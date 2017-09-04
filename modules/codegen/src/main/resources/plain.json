@@ -1,0 +1,41 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  Something:
+    type: object
+    required:
+      - map
+    properties:
+      boolean_value:
+        type: boolean
+      string_value:
+        type: string
+      date_property:
+        type: date
+      date_time_property:
+        type: date-time
+      long_property:
+        type: integer
+        format: int64
+      int_property:
+        type: integer
+        format: int32
+      integer_property:
+        type: integer
+      float_property:
+        type: number
+        format: float
+      double_property:
+        type: number
+        format: double
+      number_property:
+        type: number
+      property:
+        default: "what"
+      object_property:
+        type: object
