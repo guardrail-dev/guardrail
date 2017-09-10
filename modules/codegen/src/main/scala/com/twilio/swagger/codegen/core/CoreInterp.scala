@@ -25,7 +25,8 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
 
     case ValidateArgs(parsed) =>
       for {
-        args <- CoreTarget.fromOption(NonEmptyList.fromList(parsed.filterNot(Args.isEmpty)), NoArgsSpecified)
+        args <- CoreTarget.pure(parsed.filterNot(_.defaults))
+        args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
         args <- if (args.exists(_.printHelp)) CoreTarget.log(PrintHelp) else CoreTarget.pure(args)
       } yield args
 
@@ -37,7 +38,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
       def rec(sofar: CoreTarget[(List[Args], List[String])]): CoreTarget[List[Args]] = {
         val step: CoreTarget[(List[Args], List[String])] = for {
           pair <- sofar
-          empty = pair._1.filter(_.defaults).reverse.headOption.getOrElse(defaultArgs)
+          empty = pair._1.filter(_.defaults).reverse.headOption.getOrElse(defaultArgs).copy(defaults=false)
           newState <- pair match {
             case (Nil, xs@(_ :: _))                                 => CoreTarget.pure((empty                                                              :: Nil     , xs))
             case (already, Nil)                                     => CoreTarget.pure((         already                                                              , Nil))
