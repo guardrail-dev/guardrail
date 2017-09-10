@@ -37,6 +37,19 @@ class BacktickTest extends FunSuite with Matchers {
     |          description: Success
     |          schema:
     |            $$ref: "#/definitions/dashy-class"
+    |    post:
+    |      tags: ["dashy-package"]
+    |      x-scala-package: dashy-package
+    |      parameters:
+    |        - name: dashy-parameter
+    |          in: query
+    |          required: true
+    |          type: string
+    |      responses:
+    |        200:
+    |          description: Success
+    |          schema:
+    |            $$ref: "#/definitions/dashy-class"
     |definitions:
     |  dashy-class:
     |    type: object
@@ -77,6 +90,11 @@ class BacktickTest extends FunSuite with Matchers {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[${Type.Name("`dashy-class`")}](httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/" + "dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = HttpEntity.Empty, headers = allHeaders)))
       }
+      def ${Term.Name("post /dashy-route")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+        wrap[${Type.Name("`dashy-class`")}](httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/" + "dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = HttpEntity.Empty, headers = allHeaders)))
+      }
+
     }
     """
 
@@ -86,6 +104,14 @@ class BacktickTest extends FunSuite with Matchers {
     cls.toString should include("dashyParameter: String")
     cls.toString should include("\"dashy-parameter\", dashyParameter")
     cls.toString shouldNot include ("``")
+
+    // Note regarding: def ${Term.Name("post /dashy-route")}
+    //   This matches the expected behavior of scala.meta regarding terms that contain spaces.
+    //   Were this term name to be wrapped in backticks, the test would fail due to scalameta
+    //   automatically stripping the backticks. The following test ensures that even though
+    //   the test doesn't follow the pattern, the generated code is still escaped.
+    //   This behavior may change in scalameta 2.0.0+
+    cls.toString should include("def `post /dashy-route`(dashyParameter")
 
     cmp.toString shouldNot include ("``")
   }
