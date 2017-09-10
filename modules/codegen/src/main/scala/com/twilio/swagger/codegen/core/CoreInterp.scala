@@ -35,20 +35,23 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
 
       @scala.annotation.tailrec
       def rec(sofar: CoreTarget[(List[Args], List[String])]): CoreTarget[List[Args]] = {
-        val step: CoreTarget[(List[Args], List[String])] = sofar.flatMap {
-          case (Nil, xs@(_ :: _))                                 => CoreTarget.pure((empty                                                              :: Nil     , xs))
-          case (already, Nil)                                     => CoreTarget.pure((         already                                                              , Nil))
-          case (sofar :: already, "--client"               :: xs) => CoreTarget.pure((empty :: sofar                                                     :: already , xs))
-          case (sofar :: already, "--server"               :: xs) => CoreTarget.pure((empty.copy(kind=CodegenTarget.Server) :: sofar                     :: already , xs))
-          case (sofar :: already, "--framework"   :: value :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(framework=Some(value))):: already , xs))
-          case (sofar :: already, "--help"                 :: xs) => CoreTarget.pure((sofar.copy(printHelp   = true)                                     :: already , List.empty))
-          case (sofar :: already, "--specPath"    :: value :: xs) => CoreTarget.pure((sofar.copy(specPath    = Option(expandTilde(value)))               :: already , xs))
-          case (sofar :: already, "--tracing"              :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(tracing=true))         :: already , xs))
-          case (sofar :: already, "--outputPath"  :: value :: xs) => CoreTarget.pure((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
-          case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[Seq]))    :: already , xs))
-          case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[Seq])            :: already , xs))
-          case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
-        }
+        val step: CoreTarget[(List[Args], List[String])] = for {
+          pair <- sofar
+          newState <- pair match {
+            case (Nil, xs@(_ :: _))                                 => CoreTarget.pure((empty                                                              :: Nil     , xs))
+            case (already, Nil)                                     => CoreTarget.pure((         already                                                              , Nil))
+            case (sofar :: already, "--client"               :: xs) => CoreTarget.pure((empty :: sofar                                                     :: already , xs))
+            case (sofar :: already, "--server"               :: xs) => CoreTarget.pure((empty.copy(kind=CodegenTarget.Server) :: sofar                     :: already , xs))
+            case (sofar :: already, "--framework"   :: value :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(framework=Some(value))):: already , xs))
+            case (sofar :: already, "--help"                 :: xs) => CoreTarget.pure((sofar.copy(printHelp   = true)                                     :: already , List.empty))
+            case (sofar :: already, "--specPath"    :: value :: xs) => CoreTarget.pure((sofar.copy(specPath    = Option(expandTilde(value)))               :: already , xs))
+            case (sofar :: already, "--tracing"              :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(tracing=true))         :: already , xs))
+            case (sofar :: already, "--outputPath"  :: value :: xs) => CoreTarget.pure((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
+            case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[Seq]))    :: already , xs))
+            case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[Seq])            :: already , xs))
+            case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
+          }
+        } yield newState
 
         if (step.isLeft || step.exists(_._2.isEmpty)) {
           step.map(_._1)
