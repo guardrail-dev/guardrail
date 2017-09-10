@@ -32,7 +32,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
 
     case ParseArgs(args, defaultFramework) => {
       def expandTilde(path: String): String = path.replaceFirst("^~", System.getProperty("user.home"))
-      val defaultArgs = Args.empty.copy(context=Args.empty.context.copy(framework=Some(defaultFramework)))
+      val defaultArgs = Args.empty.copy(context=Args.empty.context.copy(framework=Some(defaultFramework)), defaults=true)
 
       @scala.annotation.tailrec
       def rec(sofar: CoreTarget[(List[Args], List[String])]): CoreTarget[List[Args]] = {
