@@ -15,7 +15,7 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
-  def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: Seq[String], dtoPackage: Seq[String]
+  def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: Seq[String], dtoPackage: Seq[String], customImports: Seq[Import]
       )(implicit S: ScalaTerms[CodegenApplication]
       ): Free[CodegenApplication, List[WriteTree]] = {
     import S._
