@@ -120,6 +120,7 @@ object SwaggerUtil {
   }).asInstanceOf[T]
 
   val unbacktick = "^`(.*)`$".r
+  val leadingNumeric = "^[0-9\"]".r
   val invalidSymbols = "[-`\"'()\\.]".r
   val reservedWords = Set(
     "abstract", "case", "catch", "class", "def", "do", "else", "extends", "false", "final",
@@ -129,8 +130,13 @@ object SwaggerUtil {
     "_", ":", "=", "=>", "<-", "<:", "<%", ">:", "#", "@"
   )
 
-  def escapeReserved(name: String): String = {
-    if (unbacktick.findFirstMatchIn(name).isEmpty && (reservedWords.contains(name) || invalidSymbols.findFirstMatchIn(name).nonEmpty)) s"`${name}`" else name
+  def escapeReserved: String => String = {
+    case name if unbacktick.findFirstMatchIn(name).nonEmpty => name
+    case name if name.contains(' ') => name // scala.meta will automatically escape. See `EscapeTreeSpec.scala`
+    case name if reservedWords.contains(name) => s"`${name}`"
+    case name if invalidSymbols.findFirstMatchIn(name).nonEmpty => s"`${name}`"
+    case name if leadingNumeric.findFirstMatchIn(name).nonEmpty => s"`${name}`"
+    case name => name
   }
 
   def propMetaType[T <: Property](property: T): Type = {
