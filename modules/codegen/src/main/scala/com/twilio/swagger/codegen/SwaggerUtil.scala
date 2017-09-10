@@ -119,8 +119,8 @@ object SwaggerUtil {
     case Ctor.Ref.Name(name) if name != "this" => Ctor.Ref.Name(escapeReserved(name)) // Literal "this" in ctor names is OK
   }).asInstanceOf[T]
 
-  val unbacktick: scala.util.matching.Regex = "^`(.*)`$".r
-  val validSymbol = "^[^0-9\"][^-`\"'()\\.]*$".r
+  val unbacktick = "^`(.*)`$".r
+  val invalidSymbols = "[-`\"'()\\.]".r
   val reservedWords = Set(
     "abstract", "case", "catch", "class", "def", "do", "else", "extends", "false", "final",
     "finally", "for", "forSome", "if", "implicit", "import", "lazy", "macro", "match", "new",
@@ -130,7 +130,7 @@ object SwaggerUtil {
   )
 
   def escapeReserved(name: String): String = {
-    if (unbacktick.findFirstMatchIn(name).isEmpty && (reservedWords.contains(name) || validSymbol.findFirstMatchIn(name).isEmpty)) s"`${name}`" else name
+    if (unbacktick.findFirstMatchIn(name).isEmpty && (reservedWords.contains(name) || invalidSymbols.findFirstMatchIn(name).nonEmpty)) s"`${name}`" else name
   }
 
   def propMetaType[T <: Property](property: T): Type = {
