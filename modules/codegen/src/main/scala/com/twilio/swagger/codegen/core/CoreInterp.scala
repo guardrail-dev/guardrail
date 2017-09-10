@@ -31,15 +31,17 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
 
     case ParseArgs(args, defaultFramework) => {
       def expandTilde(path: String): String = path.replaceFirst("^~", System.getProperty("user.home"))
-      val empty = Args.empty.copy(context=Args.empty.context.copy(framework=Some(defaultFramework)))
+      val defaultArgs = Args.empty.copy(context=Args.empty.context.copy(framework=Some(defaultFramework)))
 
       @scala.annotation.tailrec
       def rec(sofar: CoreTarget[(List[Args], List[String])]): CoreTarget[List[Args]] = {
         val step: CoreTarget[(List[Args], List[String])] = for {
           pair <- sofar
+          empty = pair._1.filter(_.defaults).reverse.headOption.getOrElse(defaultArgs)
           newState <- pair match {
             case (Nil, xs@(_ :: _))                                 => CoreTarget.pure((empty                                                              :: Nil     , xs))
             case (already, Nil)                                     => CoreTarget.pure((         already                                                              , Nil))
+            case (sofar :: already, "--defaults"             :: xs) => CoreTarget.pure((empty.copy(defaults=true) :: sofar                                 :: already , xs))
             case (sofar :: already, "--client"               :: xs) => CoreTarget.pure((empty :: sofar                                                     :: already , xs))
             case (sofar :: already, "--server"               :: xs) => CoreTarget.pure((empty.copy(kind=CodegenTarget.Server) :: sofar                     :: already , xs))
             case (sofar :: already, "--framework"   :: value :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(framework=Some(value))):: already , xs))
