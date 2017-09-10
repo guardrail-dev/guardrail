@@ -52,6 +52,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             case (sofar :: already, "--outputPath"  :: value :: xs) => CoreTarget.pure((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
             case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[Seq]))    :: already , xs))
             case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[Seq])            :: already , xs))
+            case (sofar :: already, "--import"      :: value :: xs) => CoreTarget.pure((sofar.copy(imports = sofar.imports :+ value)                       :: already , xs))
             case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
           }
         } yield newState

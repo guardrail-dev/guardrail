@@ -12,10 +12,11 @@ case class Args(
 , printHelp: Boolean
 , context: Context
 , defaults: Boolean
+, imports: Seq[String]
 )
 
 object Args {
-  val empty = Args(CodegenTarget.Client, Option.empty, Option.empty, Option.empty, Seq.empty, false, Context.empty, false)
+  val empty = Args(CodegenTarget.Client, Option.empty, Option.empty, Option.empty, Seq.empty, false, Context.empty, false, Seq.empty)
   def isEmpty: Args => Boolean = { args =>
     args.specPath.isEmpty &&
     args.outputPath.isEmpty &&
