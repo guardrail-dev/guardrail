@@ -92,6 +92,9 @@ class BacktickTest extends FunSuite with Matchers {
     cls.toString should include("def `dashy-op-id`")
     cls.toString should include("dashyParameter: String")
     cls.toString should include("\"dashy-parameter\", dashyParameter")
+    cls.toString shouldNot include ("``")
+
+    cmp.toString shouldNot include ("``")
   }
 
   val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
@@ -114,6 +117,7 @@ class BacktickTest extends FunSuite with Matchers {
     cls.structure should equal(definition.structure)
     cls.toString should include("case class `dashy-class`")
     cls.toString should include("`dashy-param`")
+    cls.toString shouldNot include ("``")
 
     cmp.structure should equal(companion.structure)
     cmp.toString should include ("`encodedashy-class`")
@@ -122,6 +126,7 @@ class BacktickTest extends FunSuite with Matchers {
     cmp.toString shouldNot include (".dashy-")
     cmp.toString shouldNot include ("[dashy-")
     cmp.toString shouldNot include ("= dashy-")
+    cmp.toString shouldNot include ("``")
   }
 
   test("Ensure enums are generated with escapes") {
@@ -152,6 +157,7 @@ class BacktickTest extends FunSuite with Matchers {
 
     cls.structure should equal(definition.structure)
     cls.toString should include("sealed abstract class `dashy-enum`")
+    cls.toString shouldNot include ("``")
 
     cmp.structure should equal(companion.structure)
     cmp.toString should include ("val DashyValueA")
@@ -163,5 +169,6 @@ class BacktickTest extends FunSuite with Matchers {
     cmp.toString shouldNot include (".dashy-")
     cmp.toString shouldNot include ("[dashy-")
     cmp.toString shouldNot include ("= dashy-")
+    cmp.toString shouldNot include ("``")
   }
 }
