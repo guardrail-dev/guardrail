@@ -10,7 +10,7 @@ import scala.meta._
 object ScalaGenerator {
   object ScalaInterp extends (ScalaTerm ~> Target) {
     def apply[T](term: ScalaTerm[T]): Target[T] = term match {
-      case RenderImplicits(pkgName, frameworkImports, jsonImports) =>
+      case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
         val jsonType: Type = t"io.circe.Json"
         val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
@@ -18,6 +18,8 @@ object ScalaGenerator {
         Target.pure(
           source"""
             package ${pkg}
+
+            ..${customImports}
 
             ..${jsonImports}
 
