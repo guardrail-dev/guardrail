@@ -57,7 +57,7 @@ object ScalaParameter {
             .flatMap {
               case EnumDefinition(Type.Name(`tpeName`), elems, _, _) =>
                 baseDefaultValue.flatMap {
-                  case Lit.String(name) => elems.find(_._1 == name).map(_._2) // FIXME: Failed lookups don't fail codegen, causing mismatches like `foo: Bar = "baz"`
+                  case Lit.String(name) => elems.find(_._1 == name).map(_._3) // FIXME: Failed lookups don't fail codegen, causing mismatches like `foo: Bar = "baz"`
                 }
               case _ => None
             } headOption
