@@ -1,3 +1,20 @@
+Example Usage
+===
+
+Client
+---
+
+```
+./cli.sh --client --specPath modules/codegen/src/main/resources/petstore.json --packageName petstore --outputPath /tmp/petstore-client/src/main/scala
+```
+
+Server
+---
+
+```
+./cli.sh --server --specPath modules/codegen/src/main/resources/petstore.json --packageName petstore --outputPath /tmp/petstore-server/src/main/scala
+```
+
 Overview
 ===
 
