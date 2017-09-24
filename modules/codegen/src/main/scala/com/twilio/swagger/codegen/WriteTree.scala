@@ -7,7 +7,7 @@ import scala.meta._
 
 case class WriteTree(path: Path, contents: Tree)
 object WriteTree {
-  val unsafeWriteTree: WriteTree => Unit = { case WriteTree(path, tree) =>
+  val unsafeWriteTree: WriteTree => Path = { case WriteTree(path, tree) =>
     val UTF8 = java.nio.charset.Charset.availableCharsets.get("UTF-8")
     val data = tree.syntax.getBytes(UTF8)
     Files.createDirectories(path.getParent)
