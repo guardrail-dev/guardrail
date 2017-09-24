@@ -68,7 +68,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     , context=Context.empty.copy(framework=Some("akka-http"))
     ), List.empty)
 
-    val result: List[WriteTree] = Common.processArgs(args).foldMap(CoreTermInterp).right.get.toList.flatMap(injectSwagger(swagger, _).right.get)
+    val result: List[WriteTree] = Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp).right.get.toList.flatMap(injectSwagger(swagger, _).right.get)
 
     val paths = result.map(_.path)
 
@@ -101,7 +101,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     , context=Context.empty.copy(framework=Some("akka-http"))
     ), List.empty)
 
-    val result: List[WriteTree] = Common.processArgs(args).foldMap(CoreTermInterp).right.get.toList.flatMap(injectSwagger(swagger, _).right.get)
+    val result: List[WriteTree] = Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp).right.get.toList.flatMap(injectSwagger(swagger, _).right.get)
 
     val paths = result.map(_.path)
 
