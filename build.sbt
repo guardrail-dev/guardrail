@@ -3,7 +3,8 @@ name := projectName
 organization in ThisBuild := "com.twilio"
 version in ThisBuild := "0.26.0-SNAPSHOT"
 
-scalaVersion in ThisBuild := "2.11.8"
+scalaVersion in ThisBuild := "2.12.2"
+crossScalaVersions := Seq("2.11.8", "2.12.2")
 
 val akkaVersion = "10.0.10"
 val catsVersion = "0.9.0"
@@ -55,7 +56,6 @@ val codegenSettings = Seq(
   , scalacOptions in ThisBuild ++= Seq(
       "-language:higherKinds",
       "-Xexperimental",
-      "-Ybackend:GenBCode",
       "-Ydelambdafy:method",
       "-Xlint:_",
       "-feature",
