@@ -12,6 +12,7 @@ package codegen {
   case class CodegenDefinitions(clients: List[Client], servers: List[Server], frameworkImports: List[Import])
 
   object Target {
+    type Type[A] = Either[String, A]
     def pure[T](x: T): Target[T] = Either.right(x)
     def error[T](x: String): Target[T] = Either.left(x)
     def fromOption[T](x: Option[T], default: => String): Target[T] = Either.fromOption(x, default)
@@ -19,6 +20,7 @@ package codegen {
   }
 
   object CoreTarget {
+    type Type[A] = Either[Error, A]
     def pure[T](x: T): CoreTarget[T] = Either.right(x)
     def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] = Either.fromOption(x, default)
     def error[T](x: Error): CoreTarget[T] = Either.left[Error, T](x)
@@ -35,6 +37,6 @@ package object codegen {
   type CodegenApplicationACEMSSP[T] = Coproduct[ScalaTerm, CodegenApplicationACEMSP, T]
   type CodegenApplication[T] = CodegenApplicationACEMSSP[T]
 
-  type Target[A] = Either[String, A]
-  type CoreTarget[A] = Either[Error, A]
+  type Target[A] = Target.Type[A]
+  type CoreTarget[A] = CoreTarget.Type[A]
 }
