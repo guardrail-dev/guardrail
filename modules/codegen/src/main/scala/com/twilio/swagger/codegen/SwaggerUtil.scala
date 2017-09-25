@@ -236,7 +236,7 @@ object SwaggerUtil {
       val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(variable, other).map(_.swap: Either[String, Term.Apply]))
 
       for {
-        parts <- pattern.parseOnly(path).either.fold(Target.log(_), Target.pure(_))
+        parts <- pattern.parseOnly(path).either.fold(Target.error(_), Target.pure(_))
         result = parts.map({
           case Left(part) => Lit.String(part)
           case Right(term) => term

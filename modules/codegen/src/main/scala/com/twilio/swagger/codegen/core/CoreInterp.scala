@@ -20,15 +20,15 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
     case ExtractGenerator(context) =>
       context.framework match {
         case Some("akka-http") => CoreTarget.pure(AkkaHttp)
-        case None => CoreTarget.log(NoFramework)
-        case Some(unknown) => CoreTarget.log(UnknownFramework(unknown))
+        case None => CoreTarget.error(NoFramework)
+        case Some(unknown) => CoreTarget.error(UnknownFramework(unknown))
       }
 
     case ValidateArgs(parsed) =>
       for {
         args <- CoreTarget.pure(parsed.filterNot(_.defaults))
         args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
-        args <- if (args.exists(_.printHelp)) CoreTarget.log(PrintHelp) else CoreTarget.pure(args)
+        args <- if (args.exists(_.printHelp)) CoreTarget.error(PrintHelp) else CoreTarget.pure(args)
       } yield args
 
     case ParseArgs(args, defaultFramework) => {
@@ -54,7 +54,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[List]))   :: already , xs))
             case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[List])           :: already , xs))
             case (sofar :: already, "--import"      :: value :: xs) => CoreTarget.pure((sofar.copy(imports = sofar.imports :+ value)                       :: already , xs))
-            case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
+            case (_, unknown) => CoreTarget.error(UnknownArguments(unknown))
           }
         } yield newState
 
@@ -83,7 +83,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         context = args.context
         customImports <- args.imports.map(x =>
           for {
-            importer <- x.parse[Importer].fold[CoreTarget[Importer]](err => CoreTarget.log(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
+            importer <- x.parse[Importer].fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
           } yield Import(List(importer))
         ).toList.sequenceU
       } yield {

@@ -13,7 +13,7 @@ package codegen {
 
   object Target {
     def pure[T](x: T): Target[T] = Either.right(x)
-    def log[T](x: String): Target[T] = Either.left(x)
+    def error[T](x: String): Target[T] = Either.left(x)
     def fromOption[T](x: Option[T], default: => String): Target[T] = Either.fromOption(x, default)
     def unsafeExtract[T](x: Target[T]): T = x.valueOr({ err => throw new Exception(err.toString) })
   }
@@ -21,7 +21,7 @@ package codegen {
   object CoreTarget {
     def pure[T](x: T): CoreTarget[T] = Either.right(x)
     def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] = Either.fromOption(x, default)
-    def log[T](x: Error): CoreTarget[T] = Either.left(x)
+    def error[T](x: Error): CoreTarget[T] = Either.left[Error, T](x)
     def unsafeExtract[T](x: CoreTarget[T]): T = x.valueOr({ err => throw new Exception(err.toString) })
   }
 }

@@ -5,6 +5,7 @@ import _root_.io.swagger.models.HttpMethod
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
+import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
@@ -163,7 +164,7 @@ object AkkaHttpServerGenerator {
         }
 
       case CombineRouteTerms(terms) => terms match {
-        case Nil => Target.log("Generated no routes, no source to generate")
+        case Nil => Target.error("Generated no routes, no source to generate")
         case x :: xs => Target.pure(xs.foldRight(x) { case (a, n) => q"${a} ~ ${n}" })
       }
 
@@ -204,7 +205,7 @@ object AkkaHttpServerGenerator {
       case HttpMethod.PATCH => Target.pure(q"patch")
       case HttpMethod.POST => Target.pure(q"post")
       case HttpMethod.PUT => Target.pure(q"put")
-      case other => Target.log(s"Unknown method: ${other}")
+      case other => Target.error(s"Unknown method: ${other}")
     }
 
     def pathSegmentToAkka: ScalaParameter => Target[Term] = { case ScalaParameter(_, param, _, argName, argType) =>
@@ -228,7 +229,7 @@ object AkkaHttpServerGenerator {
             .map { param =>
               pathSegmentToAkka(param)
             } getOrElse {
-              Target.log(s"Unknown path variable ${paramName} (known: ${pathVars.map(_.argName).mkString(", ")})")
+              Target.error(s"Unknown path variable ${paramName} (known: ${pathVars.map(_.argName).mkString(", ")})")
             }
         }
       }
@@ -244,15 +245,14 @@ object AkkaHttpServerGenerator {
             segments <- (
               rest.split('/')
                 .toList
-                .map({
-                  case "" => Target.log("Double slashes not supported")
-                  case segment => getKnownVar(segment).getOrElse(Target.pure(Lit.String(segment)))
+                .map(_.pure[Option].filterNot(_.isEmpty).fold(Target.error[Term]("Double slashes not supported")) {
+                  segment => getKnownVar(segment).getOrElse(Target.pure(Lit.String(segment)))
                 }).sequenceU
             )
             pathDirective <- segments match {
               case x :: Nil => Target.pure(q"path(${x})")
               case x :: xs => Target.pure(q"path(${xs.foldLeft(x) { case (a, n) => q"${a} / ${n}" }})")
-              case Nil => Target.log("Impossible scenario")
+              case Nil => Target.error("Impossible scenario")
             }
             akkaRoute = addTrailingSlashMatcher(rest.endsWith("/"), pathDirective)
           } yield akkaRoute
@@ -296,8 +296,8 @@ object AkkaHttpServerGenerator {
     def headersToAkka: List[ScalaParameter] => Target[Option[Term]] = {
       directivesFromParams(
         arg => tpe => Target.pure(q"headerValueByName(${arg})"),
-        arg => tpe => Target.log(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => Target.log(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => Target.error(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => Target.error(s"Unsupported Option[Iterable[${arg}]]"),
         arg => tpe => Target.pure(q"optionalHeaderValueByName(${arg})")
       ) _
     }
