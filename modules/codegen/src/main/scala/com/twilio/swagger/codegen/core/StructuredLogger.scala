@@ -1,9 +1,8 @@
 package com.twilio.swagger.core
 
-import cats.{Monoid, Order, Show}
 import cats.data.NonEmptyList
-import cats.syntax.applicative._
-import cats.instances.list._
+import cats.implicits._
+import cats.{Monoid, Order, Show}
 
 sealed abstract class LogLevel(val level: String)
 object LogLevel {
@@ -33,7 +32,8 @@ object LogLevels {
 sealed case class StructuredLogLevel(name: NonEmptyList[String], lines: NonEmptyList[(LogLevel, String)])
 
 class StructuredLogger(val levels: List[StructuredLogLevel])
-object StructuredLogger {
+object StructuredLogger extends StructuredLoggerInstances
+sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {
     def empty: StructuredLogger = new StructuredLogger(List.empty)
     def combine(x: StructuredLogger, y: StructuredLogger): StructuredLogger = new StructuredLogger({
@@ -44,14 +44,15 @@ object StructuredLogger {
     })
   }
 
-  implicit class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
+  class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
     def show(value: StructuredLogger): String = {
-      value.levels.foldLeft(List.empty[String])({ case (acc, StructuredLogLevel(name, lines)) =>
-        val prefix: String = name.foldLeft("  ") { case (a, b) => (" " * a.length) + " " + b }
-        val section: List[String] = lines.filter(_._1 >= desiredLevel).map({ case (level, message) =>
-          s"${level.show} ${prefix}: ${message}"
+      value.levels.foldLeft(List.empty[(LogLevel, NonEmptyList[String], String)])({ case (acc, StructuredLogLevel(name, lines)) =>
+        acc ++ lines.filter(_._1 >= desiredLevel).map({ case (level, message) =>
+          (level, name, message)
         })
-        acc ++ section
+      }).map({ case (level, name, message) =>
+        val prefix: String = name.foldLeft("  ") { case (a, b) => (" " * a.length) + " " + b }
+        s"${level.show} ${prefix}: ${message}"
       }).mkString("\n")
     }
   }
@@ -60,4 +61,8 @@ object StructuredLogger {
   def info(name: NonEmptyList[String], message: String): StructuredLogger = new StructuredLogger(StructuredLogLevel(name, (LogLevels.Info, message).pure[NonEmptyList]).pure[List])
   def warning(name: NonEmptyList[String], message: String): StructuredLogger = new StructuredLogger(StructuredLogLevel(name, (LogLevels.Warning, message).pure[NonEmptyList]).pure[List])
   def error(name: NonEmptyList[String], message: String): StructuredLogger = new StructuredLogger(StructuredLogLevel(name, (LogLevels.Error, message).pure[NonEmptyList]).pure[List])
+}
+
+trait StructuredLoggerLowPriority { self: StructuredLoggerInstances =>
+  implicit def createShowStructuredLogger(implicit desiredLevel: LogLevel): Show[StructuredLogger] = new ShowStructuredLogger(desiredLevel)
 }
