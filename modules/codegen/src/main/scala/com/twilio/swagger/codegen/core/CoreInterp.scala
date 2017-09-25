@@ -65,7 +65,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         }
       }
 
-      rec(Right((Nil, args.toList)))
+      rec(CoreTarget.pure((Nil, args.toList)))
     }
 
     case ProcessArgSet(targetInterpreter, args) =>
@@ -83,7 +83,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         context = args.context
         customImports <- args.imports.map(x =>
           for {
-            importer <- x.parse[Importer].fold(err => CoreTarget.log(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
+            importer <- x.parse[Importer].fold[CoreTarget[Importer]](err => CoreTarget.log(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
           } yield Import(List(importer))
         ).toList.sequenceU
       } yield {
