@@ -32,7 +32,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
       for {
         args <- CoreTarget.pure(parsed.filterNot(_.defaults))
         args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
-        args <- if (args.exists(_.printHelp)) CoreTarget.error(PrintHelp) else CoreTarget.pure(args)
+        args <- if (args.exists(_.printHelp)) CoreTarget.error[NonEmptyList[Args]](PrintHelp) else CoreTarget.pure(args)
       } yield args
 
     case ParseArgs(args, defaultFramework) => {
@@ -77,6 +77,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         case Parsed.Success(tree) => Right(tree)
       }
       for {
+        _ <- CoreTarget.log.debug("core", "processArgSet")("Processing arguments")
         specPath <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
         outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
         pkgName <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
@@ -88,7 +89,8 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse ${x} as an import directive")
             importer <- x.parse[Importer].fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
           } yield Import(List(importer))
-        ).toList.sequenceU
+        ).toList.sequence[CoreTarget, Import]
+        _ <- CoreTarget.log.debug("core", "processArgSet")("Finished processing arguments")
       } yield {
         ReadSwagger(Paths.get(specPath), { swagger =>
           Common.writePackage(kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)

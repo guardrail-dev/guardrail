@@ -120,7 +120,11 @@ object CirceProtocolGenerator {
           case s: StringProperty => ScalaEmptyIsNull(s)
           case _ => None
         }
-        Target.pure(ProtocolParameter(term, name, dep, readOnly, needsEmptyToNull.filter(_ == true).map(_ => argName)))
+
+        for {
+          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+          param <- Target.pure(ProtocolParameter(term, name, dep, readOnly, needsEmptyToNull.filter(_ == true).map(_ => argName)))
+        } yield param
 
       case RenderDTOClass(clsName, terms) =>
         Target.pure(q"""
