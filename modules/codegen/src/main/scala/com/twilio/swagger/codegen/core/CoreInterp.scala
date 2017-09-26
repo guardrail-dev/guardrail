@@ -21,11 +21,10 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
     case ExtractGenerator(context) =>
       for {
         _ <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
-        framework <- context.framework match {
-          case Some("akka-http") => CoreTarget.pure(AkkaHttp)
-          case None => CoreTarget.error(NoFramework)
-          case Some(unknown) => CoreTarget.error(UnknownFramework(unknown))
-        }
+        framework <- context.framework.fold(CoreTarget.error[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
+          case "akka-http" => CoreTarget.pure(AkkaHttp)
+          case unknown => CoreTarget.error(UnknownFramework(unknown))
+        })
         _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: ${framework}")
       } yield framework
 
