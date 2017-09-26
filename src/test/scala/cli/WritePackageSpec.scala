@@ -60,13 +60,11 @@ class WritePackageSpec extends FunSuite with Matchers {
   }
 
   test("CLI should provide sane defaults for paths") {
-    val args = NonEmptyList(Args(
+    val args = NonEmptyList(Args.empty.copy(
       kind=CodegenTarget.Client
     , specPath=Some("/tmp/foo.json")
     , outputPath=Some("/tmp/foo")
     , packageName=Some(ISeq("com", "twilio", "example", "clients"))
-    , dtoPackage=ISeq.empty
-    , printHelp=false
     , context=Context.empty.copy(framework=Some("akka-http"))
     ), List.empty)
 
@@ -95,13 +93,11 @@ class WritePackageSpec extends FunSuite with Matchers {
   }
 
   test("CLI properly generates all WriteTrees") {
-    val args = NonEmptyList(Args(
+    val args = NonEmptyList(Args.empty.copy(
       kind=CodegenTarget.Client
     , specPath=Some("/tmp/foo.json")
     , outputPath=Some("/tmp/foo")
     , packageName=Some(ISeq("base"))
-    , dtoPackage=ISeq.empty
-    , printHelp=false
     , context=Context.empty.copy(framework=Some("akka-http"))
     ), List.empty)
 
