@@ -1,11 +1,12 @@
 package com.twilio.swagger.codegen
 
-import cats.data.EitherT
+import cats.data.{EitherT, WriterT}
 import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
 import cats.syntax.traverse._
 import cats.syntax.show._
+import cats.syntax.functor._
 import cats.~>
 import com.twilio.swagger.codegen.core.CoreTermInterp
 import com.twilio.swagger.codegen.terms.CoreTerm
@@ -15,12 +16,15 @@ import java.nio.file.Path
 
 object CLICommon {
   def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
-    implicit val logLevel: LogLevel = sys.props.get("swagger.codegen.loglevel").flatMap(level => LogLevels.members.find(_.level == level.toLowerCase)).getOrElse(LogLevels.Warning)
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val result = Common.runM[CoreTerm](args)
+    val (logLevelString, result) = Common.runM[CoreTerm](args)
       .foldMap(interpreter)
-      .runA(false)
-      .fold[List[ReadSwagger[Target[List[WriteTree]]]]]({
+      .value
+      .run
+      .runF(Some("debug"))
+      .sequence
+      .map(x => EitherT(WriterT(x)))
+      .map(_.fold[List[ReadSwagger[Target[List[WriteTree]]]]]({
         case MissingArg(args, Error.ArgName(arg)) =>
           println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
           unsafePrintHelp()
@@ -46,7 +50,9 @@ object CLICommon {
         case UnparseableArgument(name, message) =>
           println(s"${AnsiColor.RED}Unparseable argument: --${name}, ${message}")
           fallback
-      }, _.toList)
+      }, _.toList))
+
+    implicit val logLevel: LogLevel = logLevelString.flatMap(level => LogLevels.members.find(_.level == level.toLowerCase)).getOrElse(LogLevels.Warning)
 
     val (coreLogger, deferred) = result.run
 

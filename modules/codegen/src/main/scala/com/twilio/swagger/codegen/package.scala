@@ -42,7 +42,7 @@ package codegen {
     def pure[T](x: T): CoreTarget[T] = x.pure[CoreTarget]
     def fromOption[T](x: Option[T], default: => ErrorType): CoreTarget[T] = EitherT.fromOption(x, default)
     def error[T](x: ErrorType): CoreTarget[T] = EitherT.left[Logger, ErrorType, T](x.pure[Logger])
-    def unsafeExtract[T](x: Type[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
+    def unsafeExtract[T](x: Type[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value.runA(None)
 
     object log {
       def debug(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
