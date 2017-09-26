@@ -19,6 +19,7 @@ object CLICommon {
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
     val result = Common.runM[CoreTerm](args)
       .foldMap(interpreter)
+      .runA(false)
       .fold[List[ReadSwagger[Target[List[WriteTree]]]]]({
         case MissingArg(args, Error.ArgName(arg)) =>
           println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
