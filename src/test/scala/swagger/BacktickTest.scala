@@ -11,13 +11,6 @@ import scala.meta._
 
 class BacktickTest extends FunSuite with Matchers {
 
-  test("Assume special characters are not escaped") {
-    // This test fails as of 1.6.0. If this changes in the future, SwaggerParser.escapeTermTree and friends can all be removed (:yey:)
-    val q"val $x = 3" = q"val `dashy-thing` = 3"
-    val x1@Pat.Var.Term(Term.Name("dashy-thing")) = x
-    q"val $x1 = 3".toString shouldNot equal("val `dashy-thing` = 3") // shouldNot -> should (!) This is a bug in scala.meta!
-  }
-
   val swagger = new SwaggerParser().parse(s"""
     |swagger: "2.0"
     |info:
@@ -44,6 +37,19 @@ class BacktickTest extends FunSuite with Matchers {
     |          description: Success
     |          schema:
     |            $$ref: "#/definitions/dashy-class"
+    |    post:
+    |      tags: ["dashy-package"]
+    |      x-scala-package: dashy-package
+    |      parameters:
+    |        - name: dashy-parameter
+    |          in: query
+    |          required: true
+    |          type: string
+    |      responses:
+    |        200:
+    |          description: Success
+    |          schema:
+    |            $$ref: "#/definitions/dashy-class"
     |definitions:
     |  dashy-class:
     |    type: object
@@ -60,7 +66,8 @@ class BacktickTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Ensure paths are generated with escapes") {
-    val Right(Clients(List(Client(tags, className, statements)), _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp)
+    val Right(Clients(clients, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp)
+    val Client(tags, className, statements) :: _ = clients
 
     tags should equal (Seq("dashy-package"))
 
@@ -83,6 +90,11 @@ class BacktickTest extends FunSuite with Matchers {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[${Type.Name("`dashy-class`")}](httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/" + "dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = HttpEntity.Empty, headers = allHeaders)))
       }
+      def ${Term.Name("post /dashy-route")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+        wrap[${Type.Name("`dashy-class`")}](httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/" + "dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = HttpEntity.Empty, headers = allHeaders)))
+      }
+
     }
     """
 
@@ -91,6 +103,17 @@ class BacktickTest extends FunSuite with Matchers {
     cls.toString should include("def `dashy-op-id`")
     cls.toString should include("dashyParameter: String")
     cls.toString should include("\"dashy-parameter\", dashyParameter")
+    cls.toString shouldNot include ("``")
+
+    // Note regarding: def ${Term.Name("post /dashy-route")}
+    //   This matches the expected behavior of scala.meta regarding terms that contain spaces.
+    //   Were this term name to be wrapped in backticks, the test would fail due to scalameta
+    //   automatically stripping the backticks. The following test ensures that even though
+    //   the test doesn't follow the pattern, the generated code is still escaped.
+    //   This behavior may change in scalameta 2.0.0+
+    cls.toString should include("def `post /dashy-route`(dashyParameter")
+
+    cmp.toString shouldNot include ("``")
   }
 
   val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
@@ -113,6 +136,7 @@ class BacktickTest extends FunSuite with Matchers {
     cls.structure should equal(definition.structure)
     cls.toString should include("case class `dashy-class`")
     cls.toString should include("`dashy-param`")
+    cls.toString shouldNot include ("``")
 
     cmp.structure should equal(companion.structure)
     cmp.toString should include ("`encodedashy-class`")
@@ -121,6 +145,7 @@ class BacktickTest extends FunSuite with Matchers {
     cmp.toString shouldNot include (".dashy-")
     cmp.toString shouldNot include ("[dashy-")
     cmp.toString shouldNot include ("= dashy-")
+    cmp.toString shouldNot include ("``")
   }
 
   test("Ensure enums are generated with escapes") {
@@ -151,6 +176,7 @@ class BacktickTest extends FunSuite with Matchers {
 
     cls.structure should equal(definition.structure)
     cls.toString should include("sealed abstract class `dashy-enum`")
+    cls.toString shouldNot include ("``")
 
     cmp.structure should equal(companion.structure)
     cmp.toString should include ("val DashyValueA")
@@ -162,5 +188,6 @@ class BacktickTest extends FunSuite with Matchers {
     cmp.toString shouldNot include (".dashy-")
     cmp.toString shouldNot include ("[dashy-")
     cmp.toString shouldNot include ("= dashy-")
+    cmp.toString shouldNot include ("``")
   }
 }
