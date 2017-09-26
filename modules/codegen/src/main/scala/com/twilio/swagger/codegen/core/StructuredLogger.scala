@@ -12,6 +12,7 @@ object LogLevel {
       case LogLevels.Info    => "   INFO"
       case LogLevels.Warning => "WARNING"
       case LogLevels.Error   => "  ERROR"
+      case LogLevels.Silent  => " SILENT"
     }
   }
 
@@ -25,8 +26,9 @@ object LogLevels {
   case object Info extends LogLevel("info")
   case object Warning extends LogLevel("warning")
   case object Error extends LogLevel("error")
+  case object Silent extends LogLevel("silent")
 
-  val members = Vector(Debug, Info, Warning, Error)
+  val members = Vector(Debug, Info, Warning, Error, Silent)
 }
 
 sealed case class StructuredLogLevel(name: NonEmptyList[String], lines: NonEmptyList[(LogLevel, String)])
