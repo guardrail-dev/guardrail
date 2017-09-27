@@ -108,9 +108,9 @@ class EnumTest extends FunSuite with Matchers {
               Left(Left(e))
           }))
         }
-        def getFoo(pathparam: Bar, bar: Bar, defaultparam: Bar = ILikeSpaces, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Bar] = {
+        def getFoo(pathparam: Bar, bar: Bar, defaultparam: Bar = Bar.ILikeSpaces, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Bar] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          wrap[Bar](httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/" + "foo" + "/" + Formatter.addPath(pathparam) + "?" + Formatter.addArg("bar", bar) + Formatter.addArg("defaultparam", defaultparam), entity = HttpEntity.Empty, headers = allHeaders)))
+          wrap[Bar](httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo/" + Formatter.addPath(pathparam) + "?" + Formatter.addArg("bar", bar) + Formatter.addArg("defaultparam", defaultparam), entity = HttpEntity.Empty, headers = allHeaders)))
         }
       }
     """

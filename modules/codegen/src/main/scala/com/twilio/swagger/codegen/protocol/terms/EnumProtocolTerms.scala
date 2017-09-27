@@ -11,7 +11,7 @@ class EnumProtocolTerms[F[_]](implicit I: Inject[EnumProtocolTerm, F]) {
     Free.inject[EnumProtocolTerm, F](ExtractEnum(swagger))
   def extractType(swagger: ModelImpl): Free[F, Either[String, Type]] =
     Free.inject[EnumProtocolTerm, F](ExtractType(swagger))
-  def renderMembers(clsName: String, elems: Seq[(String, Term.Name)]): Free[F, Defn.Object] =
+  def renderMembers(clsName: String, elems: Seq[(String, Term.Name, Term)]): Free[F, Defn.Object] =
     Free.inject[EnumProtocolTerm, F](RenderMembers(clsName, elems))
   def encodeEnum(clsName: String): Free[F, Defn.Val] =
     Free.inject[EnumProtocolTerm, F](EncodeEnum(clsName))

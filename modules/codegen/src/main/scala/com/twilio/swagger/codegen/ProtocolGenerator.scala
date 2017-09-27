@@ -18,7 +18,7 @@ import scala.meta._
 sealed trait ProtocolElems
 case class RandomType(tpe: Type, defn: Seq[Defn]) extends ProtocolElems
 case class ClassDefinition(tpe: Type.Name, cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
-case class EnumDefinition(tpe: Type.Name, elems: Seq[(String, Term.Name)], cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
+case class EnumDefinition(tpe: Type.Name, elems: Seq[(String, Term.Name, Term.Select)], cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
 
 case class ProtocolDefinitions(elems: List[ProtocolElems], protocolImports: Seq[Import], packageObjectImports: Seq[Import], packageObjectContents: Seq[Stat])
 
@@ -41,7 +41,10 @@ object ProtocolGenerator {
     }
 
     def validProg(enum: Seq[String], tpe: Type): Free[F, EnumDefinition] = {
-      val elems = enum.map(elem => (elem, Term.Name(toPascalCase(elem))))
+      val elems = enum.map { elem =>
+        val valueTerm = Term.Name(toPascalCase(elem))
+        (elem, valueTerm, q"${Term.Name(clsName)}.${valueTerm}")
+      }
       val pascalValues = elems.map(_._2)
       for {
         members <- renderMembers(clsName, elems)
@@ -95,7 +98,7 @@ object ProtocolGenerator {
         deps = params.flatMap(_.dep)
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
         decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
-        cmp <- renderDTOCompanion(clsName, deps, encoder, decoder)
+        cmp <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
       } yield ClassDefinition(Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
     }
 

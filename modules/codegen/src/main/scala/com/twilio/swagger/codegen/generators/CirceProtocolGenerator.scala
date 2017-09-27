@@ -27,8 +27,8 @@ object CirceProtocolGenerator {
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
           object members {
-            ..${elems.map({ case (value, pascalValue) =>
-              q"""case object ${pascalValue} extends ${Ctor.Ref.Name(clsName)}(${Lit.String(value)})"""
+            ..${elems.map({ case (value, termName, defaultTerm) =>
+              q"""case object ${termName} extends ${Ctor.Ref.Name(clsName)}(${Lit.String(value)})"""
             }).to[Seq]}
           }
         """)
