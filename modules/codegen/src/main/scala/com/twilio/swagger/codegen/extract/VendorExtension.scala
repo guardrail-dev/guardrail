@@ -34,7 +34,6 @@ object VendorExtension {
     implicit val defaultVendorExtensibleMapProperty = build[io.swagger.models.properties.MapProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleModelImpl = build[io.swagger.models.ModelImpl](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleObjectProperty = build[io.swagger.models.properties.ObjectProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleRefProperty = build[io.swagger.models.properties.RefProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleStringProperty = build[io.swagger.models.properties.StringProperty](m => key => m.getVendorExtensions.get(key))
 
     implicit val defaultVendorExtensibleCookieParameter = build[io.swagger.models.parameters.CookieParameter](m => key => m.getVendorExtensions.get(key))
