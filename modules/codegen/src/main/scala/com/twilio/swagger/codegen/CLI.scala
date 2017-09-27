@@ -29,6 +29,8 @@ object CLICommon {
           unsafePrintHelp()
         case UnknownFramework(name) =>
           println(s"${AnsiColor.RED}Unknown framework specified: ${name}${AnsiColor.RESET}")
+        case UnparseableArgument(name, message) =>
+          println(s"${AnsiColor.RED}Unparseable argument: --${name}, ${message}")
       }, _.toList.foreach(rs =>
         ReadSwagger.unsafeReadSwagger(rs)
           .fold({ err =>

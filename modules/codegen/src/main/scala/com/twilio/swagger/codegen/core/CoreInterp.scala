@@ -4,12 +4,14 @@ package core
 import cats.data.NonEmptyList
 import cats.instances.all._
 import cats.syntax.either._
+import cats.syntax.traverse._
 import cats.~>
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.terms._
 import java.nio.file.Paths
 import scala.collection.immutable.Seq
 import scala.io.AnsiColor
+import scala.meta._
 
 object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
   def apply[T](x: CoreTerm[T]): CoreTarget[T] = x match {
@@ -52,6 +54,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             case (sofar :: already, "--outputPath"  :: value :: xs) => CoreTarget.pure((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
             case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[Seq]))    :: already , xs))
             case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[Seq])            :: already , xs))
+            case (sofar :: already, "--import"      :: value :: xs) => CoreTarget.pure((sofar.copy(imports = sofar.imports :+ value)                       :: already , xs))
             case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
           }
         } yield newState
@@ -67,6 +70,11 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
     }
 
     case ProcessArgSet(targetInterpreter, args) =>
+      import scala.meta.parsers.Parsed
+      implicit def parsed2Either[Z]: Parsed[Z] => Either[Parsed.Error, Z] = {
+        case x: Parsed.Error => Left(x)
+        case Parsed.Success(tree) => Right(tree)
+      }
       for {
         specPath <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
         outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
@@ -74,9 +82,14 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         kind = args.kind
         dtoPackage = args.dtoPackage
         context = args.context
+        customImports <- args.imports.map(x =>
+          for {
+            importer <- x.parse[Importer].fold(err => CoreTarget.log(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
+          } yield Import(Seq(importer))
+        ).toList.sequenceU
       } yield {
         ReadSwagger(Paths.get(specPath), { swagger =>
-          Common.writePackage(kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage)
+          Common.writePackage(kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
             .foldMap(targetInterpreter)
         })
       }

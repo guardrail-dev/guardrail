@@ -15,7 +15,7 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
-  def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: Seq[String], dtoPackage: Seq[String]
+  def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: Seq[String], dtoPackage: Seq[String], customImports: Seq[Import]
       )(implicit S: ScalaTerms[CodegenApplication]
       ): Free[CodegenApplication, List[WriteTree]] = {
     import S._
@@ -35,6 +35,8 @@ object Common {
     for {
       proto <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
+      implicitsImport = q"import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._"
+      imports = customImports ++ protocolImports ++ Seq(implicitsImport)
 
       protoOut = protocolElems.map({
         case EnumDefinition(_, _, cls, obj) =>
@@ -42,7 +44,7 @@ object Common {
             resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala")
             , source"""
               package ${buildPkgTerm(definitions)}
-                ..${protocolImports :+ q"import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._"}
+                ..${imports}
                 $cls
                 $obj
               """
@@ -53,7 +55,7 @@ object Common {
             resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala")
             , source"""
               package ${buildPkgTerm(dtoComponents)}
-                ..${protocolImports}
+                ..${imports}
                 $cls
                 $obj
               """
@@ -67,7 +69,7 @@ object Common {
 
       packageObject = WriteTree(dtoPackagePath.resolve("package.scala"),
         source"""package ${Term.Name(dtoComponents.dropRight(1).mkString("."))}
-            ..${packageObjectImports ++ protocolImports}
+            ..${customImports ++ packageObjectImports ++ protocolImports}
 
             package object ${Term.Name(dtoComponents.last)} {
                ..${(packageObjectContents ++ extraTypes).to[Seq]}
@@ -100,7 +102,8 @@ object Common {
                   package ${buildPkgTerm(pkgName ++ pkg                             )}
                   import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._
                   import ${buildPkgTerm(Seq("_root_") ++ dtoComponents              )}._
-                  ..$clientSrc
+                  ..${customImports}
+                  ..${clientSrc}
                   """
               )
             }).to[Seq]
@@ -110,16 +113,17 @@ object Common {
                 WriteTree(resolveFile(pkgPath)(pkg.toList :+ "Routes.scala")
                   , source"""
                     package ${buildPkgTerm((pkgName ++ pkg.toList)                    )}
-                    ..$extraImports
+                    ..${extraImports}
                     import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._
                     import ${buildPkgTerm(Seq("_root_") ++ dtoComponents              )}._
+                    ..${customImports}
                     ..$src
                     """
                 )
               }).to[Seq]
           )
 
-      implicits <- renderImplicits(pkgName, frameworkImports, protocolImports)
+      implicits <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
     } yield (
       protocolDefinitions ++
       Seq(packageObject) ++
