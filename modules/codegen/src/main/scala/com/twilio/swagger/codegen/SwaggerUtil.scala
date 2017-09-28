@@ -3,7 +3,6 @@ package com.twilio.swagger.codegen
 import _root_.io.swagger.models._
 import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
-import cats.syntax.either._
 import com.twilio.swagger.codegen.extract.{Default, ScalaType}
 import java.util.{Map => JMap}
 import scala.collection.immutable.Seq
@@ -215,25 +214,6 @@ object SwaggerUtil {
       }.getOrElse(ignoredType)
     } else {
       ignoredType
-    }
-  }
-
-  object paths {
-    def generateUrlPathParams(path: String)(termMunger: Term.Name => Term.Name): Term = {
-      import atto._, Atto._
-
-      val term: Parser[Term.Apply] = many(letter).map(_.mkString("")).map(term => q"Formatter.addPath(${termMunger(Term.Name(term))})")
-      val variable: Parser[Term.Apply] = char('{') ~> term <~ char('}')
-      val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(variable, other).map(_.swap: Either[String, Term.Apply]))
-
-      (for {
-        parts <- pattern.parseOnly(path).either
-        result = parts.map({
-          case Left(part) => Lit.String(part)
-          case Right(term) => term
-        }).foldLeft[Term](q"host + basePath")({ case (a, b) => q"${a} + ${b}" })
-      } yield result).right.get
     }
   }
 }
