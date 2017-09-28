@@ -58,7 +58,7 @@ val codegenSettings = Seq(
       "-language:higherKinds",
       "-Xexperimental",
       "-Ydelambdafy:method",
-      "-Xlint:_",
+      "-Xlint:-unused",
       "-feature",
       "-unchecked",
       "-deprecation",
