@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -70,14 +70,14 @@ class BasicTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Generate JSON alias definitions") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val RandomType(_, List(tpe, cmp)) :: _ = definitions
     tpe.structure should equal(q"type Baz = Json".structure)
     cmp.structure should equal(q"object Baz".structure)
   }
 
   test("Handle json subvalues") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val _ :: ClassDefinition(_, cls, cmp) :: _ = definitions
 
     val definition = q"""
@@ -99,7 +99,7 @@ class BasicTest extends FunSuite with Matchers {
   }
 
   test("Properly handle all methods") {
-    val Right(Clients(Client(tags, className, statements) :: _, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp)
+    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
 
     val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

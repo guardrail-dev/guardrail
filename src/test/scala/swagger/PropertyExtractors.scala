@@ -2,7 +2,7 @@ package swagger
 
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
 import io.swagger.parser.SwaggerParser
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
@@ -64,7 +64,7 @@ class PropertyExtractors extends FunSuite with Matchers {
 */
 
   test("Render all primitive types correctly") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val ClassDefinition(_, cls, cmp) :: _ = definitions
 
     val definition = q"""

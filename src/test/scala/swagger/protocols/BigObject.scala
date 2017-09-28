@@ -4,7 +4,7 @@ package protocols
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, EnumDefinition, ProtocolGenerator, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, EnumDefinition, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -116,7 +116,7 @@ class BigObjectSpec extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Big objects can be generated") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val ClassDefinition(_, cls, cmp) :: _ = definitions
 
     val definition = q"""
