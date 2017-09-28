@@ -219,7 +219,7 @@ object SwaggerUtil {
   }
 
   object paths {
-    def generateUrlPathParams(path: String)(termMunger: Term.Name => Term.Name): Term = {
+    def generateUrlPathParams(path: String)(termMunger: Term.Name => Term.Name): Target[Term] = {
       import atto._, Atto._
 
       val term: Parser[Term.Apply] = many(letter).map(_.mkString("")).map(term => q"Formatter.addPath(${termMunger(Term.Name(term))})")
@@ -227,13 +227,13 @@ object SwaggerUtil {
       val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
       val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(variable, other).map(_.swap: Either[String, Term.Apply]))
 
-      (for {
-        parts <- pattern.parseOnly(path).either
+      for {
+        parts <- pattern.parseOnly(path).either.fold(Target.log(_), Target.pure(_))
         result = parts.map({
           case Left(part) => Lit.String(part)
           case Right(term) => term
         }).foldLeft[Term](q"host + basePath")({ case (a, b) => q"${a} + ${b}" })
-      } yield result).right.get
+      } yield result
     }
   }
 }
