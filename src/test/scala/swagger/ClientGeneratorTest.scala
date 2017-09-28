@@ -66,7 +66,7 @@ class ClientGeneratorTest extends FunSuite with Matchers {
     |      - application/xml
     |      - application/json
     |      parameters:
-    |      - name: orderId
+    |      - name: order_id
     |        in: path
     |        description: ID of the order that needs to be deleted
     |        required: true
