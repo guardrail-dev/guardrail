@@ -68,7 +68,7 @@ class MultipartTest extends FunSuite with Matchers {
       }
       def createFoo(bar: String, quux: BodyPartEntity, baz: Option[String] = None, oortCloud: Option[BodyPartEntity] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], String] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[String](httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/" + "foo" + "?", entity = Multipart.FormData(Source.fromIterator {
+        wrap[String](httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo" + "?", entity = Multipart.FormData(Source.fromIterator {
           () => Seq(Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("Quux", quux)), baz.map(v => Multipart.FormData.BodyPart("Baz", Formatter.show(v))), oortCloud.map(v => Multipart.FormData.BodyPart("oort_cloud", v))).flatten.iterator
         }).toEntity, headers = allHeaders)))
       }

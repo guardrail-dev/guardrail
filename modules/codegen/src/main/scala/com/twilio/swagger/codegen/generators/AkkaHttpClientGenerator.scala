@@ -3,6 +3,7 @@ package generators
 
 import _root_.io.swagger.models._
 import cats.arrow.FunctionK
+import cats.data.NonEmptyList
 import cats.instances.all._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -59,31 +60,21 @@ object AkkaHttpClientGenerator {
           "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
         }
 
-        def generateUrlPathParams(path: String): Term = {
-          val tpl = "\\{([^}]+)\\}".r
-          val tplWithQuery = "\\{([^}]+)\\}\\?(.*)".r
-          val base: Term = path.split('/').drop(1).foldLeft[Term](q"host + basePath") {
-            case (url, tpl(term)) => q""" $url + "/" + Formatter.addPath(${Term.Name(toCamelCase(term))}) """
-            case (url, tplWithQuery(term, query)) =>  q""" $url + "/" + Formatter.addPath(${Term.Name(toCamelCase(term))}) + "?" + $query """
-            case (url,   segment) => q""" $url + "/" + ${segment} """
-          }
+        def generateUrlWithParams(path: String, pathArgs: Seq[ScalaParameter], qsArgs: Seq[ScalaParameter]): Target[Term] = {
+          for {
+            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)({ case Term.Name(term) => Term.Name(toCamelCase(term)) })
+            suffix = if (path.contains("?")) {
+              Lit.String("&")
+            } else {
+              Lit.String("?")
+            }
 
-          if (path.endsWith("/")) {
-            q""" $base + "/" """
-          } else {
-            base
-          }
-        }
+            baseTerm = q"${base} + ${suffix}"
 
-        def generateUrlWithParams(path: String, parameters: Seq[ScalaParameter]): Term = {
-          val baseTerm = if (path.contains("?")) {
-            q"""${generateUrlPathParams(path)} + "&" """
-          } else {
-            q"""${generateUrlPathParams(path)} + "?" """
-          }
-          parameters.foldLeft[Term](baseTerm) { case (a, ScalaParameter(_, paramName, argName, _)) =>
-            q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
-          }
+            result = qsArgs.foldLeft[Term](baseTerm) { case (a, ScalaParameter(_, paramName, argName, _)) =>
+              q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
+            }
+          } yield result
         }
 
         def generateFormDataParams(parameters: Seq[ScalaParameter], needsMultipart: Boolean): Term = {
@@ -182,35 +173,40 @@ object AkkaHttpClientGenerator {
           """
         }
 
-        val formDataNeedsMultipart = Option(operation.getConsumes).exists(_.contains("multipart/form-data"))
+        for {
+          // Placeholder for when more functions get logging
+          _ <- Target.pure(())
+
+          formDataNeedsMultipart = Option(operation.getConsumes).exists(_.contains("multipart/form-data"))
 
         // Get the response type
-        val responseTypeRef: Type = SwaggerUtil.getResponseType(httpMethod, operation)
+          responseTypeRef: Type = SwaggerUtil.getResponseType(httpMethod, operation)
 
         // Insert the method parameters
-        val httpMethodStr: String = httpMethod.toString.toLowerCase
-        val methodName = Option(operation.getOperationId).getOrElse(s"$httpMethodStr $pathStr")
+          httpMethodStr: String = httpMethod.toString.toLowerCase
+          methodName = Option(operation.getOperationId).getOrElse(s"$httpMethodStr $pathStr")
 
-        val filterParamBy = ScalaParameter.filterParams(Option(operation.getParameters).map(_.asScala).toIndexedSeq.flatten, protocolElems)
-        val headerArgs = filterParamBy("header")
-        val pathArgs = filterParamBy("path")
-        val qsArgs = filterParamBy("query")
-        val bodyArgs = filterParamBy("body").headOption
-        val formArgs = filterParamBy("formData")
 
-        // Generate the url with path, query parameters
-        val urlWithParams = generateUrlWithParams(pathStr, qsArgs)
-        // Generate FormData arguments
-        val formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
-        // Generate header arguments
-        val headerParams = generateHeaderParams(headerArgs)
+          filterParamBy = ScalaParameter.filterParams(Option(operation.getParameters).map(_.asScala).toIndexedSeq.flatten, protocolElems)
+          headerArgs = filterParamBy("header")
+          pathArgs = filterParamBy("path")
+          qsArgs = filterParamBy("query")
+          bodyArgs = filterParamBy("body").headOption
+          formArgs = filterParamBy("formData")
 
-        val tracingArgsPre = if (tracing) Seq(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], ${responseTypeRef}]")) else Seq.empty
-        val tracingArgsPost = if (tracing) Seq(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}")) else Seq.empty
-        val extraImplicits = Seq.empty
-        val defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
+          // Generate the url with path, query parameters
+          urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
-        Target.pure(defn)
+          // Generate FormData arguments
+          formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
+          // Generate header arguments
+          headerParams = generateHeaderParams(headerArgs)
+
+          tracingArgsPre = if (tracing) Seq(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], ${responseTypeRef}]")) else Seq.empty
+          tracingArgsPost = if (tracing) Seq(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}")) else Seq.empty
+          extraImplicits = Seq.empty
+          defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
+        } yield defn
       }
 
       case GetFrameworkImports(tracing) => Target.pure(Seq(
