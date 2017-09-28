@@ -48,7 +48,7 @@ val codegenSettings = Seq(
     Resolver.url("scalameta", url("http://dl.bintray.com/scalameta/maven"))(Resolver.ivyStylePatterns)
   ),
   libraryDependencies ++= testDependencies ++ Seq(
-    "org.scalameta" %% "scalameta" % "1.8.0"
+    "org.scalameta" %% "scalameta" % "2.0.1"
     , "io.swagger" % "swagger-parser" % "1.0.32"
     , "org.tpolecat" %% "atto-core"  % "0.6.0"
     , "org.typelevel" %% "cats" % catsVersion
