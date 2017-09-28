@@ -3,6 +3,7 @@ package generators
 
 import _root_.io.swagger.models._
 import cats.arrow.FunctionK
+import cats.data.NonEmptyList
 import cats.instances.all._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -59,28 +60,15 @@ object AkkaHttpClientGenerator {
           "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
         }
 
-        def generateUrlPathParams(path: String): Term = {
-          val tpl = "\\{([^}]+)\\}".r
-          val tplWithQuery = "\\{([^}]+)\\}\\?(.*)".r
-          val base: Term = path.split('/').drop(1).foldLeft[Term](q"host + basePath") {
-            case (url, tpl(term)) => q""" $url + "/" + Formatter.addPath(${Term.Name(toCamelCase(term))}) """
-            case (url, tplWithQuery(term, query)) =>  q""" $url + "/" + Formatter.addPath(${Term.Name(toCamelCase(term))}) + "?" + $query """
-            case (url,   segment) => q""" $url + "/" + ${segment} """
-          }
-
-          if (path.endsWith("/")) {
-            q""" $base + "/" """
-          } else {
-            base
-          }
-        }
-
         def generateUrlWithParams(path: String, parameters: Seq[ScalaParameter]): Term = {
-          val baseTerm = if (path.contains("?")) {
-            q"""${generateUrlPathParams(path)} + "&" """
+          val base = SwaggerUtil.paths.generateUrlPathParams(path)({ case Term.Name(term) => Term.Name(toCamelCase(term)) })
+          val suffix = if (path.contains("?")) {
+            Lit.String("&")
           } else {
-            q"""${generateUrlPathParams(path)} + "?" """
+            Lit.String("?")
           }
+
+          val baseTerm = q"${base} + ${suffix}"
           parameters.foldLeft[Term](baseTerm) { case (a, ScalaParameter(_, paramName, argName, _)) =>
             q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
           }
