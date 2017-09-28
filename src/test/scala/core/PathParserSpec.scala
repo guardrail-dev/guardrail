@@ -2,6 +2,7 @@ package swagger
 
 import com.twilio.swagger.codegen.SwaggerUtil
 import org.scalatest.{FunSuite, Matchers}
+import scala.collection.immutable.Seq
 import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers {
@@ -16,7 +17,7 @@ class PathParserSpec extends FunSuite with Matchers {
   , ("/{foo}/{bar}.json", q""" host + basePath + "/" + Formatter.addPath(foo) + "/" + Formatter.addPath(bar) + ".json" """)
   ).foreach { case (str, expected) =>
     test(str) {
-      val gen = SwaggerUtil.paths.generateUrlPathParams(str)(identity).right.get
+      val gen = SwaggerUtil.paths.generateUrlPathParams(str, Seq.empty)(identity).right.get
       gen.structure shouldBe(expected.structure)
     }
   }

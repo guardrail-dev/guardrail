@@ -5,6 +5,7 @@ import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
 import cats.syntax.either._
 import com.twilio.swagger.codegen.extract.{Default, ScalaType}
+import com.twilio.swagger.codegen.generators.ScalaParameter
 import java.util.{Map => JMap}
 import scala.collection.immutable.Seq
 import scala.language.reflectiveCalls
@@ -219,10 +220,18 @@ object SwaggerUtil {
   }
 
   object paths {
-    def generateUrlPathParams(path: String)(termMunger: Term.Name => Term.Name): Target[Term] = {
+    def generateUrlPathParams(path: String, pathArgs: Seq[ScalaParameter])(termMunger: Term.Name => Term.Name): Target[Term] = {
       import atto._, Atto._
 
-      val term: Parser[Term.Apply] = many(letter).map(_.mkString("")).map(term => q"Formatter.addPath(${termMunger(Term.Name(term))})")
+      val term: Parser[Term.Apply] = many(notChar('}')).map(_.mkString("")).flatMap({ term =>
+        pathArgs
+          .find(_.argName.value == term)
+          .fold[Parser[Term.Apply]](
+            err(s"Unable to find argument ${term}")
+          )({ case ScalaParameter(_, paramName, _, _) =>
+            ok(q"Formatter.addPath(${termMunger(paramName)})")
+          })
+      })
       val variable: Parser[Term.Apply] = char('{') ~> term <~ char('}')
       val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
       val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(variable, other).map(_.swap: Either[String, Term.Apply]))
