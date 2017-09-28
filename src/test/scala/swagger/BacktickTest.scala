@@ -6,7 +6,6 @@ import collection.JavaConverters._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Context, ClassDefinition, EnumDefinition, Client, Clients, ClientGenerator, ProtocolGenerator, CodegenApplication}
 import org.scalatest.{FunSuite, Matchers}
-import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class BacktickTest extends FunSuite with Matchers {
@@ -71,7 +70,7 @@ class BacktickTest extends FunSuite with Matchers {
 
     tags should equal (Seq("dashy-package"))
 
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
     class ${Type.Name("`Dashy-packageClient`")}(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -124,11 +123,11 @@ class BacktickTest extends FunSuite with Matchers {
     """
     val companion = q"""
     object ${Term.Name("`dashy-class`")} {
-      implicit val ${Pat.Var.Term(Term.Name("`encodedashy-class`"))} = {
+      implicit val ${Pat.Var(Term.Name("`encodedashy-class`"))} = {
         val readOnlyKeys = Set[String]()
         Encoder.forProduct1("dashy-param")((o: ${Type.Name("`dashy-class`")}) => o.${Term.Name("`dashy-param`")}).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
       }
-      implicit val ${Pat.Var.Term(Term.Name("`decodedashy-class`"))} = Decoder.forProduct1("dashy-param")(${Term.Name("`dashy-class`")}.apply _)
+      implicit val ${Pat.Var(Term.Name("`decodedashy-class`"))} = Decoder.forProduct1("dashy-param")(${Term.Name("`dashy-class`")}.apply _)
     }
     """
 
@@ -157,19 +156,19 @@ class BacktickTest extends FunSuite with Matchers {
     val companion = q"""
     object ${Term.Name("`dashy-enum`")} {
       object members {
-        case object DashyValueA extends ${Ctor.Ref.Name("`dashy-enum`")}("dashy-value-a")
-        case object DashyValueB extends ${Ctor.Ref.Name("`dashy-enum`")}("dashy-value-b")
-        case object DashyValueC extends ${Ctor.Ref.Name("`dashy-enum`")}("dashy-value.c")
+        case object DashyValueA extends ${Type.Name("`dashy-enum`")}("dashy-value-a")
+        case object DashyValueB extends ${Type.Name("`dashy-enum`")}("dashy-value-b")
+        case object DashyValueC extends ${Type.Name("`dashy-enum`")}("dashy-value.c")
       }
       val DashyValueA: ${Type.Name("`dashy-enum`")} = members.DashyValueA
       val DashyValueB: ${Type.Name("`dashy-enum`")} = members.DashyValueB
       val DashyValueC: ${Type.Name("`dashy-enum`")} = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
       def parse(value: String): Option[${Type.Name("`dashy-enum`")}] = values.find(_.value == value)
-      implicit val ${Pat.Var.Term(Term.Name("`encodedashy-enum`"))}: Encoder[${Type.Name("`dashy-enum`")}] = Encoder[String].contramap(_.value)
-      implicit val ${Pat.Var.Term(Term.Name("`decodedashy-enum`"))}: Decoder[${Type.Name("`dashy-enum`")}] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
-      implicit val ${Pat.Var.Term(Term.Name("`addPathdashy-enum`"))}: AddPath[${Type.Name("`dashy-enum`")}] = AddPath.build(_.value)
-      implicit val ${Pat.Var.Term(Term.Name("`showdashy-enum`"))}: Show[${Type.Name("`dashy-enum`")}] = Show.build(_.value)
+      implicit val ${Pat.Var(Term.Name("`encodedashy-enum`"))}: Encoder[${Type.Name("`dashy-enum`")}] = Encoder[String].contramap(_.value)
+      implicit val ${Pat.Var(Term.Name("`decodedashy-enum`"))}: Decoder[${Type.Name("`dashy-enum`")}] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
+      implicit val ${Pat.Var(Term.Name("`addPathdashy-enum`"))}: AddPath[${Type.Name("`dashy-enum`")}] = AddPath.build(_.value)
+      implicit val ${Pat.Var(Term.Name("`showdashy-enum`"))}: Show[${Type.Name("`dashy-enum`")}] = Show.build(_.value)
     }
     """
     val _ :: EnumDefinition(_, _, cls,cmp) :: _ = definitions.toList

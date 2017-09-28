@@ -5,7 +5,6 @@ import _root_.io.swagger.models.{ModelImpl, Operation, Path}
 import cats.data.NonEmptyList
 import cats.free.{Free, Inject}
 import com.twilio.swagger.codegen.generators.ScalaParameter
-import scala.collection.immutable.Seq
 import scala.meta._
 
 class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
@@ -17,17 +16,17 @@ class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
     Free.inject(BuildTracingFields(operation, className, tracing))
   def generateRoute(className: NonEmptyList[String], basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)])(route: ServerRoute): Free[F, RenderedRoute] =
     Free.inject(GenerateRoute(className, basePath, route, tracingFields))
-  def getExtraRouteParams(tracing: Boolean): Free[F, Seq[Term.Param]] =
+  def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
-  def renderClass(className: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: Seq[Term.Param]): Free[F, Stat] =
+  def renderClass(className: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param]): Free[F, Stat] =
     Free.inject(RenderClass(className, handlerName, combinedRouteTerms, extraRouteParams))
-  def renderHandler(handlerName: String, methodSigs: Seq[Decl.Def]) =
+  def renderHandler(handlerName: String, methodSigs: List[Decl.Def]) =
     Free.inject(RenderHandler(handlerName, methodSigs))
   def combineRouteTerms(terms: List[Term]): Free[F, Term] =
     Free.inject(CombineRouteTerms(terms))
-  def getFrameworkImports(tracing: Boolean): Free[F, Seq[Import]] =
+  def getFrameworkImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject(GetFrameworkImports(tracing))
-  def getExtraImports(tracing: Boolean): Free[F, Seq[Import]] =
+  def getExtraImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject(GetExtraImports(tracing))
 }
 

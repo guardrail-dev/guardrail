@@ -9,7 +9,6 @@ import cats.~>
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.terms._
 import java.nio.file.Paths
-import scala.collection.immutable.Seq
 import scala.io.AnsiColor
 import scala.meta._
 
@@ -52,8 +51,8 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             case (sofar :: already, "--specPath"    :: value :: xs) => CoreTarget.pure((sofar.copy(specPath    = Option(expandTilde(value)))               :: already , xs))
             case (sofar :: already, "--tracing"              :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(tracing=true))         :: already , xs))
             case (sofar :: already, "--outputPath"  :: value :: xs) => CoreTarget.pure((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
-            case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[Seq]))    :: already , xs))
-            case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[Seq])            :: already , xs))
+            case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[List]))   :: already , xs))
+            case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[List])           :: already , xs))
             case (sofar :: already, "--import"      :: value :: xs) => CoreTarget.pure((sofar.copy(imports = sofar.imports :+ value)                       :: already , xs))
             case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
           }
@@ -85,7 +84,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         customImports <- args.imports.map(x =>
           for {
             importer <- x.parse[Importer].fold(err => CoreTarget.log(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
-          } yield Import(Seq(importer))
+          } yield Import(List(importer))
         ).toList.sequenceU
       } yield {
         ReadSwagger(Paths.get(specPath), { swagger =>

@@ -6,7 +6,6 @@ import cats.syntax.traverse._
 import cats.~>
 import com.twilio.swagger.codegen.core.CoreTermInterp
 import com.twilio.swagger.codegen.terms.CoreTerm
-import scala.collection.immutable.Seq
 import scala.io.AnsiColor
 
 object CLICommon {

@@ -5,7 +5,6 @@ import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication}
 import org.scalatest.{FunSuite, Matchers}
-import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class AkkaHttpClientTracingTest extends FunSuite with Matchers {
@@ -36,7 +35,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
     val Right(Clients(clients, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger)(List.empty).foldMap(AkkaHttp)
     val Client(tags, className, statements) :: _ = clients
 
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
     class Client(host: String = "http://localhost:1234", clientName: String)(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -86,7 +85,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
     val Right(Clients(clients, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger)(List.empty).foldMap(AkkaHttp)
     val Client(tags, className, statements) :: _ = clients
 
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
     class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

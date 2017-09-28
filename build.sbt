@@ -89,7 +89,6 @@ lazy val sample = (project in file("modules/sample"))
     , initialCommands in console := """
       |import scala.concurrent.ExecutionContext.Implicits.global
       |import scala.meta._
-      |import scala.collection.immutable.Seq
       |import java.time._
       |import Common._
       |import scala.concurrent.Await

@@ -5,13 +5,12 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.meta.{Lit, Term, Type, _}
 
 import com.twilio.swagger.codegen.terms.client._
 
-case class Clients(clients: Seq[Client], frameworkImports: Seq[Import])
-case class Client(pkg: Seq[String], clientName: String, lines: Seq[Stat])
+case class Clients(clients: List[Client], frameworkImports: List[Import])
+case class Client(pkg: List[String], clientName: String, lines: List[Stat])
 case class ClientRoute(path: String, method: HttpMethod, operation: Operation)
 
 object ClientGenerator {
@@ -21,7 +20,7 @@ object ClientGenerator {
     import C._
     val paths: List[(String, Path)] = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
     val basePath: Option[String] = Option(swagger.getBasePath)
-    val schemes: Seq[String] = Option(swagger.getSchemes).fold(Seq.empty[String])(_.asScala.to[Seq].map(_.toValue))
+    val schemes: List[String] = Option(swagger.getSchemes).fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
 
     for {
       routes <- extractOperations(paths)
@@ -40,7 +39,7 @@ object ClientGenerator {
           companion <- buildCompanion(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
           client <- buildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, context.tracing)
         } yield {
-          val stats: Seq[Stat] = (
+          val stats: List[Stat] = (
             (clientImports ++ frameworkImports ++ clientExtraImports) :+
             companion :+
             client

@@ -6,11 +6,10 @@ import com.twilio.swagger.codegen.terms.ScalaTerm
 import com.twilio.swagger.codegen.terms.client.ClientTerm
 import com.twilio.swagger.codegen.terms.protocol.{AliasProtocolTerm, EnumProtocolTerm, ModelProtocolTerm, ProtocolSupportTerm}
 import com.twilio.swagger.codegen.terms.server.ServerTerm
-import scala.collection.immutable.Seq
 import scala.meta._
 
 package codegen {
-  case class CodegenDefinitions(clients: Seq[Client], servers: Seq[Server], frameworkImports: Seq[Import])
+  case class CodegenDefinitions(clients: List[Client], servers: List[Server], frameworkImports: List[Import])
 
   object Target {
     def pure[T](x: T): Target[T] = Either.right(x)

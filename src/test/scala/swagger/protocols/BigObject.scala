@@ -6,7 +6,6 @@ import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{ClassDefinition, EnumDefinition, ProtocolGenerator, CodegenApplication}
 import org.scalatest.{FunSuite, Matchers}
-import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class BigObjectSpec extends FunSuite with Matchers {
