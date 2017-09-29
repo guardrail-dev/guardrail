@@ -106,7 +106,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
         traceBuilder(s"$${clientName}:$${methodName}") { propagate =>
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders)))
+            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders)))
           })
         }
       }

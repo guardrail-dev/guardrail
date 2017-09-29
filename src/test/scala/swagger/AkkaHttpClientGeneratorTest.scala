@@ -142,13 +142,13 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
       def getOrderById(orderId: Long, headerMeThis: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?", entity = entity, headers = allHeaders))
+          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
         })
       }
       def deleteOrder(orderId: Long, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?", entity = entity, headers = allHeaders))
+          httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
         })
       }
     }
@@ -192,7 +192,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
         traceBuilder(s"$$clientName:$$methodName") { propagate =>
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
           wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?", entity = entity, headers = allHeaders)))
+            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders)))
           })
         }
       }
@@ -200,7 +200,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
         traceBuilder(s"$$clientName:$$methodName") { propagate =>
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?", entity = entity, headers = allHeaders)))
+            httpClient(propagate(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders)))
           })
         }
       }

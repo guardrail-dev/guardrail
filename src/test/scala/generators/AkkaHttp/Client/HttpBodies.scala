@@ -105,31 +105,31 @@ class HttpBodiesTest extends FunSuite with Matchers {
         def getFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def putFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.PUT, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.PUT, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def postFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def deleteFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def patchFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.PATCH, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.PATCH, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
       }

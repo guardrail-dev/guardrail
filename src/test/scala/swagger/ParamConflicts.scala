@@ -65,7 +65,7 @@ class ParamConflictsTest extends FunSuite with Matchers {
           case (n, Some(v)) =>
             (n, v)
         }): _*)).to[RequestEntity].flatMap {
-          entity => httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+          entity => httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
         })
       }
     }
