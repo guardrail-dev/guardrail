@@ -63,18 +63,22 @@ object AkkaHttpClientGenerator {
           for {
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
             base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
+
+            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
+
             suffix = if (path.contains("?")) {
               Lit.String("&")
             } else {
               Lit.String("?")
             }
 
-            baseTerm = q"${base} + ${suffix}"
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
 
-            result = qsArgs.foldLeft[Term](baseTerm) { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
-              q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
-            }
+            result = NonEmptyList.fromList(qsArgs.toList)
+              .fold(base)({ _.foldLeft[Term](q"${base} + ${suffix}") { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                  q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
+                }
+              })
           } yield result
         }
 
