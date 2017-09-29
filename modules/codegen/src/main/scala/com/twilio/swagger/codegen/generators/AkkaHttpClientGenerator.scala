@@ -62,7 +62,7 @@ object AkkaHttpClientGenerator {
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] = {
           for {
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
-            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)({ case Term.Name(term) => Term.Name(toCamelCase(term)) })
+            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
             suffix = if (path.contains("?")) {
               Lit.String("&")
             } else {

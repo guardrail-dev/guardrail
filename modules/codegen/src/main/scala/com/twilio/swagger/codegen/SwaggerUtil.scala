@@ -219,7 +219,7 @@ object SwaggerUtil {
   }
 
   object paths {
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter])(termMunger: Term.Name => Term.Name): Target[Term] = {
+    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
       import atto._, Atto._
 
       val term: Parser[Term.Apply] = many(notChar('}')).map(_.mkString("")).flatMap({ term =>
@@ -228,7 +228,7 @@ object SwaggerUtil {
           .fold[Parser[Term.Apply]](
             err(s"Unable to find argument ${term}")
           )({ case ScalaParameter(_, _, paramName, _, _) =>
-            ok(q"Formatter.addPath(${termMunger(paramName)})")
+            ok(q"Formatter.addPath(${paramName})")
           })
       })
       val variable: Parser[Term.Apply] = char('{') ~> term <~ char('}')
