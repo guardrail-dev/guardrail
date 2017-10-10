@@ -77,9 +77,9 @@ object AkkaHttpClientGenerator {
           } yield result
         }
 
-        def generateFormDataParams(parameters: Seq[ScalaParameter], needsMultipart: Boolean): Term = {
+        def generateFormDataParams(parameters: Seq[ScalaParameter], needsMultipart: Boolean): Option[Term] = {
           if (parameters.isEmpty) {
-            Term.Placeholder()
+            None
           } else if (needsMultipart) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: Term.Name) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${Lit.String(tName.value)}, v))"
             def liftFileTerm(tParamName: Term.Name, tName: Term.Name) = q"Some(Multipart.FormData.BodyPart(${Lit.String(tName.value)}, $tParamName))"
@@ -97,7 +97,7 @@ object AkkaHttpClientGenerator {
               }
                 a :+ lifter(paramName, argName)
             }
-            q"Seq(..$args)"
+            Some(q"Seq(..$args)")
           } else {
             def liftOptionTerm(tParamName: Term.Name, tName: Term.Name) = q"(${Lit.String(tName.value)}, $tParamName.map(Formatter.show(_)))"
             def liftTerm(tParamName: Term.Name, tName: Term.Name) = q"(${Lit.String(tName.value)}, Some(Formatter.show($tParamName)))"
@@ -109,7 +109,7 @@ object AkkaHttpClientGenerator {
               }
               a :+ lifter(paramName, argName)
             }
-            q"Seq(..$args)"
+            Some(q"Seq(..$args)")
           }
         }
 
@@ -127,23 +127,23 @@ object AkkaHttpClientGenerator {
           q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
         }
 
-        def build(methodName: String, httpMethod: HttpMethod, urlWithParams: Term, formDataParams: Term, formDataNeedsMultipart: Boolean, headerParams: Term, responseTypeRef: Type, tracing: Boolean
+        def build(methodName: String, httpMethod: HttpMethod, urlWithParams: Term, formDataParams: Option[Term], formDataNeedsMultipart: Boolean, headerParams: Term, responseTypeRef: Type, tracing: Boolean
             )(tracingArgsPre: Seq[ScalaParameter], tracingArgsPost: Seq[ScalaParameter], pathArgs: Seq[ScalaParameter], qsArgs: Seq[ScalaParameter], formArgs: Seq[ScalaParameter], body: Option[ScalaParameter], headerArgs: Seq[ScalaParameter], extraImplicits: Seq[Term.Param]
             ): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] = if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod) Some((q"HttpEntity.Empty", t"HttpEntity.Strict")) else None
           val safeBody: Option[(Term, Type)] = body.map(sp => (sp.argName, sp.argType)).orElse(fallbackHttpBody)
-          val entity: Term = if (formArgs.nonEmpty) {
+
+          val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {
               q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator }).toEntity"""
             } else {
               q"""FormData($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*).toEntity"""
             }
-          } else {
-            q"HttpEntity.Empty"
           }
 
+          val entity: Term = formEntity.orElse(safeBody.map(_._1)).getOrElse(q"HttpEntity.Empty")
           val methodBody: Term = if (tracing) {
             val tracingLabel = q"""s"$${clientName}:$${methodName}""""
             q"""
