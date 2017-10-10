@@ -143,7 +143,7 @@ object AkkaHttpClientGenerator {
             }
           }
 
-          val entity: Term = formEntity.getOrElse(q"HttpEntity.Empty")
+          val entity: Term = formEntity.orElse(safeBody.map(_._1)).getOrElse(q"HttpEntity.Empty")
           val methodBody: Term = if (tracing) {
             val tracingLabel = q"""s"$${clientName}:$${methodName}""""
             q"""
