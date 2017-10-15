@@ -16,12 +16,18 @@ import java.nio.file.Path
 
 object CLICommon {
   def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
+    // Hacky loglevel parsing, only supports levels that come before absolutely
+    // every other argument due to arguments being a small configuration
+    // language themselves.
+    val (levels, newArgs): (Array[String], Array[String]) = args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
+    val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
+
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val (logLevelString, result) = Common.runM[CoreTerm](args)
+    val (logLevelString, result) = Common.runM[CoreTerm](newArgs)
       .foldMap(interpreter)
       .value
       .run
-      .runF(Some("debug"))
+      .runF(level)
       .sequence
       .map(x => EitherT(WriterT(x)))
       .map(_.fold[List[ReadSwagger[Target[List[WriteTree]]]]]({

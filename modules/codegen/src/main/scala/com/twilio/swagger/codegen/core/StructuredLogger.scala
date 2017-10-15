@@ -29,6 +29,8 @@ object LogLevels {
   case object Silent extends LogLevel("silent")
 
   val members = Vector(Debug, Info, Warning, Error, Silent)
+
+  def apply(value: String): Option[LogLevel] = members.find(_.level == value)
 }
 
 sealed case class StructuredLogLevel(name: NonEmptyList[String], lines: NonEmptyList[(LogLevel, String)])
