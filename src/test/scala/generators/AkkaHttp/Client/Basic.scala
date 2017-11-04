@@ -5,6 +5,7 @@ import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
+import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class BasicTest extends FunSuite with Matchers {
@@ -100,7 +101,7 @@ class BasicTest extends FunSuite with Matchers {
   test("Properly handle all methods") {
     val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
 
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
     class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

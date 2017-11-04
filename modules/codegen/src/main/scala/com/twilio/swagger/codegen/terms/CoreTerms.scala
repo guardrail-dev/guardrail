@@ -5,6 +5,7 @@ import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.{Free, Inject}
 import com.twilio.swagger.codegen.{CodegenApplication, Target}
+import scala.collection.immutable.Seq
 import scala.meta._
 
 class CoreTerms[F[_]](implicit I: Inject[CoreTerm, F]) {

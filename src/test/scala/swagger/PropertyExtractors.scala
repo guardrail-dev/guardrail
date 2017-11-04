@@ -5,6 +5,7 @@ import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
 import io.swagger.parser.SwaggerParser
 import org.scalatest.{FunSuite, Matchers}
+import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class PropertyExtractors extends FunSuite with Matchers {

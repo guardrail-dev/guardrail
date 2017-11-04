@@ -5,6 +5,7 @@ import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
+import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class MultipartTest extends FunSuite with Matchers {
@@ -50,7 +51,7 @@ class MultipartTest extends FunSuite with Matchers {
     val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
     val Client(_, className, statements) :: _ = clients
 
-    val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val Seq(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
     class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -68,7 +69,7 @@ class MultipartTest extends FunSuite with Matchers {
       def createFoo(bar: String, quux: BodyPartEntity, baz: Option[String] = None, oortCloud: Option[BodyPartEntity] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], String] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[String](httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo" + "?", entity = Multipart.FormData(Source.fromIterator {
-          () => List(Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("Quux", quux)), baz.map(v => Multipart.FormData.BodyPart("Baz", Formatter.show(v))), oortCloud.map(v => Multipart.FormData.BodyPart("oort_cloud", v))).flatten.iterator
+          () => Seq(Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("Quux", quux)), baz.map(v => Multipart.FormData.BodyPart("Baz", Formatter.show(v))), oortCloud.map(v => Multipart.FormData.BodyPart("oort_cloud", v))).flatten.iterator
         }).toEntity, headers = allHeaders)))
       }
     }
