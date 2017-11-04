@@ -9,18 +9,17 @@ import com.twilio.swagger.codegen.extract.ScalaType
 import com.twilio.swagger.codegen.terms.protocol._
 import java.util.Locale
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.language.higherKinds
 import scala.language.postfixOps
 import scala.language.reflectiveCalls
 import scala.meta._
 
 sealed trait ProtocolElems
-case class RandomType(tpe: Type, defn: Seq[Defn]) extends ProtocolElems
+case class RandomType(tpe: Type, defn: List[Defn]) extends ProtocolElems
 case class ClassDefinition(tpe: Type.Name, cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
-case class EnumDefinition(tpe: Type.Name, elems: Seq[(String, Term.Name, Term.Select)], cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
+case class EnumDefinition(tpe: Type.Name, elems: List[(String, Term.Name, Term.Select)], cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
 
-case class ProtocolDefinitions(elems: List[ProtocolElems], protocolImports: Seq[Import], packageObjectImports: Seq[Import], packageObjectContents: Seq[Stat])
+case class ProtocolDefinitions(elems: List[ProtocolElems], protocolImports: List[Import], packageObjectImports: List[Import], packageObjectContents: List[Stat])
 
 case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
 
@@ -28,7 +27,7 @@ object ProtocolGenerator {
   private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(implicit E: EnumProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
     import E._
 
-    val toPascalRegexes = Seq(
+    val toPascalRegexes = List(
       "[\\._-]([a-z])".r,  // dotted, snake, or dashed case
       "\\s+([a-zA-Z])".r,  // spaces
       "^([a-z])".r         // initial letter
@@ -40,7 +39,7 @@ object ProtocolGenerator {
       )
     }
 
-    def validProg(enum: Seq[String], tpe: Type): Free[F, EnumDefinition] = {
+    def validProg(enum: List[String], tpe: Type): Free[F, EnumDefinition] = {
       val elems = enum.map { elem =>
         val valueTerm = Term.Name(toPascalCase(elem))
         (elem, valueTerm, q"${Term.Name(clsName)}.${valueTerm}")
@@ -48,7 +47,7 @@ object ProtocolGenerator {
       val pascalValues = elems.map(_._2)
       for {
         members <- renderMembers(clsName, elems)
-        accessors = pascalValues.map({ pascalValue => q"val ${Pat.Var.Term(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}" }).to[Seq]
+        accessors = pascalValues.map({ pascalValue => q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}" }).to[List]
         values = q"val values = Vector(..${pascalValues})"
         encoder <- encodeEnum(clsName)
         decoder <- decodeEnum(clsName)
@@ -93,7 +92,7 @@ object ProtocolGenerator {
       val needCamelSnakeConversion = props.forall({ case (k, v) => couldBeSnakeCase(k) })
       for {
         params <- props.map(transformProperty(clsName, needCamelSnakeConversion) _ tupled).sequenceU
-        terms = params.map(_.term).to[Seq]
+        terms = params.map(_.term).to[List]
         defn <- renderDTOClass(clsName, terms)
         deps = params.flatMap(_.dep)
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
@@ -124,7 +123,7 @@ object ProtocolGenerator {
     for {
       defn <- renderAlias(clsName, tpe)
       cmp <- renderAliasCompanion(clsName)
-    } yield RandomType(tpe, Seq(SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp)))
+    } yield RandomType(tpe, List(SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp)))
   }
 
   def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {

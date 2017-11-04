@@ -4,7 +4,6 @@ package generators
 import cats.syntax.either._
 import cats.~>
 import com.twilio.swagger.codegen.terms._
-import scala.collection.immutable.Seq
 import scala.meta._
 
 object ScalaGenerator {
@@ -44,7 +43,7 @@ object ScalaGenerator {
                 }
 
                 implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = build[T](key => v => argEscape(key, ev.show(v)))
-                implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[Seq[T]] = build[Seq[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
+                implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgIterable[T](implicit ev: AddArg[T]): AddArg[Iterable[T]] = build[Iterable[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgOption[T](implicit ev: AddArg[T]): AddArg[Option[T]] = build[Option[T]](key => v => v.map(ev.addArg(key, _)).getOrElse(""))
               }
