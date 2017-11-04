@@ -4,7 +4,6 @@ package terms.protocol
 import _root_.io.swagger.models.ModelImpl
 import _root_.io.swagger.models.properties.Property
 import cats.free.{Free, Inject}
-import scala.collection.immutable.Seq
 import scala.meta._
 
 class ModelProtocolTerms[F[_]](implicit I: Inject[ModelProtocolTerm, F]) {
@@ -12,7 +11,7 @@ class ModelProtocolTerms[F[_]](implicit I: Inject[ModelProtocolTerm, F]) {
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean)(name: String, prop: Property): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion))
-  def renderDTOClass(clsName: String, terms: Seq[Term.Param]): Free[F, Defn.Class] =
+  def renderDTOClass(clsName: String, terms: List[Term.Param]): Free[F, Defn.Class] =
     Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms))
   def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =
     Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params))

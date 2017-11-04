@@ -115,7 +115,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
 
     tags should equal (Seq("store"))
 
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
     object StoreClient {
@@ -164,7 +164,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
 
     tags should equal (Seq("store"))
 
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
     object StoreClient {

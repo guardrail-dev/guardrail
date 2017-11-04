@@ -3,12 +3,11 @@ package swagger
 import com.twilio.swagger.codegen.{SwaggerUtil, Target}
 import com.twilio.swagger.codegen.generators.ScalaParameter
 import org.scalatest.{FunSuite, Matchers}
-import scala.collection.immutable.Seq
 import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers {
 
-  val args: Seq[ScalaParameter] = Seq(
+  val args: List[ScalaParameter] = List(
     ScalaParameter(param"foo: Int = 1", q"foo", q"foo", t"Int"),
     ScalaParameter(param"bar: Int = 1", q"bar", q"bar", t"Int"),
     ScalaParameter(param"fooBar: Int = 1", q"fooBar", q"foo_bar", t"Int"),

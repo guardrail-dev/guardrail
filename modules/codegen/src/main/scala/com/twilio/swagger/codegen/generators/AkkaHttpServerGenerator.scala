@@ -12,14 +12,13 @@ import com.twilio.swagger.codegen.SwaggerUtil
 import com.twilio.swagger.codegen.extract.{ScalaPackage, ServerRawResponse, ScalaTracingLabel}
 import com.twilio.swagger.codegen.terms.server._
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.meta._
 
 object AkkaHttpServerGenerator {
   object ServerTermInterp extends FunctionK[ServerTerm, Target] {
     def apply[T](term: ServerTerm[T]): Target[T] = term match {
       case GetFrameworkImports(tracing) =>
-        Target.pure(Seq(
+        Target.pure(List(
           q"import akka.http.scaladsl.model._"
         , q"import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}"
         , q"import akka.http.scaladsl.server.Directives._"
@@ -52,7 +51,7 @@ object AkkaHttpServerGenerator {
         Target.pure(None)
 
       case GenerateRoute(className, basePath, ServerRoute(path, method, operation), tracingFields) =>
-        val filterParamBy = ScalaParameter.filterParams(Option(operation.getParameters).map(_.asScala).getOrElse(List.empty).toIndexedSeq, List.empty)
+        val filterParamBy = ScalaParameter.filterParams(Option(operation.getParameters).map(_.asScala.toList).getOrElse(List.empty), List.empty)
         val bodyArgs = filterParamBy("body").headOption
         val formArgs = filterParamBy("formData").toList
         val headerArgs = filterParamBy("header").toList
@@ -104,7 +103,7 @@ object AkkaHttpServerGenerator {
         """)
 
       case GetExtraRouteParams(tracing) =>
-        Target.pure(Seq.empty)
+        Target.pure(List.empty)
 
       case RenderClass(className, handlerName, combinedRouteTerms, extraRouteParams) =>
         val routesParams: List[Term.Param] = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
@@ -120,7 +119,7 @@ object AkkaHttpServerGenerator {
 
       case GetExtraImports(tracing) =>
         Target.pure(
-          if (tracing) Seq(q"import akka.http.scaladsl.server.Directive1") else Seq.empty
+          if (tracing) List(q"import akka.http.scaladsl.server.Directive1") else List.empty
         )
     }
 
@@ -145,7 +144,7 @@ object AkkaHttpServerGenerator {
       }
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathVars: Seq[ScalaParameter]): Target[Term] = {
+    def pathStrToAkka(basePath: Option[String], path: String, pathVars: List[ScalaParameter]): Target[Term] = {
       val varRegex = "^\\{([^}]+)\\}$".r
       def getKnownVar(segment: String): Option[Target[Term]] = {
         varRegex.findFirstMatchIn(segment).map { m =>

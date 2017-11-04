@@ -5,7 +5,6 @@ import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, EnumDefinition, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
-import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class EnumTest extends FunSuite with Matchers {
@@ -93,7 +92,7 @@ class EnumTest extends FunSuite with Matchers {
     val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
 
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

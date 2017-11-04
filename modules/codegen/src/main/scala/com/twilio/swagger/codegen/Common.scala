@@ -10,33 +10,32 @@ import cats.syntax.traverse._
 import cats.~>
 import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms, ScalaTerms}
 import java.nio.file.{Path, Paths}
-import scala.collection.immutable.Seq
 import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
-  def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: Seq[String], dtoPackage: Seq[String], customImports: Seq[Import]
+  def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: List[String], dtoPackage: List[String], customImports: List[Import]
       )(implicit S: ScalaTerms[CodegenApplication]
       ): Free[CodegenApplication, List[WriteTree]] = {
     import S._
 
-    val resolveFile: Path => Seq[String] => Path = root => _.foldLeft(root)(_.resolve(_))
-    val splitComponents: String => Option[Seq[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
+    val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+    val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
 
     val buildPackage: String => Option[Term.Ref] = pkg => splitComponents(pkg).map(dtoPackage ++ _).map(_.map(Term.Name.apply _).reduceLeft(Term.Select.apply _))
 
     val pkgPath = resolveFile(outputPath)(pkgName)
     val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
 
-    val definitions: Seq[String] = pkgName :+ "definitions"
-    val dtoComponents: Seq[String] = definitions ++ dtoPackage
-    val buildPkgTerm: Seq[String] => Term.Ref = _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+    val definitions: List[String] = pkgName :+ "definitions"
+    val dtoComponents: List[String] = definitions ++ dtoPackage
+    val buildPkgTerm: List[String] => Term.Ref = _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
     for {
       proto <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-      implicitsImport = q"import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._"
-      imports = customImports ++ protocolImports ++ Seq(implicitsImport)
+      implicitsImport = q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._"
+      imports = customImports ++ protocolImports ++ List(implicitsImport)
 
       protoOut = protocolElems.map({
         case EnumDefinition(_, _, cls, obj) =>
@@ -72,7 +71,7 @@ object Common {
             ..${customImports ++ packageObjectImports ++ protocolImports}
 
             package object ${Term.Name(dtoComponents.last)} {
-               ..${(packageObjectContents ++ extraTypes).to[Seq]}
+               ..${(packageObjectContents ++ extraTypes).to[List]}
              }
           """
         )
@@ -82,13 +81,13 @@ object Common {
           for {
             clientMeta <- ClientGenerator.fromSwagger[CodegenApplication](context, swagger)(protocolElems)
             Clients(clients, frameworkImports) = clientMeta
-          } yield CodegenDefinitions(clients, Seq.empty, frameworkImports)
+          } yield CodegenDefinitions(clients, List.empty, frameworkImports)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator.fromSwagger[CodegenApplication](context, swagger)
             Servers(servers, frameworkImports) = serverMeta
-          } yield CodegenDefinitions(Seq.empty, servers, frameworkImports)
+          } yield CodegenDefinitions(List.empty, servers, frameworkImports)
       }
 
       CodegenDefinitions(clients, servers, frameworkImports) = codegen
@@ -100,13 +99,13 @@ object Common {
                 resolveFile(pkgPath)(pkg :+ s"${clientName}.scala")
                 , source"""
                   package ${buildPkgTerm(pkgName ++ pkg                             )}
-                  import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._
-                  import ${buildPkgTerm(Seq("_root_") ++ dtoComponents              )}._
+                  import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+                  import ${buildPkgTerm(List("_root_") ++ dtoComponents              )}._
                   ..${customImports}
                   ..${clientSrc}
                   """
               )
-            }).to[Seq]
+            }).to[List]
           ) ++ (
             servers
               .map({ case Server(pkg, extraImports, src) =>
@@ -114,21 +113,21 @@ object Common {
                   , source"""
                     package ${buildPkgTerm((pkgName ++ pkg.toList)                    )}
                     ..${extraImports}
-                    import ${buildPkgTerm(Seq("_root_") ++ pkgName ++ Seq("Implicits"))}._
-                    import ${buildPkgTerm(Seq("_root_") ++ dtoComponents              )}._
+                    import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+                    import ${buildPkgTerm(List("_root_") ++ dtoComponents              )}._
                     ..${customImports}
                     ..$src
                     """
                 )
-              }).to[Seq]
+              }).to[List]
           )
 
       implicits <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
     } yield (
       protocolDefinitions ++
-      Seq(packageObject) ++
+      List(packageObject) ++
       files ++
-      Seq(WriteTree(pkgPath.resolve("Implicits.scala"), implicits))
+      List(WriteTree(pkgPath.resolve("Implicits.scala"), implicits))
     ).toList
   }
 
