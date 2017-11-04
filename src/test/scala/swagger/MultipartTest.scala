@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication}
+import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -48,7 +48,7 @@ class MultipartTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Multipart form data") {
-    val Right(Clients(clients, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp)
+    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
     val Client(_, className, statements) :: _ = clients
 
     val Seq(_, cls) = statements.dropWhile(_.isInstanceOf[Import])

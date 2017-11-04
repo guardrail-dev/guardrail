@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, EnumDefinition, ProtocolGenerator, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, EnumDefinition, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -69,7 +69,7 @@ class DefinitionSpec extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Plain objects should be generated") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val ClassDefinition(_, cls, cmp) :: _ = definitions
 
     val definition = q"""
@@ -90,7 +90,7 @@ class DefinitionSpec extends FunSuite with Matchers {
   }
 
   test("Enumerations should be generated") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val _ :: _ :: EnumDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
@@ -123,7 +123,7 @@ class DefinitionSpec extends FunSuite with Matchers {
   }
 
   test("Camel case conversion should happen") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val _ :: _ :: _ :: _ :: ClassDefinition(_, cls, cmp) :: _ = definitions
 
     val definition = q"""
@@ -144,7 +144,7 @@ class DefinitionSpec extends FunSuite with Matchers {
   }
 
   test("Defaults should work") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val _ :: _ :: _ :: _ :: _ :: ClassDefinition(_, cls, cmp) :: _ = definitions
 
     val definition = q"""

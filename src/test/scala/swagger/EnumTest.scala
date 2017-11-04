@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, EnumDefinition, ClientGenerator, ProtocolGenerator, CodegenApplication}
+import com.twilio.swagger.codegen.{Client, Clients, Context, EnumDefinition, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -80,7 +80,7 @@ class EnumTest extends FunSuite with Matchers {
     }
     """
 
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     definitions.length should equal (1)
     val EnumDefinition(_, _, cls, cmp) = definitions.head
     cls.structure should equal(definition.structure)
@@ -89,8 +89,8 @@ class EnumTest extends FunSuite with Matchers {
   }
 
   test("Use enums") {
-    val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
-    val Right(Clients(clients, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp)
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
 
     val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])

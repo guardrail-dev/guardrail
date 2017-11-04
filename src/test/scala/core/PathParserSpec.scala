@@ -1,6 +1,6 @@
 package swagger
 
-import com.twilio.swagger.codegen.SwaggerUtil
+import com.twilio.swagger.codegen.{SwaggerUtil, Target}
 import com.twilio.swagger.codegen.generators.ScalaParameter
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.Seq
@@ -26,7 +26,7 @@ class PathParserSpec extends FunSuite with Matchers {
   , ("/{foo_bar}/{bar_baz}.json", q""" host + basePath + "/" + Formatter.addPath(fooBar) + "/" + Formatter.addPath(barBaz) + ".json" """)
   ).foreach { case (str, expected) =>
     test(str) {
-      val gen = SwaggerUtil.paths.generateUrlPathParams(str, args)(identity).right.get
+      val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathParams(str, args)(identity))
       gen.toString shouldBe(expected.toString)
     }
   }

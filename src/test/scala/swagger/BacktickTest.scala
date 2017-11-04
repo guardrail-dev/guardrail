@@ -4,7 +4,7 @@ import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import collection.JavaConverters._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Context, ClassDefinition, EnumDefinition, Client, Clients, ClientGenerator, ProtocolGenerator, CodegenApplication}
+import com.twilio.swagger.codegen.{Context, ClassDefinition, EnumDefinition, Client, Clients, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -66,7 +66,7 @@ class BacktickTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Ensure paths are generated with escapes") {
-    val Right(Clients(clients, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp)
+    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
 
     tags should equal (Seq("dashy-package"))
@@ -116,7 +116,7 @@ class BacktickTest extends FunSuite with Matchers {
     cmp.toString shouldNot include ("``")
   }
 
-  val definitions = ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp).right.get.elems
+  val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
 
   test("Ensure dtos are generated with escapes") {
     val definition = q"""

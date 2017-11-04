@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication}
+import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 
 class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
@@ -111,7 +111,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
 
   test("Ensure responses are generated") {
     val swagger = new SwaggerParser().parse(spec)
-    val Right(Clients(List(Client(tags, className, statements)), _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(framework=Some("akka-http")), swagger)(List.empty).foldMap(AkkaHttp)
+    val Clients(List(Client(tags, className, statements)), _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(framework=Some("akka-http")), swagger)(List.empty).foldMap(AkkaHttp))
 
     tags should equal (Seq("store"))
 
@@ -156,7 +156,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
 
   test("Ensure traced responses are generated") {
     val swagger = new SwaggerParser().parse(spec)
-    val Right(Clients(List(Client(tags, className, statements)), _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(framework=Some("akka-http"), tracing=true), swagger)(List.empty).foldMap(AkkaHttp)
+    val Clients(List(Client(tags, className, statements)), _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(framework=Some("akka-http"), tracing=true), swagger)(List.empty).foldMap(AkkaHttp))
 
     tags should equal (Seq("store"))
 
