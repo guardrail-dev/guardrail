@@ -97,6 +97,7 @@ lazy val sample = (project in file("modules/sample"))
       |""".stripMargin
     , libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-http" % akkaVersion
+      , "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion
       , "io.circe" %% "circe-core" % circeVersion
       , "io.circe" %% "circe-generic" % circeVersion
       , "io.circe" %% "circe-java8" % circeVersion
