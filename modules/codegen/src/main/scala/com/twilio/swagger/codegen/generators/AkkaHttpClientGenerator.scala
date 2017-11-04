@@ -137,9 +137,9 @@ object AkkaHttpClientGenerator {
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {
-              q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator }).toEntity"""
+              q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
             } else {
-              q"""FormData($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*).toEntity"""
+              q"""FormData($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*)"""
             }
           }
 
@@ -150,7 +150,9 @@ object AkkaHttpClientGenerator {
             {
               traceBuilder(s"$${clientName}:$${methodName}") { propagate =>
                 val allHeaders = headers ++ $headerParams
-                wrap[${responseTypeRef}](httpClient(propagate(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = ${entity}, headers = allHeaders))))
+                wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
+                  httpClient(propagate(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders)))
+                })
               }
             }
             """
@@ -158,7 +160,9 @@ object AkkaHttpClientGenerator {
             q"""
             {
               val allHeaders = headers ++ $headerParams
-              wrap[${responseTypeRef}](httpClient(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = ${entity}, headers = allHeaders)))
+              wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
+                httpClient(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders))
+              })
             }
             """
           }
@@ -213,7 +217,7 @@ object AkkaHttpClientGenerator {
         q"import akka.http.scaladsl.model._"
       , q"import akka.http.scaladsl.model.headers.RawHeader"
       , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
-      , q"import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}"
+      , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, ToEntityMarshaller}"
       , q"import akka.http.scaladsl.util.FastFuture"
       , q"import akka.stream.Materializer"
       , q"import akka.stream.scaladsl.Source"
