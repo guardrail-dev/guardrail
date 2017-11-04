@@ -3,7 +3,6 @@ package generators
 
 import _root_.io.swagger.models.parameters.Parameter
 import java.util.Locale
-import scala.collection.immutable.Seq
 import scala.meta._
 
 case class ScalaParameter(param: Term.Param, paramName: Term.Name, argName: Term.Name, argType: Type)
@@ -12,7 +11,7 @@ object ScalaParameter {
   def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(Term.Name(argName))
   def fromParam(argName: Term.Name): Term.Param => ScalaParameter = { case param@Term.Param(mods, name, decltype, default) =>
     val tpe: Type = decltype.flatMap({
-      case Type.Arg.ByName(tpe) => Some(tpe)
+      case Type.ByName(tpe) => Some(tpe)
       case _ => None
     }).getOrElse(t"Nothing")
     ScalaParameter(param, Term.Name(name.value), argName, tpe)
@@ -23,7 +22,7 @@ object ScalaParameter {
     * @param params
     * @return
     */
-  def filterParams(params: Seq[Parameter], protocolElems: List[ProtocolElems]): String => Seq[ScalaParameter] = { in =>
+  def filterParams(params: List[Parameter], protocolElems: List[ProtocolElems]): String => List[ScalaParameter] = { in =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed = "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
       "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))

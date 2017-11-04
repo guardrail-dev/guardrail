@@ -9,11 +9,10 @@ import cats.syntax.all._
 import com.twilio.swagger.codegen.generators.ScalaParameter
 import com.twilio.swagger.codegen.terms.server._
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.meta._
 
-case class Servers(servers: Seq[Server], frameworkImports: Seq[Import])
-case class Server(pkg: NonEmptyList[String], extraImports: Seq[Import], src: Seq[Stat])
+case class Servers(servers: List[Server], frameworkImports: List[Import])
+case class Server(pkg: NonEmptyList[String], extraImports: List[Import], src: List[Stat])
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
 case class RenderedRoute(route: Term, methodSig: Decl.Def)
 object ServerGenerator {
@@ -51,7 +50,7 @@ object ServerGenerator {
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc <- renderClass(formatClassName(className.last), formatHandlerName(className.last), combinedRouteTerms, extraRouteParams)
           } yield {
-            Server(className, frameworkImports ++ extraImports, Seq(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
+            Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
           }
         }).sequenceU
     } yield Servers(servers, frameworkImports)

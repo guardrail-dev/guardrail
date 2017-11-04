@@ -5,7 +5,6 @@ import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
-import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class SchemeTest extends FunSuite with Matchers {
@@ -66,7 +65,7 @@ class SchemeTest extends FunSuite with Matchers {
 
     val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     companion.structure should equal(cmp.structure)
     client.structure should equal(cls.structure)
