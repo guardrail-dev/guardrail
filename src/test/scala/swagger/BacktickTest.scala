@@ -88,11 +88,15 @@ class BacktickTest extends FunSuite with Matchers {
       }
       def ${Term.Name("`dashy-op-id`")}(${Term.Name("dashyParameter")}: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[${Type.Name("`dashy-class`")}](httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = HttpEntity.Empty, headers = allHeaders)))
+        wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
+        })
       }
       def ${Term.Name("post /dashy-route")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[${Type.Name("`dashy-class`")}](httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = HttpEntity.Empty, headers = allHeaders)))
+        wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+          httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
+        })
       }
 
     }
