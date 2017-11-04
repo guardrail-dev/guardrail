@@ -9,6 +9,7 @@ import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms}
 import com.twilio.swagger.codegen.core.CoreTermInterp
 import java.nio.file.{Path, Paths}
 import org.scalatest.{FunSuite, Matchers}
+import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class WritePackageSpec extends FunSuite with Matchers {
@@ -63,7 +64,7 @@ class WritePackageSpec extends FunSuite with Matchers {
       kind=CodegenTarget.Client
     , specPath=Some("/tmp/foo.json")
     , outputPath=Some("/tmp/foo")
-    , packageName=Some(List("com", "twilio", "example", "clients"))
+    , packageName=Some(ISeq("com", "twilio", "example", "clients"))
     , context=Context.empty.copy(framework=Some("akka-http"))
     ), List.empty)
 
@@ -96,7 +97,7 @@ class WritePackageSpec extends FunSuite with Matchers {
       kind=CodegenTarget.Client
     , specPath=Some("/tmp/foo.json")
     , outputPath=Some("/tmp/foo")
-    , packageName=Some(List("base"))
+    , packageName=Some(ISeq("base"))
     , context=Context.empty.copy(framework=Some("akka-http"))
     ), List.empty)
 

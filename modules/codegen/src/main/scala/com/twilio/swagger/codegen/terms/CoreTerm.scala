@@ -3,6 +3,7 @@ package terms
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
+import scala.collection.immutable.Seq
 import scala.meta._
 
 sealed trait CoreTerm[T]

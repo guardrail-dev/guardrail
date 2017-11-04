@@ -3,8 +3,8 @@ name := projectName
 organization in ThisBuild := "com.twilio"
 version in ThisBuild := "0.26.0-SNAPSHOT"
 
+scalaVersion in ThisBuild := "2.12.2"
 crossScalaVersions := Seq("2.11.11", "2.12.3")
-scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 val akkaVersion = "10.0.10"
 val catsVersion = "0.9.0"
@@ -48,7 +48,7 @@ val codegenSettings = Seq(
     Resolver.url("scalameta", url("http://dl.bintray.com/scalameta/maven"))(Resolver.ivyStylePatterns)
   ),
   libraryDependencies ++= testDependencies ++ Seq(
-    "org.scalameta" %% "scalameta" % "2.0.1"
+    "org.scalameta" %% "scalameta" % "1.8.0"
     , "io.swagger" % "swagger-parser" % "1.0.32"
     , "org.tpolecat" %% "atto-core"  % "0.6.0"
     , "org.typelevel" %% "cats" % catsVersion
@@ -89,6 +89,7 @@ lazy val sample = (project in file("modules/sample"))
     , initialCommands in console := """
       |import scala.concurrent.ExecutionContext.Implicits.global
       |import scala.meta._
+      |import scala.collection.immutable.Seq
       |import java.time._
       |import Common._
       |import scala.concurrent.Await

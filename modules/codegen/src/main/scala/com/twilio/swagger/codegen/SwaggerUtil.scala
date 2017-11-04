@@ -7,6 +7,7 @@ import cats.syntax.either._
 import com.twilio.swagger.codegen.extract.{Default, ScalaType}
 import com.twilio.swagger.codegen.generators.ScalaParameter
 import java.util.{Map => JMap}
+import scala.collection.immutable.Seq
 import scala.language.reflectiveCalls
 import scala.meta._
 
@@ -117,7 +118,7 @@ object SwaggerUtil {
     case Term.Name(name) => Term.Name(escapeReserved(name))
     case p@Term.Param(_, Term.Name(name), _, _) => p.copy(name=Term.Name(escapeReserved(name)))
     case Type.Name(name) => Type.Name(escapeReserved(name))
-    case ctor@Init(Type.Name(name), _, _) if name != "this" => ctor.copy(tpe=Type.Name(escapeReserved(name))) // Literal "this" in ctor names is OK
+    case Ctor.Ref.Name(name) if name != "this" => Ctor.Ref.Name(escapeReserved(name)) // Literal "this" in ctor names is OK
   }).asInstanceOf[T]
 
   val unbacktick = "^`(.*)`$".r
@@ -197,8 +198,8 @@ object SwaggerUtil {
     FALSE / NULL        || a: T = v || a: Opt[T] = None ||
   */
 
-  private[this] val successCodesWithEntities = List(200, 201, 202, 203, 206, 226).map(_.toString)
-  private[this] val successCodesWithoutEntities = List(204, 205).map(_.toString)
+  private[this] val successCodesWithEntities = Seq(200, 201, 202, 203, 206, 226).map(_.toString)
+  private[this] val successCodesWithoutEntities = Seq(204, 205).map(_.toString)
 
   private[this] def getBestSuccessResponse(responses: JMap[String, Response]): Option[Response] =
     successCodesWithEntities.find(responses.containsKey).flatMap(code => Option(responses.get(code)))
@@ -219,7 +220,7 @@ object SwaggerUtil {
   }
 
   object paths {
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter])(termMunger: Term.Name => Term.Name): Target[Term] = {
+    def generateUrlPathParams(path: String, pathArgs: Seq[ScalaParameter])(termMunger: Term.Name => Term.Name): Target[Term] = {
       import atto._, Atto._
 
       val term: Parser[Term.Apply] = many(notChar('}')).map(_.mkString("")).flatMap({ term =>
