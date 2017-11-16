@@ -64,6 +64,23 @@ object ScalaParameter {
     ScalaParameter(Option(parameter.getIn), param, paramName, Term.Name(parameter.getName), declType)
   }
 
+  def fromParameters(protocolElems: List[ProtocolElems]): List[Parameter] => List[ScalaParameter] = { params =>
+    val parameters = params.map(ScalaParameter.fromParameter(protocolElems))
+    val counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
+
+    parameters.map { param =>
+      val Term.Name(name) = param.paramName
+      if (counts.getOrElse(name, 0) > 1) {
+        val escapedName = Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
+        param.copy(
+          param = param.param.copy(name=escapedName),
+          paramName = escapedName
+        )
+      }
+      else param
+    }
+  }
+
   /**
     * Create method parameters from Swagger's Path parameters list. Use Option for non-required parameters.
     * @param params
