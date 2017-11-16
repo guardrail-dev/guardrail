@@ -132,7 +132,7 @@ object AkkaHttpServerGenerator {
       case other => Target.log(s"Unknown method: ${other}")
     }
 
-    def pathSegmentToAkka: ScalaParameter => Target[Term] = { case ScalaParameter(param, _, argName, argType) =>
+    def pathSegmentToAkka: ScalaParameter => Target[Term] = { case ScalaParameter(_, param, _, argName, argType) =>
       argType match {
         case t"String" =>         Target.pure(q"Segment")
         case t"Double" =>         Target.pure(q"DoubleNumber")
@@ -191,7 +191,7 @@ object AkkaHttpServerGenerator {
         optional: Term => Type => Target[Term.Apply]
     )(params: List[ScalaParameter]): Target[Option[Term]] = {
       for {
-        directives <- params.map({ case ScalaParameter(param, _, argName, argType) =>
+        directives <- params.map({ case ScalaParameter(_, param, _, argName, argType) =>
           param match {
             case param"$_: Option[Iterable[$tpe]]" => multiOpt(Lit.String(argName.value))(tpe)
             case param"$_: Option[Iterable[$tpe]] = $_" => multiOpt(Lit.String(argName.value))(tpe)
@@ -210,7 +210,7 @@ object AkkaHttpServerGenerator {
 
     def bodyToAkka(body: Option[ScalaParameter]): Target[Term] = {
       Target.pure(
-        body.map { case ScalaParameter(_, _, _, argType) =>
+        body.map { case ScalaParameter(_, _, _, _, argType) =>
           q"entity(as[${argType}])"
         } getOrElse {
           q"discardEntity"

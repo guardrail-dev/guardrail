@@ -8,10 +8,10 @@ import scala.meta._
 class PathParserSpec extends FunSuite with Matchers {
 
   val args: List[ScalaParameter] = List(
-    ScalaParameter(param"foo: Int = 1", q"foo", q"foo", t"Int"),
-    ScalaParameter(param"bar: Int = 1", q"bar", q"bar", t"Int"),
-    ScalaParameter(param"fooBar: Int = 1", q"fooBar", q"foo_bar", t"Int"),
-    ScalaParameter(param"barBaz: Int = 1", q"barBaz", q"bar_baz", t"Int")
+    ScalaParameter(None, param"foo: Int = 1", q"foo", q"foo", t"Int"),
+    ScalaParameter(None, param"bar: Int = 1", q"bar", q"bar", t"Int"),
+    ScalaParameter(None, param"fooBar: Int = 1", q"fooBar", q"foo_bar", t"Int"),
+    ScalaParameter(None, param"barBaz: Int = 1", q"barBaz", q"bar_baz", t"Int")
   )
 
   List[(String, Term)](

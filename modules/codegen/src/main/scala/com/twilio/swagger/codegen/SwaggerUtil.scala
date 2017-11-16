@@ -227,7 +227,7 @@ object SwaggerUtil {
           .find(_.argName.value == term)
           .fold[Parser[Term.Apply]](
             err(s"Unable to find argument ${term}")
-          )({ case ScalaParameter(_, paramName, _, _) =>
+          )({ case ScalaParameter(_, _, paramName, _, _) =>
             ok(q"Formatter.addPath(${termMunger(paramName)})")
           })
       })

@@ -5,7 +5,7 @@ import _root_.io.swagger.models.parameters.Parameter
 import java.util.Locale
 import scala.meta._
 
-case class ScalaParameter(param: Term.Param, paramName: Term.Name, argName: Term.Name, argType: Type)
+case class ScalaParameter(in: Option[String], param: Term.Param, paramName: Term.Name, argName: Term.Name, argType: Type)
 object ScalaParameter {
   def fromParam: Term.Param => ScalaParameter = { param => fromParam(param.name.value)(param) }
   def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(Term.Name(argName))
@@ -14,7 +14,7 @@ object ScalaParameter {
       case Type.ByName(tpe) => Some(tpe)
       case _ => None
     }).getOrElse(t"Nothing")
-    ScalaParameter(param, Term.Name(name.value), argName, tpe)
+    ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
   }
 
   /**
@@ -70,7 +70,7 @@ object ScalaParameter {
 
       val paramName = Term.Name(toCamelCase(parameter.getName))
       val param = param"${paramName}: ${declType}".copy(default=defaultValue)
-      ScalaParameter(param, paramName, Term.Name(parameter.getName), declType)
+      ScalaParameter(Option(parameter.getIn), param, paramName, Term.Name(parameter.getName), declType)
     }
   }
 }
