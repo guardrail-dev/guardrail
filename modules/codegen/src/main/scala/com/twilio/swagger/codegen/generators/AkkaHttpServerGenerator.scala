@@ -51,8 +51,8 @@ object AkkaHttpServerGenerator {
         Target.pure(None)
 
       case GenerateRoute(className, basePath, ServerRoute(path, method, operation), tracingFields) =>
-        val parameters = Option(operation.getParameters).fold(List.empty[_root_.io.swagger.models.parameters.Parameter])(_.asScala.toList)
-        val filterParamBy = ScalaParameter.filterParams(parameters, List.empty)
+        val parameters = Option(operation.getParameters).fold(List.empty[ScalaParameter])(_.asScala.toList.map(ScalaParameter.fromParameter(List.empty)))
+        val filterParamBy = ScalaParameter.filterParams(parameters)
         val bodyArgs = filterParamBy("body").headOption
         val formArgs = filterParamBy("formData").toList
         val headerArgs = filterParamBy("header").toList

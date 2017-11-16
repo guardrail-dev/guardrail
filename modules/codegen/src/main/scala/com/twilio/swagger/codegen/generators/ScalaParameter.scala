@@ -69,7 +69,7 @@ object ScalaParameter {
     * @param params
     * @return
     */
-  def filterParams(params: List[Parameter], protocolElems: List[ProtocolElems]): String => List[ScalaParameter] = { in =>
-    params.map(fromParameter(protocolElems)).filter(_.in == Some(in))
+  def filterParams(params: List[ScalaParameter]): String => List[ScalaParameter] = { in =>
+    params.filter(_.in == Some(in))
   }
 }

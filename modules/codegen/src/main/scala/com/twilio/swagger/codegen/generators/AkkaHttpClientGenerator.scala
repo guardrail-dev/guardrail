@@ -189,9 +189,9 @@ object AkkaHttpClientGenerator {
           httpMethodStr: String = httpMethod.toString.toLowerCase
           methodName = Option(operation.getOperationId).getOrElse(s"$httpMethodStr $pathStr")
 
-          allParams = Option(operation.getParameters).fold(List.empty[_root_.io.swagger.models.parameters.Parameter])(_.asScala.toList)
+          allParams = Option(operation.getParameters).fold(List.empty[ScalaParameter])(_.asScala.toList.map(ScalaParameter.fromParameter(protocolElems)))
 
-          filterParamBy = ScalaParameter.filterParams(allParams, protocolElems)
+          filterParamBy = ScalaParameter.filterParams(allParams)
           headerArgs = filterParamBy("header")
           pathArgs = filterParamBy("path")
           qsArgs = filterParamBy("query")
