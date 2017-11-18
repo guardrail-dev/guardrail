@@ -20,11 +20,12 @@ object AkkaHttpServerGenerator {
       case GetFrameworkImports(tracing) =>
         Target.pure(List(
           q"import akka.http.scaladsl.model._"
-        , q"import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}"
+        , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}"
         , q"import akka.http.scaladsl.server.Directives._"
         , q"import akka.http.scaladsl.server.{Directive, Directive0, Route}"
         , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
         , q"import akka.util.ByteString"
+        , q"import scala.language.implicitConversions"
         ))
 
       case ExtractOperations(paths) =>
