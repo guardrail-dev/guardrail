@@ -98,8 +98,8 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
 
     val handler = q"""
       trait StoreHandler {
-        def getOrderById(orderId: Long): scala.concurrent.Future[Order]
-        def getFoo(): scala.concurrent.Future[Boolean]
+        def getOrderById(respond: getOrderByIdResponse.type)(orderId: Long): scala.concurrent.Future[getOrderByIdResponse]
+        def getFoo(respond: getFooResponse.type)(): scala.concurrent.Future[getFooResponse]
       }
     """
     val resource = q"""
@@ -111,9 +111,9 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
           (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
-            complete(handler.getFoo())
+            complete(handler.getFoo(getFooResponse)())
           } ~ (get & path("store" / "order" / LongNumber) & discardEntity) { orderId =>
-            complete(handler.getOrderById(orderId))
+            complete(handler.getOrderById(getOrderByIdResponse)(orderId))
           }
         }
       }

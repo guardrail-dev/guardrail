@@ -51,6 +51,8 @@ object AkkaHttpServerGenerator {
         Target.pure(None)
 
       case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields) =>
+        // Generate the pair of the Handler method and the actual call to `complete(...)`
+
         val parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(List.empty)).getOrElse(List.empty[ScalaParameter])
         val filterParamBy = ScalaParameter.filterParams(parameters)
         val bodyArgs = filterParamBy("body").headOption
@@ -67,23 +69,28 @@ object AkkaHttpServerGenerator {
           akkaHeaders <- headersToAkka(headerArgs)
           operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
         } yield {
-          val responseType = ServerRawResponse(operation).fold(SwaggerUtil.getResponseType(method, operation, t"Unit"))(Function.const(t"HttpResponse"))
+          val responseCompanion = Term.Name(s"${operationId}Response")
+          val responseType = ServerRawResponse(operation).filter(_ == true).fold[Type](t"${Term.Name(resourceName)}.${Type.Name(responseCompanion.value)}")(Function.const(t"HttpResponse"))
           val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields.map(_._1).map(List(_))
           val fullRouteMatcher = List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(akkaBody), akkaForm, akkaHeaders, tracingFields.map(_._2)).flatten.reduceLeft { (a, n) => q"${a} & ${n}" }
           val fullRoute: Term.Apply = orderedParameters match {
             case List(List()) => q"""
               ${fullRouteMatcher} {
-                complete(handler.${Term.Name(operationId)}())
+                complete(handler.${Term.Name(operationId)}(${responseCompanion})())
               }
               """
             case params =>
               q"""
               ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
-                complete(handler.${Term.Name(operationId)}(...${params.map(_.map(_.paramName))}))
+                complete(handler.${Term.Name(operationId)}(${responseCompanion})(...${params.map(_.map(_.paramName))}))
               }
               """
           }
-          val params: List[List[Term.Param]] = orderedParameters.map(_.map(_.param))
+
+          val respond: List[List[Term.Param]] = if (ServerRawResponse(operation).getOrElse(false)) {
+            List.empty
+          } else List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanion}.type"))
+          val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(_.param))
           RenderedRoute(fullRoute,
             q"""
               def ${Term.Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
