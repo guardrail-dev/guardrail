@@ -50,7 +50,7 @@ object AkkaHttpServerGenerator {
       case BuildTracingFields(operation, className, tracing) =>
         Target.pure(None)
 
-      case GenerateRoute(className, basePath, ServerRoute(path, method, operation), tracingFields) =>
+      case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields) =>
         val parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(List.empty)).getOrElse(List.empty[ScalaParameter])
         val filterParamBy = ScalaParameter.filterParams(parameters)
         val bodyArgs = filterParamBy("body").headOption
@@ -106,10 +106,10 @@ object AkkaHttpServerGenerator {
       case GetExtraRouteParams(tracing) =>
         Target.pure(List.empty)
 
-      case RenderClass(className, handlerName, combinedRouteTerms, extraRouteParams) =>
+      case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams) =>
         val routesParams: List[Term.Param] = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         Target.pure(q"""
-          object ${Term.Name(className)} {
+          object ${Term.Name(resourceName)} {
             import cats.syntax.either._
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {

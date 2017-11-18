@@ -36,11 +36,13 @@ object ServerGenerator {
       frameworkImports <- getFrameworkImports(context.tracing)
       extraImports <- getExtraImports(context.tracing)
       servers <- groupedRoutes.map({ case (className, routes) =>
+          val resourceName = formatClassName(className.last)
+          val handlerName = formatHandlerName(className.last)
           for {
             renderedRoutes <- routes.map({ case sr@ServerRoute(path, method, operation) =>
               for {
                 tracingFields <- buildTracingFields(operation, className, context.tracing)
-                rendered <- generateRoute(className, basePath, tracingFields)(sr)
+                rendered <- generateRoute(resourceName, basePath, tracingFields)(sr)
               } yield rendered
             }).sequenceU
             routeTerms = renderedRoutes.map(_.route)
@@ -48,7 +50,7 @@ object ServerGenerator {
             methodSigs = renderedRoutes.map(_.methodSig)
             handlerSrc <- renderHandler(formatHandlerName(className.last), methodSigs)
             extraRouteParams <- getExtraRouteParams(context.tracing)
-            classSrc <- renderClass(formatClassName(className.last), formatHandlerName(className.last), combinedRouteTerms, extraRouteParams)
+            classSrc <- renderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams)
           } yield {
             Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
           }
