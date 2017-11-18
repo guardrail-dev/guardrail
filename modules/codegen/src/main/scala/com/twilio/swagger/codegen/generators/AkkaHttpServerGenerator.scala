@@ -96,7 +96,7 @@ object AkkaHttpServerGenerator {
             q"""
               def ${Term.Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
             """
-          )
+          , List.empty)
         }
 
       case CombineRouteTerms(terms) => terms match {
@@ -114,15 +114,18 @@ object AkkaHttpServerGenerator {
       case GetExtraRouteParams(tracing) =>
         Target.pure(List.empty)
 
-      case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams) =>
+      case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions) =>
         val routesParams: List[Term.Param] = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         Target.pure(q"""
           object ${Term.Name(resourceName)} {
             import cats.syntax.either._
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
+
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
               ${combinedRouteTerms}
             }
+
+            ..${responseDefinitions}
           }
         """)
 
