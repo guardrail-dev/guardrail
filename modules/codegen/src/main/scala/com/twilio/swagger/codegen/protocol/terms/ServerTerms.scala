@@ -18,8 +18,8 @@ class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
     Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
-  def generateResponseDefinitions(): Free[F, List[Defn]] =
-    Free.inject(GenerateResponseDefinitions())
+  def generateResponseDefinitions(operation: Operation): Free[F, List[Defn]] =
+    Free.inject(GenerateResponseDefinitions(operation))
   def renderClass(resourceName: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param], responseDefinitions: List[Defn]): Free[F, Stat] =
     Free.inject(RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions))
   def renderHandler(handlerName: String, methodSigs: List[Decl.Def]) =

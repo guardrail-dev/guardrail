@@ -51,8 +51,32 @@ object AkkaHttpServerGenerator {
       case BuildTracingFields(operation, className, tracing) =>
         Target.pure(None)
 
-      case GenerateResponseDefinitions() =>
-        Target.pure(List.empty)
+      case GenerateResponseDefinitions(operation) =>
+        for {
+          operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
+          responses <- Target.fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
+          responseSuperType = Type.Name(s"${operationId}Response")
+
+          instances <- responses.foldLeft[List[Target[Defn]]](List.empty)({ case (acc, (key, resp)) =>
+            acc :+ (for {
+              httpCode <- Target.fromOption(HttpHelper(key), s"Unknown HTTP type: ${key}")
+              (code, friendlyName) = httpCode
+              statusCodeName = Term.Name(friendlyName)
+              statusCode = q"StatusCodes.${statusCodeName}"
+              valueType = Option(resp.getSchema).map(SwaggerUtil.propMetaType)
+              responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
+              responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
+            } yield {
+              valueType.fold[Defn](
+                q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
+              ) { valueType =>
+                q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
+              }
+            })
+          }).sequenceU
+        } yield List[Defn](
+          q"sealed abstract class ${responseSuperType}(val statusCode: StatusCode)",
+        ) ++ instances
 
       case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields, responseDefinitions) =>
         // Generate the pair of the Handler method and the actual call to `complete(...)`
