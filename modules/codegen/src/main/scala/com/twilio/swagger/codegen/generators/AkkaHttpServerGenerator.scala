@@ -56,8 +56,9 @@ object AkkaHttpServerGenerator {
           operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
           responses <- Target.fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
           responseSuperType = Type.Name(s"${operationId}Response")
+          responseSuperTerm = Term.Name(s"${operationId}Response")
 
-          instances <- responses.foldLeft[List[Target[Defn]]](List.empty)({ case (acc, (key, resp)) =>
+          instances <- responses.foldLeft[List[Target[(Defn, Defn, Case)]]](List.empty)({ case (acc, (key, resp)) =>
             acc :+ (for {
               httpCode <- Target.fromOption(HttpHelper(key), s"Unknown HTTP type: ${key}")
               (code, friendlyName) = httpCode
@@ -67,16 +68,37 @@ object AkkaHttpServerGenerator {
               responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
             } yield {
-              valueType.fold[Defn](
-                q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
+              valueType.fold[(Defn, Defn, Case)](
+                ( q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
+                , q"def ${statusCodeName}: ${responseSuperType} = ${responseTerm}"
+                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque(() => HttpResponse(r.statusCode)) :: Nil)"
+                )
               ) { valueType =>
-                q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
+                ( q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
+                , q"def ${statusCodeName}(value: ${valueType}): ${responseSuperType} = ${responseTerm}(value)"
+                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity=entity)) :: Nil }"
+                )
               }
             })
           }).sequenceU
+
+          (terms, aliases, marshallers) = instances.unzip3
+
+          companion = q"""
+            object ${responseSuperTerm} {
+              implicit val ${Pat.Var(Term.Name(s"${operationId}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term.Name(s"${operationId}TR")}(resp) }
+              implicit def ${Term.Name(s"${operationId}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
+                ${Term.Match(Term.Name("value"), marshallers)}
+
+              ..${aliases}
+            }
+          """
+
         } yield List[Defn](
-          q"sealed abstract class ${responseSuperType}(val statusCode: StatusCode)",
-        ) ++ instances
+          q"sealed abstract class ${responseSuperType}(val statusCode: StatusCode)"
+        ) ++ terms ++ List[Defn](
+          companion
+        )
 
       case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields, responseDefinitions) =>
         // Generate the pair of the Handler method and the actual call to `complete(...)`
