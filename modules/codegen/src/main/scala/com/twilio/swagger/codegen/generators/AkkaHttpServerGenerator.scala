@@ -51,7 +51,10 @@ object AkkaHttpServerGenerator {
       case BuildTracingFields(operation, className, tracing) =>
         Target.pure(None)
 
-      case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields) =>
+      case GenerateResponseDefinitions() =>
+        Target.pure(List.empty)
+
+      case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields, responseDefinitions) =>
         // Generate the pair of the Handler method and the actual call to `complete(...)`
 
         val parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(List.empty)).getOrElse(List.empty[ScalaParameter])
@@ -96,7 +99,7 @@ object AkkaHttpServerGenerator {
             q"""
               def ${Term.Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
             """
-          , List.empty)
+          , responseDefinitions)
         }
 
       case CombineRouteTerms(terms) => terms match {

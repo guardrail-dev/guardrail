@@ -14,10 +14,12 @@ class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
     Free.inject(GetClassName(operation))
   def buildTracingFields(operation: Operation, className: NonEmptyList[String], tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
     Free.inject(BuildTracingFields(operation, className, tracing))
-  def generateRoute(resourceName: String, basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)])(route: ServerRoute): Free[F, RenderedRoute] =
-    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields))
+  def generateRoute(resourceName: String, basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)], responseDefinitions: List[Defn])(route: ServerRoute): Free[F, RenderedRoute] =
+    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
+  def generateResponseDefinitions(): Free[F, List[Defn]] =
+    Free.inject(GenerateResponseDefinitions())
   def renderClass(resourceName: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param], responseDefinitions: List[Defn]): Free[F, Stat] =
     Free.inject(RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions))
   def renderHandler(handlerName: String, methodSigs: List[Decl.Def]) =
