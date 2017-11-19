@@ -218,6 +218,9 @@
           },
           "400": {
             "description": "Invalid status value"
+          },
+          "404": {
+            "description": "Pet not found"
           }
         },
         "security": [
