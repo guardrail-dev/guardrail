@@ -98,8 +98,8 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
 
     val handler = q"""
       trait StoreHandler {
-        def getOrderById(respond: getOrderByIdResponse.type)(orderId: Long): scala.concurrent.Future[getOrderByIdResponse]
-        def getFoo(respond: getFooResponse.type)(): scala.concurrent.Future[getFooResponse]
+        def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
+        def getFoo(respond: StoreResource.getFooResponse.type)(): scala.concurrent.Future[StoreResource.getFooResponse]
       }
     """
     val resource = q"""
@@ -112,9 +112,49 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
           (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
             complete(handler.getFoo(getFooResponse)())
-          } ~ (get & path("store" / "order" / LongNumber) & discardEntity) { orderId =>
-            complete(handler.getOrderById(getOrderByIdResponse)(orderId))
+          } ~ (get & path("store" / "order" / LongNumber) & discardEntity) {
+            orderId => complete(handler.getOrderById(getOrderByIdResponse)(orderId))
           }
+        }
+        sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
+        case class getOrderByIdResponseOK(value: Order) extends getOrderByIdResponse(StatusCodes.OK)
+        case object getOrderByIdResponseBadRequest extends getOrderByIdResponse(StatusCodes.BadRequest)
+        case object getOrderByIdResponseNotFound extends getOrderByIdResponse(StatusCodes.NotFound)
+        object getOrderByIdResponse {
+          implicit val getOrderByIdTRM: ToResponseMarshaller[getOrderByIdResponse] = Marshaller { implicit ec =>
+            resp => getOrderByIdTR(resp)
+          }
+          implicit def getOrderByIdTR(value: getOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getOrderByIdResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity = entity)) :: Nil
+              }
+            case r: getOrderByIdResponseBadRequest.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque(() => HttpResponse(r.statusCode)) :: Nil)
+            case r: getOrderByIdResponseNotFound.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque(() => HttpResponse(r.statusCode)) :: Nil)
+          }
+          def apply[T](value: T)(implicit ev: T => getOrderByIdResponse): getOrderByIdResponse = ev(value)
+          implicit def OKEv(value: Order): getOrderByIdResponse = OK(value)
+          def OK(value: Order): getOrderByIdResponse = getOrderByIdResponseOK(value)
+          def BadRequest: getOrderByIdResponse = getOrderByIdResponseBadRequest
+          def NotFound: getOrderByIdResponse = getOrderByIdResponseNotFound
+        }
+        sealed abstract class getFooResponse(val statusCode: StatusCode)
+        case class getFooResponseOK(value: Boolean) extends getFooResponse(StatusCodes.OK)
+        object getFooResponse {
+          implicit val getFooTRM: ToResponseMarshaller[getFooResponse] = Marshaller { implicit ec =>
+            resp => getFooTR(resp)
+          }
+          implicit def getFooTR(value: getFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getFooResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity = entity)) :: Nil
+              }
+          }
+          def apply[T](value: T)(implicit ev: T => getFooResponse): getFooResponse = ev(value)
+          implicit def OKEv(value: Boolean): getFooResponse = OK(value)
+          def OK(value: Boolean): getFooResponse = getFooResponseOK(value)
         }
       }
     """

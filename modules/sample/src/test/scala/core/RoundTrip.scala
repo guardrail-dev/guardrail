@@ -13,46 +13,45 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import scala.concurrent.Future
 
 class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-	def traceBuilder[T]: clients.Implicits.TraceBuilder[Either[Throwable,HttpResponse],T] = {
-		name => inner => inner(identity _)
-	}
+  def traceBuilder[T]: clients.Implicits.TraceBuilder[Either[Throwable,HttpResponse],T] = {
+    name => inner => inner(identity _)
+  }
 
-	// Placeholder until property testing
-	val id: Option[Long] = None
-	val categoryId: Option[Long] = None
-	val categoryName: Option[String] = None
-	val name: String = ""
-	val photoUrls: IndexedSeq[String] = IndexedSeq.empty
-	val tag1id: Option[Long] = None
-	val tag1name: Option[String] = None
-	val tag2id: Option[Long] = None
-	val tag2name: Option[String] = None
-	val tag3id: Option[Long] = None
-	val tag3name: Option[String] = None
-	val petStatus: Option[String] = Some("pending")
+  // Placeholder until property testing
+  val id: Option[Long] = None
+  val categoryId: Option[Long] = None
+  val categoryName: Option[String] = None
+  val name: String = ""
+  val photoUrls: IndexedSeq[String] = IndexedSeq.empty
+  val tag1id: Option[Long] = None
+  val tag1name: Option[String] = None
+  val tag2id: Option[Long] = None
+  val tag2name: Option[String] = None
+  val tag3id: Option[Long] = None
+  val tag3name: Option[String] = None
+  val petStatus: Option[String] = Some("pending")
 
   test("round-trip: definition query, unit response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def addPet(body: sdefs.Pet): Future[Unit] = body match {
-				case sdefs.Pet(
-						`id`,
-						Some(sdefs.Category(`categoryId`, `categoryName`)),
-						`name`,
-						`photoUrls`,
-						None,
-						Some(sdefs.PetStatus.Pending)
-					) => Future.successful(())
-				case _ => failTest("Parameters didn't match")
-			}
-
-      def deletePet(petId: Long, apiKey: Option[String] = None): Future[Unit] = ???
-      def findPetsByStatus(status: Iterable[String]): Future[IndexedSeq[sdefs.Pet]] = ???
-      def findPetsByStatusEnum(_status: sdefs.PetStatus): Future[IndexedSeq[sdefs.Pet]] = ???
-      def findPetsByTags(tags: Iterable[String]): Future[IndexedSeq[sdefs.Pet]] = ???
-      def getPetById(petId: Long): Future[sdefs.Pet] = ???
-      def updatePet(body: sdefs.Pet): Future[Unit] = ???
-      def updatePetWithForm(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[Unit] = ???
-      def uploadFile(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[sdefs.ApiResponse] = ???
+      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet): Future[PetResource.addPetResponse] = body match {
+        case sdefs.Pet(
+            `id`,
+            Some(sdefs.Category(`categoryId`, `categoryName`)),
+            `name`,
+            `photoUrls`,
+            None,
+            Some(sdefs.PetStatus.Pending)
+          ) => Future.successful(respond.Created)
+        case _ => failTest("Parameters didn't match")
+      }
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet): Future[PetResource.updatePetResponse] = ???
+      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus): Future[PetResource.findPetsByStatusEnumResponse] = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.findPetsByStatusResponse] = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]): Future[PetResource.findPetsByTagsResponse] = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long): Future[PetResource.getPetByIdResponse] = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[PetResource.updatePetWithFormResponse] = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None): Future[PetResource.deletePetResponse] = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[PetResource.uploadFileResponse] = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -69,31 +68,31 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
 
   test("round-trip: enum query, Vector of definition response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def findPetsByStatusEnum(_status: sdefs.PetStatus): Future[IndexedSeq[sdefs.Pet]] = {
-				Future.successful(petStatus.fold(IndexedSeq.empty[sdefs.Pet])({ value =>
-					if (_status.value == value) {
-						IndexedSeq(sdefs.Pet(
-							id=id,
-							category=Some(sdefs.Category(categoryId, categoryName)),
-							name=name,
-							photoUrls=photoUrls,
-							tags=None,
-							status=sdefs.PetStatus.parse(value)
-						))
-					} else {
-						failTest("Parameters didn't match!")
-					}
-				}))
-			}
+      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(_status: sdefs.PetStatus): Future[PetResource.findPetsByStatusEnumResponse] = {
+        Future.successful(petStatus.fold(IndexedSeq.empty[sdefs.Pet])({ value =>
+          if (_status.value == value) {
+            IndexedSeq(sdefs.Pet(
+              id=id,
+              category=Some(sdefs.Category(categoryId, categoryName)),
+              name=name,
+              photoUrls=photoUrls,
+              tags=None,
+              status=sdefs.PetStatus.parse(value)
+            ))
+          } else {
+            failTest("Parameters didn't match!")
+          }
+        }))
+      }
 
-      def addPet(body: sdefs.Pet): Future[Unit] = ???
-      def deletePet(petId: Long, apiKey: Option[String] = None): Future[Unit] = ???
-      def findPetsByStatus(status: Iterable[String]): Future[IndexedSeq[sdefs.Pet]] = ???
-      def findPetsByTags(tags: Iterable[String]): Future[IndexedSeq[sdefs.Pet]] = ???
-      def getPetById(petId: Long): Future[sdefs.Pet] = ???
-      def updatePet(body: sdefs.Pet): Future[Unit] = ???
-      def updatePetWithForm(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[Unit] = ???
-      def uploadFile(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[sdefs.ApiResponse] = ???
+      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet): Future[PetResource.addPetResponse] = ???
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet): Future[PetResource.updatePetResponse] = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.findPetsByStatusResponse] = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]): Future[PetResource.findPetsByTagsResponse] = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long): Future[PetResource.getPetByIdResponse] = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[PetResource.updatePetWithFormResponse] = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None): Future[PetResource.deletePetResponse] = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[PetResource.uploadFileResponse] = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
