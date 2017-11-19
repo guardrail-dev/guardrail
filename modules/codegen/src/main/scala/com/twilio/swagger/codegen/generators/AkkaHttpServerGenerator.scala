@@ -84,11 +84,25 @@ object AkkaHttpServerGenerator {
 
           (terms, aliases, marshallers) = instances.unzip3
 
+          convenienceConstructors = aliases.flatMap({
+            case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }
+            case _ => None
+          })
+
+          implicitHelpers = convenienceConstructors.groupBy(_._1).flatMap({
+            case (tpe, (_, name) :: Nil) => Some(q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)")
+            case _ => None
+          }).toList
+
           companion = q"""
             object ${responseSuperTerm} {
               implicit val ${Pat.Var(Term.Name(s"${operationId}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term.Name(s"${operationId}TR")}(resp) }
               implicit def ${Term.Name(s"${operationId}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
                 ${Term.Match(Term.Name("value"), marshallers)}
+
+              def apply[T](value: T)(implicit ev: T => ${responseSuperType}): ${responseSuperType} = ev(value)
+
+              ..${implicitHelpers}
 
               ..${aliases}
             }
