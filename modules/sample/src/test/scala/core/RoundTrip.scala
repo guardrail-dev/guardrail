@@ -5,8 +5,10 @@ import _root_.clients.{definitions => cdefs}
 import _root_.servers.pet.{PetHandler, PetResource}
 import _root_.servers.{definitions => sdefs}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import cats.instances.future._
 import clients.Implicits
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
@@ -15,10 +17,6 @@ import scala.concurrent.Future
 
 class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(1000 millis, 1000 millis)
-
-  def traceBuilder[T]: clients.Implicits.TraceBuilder[Either[Throwable,HttpResponse],T] = {
-    name => inner => inner(identity _)
-  }
 
   // Placeholder until property testing
   val id: Option[Long] = None
@@ -59,7 +57,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
 
     val petClient = PetClient.httpClient(httpClient)
 
-    petClient.addPet(traceBuilder, cdefs.Pet(
+    petClient.addPet(cdefs.Pet(
       id=id,
       category=Some(cdefs.Category(categoryId, categoryName)),
       name=name,
@@ -100,7 +98,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
 
     val petClient = PetClient.httpClient(httpClient)
 
-    petClient.findPetsByStatusEnum(traceBuilder, cdefs.PetStatus.Pending).value.futureValue should be(Right(Vector(cdefs.Pet(
+    petClient.findPetsByStatusEnum(cdefs.PetStatus.Pending).value.futureValue should be(Right(Vector(cdefs.Pet(
       id=id,
       category=Some(cdefs.Category(categoryId, categoryName)),
       name=name,
@@ -128,7 +126,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
 
     val petClient = PetClient.httpClient(httpClient)
 
-    val result = petClient.findPetsByStatus(traceBuilder, Vector("bogus")).value.futureValue
+    val result = petClient.findPetsByStatus(Vector("bogus")).value.futureValue
     assert(result.left.value.right.value.status.intValue == 404)
   }
 
@@ -153,7 +151,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
 
     val petClient = PetClient.httpClient(httpClient)
 
-    val result = petClient.deletePet(traceBuilder, petId, Some(true), Some(cdefs.PetStatus.Pending), Some(apiKey)).value.futureValue
+    val result = petClient.deletePet(petId, Some(true), Some(cdefs.PetStatus.Pending), Some(apiKey)).value.futureValue
     result
       .fold({ err =>
         failTest(err.toString)
