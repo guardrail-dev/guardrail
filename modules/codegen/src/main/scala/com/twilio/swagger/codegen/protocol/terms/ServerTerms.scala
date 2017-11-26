@@ -14,12 +14,14 @@ class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
     Free.inject(GetClassName(operation))
   def buildTracingFields(operation: Operation, className: NonEmptyList[String], tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
     Free.inject(BuildTracingFields(operation, className, tracing))
-  def generateRoute(className: NonEmptyList[String], basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)])(route: ServerRoute): Free[F, RenderedRoute] =
-    Free.inject(GenerateRoute(className, basePath, route, tracingFields))
+  def generateRoute(resourceName: String, basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)], responseDefinitions: List[Defn])(route: ServerRoute): Free[F, RenderedRoute] =
+    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
-  def renderClass(className: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param]): Free[F, Stat] =
-    Free.inject(RenderClass(className, handlerName, combinedRouteTerms, extraRouteParams))
+  def generateResponseDefinitions(operation: Operation): Free[F, List[Defn]] =
+    Free.inject(GenerateResponseDefinitions(operation))
+  def renderClass(resourceName: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param], responseDefinitions: List[Defn]): Free[F, Stat] =
+    Free.inject(RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions))
   def renderHandler(handlerName: String, methodSigs: List[Decl.Def]) =
     Free.inject(RenderHandler(handlerName, methodSigs))
   def combineRouteTerms(terms: List[Term]): Free[F, Term] =

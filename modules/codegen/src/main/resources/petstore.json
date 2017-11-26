@@ -70,6 +70,9 @@
           }
         ],
         "responses": {
+          "201": {
+            "description": "Created"
+          },
           "405": {
             "description": "Invalid input"
           }
@@ -215,6 +218,9 @@
           },
           "400": {
             "description": "Invalid status value"
+          },
+          "404": {
+            "description": "Pet not found"
           }
         },
         "security": [
@@ -645,7 +651,7 @@
           }
         ],
         "responses": {
-          "default": {
+          "200": {
             "description": "successful operation"
           }
         }
@@ -679,7 +685,7 @@
           }
         ],
         "responses": {
-          "default": {
+          "200": {
             "description": "successful operation"
           }
         }
@@ -713,7 +719,7 @@
           }
         ],
         "responses": {
-          "default": {
+          "200": {
             "description": "successful operation"
           }
         }
@@ -788,7 +794,7 @@
         ],
         "parameters": [],
         "responses": {
-          "default": {
+          "200": {
             "description": "successful operation"
           }
         }

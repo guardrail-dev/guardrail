@@ -20,11 +20,12 @@ object AkkaHttpServerGenerator {
       case GetFrameworkImports(tracing) =>
         Target.pure(List(
           q"import akka.http.scaladsl.model._"
-        , q"import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}"
+        , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}"
         , q"import akka.http.scaladsl.server.Directives._"
         , q"import akka.http.scaladsl.server.{Directive, Directive0, Route}"
         , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
         , q"import akka.util.ByteString"
+        , q"import scala.language.implicitConversions"
         ))
 
       case ExtractOperations(paths) =>
@@ -50,7 +51,72 @@ object AkkaHttpServerGenerator {
       case BuildTracingFields(operation, className, tracing) =>
         Target.pure(None)
 
-      case GenerateRoute(className, basePath, ServerRoute(path, method, operation), tracingFields) =>
+      case GenerateResponseDefinitions(operation) =>
+        for {
+          operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
+          responses <- Target.fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
+          responseSuperType = Type.Name(s"${operationId}Response")
+          responseSuperTerm = Term.Name(s"${operationId}Response")
+
+          instances <- responses.foldLeft[List[Target[(Defn, Defn, Case)]]](List.empty)({ case (acc, (key, resp)) =>
+            acc :+ (for {
+              httpCode <- Target.fromOption(HttpHelper(key), s"Unknown HTTP type: ${key}")
+              (code, friendlyName) = httpCode
+              statusCodeName = Term.Name(friendlyName)
+              statusCode = q"StatusCodes.${statusCodeName}"
+              valueType = Option(resp.getSchema).map(SwaggerUtil.propMetaType)
+              responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
+              responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
+            } yield {
+              valueType.fold[(Defn, Defn, Case)](
+                ( q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
+                , q"def ${statusCodeName}: ${responseSuperType} = ${responseTerm}"
+                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque(() => HttpResponse(r.statusCode)) :: Nil)"
+                )
+              ) { valueType =>
+                ( q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
+                , q"def ${statusCodeName}(value: ${valueType}): ${responseSuperType} = ${responseTerm}(value)"
+                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity=entity)) :: Nil }"
+                )
+              }
+            })
+          }).sequenceU
+
+          (terms, aliases, marshallers) = instances.unzip3
+
+          convenienceConstructors = aliases.flatMap({
+            case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }
+            case _ => None
+          })
+
+          implicitHelpers = convenienceConstructors.groupBy(_._1).flatMap({
+            case (tpe, (_, name) :: Nil) => Some(q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)")
+            case _ => None
+          }).toList
+
+          companion = q"""
+            object ${responseSuperTerm} {
+              implicit val ${Pat.Var(Term.Name(s"${operationId}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term.Name(s"${operationId}TR")}(resp) }
+              implicit def ${Term.Name(s"${operationId}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
+                ${Term.Match(Term.Name("value"), marshallers)}
+
+              def apply[T](value: T)(implicit ev: T => ${responseSuperType}): ${responseSuperType} = ev(value)
+
+              ..${implicitHelpers}
+
+              ..${aliases}
+            }
+          """
+
+        } yield List[Defn](
+          q"sealed abstract class ${responseSuperType}(val statusCode: StatusCode)"
+        ) ++ terms ++ List[Defn](
+          companion
+        )
+
+      case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields, responseDefinitions) =>
+        // Generate the pair of the Handler method and the actual call to `complete(...)`
+
         val parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(List.empty)).getOrElse(List.empty[ScalaParameter])
         val filterParamBy = ScalaParameter.filterParams(parameters)
         val bodyArgs = filterParamBy("body").headOption
@@ -67,28 +133,33 @@ object AkkaHttpServerGenerator {
           akkaHeaders <- headersToAkka(headerArgs)
           operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
         } yield {
-          val responseType = ServerRawResponse(operation).fold(SwaggerUtil.getResponseType(method, operation, t"Unit"))(Function.const(t"HttpResponse"))
+          val responseCompanion = Term.Name(s"${operationId}Response")
+          val responseType = ServerRawResponse(operation).filter(_ == true).fold[Type](t"${Term.Name(resourceName)}.${Type.Name(responseCompanion.value)}")(Function.const(t"HttpResponse"))
           val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields.map(_._1).map(List(_))
           val fullRouteMatcher = List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(akkaBody), akkaForm, akkaHeaders, tracingFields.map(_._2)).flatten.reduceLeft { (a, n) => q"${a} & ${n}" }
           val fullRoute: Term.Apply = orderedParameters match {
             case List(List()) => q"""
               ${fullRouteMatcher} {
-                complete(handler.${Term.Name(operationId)}())
+                complete(handler.${Term.Name(operationId)}(${responseCompanion})())
               }
               """
             case params =>
               q"""
               ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
-                complete(handler.${Term.Name(operationId)}(...${params.map(_.map(_.paramName))}))
+                complete(handler.${Term.Name(operationId)}(${responseCompanion})(...${params.map(_.map(_.paramName))}))
               }
               """
           }
-          val params: List[List[Term.Param]] = orderedParameters.map(_.map(_.param))
+
+          val respond: List[List[Term.Param]] = if (ServerRawResponse(operation).getOrElse(false)) {
+            List.empty
+          } else List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanion}.type"))
+          val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(_.param))
           RenderedRoute(fullRoute,
             q"""
               def ${Term.Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
             """
-          )
+          , responseDefinitions)
         }
 
       case CombineRouteTerms(terms) => terms match {
@@ -106,15 +177,18 @@ object AkkaHttpServerGenerator {
       case GetExtraRouteParams(tracing) =>
         Target.pure(List.empty)
 
-      case RenderClass(className, handlerName, combinedRouteTerms, extraRouteParams) =>
+      case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions) =>
         val routesParams: List[Term.Param] = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         Target.pure(q"""
-          object ${Term.Name(className)} {
+          object ${Term.Name(resourceName)} {
             import cats.syntax.either._
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
+
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
               ${combinedRouteTerms}
             }
+
+            ..${responseDefinitions}
           }
         """)
 
