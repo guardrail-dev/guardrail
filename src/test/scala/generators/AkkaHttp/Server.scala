@@ -116,7 +116,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
         def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
         def getFoo(respond: StoreResource.getFooResponse.type)(): scala.concurrent.Future[StoreResource.getFooResponse]
         def getFooBar(respond: StoreResource.getFooBarResponse.type)(bar: Long): scala.concurrent.Future[StoreResource.getFooBarResponse]
-        def putBar(bar: Long): scala.concurrent.Future[HttpResponse]
+        def putBar(respond: StoreResource.putBarResponse.type)(bar: Long): scala.concurrent.Future[HttpResponse]
       }
     """
     val resource = q"""

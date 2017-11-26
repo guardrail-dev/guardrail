@@ -168,9 +168,7 @@ object AkkaHttpServerGenerator {
               """
           }
 
-          val respond: List[List[Term.Param]] = if (ServerRawResponse(operation).getOrElse(false)) {
-            List.empty
-          } else List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanion}.type"))
+          val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanion}.type"))
           val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(_.param))
           RenderedRoute(fullRoute,
             q"""
