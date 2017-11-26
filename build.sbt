@@ -17,8 +17,8 @@ lazy val runExample = taskKey[Unit]("Run with example args")
 // TODO: akka.NotUsed should exist in all generated sources, but there are no import verifying tests yet.
 fullRunTask(runExample, Test, "com.twilio.swagger.codegen.CLI", """
   --defaults --import akka.NotUsed
-  --client --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients --tracing
-  --server --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers --tracing
+  --client --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients
+  --server --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers
   --client --specPath modules/codegen/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos
   --server --specPath modules/codegen/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server
   --client --specPath modules/codegen/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client
