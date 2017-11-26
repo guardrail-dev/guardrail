@@ -50,13 +50,12 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
             Left(Left(e))
         }))
       }
-      def getFoo(traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], IgnoredEntity], bleep: String, methodName: String = "get-foo", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-        traceBuilder(s"$${clientName}:$${methodName}") { propagate =>
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?" + Formatter.addArg("bleep", bleep), entity = entity, headers = allHeaders)))
-          })
-        }
+      def getFoo(traceBuilder: TraceBuilder, bleep: String, methodName: String = "get-foo", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+        wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+          tracingHttpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?" + Formatter.addArg("bleep", bleep), entity = entity, headers = allHeaders))
+        })
       }
     }
     """
@@ -102,13 +101,12 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
             Left(Left(e))
         }))
       }
-      def getFoo(traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], IgnoredEntity], methodName: String = "get-foo", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-        traceBuilder(s"$${clientName}:$${methodName}") { propagate =>
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders)))
-          })
-        }
+      def getFoo(traceBuilder: TraceBuilder, methodName: String = "get-foo", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+        wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+          tracingHttpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
+        })
       }
     }
     """
