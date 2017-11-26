@@ -184,7 +184,7 @@ object AkkaHttpServerGenerator {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
           routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
           _ <- routes.map(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString)).sequenceU
-        } yield routes.tail.foldRight(routes.head) { case (a, n) => q"${a} ~ ${n}" }
+        } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
 
       case RenderHandler(handlerName, methodSigs) =>
         for {
