@@ -1,0 +1,44 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  Address:
+    type: object
+    properties:
+      line1:
+        type: string
+      line2:
+        type: string
+      line3:
+        type: string
+paths:
+  /address:
+    get:
+      operationId: getAddresses
+      x-scala-package: addresses
+      responses:
+        '200':
+          type: array
+          items:
+            $ref: '#/definitions/Address'
+        '404':
+          description: Not found
+  /address/{id}:
+    get:
+      operationId: getAddress
+      x-scala-package: addresses
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/Address'
+        '404':
+          description: Not found
