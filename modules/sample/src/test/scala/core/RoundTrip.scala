@@ -1,8 +1,5 @@
 package swagger
 
-import org.scalatest.{EitherValues, FunSuite, Matchers}
-import org.scalatest.concurrent.ScalaFutures
-import clients.Implicits
 import _root_.clients.pet.PetClient
 import _root_.clients.{definitions => cdefs}
 import _root_.servers.pet.{PetHandler, PetResource}
@@ -10,9 +7,15 @@ import _root_.servers.{definitions => sdefs}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import clients.Implicits
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.SpanSugar._
+import org.scalatest.{EitherValues, FunSuite, Matchers}
 import scala.concurrent.Future
 
 class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+  override implicit val patienceConfig = PatienceConfig(1000 millis, 1000 millis)
+
   def traceBuilder[T]: clients.Implicits.TraceBuilder[Either[Throwable,HttpResponse],T] = {
     name => inner => inner(identity _)
   }
