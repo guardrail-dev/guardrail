@@ -1,0 +1,24 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      x-server-raw-response: true
+      x-scala-package: foo
+      responses:
+        '201':
+          schema:
+            $ref: '#/definitions/Foo'
+definitions:
+  Foo:
+    type: object
+    required:
+      - id
+    properties:
+      id:
+        type: integer
+        format: int64

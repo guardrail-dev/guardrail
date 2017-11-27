@@ -20,6 +20,7 @@ fullRunTask(runExample, Test, "com.twilio.swagger.codegen.CLI", """
   --client --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients --tracing
   --server --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers --tracing
   --client --specPath modules/codegen/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos
+  --server --specPath modules/codegen/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*)
 
 artifact in (Compile, assembly) := {

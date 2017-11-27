@@ -150,27 +150,26 @@ object AkkaHttpServerGenerator {
           akkaHeaders <- headersToAkka(headerArgs)
           operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
         } yield {
-          val responseCompanion = Term.Name(s"${operationId}Response")
-          val responseType = ServerRawResponse(operation).filter(_ == true).fold[Type](t"${Term.Name(resourceName)}.${Type.Name(responseCompanion.value)}")(Function.const(t"HttpResponse"))
+          val (responseCompanionTerm, responseCompanionType) = (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
+          val responseType = ServerRawResponse(operation).filter(_ == true).fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
           val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields.map(_._1).map(List(_))
           val fullRouteMatcher = List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(akkaBody), akkaForm, akkaHeaders, tracingFields.map(_._2)).flatten.reduceLeft { (a, n) => q"${a} & ${n}" }
+          val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
           val fullRoute: Term.Apply = orderedParameters match {
             case List(List()) => q"""
               ${fullRouteMatcher} {
-                complete(handler.${Term.Name(operationId)}(${responseCompanion})())
+                complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))
               }
               """
             case params =>
               q"""
               ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
-                complete(handler.${Term.Name(operationId)}(${responseCompanion})(...${params.map(_.map(_.paramName))}))
+                complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))
               }
               """
           }
 
-          val respond: List[List[Term.Param]] = if (ServerRawResponse(operation).getOrElse(false)) {
-            List.empty
-          } else List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanion}.type"))
+          val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
           val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(_.param))
           RenderedRoute(fullRoute,
             q"""

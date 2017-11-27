@@ -47,12 +47,27 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     |            type: boolean
     |  "/foo/{bar}":
     |    get:
-    |      x-scala-package: baz
+    |      x-scala-package: store
     |      x-scala-tracing-label: "completely-custom-label"
-    |      operationId: getFoo
+    |      operationId: getFooBar
     |      parameters:
     |      - name: bar
     |        in: path
+    |        required: true
+    |        type: integer
+    |        format: int64
+    |      responses:
+    |        200:
+    |          schema:
+    |            type: boolean
+    |  "/bar":
+    |    put:
+    |      operationId: putBar
+    |      x-server-raw-response: true
+    |      x-scala-package: store
+    |      parameters:
+    |      - name: bar
+    |        in: query
     |        required: true
     |        type: integer
     |        format: int64
@@ -94,12 +109,14 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     val swagger = new SwaggerParser().parse(spec)
 
     val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger).foldMap(AkkaHttp))
-    val _ :: Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
+    val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
 
     val handler = q"""
       trait StoreHandler {
         def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
         def getFoo(respond: StoreResource.getFooResponse.type)(): scala.concurrent.Future[StoreResource.getFooResponse]
+        def getFooBar(respond: StoreResource.getFooBarResponse.type)(bar: Long): scala.concurrent.Future[StoreResource.getFooBarResponse]
+        def putBar(respond: StoreResource.putBarResponse.type)(bar: Long): scala.concurrent.Future[HttpResponse]
       }
     """
     val resource = q"""
@@ -114,6 +131,10 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
             orderId => complete(handler.getOrderById(getOrderByIdResponse)(orderId))
           } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
             complete(handler.getFoo(getFooResponse)())
+          } ~ (get & path("foo" / LongNumber) & discardEntity) {
+            bar => complete(handler.getFooBar(getFooBarResponse)(bar))
+          } ~ (put & path("bar") & parameter(Symbol("bar").as[Long]) & discardEntity) {
+            bar => complete(handler.putBar(putBarResponse)(bar))
           }
         }
         sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
@@ -156,6 +177,38 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
           implicit def OKEv(value: Boolean): getFooResponse = OK(value)
           def OK(value: Boolean): getFooResponse = getFooResponseOK(value)
         }
+        sealed abstract class getFooBarResponse(val statusCode: StatusCode)
+        case class getFooBarResponseOK(value: Boolean) extends getFooBarResponse(StatusCodes.OK)
+        object getFooBarResponse {
+          implicit val getFooBarTRM: ToResponseMarshaller[getFooBarResponse] = Marshaller { implicit ec =>
+            resp => getFooBarTR(resp)
+          }
+          implicit def getFooBarTR(value: getFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getFooBarResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity = entity)) :: Nil
+              }
+          }
+          def apply[T](value: T)(implicit ev: T => getFooBarResponse): getFooBarResponse = ev(value)
+          implicit def OKEv(value: Boolean): getFooBarResponse = OK(value)
+          def OK(value: Boolean): getFooBarResponse = getFooBarResponseOK(value)
+        }
+        sealed abstract class putBarResponse(val statusCode: StatusCode)
+        case class putBarResponseOK(value: Boolean) extends putBarResponse(StatusCodes.OK)
+        object putBarResponse {
+          implicit val putBarTRM: ToResponseMarshaller[putBarResponse] = Marshaller { implicit ec =>
+            resp => putBarTR(resp)
+          }
+          implicit def putBarTR(value: putBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ putBarResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity = entity)) :: Nil
+              }
+          }
+          def apply[T](value: T)(implicit ev: T => putBarResponse): putBarResponse = ev(value)
+          implicit def OKEv(value: Boolean): putBarResponse = OK(value)
+          def OK(value: Boolean): putBarResponse = putBarResponseOK(value)
+        }
       }
     """
 
@@ -167,7 +220,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     val swagger = new SwaggerParser().parse(spec)
 
     val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger).foldMap(AkkaHttp))
-    val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: _ :: Nil = output
+    val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
 
     val handler = q"""
       trait BazHandler {
