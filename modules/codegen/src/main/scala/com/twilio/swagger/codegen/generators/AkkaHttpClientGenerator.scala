@@ -61,18 +61,24 @@ object AkkaHttpClientGenerator {
 
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] = {
           for {
-            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)({ case Term.Name(term) => Term.Name(toCamelCase(term)) })
+            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
+            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
+
+            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
+
             suffix = if (path.contains("?")) {
               Lit.String("&")
             } else {
               Lit.String("?")
             }
 
-            baseTerm = q"${base} + ${suffix}"
+            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
 
-            result = qsArgs.foldLeft[Term](baseTerm) { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
-              q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
-            }
+            result = NonEmptyList.fromList(qsArgs.toList)
+              .fold(base)({ _.foldLeft[Term](q"${base} + ${suffix}") { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                  q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
+                }
+              })
           } yield result
         }
 
@@ -189,7 +195,10 @@ object AkkaHttpClientGenerator {
           httpMethodStr: String = httpMethod.toString.toLowerCase
           methodName = Option(operation.getOperationId).getOrElse(s"$httpMethodStr $pathStr")
 
+          _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
+
           allParams = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(List.empty[ScalaParameter])
+          _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
 
           filterParamBy = ScalaParameter.filterParams(allParams)
           headerArgs = filterParamBy("header")
@@ -198,9 +207,12 @@ object AkkaHttpClientGenerator {
           bodyArgs = filterParamBy("body").headOption
           formArgs = filterParamBy("formData")
 
+          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
+
           // Generate the url with path, query parameters
           urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
+          _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
           // Generate FormData arguments
           formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
           // Generate header arguments

@@ -3,9 +3,10 @@ package core
 
 import cats.data.NonEmptyList
 import cats.instances.all._
+import cats.syntax.flatMap._
 import cats.syntax.either._
 import cats.syntax.traverse._
-import cats.~>
+import cats.{~>, FlatMap}
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.terms._
 import java.nio.file.Paths
@@ -15,57 +16,58 @@ import scala.meta._
 object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
   def apply[T](x: CoreTerm[T]): CoreTarget[T] = x match {
     case GetDefaultFramework =>
-      CoreTarget.pure("akka-http")
+      CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget.pure("akka-http")
 
     case ExtractGenerator(context) =>
-      context.framework match {
-        case Some("akka-http") => CoreTarget.pure(AkkaHttp)
-        case None => CoreTarget.log(NoFramework)
-        case Some(unknown) => CoreTarget.log(UnknownFramework(unknown))
-      }
+      for {
+        _ <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
+        framework <- context.framework.fold(CoreTarget.error[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
+          case "akka-http" => CoreTarget.pure(AkkaHttp)
+          case unknown => CoreTarget.error(UnknownFramework(unknown))
+        })
+        _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: ${framework}")
+      } yield framework
 
     case ValidateArgs(parsed) =>
       for {
         args <- CoreTarget.pure(parsed.filterNot(_.defaults))
         args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
-        args <- if (args.exists(_.printHelp)) CoreTarget.log(PrintHelp) else CoreTarget.pure(args)
+        args <- if (args.exists(_.printHelp)) CoreTarget.error[NonEmptyList[Args]](PrintHelp) else CoreTarget.pure(args)
       } yield args
 
     case ParseArgs(args, defaultFramework) => {
       def expandTilde(path: String): String = path.replaceFirst("^~", System.getProperty("user.home"))
       val defaultArgs = Args.empty.copy(context=Args.empty.context.copy(framework=Some(defaultFramework)), defaults=true)
 
-      @scala.annotation.tailrec
-      def rec(sofar: CoreTarget[(List[Args], List[String])]): CoreTarget[List[Args]] = {
-        val step: CoreTarget[(List[Args], List[String])] = for {
-          pair <- sofar
-          empty = pair._1.filter(_.defaults).reverse.headOption.getOrElse(defaultArgs).copy(defaults=false)
-          newState <- pair match {
-            case (Nil, xs@(_ :: _))                                 => CoreTarget.pure((empty                                                              :: Nil     , xs))
-            case (already, Nil)                                     => CoreTarget.pure((         already                                                              , Nil))
-            case (sofar :: already, "--defaults"             :: xs) => CoreTarget.pure((empty.copy(defaults=true) :: sofar                                 :: already , xs))
-            case (sofar :: already, "--client"               :: xs) => CoreTarget.pure((empty :: sofar                                                     :: already , xs))
-            case (sofar :: already, "--server"               :: xs) => CoreTarget.pure((empty.copy(kind=CodegenTarget.Server) :: sofar                     :: already , xs))
-            case (sofar :: already, "--framework"   :: value :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(framework=Some(value))):: already , xs))
-            case (sofar :: already, "--help"                 :: xs) => CoreTarget.pure((sofar.copy(printHelp   = true)                                     :: already , List.empty))
-            case (sofar :: already, "--specPath"    :: value :: xs) => CoreTarget.pure((sofar.copy(specPath    = Option(expandTilde(value)))               :: already , xs))
-            case (sofar :: already, "--tracing"              :: xs) => CoreTarget.pure((sofar.copy(context     = sofar.context.copy(tracing=true))         :: already , xs))
-            case (sofar :: already, "--outputPath"  :: value :: xs) => CoreTarget.pure((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
-            case (sofar :: already, "--packageName" :: value :: xs) => CoreTarget.pure((sofar.copy(packageName = Option(value.trim.split('.').to[List]))   :: already , xs))
-            case (sofar :: already, "--dtoPackage"  :: value :: xs) => CoreTarget.pure((sofar.copy(dtoPackage  = value.trim.split('.').to[List])           :: already , xs))
-            case (sofar :: already, "--import"      :: value :: xs) => CoreTarget.pure((sofar.copy(imports = sofar.imports :+ value)                       :: already , xs))
-            case (_, unknown) => CoreTarget.log(UnknownArguments(unknown))
+      type From = (List[Args], List[String])
+      type To = List[Args]
+      val start: From = (List.empty[Args], args.toList)
+      import CoreTarget.log.debug
+      FlatMap[CoreTarget].tailRecM[From, To](start)({ case pair@(sofar, rest) =>
+        val empty = sofar.filter(_.defaults).reverse.headOption.getOrElse(defaultArgs).copy(defaults=false)
+        def Continue(x: From): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.left(x))
+        def Return(x: To): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.right(x))
+        def Bail(x: Error): CoreTarget[Either[From, To]] = CoreTarget.error(x)
+        for {
+          _ <- debug("core", "parseArgs")(s"Processing: ${rest.take(5).mkString(" ")}${if(rest.length > 3) "..." else ""} of ${rest.length}")
+          step <- pair match {
+            case (already, Nil)                                     => debug("core", "parseArgs")("Finished") >> Return(already)
+            case (Nil, xs@(_ :: _))                                 => Continue((empty                                                              :: Nil     , xs))
+            case (sofar :: already, "--defaults"             :: xs) => Continue((empty.copy(defaults=true) :: sofar                                 :: already , xs))
+            case (sofar :: already, "--client"               :: xs) => Continue((empty :: sofar                                                     :: already , xs))
+            case (sofar :: already, "--server"               :: xs) => Continue((empty.copy(kind=CodegenTarget.Server) :: sofar                     :: already , xs))
+            case (sofar :: already, "--framework"   :: value :: xs) => Continue((sofar.copy(context     = sofar.context.copy(framework=Some(value))):: already , xs))
+            case (sofar :: already, "--help"                 :: xs) => Continue((sofar.copy(printHelp   = true)                                     :: already , List.empty))
+            case (sofar :: already, "--specPath"    :: value :: xs) => Continue((sofar.copy(specPath    = Option(expandTilde(value)))               :: already , xs))
+            case (sofar :: already, "--tracing"              :: xs) => Continue((sofar.copy(context     = sofar.context.copy(tracing=true))         :: already , xs))
+            case (sofar :: already, "--outputPath"  :: value :: xs) => Continue((sofar.copy(outputPath  = Option(expandTilde(value)))               :: already , xs))
+            case (sofar :: already, "--packageName" :: value :: xs) => Continue((sofar.copy(packageName = Option(value.trim.split('.').to[List]))   :: already , xs))
+            case (sofar :: already, "--dtoPackage"  :: value :: xs) => Continue((sofar.copy(dtoPackage  = value.trim.split('.').to[List])           :: already , xs))
+            case (sofar :: already, "--import"      :: value :: xs) => Continue((sofar.copy(imports = sofar.imports :+ value)                       :: already , xs))
+            case (_, unknown) => debug("core", "parseArgs")("Unknown argument") >> Bail(UnknownArguments(unknown))
           }
-        } yield newState
-
-        if (step.isLeft || step.exists(_._2.isEmpty)) {
-          step.map(_._1)
-        } else {
-          rec(step)
-        }
-      }
-
-      rec(Right((Nil, args.toList)))
+        } yield step
+      })
     }
 
     case ProcessArgSet(targetInterpreter, args) =>
@@ -75,6 +77,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         case Parsed.Success(tree) => Right(tree)
       }
       for {
+        _ <- CoreTarget.log.debug("core", "processArgSet")("Processing arguments")
         specPath <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
         outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
         pkgName <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
@@ -83,9 +86,11 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         context = args.context
         customImports <- args.imports.map(x =>
           for {
-            importer <- x.parse[Importer].fold(err => CoreTarget.log(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
+            _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse ${x} as an import directive")
+            importer <- x.parse[Importer].fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
           } yield Import(List(importer))
-        ).toList.sequenceU
+        ).toList.sequence[CoreTarget, Import]
+        _ <- CoreTarget.log.debug("core", "processArgSet")("Finished processing arguments")
       } yield {
         ReadSwagger(Paths.get(specPath), { swagger =>
           Common.writePackage(kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)

@@ -57,7 +57,7 @@ class SchemeTest extends FunSuite with Matchers {
         def getFoo(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Bar] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[Bar](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
       }

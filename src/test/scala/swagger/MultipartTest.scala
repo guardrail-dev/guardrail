@@ -70,7 +70,7 @@ class MultipartTest extends FunSuite with Matchers {
         wrap[String](Marshal(Multipart.FormData(Source.fromIterator {
           () => List(Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("Quux", quux)), baz.map(v => Multipart.FormData.BodyPart("Baz", Formatter.show(v))), oortCloud.map(v => Multipart.FormData.BodyPart("oort_cloud", v))).flatten.iterator
         })).to[RequestEntity].flatMap {
-          entity => httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+          entity => httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
         })
       }
     }

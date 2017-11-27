@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, Target, CodegenApplication}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -85,7 +85,7 @@ class HttpBodiesTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Properly handle all methods") {
-    val Right(Clients(Client(tags, className, statements) :: _, _)) = ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp)
+    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
 
     val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -105,31 +105,31 @@ class HttpBodiesTest extends FunSuite with Matchers {
         def getFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def putFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.PUT, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.PUT, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def postFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def deleteFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
         def patchFoo(body: Foo, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           wrap[IgnoredEntity](Marshal(body).to[RequestEntity].flatMap { entity =>
-            httpClient(HttpRequest(method = HttpMethods.PATCH, uri = host + basePath + "/foo" + "?", entity = entity, headers = allHeaders))
+            httpClient(HttpRequest(method = HttpMethods.PATCH, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
       }

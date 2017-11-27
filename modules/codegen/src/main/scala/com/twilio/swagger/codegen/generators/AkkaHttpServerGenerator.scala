@@ -5,6 +5,7 @@ import _root_.io.swagger.models.HttpMethod
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
+import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
@@ -18,7 +19,9 @@ object AkkaHttpServerGenerator {
   object ServerTermInterp extends FunctionK[ServerTerm, Target] {
     def apply[T](term: ServerTerm[T]): Target[T] = term match {
       case GetFrameworkImports(tracing) =>
-        Target.pure(List(
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "getFrameworkImports")(s"getFrameworkImports(${tracing})")
+        } yield List(
           q"import akka.http.scaladsl.model._"
         , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}"
         , q"import akka.http.scaladsl.server.Directives._"
@@ -26,30 +29,40 @@ object AkkaHttpServerGenerator {
         , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
         , q"import akka.util.ByteString"
         , q"import scala.language.implicitConversions"
-        ))
+        )
 
       case ExtractOperations(paths) =>
-        paths.map({ case (pathStr, path) =>
-          Target.fromOption(Option(path.getOperationMap), "No operations defined")
-            .map { operationMap =>
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
+          routes <- paths.map({ case (pathStr, path) =>
+            for {
+              _ <- Target.log.info("AkkaHttpServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
+              operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
+            } yield {
               operationMap.asScala.map { case (httpMethod, operation) =>
                 ServerRoute(pathStr, httpMethod, operation)
               }
             }
-        }).sequenceU.map(_.flatten)
+          }).sequenceU.map(_.flatten)
+        } yield routes
 
       case GetClassName(operation) =>
-        val primary: Option[Vector[String]] = ScalaPackage(operation).map(_.split('.').toVector)
-        def fallback: Option[Vector[String]] = {
-          Option(operation.getTags).map { tags =>
-            println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-            tags.asScala.toVector
-          }
-        }
-        Target.fromOption(NonEmptyList.fromList(primary.orElse(fallback).toList.flatten), s"Unable to determine className for ${operation}")
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getClassName(${operation})")
 
-      case BuildTracingFields(operation, className, tracing) =>
-        Target.pure(None)
+          pkg = ScalaPackage(operation).map(_.split('.').toVector).orElse({
+            Option(operation.getTags).map { tags =>
+              println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
+              tags.asScala.toVector
+            }
+          })
+          className <- Target.fromOption(NonEmptyList.fromList(pkg.toList.flatten), s"Unable to determine className for ${operation}")
+        } yield className
+
+      case BuildTracingFields(operation, resourceName, tracing) =>
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+        } yield None
 
       case GenerateResponseDefinitions(operation) =>
         for {
@@ -114,17 +127,21 @@ object AkkaHttpServerGenerator {
           companion
         )
 
-      case GenerateRoute(resourceName, basePath, ServerRoute(path, method, operation), tracingFields, responseDefinitions) =>
+      case GenerateRoute(resourceName, basePath, route@ServerRoute(path, method, operation), tracingFields, responseDefinitions) =>
         // Generate the pair of the Handler method and the actual call to `complete(...)`
-
-        val parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(List.empty)).getOrElse(List.empty[ScalaParameter])
-        val filterParamBy = ScalaParameter.filterParams(parameters)
-        val bodyArgs = filterParamBy("body").headOption
-        val formArgs = filterParamBy("formData").toList
-        val headerArgs = filterParamBy("header").toList
-        val pathArgs = filterParamBy("path").toList
-        val qsArgs = filterParamBy("query").toList
         for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+          parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(List.empty)).getOrElse(List.empty[ScalaParameter])
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
+          _ <- parameters.map(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}")).sequenceU
+
+          filterParamBy = ScalaParameter.filterParams(parameters)
+          bodyArgs = filterParamBy("body").headOption
+          formArgs = filterParamBy("formData").toList
+          headerArgs = filterParamBy("header").toList
+          pathArgs = filterParamBy("path").toList
+          qsArgs = filterParamBy("query").toList
+
           akkaMethod <- httpMethodToAkka(method)
           akkaPath <- pathStrToAkka(basePath, path, pathArgs)
           akkaQs <- qsToAkka(qsArgs)
@@ -162,24 +179,32 @@ object AkkaHttpServerGenerator {
           , responseDefinitions)
         }
 
-      case CombineRouteTerms(terms) => terms match {
-        case Nil => Target.log("Generated no routes, no source to generate")
-        case x :: xs => Target.pure(xs.foldRight(x) { case (a, n) => q"${a} ~ ${n}" })
-      }
+      case CombineRouteTerms(terms) =>
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
+          routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
+          _ <- routes.map(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString)).sequenceU
+        } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
 
       case RenderHandler(handlerName, methodSigs) =>
-        Target.pure(q"""
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"renderHandler(${handlerName}, ${methodSigs}")
+        } yield q"""
           trait ${Type.Name(handlerName)} {
             ..${methodSigs}
           }
-        """)
+        """
 
       case GetExtraRouteParams(tracing) =>
-        Target.pure(List.empty)
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
+        } yield List.empty
 
       case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions) =>
-        val routesParams: List[Term.Param] = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
-        Target.pure(q"""
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
+          routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
+        } yield q"""
           object ${Term.Name(resourceName)} {
             import cats.syntax.either._
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
@@ -190,12 +215,12 @@ object AkkaHttpServerGenerator {
 
             ..${responseDefinitions}
           }
-        """)
+        """
 
       case GetExtraImports(tracing) =>
-        Target.pure(
-          if (tracing) List(q"import akka.http.scaladsl.server.Directive1") else List.empty
-        )
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraImports(${tracing})")
+        } yield if (tracing) List(q"import akka.http.scaladsl.server.Directive1") else List.empty
     }
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {
@@ -204,7 +229,7 @@ object AkkaHttpServerGenerator {
       case HttpMethod.PATCH => Target.pure(q"patch")
       case HttpMethod.POST => Target.pure(q"post")
       case HttpMethod.PUT => Target.pure(q"put")
-      case other => Target.log(s"Unknown method: ${other}")
+      case other => Target.error(s"Unknown method: ${other}")
     }
 
     def pathSegmentToAkka: ScalaParameter => Target[Term] = { case ScalaParameter(_, param, _, argName, argType) =>
@@ -228,7 +253,7 @@ object AkkaHttpServerGenerator {
             .map { param =>
               pathSegmentToAkka(param)
             } getOrElse {
-              Target.log(s"Unknown path variable ${paramName} (known: ${pathVars.map(_.argName).mkString(", ")})")
+              Target.error(s"Unknown path variable ${paramName} (known: ${pathVars.map(_.argName).mkString(", ")})")
             }
         }
       }
@@ -244,15 +269,14 @@ object AkkaHttpServerGenerator {
             segments <- (
               rest.split('/')
                 .toList
-                .map({
-                  case "" => Target.log("Double slashes not supported")
-                  case segment => getKnownVar(segment).getOrElse(Target.pure(Lit.String(segment)))
+                .map(_.pure[Option].filterNot(_.isEmpty).fold(Target.error[Term]("Double slashes not supported")) {
+                  segment => getKnownVar(segment).getOrElse(Target.pure(Lit.String(segment)))
                 }).sequenceU
             )
             pathDirective <- segments match {
               case x :: Nil => Target.pure(q"path(${x})")
               case x :: xs => Target.pure(q"path(${xs.foldLeft(x) { case (a, n) => q"${a} / ${n}" }})")
-              case Nil => Target.log("Impossible scenario")
+              case Nil => Target.error("Impossible scenario")
             }
             akkaRoute = addTrailingSlashMatcher(rest.endsWith("/"), pathDirective)
           } yield akkaRoute
@@ -296,8 +320,8 @@ object AkkaHttpServerGenerator {
     def headersToAkka: List[ScalaParameter] => Target[Option[Term]] = {
       directivesFromParams(
         arg => tpe => Target.pure(q"headerValueByName(${arg})"),
-        arg => tpe => Target.log(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => Target.log(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => Target.error(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => Target.error(s"Unsupported Option[Iterable[${arg}]]"),
         arg => tpe => Target.pure(q"optionalHeaderValueByName(${arg})")
       ) _
     }

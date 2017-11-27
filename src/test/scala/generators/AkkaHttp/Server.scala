@@ -110,10 +110,10 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
           Directive.Empty
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
-            complete(handler.getFoo(getFooResponse)())
-          } ~ (get & path("store" / "order" / LongNumber) & discardEntity) {
+          (get & path("store" / "order" / LongNumber) & discardEntity) {
             orderId => complete(handler.getOrderById(getOrderByIdResponse)(orderId))
+          } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
+            complete(handler.getFoo(getFooResponse)())
           }
         }
         sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
