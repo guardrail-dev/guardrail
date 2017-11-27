@@ -110,7 +110,10 @@ object ProtocolGenerator {
   }
 
   def modelTypeAlias[F[_]](clsName: String, model: ModelImpl)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
-    val tpe = Option(model.getType).map(SwaggerUtil.typeName(_, None, ScalaType(model))).getOrElse(t"Json")
+    val tpe = Option(model.getType)
+      .fold[Type](t"Json")(raw =>
+        SwaggerUtil.typeName(raw, Option(model.getFormat), ScalaType(model))
+      )
     typeAlias(clsName, tpe)
   }
 
@@ -140,7 +143,10 @@ object ProtocolGenerator {
               model <- fromModel(clsName, m)
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
-          case _ =>
+          case arr: ArrayModel =>
+            typeAlias(clsName, SwaggerUtil.modelMetaType(arr))
+          case x =>
+            println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)
         }
       }).sequenceU

@@ -21,7 +21,7 @@ object CirceProtocolGenerator {
         Target.pure(Either.fromOption(Option(swagger.getEnum).map(_.asScala.to[List]), "Model has no enumerations"))
 
       case ExtractType(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getType).map(SwaggerUtil.typeName(_, None, ScalaType(swagger))), "Unable to determine type"))
+        Target.pure(Either.fromOption(Option(swagger.getType).map(SwaggerUtil.typeName(_, Option(swagger.getFormat), ScalaType(swagger))), "Unable to determine type"))
 
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
