@@ -56,6 +56,7 @@ val codegenSettings = Seq(
   )
   // Dev
   , scalacOptions in ThisBuild ++= Seq(
+      "-Ypartial-unification",
       "-language:higherKinds",
       "-Xexperimental",
       "-Ydelambdafy:method",
