@@ -140,7 +140,10 @@ object ProtocolGenerator {
               model <- fromModel(clsName, m)
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
-          case _ =>
+          case arr: ArrayModel =>
+            typeAlias(clsName, SwaggerUtil.modelMetaType(arr))
+          case x =>
+            println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)
         }
       }).sequenceU
