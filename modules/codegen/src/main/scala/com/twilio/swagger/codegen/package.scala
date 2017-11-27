@@ -16,38 +16,31 @@ package codegen {
   case class CodegenDefinitions(clients: List[Client], servers: List[Server], frameworkImports: List[Import])
 
   object Target {
-    type ErrorType = String
-    type Logger[T] = WriterT[Id, StructuredLogger, T]
-    type Type[A] = EitherT[Logger, ErrorType, A]
     val A = Applicative[Target]
     def pure[T](x: T): Target[T] = A.pure(x)
-    def error[T](x: ErrorType): Target[T] = EitherT.left[Logger, ErrorType, T](x.pure[Logger])
-    def fromOption[T](x: Option[T], default: => ErrorType): Target[T] = EitherT.fromOption(x, default)
-    def unsafeExtract[T](x: Type[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
+    def error[T](x: String): Target[T] = EitherT.left[Logger, String, T](x.pure[Logger])
+    def fromOption[T](x: Option[T], default: => String): Target[T] = EitherT.fromOption(x, default)
+    def unsafeExtract[T](x: Target[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
 
     object log {
-      def debug(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
-      def info(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
-      def warning(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
-      def error(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
+      def debug(name: String, names: String*)(message: String): Target[Unit] = EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
+      def info(name: String, names: String*)(message: String): Target[Unit] = EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
+      def warning(name: String, names: String*)(message: String): Target[Unit] = EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
+      def error(name: String, names: String*)(message: String): Target[Unit] = EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
     }
   }
 
   object CoreTarget {
-    type ErrorType = Error
-    type Logger[T] = WriterT[Id, StructuredLogger, T]
-    type Failure[T] = EitherT[Logger, ErrorType, T]
-    type Type[T] = Failure[T]
     def pure[T](x: T): CoreTarget[T] = x.pure[CoreTarget]
-    def fromOption[T](x: Option[T], default: => ErrorType): CoreTarget[T] = EitherT.fromOption(x, default)
-    def error[T](x: ErrorType): CoreTarget[T] = EitherT.left[Logger, ErrorType, T](x.pure[Logger])
-    def unsafeExtract[T](x: Type[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
+    def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] = EitherT.fromOption(x, default)
+    def error[T](x: Error): CoreTarget[T] = EitherT.left[Logger, Error, T](x.pure[Logger])
+    def unsafeExtract[T](x: CoreTarget[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
 
     object log {
-      def debug(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
-      def info(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
-      def warning(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
-      def error(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
+      def debug(name: String, names: String*)(message: String): CoreTarget[Unit] = EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
+      def info(name: String, names: String*)(message: String): CoreTarget[Unit] = EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
+      def warning(name: String, names: String*)(message: String): CoreTarget[Unit] = EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
+      def error(name: String, names: String*)(message: String): CoreTarget[Unit] = EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
     }
   }
 }
@@ -61,6 +54,7 @@ package object codegen {
   type CodegenApplicationACEMSSP[T] = Coproduct[ScalaTerm, CodegenApplicationACEMSP, T]
   type CodegenApplication[T] = CodegenApplicationACEMSSP[T]
 
-  type Target[A] = Target.Type[A]
-  type CoreTarget[A] = CoreTarget.Type[A]
+  type Logger[T] = WriterT[Id, StructuredLogger, T]
+  type Target[A] = EitherT[Logger, String, A]
+  type CoreTarget[A] = EitherT[Logger, Error, A]
 }
