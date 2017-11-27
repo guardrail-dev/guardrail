@@ -1,7 +1,7 @@
 package com.twilio.swagger
 
 import cats.{Applicative, Id}
-import cats.data.{Coproduct, EitherT, NonEmptyList, StateT, WriterT}
+import cats.data.{Coproduct, EitherT, NonEmptyList, WriterT}
 import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
@@ -35,14 +35,13 @@ package codegen {
 
   object CoreTarget {
     type ErrorType = Error
-    type State[T] = StateT[Id, Option[String], T]
-    type Logger[T] = WriterT[State, StructuredLogger, T]
+    type Logger[T] = WriterT[Id, StructuredLogger, T]
     type Failure[T] = EitherT[Logger, ErrorType, T]
     type Type[T] = Failure[T]
     def pure[T](x: T): CoreTarget[T] = x.pure[CoreTarget]
     def fromOption[T](x: Option[T], default: => ErrorType): CoreTarget[T] = EitherT.fromOption(x, default)
     def error[T](x: ErrorType): CoreTarget[T] = EitherT.left[Logger, ErrorType, T](x.pure[Logger])
-    def unsafeExtract[T](x: Type[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value.runA(None)
+    def unsafeExtract[T](x: Type[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
 
     object log {
       def debug(name: String, names: String*)(message: String): Type[Unit] = EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))

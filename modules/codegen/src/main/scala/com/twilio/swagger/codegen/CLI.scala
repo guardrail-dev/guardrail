@@ -23,14 +23,9 @@ object CLICommon {
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val (logLevelString, result) = Common.runM[CoreTerm](newArgs)
+    val result = Common.runM[CoreTerm](newArgs)
       .foldMap(interpreter)
-      .value
-      .run
-      .runF(level)
-      .sequence
-      .map(x => EitherT(WriterT(x)))
-      .map(_.fold[List[ReadSwagger[Target[List[WriteTree]]]]]({
+      .fold[List[ReadSwagger[Target[List[WriteTree]]]]]({
         case MissingArg(args, Error.ArgName(arg)) =>
           println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
           unsafePrintHelp()
@@ -56,9 +51,9 @@ object CLICommon {
         case UnparseableArgument(name, message) =>
           println(s"${AnsiColor.RED}Unparseable argument: --${name}, ${message}")
           fallback
-      }, _.toList))
+      }, _.toList)
 
-    implicit val logLevel: LogLevel = logLevelString.flatMap(level => LogLevels.members.find(_.level == level.toLowerCase)).getOrElse(LogLevels.Warning)
+    implicit val logLevel: LogLevel = level.flatMap(level => LogLevels.members.find(_.level == level.toLowerCase)).getOrElse(LogLevels.Warning)
 
     val (coreLogger, deferred) = result.run
 
