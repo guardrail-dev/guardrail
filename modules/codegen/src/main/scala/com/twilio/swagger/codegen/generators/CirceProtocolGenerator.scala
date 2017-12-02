@@ -18,10 +18,12 @@ object CirceProtocolGenerator {
   object EnumProtocolTermInterp extends (EnumProtocolTerm ~> Target) {
     def apply[T](term: EnumProtocolTerm[T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getEnum).map(_.asScala.to[List]), "Model has no enumerations"))
+        Target.pure(Either.fromOption(Option(swagger.getEnum()).map(_.asScala.to[List]), "Model has no enumerations"))
 
       case ExtractType(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getType).map(SwaggerUtil.typeName(_, Option(swagger.getFormat), ScalaType(swagger))), "Unable to determine type"))
+        Target.pure(for {
+          tpeName <- Either.fromOption(Option(swagger.getType()), s"Enum with no type: ${swagger} ${swagger.getTitle()} ${swagger.getEnum().asScala} ${swagger.getName()}")
+        } yield SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger)))
 
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
@@ -77,52 +79,55 @@ object CirceProtocolGenerator {
       case TransformProperty(clsName, name, property, needCamelSnakeConversion) =>
         def toCamelCase(s: String): String = "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
-        val argName = if (needCamelSnakeConversion) toCamelCase(name) else name
-        val (term, ref) = {
-          val defaultValue: Option[Term] = property match {
-            case _: MapProperty =>
-              Option(q"Map.empty")
-            case _: ArrayProperty =>
-              Option(q"IndexedSeq.empty")
-            case p: BooleanProperty =>
-              Default(p).extract[Boolean].map(Lit.Boolean(_))
-            case p: DoubleProperty =>
-              Default(p).extract[Double].map(Lit.Double(_))
-            case p: FloatProperty =>
-              Default(p).extract[Float].map(Lit.Float(_))
-            case p: IntegerProperty =>
-              Default(p).extract[Int].map(Lit.Int(_))
-            case p: LongProperty =>
-              Default(p).extract[Long].map(Lit.Long(_))
-            case p: StringProperty =>
-              Default(p).extract[String].map(Lit.String(_))
-            case _ =>
-              None
-          }
-
-          val SwaggerUtil.PropMeta(declType: Type, dep, _) = SwaggerUtil.propMeta(property)
-
-          val (finalDeclType, finalDefaultValue) =
-            Option(property.getRequired)
-              .filterNot(_ == false)
-              .fold[(Type, Option[Term])](
-                (t"Option[${declType}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-              )(Function.const((declType, defaultValue)) _)
-
-          (param"${Term.Name(argName)}: ${finalDeclType}".copy(default=finalDefaultValue), dep)
-        }
-
-        val dep = ref.filterNot(_.value == clsName) // Filter out our own class name
-        val readOnly = Option(name).filter(_ => Option(property.getReadOnly).exists(Boolean.unbox))
-        val needsEmptyToNull = property match {
-          case d: DateProperty => ScalaEmptyIsNull(d)
-          case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
-          case s: StringProperty => ScalaEmptyIsNull(s)
-          case _ => None
-        }
-
         for {
           _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+
+          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
+          meta <- SwaggerUtil.propMeta(property)
+
+          (term, ref) = {
+            val defaultValue: Option[Term] = property match {
+              case _: MapProperty =>
+                Option(q"Map.empty")
+              case _: ArrayProperty =>
+                Option(q"IndexedSeq.empty")
+              case p: BooleanProperty =>
+                Default(p).extract[Boolean].map(Lit.Boolean(_))
+              case p: DoubleProperty =>
+                Default(p).extract[Double].map(Lit.Double(_))
+              case p: FloatProperty =>
+                Default(p).extract[Float].map(Lit.Float(_))
+              case p: IntegerProperty =>
+                Default(p).extract[Int].map(Lit.Int(_))
+              case p: LongProperty =>
+                Default(p).extract[Long].map(Lit.Long(_))
+              case p: StringProperty =>
+                Default(p).extract[String].map(Lit.String(_))
+              case _ =>
+                None
+            }
+
+            val SwaggerUtil.PropMeta(declType: Type, dep, _) = meta
+
+            val (finalDeclType, finalDefaultValue) =
+              Option(property.getRequired)
+                .filterNot(_ == false)
+                .fold[(Type, Option[Term])](
+                  (t"Option[${declType}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+                )(Function.const((declType, defaultValue)) _)
+
+            (param"${Term.Name(argName)}: ${finalDeclType}".copy(default=finalDefaultValue), dep)
+          }
+
+          dep = ref.filterNot(_.value == clsName) // Filter out our own class name
+          readOnly = Option(name).filter(_ => Option(property.getReadOnly).exists(Boolean.unbox))
+          needsEmptyToNull = property match {
+            case d: DateProperty => ScalaEmptyIsNull(d)
+            case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
+            case s: StringProperty => ScalaEmptyIsNull(s)
+            case _ => None
+          }
+
           param <- Target.pure(ProtocolParameter(term, name, dep, readOnly, needsEmptyToNull.filter(_ == true).map(_ => argName)))
         } yield param
 

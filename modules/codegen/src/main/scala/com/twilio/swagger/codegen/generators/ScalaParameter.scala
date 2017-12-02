@@ -23,7 +23,7 @@ object ScalaParameter {
       "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
 
-    val SwaggerUtil.ParamMeta(baseType, baseDefaultValue) = SwaggerUtil.paramMeta(parameter)
+    val SwaggerUtil.ParamMeta(baseType, baseDefaultValue) = Target.unsafeExtract(SwaggerUtil.paramMeta(parameter))
     val paramType = baseType match {
       case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
       case other => other
