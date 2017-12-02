@@ -400,6 +400,19 @@
             "type": "string"
           },
           {
+            "name": "includeChildren",
+            "in": "query",
+            "description": "Delete children as well",
+            "type": "boolean"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Only delete pets with the specified status",
+            "type": "string",
+            "x-scala-type": "PetStatus"
+          },
+          {
             "name": "petId",
             "in": "path",
             "description": "Pet id to delete",
@@ -409,6 +422,9 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Pet deleted"
+          },
           "400": {
             "description": "Invalid ID supplied"
           },
