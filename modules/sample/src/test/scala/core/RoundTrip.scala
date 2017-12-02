@@ -131,4 +131,32 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
     val result = petClient.findPetsByStatus(traceBuilder, Vector("bogus")).value.futureValue
     assert(result.left.value.right.value.status.intValue == 404)
   }
+
+  test("round-trip: Raw type parameters") {
+    val petId: Long = 123L
+    val apiKey: String = "foobar"
+    val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
+      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None): Future[PetResource.deletePetResponse] = {
+        if (_petId == petId && _apiKey.contains(apiKey) && status.contains(sdefs.PetStatus.Pending)) Future.successful(respond.OK)
+        else Future.successful(respond.NotFound)
+      }
+
+      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]) = ???
+      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus) = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet) = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None) = ???
+    }))
+
+    val petClient = PetClient.httpClient(httpClient)
+
+    val result = petClient.deletePet(traceBuilder, petId, Some(true), Some(cdefs.PetStatus.Pending), Some(apiKey)).value.futureValue
+    result
+      .fold({ err =>
+        failTest(err.toString)
+      }, { _ == clients.Implicits.IgnoredEntity.empty})
+  }
 }
