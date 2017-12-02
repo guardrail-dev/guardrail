@@ -3,7 +3,7 @@ package tests.generators.AkkaHttp
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Context, Server, Servers, ServerGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Context, Server, Servers, ProtocolGenerator, ProtocolDefinitions, ServerGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 
 class AkkaHttpServerTest extends FunSuite with Matchers {
@@ -28,6 +28,12 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     |        required: true
     |        type: integer
     |        format: int64
+    |      - name: status
+    |        in: query
+    |        required: true
+    |        type: string
+    |        x-scala-type: OrderStatus
+    |        default: placed
     |      responses:
     |        '200':
     |          description: successful operation
@@ -103,17 +109,24 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     |        default: false
     |    xml:
     |      name: Order
+    |  OrderStatus:
+    |    type: string
+    |    enum:
+    |    - placed
+    |    - approved
+    |    - delivered
     |""".stripMargin
 
   test("Ensure routes are generated") {
     val swagger = new SwaggerParser().parse(spec)
 
-    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val ProtocolDefinitions(protocolElems, _, _, _) = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp))
+    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(protocolElems).foldMap(AkkaHttp))
     val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
 
     val handler = q"""
       trait StoreHandler {
-        def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
+        def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
         def getFoo(respond: StoreResource.getFooResponse.type)(): scala.concurrent.Future[StoreResource.getFooResponse]
         def getFooBar(respond: StoreResource.getFooBarResponse.type)(bar: Long): scala.concurrent.Future[StoreResource.getFooBarResponse]
         def putBar(respond: StoreResource.putBarResponse.type)(bar: Long): scala.concurrent.Future[HttpResponse]
@@ -127,8 +140,8 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
           Directive.Empty
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & path("store" / "order" / LongNumber) & discardEntity) {
-            orderId => complete(handler.getOrderById(getOrderByIdResponse)(orderId))
+          (get & path("store" / "order" / LongNumber) & parameter(Symbol("status").as[OrderStatus]) & discardEntity) {
+            (orderId, status) => complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))
           } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
             complete(handler.getFoo(getFooResponse)())
           } ~ (get & path("foo" / LongNumber) & discardEntity) {
