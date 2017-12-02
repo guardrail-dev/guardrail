@@ -47,14 +47,14 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
           ) => Future.successful(respond.Created)
         case _ => failTest("Parameters didn't match")
       }
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet): Future[PetResource.updatePetResponse] = ???
-      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus): Future[PetResource.findPetsByStatusEnumResponse] = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.findPetsByStatusResponse] = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]): Future[PetResource.findPetsByTagsResponse] = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long): Future[PetResource.getPetByIdResponse] = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[PetResource.updatePetWithFormResponse] = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None): Future[PetResource.deletePetResponse] = ???
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[PetResource.uploadFileResponse] = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None) = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]) = ???
+      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus) = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet) = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -88,14 +88,14 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
         }))
       }
 
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet): Future[PetResource.addPetResponse] = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet): Future[PetResource.updatePetResponse] = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.findPetsByStatusResponse] = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]): Future[PetResource.findPetsByTagsResponse] = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long): Future[PetResource.getPetByIdResponse] = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[PetResource.updatePetWithFormResponse] = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None): Future[PetResource.deletePetResponse] = ???
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[PetResource.uploadFileResponse] = ???
+      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None) = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]) = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet) = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -116,14 +116,14 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
         Future.successful(respond.NotFound)
       }
 
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet): Future[PetResource.addPetResponse] = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet): Future[PetResource.updatePetResponse] = ???
-      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus): Future[PetResource.findPetsByStatusEnumResponse] = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]): Future[PetResource.findPetsByTagsResponse] = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long): Future[PetResource.getPetByIdResponse] = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None): Future[PetResource.updatePetWithFormResponse] = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None): Future[PetResource.deletePetResponse] = ???
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None): Future[PetResource.uploadFileResponse] = ???
+      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None) = ???
+      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus) = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet) = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: Long, additionalMetadata: Option[String] = None, file: Option[String] = None) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
