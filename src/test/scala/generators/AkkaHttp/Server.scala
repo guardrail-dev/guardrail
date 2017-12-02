@@ -108,7 +108,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
   test("Ensure routes are generated") {
     val swagger = new SwaggerParser().parse(spec)
 
-    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger).foldMap(AkkaHttp))
+    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
     val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
 
     val handler = q"""
@@ -219,7 +219,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
   test("Ensure routes are generated with tracing") {
     val swagger = new SwaggerParser().parse(spec)
 
-    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger).foldMap(AkkaHttp))
+    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger)(List.empty).foldMap(AkkaHttp))
     val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
 
     val handler = q"""

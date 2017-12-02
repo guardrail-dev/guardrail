@@ -85,7 +85,7 @@ object Common {
 
         case CodegenTarget.Server =>
           for {
-            serverMeta <- ServerGenerator.fromSwagger[CodegenApplication](context, swagger)
+            serverMeta <- ServerGenerator.fromSwagger[CodegenApplication](context, swagger)(protocolElems)
             Servers(servers, frameworkImports) = serverMeta
           } yield CodegenDefinitions(List.empty, servers, frameworkImports)
       }
