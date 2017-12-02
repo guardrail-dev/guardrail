@@ -21,7 +21,8 @@ object SwaggerUtil {
         for {
           items <- Target.fromOption(Option(arr.getItems()), "items.type unspecified")
           meta <- propMeta(items)
-        } yield t"List[${meta.tpe}]"
+          tpe = meta.tpe
+        } yield t"List[${tpe}]"
       case impl: ModelImpl =>
         for {
           tpeName <- Target.fromOption(Option(impl.getType()), s"Unable to resolve type for ${impl}")
@@ -32,7 +33,7 @@ object SwaggerUtil {
   def responseMetaType[T <: Response](response: T): Target[Type] = {
     response match {
       case r: RefResponse =>
-        propMetaType(r.getSchema())
+        propMeta(r.getSchema()).map(_.tpe)
       case x =>
         Target.error(s"responseMetaType: Unsupported type ${x}")
     }
@@ -164,10 +165,6 @@ object SwaggerUtil {
     case name => name
   }
 
-  def propMetaType[T <: Property](property: T): Target[Type] = {
-    propMeta[T](property).map(_.tpe)
-  }
-
   case class PropMeta(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term])
   def propMeta[T <: Property](property: T): Target[PropMeta] = {
     property match {
@@ -239,7 +236,7 @@ object SwaggerUtil {
       Option(operation.getResponses).flatMap { responses =>
         getBestSuccessResponse(responses)
           .flatMap(resp => Option(resp.getSchema))
-          .map(SwaggerUtil.propMetaType)
+          .map(prop => SwaggerUtil.propMeta(prop).map(_.tpe))
           .orElse(if (hasEmptySuccessType(responses)) Some(Target.pure(ignoredType)) else None)
       }.getOrElse(Target.pure(ignoredType))
     } else {
