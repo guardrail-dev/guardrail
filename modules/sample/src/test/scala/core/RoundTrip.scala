@@ -47,7 +47,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
           ) => Future.successful(respond.Created)
         case _ => failTest("Parameters didn't match")
       }
-      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None) = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]) = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus) = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
@@ -89,7 +89,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       }
 
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None) = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]) = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
@@ -117,7 +117,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       }
 
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(petId: Long, apiKey: Option[String] = None) = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus) = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
