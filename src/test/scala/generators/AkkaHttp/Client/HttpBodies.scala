@@ -85,7 +85,8 @@ class HttpBodiesTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Properly handle all methods") {
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
 
     val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
