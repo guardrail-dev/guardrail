@@ -69,7 +69,7 @@ class DefinitionSpec extends FunSuite with Matchers {
 
   test("Plain objects should be generated") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, cls, cmp) :: _ = definitions
+    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class First(a: Option[Int] = None)
@@ -90,7 +90,7 @@ class DefinitionSpec extends FunSuite with Matchers {
 
   test("Enumerations should be generated") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: _ :: EnumDefinition(_, _, cls, cmp) :: _ = definitions
+    val _ :: _ :: EnumDefinition(_, _, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
     sealed abstract class Third(val value: String) {
@@ -123,7 +123,7 @@ class DefinitionSpec extends FunSuite with Matchers {
 
   test("Camel case conversion should happen") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: _ :: _ :: _ :: ClassDefinition(_, cls, cmp) :: _ = definitions
+    val _ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class Fifth(aBCD: Option[Int] = None, bCDE: Option[Int] = None)
@@ -144,7 +144,7 @@ class DefinitionSpec extends FunSuite with Matchers {
 
   test("Defaults should work") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: _ :: _ :: _ :: _ :: ClassDefinition(_, cls, cmp) :: _ = definitions
+    val _ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))

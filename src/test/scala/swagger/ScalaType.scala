@@ -42,7 +42,7 @@ class ScalaTypesTest extends FunSuite with Matchers {
       }
     """
 
-    val ClassDefinition(_, cls, cmp) = definitions.head
+    val ClassDefinition(_, _, cls, cmp) = definitions.head
     cls.structure shouldEqual definition.structure
     cmp.structure shouldEqual companion.structure
   }

@@ -49,7 +49,7 @@ object ProtocolGenerator {
 
         defn <- renderClass(clsName, tpe)
         companion <- renderCompanion(clsName, members, accessors, values, encoder, decoder)
-      } yield EnumDefinition(Type.Name(clsName), elems, SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(companion))
+      } yield EnumDefinition(clsName, Type.Name(clsName), elems, SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(companion))
     }
 
     for {
@@ -93,7 +93,7 @@ object ProtocolGenerator {
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
         decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
         cmp <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
+      } yield ClassDefinition(clsName, Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
     }
 
     for {
@@ -121,7 +121,7 @@ object ProtocolGenerator {
     for {
       defn <- renderAlias(clsName, tpe)
       cmp <- renderAliasCompanion(clsName)
-    } yield RandomType(tpe, List(SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp)))
+    } yield RandomType(clsName, tpe, List.empty)
   }
 
   def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {

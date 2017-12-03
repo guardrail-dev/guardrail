@@ -135,7 +135,7 @@ class BacktickTest extends FunSuite with Matchers {
     }
     """
 
-    val ClassDefinition(_, cls, cmp) :: _ = definitions.toList
+    val ClassDefinition(_, _, cls, cmp) :: _ = definitions.toList
     cls.structure should equal(definition.structure)
     cls.toString should include("case class `dashy-class`")
     cls.toString should include("`dashy-param`")
@@ -175,7 +175,7 @@ class BacktickTest extends FunSuite with Matchers {
       implicit val ${Pat.Var(Term.Name("`showdashy-enum`"))}: Show[${Type.Name("`dashy-enum`")}] = Show.build(_.value)
     }
     """
-    val _ :: EnumDefinition(_, _, cls,cmp) :: _ = definitions.toList
+    val _ :: EnumDefinition(_, _, _, cls,cmp) :: _ = definitions.toList
 
     cls.structure should equal(definition.structure)
     cls.toString should include("sealed abstract class `dashy-enum`")

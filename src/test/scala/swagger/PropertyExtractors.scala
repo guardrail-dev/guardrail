@@ -64,7 +64,7 @@ class PropertyExtractors extends FunSuite with Matchers {
 
   test("Render all primitive types correctly") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, cls, cmp) :: _ = definitions
+    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class Something(

@@ -81,7 +81,7 @@ class EnumTest extends FunSuite with Matchers {
 
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     definitions.length should equal (1)
-    val EnumDefinition(_, _, cls, cmp) = definitions.head
+    val EnumDefinition(_, _, _, cls, cmp) = definitions.head
     cls.structure should equal(definition.structure)
 
     cmp.structure should equal(companion.structure)
