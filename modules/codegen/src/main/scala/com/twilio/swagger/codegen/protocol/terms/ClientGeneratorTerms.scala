@@ -10,7 +10,7 @@ class ClientTerms[F[_]](implicit I: Inject[ClientTerm, F]) {
     Free.inject[ClientTerm, F](ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject[ClientTerm, F](GetClassName(operation))
-  def generateClientOperation(className: List[String], tracing: Boolean, protocolElems: List[ProtocolElems])(route: ClientRoute): Free[F, Defn] =
+  def generateClientOperation(className: List[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(route: ClientRoute): Free[F, Defn] =
     Free.inject[ClientTerm, F](GenerateClientOperation(className, route, tracing, protocolElems))
   def getImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject[ClientTerm, F](GetImports(tracing))

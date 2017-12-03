@@ -16,7 +16,7 @@ case class ClientRoute(path: String, method: HttpMethod, operation: Operation)
 object ClientGenerator {
   type ClientGenerator[A] = ClientTerm[A]
 
-  def fromSwagger[F[_]](context: Context, swagger: Swagger)(protocolElems: List[ProtocolElems])(implicit C: ClientTerms[F]): Free[F, Clients] = {
+  def fromSwagger[F[_]](context: Context, swagger: Swagger)(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[F]): Free[F, Clients] = {
     import C._
     val paths: List[(String, Path)] = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
     val basePath: Option[String] = Option(swagger.getBasePath)
