@@ -14,12 +14,7 @@ import scala.language.postfixOps
 import scala.language.reflectiveCalls
 import scala.meta._
 
-sealed trait ProtocolElems
-case class RandomType(tpe: Type, defn: List[Defn]) extends ProtocolElems
-case class ClassDefinition(tpe: Type.Name, cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
-case class EnumDefinition(tpe: Type.Name, elems: List[(String, Term.Name, Term.Select)], cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
-
-case class ProtocolDefinitions(elems: List[ProtocolElems], protocolImports: List[Import], packageObjectImports: List[Import], packageObjectContents: List[Stat])
+case class ProtocolDefinitions(elems: List[StrictProtocolElems], protocolImports: List[Import], packageObjectImports: List[Import], packageObjectContents: List[Stat])
 
 case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
 
@@ -153,6 +148,6 @@ object ProtocolGenerator {
       protoImports <- protocolImports
       pkgImports <- packageObjectImports
       pkgObjectContents <- packageObjectContents
-    } yield ProtocolDefinitions(elems, protoImports, pkgImports, pkgObjectContents)
+    } yield ProtocolDefinitions(elems.collect { case x: StrictProtocolElems => x }, protoImports, pkgImports, pkgObjectContents)
   }
 }
