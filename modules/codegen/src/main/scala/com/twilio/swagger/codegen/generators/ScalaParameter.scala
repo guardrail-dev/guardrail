@@ -4,6 +4,8 @@ package generators
 import _root_.io.swagger.models.parameters.Parameter
 import java.util.Locale
 import scala.meta._
+import cats.syntax.traverse._
+import cats.instances.all._
 
 case class ScalaParameter(in: Option[String], param: Term.Param, paramName: Term.Name, argName: Term.Name, argType: Type)
 object ScalaParameter {
@@ -17,7 +19,7 @@ object ScalaParameter {
     ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
   }
 
-  def fromParameter(protocolElems: List[ProtocolElems]): Parameter => ScalaParameter = { parameter =>
+  def fromParameter(protocolElems: List[ProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed = "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
       "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
@@ -81,7 +83,7 @@ object ScalaParameter {
       }
     }
 
-    Target.unsafeExtract(for {
+    for {
       meta <- paramMeta(parameter)
     } yield {
       val ParamMeta(baseType, baseDefaultValue) = meta
@@ -123,24 +125,24 @@ object ScalaParameter {
       val paramName = Term.Name(toCamelCase(parameter.getName))
       val param = param"${paramName}: ${declType}".copy(default=defaultValue)
       ScalaParameter(Option(parameter.getIn), param, paramName, Term.Name(parameter.getName), declType)
-    })
+    }
   }
 
-  def fromParameters(protocolElems: List[ProtocolElems]): List[Parameter] => List[ScalaParameter] = { params =>
-    val parameters = params.map(ScalaParameter.fromParameter(protocolElems))
-    val counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
-
-    parameters.map { param =>
-      val Term.Name(name) = param.paramName
-      if (counts.getOrElse(name, 0) > 1) {
-        val escapedName = Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
-        param.copy(
-          param = param.param.copy(name=escapedName),
-          paramName = escapedName
-        )
+  def fromParameters(protocolElems: List[ProtocolElems]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
+    for {
+      parameters <- params.map(fromParameter(protocolElems)).sequenceU
+      counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
+    } yield parameters.map { param =>
+        val Term.Name(name) = param.paramName
+        if (counts.getOrElse(name, 0) > 1) {
+          val escapedName = Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
+          param.copy(
+            param = param.param.copy(name=escapedName),
+            paramName = escapedName
+          )
+        }
+        else param
       }
-      else param
-    }
   }
 
   /**

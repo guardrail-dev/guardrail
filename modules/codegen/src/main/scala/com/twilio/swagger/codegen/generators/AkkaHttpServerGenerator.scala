@@ -131,7 +131,7 @@ object AkkaHttpServerGenerator {
         // Generate the pair of the Handler method and the actual call to `complete(...)`
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-          parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(List.empty[ScalaParameter])
+          parameters <- Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(Target.pure(List.empty[ScalaParameter]))
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
           _ <- parameters.map(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}")).sequenceU
 

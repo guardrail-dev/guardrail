@@ -197,7 +197,7 @@ object AkkaHttpClientGenerator {
 
           _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
-          allParams = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(List.empty[ScalaParameter])
+          allParams <- Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(Target.pure(List.empty[ScalaParameter]))
           _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
 
           filterParamBy = ScalaParameter.filterParams(allParams)
