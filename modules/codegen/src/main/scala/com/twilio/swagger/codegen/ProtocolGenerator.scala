@@ -121,7 +121,7 @@ object ProtocolGenerator {
     for {
       defn <- renderAlias(clsName, tpe)
       cmp <- renderAliasCompanion(clsName)
-    } yield RandomType(clsName, tpe, List.empty)
+    } yield RandomType(clsName, tpe)
   }
 
   def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {

@@ -28,14 +28,14 @@ class Issue61 extends FunSuite with Matchers {
 
   test("Generate plain array alias definition") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val RandomType(_, tpe, Nil) :: _ :: Nil = definitions
+    val RandomType(_, tpe) :: _ :: Nil = definitions
 
     tpe.structure shouldBe(t"IndexedSeq[String]".structure)
   }
 
   test("Generate primitive type aliases") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: RandomType(_, tpe, Nil) :: Nil = definitions
+    val _ :: RandomType(_, tpe) :: Nil = definitions
 
     tpe.structure shouldBe(t"Long".structure)
   }

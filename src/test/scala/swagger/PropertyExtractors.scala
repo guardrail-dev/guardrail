@@ -2,7 +2,7 @@ package swagger
 
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import io.swagger.parser.SwaggerParser
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._

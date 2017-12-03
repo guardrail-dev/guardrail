@@ -3,7 +3,7 @@ package tests.generators.AkkaHttp.Client
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 

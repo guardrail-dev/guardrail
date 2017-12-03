@@ -21,13 +21,13 @@ object SwaggerUtil {
         case x@Resolved(tpe, _, default) => Target.pure(x)
         case Deferred(name) =>
           Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
-            case RandomType(name, tpe, defn) => Resolved(tpe, None, None)
+            case RandomType(name, tpe) => Resolved(tpe, None, None)
             case ClassDefinition(name, tpe, cls, companion) => Resolved(tpe, None, None)
             case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(tpe, None, None)
           }
         case DeferredArray(name) =>
           Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
-            case RandomType(name, tpe, defn) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+            case RandomType(name, tpe) => Resolved(t"IndexedSeq[${tpe}]", None, None)
             case ClassDefinition(name, tpe, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
             case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
           }

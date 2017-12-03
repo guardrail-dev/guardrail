@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, Target, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, Target, CodegenApplication}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
