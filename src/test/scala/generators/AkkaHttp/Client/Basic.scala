@@ -70,9 +70,8 @@ class BasicTest extends FunSuite with Matchers {
 
   test("Generate JSON alias definitions") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val RandomType(_, _, List(tpe, cmp)) :: _ = definitions
-    tpe.structure should equal(q"type Baz = Json".structure)
-    cmp.structure should equal(q"object Baz".structure)
+    val RandomType(_, tpe, Nil) :: _ = definitions
+    tpe.structure should equal(t"Json".structure)
   }
 
   test("Handle json subvalues") {

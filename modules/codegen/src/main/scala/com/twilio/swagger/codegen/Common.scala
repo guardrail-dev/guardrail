@@ -60,9 +60,8 @@ object Common {
               """
           )), List.empty[Stat])
 
-        case RandomType(_, _, defns) =>
-          (List.empty, defns.toList)
-
+        case RandomType(_, _, _) =>
+          (List.empty, List.empty)
       }).foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
       (protocolDefinitions, extraTypes) = protoOut
 
