@@ -30,7 +30,7 @@ class Issue61 extends FunSuite with Matchers {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val RandomType(_, tpe, Nil) :: _ :: Nil = definitions
 
-    tpe.structure shouldBe(t"List[String]".structure)
+    tpe.structure shouldBe(t"IndexedSeq[String]".structure)
   }
 
   test("Generate primitive type aliases") {

@@ -89,41 +89,37 @@ object ScalaParameter {
 
     for {
       meta <- paramMeta(parameter)
-    } yield {
-      val ParamMeta(baseType, baseDefaultValue) = meta
-      val paramType = baseType match {
+      ParamMeta(baseType, baseDefaultValue) = meta
+      paramType = baseType match {
         case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
         case other => other
       }
 
-      val required = parameter.getRequired()
-      val declType: Type = if (!required) {
+      required = parameter.getRequired()
+      declType: Type = if (!required) {
         t"Option[$paramType]"
       } else {
         paramType
       }
 
-      val enumType: Option[Type.Name] = paramType match {
-        case tpe@Type.Name(_) => Some(tpe)
-        case _ => None
-      }
-
-      val propDefaultValue: Option[Term] =
-        enumType.flatMap { case Type.Name(tpeName) =>
-          protocolElems
-            .flatMap {
-              case EnumDefinition(_, Type.Name(`tpeName`), elems, _, _) =>
-                baseDefaultValue.flatMap {
-                  case Lit.String(name) => elems.find(_._1 == name).map(_._3) // FIXME: Failed lookups don't fail codegen, causing mismatches like `foo: Bar = "baz"`
-                }
-              case _ => None
-            } headOption
-        } orElse baseDefaultValue
-
+      enumDefaultValue <- (paramType match {
+        case tpe@Type.Name(tpeName) =>
+          protocolElems.collect({ case x@EnumDefinition(_, Type.Name(`tpeName`), _, _, _) => x }).headOption
+            .fold(baseDefaultValue.map(Target.pure _)) { case EnumDefinition(_, _, elems, _, _) => // FIXME: Is there a better way to do this? There's a gap of coverage here
+              baseDefaultValue.map {
+                case Lit.String(name) =>
+                  elems.find(_._1 == name)
+                    .fold(Target.error[Term](s"Enumeration ${tpeName} is not defined for default value ${name}"))(value => Target.pure(value._3))
+                case _ => Target.error[Term](s"Enumeration ${tpeName} somehow has a default value that isn't a string")
+              }
+            }
+        case _ => baseDefaultValue.map(Target.pure _)
+      }).sequenceU
+    } yield {
       val defaultValue = if (!required) {
-        propDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
+        enumDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
       } else {
-        propDefaultValue
+        enumDefaultValue
       }
 
       val paramName = Term.Name(toCamelCase(parameter.getName))
