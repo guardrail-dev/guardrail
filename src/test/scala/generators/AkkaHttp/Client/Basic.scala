@@ -97,7 +97,8 @@ class BasicTest extends FunSuite with Matchers {
   }
 
   test("Properly handle all methods") {
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -150,9 +151,9 @@ class BasicTest extends FunSuite with Matchers {
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/bar", entity = entity, headers = allHeaders))
         })
       }
-      def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Baz] = {
+      def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Json] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[Baz](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+        wrap[Json](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/baz", entity = entity, headers = allHeaders))
         })
       }

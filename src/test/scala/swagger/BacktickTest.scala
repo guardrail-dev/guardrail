@@ -65,7 +65,8 @@ class BacktickTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Ensure paths are generated with escapes") {
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
 
     tags should equal (Seq("dashy-package"))

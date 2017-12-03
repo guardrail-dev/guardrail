@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
@@ -63,7 +63,8 @@ class SchemeTest extends FunSuite with Matchers {
       }
     """
 
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
