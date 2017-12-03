@@ -19,14 +19,13 @@ object ScalaParameter {
     ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
   }
 
-  def fromParameter(protocolElems: List[ProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
+  def fromParameter(protocolElems: List[StrictProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed = "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
       "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
 
-    case class ParamMeta(tpe: Type, defaultValue: Option[Term])
-    def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
+    def paramMeta[T <: Parameter](param: T): Target[SwaggerUtil.ResolvedType] = {
       import com.twilio.swagger.codegen.extract.{Default, ScalaType}
       import _root_.io.swagger.models.parameters._
       def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
@@ -48,40 +47,36 @@ object ScalaParameter {
       param match {
         case x: BodyParameter => for {
           schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
-          tpe <- SwaggerUtil.modelMetaType(schema)
-          meta <- tpe match {
-            case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(ParamMeta(tpe, None))
-            case xs => Target.error(s"Unresolved references: ${xs}")
-          }
-        } yield meta
+          rtpe <- SwaggerUtil.modelMetaType(schema)
+        } yield rtpe
         case x: HeaderParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+          } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
         case x: PathParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+          } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
         case x: QueryParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+          } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
         case x: CookieParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+          } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
         case x: FormParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+          } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
         case r: RefParameter =>
           for {
             tpeName <- Target.fromOption(Option(r.getSimpleRef()), "$ref not defined")
-          } yield ParamMeta(Type.Name(tpeName), None)
+          } yield SwaggerUtil.Deferred(tpeName)
         case x: SerializableParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None)
+          } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, None)
         case x =>
           Target.error(s"Unsure how to handle ${x}")
       }
@@ -89,7 +84,22 @@ object ScalaParameter {
 
     for {
       meta <- paramMeta(parameter)
-      ParamMeta(baseType, baseDefaultValue) = meta
+      resolved <- meta match {
+        case SwaggerUtil.Resolved(tpe, _, default) => Target.pure((tpe, default))
+        case SwaggerUtil.Deferred(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe, defn) => (tpe, None)
+            case ClassDefinition(name, tpe, cls, companion) => (tpe, None)
+            case EnumDefinition(name, tpe, elems, cls, companion) => (tpe, None)
+          }
+        case SwaggerUtil.DeferredArray(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe, defn) => (t"IndexedSeq[${tpe}]", None)
+            case ClassDefinition(name, tpe, cls, companion) => (t"IndexedSeq[${tpe}]", None)
+            case EnumDefinition(name, tpe, elems, cls, companion) => (t"IndexedSeq[${tpe}]", None)
+          }
+      }
+      (baseType, baseDefaultValue) = resolved
       paramType = baseType match {
         case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
         case other => other
