@@ -49,7 +49,11 @@ object ScalaParameter {
         case x: BodyParameter => for {
           schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
           tpe <- SwaggerUtil.modelMetaType(schema)
-        } yield ParamMeta(tpe, None)
+          meta <- tpe match {
+            case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(ParamMeta(tpe, None))
+            case xs => Target.error(s"Unresolved references: ${xs}")
+          }
+        } yield meta
         case x: HeaderParameter =>
           for {
             tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")

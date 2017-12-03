@@ -139,7 +139,10 @@ object ProtocolGenerator {
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
           case arr: ArrayModel =>
-            typeAlias(clsName, Target.unsafeExtract(SwaggerUtil.modelMetaType(arr)))
+            typeAlias(clsName, Target.unsafeExtract(SwaggerUtil.modelMetaType(arr).flatMap {
+              case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+              case xs => Target.error[Type](s"Unresolved references: ${xs}")
+            }))
           case x =>
             println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)

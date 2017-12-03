@@ -107,7 +107,7 @@ object CirceProtocolGenerator {
                 None
             }
 
-            val SwaggerUtil.PropMeta(declType: Type, dep, _) = meta
+            val SwaggerUtil.Resolved(declType, dep, _) = meta
 
             val (finalDeclType, finalDefaultValue) =
               Option(property.getRequired)

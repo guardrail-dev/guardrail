@@ -189,7 +189,12 @@ object AkkaHttpClientGenerator {
           formDataNeedsMultipart = Option(operation.getConsumes).exists(_.contains("multipart/form-data"))
 
         // Get the response type
-          responseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
+          unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
+          responseTypeRef <- unresolvedResponseTypeRef match {
+            case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(tpe)
+            case xs => Target.error(s"Unresolved references: ${xs}")
+          }
+
 
         // Insert the method parameters
           httpMethodStr: String = httpMethod.toString.toLowerCase

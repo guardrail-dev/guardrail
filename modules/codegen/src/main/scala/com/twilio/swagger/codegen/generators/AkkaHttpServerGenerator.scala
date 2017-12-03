@@ -77,7 +77,12 @@ object AkkaHttpServerGenerator {
               (code, friendlyName) = httpCode
               statusCodeName = Term.Name(friendlyName)
               statusCode = q"StatusCodes.${statusCodeName}"
-              valueType <- Option(resp.getSchema).map(prop => SwaggerUtil.propMeta(prop).map(_.tpe)).sequenceU
+              valueType <- Option(resp.getSchema).map({ prop =>
+                SwaggerUtil.propMeta(prop).flatMap {
+                  case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(tpe)
+                  case xs => Target.error[Type](s"Unable to resolve: ${xs}")
+                }
+              }).sequenceU
               responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
             } yield {
