@@ -148,6 +148,7 @@ object ProtocolGenerator {
       protoImports <- protocolImports
       pkgImports <- packageObjectImports
       pkgObjectContents <- packageObjectContents
-    } yield ProtocolDefinitions(elems.collect { case x: StrictProtocolElems => x }, protoImports, pkgImports, pkgObjectContents)
+      strictElems = ProtocolElems.resolve(elems).right.get
+    } yield ProtocolDefinitions(strictElems, protoImports, pkgImports, pkgObjectContents)
   }
 }
