@@ -81,46 +81,49 @@ object ScalaParameter {
       }
     }
 
-    val ParamMeta(baseType, baseDefaultValue) = Target.unsafeExtract(paramMeta(parameter))
+    Target.unsafeExtract(for {
+      meta <- paramMeta(parameter)
+    } yield {
+      val ParamMeta(baseType, baseDefaultValue) = meta
+      val paramType = baseType match {
+        case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
+        case other => other
+      }
 
-    val paramType = baseType match {
-      case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
-      case other => other
-    }
+      val required = parameter.getRequired()
+      val declType: Type = if (!required) {
+        t"Option[$paramType]"
+      } else {
+        paramType
+      }
 
-    val required = parameter.getRequired()
-    val declType: Type = if (!required) {
-      t"Option[$paramType]"
-    } else {
-      paramType
-    }
+      val enumType: Option[Type.Name] = paramType match {
+        case tpe@Type.Name(_) => Some(tpe)
+        case _ => None
+      }
 
-    val enumType: Option[Type.Name] = paramType match {
-      case tpe@Type.Name(_) => Some(tpe)
-      case _ => None
-    }
+      val propDefaultValue: Option[Term] =
+        enumType.flatMap { case Type.Name(tpeName) =>
+          protocolElems
+            .flatMap {
+              case EnumDefinition(_, Type.Name(`tpeName`), elems, _, _) =>
+                baseDefaultValue.flatMap {
+                  case Lit.String(name) => elems.find(_._1 == name).map(_._3) // FIXME: Failed lookups don't fail codegen, causing mismatches like `foo: Bar = "baz"`
+                }
+              case _ => None
+            } headOption
+        } orElse baseDefaultValue
 
-    val propDefaultValue: Option[Term] =
-      enumType.flatMap { case Type.Name(tpeName) =>
-        protocolElems
-          .flatMap {
-            case EnumDefinition(_, Type.Name(`tpeName`), elems, _, _) =>
-              baseDefaultValue.flatMap {
-                case Lit.String(name) => elems.find(_._1 == name).map(_._3) // FIXME: Failed lookups don't fail codegen, causing mismatches like `foo: Bar = "baz"`
-              }
-            case _ => None
-          } headOption
-      } orElse baseDefaultValue
+      val defaultValue = if (!required) {
+        propDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
+      } else {
+        propDefaultValue
+      }
 
-    val defaultValue = if (!required) {
-      propDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
-    } else {
-      propDefaultValue
-    }
-
-    val paramName = Term.Name(toCamelCase(parameter.getName))
-    val param = param"${paramName}: ${declType}".copy(default=defaultValue)
-    ScalaParameter(Option(parameter.getIn), param, paramName, Term.Name(parameter.getName), declType)
+      val paramName = Term.Name(toCamelCase(parameter.getName))
+      val param = param"${paramName}: ${declType}".copy(default=defaultValue)
+      ScalaParameter(Option(parameter.getIn), param, paramName, Term.Name(parameter.getName), declType)
+    })
   }
 
   def fromParameters(protocolElems: List[ProtocolElems]): List[Parameter] => List[ScalaParameter] = { params =>
