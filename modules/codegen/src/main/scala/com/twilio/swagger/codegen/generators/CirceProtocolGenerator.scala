@@ -85,51 +85,54 @@ object CirceProtocolGenerator {
           argName = if (needCamelSnakeConversion) toCamelCase(name) else name
           meta <- SwaggerUtil.propMeta(property)
 
-          (term, ref) = {
-            val defaultValue: Option[Term] = property match {
-              case _: MapProperty =>
-                Option(q"Map.empty")
-              case _: ArrayProperty =>
-                Option(q"IndexedSeq.empty")
-              case p: BooleanProperty =>
-                Default(p).extract[Boolean].map(Lit.Boolean(_))
-              case p: DoubleProperty =>
-                Default(p).extract[Double].map(Lit.Double(_))
-              case p: FloatProperty =>
-                Default(p).extract[Float].map(Lit.Float(_))
-              case p: IntegerProperty =>
-                Default(p).extract[Int].map(Lit.Int(_))
-              case p: LongProperty =>
-                Default(p).extract[Long].map(Lit.Long(_))
-              case p: StringProperty =>
-                Default(p).extract[String].map(Lit.String(_))
-              case _ =>
-                None
-            }
-
-            val SwaggerUtil.Resolved(declType, dep, _) = meta
-
-            val (finalDeclType, finalDefaultValue) =
-              Option(property.getRequired)
-                .filterNot(_ == false)
-                .fold[(Type, Option[Term])](
-                  (t"Option[${declType}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-                )(Function.const((declType, defaultValue)) _)
-
-            (param"${Term.Name(argName)}: ${finalDeclType}".copy(default=finalDefaultValue), dep)
+          defaultValue = property match {
+            case _: MapProperty =>
+              Option(q"Map.empty")
+            case _: ArrayProperty =>
+              Option(q"IndexedSeq.empty")
+            case p: BooleanProperty =>
+              Default(p).extract[Boolean].map(Lit.Boolean(_))
+            case p: DoubleProperty =>
+              Default(p).extract[Double].map(Lit.Double(_))
+            case p: FloatProperty =>
+              Default(p).extract[Float].map(Lit.Float(_))
+            case p: IntegerProperty =>
+              Default(p).extract[Int].map(Lit.Int(_))
+            case p: LongProperty =>
+              Default(p).extract[Long].map(Lit.Long(_))
+            case p: StringProperty =>
+              Default(p).extract[String].map(Lit.String(_))
+            case _ =>
+              None
           }
 
-          dep = ref.filterNot(_.value == clsName) // Filter out our own class name
-          readOnly = Option(name).filter(_ => Option(property.getReadOnly).exists(Boolean.unbox))
+          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
           needsEmptyToNull = property match {
             case d: DateProperty => ScalaEmptyIsNull(d)
             case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
             case s: StringProperty => ScalaEmptyIsNull(s)
             case _ => None
           }
+          emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
 
-          param <- Target.pure(ProtocolParameter(term, name, dep, readOnly, needsEmptyToNull.filter(_ == true).map(_ => argName)))
-        } yield param
+          (tpe, rawDep) = meta match {
+            case SwaggerUtil.Resolved(declType, rawDep, _) =>
+              (declType, rawDep)
+            case SwaggerUtil.Deferred(tpeName) =>
+              (Type.Name(tpeName), Option.empty)
+            case SwaggerUtil.DeferredArray(tpeName) =>
+              (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
+            }
+
+          (finalDeclType, finalDefaultValue) =
+            Option(property.getRequired)
+              .filterNot(_ == false)
+              .fold[(Type, Option[Term])](
+                (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+              )(Function.const((tpe, defaultValue)) _)
+          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default=finalDefaultValue)
+          dep = rawDep.filterNot(_.value == clsName) // Filter out our own class name
+        } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
 
       case RenderDTOClass(clsName, terms) =>
         Target.pure(q"""
