@@ -15,6 +15,25 @@ object SwaggerUtil {
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
   case class Deferred(value: String) extends ResolvedType
   case class DeferredArray(value: String) extends ResolvedType
+  object ResolvedType {
+    def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
+      value match {
+        case x@Resolved(tpe, _, default) => Target.pure(x)
+        case Deferred(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe, defn) => Resolved(tpe, None, None)
+            case ClassDefinition(name, tpe, cls, companion) => Resolved(tpe, None, None)
+            case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(tpe, None, None)
+          }
+        case DeferredArray(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe, defn) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+            case ClassDefinition(name, tpe, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+            case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+          }
+      }
+    }
+  }
 
   def modelMetaType[T <: Model](model: T): Target[ResolvedType] = {
     model match {
@@ -207,8 +226,7 @@ object SwaggerUtil {
       case o: ObjectProperty =>
         Target.pure(Resolved(t"Json", None, None)) // TODO: o.getProperties
       case r: RefProperty =>
-        Target.pure(Resolved(Type.Name(r.getSimpleRef), Some(Term.Name(r.getSimpleRef)), None))
-
+        Target.fromOption(Option(r.getSimpleRef()), "Malformed $ref").map(Deferred.apply _)
       case b: BooleanProperty =>
         Target.pure(Resolved(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
       case s: StringProperty =>

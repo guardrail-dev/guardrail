@@ -190,11 +190,8 @@ object AkkaHttpClientGenerator {
 
         // Get the response type
           unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
-          responseTypeRef <- unresolvedResponseTypeRef match {
-            case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(tpe)
-            case xs => Target.error(s"Unresolved references: ${xs}")
-          }
-
+          resolvedResponseTypeRef <- SwaggerUtil.ResolvedType.resolve(unresolvedResponseTypeRef, protocolElems)
+          responseTypeRef = resolvedResponseTypeRef.tpe
 
         // Insert the method parameters
           httpMethodStr: String = httpMethod.toString.toLowerCase

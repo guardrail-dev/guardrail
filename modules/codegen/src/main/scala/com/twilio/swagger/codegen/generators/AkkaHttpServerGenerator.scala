@@ -64,7 +64,7 @@ object AkkaHttpServerGenerator {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
         } yield None
 
-      case GenerateResponseDefinitions(operation) =>
+      case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
           operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
           responses <- Target.fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
@@ -78,10 +78,11 @@ object AkkaHttpServerGenerator {
               statusCodeName = Term.Name(friendlyName)
               statusCode = q"StatusCodes.${statusCodeName}"
               valueType <- Option(resp.getSchema).map({ prop =>
-                SwaggerUtil.propMeta(prop).flatMap {
-                  case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(tpe)
-                  case xs => Target.error[Type](s"Unable to resolve: ${xs}")
-                }
+                for {
+                  meta <- SwaggerUtil.propMeta(prop)
+                  resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
+                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
+                } yield baseType
               }).sequenceU
               responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")

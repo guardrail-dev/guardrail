@@ -84,22 +84,8 @@ object ScalaParameter {
 
     for {
       meta <- paramMeta(parameter)
-      resolved <- meta match {
-        case SwaggerUtil.Resolved(tpe, _, default) => Target.pure((tpe, default))
-        case SwaggerUtil.Deferred(name) =>
-          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
-            case RandomType(name, tpe, defn) => (tpe, None)
-            case ClassDefinition(name, tpe, cls, companion) => (tpe, None)
-            case EnumDefinition(name, tpe, elems, cls, companion) => (tpe, None)
-          }
-        case SwaggerUtil.DeferredArray(name) =>
-          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
-            case RandomType(name, tpe, defn) => (t"IndexedSeq[${tpe}]", None)
-            case ClassDefinition(name, tpe, cls, companion) => (t"IndexedSeq[${tpe}]", None)
-            case EnumDefinition(name, tpe, elems, cls, companion) => (t"IndexedSeq[${tpe}]", None)
-          }
-      }
-      (baseType, baseDefaultValue) = resolved
+      resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
+      SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
       paramType = baseType match {
         case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
         case other => other

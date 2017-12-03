@@ -42,7 +42,7 @@ object ServerGenerator {
             renderedRoutes <- routes.map({ case sr@ServerRoute(path, method, operation) =>
               for {
                 tracingFields <- buildTracingFields(operation, className, context.tracing)
-                responseDefinitions <- generateResponseDefinitions(operation)
+                responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
                 rendered <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(sr)
               } yield rendered
             }).sequenceU
