@@ -1,0 +1,28 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      x-scala-package: foo
+      parameters:
+      - in: query
+        name: long
+        type: integer
+        format: int64
+      - in: body
+        name: body
+        schema:
+          $ref: '#/definitions/defLong'
+      responses:
+        '201':
+          description: "woop"
+          schema:
+            $ref: '#/definitions/defLong'
+definitions:
+  defLong:
+    type: integer
+    format: int64
