@@ -23,7 +23,66 @@ object ScalaParameter {
       "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
 
-    val SwaggerUtil.ParamMeta(baseType, baseDefaultValue) = Target.unsafeExtract(SwaggerUtil.paramMeta(parameter))
+    case class ParamMeta(tpe: Type, defaultValue: Option[Term])
+    def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
+      import com.twilio.swagger.codegen.extract.{Default, ScalaType}
+      import _root_.io.swagger.models.parameters._
+      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
+        Option(p.getType)
+          .flatMap { _type =>
+            val fmt = Option(p.getFormat)
+            (_type, fmt) match {
+              case ("string", None)           => Default(p).extract[String].map(Lit.String(_))
+              case ("number", Some("float"))  => Default(p).extract[Float].map(Lit.Float(_))
+              case ("number", Some("double")) => Default(p).extract[Double].map(Lit.Double(_))
+              case ("integer", Some("int32")) => Default(p).extract[Int].map(Lit.Int(_))
+              case ("integer", Some("int64")) => Default(p).extract[Long].map(Lit.Long(_))
+              case ("boolean", None)          => Default(p).extract[Boolean].map(Lit.Boolean(_))
+              case x                          => None
+            }
+          }
+      )
+
+      param match {
+        case x: BodyParameter => for {
+          schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
+          tpe <- SwaggerUtil.modelMetaType(schema)
+        } yield ParamMeta(tpe, None)
+        case x: HeaderParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+        case x: PathParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+        case x: QueryParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+        case x: CookieParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+        case x: FormParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+        case r: RefParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(r.getSimpleRef()), "$ref not defined")
+          } yield ParamMeta(Type.Name(tpeName), None)
+        case x: SerializableParameter =>
+          for {
+            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+          } yield ParamMeta(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None)
+        case x =>
+          Target.error(s"Unsure how to handle ${x}")
+      }
+    }
+
+    val ParamMeta(baseType, baseDefaultValue) = Target.unsafeExtract(paramMeta(parameter))
+
     val paramType = baseType match {
       case t"java.io.File" if Option(parameter.getIn) == Some("formData") => t"BodyPartEntity"
       case other => other
