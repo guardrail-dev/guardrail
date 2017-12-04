@@ -23,6 +23,7 @@ fullRunTask(runExample, Test, "com.twilio.swagger.codegen.CLI", """
   --server --specPath modules/codegen/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server
   --client --specPath modules/codegen/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client
   --server --specPath modules/codegen/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server
+  --client --specPath modules/codegen/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*)
 
 artifact in (Compile, assembly) := {
