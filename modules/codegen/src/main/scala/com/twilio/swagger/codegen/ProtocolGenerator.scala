@@ -119,7 +119,15 @@ object ProtocolGenerator {
     } yield RandomType(clsName, tpe)
   }
 
-  def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
+  def fromArray[F[_]](clsName: String, arr: ArrayModel)(implicit R: ArrayProtocolTerms[F], A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+    import R._
+    for {
+      tpe <- extractArrayType(arr)
+      ret <- typeAlias(clsName, tpe)
+    } yield ret
+  }
+
+  def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], R: ArrayProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
     import S._
 
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
@@ -134,10 +142,7 @@ object ProtocolGenerator {
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
           case arr: ArrayModel =>
-            typeAlias(clsName, Target.unsafeExtract(SwaggerUtil.modelMetaType(arr).flatMap {
-              case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
-              case xs => Target.error[Type](s"Unresolved references: ${xs}")
-            }))
+            fromArray(clsName, arr)
           case x =>
             println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)

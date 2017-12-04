@@ -16,5 +16,6 @@ object AkkaHttp extends FunctionK[CodegenApplication, Target] {
   val interpCEMSP: CodegenApplicationCEMSP ~> Target = ClientTermInterp or interpEMSP
   val interpACEMSP: CodegenApplicationACEMSP ~> Target = AliasProtocolTermInterp or interpCEMSP
   val interpACEMSSP: CodegenApplicationACEMSSP ~> Target = ScalaInterp or interpACEMSP
-  def apply[T](x: CodegenApplication[T]): Target[T] = interpACEMSSP.apply(x)
+  val interpACEMSSPR: CodegenApplicationACEMSSPR ~> Target = ArrayProtocolTermInterp or interpACEMSSP
+  def apply[T](x: CodegenApplication[T]): Target[T] = interpACEMSSPR.apply(x)
 }

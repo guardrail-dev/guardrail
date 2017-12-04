@@ -246,6 +246,16 @@ object CirceProtocolGenerator {
     }
   }
 
+  object ArrayProtocolTermInterp extends (ArrayProtocolTerm ~> Target) {
+    def apply[T](term: ArrayProtocolTerm[T]): Target[T] = term match {
+      case ExtractArrayType(arr) =>
+        SwaggerUtil.modelMetaType(arr).flatMap {
+          case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+          case xs => Target.error[Type](s"Unresolved references: ${xs}")
+        }
+    }
+  }
+
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
       case ProtocolImports() =>
