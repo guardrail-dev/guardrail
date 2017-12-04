@@ -55,10 +55,7 @@ object ProtocolGenerator {
     for {
       enum <- extractEnum(swagger)
       tpe <- extractType(swagger)
-      res <- (for {
-        e <- enum
-        t <- tpe
-      } yield validProg(e, t)).sequenceU
+      res <- (enum |@| tpe).map(validProg).sequenceU
     } yield res
   }
 
@@ -98,9 +95,7 @@ object ProtocolGenerator {
 
     for {
       props <- extractProperties(model)
-      res <- (for {
-        p <- props
-      } yield validProg(p)).sequenceU
+      res <- props.map(validProg).sequenceU
     } yield res
   }
 
