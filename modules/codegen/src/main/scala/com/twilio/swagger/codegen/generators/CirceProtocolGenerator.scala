@@ -238,11 +238,7 @@ object CirceProtocolGenerator {
 
   object AliasProtocolTermInterp extends (AliasProtocolTerm ~> Target) {
     def apply[T](term: AliasProtocolTerm[T]): Target[T] = term match {
-      case RenderAlias(clsName, tpe) =>
-        Target.pure(q"type ${Type.Name(clsName)} = ${tpe}")
-
-      case RenderAliasCompanion(clsName) =>
-        Target.pure(q"object ${Term.Name(clsName)}")
+      case _ => ???
     }
   }
 

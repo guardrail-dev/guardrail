@@ -113,10 +113,7 @@ object ProtocolGenerator {
 
   def typeAlias[F[_]](clsName: String, tpe: Type)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
     import A._
-    for {
-      defn <- renderAlias(clsName, tpe)
-      cmp <- renderAliasCompanion(clsName)
-    } yield RandomType(clsName, tpe)
+    Free.pure(RandomType(clsName, tpe))
   }
 
   def fromArray[F[_]](clsName: String, arr: ArrayModel)(implicit R: ArrayProtocolTerms[F], A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
