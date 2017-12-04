@@ -77,7 +77,7 @@ object CirceProtocolGenerator {
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
 
-      case TransformProperty(clsName, name, property, needCamelSnakeConversion) =>
+      case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
         def toCamelCase(s: String): String = "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
         for {
@@ -120,7 +120,11 @@ object CirceProtocolGenerator {
             case SwaggerUtil.Resolved(declType, rawDep, _) =>
               (declType, rawDep)
             case SwaggerUtil.Deferred(tpeName) =>
-              (Type.Name(tpeName), Option.empty)
+              val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
+                println(s"Unable to find definition for ${tpeName}, just inlining")
+                Type.Name(tpeName)
+              }
+              (tpe, Option.empty)
             case SwaggerUtil.DeferredArray(tpeName) =>
               (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
             }

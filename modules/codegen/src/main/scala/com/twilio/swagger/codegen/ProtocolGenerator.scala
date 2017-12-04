@@ -59,7 +59,7 @@ object ProtocolGenerator {
     } yield res
   }
 
-  private[this] def fromModel[F[_]](clsName: String, model: ModelImpl)(implicit M: ModelProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
+  private[this] def fromModel[F[_]](clsName: String, model: ModelImpl, concreteTypes: List[PropMeta])(implicit M: ModelProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
     import M._
     /**
       * types of things we can losslessly convert between snake and camel case:
@@ -83,7 +83,7 @@ object ProtocolGenerator {
     def validProg(props: List[(String,Property)]): Free[F, ClassDefinition] = {
       val needCamelSnakeConversion = props.forall({ case (k, v) => couldBeSnakeCase(k) })
       for {
-        params <- props.map(transformProperty(clsName, needCamelSnakeConversion) _ tupled).sequenceU
+        params <- props.map(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled).sequenceU
         terms = params.map(_.term).to[List]
         defn <- renderDTOClass(clsName, terms)
         deps = params.flatMap(_.dep)
@@ -130,12 +130,13 @@ object ProtocolGenerator {
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
 
     for {
+      concreteTypes <- extractConcreteTypes(definitions)
       elems <- (definitions.map { case (clsName, model) =>
         model match {
           case m: ModelImpl =>
             for {
               enum <- fromEnum(clsName, m)
-              model <- fromModel(clsName, m)
+              model <- fromModel(clsName, m, concreteTypes)
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
           case arr: ArrayModel =>
