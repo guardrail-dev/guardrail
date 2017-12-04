@@ -1,8 +1,9 @@
 package com.twilio.swagger.codegen
 package generators
 
+import _root_.io.swagger.models.{ArrayModel, Model, ModelImpl, RefModel}
 import _root_.io.swagger.models.properties._
-import cats.syntax.either._
+import cats.implicits._
 import cats.~>
 import com.twilio.swagger.codegen.extract.{Default, ScalaEmptyIsNull, ScalaType}
 import com.twilio.swagger.codegen.terms.protocol._
@@ -258,6 +259,27 @@ object CirceProtocolGenerator {
 
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
+      case ExtractConcreteTypes(definitions: List[(String, Model)]) =>
+        definitions.map({ case (clsName, definition) =>
+          definition match {
+            case impl: ModelImpl =>
+              val props = Option(impl.getProperties())
+              val enum = Option(impl.getEnum())
+              if (props.isDefined || enum.isDefined) {
+                Target.pure(Option(PropMeta(clsName, Type.Name(clsName))))
+              } else {
+                SwaggerUtil.modelMetaType(definition).map {
+                  case SwaggerUtil.Resolved(tpe, _, _) => Option(PropMeta(clsName, tpe))
+                  case _ => None
+                }
+              }
+            case _ =>
+              SwaggerUtil.modelMetaType(definition).map {
+                case SwaggerUtil.Resolved(tpe, _, _) => Some(PropMeta(clsName, tpe))
+                case _ => None
+              }
+          }
+        }).sequenceU.map(_.flatten)
       case ProtocolImports() =>
         Target.pure(List(
           q"import io.circe._"
