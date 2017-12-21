@@ -26,3 +26,15 @@ definitions:
   defLong:
     type: integer
     format: int64
+  defArrayLong:
+    type: array
+    items:
+      type: integer
+      format: int64
+  propRef:
+    type: object
+    properties:
+      param:
+        $ref: "#/definitions/defLong"
+      array:
+        $ref: "#/definitions/defArrayLong"
