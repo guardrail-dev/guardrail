@@ -72,7 +72,7 @@ class PropertyExtractors extends FunSuite with Matchers {
         longProperty: Option[Long] = None, intProperty: Option[Int] = None,
         integerProperty: Option[BigInt] = None, floatProperty: Option[Float] = None,
         doubleProperty: Option[Double] = None, numberProperty: Option[BigDecimal] = None,
-        objectProperty: Option[Json] = None
+        objectProperty: Option[io.circe.Json] = None
         /*, refProperty: Option[ref_target_property] = None, refTargetProperty: Option[String] = None,
         arrayProperty: Option[IndexedSeq[ref_target_property]] = Option(IndexedSeq.empty)
         */

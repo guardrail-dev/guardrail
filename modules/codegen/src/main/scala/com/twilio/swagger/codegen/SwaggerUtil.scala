@@ -169,7 +169,7 @@ object SwaggerUtil {
         case ("array", fmt)                 => log(fmt, t"Iterable[String]")
         case ("file", o@Some(fmt))          => log(o, Type.Name(fmt))
         case ("file", fmt)                  => log(fmt, t"java.io.File")
-        case ("object", fmt)                => log(fmt, t"Json")
+        case ("object", fmt)                => log(fmt, t"io.circe.Json")
         case (x, fmt)                       => {
           println(s"Fallback: ${x} (${fmt})")
           Type.Name(x)
@@ -224,7 +224,7 @@ object SwaggerUtil {
           Resolved(inner, dep, _) = rec
         } yield Resolved(t"Map[String, ${inner}]", dep, None)
       case o: ObjectProperty =>
-        Target.pure(Resolved(t"Json", None, None)) // TODO: o.getProperties
+        Target.pure(Resolved(t"io.circe.Json", None, None)) // TODO: o.getProperties
       case r: RefProperty =>
         Target.fromOption(Option(r.getSimpleRef()), "Malformed $ref").map(Deferred.apply _)
       case b: BooleanProperty =>

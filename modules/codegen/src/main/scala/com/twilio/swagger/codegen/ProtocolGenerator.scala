@@ -101,14 +101,14 @@ object ProtocolGenerator {
 
   def modelTypeAlias[F[_]](clsName: String, model: ModelImpl)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
     val tpe = Option(model.getType)
-      .fold[Type](t"Json")(raw =>
+      .fold[Type](t"io.circe.Json")(raw =>
         SwaggerUtil.typeName(raw, Option(model.getFormat), ScalaType(model))
       )
     typeAlias(clsName, tpe)
   }
 
   def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
-    typeAlias(clsName, t"Json")
+    typeAlias(clsName, t"io.circe.Json")
   }
 
   def typeAlias[F[_]](clsName: String, tpe: Type)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {

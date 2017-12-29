@@ -71,7 +71,7 @@ class BasicTest extends FunSuite with Matchers {
   test("Generate JSON alias definitions") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
     val RandomType(_, tpe) :: _ = definitions
-    tpe.structure should equal(t"Json".structure)
+    tpe.structure should equal(t"io.circe.Json".structure)
   }
 
   test("Handle json subvalues") {
@@ -79,7 +79,7 @@ class BasicTest extends FunSuite with Matchers {
     val _ :: ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
-      case class Blix(map: Json)
+      case class Blix(map: io.circe.Json)
     """
 
     val companion = q"""
@@ -151,9 +151,9 @@ class BasicTest extends FunSuite with Matchers {
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/bar", entity = entity, headers = allHeaders))
         })
       }
-      def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Json] = {
+      def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], io.circe.Json] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[Json](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+        wrap[io.circe.Json](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/baz", entity = entity, headers = allHeaders))
         })
       }
