@@ -38,7 +38,7 @@ object Common {
       imports = customImports ++ protocolImports ++ List(implicitsImport)
 
       protoOut = protocolElems.map({
-        case EnumDefinition(_, _, cls, obj) =>
+        case EnumDefinition(_, _, _, cls, obj) =>
           (List(WriteTree(
             resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala")
             , source"""
@@ -49,7 +49,7 @@ object Common {
               """
           )), List.empty[Stat])
 
-        case ClassDefinition(_, cls, obj) =>
+        case ClassDefinition(_, _, cls, obj) =>
           (List(WriteTree(
             resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala")
             , source"""
@@ -60,9 +60,8 @@ object Common {
               """
           )), List.empty[Stat])
 
-        case RandomType(_, defns) =>
-          (List.empty, defns.toList)
-
+        case RandomType(_, _) =>
+          (List.empty, List.empty)
       }).foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
       (protocolDefinitions, extraTypes) = protoOut
 

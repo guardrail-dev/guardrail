@@ -2,7 +2,7 @@ package swagger
 
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import io.swagger.parser.SwaggerParser
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
@@ -64,7 +64,7 @@ class PropertyExtractors extends FunSuite with Matchers {
 
   test("Render all primitive types correctly") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, cls, cmp) :: _ = definitions
+    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class Something(
@@ -72,7 +72,7 @@ class PropertyExtractors extends FunSuite with Matchers {
         longProperty: Option[Long] = None, intProperty: Option[Int] = None,
         integerProperty: Option[BigInt] = None, floatProperty: Option[Float] = None,
         doubleProperty: Option[Double] = None, numberProperty: Option[BigDecimal] = None,
-        objectProperty: Option[Json] = None
+        objectProperty: Option[io.circe.Json] = None
         /*, refProperty: Option[ref_target_property] = None, refTargetProperty: Option[String] = None,
         arrayProperty: Option[IndexedSeq[ref_target_property]] = Option(IndexedSeq.empty)
         */

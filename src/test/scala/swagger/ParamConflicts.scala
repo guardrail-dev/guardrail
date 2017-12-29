@@ -76,7 +76,7 @@ class ParamConflictsTest extends FunSuite with Matchers {
 
   test("Generate non-conflicting names in definitions") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, cls, cmp) :: _ = definitions
+    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)

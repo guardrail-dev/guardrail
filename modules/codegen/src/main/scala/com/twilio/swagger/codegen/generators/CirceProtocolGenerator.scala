@@ -1,8 +1,9 @@
 package com.twilio.swagger.codegen
 package generators
 
+import _root_.io.swagger.models.{ArrayModel, Model, ModelImpl, RefModel}
 import _root_.io.swagger.models.properties._
-import cats.syntax.either._
+import cats.implicits._
 import cats.~>
 import com.twilio.swagger.codegen.extract.{Default, ScalaEmptyIsNull, ScalaType}
 import com.twilio.swagger.codegen.terms.protocol._
@@ -18,10 +19,13 @@ object CirceProtocolGenerator {
   object EnumProtocolTermInterp extends (EnumProtocolTerm ~> Target) {
     def apply[T](term: EnumProtocolTerm[T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getEnum).map(_.asScala.to[List]), "Model has no enumerations"))
+        Target.pure(Either.fromOption(Option(swagger.getEnum()).map(_.asScala.to[List]), "Model has no enumerations"))
 
       case ExtractType(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getType).map(SwaggerUtil.typeName(_, Option(swagger.getFormat), ScalaType(swagger))), "Unable to determine type"))
+        // Default to `string` for untyped enums.
+        // Currently, only plain strings are correctly supported anyway, so no big loss.
+        val tpeName = Option(swagger.getType()).getOrElse("string")
+        Target.pure(Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger))))
 
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
@@ -74,12 +78,16 @@ object CirceProtocolGenerator {
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
 
-      case TransformProperty(clsName, name, property, needCamelSnakeConversion) =>
+      case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
         def toCamelCase(s: String): String = "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
-        val argName = if (needCamelSnakeConversion) toCamelCase(name) else name
-        val (term, ref) = {
-          val defaultValue: Option[Term] = property match {
+        for {
+          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+
+          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
+          meta <- SwaggerUtil.propMeta(property)
+
+          defaultValue = property match {
             case _: MapProperty =>
               Option(q"Map.empty")
             case _: ArrayProperty =>
@@ -100,31 +108,37 @@ object CirceProtocolGenerator {
               None
           }
 
-          val SwaggerUtil.PropMeta(declType: Type, dep, _) = SwaggerUtil.propMeta(property)
+          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
+          needsEmptyToNull = property match {
+            case d: DateProperty => ScalaEmptyIsNull(d)
+            case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
+            case s: StringProperty => ScalaEmptyIsNull(s)
+            case _ => None
+          }
+          emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
 
-          val (finalDeclType, finalDefaultValue) =
+          (tpe, rawDep) = meta match {
+            case SwaggerUtil.Resolved(declType, rawDep, _) =>
+              (declType, rawDep)
+            case SwaggerUtil.Deferred(tpeName) =>
+              val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
+                println(s"Unable to find definition for ${tpeName}, just inlining")
+                Type.Name(tpeName)
+              }
+              (tpe, Option.empty)
+            case SwaggerUtil.DeferredArray(tpeName) =>
+              (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
+            }
+
+          (finalDeclType, finalDefaultValue) =
             Option(property.getRequired)
               .filterNot(_ == false)
               .fold[(Type, Option[Term])](
-                (t"Option[${declType}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-              )(Function.const((declType, defaultValue)) _)
-
-          (param"${Term.Name(argName)}: ${finalDeclType}".copy(default=finalDefaultValue), dep)
-        }
-
-        val dep = ref.filterNot(_.value == clsName) // Filter out our own class name
-        val readOnly = Option(name).filter(_ => Option(property.getReadOnly).exists(Boolean.unbox))
-        val needsEmptyToNull = property match {
-          case d: DateProperty => ScalaEmptyIsNull(d)
-          case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
-          case s: StringProperty => ScalaEmptyIsNull(s)
-          case _ => None
-        }
-
-        for {
-          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
-          param <- Target.pure(ProtocolParameter(term, name, dep, readOnly, needsEmptyToNull.filter(_ == true).map(_ => argName)))
-        } yield param
+                (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+              )(Function.const((tpe, defaultValue)) _)
+          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default=finalDefaultValue)
+          dep = rawDep.filterNot(_.value == clsName) // Filter out our own class name
+        } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
 
       case RenderDTOClass(clsName, terms) =>
         Target.pure(q"""
@@ -229,16 +243,43 @@ object CirceProtocolGenerator {
 
   object AliasProtocolTermInterp extends (AliasProtocolTerm ~> Target) {
     def apply[T](term: AliasProtocolTerm[T]): Target[T] = term match {
-      case RenderAlias(clsName, tpe) =>
-        Target.pure(q"type ${Type.Name(clsName)} = ${tpe}")
+      case _ => ???
+    }
+  }
 
-      case RenderAliasCompanion(clsName) =>
-        Target.pure(q"object ${Term.Name(clsName)}")
+  object ArrayProtocolTermInterp extends (ArrayProtocolTerm ~> Target) {
+    def apply[T](term: ArrayProtocolTerm[T]): Target[T] = term match {
+      case ExtractArrayType(arr) =>
+        SwaggerUtil.modelMetaType(arr).flatMap {
+          case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+          case xs => Target.error[Type](s"Unresolved references: ${xs}")
+        }
     }
   }
 
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
+      case ExtractConcreteTypes(definitions: List[(String, Model)]) =>
+        definitions.map({ case (clsName, definition) =>
+          definition match {
+            case impl: ModelImpl =>
+              val props = Option(impl.getProperties())
+              val enum = Option(impl.getEnum())
+              if (props.isDefined || enum.isDefined) {
+                Target.pure(Option(PropMeta(clsName, Type.Name(clsName))))
+              } else {
+                SwaggerUtil.modelMetaType(definition).map {
+                  case SwaggerUtil.Resolved(tpe, _, _) => Option(PropMeta(clsName, tpe))
+                  case _ => None
+                }
+              }
+            case _ =>
+              SwaggerUtil.modelMetaType(definition).map {
+                case SwaggerUtil.Resolved(tpe, _, _) => Some(PropMeta(clsName, tpe))
+                case _ => None
+              }
+          }
+        }).sequenceU.map(_.flatten)
       case ProtocolImports() =>
         Target.pure(List(
           q"import io.circe._"

@@ -11,26 +11,71 @@ import scala.language.reflectiveCalls
 import scala.meta._
 
 object SwaggerUtil {
-  def modelMetaType[T <: Model](model: T): Type = {
-    model match {
-      case ref: RefModel => Type.Name(ref.getSimpleRef())
-      case arr: ArrayModel => t"List[${propMetaType(arr.getItems())}]"
-      case impl: ModelImpl => typeName(impl.getType, Option(impl.getFormat), ScalaType(impl))
+  sealed trait ResolvedType
+  case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
+  case class Deferred(value: String) extends ResolvedType
+  case class DeferredArray(value: String) extends ResolvedType
+  object ResolvedType {
+    def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
+      value match {
+        case x@Resolved(tpe, _, default) => Target.pure(x)
+        case Deferred(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe) => Resolved(tpe, None, None)
+            case ClassDefinition(name, tpe, cls, companion) => Resolved(tpe, None, None)
+            case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(tpe, None, None)
+          }
+        case DeferredArray(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+            case ClassDefinition(name, tpe, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+            case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+          }
+      }
     }
   }
 
-  def responseMetaType[T <: Response](response: T): Type = {
+  def modelMetaType[T <: Model](model: T): Target[ResolvedType] = {
+    model match {
+      case ref: RefModel =>
+        for {
+          ref <- Target.fromOption(Option(ref.getSimpleRef()), "Unspecified $ref")
+        } yield Deferred(ref)
+      case arr: ArrayModel =>
+        for {
+          items <- Target.fromOption(Option(arr.getItems()), "items.type unspecified")
+          meta <- propMeta(items)
+          res <- meta match {
+            case Resolved(inner, dep, default) => Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
+            case Deferred(tpe) => Target.pure(DeferredArray(tpe))
+            case DeferredArray(_) => Target.error("FIXME: Got an Array of Arrays, currently not supported")
+          }
+        } yield res
+      case impl: ModelImpl =>
+        for {
+          tpeName <- Target.fromOption(Option(impl.getType()), s"Unable to resolve type for ${impl}")
+        } yield Resolved(typeName(tpeName, Option(impl.getFormat()), ScalaType(impl)), None, None)
+    }
+  }
+
+  def responseMetaType[T <: Response](response: T): Target[ResolvedType] = {
     response match {
       case r: RefResponse =>
-        propMetaType(r.getSchema())
+        for {
+          meta <- propMeta(r.getSchema())
+          res <- meta match {
+            case Resolved(inner, dep, default) => Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
+            case Deferred(tpe) => Target.pure(DeferredArray(tpe))
+            case DeferredArray(_) => Target.error("FIXME: Got an Array of Arrays, currently not supported")
+          }
+        } yield res
       case x =>
-        println(s"responseMetaType: ${x} is being treated as Any")
-        t"Any" // TODO: fill in rest
+        Target.error(s"responseMetaType: Unsupported type ${x}")
     }
   }
 
   case class ParamMeta(tpe: Type, defaultValue: Option[Term])
-  def paramMeta[T <: Parameter](param: T): ParamMeta = {
+  def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
     def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
       Option(p.getType)
         .flatMap { _type =>
@@ -48,25 +93,45 @@ object SwaggerUtil {
     )
 
     param match {
-      case b: BodyParameter =>
-        ParamMeta(modelMetaType(b.getSchema()), None)
-      case h: HeaderParameter =>
-        ParamMeta(typeName(h.getType(), Option(h.getFormat()), ScalaType(h)), getDefault(h))
-      case p: PathParameter =>
-        ParamMeta(typeName(p.getType(), Option(p.getFormat()), ScalaType(p)), getDefault(p))
-      case q: QueryParameter =>
-        ParamMeta(typeName(q.getType(), Option(q.getFormat()), ScalaType(q)), getDefault(q))
-      case c: CookieParameter =>
-        ParamMeta(typeName(c.getType(), Option(c.getFormat()), ScalaType(c)), getDefault(c))
-      case f: FormParameter =>
-        ParamMeta(typeName(f.getType(), Option(f.getFormat()), ScalaType(f)), getDefault(f))
+      case x: BodyParameter =>
+        for {
+          schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
+          tpe <- modelMetaType(schema)
+          meta <- tpe match {
+            case SwaggerUtil.Resolved(tpe, _, _) => Target.pure(ParamMeta(tpe, None))
+            case xs => Target.error(s"Unresolved references: ${xs}")
+          }
+        } yield meta
+      case x: HeaderParameter =>
+        for {
+          tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+        } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+      case x: PathParameter =>
+        for {
+          tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+        } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+      case x: QueryParameter =>
+        for {
+          tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+        } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+      case x: CookieParameter =>
+        for {
+          tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+        } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+      case x: FormParameter =>
+        for {
+          tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+        } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
       case r: RefParameter =>
-        ParamMeta(Type.Name(r.getSimpleRef()), None)
-      case s: SerializableParameter =>
-        ParamMeta(typeName(s.getType(), Option(s.getFormat()), ScalaType(s)), None)
+        for {
+          tpeName <- Target.fromOption(Option(r.getSimpleRef()), "$ref not defined")
+        } yield ParamMeta(Type.Name(tpeName), None)
+      case x: SerializableParameter =>
+        for {
+          tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+        } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None)
       case x =>
-        println(s"paramMeta: ${x} is being treated as Any")
-        ParamMeta(t"Any", None)
+        Target.error(s"Unsure how to handle ${x}")
     }
   }
 
@@ -104,7 +169,7 @@ object SwaggerUtil {
         case ("array", fmt)                 => log(fmt, t"Iterable[String]")
         case ("file", o@Some(fmt))          => log(o, Type.Name(fmt))
         case ("file", fmt)                  => log(fmt, t"java.io.File")
-        case ("object", fmt)                => log(fmt, t"Json")
+        case ("object", fmt)                => log(fmt, t"io.circe.Json")
         case (x, fmt)                       => {
           println(s"Fallback: ${x} (${fmt})")
           Type.Name(x)
@@ -140,53 +205,56 @@ object SwaggerUtil {
     case name => name
   }
 
-  def propMetaType[T <: Property](property: T): Type = {
-    propMeta[T](property).tpe
-  }
-
-  case class PropMeta(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term])
-  def propMeta[T <: Property](property: T): PropMeta = {
+  def propMeta[T <: Property](property: T): Target[ResolvedType] = {
     property match {
       case p: ArrayProperty =>
-        val PropMeta(inner, dep, _) = propMeta(p.getItems)
-        PropMeta(t"IndexedSeq[${inner}]", dep, None)
+        val title = Option(p.getTitle()).getOrElse("Unnamed array")
+        for {
+          items <- Target.fromOption(Option(p.getItems()), s"${title} has no items")
+          rec <- propMeta(items)
+          res <- rec match {
+            case DeferredArray(_) => Target.error("FIXME: Got an Array of Arrays, currently not supported")
+            case Deferred(inner) => Target.pure(DeferredArray(inner))
+            case Resolved(inner, dep, default) => Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
+          }
+        } yield res
       case m: MapProperty =>
-        val PropMeta(inner, dep, _) = propMeta(m.getAdditionalProperties)
-        PropMeta(t"Map[String, ${inner}]", dep, None)
+        for {
+          rec <- propMeta(m.getAdditionalProperties)
+          Resolved(inner, dep, _) = rec
+        } yield Resolved(t"Map[String, ${inner}]", dep, None)
       case o: ObjectProperty =>
-        PropMeta(t"Json", None, None) // TODO: o.getProperties
+        Target.pure(Resolved(t"io.circe.Json", None, None)) // TODO: o.getProperties
       case r: RefProperty =>
-        PropMeta(Type.Name(r.getSimpleRef), Some(Term.Name(r.getSimpleRef)), None)
-
+        Target.fromOption(Option(r.getSimpleRef()), "Malformed $ref").map(Deferred.apply _)
       case b: BooleanProperty =>
-        PropMeta(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_)))
+        Target.pure(Resolved(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
       case s: StringProperty =>
-        PropMeta(typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_)))
+        Target.pure(Resolved(typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
 
       case d: DateProperty =>
-        PropMeta(t"java.time.LocalDate", None, None)
+        Target.pure(Resolved(t"java.time.LocalDate", None, None))
       case d: DateTimeProperty =>
-        PropMeta(t"java.time.OffsetDateTime", None, None)
+        Target.pure(Resolved(t"java.time.OffsetDateTime", None, None))
 
       case l: LongProperty =>
-        PropMeta(t"Long", None, Default(l).extract[Long].map(Lit.Long(_)))
+        Target.pure(Resolved(t"Long", None, Default(l).extract[Long].map(Lit.Long(_))))
       case i: IntegerProperty =>
-        PropMeta(t"Int", None, Default(i).extract[Int].map(Lit.Int(_)))
+        Target.pure(Resolved(t"Int", None, Default(i).extract[Int].map(Lit.Int(_))))
       case f: FloatProperty =>
-        PropMeta(t"Float", None, Default(f).extract[Float].map(Lit.Float(_)))
+        Target.pure(Resolved(t"Float", None, Default(f).extract[Float].map(Lit.Float(_))))
       case d: DoubleProperty =>
-        PropMeta(t"Double", None, Default(d).extract[Double].map(Lit.Double(_)))
+        Target.pure(Resolved(t"Double", None, Default(d).extract[Double].map(Lit.Double(_))))
       case d: DecimalProperty =>
-        PropMeta(t"BigDecimal", None, None)
+        Target.pure(Resolved(t"BigDecimal", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "integer" =>
-        PropMeta(t"BigInt", None, None)
+        Target.pure(Resolved(t"BigInt", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "number" =>
-        PropMeta(t"BigDecimal", None, None)
+        Target.pure(Resolved(t"BigDecimal", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "string" =>
-        PropMeta(t"String", None, None)
+        Target.pure(Resolved(t"String", None, None))
       case x =>
-        println(s"propMeta: ${x} is being treated as Any")
-        PropMeta(t"Any", None, None)
+        Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
     }
   }
 
@@ -205,16 +273,16 @@ object SwaggerUtil {
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
-  def getResponseType(httpMethod: HttpMethod, operation: Operation, ignoredType: Type = t"IgnoredEntity"): Type = {
+  def getResponseType(httpMethod: HttpMethod, operation: Operation, ignoredType: Type = t"IgnoredEntity"): Target[ResolvedType] = {
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses).flatMap { responses =>
         getBestSuccessResponse(responses)
           .flatMap(resp => Option(resp.getSchema))
-          .map(SwaggerUtil.propMetaType)
-          .orElse(if (hasEmptySuccessType(responses)) Some(ignoredType) else None)
-      }.getOrElse(ignoredType)
+          .map(propMeta)
+          .orElse(if (hasEmptySuccessType(responses)) Some(Target.pure(Resolved(ignoredType, None, None): ResolvedType)) else None)
+      }.getOrElse(Target.pure(Resolved(ignoredType, None, None)))
     } else {
-      ignoredType
+      Target.pure(Resolved(ignoredType, None, None))
     }
   }
 

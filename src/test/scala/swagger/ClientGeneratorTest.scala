@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 
 class ClientGeneratorTest extends FunSuite with Matchers {
@@ -122,7 +122,8 @@ class ClientGeneratorTest extends FunSuite with Matchers {
 
   test("Ensure responses are generated") {
     val swagger = new SwaggerParser().parse(spec)
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
     val Client(tags, className, statements) :: _ = clients
 
     tags should equal (Seq("store"))

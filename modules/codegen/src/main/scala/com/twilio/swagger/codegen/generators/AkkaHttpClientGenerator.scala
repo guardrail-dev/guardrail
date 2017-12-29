@@ -189,7 +189,9 @@ object AkkaHttpClientGenerator {
           formDataNeedsMultipart = Option(operation.getConsumes).exists(_.contains("multipart/form-data"))
 
         // Get the response type
-          responseTypeRef: Type = SwaggerUtil.getResponseType(httpMethod, operation)
+          unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
+          resolvedResponseTypeRef <- SwaggerUtil.ResolvedType.resolve(unresolvedResponseTypeRef, protocolElems)
+          responseTypeRef = resolvedResponseTypeRef.tpe
 
         // Insert the method parameters
           httpMethodStr: String = httpMethod.toString.toLowerCase
@@ -197,7 +199,7 @@ object AkkaHttpClientGenerator {
 
           _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
-          allParams = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(List.empty[ScalaParameter])
+          allParams <- Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(Target.pure(List.empty[ScalaParameter]))
           _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
 
           filterParamBy = ScalaParameter.filterParams(allParams)

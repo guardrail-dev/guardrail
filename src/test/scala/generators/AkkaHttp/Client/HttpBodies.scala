@@ -3,7 +3,7 @@ package swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, Target, CodegenApplication}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, Target, CodegenApplication}
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
@@ -85,7 +85,8 @@ class HttpBodiesTest extends FunSuite with Matchers {
     |""".stripMargin)
 
   test("Properly handle all methods") {
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
 
     val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

@@ -1,0 +1,18 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+definitions:
+  arbEnum:
+    description: An enum without a `type`
+    enum:
+      - foo
+      - bar
+  arbModel:
+    description: A model without a `type`
+    required:
+    - arbProp
+    properties:
+      arbProp:
+        description: A property without a `type`

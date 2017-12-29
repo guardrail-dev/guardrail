@@ -70,17 +70,16 @@ class BasicTest extends FunSuite with Matchers {
 
   test("Generate JSON alias definitions") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val RandomType(_, List(tpe, cmp)) :: _ = definitions
-    tpe.structure should equal(q"type Baz = Json".structure)
-    cmp.structure should equal(q"object Baz".structure)
+    val RandomType(_, tpe) :: _ = definitions
+    tpe.structure should equal(t"io.circe.Json".structure)
   }
 
   test("Handle json subvalues") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: ClassDefinition(_, cls, cmp) :: _ = definitions
+    val _ :: ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
-      case class Blix(map: Json)
+      case class Blix(map: io.circe.Json)
     """
 
     val companion = q"""
@@ -98,7 +97,8 @@ class BasicTest extends FunSuite with Matchers {
   }
 
   test("Properly handle all methods") {
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
+    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -151,9 +151,9 @@ class BasicTest extends FunSuite with Matchers {
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/bar", entity = entity, headers = allHeaders))
         })
       }
-      def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Baz] = {
+      def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], io.circe.Json] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[Baz](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+        wrap[io.circe.Json](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/baz", entity = entity, headers = allHeaders))
         })
       }

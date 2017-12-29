@@ -116,7 +116,7 @@ class BigObjectSpec extends FunSuite with Matchers {
 
   test("Big objects can be generated") {
     val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, cls, cmp) :: _ = definitions
+    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
 
     val definition = q"""
       case class BigObject(v1: Option[Int] = None, v2: Option[Int] = None, v3: Option[Int] = None, v4: Option[Int] = None, v5: Option[Int] = None, v6: Option[Int] = None, v7: Option[Int] = None, v8: Option[Int] = None, v9: Option[Int] = None, v10: Option[Int] = None, v11: Option[Int] = None, v12: Option[Int] = None, v13: Option[Int] = None, v14: Option[Int] = None, v15: Option[Int] = None, v16: Option[Int] = None, v17: Option[Int] = None, v18: Option[Int] = None, v19: Option[Int] = None, v20: Option[Int] = None, v21: Option[Int] = None, v22: Option[Int] = None, v23: Option[Int] = None, v24: Option[Int] = None, v25: Option[Int] = None, v26: Option[Int] = None, v27: Option[Int] = None, v28: Option[Int] = None, v29: Option[Int] = None, v30: Option[Int] = None)

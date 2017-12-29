@@ -64,7 +64,7 @@ object AkkaHttpServerGenerator {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
         } yield None
 
-      case GenerateResponseDefinitions(operation) =>
+      case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
           operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
           responses <- Target.fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
@@ -77,7 +77,13 @@ object AkkaHttpServerGenerator {
               (code, friendlyName) = httpCode
               statusCodeName = Term.Name(friendlyName)
               statusCode = q"StatusCodes.${statusCodeName}"
-              valueType = Option(resp.getSchema).map(SwaggerUtil.propMetaType)
+              valueType <- Option(resp.getSchema).map({ prop =>
+                for {
+                  meta <- SwaggerUtil.propMeta(prop)
+                  resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
+                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
+                } yield baseType
+              }).sequenceU
               responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
             } yield {
@@ -131,7 +137,7 @@ object AkkaHttpServerGenerator {
         // Generate the pair of the Handler method and the actual call to `complete(...)`
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-          parameters = Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(List.empty[ScalaParameter])
+          parameters <- Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(Target.pure(List.empty[ScalaParameter]))
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
           _ <- parameters.map(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}")).sequenceU
 

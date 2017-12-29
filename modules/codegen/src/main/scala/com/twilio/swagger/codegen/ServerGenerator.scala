@@ -23,7 +23,7 @@ object ServerGenerator {
   def formatClassName(str: String): String = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[F[_]](context: Context, swagger: Swagger)(protocolElems: List[ProtocolElems])(implicit S: ServerTerms[F]): Free[F, Servers] = {
+  def fromSwagger[F[_]](context: Context, swagger: Swagger)(protocolElems: List[StrictProtocolElems])(implicit S: ServerTerms[F]): Free[F, Servers] = {
     import S._
 
     val paths: List[(String, Path)] = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
@@ -42,7 +42,7 @@ object ServerGenerator {
             renderedRoutes <- routes.map({ case sr@ServerRoute(path, method, operation) =>
               for {
                 tracingFields <- buildTracingFields(operation, className, context.tracing)
-                responseDefinitions <- generateResponseDefinitions(operation)
+                responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
                 rendered <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(sr)
               } yield rendered
             }).sequenceU

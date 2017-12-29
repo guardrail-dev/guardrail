@@ -14,12 +14,7 @@ import scala.language.postfixOps
 import scala.language.reflectiveCalls
 import scala.meta._
 
-sealed trait ProtocolElems
-case class RandomType(tpe: Type, defn: List[Defn]) extends ProtocolElems
-case class ClassDefinition(tpe: Type.Name, cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
-case class EnumDefinition(tpe: Type.Name, elems: List[(String, Term.Name, Term.Select)], cls: Defn.Class, companion: Defn.Object) extends ProtocolElems
-
-case class ProtocolDefinitions(elems: List[ProtocolElems], protocolImports: List[Import], packageObjectImports: List[Import], packageObjectContents: List[Stat])
+case class ProtocolDefinitions(elems: List[StrictProtocolElems], protocolImports: List[Import], packageObjectImports: List[Import], packageObjectContents: List[Stat])
 
 case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
 
@@ -54,20 +49,17 @@ object ProtocolGenerator {
 
         defn <- renderClass(clsName, tpe)
         companion <- renderCompanion(clsName, members, accessors, values, encoder, decoder)
-      } yield EnumDefinition(Type.Name(clsName), elems, SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(companion))
+      } yield EnumDefinition(clsName, Type.Name(clsName), elems, SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(companion))
     }
 
     for {
       enum <- extractEnum(swagger)
       tpe <- extractType(swagger)
-      res <- (for {
-        e <- enum
-        t <- tpe
-      } yield validProg(e, t)).sequenceU
+      res <- (enum |@| tpe).map(validProg).sequenceU
     } yield res
   }
 
-  private[this] def fromModel[F[_]](clsName: String, model: ModelImpl)(implicit M: ModelProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
+  private[this] def fromModel[F[_]](clsName: String, model: ModelImpl, concreteTypes: List[PropMeta])(implicit M: ModelProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
     import M._
     /**
       * types of things we can losslessly convert between snake and camel case:
@@ -91,60 +83,64 @@ object ProtocolGenerator {
     def validProg(props: List[(String,Property)]): Free[F, ClassDefinition] = {
       val needCamelSnakeConversion = props.forall({ case (k, v) => couldBeSnakeCase(k) })
       for {
-        params <- props.map(transformProperty(clsName, needCamelSnakeConversion) _ tupled).sequenceU
+        params <- props.map(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled).sequenceU
         terms = params.map(_.term).to[List]
         defn <- renderDTOClass(clsName, terms)
         deps = params.flatMap(_.dep)
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
         decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
         cmp <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
+      } yield ClassDefinition(clsName, Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
     }
 
     for {
       props <- extractProperties(model)
-      res <- (for {
-        p <- props
-      } yield validProg(p)).sequenceU
+      res <- props.map(validProg).sequenceU
     } yield res
   }
 
   def modelTypeAlias[F[_]](clsName: String, model: ModelImpl)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
     val tpe = Option(model.getType)
-      .fold[Type](t"Json")(raw =>
+      .fold[Type](t"io.circe.Json")(raw =>
         SwaggerUtil.typeName(raw, Option(model.getFormat), ScalaType(model))
       )
     typeAlias(clsName, tpe)
   }
 
   def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
-    typeAlias(clsName, t"Json")
+    typeAlias(clsName, t"io.circe.Json")
   }
 
   def typeAlias[F[_]](clsName: String, tpe: Type)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
     import A._
-    for {
-      defn <- renderAlias(clsName, tpe)
-      cmp <- renderAliasCompanion(clsName)
-    } yield RandomType(tpe, List(SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp)))
+    Free.pure(RandomType(clsName, tpe))
   }
 
-  def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
+  def fromArray[F[_]](clsName: String, arr: ArrayModel)(implicit R: ArrayProtocolTerms[F], A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+    import R._
+    for {
+      tpe <- extractArrayType(arr)
+      ret <- typeAlias(clsName, tpe)
+    } yield ret
+  }
+
+  def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F], M: ModelProtocolTerms[F], A: AliasProtocolTerms[F], R: ArrayProtocolTerms[F], S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
     import S._
 
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
 
     for {
+      concreteTypes <- extractConcreteTypes(definitions)
       elems <- (definitions.map { case (clsName, model) =>
         model match {
           case m: ModelImpl =>
             for {
               enum <- fromEnum(clsName, m)
-              model <- fromModel(clsName, m)
+              model <- fromModel(clsName, m, concreteTypes)
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
           case arr: ArrayModel =>
-            typeAlias(clsName, SwaggerUtil.modelMetaType(arr))
+            fromArray(clsName, arr)
           case x =>
             println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)
@@ -153,6 +149,7 @@ object ProtocolGenerator {
       protoImports <- protocolImports
       pkgImports <- packageObjectImports
       pkgObjectContents <- packageObjectContents
-    } yield ProtocolDefinitions(elems, protoImports, pkgImports, pkgObjectContents)
+      strictElems = ProtocolElems.resolve(elems).right.get
+    } yield ProtocolDefinitions(strictElems, protoImports, pkgImports, pkgObjectContents)
   }
 }
