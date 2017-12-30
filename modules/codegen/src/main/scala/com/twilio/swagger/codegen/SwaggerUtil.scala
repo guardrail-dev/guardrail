@@ -15,6 +15,7 @@ object SwaggerUtil {
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
   case class Deferred(value: String) extends ResolvedType
   case class DeferredArray(value: String) extends ResolvedType
+  case class DeferredMap(value: String) extends ResolvedType
   object ResolvedType {
     def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
       value match {
@@ -30,6 +31,12 @@ object SwaggerUtil {
             case RandomType(name, tpe) => Resolved(t"IndexedSeq[${tpe}]", None, None)
             case ClassDefinition(name, tpe, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
             case EnumDefinition(name, tpe, elems, cls, companion) => Resolved(t"IndexedSeq[${tpe}]", None, None)
+          }
+        case DeferredMap(name) =>
+          Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}").map {
+            case RandomType(name, tpe) => Resolved(t"Map[String, ${tpe}]", None, None)
+            case ClassDefinition(_, tpe, _, _) => Resolved(t"Map[String, ${tpe}]", None, None)
+            case EnumDefinition(_, tpe, _, _, _) => Resolved(t"Map[String, ${tpe}]", None, None)
           }
       }
     }
@@ -49,6 +56,7 @@ object SwaggerUtil {
             case Resolved(inner, dep, default) => Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
             case Deferred(tpe) => Target.pure(DeferredArray(tpe))
             case DeferredArray(_) => Target.error("FIXME: Got an Array of Arrays, currently not supported")
+            case DeferredMap(_) => Target.error("FIXME: Got an Array of Maps, currently not supported")
           }
         } yield res
       case impl: ModelImpl =>
@@ -213,6 +221,7 @@ object SwaggerUtil {
           items <- Target.fromOption(Option(p.getItems()), s"${title} has no items")
           rec <- propMeta(items)
           res <- rec match {
+            case DeferredMap(_) => Target.error("FIXME: Got an Array of Maps, currently not supported")
             case DeferredArray(_) => Target.error("FIXME: Got an Array of Arrays, currently not supported")
             case Deferred(inner) => Target.pure(DeferredArray(inner))
             case Resolved(inner, dep, default) => Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
@@ -221,8 +230,13 @@ object SwaggerUtil {
       case m: MapProperty =>
         for {
           rec <- propMeta(m.getAdditionalProperties)
-          Resolved(inner, dep, _) = rec
-        } yield Resolved(t"Map[String, ${inner}]", dep, None)
+          res <- rec match {
+            case DeferredMap(_) => Target.error("FIXME: Got a map of maps, currently not supported")
+            case DeferredArray(_) => Target.error("FIXME: Got a map of arrays, currently not supported")
+            case Deferred(inner) => Target.pure(DeferredMap(inner))
+            case Resolved(inner, dep, _) => Target.pure(Resolved(t"Map[String, ${inner}]", dep, None))
+          }
+        } yield res
       case o: ObjectProperty =>
         Target.pure(Resolved(t"io.circe.Json", None, None)) // TODO: o.getProperties
       case r: RefProperty =>

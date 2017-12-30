@@ -8,6 +8,7 @@ sealed trait ProtocolElems
 sealed trait LazyProtocolElems extends ProtocolElems { def name: String }
 case class Deferred(name: String) extends LazyProtocolElems
 case class DeferredArray(name: String) extends LazyProtocolElems
+case class DeferredMap(name: String) extends LazyProtocolElems
 
 sealed trait StrictProtocolElems extends ProtocolElems { def name: String }
 case class RandomType(name: String, tpe: Type) extends StrictProtocolElems
@@ -31,6 +32,11 @@ object ProtocolElems {
               case RandomType(name, tpe) => RandomType(name, t"IndexedSeq[${tpe}]")
               case ClassDefinition(name, tpe, cls, companion) => RandomType(name, t"IndexedSeq[${tpe}]")
               case EnumDefinition(name, tpe, elems, cls, companion) => RandomType(name, t"IndexedSeq[${tpe}]")
+            }).getOrElse(d)
+            case d@DeferredMap(name) => strictElems.find(_.name == name).map({
+              case RandomType(name, tpe) => RandomType(name, t"Map[String, ${tpe}]")
+              case ClassDefinition(name, tpe, cls, companion) => RandomType(name, t"Map[String, ${tpe}]")
+              case EnumDefinition(name, tpe, elems, cls, companion) => RandomType(name, t"Map[String, ${tpe}]")
             }).getOrElse(d)
           }
           val next = (iters - 1, newElems)

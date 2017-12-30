@@ -128,6 +128,8 @@ object CirceProtocolGenerator {
               (tpe, Option.empty)
             case SwaggerUtil.DeferredArray(tpeName) =>
               (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
+            case SwaggerUtil.DeferredMap(tpeName) =>
+              (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
             }
 
           (finalDeclType, finalDefaultValue) =
