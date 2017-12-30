@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.meta._
 
 case class Servers(servers: List[Server], frameworkImports: List[Import])
-case class Server(pkg: NonEmptyList[String], extraImports: List[Import], src: List[Stat])
+case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
 case class RenderedRoute(route: Term, methodSig: Decl.Def, responseDefinitions: List[Defn])
 object ServerGenerator {
@@ -36,8 +36,8 @@ object ServerGenerator {
       frameworkImports <- getFrameworkImports(context.tracing)
       extraImports <- getExtraImports(context.tracing)
       servers <- groupedRoutes.map({ case (className, routes) =>
-          val resourceName = formatClassName(className.last)
-          val handlerName = formatHandlerName(className.last)
+          val resourceName = formatClassName(className.lastOption.getOrElse(""))
+          val handlerName = formatHandlerName(className.lastOption.getOrElse(""))
           for {
             renderedRoutes <- routes.map({ case sr@ServerRoute(path, method, operation) =>
               for {

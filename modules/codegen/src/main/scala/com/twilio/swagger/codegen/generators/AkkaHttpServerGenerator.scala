@@ -61,8 +61,7 @@ object AkkaHttpServerGenerator {
             }
           }).map(_.toList)
           opPkg = Option(operation.getOperationId()).map(splitOperationParts).fold(List.empty[String])(_._1)
-          finalPkg = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-          className <- Target.fromOption(NonEmptyList.fromList(finalPkg), s"Unable to determine className for ${operation}")
+          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
         } yield className
 
       case BuildTracingFields(operation, resourceName, tracing) =>

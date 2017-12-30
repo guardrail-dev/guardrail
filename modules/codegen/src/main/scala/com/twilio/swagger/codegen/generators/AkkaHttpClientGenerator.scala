@@ -65,9 +65,8 @@ object AkkaHttpClientGenerator {
             }
           }).map(_.toList)
           opPkg = Option(operation.getOperationId()).map(splitOperationParts).fold(List.empty[String])(_._1)
-          finalPkg = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-          className <- Target.fromOption(NonEmptyList.fromList(finalPkg), s"Unable to determine className for ${operation}")
-        } yield className.toList
+          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
+        } yield className
 
       case GenerateClientOperation(className, ClientRoute(pathStr, httpMethod, operation), tracing, protocolElems) => {
         def toCamelCase(s: String): String = {
