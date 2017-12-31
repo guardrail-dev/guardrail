@@ -4,6 +4,8 @@ import _root_.io.swagger.models._
 import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
 import cats.syntax.either._
+import cats.{FlatMap, Foldable}
+import cats.instances.list._
 import com.twilio.swagger.codegen.extract.{Default, ScalaType}
 import com.twilio.swagger.codegen.generators.ScalaParameter
 import java.util.{Map => JMap}
@@ -18,6 +20,21 @@ object SwaggerUtil {
   case class DeferredArray(value: String) extends LazyResolvedType
   case class DeferredMap(value: String) extends LazyResolvedType
   object ResolvedType {
+    implicit class FoldableExtension[F[_]](F: Foldable[F]) {
+      import cats.{Alternative, Monoid}
+      def partitionEither[A, B, C](value: F[A])(f: A => Either[B, C])(implicit A: Alternative[F]): (F[B], F[C]) = {
+        import cats.instances.tuple._
+
+        implicit val mb: Monoid[F[B]] = A.algebra[B]
+        implicit val mc: Monoid[F[C]] = A.algebra[C]
+
+        F.foldMap(value)(a => f(a) match {
+          case Left(b) => (A.pure(b), A.empty[C])
+          case Right(c) => (A.empty[B], A.pure(c))
+        })
+      }
+    }
+
     def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
       value match {
         case x@Resolved(tpe, _, default) => Target.pure(x)
