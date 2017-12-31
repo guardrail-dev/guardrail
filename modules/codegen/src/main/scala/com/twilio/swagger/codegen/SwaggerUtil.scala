@@ -62,7 +62,7 @@ object SwaggerUtil {
         } yield res
       case impl: ModelImpl =>
         for {
-          tpeName <- Target.fromOption(Option(impl.getType()), s"Unable to resolve type for ${impl}")
+          tpeName <- Target.fromOption(Option(impl.getType()), s"Unable to resolve type for ${impl.getDescription()} (${impl.getEnum()} ${impl.getName()} ${impl.getType()} ${impl.getFormat()})")
         } yield Resolved(typeName(tpeName, Option(impl.getFormat()), ScalaType(impl)), None, None)
     }
   }
