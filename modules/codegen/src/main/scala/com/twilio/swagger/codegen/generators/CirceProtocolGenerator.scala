@@ -270,27 +270,21 @@ object CirceProtocolGenerator {
 
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
-      case ExtractConcreteTypes(definitions: List[(String, Model)]) =>
-        definitions.map({ case (clsName, definition) =>
-          definition match {
-            case impl: ModelImpl =>
-              val props = Option(impl.getProperties())
-              val enum = Option(impl.getEnum())
-              if (props.isDefined || enum.isDefined) {
-                Target.pure(Option(PropMeta(clsName, Type.Name(clsName))))
-              } else {
-                SwaggerUtil.modelMetaType(definition).map {
-                  case SwaggerUtil.Resolved(tpe, _, _) => Option(PropMeta(clsName, tpe))
-                  case _ => None
-                }
-              }
-            case model =>
-              SwaggerUtil.modelMetaType(model).map {
-                case SwaggerUtil.Resolved(tpe, _, _) => Some(PropMeta(clsName, tpe))
-                case _ => None
-              }
-          }
-        }).sequenceU.map(_.flatten)
+      case ExtractConcreteTypes(definitions) => {
+        for {
+          entries <- definitions.map({
+            case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
+              Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
+            case (clsName, definition) =>
+              SwaggerUtil.modelMetaType(definition)
+                .map(x => (clsName, x))
+          }).sequenceU
+          result <- SwaggerUtil.ResolvedType.resolve_(entries)
+        } yield result.map { case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
+          PropMeta(clsName, tpe)
+        }
+      }
+
       case ProtocolImports() =>
         Target.pure(List(
           q"import io.circe._"
