@@ -13,9 +13,10 @@ import scala.meta._
 object SwaggerUtil {
   sealed trait ResolvedType
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
-  case class Deferred(value: String) extends ResolvedType
-  case class DeferredArray(value: String) extends ResolvedType
-  case class DeferredMap(value: String) extends ResolvedType
+  sealed trait LazyResolvedType extends ResolvedType
+  case class Deferred(value: String) extends LazyResolvedType
+  case class DeferredArray(value: String) extends LazyResolvedType
+  case class DeferredMap(value: String) extends LazyResolvedType
   object ResolvedType {
     def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
       value match {
