@@ -16,6 +16,13 @@ object CirceProtocolGenerator {
 
   def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
+  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] = {
+    concreteTypes
+      .find(_.clsName == tpeName)
+      .map(_.tpe)
+      .map(f)
+  }
+
   object EnumProtocolTermInterp extends (EnumProtocolTerm ~> Target) {
     def apply[T](term: EnumProtocolTerm[T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
@@ -251,10 +258,12 @@ object CirceProtocolGenerator {
 
   object ArrayProtocolTermInterp extends (ArrayProtocolTerm ~> Target) {
     def apply[T](term: ArrayProtocolTerm[T]): Target[T] = term match {
-      case ExtractArrayType(arr) =>
+      case ExtractArrayType(arr, concreteTypes) =>
         SwaggerUtil.modelMetaType(arr).flatMap {
           case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
-          case xs => Target.error[Type](s"Unresolved references: ${xs}")
+          case SwaggerUtil.Deferred(tpeName) => Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
+          case SwaggerUtil.DeferredArray(tpeName) => Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
+          case SwaggerUtil.DeferredMap(tpeName) => Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
         }
     }
   }
