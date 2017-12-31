@@ -31,6 +31,10 @@ definitions:
     items:
       type: integer
       format: int64
+  defArrayArrayLong:
+    type: array
+    items:
+      $ref: '#/definitions/defArrayLong'
   propRef:
     type: object
     properties:
@@ -38,3 +42,5 @@ definitions:
         $ref: "#/definitions/defLong"
       array:
         $ref: "#/definitions/defArrayLong"
+      arrayArray:
+        $ref: "#/definitions/defArrayArrayLong"
