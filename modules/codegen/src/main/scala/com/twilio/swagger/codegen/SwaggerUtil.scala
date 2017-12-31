@@ -66,22 +66,6 @@ object SwaggerUtil {
     }
   }
 
-  def responseMetaType[T <: Response](response: T): Target[ResolvedType] = {
-    response match {
-      case r: RefResponse =>
-        for {
-          meta <- propMeta(r.getSchema())
-          res <- meta match {
-            case Resolved(inner, dep, default) => Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
-            case Deferred(tpe) => Target.pure(DeferredArray(tpe))
-            case DeferredArray(_) => Target.error("FIXME: Got an Array of Arrays, currently not supported")
-          }
-        } yield res
-      case x =>
-        Target.error(s"responseMetaType: Unsupported type ${x}")
-    }
-  }
-
   case class ParamMeta(tpe: Type, defaultValue: Option[Term])
   def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
     def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
