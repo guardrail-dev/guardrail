@@ -284,8 +284,8 @@ object CirceProtocolGenerator {
                   case _ => None
                 }
               }
-            case _ =>
-              SwaggerUtil.modelMetaType(definition).map {
+            case model =>
+              SwaggerUtil.modelMetaType(model).map {
                 case SwaggerUtil.Resolved(tpe, _, _) => Some(PropMeta(clsName, tpe))
                 case _ => None
               }
