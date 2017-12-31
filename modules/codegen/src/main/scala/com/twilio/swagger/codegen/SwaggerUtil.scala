@@ -35,6 +35,38 @@ object SwaggerUtil {
       }
     }
 
+    def resolve_(values: List[(String, ResolvedType)]): Target[List[(String, Resolved)]] = {
+      val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
+        case (clsName, x: Resolved) => Right((clsName, x))
+        case (clsName, x: LazyResolvedType) => Left((clsName, x))
+      }
+
+      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] = {
+        resolvedTypes
+          .find(_._1 == tpeName)
+          .map(_._2.tpe)
+          .map(x => (clsName, Resolved(f(x), None, None)))
+      }
+
+      FlatMap[Target].tailRecM[(List[(String, LazyResolvedType)], List[(String, Resolved)]), List[(String, Resolved)]]((lazyTypes, resolvedTypes)) {
+        case (lazyTypes, resolvedTypes) =>
+          if (lazyTypes.isEmpty) {
+            Target.pure(Right(resolvedTypes))
+          } else {
+            val (newLazyTypes, newResolvedTypes) = Foldable[List].partitionEither(lazyTypes) {
+              case x@(clsName, Deferred(tpeName)) =>
+                Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(identity), x)
+              case x@(clsName, DeferredArray(tpeName)) =>
+                Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"IndexedSeq[${tpe}]"), x)
+              case x@(clsName, DeferredMap(tpeName)) =>
+                Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, ${tpe}]"), x)
+            }
+
+            Target.pure(Left((newLazyTypes, resolvedTypes ++ newResolvedTypes)))
+          }
+      }
+    }
+
     def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
       value match {
         case x@Resolved(tpe, _, default) => Target.pure(x)
