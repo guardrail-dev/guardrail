@@ -116,10 +116,10 @@ object ProtocolGenerator {
     Free.pure(RandomType(clsName, tpe))
   }
 
-  def fromArray[F[_]](clsName: String, arr: ArrayModel)(implicit R: ArrayProtocolTerms[F], A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+  def fromArray[F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(implicit R: ArrayProtocolTerms[F], A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
     import R._
     for {
-      tpe <- extractArrayType(arr)
+      tpe <- extractArrayType(arr, concreteTypes)
       ret <- typeAlias(clsName, tpe)
     } yield ret
   }
@@ -140,7 +140,7 @@ object ProtocolGenerator {
               alias <- modelTypeAlias(clsName, m)
             } yield enum.orElse(model).getOrElse(alias)
           case arr: ArrayModel =>
-            fromArray(clsName, arr)
+            fromArray(clsName, arr, concreteTypes)
           case x =>
             println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)

@@ -6,8 +6,8 @@ import cats.free.{Free, Inject}
 import scala.meta._
 
 class ArrayProtocolTerms[F[_]](implicit I: Inject[ArrayProtocolTerm, F]) {
-  def extractArrayType(arr: ArrayModel): Free[F, Type] =
-    Free.inject[ArrayProtocolTerm, F](ExtractArrayType(arr))
+  def extractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta]): Free[F, Type] =
+    Free.inject[ArrayProtocolTerm, F](ExtractArrayType(arr, concreteTypes))
 }
 
 object ArrayProtocolTerms {

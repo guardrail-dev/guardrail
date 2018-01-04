@@ -10,9 +10,9 @@ import scala.meta._
 class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
   def extractOperations(paths: List[(String, Path)]): Free[F, List[ServerRoute]] =
     Free.inject(ExtractOperations(paths))
-  def getClassName(operation: Operation): Free[F, NonEmptyList[String]] =
+  def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
-  def buildTracingFields(operation: Operation, className: NonEmptyList[String], tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
+  def buildTracingFields(operation: Operation, className: List[String], tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
     Free.inject(BuildTracingFields(operation, className, tracing))
   def generateRoute(resourceName: String, basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)], responseDefinitions: List[Defn], protocolElems: List[StrictProtocolElems])(route: ServerRoute): Free[F, RenderedRoute] =
     Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions, protocolElems))

@@ -16,6 +16,10 @@ import scala.meta._
 
 object AkkaHttpClientGenerator {
   object ClientTermInterp extends FunctionK[ClientTerm, Target] {
+    def splitOperationParts(operationId: String): (List[String], String) = {
+      val parts = operationId.split('.')
+      (parts.drop(1).toList, parts.last)
+    }
     private[this] def toDashedCase(s: String): String = {
       val lowercased = "^[A-Z]".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
       "([A-Z])".r.replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
@@ -51,7 +55,18 @@ object AkkaHttpClientGenerator {
         }).sequenceU.map(_.flatten)
 
       case GetClassName(operation) =>
-        Target.pure(ScalaPackage(operation).toList.flatMap(_.split('.')))
+        for {
+          _ <- Target.log.debug("AkkaHttpClientGenerator", "client")(s"getClassName(${operation})")
+
+          pkg = ScalaPackage(operation).map(_.split('.').toVector).orElse({
+            Option(operation.getTags).map { tags =>
+              println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
+              tags.asScala
+            }
+          }).map(_.toList)
+          opPkg = Option(operation.getOperationId()).map(splitOperationParts).fold(List.empty[String])(_._1)
+          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
+        } yield className
 
       case GenerateClientOperation(className, ClientRoute(pathStr, httpMethod, operation), tracing, protocolElems) => {
         def toCamelCase(s: String): String = {
@@ -194,7 +209,7 @@ object AkkaHttpClientGenerator {
 
         // Insert the method parameters
           httpMethodStr: String = httpMethod.toString.toLowerCase
-          methodName = Option(operation.getOperationId).getOrElse(s"$httpMethodStr $pathStr")
+          methodName = Option(operation.getOperationId()).map(splitOperationParts).map(_._2).getOrElse(s"$httpMethodStr $pathStr")
 
           _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 

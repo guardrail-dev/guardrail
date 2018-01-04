@@ -17,6 +17,10 @@ import scala.meta._
 
 object AkkaHttpServerGenerator {
   object ServerTermInterp extends FunctionK[ServerTerm, Target] {
+    def splitOperationParts(operationId: String): (List[String], String) = {
+      val parts = operationId.split('.')
+      (parts.drop(1).toList, parts.last)
+    }
     def apply[T](term: ServerTerm[T]): Target[T] = term match {
       case GetFrameworkImports(tracing) =>
         for {
@@ -53,10 +57,11 @@ object AkkaHttpServerGenerator {
           pkg = ScalaPackage(operation).map(_.split('.').toVector).orElse({
             Option(operation.getTags).map { tags =>
               println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-              tags.asScala.toVector
+              tags.asScala
             }
-          })
-          className <- Target.fromOption(NonEmptyList.fromList(pkg.toList.flatten), s"Unable to determine className for ${operation}")
+          }).map(_.toList)
+          opPkg = Option(operation.getOperationId()).map(splitOperationParts).fold(List.empty[String])(_._1)
+          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
         } yield className
 
       case BuildTracingFields(operation, resourceName, tracing) =>
@@ -64,7 +69,7 @@ object AkkaHttpServerGenerator {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
           res <- if (tracing) {
             for {
-              operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
+              operationId <- Target.fromOption(Option(operation.getOperationId()).map(splitOperationParts).map(_._2), "Missing operationId")
               label = ScalaTracingLabel(operation).map(Lit.String(_)).getOrElse(Lit.String(s"${resourceName.toList.last}:${operationId}"))
             } yield Some((ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -72,7 +77,7 @@ object AkkaHttpServerGenerator {
 
       case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
-          operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
+          operationId <- Target.fromOption(Option(operation.getOperationId()).map(splitOperationParts).map(_._2), "Missing operationId")
           responses <- Target.fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
           responseSuperType = Type.Name(s"${operationId}Response")
           responseSuperTerm = Term.Name(s"${operationId}Response")
@@ -160,7 +165,7 @@ object AkkaHttpServerGenerator {
           akkaBody <- bodyToAkka(bodyArgs)
           akkaForm <- formToAkka(formArgs)
           akkaHeaders <- headersToAkka(headerArgs)
-          operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
+          operationId <- Target.fromOption(Option(operation.getOperationId()).map(splitOperationParts).map(_._2), "Missing operationId")
         } yield {
           val (responseCompanionTerm, responseCompanionType) = (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
           val responseType = ServerRawResponse(operation).filter(_ == true).fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
