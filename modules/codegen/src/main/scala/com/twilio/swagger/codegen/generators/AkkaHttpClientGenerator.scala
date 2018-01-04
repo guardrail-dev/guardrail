@@ -153,12 +153,11 @@ object AkkaHttpClientGenerator {
             val tracingLabel = q"""s"$${clientName}:$${methodName}""""
             q"""
             {
-              traceBuilder(s"$${clientName}:$${methodName}") { propagate =>
-                val allHeaders = headers ++ $headerParams
-                wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
-                  httpClient(propagate(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders)))
-                })
-              }
+              val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
+              val allHeaders = headers ++ $headerParams
+              wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
+                tracingHttpClient(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders))
+              })
             }
             """
           } else {
@@ -220,7 +219,7 @@ object AkkaHttpClientGenerator {
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
-          tracingArgsPre = if (tracing) List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], ${responseTypeRef}]")) else List.empty
+          tracingArgsPre = if (tracing) List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder")) else List.empty
           tracingArgsPost = if (tracing) List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}")) else List.empty
           extraImplicits = List.empty
           defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)

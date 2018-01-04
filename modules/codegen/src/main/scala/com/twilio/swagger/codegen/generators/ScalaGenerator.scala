@@ -93,7 +93,8 @@ object ScalaGenerator {
                 }
               }
 
-              type TraceBuilder[E, T] = String => ((HttpRequest => HttpRequest) => EitherT[Future, E, T]) => EitherT[Future, E, T]
+              type HttpClient = HttpRequest => Future[HttpResponse]
+              type TraceBuilder = String => HttpClient => HttpClient
 
               implicit final def jsonMarshaller(
                   implicit printer: Printer = Printer.noSpaces

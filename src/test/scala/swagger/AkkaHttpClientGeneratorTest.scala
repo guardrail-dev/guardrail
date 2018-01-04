@@ -190,21 +190,19 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
             Left(Left(e))
         }))
       }
-      def getOrderById(traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], Order], orderId: Long, headerMeThis: String, methodName: String = "get-order-by-id", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
-        traceBuilder(s"$$clientName:$$methodName") { propagate =>
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-          wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders)))
-          })
-        }
+      def getOrderById(traceBuilder: TraceBuilder, orderId: Long, headerMeThis: String, methodName: String = "get-order-by-id", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
+        val tracingHttpClient = traceBuilder(s"$$clientName:$$methodName")(httpClient)
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
+        wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+          tracingHttpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
+        })
       }
-      def deleteOrder(traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], IgnoredEntity], orderId: Long, methodName: String = "delete-order", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-        traceBuilder(s"$$clientName:$$methodName") { propagate =>
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-            httpClient(propagate(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders)))
-          })
-        }
+      def deleteOrder(traceBuilder: TraceBuilder, orderId: Long, methodName: String = "delete-order", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        val tracingHttpClient = traceBuilder(s"$$clientName:$$methodName")(httpClient)
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+        wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+          tracingHttpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
+        })
       }
     }
     """

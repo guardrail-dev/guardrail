@@ -244,7 +244,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
 
     val handler = q"""
       trait BazHandler {
-        def getFoo(bar: Long)(implicit traceBuilder: TraceBuilder[Either[Throwable, HttpResponse], IgnoredEntity]): scala.concurrent.Future[Boolean]
+        def getFoo(bar: Long)(implicit traceBuilder: TraceBuilder): scala.concurrent.Future[Boolean]
       }
     """
     val resource = q"""
@@ -253,7 +253,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
           req.discardEntityBytes().future
           Directive.Empty
         }
-        def routes(handler: BazHandler, trace: String => Directive1[TraceBuilder[Either[Throwable, HttpResponse], IgnoredEntity]])(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: BazHandler, trace: String => Directive1[TraceBuilder])(implicit mat: akka.stream.Materializer): Route = {
           (get & path("foo" / LongNumber) & discardEntity & trace("completely-custom-label")) { (bar, traceBuilder) =>
             complete(handler.getFoo(bar)(traceBuilder))
           }

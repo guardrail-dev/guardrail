@@ -62,7 +62,13 @@ object AkkaHttpServerGenerator {
       case BuildTracingFields(operation, resourceName, tracing) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-        } yield None
+          res <- if (tracing) {
+            for {
+              operationId <- Target.fromOption(Option(operation.getOperationId), "Missing operationId")
+              label = ScalaTracingLabel(operation).map(Lit.String(_)).getOrElse(Lit.String(s"${resourceName.toList.last}:${operationId}"))
+            } yield Some((ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+          } else Target.pure(None)
+        } yield res
 
       case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
@@ -203,7 +209,10 @@ object AkkaHttpServerGenerator {
       case GetExtraRouteParams(tracing) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
-        } yield List.empty
+          res <- if (tracing) {
+            Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
+          } else Target.pure(List.empty)
+        } yield res
 
       case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions) =>
         for {
