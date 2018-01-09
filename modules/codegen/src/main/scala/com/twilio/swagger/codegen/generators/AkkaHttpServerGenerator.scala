@@ -101,12 +101,12 @@ object AkkaHttpServerGenerator {
               valueType.fold[(Defn, Defn, Case)](
                 ( q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
                 , q"def ${statusCodeName}: ${responseSuperType} = ${responseTerm}"
-                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque(() => HttpResponse(r.statusCode)) :: Nil)"
+                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
                 )
               ) { valueType =>
                 ( q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
                 , q"def ${statusCodeName}(value: ${valueType}): ${responseSuperType} = ${responseTerm}(value)"
-                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity=entity)) :: Nil }"
+                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
                 )
               }
             })
