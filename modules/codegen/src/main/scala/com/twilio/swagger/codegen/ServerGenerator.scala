@@ -49,7 +49,7 @@ object ServerGenerator {
             routeTerms = renderedRoutes.map(_.route)
             combinedRouteTerms <- combineRouteTerms(routeTerms)
             methodSigs = renderedRoutes.map(_.methodSig)
-            handlerSrc <- renderHandler(formatHandlerName(className.last), methodSigs)
+            handlerSrc <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), methodSigs)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             responseDefinitions = renderedRoutes.flatMap(_.responseDefinitions)
             classSrc <- renderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions)
