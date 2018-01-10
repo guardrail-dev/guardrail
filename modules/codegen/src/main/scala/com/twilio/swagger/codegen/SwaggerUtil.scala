@@ -363,5 +363,35 @@ object SwaggerUtil {
         }).foldLeft[Term](q"host + basePath")({ case (a, b) => q"${a} + ${b}" })
       } yield result
     }
+
+    object extractors {
+      type P = Parser[(Option[Term.Name], Term)]
+      type LP = Parser[List[(Option[Term.Name], Term)]]
+
+      val plainString = many(noneOf("{}/?")).map(_.mkString)
+      val plainNEString = many1(noneOf("{}/?")).map(_.toList.mkString)
+      val stringSegment: P = plainNEString.map(s => (None, Lit.String(s)))
+      def regexSegment(implicit pathArgs: List[ScalaParameter]): P = (plainString ~ variable ~ plainString).flatMap { case ((before, binding), after) =>
+        lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, _, _) =>
+          if (before.nonEmpty || after.nonEmpty) {
+            (Some(paramName), q"""new scala.util.matching.Regex("^" + ${Lit.String(before.mkString)} + "(.*)" + ${Lit.String(after.mkString)} + ${Lit.String("$")})""")
+          } else {
+            (Some(paramName), q"Segment")
+          }
+        }
+      }
+
+      def segments(implicit pathArgs: List[ScalaParameter]): LP = sepBy1(choice(regexSegment(pathArgs), stringSegment), char('/')).map(_.toList)
+
+      val qsValueOnly: Parser[(String, String)] = ok("") ~ (char('=') ~> opt(many(noneOf("&"))).map(_.fold("")(_.mkString)))
+      val staticQSArg: Parser[(String, String)] = many1(noneOf("=&")).map(_.toList.mkString) ~ opt(char('=') ~> many(noneOf("&"))).map(_.fold("")(_.mkString))
+      val staticQSTerm: Parser[Term] = choice(staticQSArg, qsValueOnly).map { case (k, v) => q" parameter(${Lit.String(k)}).require(_ == ${Lit.String(v)}) " }
+      val trailingSlash: Parser[Boolean] = opt(char('/')).map(_.nonEmpty)
+      val staticQS: Parser[Option[Term]] = (opt(char('?') ~> sepBy1(staticQSTerm, char('&')).map(_.reduceLeft((l, r) => q"${l} & ${r}"))) | opt(char('?')).map { _ => None })
+      val emptyPath: Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] = endOfInput ~> ok((List.empty[(Option[Term.Name], Term)], (false, None)))
+      val emptyPathQS: Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] = ok(List.empty[(Option[Term.Name], Term)]) ~ (ok(false) ~ staticQS)
+      def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] =
+        (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
+    }
   }
 }
