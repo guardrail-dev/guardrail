@@ -256,18 +256,6 @@ object AkkaHttpServerGenerator {
       case other => Target.error(s"Unknown method: ${other}")
     }
 
-    def pathSegmentToAkka: ScalaParameter => Target[Term] = { case ScalaParameter(_, param, _, argName, argType) =>
-      argType match {
-        case t"String" =>         Target.pure(q"Segment")
-        case t"Double" =>         Target.pure(q"DoubleNumber")
-        case t"BigDecimal" =>     Target.pure(q"Segment.map(BigDecimal.apply _)")
-        case t"Int" =>            Target.pure(q"IntNumber")
-        case t"Long" =>           Target.pure(q"LongNumber")
-        case t"BigInt" =>         Target.pure(q"Segment.map(BigInt.apply _)")
-        case tpe@Type.Name(_) =>  Target.pure(q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
-      }
-    }
-
     def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =

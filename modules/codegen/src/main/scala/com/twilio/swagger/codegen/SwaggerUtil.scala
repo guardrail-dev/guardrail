@@ -368,15 +368,33 @@ object SwaggerUtil {
       type P = Parser[(Option[Term.Name], Term)]
       type LP = Parser[List[(Option[Term.Name], Term)]]
 
+      def pathSegmentToAkka: (ScalaParameter, Option[Term]) => Term = { case (ScalaParameter(_, param, _, argName, argType), base) =>
+        base.fold { argType match {
+          case t"String"        => q"Segment"
+          case t"Double"        => q"DoubleNumber"
+          case t"BigDecimal"    => q"Segment.map(BigDecimal.apply _)"
+          case t"Int"           => q"IntNumber"
+          case t"Long"          => q"LongNumber"
+          case t"BigInt"        => q"Segment.map(BigInt.apply _)"
+          case tpe@Type.Name(_) => q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
+        } } { segment => argType match {
+          case t"String"        => segment
+          case t"BigDecimal"    => q"${segment}.map(BigDecimal.apply _)"
+          case t"BigInt"        => q"${segment}.map(BigInt.apply _)"
+          case tpe@Type.Name(_) => q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
+        } }
+      }
+
       val plainString = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P = plainNEString.map(s => (None, Lit.String(s)))
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P = (plainString ~ variable ~ plainString).flatMap { case ((before, binding), after) =>
         lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, _, _) =>
           if (before.nonEmpty || after.nonEmpty) {
-            (Some(paramName), q"""new scala.util.matching.Regex("^" + ${Lit.String(before.mkString)} + "(.*)" + ${Lit.String(after.mkString)} + ${Lit.String("$")})""")
+            val regexSegment = q"""new scala.util.matching.Regex("^" + ${Lit.String(before.mkString)} + "(.*)" + ${Lit.String(after.mkString)} + ${Lit.String("$")})"""
+            (Some(paramName), pathSegmentToAkka(param, Some(regexSegment)))
           } else {
-            (Some(paramName), q"Segment")
+            (Some(paramName), pathSegmentToAkka(param, None))
           }
         }
       }
