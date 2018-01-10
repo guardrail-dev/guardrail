@@ -335,21 +335,25 @@ object SwaggerUtil {
   }
 
   object paths {
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
-      import atto._, Atto._
+    import atto._, Atto._
 
-      val term: Parser[Term.Apply] = many(notChar('}')).map(_.mkString("")).flatMap({ term =>
-        pathArgs
-          .find(_.argName.value == term)
-          .fold[Parser[Term.Apply]](
-            err(s"Unable to find argument ${term}")
-          )({ case ScalaParameter(_, _, paramName, _, _) =>
-            ok(q"Formatter.addPath(${paramName})")
-          })
-      })
-      val variable: Parser[Term.Apply] = char('{') ~> term <~ char('}')
+    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => T): Parser[T] =
+      pathArgs
+        .find(_.argName.value == bindingName)
+        .fold[Parser[T]](
+          err(s"Unable to find argument ${bindingName}")
+        )(param => ok(f(param)))
+
+    private[this] val variable: Parser[String] = char('{') ~> many(notChar('}')).map(_.mkString("")) <~ char('}')
+
+    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+      val term: Parser[Term.Apply] = variable.flatMap { binding =>
+        lookupName(binding, pathArgs)(_.paramName).map { paramName =>
+          q"Formatter.addPath(${paramName})"
+        }
+      }
       val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(variable, other).map(_.swap: Either[String, Term.Apply]))
+      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(term, other).map(_.swap: Either[String, Term.Apply]))
 
       for {
         parts <- pattern.parseOnly(path).either.fold(Target.error(_), Target.pure(_))
@@ -357,6 +361,73 @@ object SwaggerUtil {
           case Left(part) => Lit.String(part)
           case Right(term) => term
         }).foldLeft[Term](q"host + basePath")({ case (a, b) => q"${a} + ${b}" })
+      } yield result
+    }
+
+    object extractors {
+      type P = Parser[(Option[Term.Name], Term)]
+      type LP = Parser[List[(Option[Term.Name], Term)]]
+
+      def pathSegmentToAkka: (ScalaParameter, Option[Term]) => Term = { case (ScalaParameter(_, param, _, argName, argType), base) =>
+        base.fold { argType match {
+          case t"String"        => q"Segment"
+          case t"Double"        => q"DoubleNumber"
+          case t"BigDecimal"    => q"Segment.map(BigDecimal.apply _)"
+          case t"Int"           => q"IntNumber"
+          case t"Long"          => q"LongNumber"
+          case t"BigInt"        => q"Segment.map(BigInt.apply _)"
+          case tpe@Type.Name(_) => q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
+        } } { segment => argType match {
+          case t"String"        => segment
+          case t"BigDecimal"    => q"${segment}.map(BigDecimal.apply _)"
+          case t"BigInt"        => q"${segment}.map(BigInt.apply _)"
+          case tpe@Type.Name(_) => q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
+        } }
+      }
+
+      val plainString = many(noneOf("{}/?")).map(_.mkString)
+      val plainNEString = many1(noneOf("{}/?")).map(_.toList.mkString)
+      val stringSegment: P = plainNEString.map(s => (None, Lit.String(s)))
+      def regexSegment(implicit pathArgs: List[ScalaParameter]): P = (plainString ~ variable ~ plainString).flatMap { case ((before, binding), after) =>
+        lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, _, _) =>
+          if (before.nonEmpty || after.nonEmpty) {
+            val regexSegment = q"""new scala.util.matching.Regex("^" + ${Lit.String(before.mkString)} + "(.*)" + ${Lit.String(after.mkString)} + ${Lit.String("$")})"""
+            (Some(paramName), pathSegmentToAkka(param, Some(regexSegment)))
+          } else {
+            (Some(paramName), pathSegmentToAkka(param, None))
+          }
+        }
+      }
+
+      def segments(implicit pathArgs: List[ScalaParameter]): LP = sepBy1(choice(regexSegment(pathArgs), stringSegment), char('/')).map(_.toList)
+
+      val qsValueOnly: Parser[(String, String)] = ok("") ~ (char('=') ~> opt(many(noneOf("&"))).map(_.fold("")(_.mkString)))
+      val staticQSArg: Parser[(String, String)] = many1(noneOf("=&")).map(_.toList.mkString) ~ opt(char('=') ~> many(noneOf("&"))).map(_.fold("")(_.mkString))
+      val staticQSTerm: Parser[Term] = choice(staticQSArg, qsValueOnly).map { case (k, v) => q" parameter(${Lit.String(k)}).require(_ == ${Lit.String(v)}) " }
+      val trailingSlash: Parser[Boolean] = opt(char('/')).map(_.nonEmpty)
+      val staticQS: Parser[Option[Term]] = (opt(char('?') ~> sepBy1(staticQSTerm, char('&')).map(_.reduceLeft((l, r) => q"${l} & ${r}"))) | opt(char('?')).map { _ => None })
+      val emptyPath: Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] = endOfInput ~> ok((List.empty[(Option[Term.Name], Term)], (false, None)))
+      val emptyPathQS: Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] = ok(List.empty[(Option[Term.Name], Term)]) ~ (ok(false) ~ staticQS)
+      def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] =
+        (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
+    }
+
+    def generateUrlPathExtractors(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+      import extractors._
+      for {
+        partsQS <- pattern(pathArgs).parse(path).done.either.fold(Target.error(_), Target.pure(_))
+        (parts, (trailingSlash, queryParams)) = partsQS
+        (directive, bindings) = parts.foldLeft[(Term, List[Term.Name])]((q"pathEnd", List.empty))({
+          case ((q"pathEnd   ", bindings), (termName, b)) => (q"path(${b}       )", bindings ++ termName)
+          case ((q"path(${a})", bindings), (termName, c)) => (q"path(${a} / ${c})", bindings ++ termName)
+        })
+        trailingSlashed = if (trailingSlash) {
+          directive match {
+            case q"path(${a})" => q"pathPrefix(${a}) & pathEndOrSingleSlash"
+            case q"pathEnd" => q"pathEndOrSingleSlash"
+          }
+        } else directive
+        result = queryParams.fold(trailingSlashed) { qs => q"${trailingSlashed} & ${qs}" }
       } yield result
     }
   }

@@ -101,12 +101,12 @@ object AkkaHttpServerGenerator {
               valueType.fold[(Defn, Defn, Case)](
                 ( q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
                 , q"def ${statusCodeName}: ${responseSuperType} = ${responseTerm}"
-                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque(() => HttpResponse(r.statusCode)) :: Nil)"
+                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
                 )
               ) { valueType =>
                 ( q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
                 , q"def ${statusCodeName}(value: ${valueType}): ${responseSuperType} = ${responseTerm}(value)"
-                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque(() => HttpResponse(r.statusCode, entity=entity)) :: Nil }"
+                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
                 )
               }
             })
@@ -256,31 +256,7 @@ object AkkaHttpServerGenerator {
       case other => Target.error(s"Unknown method: ${other}")
     }
 
-    def pathSegmentToAkka: ScalaParameter => Target[Term] = { case ScalaParameter(_, param, _, argName, argType) =>
-      argType match {
-        case t"String" =>         Target.pure(q"Segment")
-        case t"Double" =>         Target.pure(q"DoubleNumber")
-        case t"BigDecimal" =>     Target.pure(q"Segment.map(BigDecimal.apply _)")
-        case t"Int" =>            Target.pure(q"IntNumber")
-        case t"Long" =>           Target.pure(q"LongNumber")
-        case t"BigInt" =>         Target.pure(q"Segment.map(BigInt.apply _)")
-        case tpe@Type.Name(_) =>  Target.pure(q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
-      }
-    }
-
-    def pathStrToAkka(basePath: Option[String], path: String, pathVars: List[ScalaParameter]): Target[Term] = {
-      val varRegex = "^\\{([^}]+)\\}$".r
-      def getKnownVar(segment: String): Option[Target[Term]] = {
-        varRegex.findFirstMatchIn(segment).map { m =>
-          val paramName = m.group(1)
-          pathVars.find(_.argName.value == paramName)
-            .map { param =>
-              pathSegmentToAkka(param)
-            } getOrElse {
-              Target.error(s"Unknown path variable ${paramName} (known: ${pathVars.map(_.argName).mkString(", ")})")
-            }
-        }
-      }
+    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash) q"${term.copy(fun=Term.Name("pathPrefix"))} & pathEndOrSingleSlash"
@@ -288,22 +264,10 @@ object AkkaHttpServerGenerator {
 
       (basePath.getOrElse("") + path).stripPrefix("/") match {
         case "" => Target.pure(q"pathEnd")
-        case rest =>
+        case path =>
           for {
-            segments <- (
-              rest.split('/')
-                .toList
-                .map(_.pure[Option].filterNot(_.isEmpty).fold(Target.error[Term]("Double slashes not supported")) {
-                  segment => getKnownVar(segment).getOrElse(Target.pure(Lit.String(segment)))
-                }).sequenceU
-            )
-            pathDirective <- segments match {
-              case x :: Nil => Target.pure(q"path(${x})")
-              case x :: xs => Target.pure(q"path(${xs.foldLeft(x) { case (a, n) => q"${a} / ${n}" }})")
-              case Nil => Target.error("Impossible scenario")
-            }
-            akkaRoute = addTrailingSlashMatcher(rest.endsWith("/"), pathDirective)
-          } yield akkaRoute
+            pathDirective <- SwaggerUtil.paths.generateUrlPathExtractors(path, pathArgs)
+          } yield pathDirective
       }
     }
 

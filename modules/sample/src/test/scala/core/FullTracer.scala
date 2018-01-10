@@ -16,8 +16,11 @@ import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{EitherValues, FunSuite, Matchers}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 class FullTracer extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 500.millis, interval = 100.millis)
 
   val traceHeaderKey = "tracer-label"
   def log(line: String): Unit = ()
