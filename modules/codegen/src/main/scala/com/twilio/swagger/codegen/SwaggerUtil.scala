@@ -393,5 +393,24 @@ object SwaggerUtil {
       def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] =
         (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
     }
+
+    def generateUrlPathExtractors(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+      import extractors._
+      for {
+        partsQS <- pattern(pathArgs).parse(path).done.either.fold(Target.error(_), Target.pure(_))
+        (parts, (trailingSlash, queryParams)) = partsQS
+        (directive, bindings) = parts.foldLeft[(Term, List[Term.Name])]((q"pathEnd", List.empty))({
+          case ((q"pathEnd   ", bindings), (termName, b)) => (q"path(${b}       )", bindings ++ termName)
+          case ((q"path(${a})", bindings), (termName, c)) => (q"path(${a} / ${c})", bindings ++ termName)
+        })
+        trailingSlashed = if (trailingSlash) {
+          directive match {
+            case q"path(${a})" => q"pathPrefix(${a}) & pathEndOrSingleSlash"
+            case q"pathEnd" => q"pathEndOrSingleSlash"
+          }
+        } else directive
+        result = queryParams.fold(trailingSlashed) { qs => q"${trailingSlashed} & ${qs}" }
+      } yield result
+    }
   }
 }
