@@ -335,21 +335,25 @@ object SwaggerUtil {
   }
 
   object paths {
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
-      import atto._, Atto._
+    import atto._, Atto._
 
-      val term: Parser[Term.Apply] = many(notChar('}')).map(_.mkString("")).flatMap({ term =>
-        pathArgs
-          .find(_.argName.value == term)
-          .fold[Parser[Term.Apply]](
-            err(s"Unable to find argument ${term}")
-          )({ case ScalaParameter(_, _, paramName, _, _) =>
-            ok(q"Formatter.addPath(${paramName})")
-          })
-      })
-      val variable: Parser[Term.Apply] = char('{') ~> term <~ char('}')
+    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => T): Parser[T] =
+      pathArgs
+        .find(_.argName.value == bindingName)
+        .fold[Parser[T]](
+          err(s"Unable to find argument ${bindingName}")
+        )(param => ok(f(param)))
+
+    private[this] val variable: Parser[String] = char('{') ~> many(notChar('}')).map(_.mkString("")) <~ char('}')
+
+    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+      val term: Parser[Term.Apply] = variable.flatMap { binding =>
+        lookupName(binding, pathArgs)(_.paramName).map { paramName =>
+          q"Formatter.addPath(${paramName})"
+        }
+      }
       val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(variable, other).map(_.swap: Either[String, Term.Apply]))
+      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(term, other).map(_.swap: Either[String, Term.Apply]))
 
       for {
         parts <- pattern.parseOnly(path).either.fold(Target.error(_), Target.pure(_))
