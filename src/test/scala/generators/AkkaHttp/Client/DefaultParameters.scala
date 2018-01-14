@@ -6,7 +6,7 @@ import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 
-class ClientGeneratorTest extends FunSuite with Matchers {
+class DefaultParametersTest extends FunSuite with Matchers {
   import scala.meta._
 
   val spec: String = s"""
