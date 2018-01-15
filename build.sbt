@@ -9,6 +9,7 @@ scalaVersion in ThisBuild := crossScalaVersions.value.last
 val akkaVersion = "10.0.10"
 val catsVersion = "0.9.0"
 val circeVersion = "0.8.0"
+val http4sVersion = "0.17.6"
 val scalatestVersion = "3.0.1"
 
 mainClass in assembly := Some("com.twilio.swagger.codegen.CLI")
@@ -95,12 +96,23 @@ lazy val sample = (project in file("modules/sample"))
   .settings(
     codegenSettings
     , initialCommands in console := """
-      |import scala.concurrent.ExecutionContext.Implicits.global
-      |import scala.meta._
+      |import cats._
+      |import cats.data.EitherT
+      |import cats.implicits._
+      |import fs2.Strategy
+      |import fs2.Task
+      |import fs2.interop.cats._
+      |import io.circe._
       |import java.time._
-      |import Common._
+      |import org.http4s._
+      |import org.http4s.client._
+      |import org.http4s.client.blaze._
+      |import org.http4s.dsl._
+      |import org.http4s.multipart._
       |import scala.concurrent.Await
+      |import scala.concurrent.ExecutionContext.Implicits.global
       |import scala.concurrent.duration._
+      |import scala.meta._
       |""".stripMargin
     , libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-http" % akkaVersion
@@ -109,7 +121,12 @@ lazy val sample = (project in file("modules/sample"))
       , "io.circe" %% "circe-generic" % circeVersion
       , "io.circe" %% "circe-java8" % circeVersion
       , "io.circe" %% "circe-parser" % circeVersion
+      , "org.http4s" %% "http4s-blaze-client" % http4sVersion
+      , "org.http4s" %% "http4s-blaze-server" % http4sVersion
+      , "org.http4s" %% "http4s-circe" % http4sVersion
+      , "org.http4s" %% "http4s-dsl" % http4sVersion
       , "org.scalatest" %% "scalatest" % scalatestVersion % Test
+      , "org.typelevel" %% "cats" % catsVersion
     )
   )
 
