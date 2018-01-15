@@ -26,8 +26,6 @@ class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
     Free.inject(RenderHandler(handlerName, methodSigs))
   def combineRouteTerms(terms: List[Term]): Free[F, Term] =
     Free.inject(CombineRouteTerms(terms))
-  def getFrameworkImports(tracing: Boolean): Free[F, List[Import]] =
-    Free.inject(GetFrameworkImports(tracing))
   def getExtraImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject(GetExtraImports(tracing))
 }

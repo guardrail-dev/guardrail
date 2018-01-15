@@ -92,7 +92,7 @@ class EnumTest extends FunSuite with Matchers {
   test("Use enums") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _, _),
+      Clients(Client(tags, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

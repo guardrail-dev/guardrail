@@ -87,7 +87,7 @@ class HttpBodiesTest extends FunSuite with Matchers {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _, _),
+      Clients(Client(tags, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

@@ -22,19 +22,6 @@ object AkkaHttpServerGenerator {
       (parts.drop(1).toList, parts.last)
     }
     def apply[T](term: ServerTerm[T]): Target[T] = term match {
-      case GetFrameworkImports(tracing) =>
-        for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "getFrameworkImports")(s"getFrameworkImports(${tracing})")
-        } yield List(
-          q"import akka.http.scaladsl.model._"
-        , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}"
-        , q"import akka.http.scaladsl.server.Directives._"
-        , q"import akka.http.scaladsl.server.{Directive, Directive0, Route}"
-        , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
-        , q"import akka.util.ByteString"
-        , q"import scala.language.implicitConversions"
-        )
-
       case ExtractOperations(paths) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")

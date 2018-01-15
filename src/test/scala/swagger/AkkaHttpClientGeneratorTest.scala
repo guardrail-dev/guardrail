@@ -112,7 +112,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: Nil, _),
+      Clients(Client(tags, className, statements) :: Nil),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
@@ -164,7 +164,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
   test("Ensure traced responses are generated") {
     val (
       _,
-      Clients(List(Client(tags, className, statements)), _),
+      Clients(List(Client(tags, className, statements))),
       _
     ) = runSwaggerSpec(swagger)(Context.empty.copy(framework=Some("akka-http"), tracing=true), AkkaHttp)
 

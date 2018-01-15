@@ -63,7 +63,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers {
   test("All types should be dereferenced") {
     val (
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
-      Clients(Client(_, _, statements) :: _, _),
+      Clients(Client(_, _, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(clientCmp, clientCls) = statements.dropWhile(_.isInstanceOf[Import])

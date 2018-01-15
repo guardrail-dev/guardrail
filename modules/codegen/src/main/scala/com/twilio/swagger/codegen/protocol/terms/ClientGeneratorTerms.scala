@@ -18,8 +18,6 @@ class ClientTerms[F[_]](implicit I: Inject[ClientTerm, F]) {
     Free.inject[ClientTerm, F](BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing))
   def buildClient(clientName: String, tracingName: Option[String], schemes: List[String], host: Option[String], basePath: Option[String], ctorArgs: List[List[Term.Param]], clientCalls: List[Defn], tracing: Boolean): Free[F, Defn.Class] =
     Free.inject[ClientTerm, F](BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, tracing))
-  def getFrameworkImports(tracing: Boolean): Free[F, List[Import]] =
-    Free.inject[ClientTerm, F](GetFrameworkImports(tracing))
 }
 
 object ClientTerms {

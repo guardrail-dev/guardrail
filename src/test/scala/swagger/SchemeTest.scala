@@ -37,7 +37,7 @@ class SchemeTest extends FunSuite with Matchers {
   test("Use first scheme") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _, _),
+      Clients(Client(tags, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

@@ -49,7 +49,7 @@ class HardcodedQSSpec extends FunSuite with Matchers {
   test("Test all cases") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _, _),
+      Clients(Client(tags, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

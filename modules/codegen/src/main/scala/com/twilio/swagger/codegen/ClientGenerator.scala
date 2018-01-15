@@ -10,17 +10,16 @@ import scala.meta.{Lit, Term, Type, _}
 import com.twilio.swagger.codegen.terms.RouteMeta
 import com.twilio.swagger.codegen.terms.client._
 
-case class Clients(clients: List[Client], frameworkImports: List[Import])
+case class Clients(clients: List[Client])
 case class Client(pkg: List[String], clientName: String, lines: List[Stat])
 
 object ClientGenerator {
   type ClientGenerator[A] = ClientTerm[A]
 
-  def fromSwagger[F[_]](context: Context)(schemes: List[String], host: Option[String], basePath: Option[String], groupedRoutes: List[(List[String], List[RouteMeta])])(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[F]): Free[F, Clients] = {
+  def fromSwagger[F[_]](context: Context, frameworkImports: List[Import])(schemes: List[String], host: Option[String], basePath: Option[String], groupedRoutes: List[(List[String], List[RouteMeta])])(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[F]): Free[F, Clients] = {
     import C._
     for {
       clientImports <- getImports(context.tracing)
-      frameworkImports <- getFrameworkImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       clients <- groupedRoutes.map({ case (pkg, routes) =>
         for {
@@ -40,6 +39,6 @@ object ClientGenerator {
           Client(pkg, clientName, stats.map(SwaggerUtil.escapeTree))
         }
       }).sequenceU
-    } yield Clients(clients, frameworkImports)
+    } yield Clients(clients)
   }
 }

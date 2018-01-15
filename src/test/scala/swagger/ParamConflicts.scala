@@ -44,7 +44,7 @@ class ParamConflictsTest extends FunSuite with Matchers {
   test("Generate non-conflicting names in clients") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _, _),
+      Clients(Client(tags, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

@@ -9,6 +9,7 @@ import AkkaHttpServerGenerator._
 import CirceProtocolGenerator._
 import ScalaGenerator._
 import SwaggerGenerator._
+import AkkaHttpGenerator._
 
 object AkkaHttp extends FunctionK[CodegenApplication, Target] {
   val interpSP: CodegenApplicationSP ~> Target = ProtocolSupportTermInterp or ServerTermInterp
@@ -19,5 +20,6 @@ object AkkaHttp extends FunctionK[CodegenApplication, Target] {
   val interpACEMSSP: CodegenApplicationACEMSSP ~> Target = ScalaInterp or interpACEMSP
   val interpACEMSSPR: CodegenApplicationACEMSSPR ~> Target = ArrayProtocolTermInterp or interpACEMSSP
   val interpACEMSSPRS: CodegenApplicationACEMSSPRS ~> Target = SwaggerInterp or interpACEMSSPR
-  def apply[T](x: CodegenApplication[T]): Target[T] = interpACEMSSPRS.apply(x)
+  val interpACEMSSPRSF: CodegenApplicationACEMSSPRSF ~> Target = FrameworkInterp or interpACEMSSPRS
+  def apply[T](x: CodegenApplication[T]): Target[T] = interpACEMSSPRSF.apply(x)
 }

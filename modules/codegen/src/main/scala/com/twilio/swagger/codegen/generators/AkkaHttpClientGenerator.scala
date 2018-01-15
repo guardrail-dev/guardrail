@@ -218,19 +218,6 @@ object AkkaHttpClientGenerator {
         } yield defn
       }
 
-      case GetFrameworkImports(tracing) => Target.pure(List(
-        q"import akka.http.scaladsl.model._"
-      , q"import akka.http.scaladsl.model.headers.RawHeader"
-      , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
-      , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, ToEntityMarshaller}"
-      , q"import akka.http.scaladsl.util.FastFuture"
-      , q"import akka.stream.Materializer"
-      , q"import akka.stream.scaladsl.Source"
-      , q"import akka.util.ByteString"
-      , q"import cats.data.EitherT"
-      , q"import scala.concurrent.{ExecutionContext, Future}"
-      ))
-
       case GetImports(tracing) => Target.pure(List.empty)
 
       case GetExtraImports(tracing) => Target.pure(List.empty)

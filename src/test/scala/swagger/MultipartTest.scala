@@ -49,7 +49,7 @@ class MultipartTest extends FunSuite with Matchers {
   test("Multipart form data") {
     val (
       _,
-      Clients(Client(_, className, statements) :: _, _),
+      Clients(Client(_, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
