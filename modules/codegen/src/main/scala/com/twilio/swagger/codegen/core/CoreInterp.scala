@@ -7,7 +7,7 @@ import cats.syntax.flatMap._
 import cats.syntax.either._
 import cats.syntax.traverse._
 import cats.{~>, FlatMap}
-import com.twilio.swagger.codegen.generators.AkkaHttp
+import com.twilio.swagger.codegen.generators.{AkkaHttp, Http4s}
 import com.twilio.swagger.codegen.terms._
 import java.nio.file.Paths
 import scala.io.AnsiColor
@@ -23,6 +23,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         _ <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
         framework <- context.framework.fold(CoreTarget.error[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
           case "akka-http" => CoreTarget.pure(AkkaHttp)
+          case "http4s" => CoreTarget.pure(Http4s)
           case unknown => CoreTarget.error(UnknownFramework(unknown))
         })
         _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: ${framework}")
