@@ -45,6 +45,7 @@ val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
 resetSample := { "git clean -fdx modules/sample/src modules/sample/target" ! }
 
+addCommandAlias("example", "; resetSample ; runExample ; sample/test")
 addCommandAlias("testSuite", "; test ; resetSample; runExample ; sample/test")
 
 publishMavenStyle := true
