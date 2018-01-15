@@ -87,6 +87,7 @@ object Common {
       classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
       frameworkImports <- getFrameworkImports(context.tracing)
+      frameworkImplicits <- getFrameworkImplicits()
 
       codegen <- kind match {
         case CodegenTarget.Client =>

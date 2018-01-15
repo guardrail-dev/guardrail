@@ -33,6 +33,52 @@ object AkkaHttpGenerator {
       , q"import scala.concurrent.{ExecutionContext, Future}"
       , q"import scala.language.implicitConversions"
       ))
+
+      case GetFrameworkImplicits() =>
+        val jsonType: Type = t"io.circe.Json"
+        val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
+        val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
+        Target.pure(q"""
+          object AkkaHttpImplicits {
+            private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
+            implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
+
+            private[this] def argEscape(k: String, v: String): String = Uri.Query.apply((k, v)).toString
+            implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = AddArg.build[T](key => v => argEscape(key, ev.show(v)))
+
+            type HttpClient = HttpRequest => Future[HttpResponse]
+            type TraceBuilder = String => HttpClient => HttpClient
+
+            implicit final def jsonMarshaller(
+                implicit printer: Printer = Printer.noSpaces
+            ): ToEntityMarshaller[${jsonType}] =
+              Marshaller.withFixedContentType(MediaTypes.${Term.Name("`application/json`")}) { json =>
+                HttpEntity(MediaTypes.${Term.Name("`application/json`")}, printer.pretty(json))
+              }
+
+            implicit final def jsonEntityMarshaller[A](
+                implicit J: ${jsonEncoderTypeclass}[A],
+                         printer: Printer = Printer.noSpaces
+            ): ToEntityMarshaller[A] =
+              jsonMarshaller(printer).compose(J.apply)
+
+            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
+                .map {
+                  case ByteString.empty => throw Unmarshaller.NoContentException
+                  case data             => jawn.parseByteBuffer(data.asByteBuffer).fold(throw _, identity)
+                }
+
+            implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
+              def decode(json: ${jsonType}) = J.decodeJson(json).fold(throw _, identity)
+              jsonUnmarshaller.map(decode)
+            }
+
+            implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
+              Unmarshaller.strict(_ => IgnoredEntity.empty)
+          }
+        """)
     }
   }
 }

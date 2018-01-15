@@ -10,6 +10,8 @@ import scala.meta._
 class FrameworkTerms[F[_]](implicit I: Inject[FrameworkTerm, F]) {
   def getFrameworkImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject(GetFrameworkImports(tracing))
+  def getFrameworkImplicits(): Free[F, Defn.Object] =
+    Free.inject(GetFrameworkImplicits())
 }
 
 object FrameworkTerms {
