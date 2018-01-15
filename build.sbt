@@ -115,3 +115,5 @@ lazy val sample = (project in file("modules/sample"))
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
+
+logBuffered in Test := false
