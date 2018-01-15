@@ -5,7 +5,7 @@ import cats.data.{Coproduct, EitherT, NonEmptyList, WriterT}
 import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
-import com.twilio.swagger.codegen.terms.ScalaTerm
+import com.twilio.swagger.codegen.terms.{ScalaTerm, SwaggerTerm}
 import com.twilio.swagger.codegen.terms.client.ClientTerm
 import com.twilio.swagger.codegen.terms.protocol.{AliasProtocolTerm, ArrayProtocolTerm, EnumProtocolTerm, ModelProtocolTerm, ProtocolSupportTerm}
 import com.twilio.swagger.codegen.terms.server.ServerTerm
@@ -53,7 +53,8 @@ package object codegen {
   type CodegenApplicationACEMSP[T] = Coproduct[AliasProtocolTerm, CodegenApplicationCEMSP, T]
   type CodegenApplicationACEMSSP[T] = Coproduct[ScalaTerm, CodegenApplicationACEMSP, T]
   type CodegenApplicationACEMSSPR[T] = Coproduct[ArrayProtocolTerm, CodegenApplicationACEMSSP, T]
-  type CodegenApplication[T] = CodegenApplicationACEMSSPR[T]
+  type CodegenApplicationACEMSSPRS[T] = Coproduct[SwaggerTerm, CodegenApplicationACEMSSPR, T]
+  type CodegenApplication[T] = CodegenApplicationACEMSSPRS[T]
 
   type Logger[T] = WriterT[Id, StructuredLogger, T]
   type Target[A] = EitherT[Logger, String, A]

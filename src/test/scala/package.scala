@@ -8,15 +8,16 @@ import com.twilio.swagger.codegen.generators.AkkaHttp
 import org.scalatest._
 import scala.collection.JavaConverters._
 import scala.meta._
-import com.twilio.swagger.codegen.terms.ScalaTerms
+import com.twilio.swagger.codegen.terms.{ScalaTerms, SwaggerTerms}
 import cats.implicits._
 
 package object swagger {
   def runSwaggerSpec(spec: String)(context: Context, framework: FunctionK[CodegenApplication, Target]): (ProtocolDefinitions, Clients, Servers) = runSwagger(new SwaggerParser().parse(spec))(context, framework)
   def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target]
-      )(implicit Sc: ScalaTerms[CodegenApplication]
+      )(implicit Sc: ScalaTerms[CodegenApplication], Sw: SwaggerTerms[CodegenApplication]
       ): (ProtocolDefinitions, Clients, Servers) = {
     import Sc._
+    import Sw._
     val prog = for {
       protocol <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
       definitions = protocol.elems
