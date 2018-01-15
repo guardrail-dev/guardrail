@@ -70,7 +70,10 @@ object AkkaHttpServerGenerator {
           res <- if (tracing) {
             for {
               operationId <- Target.fromOption(Option(operation.getOperationId()).map(splitOperationParts).map(_._2), "Missing operationId")
-              label = ScalaTracingLabel(operation).map(Lit.String(_)).getOrElse(Lit.String(s"${resourceName.toList.last}:${operationId}"))
+              label <- Target.fromOption(
+                ScalaTracingLabel(operation)
+                  .map(Lit.String(_))
+                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))), "Missing client name")
             } yield Some((ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
           } else Target.pure(None)
         } yield res
