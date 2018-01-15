@@ -88,6 +88,7 @@ object Common {
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
       frameworkImports <- getFrameworkImports(context.tracing)
       frameworkImplicits <- getFrameworkImplicits()
+      frameworkImplicitName = frameworkImplicits.name
 
       codegen <- kind match {
         case CodegenTarget.Client =>
@@ -113,6 +114,7 @@ object Common {
                 , source"""
                   package ${buildPkgTerm(pkgName ++ pkg                             )}
                   import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+                  import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
                   import ${buildPkgTerm(List("_root_") ++ dtoComponents              )}._
                   ..${customImports}
                   ..${clientSrc}
@@ -127,6 +129,7 @@ object Common {
                     package ${buildPkgTerm((pkgName ++ pkg.toList)                    )}
                     ..${extraImports}
                     import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+                    import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
                     import ${buildPkgTerm(List("_root_") ++ dtoComponents              )}._
                     ..${customImports}
                     ..$src
@@ -136,11 +139,15 @@ object Common {
           )
 
       implicits <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
+      frameworkImplicitsFile <- renderFrameworkImplicits(pkgName, frameworkImports, protocolImports, frameworkImplicits)
     } yield (
       protocolDefinitions ++
       List(packageObject) ++
       files ++
-      List(WriteTree(pkgPath.resolve("Implicits.scala"), implicits))
+      List(
+        WriteTree(pkgPath.resolve("Implicits.scala"), implicits),
+        WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile)
+      )
     ).toList
   }
 

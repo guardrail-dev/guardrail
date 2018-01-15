@@ -87,6 +87,27 @@ object ScalaGenerator {
             }
           """
         )
+
+      case RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits) =>
+        val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        Target.pure(
+          source"""
+            package ${pkg}
+
+            ..${jsonImports}
+
+            ..${frameworkImports}
+
+            import cats.implicits._
+            import cats.data.EitherT
+
+            import scala.concurrent.Future
+
+            import ${pkg}.Implicits._
+
+            ${frameworkImplicits}
+          """
+        )
     }
   }
 }

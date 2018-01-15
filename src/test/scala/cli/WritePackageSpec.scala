@@ -86,7 +86,10 @@ class WritePackageSpec extends FunSuite with Matchers {
     val implicitsPath = Paths.get("/tmp/foo/com/twilio/example/clients/Implicits.scala")
     paths should contain(implicitsPath)
 
-    val allPaths = Set(fooPath, barPath, pkgPath, clientPath, implicitsPath)
+    val frameworkImplicitsPath = Paths.get("/tmp/foo/com/twilio/example/clients/AkkaHttpImplicits.scala")
+    paths should contain(frameworkImplicitsPath)
+
+    val allPaths = Set(fooPath, barPath, pkgPath, clientPath, implicitsPath, frameworkImplicitsPath)
 
     result.filterNot(wf => allPaths.contains(wf.path)).length shouldBe 0
   }
@@ -124,7 +127,11 @@ class WritePackageSpec extends FunSuite with Matchers {
     paths should contain(implicitsPath)
     extractPackage(implicitsPath, result).structure shouldBe q"base".structure
 
-    val allPaths = Set(fooPath, barPath, pkgPath, clientPath, implicitsPath)
+    val frameworkImplicitsPath = Paths.get("/tmp/foo/base/AkkaHttpImplicits.scala")
+    paths should contain(frameworkImplicitsPath)
+    extractPackage(frameworkImplicitsPath, result).structure shouldBe q"base".structure
+
+    val allPaths = Set(fooPath, barPath, pkgPath, clientPath, implicitsPath, frameworkImplicitsPath)
 
     result.filterNot(wf => allPaths.contains(wf.path)).length shouldBe 0
   }
