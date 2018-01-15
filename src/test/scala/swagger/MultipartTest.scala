@@ -1,4 +1,4 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
@@ -8,7 +8,7 @@ import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class MultipartTest extends FunSuite with Matchers {
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -44,12 +44,14 @@ class MultipartTest extends FunSuite with Matchers {
     |          description: Success
     |          schema:
     |            type: string
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Multipart form data") {
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
-    val Client(_, className, statements) :: _ = clients
-
+    val (
+      _,
+      Clients(Client(_, className, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""

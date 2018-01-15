@@ -1,4 +1,4 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
@@ -9,7 +9,7 @@ import org.scalatest.{FunSuite, Matchers}
 class DefaultParametersTest extends FunSuite with Matchers {
   import scala.meta._
 
-  val spec: String = s"""
+  val swagger = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -121,10 +121,11 @@ class DefaultParametersTest extends FunSuite with Matchers {
     |""".stripMargin
 
   test("Ensure responses are generated") {
-    val swagger = new SwaggerParser().parse(spec)
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     tags should equal (Seq("store"))
 

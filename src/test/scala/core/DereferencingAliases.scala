@@ -1,15 +1,15 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, ClientGenerator, Clients, Context, EnumDefinition, ProtocolGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, ClientGenerator, Clients, Context, EnumDefinition, ProtocolGenerator, ProtocolDefinitions, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class DereferencingAliasesSpec extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -58,12 +58,14 @@ class DereferencingAliasesSpec extends FunSuite with Matchers {
     |        $$ref: "#/definitions/defArrayLong"
     |      arrayArray:
     |        $$ref: "#/definitions/defArrayArrayLong"
-    |""".stripMargin)
+    |""".stripMargin
 
   test("All types should be dereferenced") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _ = definitions
-    val Clients(Client(_, _, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
+    val (
+      ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      Clients(Client(_, _, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(clientCmp, clientCls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val definition = q"""

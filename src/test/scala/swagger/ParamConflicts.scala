@@ -1,15 +1,15 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolDefinitions, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class ParamConflictsTest extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -39,10 +39,14 @@ class ParamConflictsTest extends FunSuite with Matchers {
     |        type: string
     |      ConflictingName:
     |        type: string
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Generate non-conflicting names in clients") {
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -75,8 +79,11 @@ class ParamConflictsTest extends FunSuite with Matchers {
   }
 
   test("Generate non-conflicting names in definitions") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)

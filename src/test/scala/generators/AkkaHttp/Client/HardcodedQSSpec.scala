@@ -1,4 +1,4 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
@@ -9,7 +9,7 @@ import scala.collection.immutable.{Seq => ISeq}
 import scala.meta._
 
 class HardcodedQSSpec extends FunSuite with Matchers {
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -26,6 +26,9 @@ class HardcodedQSSpec extends FunSuite with Matchers {
     |        type: integer
     |        format: int32
     |        in: query
+    |      responses:
+    |        200:
+    |          description: Success
     |  /specViolation?isThisSupported={value}:
     |    get:
     |      operationId: getHardcodedQs
@@ -38,10 +41,17 @@ class HardcodedQSSpec extends FunSuite with Matchers {
     |        type: integer
     |        format: int32
     |        in: query
-    |""".stripMargin)
+    |      responses:
+    |        200:
+    |          description: Success
+    |""".stripMargin
 
   test("Test all cases") {
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(List.empty).foldMap(AkkaHttp))
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

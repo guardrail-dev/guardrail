@@ -2,6 +2,7 @@ package tests.generators.AkkaHttp.Client
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
@@ -10,7 +11,7 @@ import scala.meta._
 class AkkaHttpClientTracingTest extends FunSuite with Matchers {
 
   test("Manage child tracing span") {
-    val swagger = new SwaggerParser().parse(s"""
+    val swagger = s"""
       |swagger: "2.0"
       |info:
       |  title: Whatever
@@ -22,6 +23,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
       |  /foo:
       |    get:
       |      operationId: getFoo
+      |      x-scala-package: foo.barBaz
       |      parameters:
       |        - name: bleep
       |          in: query
@@ -30,15 +32,18 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
       |      responses:
       |        200:
       |          description: Success
-      |""".stripMargin)
+      |""".stripMargin
 
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger)(List.empty).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing=true), AkkaHttp)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
-    class Client(host: String = "http://localhost:1234", clientName: String)(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
+    class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
       val basePath: String = ""
       private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
         EitherT(resp.flatMap(resp => if (resp.status.isSuccess) {
@@ -64,7 +69,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
   }
 
   test("Manage child span with tags") {
-    val swagger = new SwaggerParser().parse(s"""
+    val swagger = s"""
       |swagger: "2.0"
       |info:
       |  title: Whatever
@@ -81,10 +86,13 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers {
       |      responses:
       |        200:
       |          description: Success
-      |""".stripMargin)
+      |""".stripMargin
 
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger)(List.empty).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _, _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing=true), AkkaHttp)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
