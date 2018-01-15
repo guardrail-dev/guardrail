@@ -2,12 +2,11 @@ package com.twilio.swagger.codegen
 package terms.client
 
 import _root_.io.swagger.models.{ModelImpl, Operation, Path}
+import com.twilio.swagger.codegen.terms.RouteMeta
 import scala.meta._
 
 sealed trait ClientTerm[T]
-case class ExtractOperations(paths: List[(String, Path)]) extends ClientTerm[List[ClientRoute]]
-case class GetClassName(operation: Operation) extends ClientTerm[List[String]]
-case class GenerateClientOperation(className: List[String], route: ClientRoute, tracing: Boolean, protocolElems: List[StrictProtocolElems]) extends ClientTerm[Defn]
+case class GenerateClientOperation(className: List[String], route: RouteMeta, tracing: Boolean, protocolElems: List[StrictProtocolElems]) extends ClientTerm[Defn]
 case class GetImports(tracing: Boolean) extends ClientTerm[List[Import]]
 case class GetExtraImports(tracing: Boolean) extends ClientTerm[List[Import]]
 case class ClientClsArgs(tracingName: Option[String], schemes: List[String], host: Option[String], tracing: Boolean) extends ClientTerm[List[List[Term.Param]]]

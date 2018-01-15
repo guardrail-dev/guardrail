@@ -21,7 +21,16 @@ package object swagger {
     val prog = for {
       protocol <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
       definitions = protocol.elems
-      clients <- ClientGenerator.fromSwagger[CodegenApplication](context, swagger)(definitions)
+
+      schemes = Option(swagger.getSchemes).fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
+      host = Option(swagger.getHost)
+      basePath = Option(swagger.getBasePath)
+      paths = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
+      routes <- extractOperations(paths)
+      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
+      groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
+
+      clients <- ClientGenerator.fromSwagger[CodegenApplication](context)(schemes, host, basePath, groupedRoutes)(definitions)
       servers <- ServerGenerator.fromSwagger[CodegenApplication](context, swagger)(definitions)
     } yield (protocol, clients, servers)
 

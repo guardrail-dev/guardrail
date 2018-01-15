@@ -9,6 +9,7 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.swagger.codegen.extract.ScalaPackage
+import com.twilio.swagger.codegen.terms.RouteMeta
 import com.twilio.swagger.codegen.terms.client._
 import java.util.Locale
 import scala.collection.JavaConverters._
@@ -44,31 +45,7 @@ object AkkaHttpClientGenerator {
 
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
-      case ExtractOperations(paths) =>
-        paths.map({ case (pathStr, path) =>
-          Target.fromOption(Option(path.getOperationMap), "No operations defined")
-            .map { operationMap =>
-              operationMap.asScala.map { case (httpMethod, operation) =>
-                ClientRoute(pathStr, httpMethod, operation)
-              }
-            }
-        }).sequenceU.map(_.flatten)
-
-      case GetClassName(operation) =>
-        for {
-          _ <- Target.log.debug("AkkaHttpClientGenerator", "client")(s"getClassName(${operation})")
-
-          pkg = ScalaPackage(operation).map(_.split('.').toVector).orElse({
-            Option(operation.getTags).map { tags =>
-              println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-              tags.asScala
-            }
-          }).map(_.toList)
-          opPkg = Option(operation.getOperationId()).map(splitOperationParts).fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-        } yield className
-
-      case GenerateClientOperation(className, ClientRoute(pathStr, httpMethod, operation), tracing, protocolElems) => {
+      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
         def toCamelCase(s: String): String = {
           val fromSnakeOrDashed = "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
           "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))

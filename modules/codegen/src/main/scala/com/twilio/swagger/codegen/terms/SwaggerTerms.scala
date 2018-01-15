@@ -6,6 +6,10 @@ import cats.free.{Free, Inject}
 import scala.meta._
 
 class SwaggerTerms[F[_]](implicit I: Inject[SwaggerTerm, F]) {
+  def extractOperations(paths: List[(String, Path)]): Free[F, List[RouteMeta]] =
+    Free.inject[SwaggerTerm, F](ExtractOperations(paths))
+  def getClassName(operation: Operation): Free[F, List[String]] =
+    Free.inject[SwaggerTerm, F](GetClassName(operation))
 }
 object SwaggerTerms {
   implicit def swaggerTerm[F[_]](implicit I: Inject[SwaggerTerm, F]): SwaggerTerms[F] = new SwaggerTerms[F]

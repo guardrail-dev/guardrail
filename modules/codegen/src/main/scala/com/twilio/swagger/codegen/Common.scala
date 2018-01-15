@@ -8,16 +8,18 @@ import cats.syntax.either._
 import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import cats.~>
-import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms, ScalaTerms}
+import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms}
 import java.nio.file.{Path, Paths}
+import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
   def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: List[String], dtoPackage: List[String], customImports: List[Import]
-      )(implicit S: ScalaTerms[CodegenApplication]
+      )(implicit Sc: ScalaTerms[CodegenApplication], Sw: SwaggerTerms[CodegenApplication]
       ): Free[CodegenApplication, List[WriteTree]] = {
-    import S._
+    import Sc._
+    import Sw._
 
     val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
     val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
@@ -75,10 +77,18 @@ object Common {
           """
         )
 
+      schemes = Option(swagger.getSchemes).fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
+      host = Option(swagger.getHost)
+      basePath = Option(swagger.getBasePath)
+      paths = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
+      routes <- extractOperations(paths)
+      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
+      groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
+
       codegen <- kind match {
         case CodegenTarget.Client =>
           for {
-            clientMeta <- ClientGenerator.fromSwagger[CodegenApplication](context, swagger)(protocolElems)
+            clientMeta <- ClientGenerator.fromSwagger[CodegenApplication](context)(schemes, host, basePath, groupedRoutes)(protocolElems)
             Clients(clients, frameworkImports) = clientMeta
           } yield CodegenDefinitions(clients, List.empty, frameworkImports)
 
