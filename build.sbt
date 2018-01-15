@@ -8,7 +8,7 @@ scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 val akkaVersion = "10.0.10"
 val catsVersion = "0.9.0"
-val circeVersion = "0.7.0"
+val circeVersion = "0.8.0"
 val scalatestVersion = "3.0.1"
 
 mainClass in assembly := Some("com.twilio.swagger.codegen.CLI")
