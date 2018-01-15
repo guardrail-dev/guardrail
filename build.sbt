@@ -71,7 +71,6 @@ val codegenSettings = Seq(
       "-feature",
       "-unchecked",
       "-deprecation",
-      "-explaintypes",
       "-target:jvm-1.8",
       "-encoding", "utf8"
     )
