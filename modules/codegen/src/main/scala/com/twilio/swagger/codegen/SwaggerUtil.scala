@@ -337,19 +337,19 @@ object SwaggerUtil {
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => T): Parser[T] =
+    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => Parser[T]): Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[Parser[T]](
           err(s"Unable to find argument ${bindingName}")
-        )(param => ok(f(param)))
+        )(param => f(param))
 
     private[this] val variable: Parser[String] = char('{') ~> many(notChar('}')).map(_.mkString("")) <~ char('}')
 
     def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
       val term: Parser[Term.Apply] = variable.flatMap { binding =>
-        lookupName(binding, pathArgs)(_.paramName).map { paramName =>
-          q"Formatter.addPath(${paramName})"
+        lookupName(binding, pathArgs) { param =>
+          ok(q"Formatter.addPath(${param.paramName})")
         }
       }
       val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
@@ -368,20 +368,20 @@ object SwaggerUtil {
       type P = Parser[(Option[Term.Name], Term)]
       type LP = Parser[List[(Option[Term.Name], Term)]]
 
-      def pathSegmentToAkka: (ScalaParameter, Option[Term]) => Term = { case (ScalaParameter(_, param, _, argName, argType), base) =>
+      def pathSegmentToAkka: (ScalaParameter, Option[Term]) => Either[String, Term] = { case (ScalaParameter(_, param, _, argName, argType), base) =>
         base.fold { argType match {
-          case t"String"        => q"Segment"
-          case t"Double"        => q"DoubleNumber"
-          case t"BigDecimal"    => q"Segment.map(BigDecimal.apply _)"
-          case t"Int"           => q"IntNumber"
-          case t"Long"          => q"LongNumber"
-          case t"BigInt"        => q"Segment.map(BigInt.apply _)"
-          case tpe@Type.Name(_) => q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
+          case t"String"        => Right(q"Segment")
+          case t"Double"        => Right(q"DoubleNumber")
+          case t"BigDecimal"    => Right(q"Segment.map(BigDecimal.apply _)")
+          case t"Int"           => Right(q"IntNumber")
+          case t"Long"          => Right(q"LongNumber")
+          case t"BigInt"        => Right(q"Segment.map(BigInt.apply _)")
+          case tpe@Type.Name(_) => Right(q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
         } } { segment => argType match {
-          case t"String"        => segment
-          case t"BigDecimal"    => q"${segment}.map(BigDecimal.apply _)"
-          case t"BigInt"        => q"${segment}.map(BigInt.apply _)"
-          case tpe@Type.Name(_) => q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
+          case t"String"        => Right(segment)
+          case t"BigDecimal"    => Right(q"${segment}.map(BigDecimal.apply _)")
+          case t"BigInt"        => Right(q"${segment}.map(BigInt.apply _)")
+          case tpe@Type.Name(_) => Right(q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
         } }
       }
 
@@ -389,13 +389,14 @@ object SwaggerUtil {
       val plainNEString = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P = plainNEString.map(s => (None, Lit.String(s)))
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P = (plainString ~ variable ~ plainString).flatMap { case ((before, binding), after) =>
-        lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, _, _) =>
-          if (before.nonEmpty || after.nonEmpty) {
+        lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, argName, _) =>
+          val value = if (before.nonEmpty || after.nonEmpty) {
             val regexSegment = q"""new scala.util.matching.Regex("^" + ${Lit.String(before.mkString)} + "(.*)" + ${Lit.String(after.mkString)} + ${Lit.String("$")})"""
-            (Some(paramName), pathSegmentToAkka(param, Some(regexSegment)))
+            pathSegmentToAkka(param, Some(regexSegment)).fold(err, ok)
           } else {
-            (Some(paramName), pathSegmentToAkka(param, None))
+            pathSegmentToAkka(param, None).fold(err, ok)
           }
+          value.map((Some(paramName), _))
         }
       }
 
