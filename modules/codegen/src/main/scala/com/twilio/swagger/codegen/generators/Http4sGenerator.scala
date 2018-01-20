@@ -39,6 +39,7 @@ object Http4sGenerator {
         val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
         Target.pure(q"""
           object Http4sImplicits {
+            import scala.util.Try
             private[this] def pathEscape(s: String): String = Path(s).toString.drop(1)
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
 
@@ -50,6 +51,18 @@ object Http4sGenerator {
             implicit def entityEncoder[T: ${jsonEncoderTypeclass}]: EntityEncoder[T] = jsonEncoderOf[T]
             implicit def entityDecoder[T: ${jsonDecoderTypeclass}]: EntityDecoder[T] = jsonOf[T]
             implicit def entityIgnoredEntityDecoder: EntityDecoder[IgnoredEntity] = EntityDecoder[Unit].map { _ => IgnoredEntity.empty }
+
+            object DoubleNumber {
+              def unapply(value: String): Option[Double] = Try(value.toDouble).toOption
+            }
+
+            object BigDecimalNumber {
+              def unapply(value: String): Option[BigDecimal] = Try(BigDecimal(value)).toOption
+            }
+
+            object BigIntNumber {
+              def unapply(value: String): Option[BigInt] = Try(BigInt(value)).toOption
+            }
           }
         """)
     }
