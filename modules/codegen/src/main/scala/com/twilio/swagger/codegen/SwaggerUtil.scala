@@ -382,7 +382,7 @@ object SwaggerUtil {
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P = (plainString ~ variable ~ plainString).flatMap { case ((before, binding), after) =>
         lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, argName, _) =>
           val value = if (before.nonEmpty || after.nonEmpty) {
-            pathSegmentConverter(param, Some(litRegex(before.mkString, argName, after.mkString))).fold(err, ok)
+            pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString))).fold(err, ok)
           } else {
             pathSegmentConverter(param, None).fold(err, ok)
           }

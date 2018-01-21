@@ -78,12 +78,12 @@ object AkkaHttpClientGenerator {
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
-            def liftOptionFileTerm(tParamName: Term.Name, tName: Term.Name) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${Lit.String(tName.value)}, v))"
-            def liftFileTerm(tParamName: Term.Name, tName: Term.Name) = q"Some(Multipart.FormData.BodyPart(${Lit.String(tName.value)}, $tParamName))"
-            def liftOptionTerm(tParamName: Term.Name, tName: Term.Name) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${Lit.String(tName.value)}, Formatter.show(v)))"
-            def liftTerm(tParamName: Term.Name, tName: Term.Name) = q"Some(Multipart.FormData.BodyPart(${Lit.String(tName.value)}, Formatter.show($tParamName)))"
+            def liftOptionFileTerm(tParamName: Term.Name, tName: Lit.String) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName}, v))"
+            def liftFileTerm(tParamName: Term.Name, tName: Lit.String) = q"Some(Multipart.FormData.BodyPart(${tName}, $tParamName))"
+            def liftOptionTerm(tParamName: Term.Name, tName: Lit.String) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName}, Formatter.show(v)))"
+            def liftTerm(tParamName: Term.Name, tName: Lit.String) = q"Some(Multipart.FormData.BodyPart(${tName}, Formatter.show($tParamName)))"
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-              val lifter: (Term.Name, Term.Name) => Term = param match {
+              val lifter: (Term.Name, Lit.String) => Term = param match {
                 case param"$_: Option[BodyPartEntity]" => liftOptionFileTerm _
                 case param"$_: Option[BodyPartEntity] = $_" => liftOptionFileTerm _
                 case param"$_: BodyPartEntity" => liftFileTerm _
@@ -96,10 +96,10 @@ object AkkaHttpClientGenerator {
             }
             Some(q"List(..$args)")
           } else {
-            def liftOptionTerm(tParamName: Term.Name, tName: Term.Name) = q"(${Lit.String(tName.value)}, $tParamName.map(Formatter.show(_)))"
-            def liftTerm(tParamName: Term.Name, tName: Term.Name) = q"(${Lit.String(tName.value)}, Some(Formatter.show($tParamName)))"
+            def liftOptionTerm(tParamName: Term.Name, tName: Lit.String) = q"(${tName}, $tParamName.map(Formatter.show(_)))"
+            def liftTerm(tParamName: Term.Name, tName: Lit.String) = q"(${tName}, Some(Formatter.show($tParamName)))"
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-              val lifter: (Term.Name, Term.Name) => Term = param match {
+              val lifter: (Term.Name, Lit.String) => Term = param match {
                 case param"$_: Option[$_]" => liftOptionTerm _
                 case param"$_: Option[$_] = $_" => liftOptionTerm _
                 case _ => liftTerm _
@@ -111,10 +111,10 @@ object AkkaHttpClientGenerator {
         }
 
         def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
-          def liftOptionTerm(tParamName: Term.Name, tName: Term.Name) = q"$tParamName.map(v => RawHeader(${Lit.String(tName.value)}, Formatter.show(v)))"
-          def liftTerm(tParamName: Term.Name, tName: Term.Name) = q"Some(RawHeader(${Lit.String(tName.value)}, Formatter.show($tParamName)))"
+          def liftOptionTerm(tParamName: Term.Name, tName: Lit.String) = q"$tParamName.map(v => RawHeader(${tName}, Formatter.show(v)))"
+          def liftTerm(tParamName: Term.Name, tName: Lit.String) = q"Some(RawHeader(${tName}, Formatter.show($tParamName)))"
           val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-            val lifter: (Term.Name, Term.Name) => Term = param match {
+            val lifter: (Term.Name, Lit.String) => Term = param match {
               case param"$_: Option[$_]" => liftOptionTerm _
               case param"$_: Option[$_] = $_" => liftOptionTerm _
               case _ => liftTerm _
@@ -130,7 +130,7 @@ object AkkaHttpClientGenerator {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] = if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod) Some((q"HttpEntity.Empty", t"HttpEntity.Strict")) else None
-          val safeBody: Option[(Term, Type)] = body.map(sp => (sp.argName, sp.argType)).orElse(fallbackHttpBody)
+          val safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {

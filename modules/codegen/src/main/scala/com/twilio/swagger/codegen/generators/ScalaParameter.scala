@@ -7,13 +7,14 @@ import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._
 
-case class ScalaParameter(in: Option[String], param: Term.Param, paramName: Term.Name, argName: Term.Name, argType: Type)
+case class ScalaParameter(in: Option[String], param: Term.Param, paramName: Term.Name, argName: Lit.String, argType: Type)
 object ScalaParameter {
   def fromParam: Term.Param => ScalaParameter = { param => fromParam(param.name.value)(param) }
-  def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(Term.Name(argName))
-  def fromParam(argName: Term.Name): Term.Param => ScalaParameter = { case param@Term.Param(mods, name, decltype, default) =>
+  def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(Lit.String(argName))
+  def fromParam(argName: Lit.String): Term.Param => ScalaParameter = { case param@Term.Param(mods, name, decltype, default) =>
     val tpe: Type = decltype.flatMap({
       case Type.ByName(tpe) => Some(tpe)
+      case tpe@Type.Name(_) => Some(tpe)
       case _ => None
     }).getOrElse(t"Nothing")
     ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
@@ -120,7 +121,7 @@ object ScalaParameter {
 
       val paramName = Term.Name(toCamelCase(parameter.getName))
       val param = param"${paramName}: ${declType}".copy(default=defaultValue)
-      ScalaParameter(Option(parameter.getIn), param, paramName, Term.Name(parameter.getName), declType)
+      ScalaParameter(Option(parameter.getIn), param, paramName, Lit.String(parameter.getName), declType)
     }
   }
 
