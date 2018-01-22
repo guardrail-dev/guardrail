@@ -334,7 +334,7 @@ object AkkaHttpServerGenerator {
         case "" => Target.pure(q"pathEnd")
         case path =>
           for {
-            pathDirective <- SwaggerUtil.paths.generateUrlPathExtractors(path, pathArgs)
+            pathDirective <- SwaggerUtil.paths.generateUrlAkkaPathExtractors(path, pathArgs)
           } yield pathDirective
       }
     }
