@@ -92,7 +92,7 @@ object AkkaHttpClientGenerator {
                 case param"$_: Option[$_] = $_" => liftOptionTerm _
                 case _ => liftTerm _
               }
-                a :+ lifter(paramName, argName)
+                a :+ lifter(paramName, argName.toLit)
             }
             Some(q"List(..$args)")
           } else {
@@ -104,7 +104,7 @@ object AkkaHttpClientGenerator {
                 case param"$_: Option[$_] = $_" => liftOptionTerm _
                 case _ => liftTerm _
               }
-              a :+ lifter(paramName, argName)
+              a :+ lifter(paramName, argName.toLit)
             }
             Some(q"List(..$args)")
           }
@@ -119,7 +119,7 @@ object AkkaHttpClientGenerator {
               case param"$_: Option[$_] = $_" => liftOptionTerm _
               case _ => liftTerm _
             }
-            a :+ lifter(paramName, argName)
+            a :+ lifter(paramName, argName.toLit)
           }
           q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
         }

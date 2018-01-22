@@ -7,17 +7,21 @@ import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._
 
-case class ScalaParameter(in: Option[String], param: Term.Param, paramName: Term.Name, argName: Lit.String, argType: Type)
+case class RawParameterName private[generators] (value: String) { def toLit: Lit.String = Lit.String(value) }
+class ScalaParameter private[generators] (val in: Option[String], val param: Term.Param, val paramName: Term.Name, val argName: RawParameterName, val argType: Type)
 object ScalaParameter {
+  def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
+    Some((param.in, param.param, param.paramName, param.argName, param.argType))
+
   def fromParam: Term.Param => ScalaParameter = { param => fromParam(param.name.value)(param) }
-  def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(Lit.String(argName))
-  def fromParam(argName: Lit.String): Term.Param => ScalaParameter = { case param@Term.Param(mods, name, decltype, default) =>
+  def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(RawParameterName(argName))
+  def fromParam(argName: RawParameterName): Term.Param => ScalaParameter = { case param@Term.Param(mods, name, decltype, default) =>
     val tpe: Type = decltype.flatMap({
       case Type.ByName(tpe) => Some(tpe)
       case tpe@Type.Name(_) => Some(tpe)
       case _ => None
     }).getOrElse(t"Nothing")
-    ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
+    new ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
   }
 
   def fromParameter(protocolElems: List[StrictProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
@@ -121,7 +125,7 @@ object ScalaParameter {
 
       val paramName = Term.Name(toCamelCase(parameter.getName))
       val param = param"${paramName}: ${declType}".copy(default=defaultValue)
-      ScalaParameter(Option(parameter.getIn), param, paramName, Lit.String(parameter.getName), declType)
+      new ScalaParameter(Option(parameter.getIn), param, paramName, RawParameterName(parameter.getName), declType)
     }
   }
 
@@ -133,9 +137,12 @@ object ScalaParameter {
         val Term.Name(name) = param.paramName
         if (counts.getOrElse(name, 0) > 1) {
           val escapedName = Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
-          param.copy(
-            param = param.param.copy(name=escapedName),
-            paramName = escapedName
+          new ScalaParameter(
+            param.in,
+            param.param.copy(name=escapedName),
+            escapedName,
+            param.argName,
+            param.argType
           )
         }
         else param
