@@ -9,10 +9,10 @@ import support.ScalaMetaMatchers._
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {
 
   val args: List[ScalaParameter] = List(
-    ScalaParameter(None, param"foo: Int = 1", q"foo", Lit.String("foo"), t"Int"),
-    ScalaParameter(None, param"bar: Int = 1", q"bar", Lit.String("bar"), t"Int"),
-    ScalaParameter(None, param"fooBar: Int = 1", q"fooBar", Lit.String("foo_bar"), t"Int"),
-    ScalaParameter(None, param"barBaz: Int = 1", q"barBaz", Lit.String("bar_baz"), t"Int")
+    ScalaParameter.fromParam(param"foo: Int = 1"),
+    ScalaParameter.fromParam(param"bar: Int = 1"),
+    ScalaParameter.fromParam("foo_bar")(param"fooBar: Int = 1"),
+    ScalaParameter.fromParam("bar_baz")(param"barBaz: Int = 1")
   )
 
   List[(String, Term)](
