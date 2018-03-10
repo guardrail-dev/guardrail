@@ -2,6 +2,7 @@ package tests.generators.AkkaHttp
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Context, Server, Servers, ProtocolGenerator, ProtocolDefinitions, ServerGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
@@ -9,7 +10,7 @@ import org.scalatest.{FunSuite, Matchers}
 class AkkaHttpServerTest extends FunSuite with Matchers {
   import scala.meta._
 
-  val spec: String = s"""
+  val swagger = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -118,11 +119,11 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     |""".stripMargin
 
   test("Ensure routes are generated") {
-    val swagger = new SwaggerParser().parse(spec)
-
-    val ProtocolDefinitions(protocolElems, _, _, _) = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp))
-    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(protocolElems).foldMap(AkkaHttp))
-    val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
+    val (
+      _,
+      _,
+      Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler = q"""
       trait StoreHandler {
@@ -245,11 +246,11 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
   }
 
   test("Ensure routes are generated with tracing") {
-    val swagger = new SwaggerParser().parse(spec)
-
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty.copy(tracing=true), swagger)(definitions).foldMap(AkkaHttp))
-    val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
+    val (
+      _,
+      _,
+      Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing=true), AkkaHttp)
 
     val handler = q"""
       trait BazHandler {

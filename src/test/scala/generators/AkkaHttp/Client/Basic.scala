@@ -1,14 +1,14 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, RandomType, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Client, Clients, Context, ClientGenerator, ProtocolGenerator, ProtocolDefinitions, RandomType, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class BasicTest extends FunSuite with Matchers {
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -66,17 +66,24 @@ class BasicTest extends FunSuite with Matchers {
     |    properties:
     |      map:
     |        type: object
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Generate JSON alias definitions") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val RandomType(_, tpe) :: _ = definitions
+    val (
+      ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
     tpe.structure should equal(t"io.circe.Json".structure)
   }
 
   test("Handle json subvalues") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val _ :: ClassDefinition(_, _, cls, cmp) :: _ = definitions
+    val (
+      ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Blix(map: io.circe.Json)
@@ -97,9 +104,11 @@ class BasicTest extends FunSuite with Matchers {
   }
 
   test("Properly handle all methods") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Clients(Client(tags, className, statements) :: _, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
-
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""

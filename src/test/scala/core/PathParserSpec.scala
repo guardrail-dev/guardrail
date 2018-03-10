@@ -9,10 +9,10 @@ import support.ScalaMetaMatchers._
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {
 
   val args: List[ScalaParameter] = List(
-    ScalaParameter(None, param"foo: Int = 1", q"foo", q"foo", t"Int"),
-    ScalaParameter(None, param"bar: Int = 1", q"bar", q"bar", t"Int"),
-    ScalaParameter(None, param"fooBar: Int = 1", q"fooBar", q"foo_bar", t"Int"),
-    ScalaParameter(None, param"barBaz: Int = 1", q"barBaz", q"bar_baz", t"Int")
+    ScalaParameter.fromParam(param"foo: Int = 1"),
+    ScalaParameter.fromParam(param"bar: Int = 1"),
+    ScalaParameter.fromParam("foo_bar")(param"fooBar: Int = 1"),
+    ScalaParameter.fromParam("bar_baz")(param"barBaz: Int = 1")
   )
 
   List[(String, Term)](
@@ -47,14 +47,14 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   , ("?=b", q""" pathEnd & parameter("").require(_ == "b") """)
   ).foreach { case (str, expected) =>
     test(s"Server ${str}") {
-      val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathExtractors(str, args))
+      val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args))
       gen.toString shouldBe(expected.toString)
     }
   }
 
   test("individual extractor components") {
     import atto._, Atto._
-    import SwaggerUtil.paths.extractors._
+    import SwaggerUtil.paths.akkaExtractor._
 
     implicit val params: List[ScalaParameter] = List.empty
 

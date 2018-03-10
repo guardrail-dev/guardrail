@@ -1,7 +1,8 @@
 package swagger
 
-import _root_.clients.pet.PetClient
-import _root_.clients.{definitions => cdefs}
+import _root_.clients.akkaHttp.pet.PetClient
+import _root_.clients.akkaHttp.{definitions => cdefs}
+import _root_.clients.akkaHttp.Implicits.IgnoredEntity
 import _root_.servers.pet.{PetHandler, PetResource}
 import _root_.servers.{definitions => sdefs}
 import akka.http.scaladsl.model._
@@ -9,7 +10,6 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
-import clients.Implicits
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.scalatest.{EitherValues, FunSuite, Matchers}
@@ -64,7 +64,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       photoUrls=photoUrls,
       tags=None,
       status=Some(cdefs.PetStatus.Pending)
-    )).value.futureValue should be(Right(clients.Implicits.IgnoredEntity.empty))
+    )).value.futureValue should be(Right(IgnoredEntity.empty))
   }
 
   test("round-trip: enum query, Vector of definition response") {
@@ -155,6 +155,6 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
     result
       .fold({ err =>
         failTest(err.toString)
-      }, { _ == clients.Implicits.IgnoredEntity.empty})
+      }, { _ == IgnoredEntity.empty})
   }
 }

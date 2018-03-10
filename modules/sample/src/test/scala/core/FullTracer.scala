@@ -6,7 +6,7 @@ import _root_.tracer.servers.users.{UsersHandler, UsersResource}
 import _root_.tracer.servers.{definitions => sdefs}
 import _root_.tracer.clients.users.UsersClient
 import _root_.tracer.clients.addresses.AddressesClient
-import _root_.tracer.servers.Implicits.{IgnoredEntity, TraceBuilder}
+import _root_.tracer.servers.AkkaHttpImplicits.TraceBuilder
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._

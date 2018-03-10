@@ -1,16 +1,15 @@
-package swagger
+package com.twilio.swagger
 
-import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import collection.JavaConverters._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Context, ClassDefinition, EnumDefinition, Client, Clients, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Context, ClassDefinition, EnumDefinition, Client, Clients, ClientGenerator, ProtocolGenerator, ProtocolDefinitions, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class BacktickTest extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -39,6 +38,7 @@ class BacktickTest extends FunSuite with Matchers {
     |    post:
     |      tags: ["dashy-package"]
     |      x-scala-package: dashy-package
+    |      operationId: postDashy-op-id
     |      parameters:
     |        - name: dashy-parameter
     |          in: query
@@ -62,12 +62,14 @@ class BacktickTest extends FunSuite with Matchers {
     |      - dashy-value-a
     |      - dashy-value-b
     |      - dashy-value.c
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Ensure paths are generated with escapes") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     tags should equal (Seq("dashy-package"))
 
@@ -92,7 +94,7 @@ class BacktickTest extends FunSuite with Matchers {
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
         })
       }
-      def ${Term.Name("post /dashy-route")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
+      def ${Term.Name("`postDashy-op-id`")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
@@ -115,14 +117,18 @@ class BacktickTest extends FunSuite with Matchers {
     //   automatically stripping the backticks. The following test ensures that even though
     //   the test doesn't follow the pattern, the generated code is still escaped.
     //   This behavior may change in scalameta 2.0.0+
-    cls.toString should include("def `post /dashy-route`(dashyParameter")
+    cls.toString should include("def `postDashy-op-id`(dashyParameter")
 
     cmp.toString shouldNot include ("``")
   }
 
-  val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-
   test("Ensure dtos are generated with escapes") {
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
     val definition = q"""
     case class ${Type.Name("`dashy-class`")}(${Term.Name("`dashy-param`")}: Option[Long] = None)
     """
@@ -136,7 +142,6 @@ class BacktickTest extends FunSuite with Matchers {
     }
     """
 
-    val ClassDefinition(_, _, cls, cmp) :: _ = definitions.toList
     cls.structure should equal(definition.structure)
     cls.toString should include("case class `dashy-class`")
     cls.toString should include("`dashy-param`")
@@ -153,6 +158,12 @@ class BacktickTest extends FunSuite with Matchers {
   }
 
   test("Ensure enums are generated with escapes") {
+    val (
+      ProtocolDefinitions(_ :: EnumDefinition(_, _, _, cls, cmp) :: _, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
     val definition = q"""
     sealed abstract class ${Type.Name("`dashy-enum`")}(val value: String) {
       override def toString: String = value.toString
@@ -176,7 +187,6 @@ class BacktickTest extends FunSuite with Matchers {
       implicit val ${Pat.Var(Term.Name("`showdashy-enum`"))}: Show[${Type.Name("`dashy-enum`")}] = Show.build(_.value)
     }
     """
-    val _ :: EnumDefinition(_, _, _, cls,cmp) :: _ = definitions.toList
 
     cls.structure should equal(definition.structure)
     cls.toString should include("sealed abstract class `dashy-enum`")

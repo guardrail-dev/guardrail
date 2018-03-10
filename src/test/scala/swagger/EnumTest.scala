@@ -1,15 +1,15 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{Client, Clients, Context, EnumDefinition, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Client, Clients, Context, EnumDefinition, ClientGenerator, ProtocolGenerator, CodegenApplication, ProtocolDefinitions, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class EnumTest extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -51,9 +51,15 @@ class EnumTest extends FunSuite with Matchers {
     |      - v1
     |      - v2
     |      - i like spaces
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Generate enums") {
+    val (
+      ProtocolDefinitions(EnumDefinition(_, _, _, cls, cmp) :: Nil, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
     val definition = q"""
     sealed abstract class Bar(val value: String) {
       override def toString: String = value.toString
@@ -79,18 +85,16 @@ class EnumTest extends FunSuite with Matchers {
     }
     """
 
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    definitions.length should equal (1)
-    val EnumDefinition(_, _, _, cls, cmp) = definitions.head
     cls.structure should equal(definition.structure)
-
     cmp.structure should equal(companion.structure)
   }
 
   test("Use enums") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

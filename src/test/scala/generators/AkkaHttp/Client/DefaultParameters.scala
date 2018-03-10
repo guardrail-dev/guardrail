@@ -6,7 +6,7 @@ import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 
-class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
+class DefaultParametersTest extends FunSuite with Matchers {
   import scala.meta._
 
   val swagger = s"""
@@ -34,6 +34,17 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
     |        in: header
     |        type: string
     |        required: true
+    |      - name: defparm_opt
+    |        in: query
+    |        type: integer
+    |        format: int32
+    |        default: 1
+    |      - name: defparm
+    |        in: query
+    |        type: integer
+    |        format: int32
+    |        required: true
+    |        default: 2
     |      responses:
     |        '200':
     |          description: successful operation
@@ -112,7 +123,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: Nil),
+      Clients(Client(tags, className, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
@@ -142,70 +153,16 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers {
             Left(Left(e))
         }))
       }
-      def getOrderById(orderId: Long, headerMeThis: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
+      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
+          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm), entity = entity, headers = allHeaders))
         })
       }
       def deleteOrder(orderId: Long, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
-        })
-      }
-    }
-    """
-
-    cmp.structure should equal(companion.structure)
-    cls.structure should equal(client.structure)
-  }
-
-  test("Ensure traced responses are generated") {
-    val (
-      _,
-      Clients(List(Client(tags, className, statements))),
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(framework=Some("akka-http"), tracing=true), AkkaHttp)
-
-    tags should equal (Seq("store"))
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
-
-    val companion = q"""
-    object StoreClient {
-      def apply(host: String = "http://petstore.swagger.io", clientName: String = "store")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer): StoreClient =
-        new StoreClient(host = host, clientName = clientName)(httpClient = httpClient, ec = ec, mat = mat)
-      def httpClient(httpClient: HttpRequest => Future[HttpResponse], host: String = "http://petstore.swagger.io", clientName: String = "store")(implicit ec: ExecutionContext, mat: Materializer): StoreClient =
-        new StoreClient(host = host, clientName = clientName)(httpClient = httpClient, ec = ec, mat = mat)
-    }
-    """
-
-    val client = q"""
-    class StoreClient(host: String = "http://petstore.swagger.io", clientName: String = "store")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
-      val basePath: String = ""
-      private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-        EitherT(resp.flatMap(resp => if (resp.status.isSuccess) {
-          Unmarshal(resp.entity).to[T].map(Right.apply _)
-        } else {
-          FastFuture.successful(Left(Right(resp)))
-        }).recover({
-          case e: Throwable =>
-            Left(Left(e))
-        }))
-      }
-      def getOrderById(traceBuilder: TraceBuilder, orderId: Long, headerMeThis: String, methodName: String = "get-order-by-id", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
-        val tracingHttpClient = traceBuilder(s"$$clientName:$$methodName")(httpClient)
-        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-        wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          tracingHttpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
-        })
-      }
-      def deleteOrder(traceBuilder: TraceBuilder, orderId: Long, methodName: String = "delete-order", headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-        val tracingHttpClient = traceBuilder(s"$$clientName:$$methodName")(httpClient)
-        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          tracingHttpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
         })
       }
     }

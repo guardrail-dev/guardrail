@@ -8,7 +8,8 @@ scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 val akkaVersion = "10.0.10"
 val catsVersion = "0.9.0"
-val circeVersion = "0.7.0"
+val circeVersion = "0.8.0"
+val http4sVersion = "0.17.6"
 val scalatestVersion = "3.0.1"
 
 mainClass in assembly := Some("com.twilio.swagger.codegen.CLI")
@@ -17,7 +18,8 @@ lazy val runExample = taskKey[Unit]("Run with example args")
 // TODO: akka.NotUsed should exist in all generated sources, but there are no import verifying tests yet.
 fullRunTask(runExample, Test, "com.twilio.swagger.codegen.CLI", """
   --defaults --import akka.NotUsed
-  --client --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients
+  --client --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
+  --client --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
   --server --specPath modules/codegen/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers
   --client --specPath modules/codegen/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos
   --server --specPath modules/codegen/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server
@@ -43,6 +45,7 @@ val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
 resetSample := { "git clean -fdx modules/sample/src modules/sample/target" ! }
 
+addCommandAlias("example", "; resetSample ; runExample ; sample/test")
 addCommandAlias("testSuite", "; test ; resetSample; runExample ; sample/test")
 
 publishMavenStyle := true
@@ -71,7 +74,6 @@ val codegenSettings = Seq(
       "-feature",
       "-unchecked",
       "-deprecation",
-      "-explaintypes",
       "-target:jvm-1.8",
       "-encoding", "utf8"
     )
@@ -96,12 +98,23 @@ lazy val sample = (project in file("modules/sample"))
   .settings(
     codegenSettings
     , initialCommands in console := """
-      |import scala.concurrent.ExecutionContext.Implicits.global
-      |import scala.meta._
+      |import cats._
+      |import cats.data.EitherT
+      |import cats.implicits._
+      |import fs2.Strategy
+      |import fs2.Task
+      |import fs2.interop.cats._
+      |import io.circe._
       |import java.time._
-      |import Common._
+      |import org.http4s._
+      |import org.http4s.client._
+      |import org.http4s.client.blaze._
+      |import org.http4s.dsl._
+      |import org.http4s.multipart._
       |import scala.concurrent.Await
+      |import scala.concurrent.ExecutionContext.Implicits.global
       |import scala.concurrent.duration._
+      |import scala.meta._
       |""".stripMargin
     , libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-http" % akkaVersion
@@ -110,8 +123,15 @@ lazy val sample = (project in file("modules/sample"))
       , "io.circe" %% "circe-generic" % circeVersion
       , "io.circe" %% "circe-java8" % circeVersion
       , "io.circe" %% "circe-parser" % circeVersion
+      , "org.http4s" %% "http4s-blaze-client" % http4sVersion
+      , "org.http4s" %% "http4s-blaze-server" % http4sVersion
+      , "org.http4s" %% "http4s-circe" % http4sVersion
+      , "org.http4s" %% "http4s-dsl" % http4sVersion
       , "org.scalatest" %% "scalatest" % scalatestVersion % Test
+      , "org.typelevel" %% "cats" % catsVersion
     )
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
+
+logBuffered in Test := false

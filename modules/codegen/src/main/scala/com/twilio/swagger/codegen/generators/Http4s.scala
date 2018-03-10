@@ -4,14 +4,14 @@ package generators
 import cats.~>
 import cats.arrow.FunctionK
 
-import AkkaHttpClientGenerator._
+import Http4sClientGenerator._
 import AkkaHttpServerGenerator._
+import Http4sGenerator._
 import CirceProtocolGenerator._
 import ScalaGenerator._
 import SwaggerGenerator._
-import AkkaHttpGenerator._
 
-object AkkaHttp extends FunctionK[CodegenApplication, Target] {
+object Http4s extends FunctionK[CodegenApplication, Target] {
   val interpSP: CodegenApplicationSP ~> Target = ProtocolSupportTermInterp or ServerTermInterp
   val interpMSP: CodegenApplicationMSP ~> Target = ModelProtocolTermInterp or interpSP
   val interpEMSP: CodegenApplicationEMSP ~> Target = EnumProtocolTermInterp or interpMSP

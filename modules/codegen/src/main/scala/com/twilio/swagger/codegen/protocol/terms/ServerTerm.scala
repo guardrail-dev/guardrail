@@ -17,5 +17,4 @@ case class GenerateResponseDefinitions(operation: Operation, protocolElems: List
 case class RenderClass(className: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param], responseDefinitions: List[Defn]) extends ServerTerm[Stat]
 case class RenderHandler(handlerName: String, methodSigs: List[Decl.Def]) extends ServerTerm[Stat]
 case class CombineRouteTerms(terms: List[Term]) extends ServerTerm[Term]
-case class GetFrameworkImports(tracing: Boolean) extends ServerTerm[List[Import]]
 case class GetExtraImports(tracing: Boolean) extends ServerTerm[List[Import]]

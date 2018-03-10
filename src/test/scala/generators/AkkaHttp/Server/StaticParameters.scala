@@ -2,13 +2,14 @@ package tests.generators.AkkaHttp
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Context, Server, Servers, ProtocolGenerator, ProtocolDefinitions, ServerGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class StaticParametersTest extends FunSuite with Matchers {
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -29,12 +30,14 @@ class StaticParametersTest extends FunSuite with Matchers {
     |      responses:
     |        200:
     |          description: Success
-    |""".stripMargin)
+    |""".stripMargin
 
-  test("zz") {
-    val ProtocolDefinitions(protocolElems, _, _, _) = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp))
-    val Servers(output, _) = Target.unsafeExtract(ServerGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(protocolElems).foldMap(AkkaHttp))
-    val Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil = output
+  test("Should produce static parameter constraints") {
+    val (
+      _,
+      _,
+      Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler = q"""
       trait Handler {

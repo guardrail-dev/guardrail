@@ -8,16 +8,20 @@ import cats.syntax.either._
 import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import cats.~>
-import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms, ScalaTerms}
+import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms}
+import com.twilio.swagger.codegen.terms.framework.FrameworkTerms
 import java.nio.file.{Path, Paths}
+import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
   def writePackage(kind: CodegenTarget, context: Context, swagger: Swagger, outputPath: Path, pkgName: List[String], dtoPackage: List[String], customImports: List[Import]
-      )(implicit S: ScalaTerms[CodegenApplication]
+      )(implicit F: FrameworkTerms[CodegenApplication], Sc: ScalaTerms[CodegenApplication], Sw: SwaggerTerms[CodegenApplication]
       ): Free[CodegenApplication, List[WriteTree]] = {
-    import S._
+    import F._
+    import Sc._
+    import Sw._
 
     val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
     val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
@@ -75,21 +79,32 @@ object Common {
           """
         )
 
+      schemes = Option(swagger.getSchemes).fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
+      host = Option(swagger.getHost)
+      basePath = Option(swagger.getBasePath)
+      paths = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
+      routes <- extractOperations(paths)
+      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
+      groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
+      frameworkImports <- getFrameworkImports(context.tracing)
+      frameworkImplicits <- getFrameworkImplicits()
+      frameworkImplicitName = frameworkImplicits.name
+
       codegen <- kind match {
         case CodegenTarget.Client =>
           for {
-            clientMeta <- ClientGenerator.fromSwagger[CodegenApplication](context, swagger)(protocolElems)
-            Clients(clients, frameworkImports) = clientMeta
-          } yield CodegenDefinitions(clients, List.empty, frameworkImports)
+            clientMeta <- ClientGenerator.fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
+            Clients(clients) = clientMeta
+          } yield CodegenDefinitions(clients, List.empty)
 
         case CodegenTarget.Server =>
           for {
-            serverMeta <- ServerGenerator.fromSwagger[CodegenApplication](context, swagger)(protocolElems)
-            Servers(servers, frameworkImports) = serverMeta
-          } yield CodegenDefinitions(List.empty, servers, frameworkImports)
+            serverMeta <- ServerGenerator.fromSwagger[CodegenApplication](context, swagger, frameworkImports)(protocolElems)
+            Servers(servers) = serverMeta
+          } yield CodegenDefinitions(List.empty, servers)
       }
 
-      CodegenDefinitions(clients, servers, frameworkImports) = codegen
+      CodegenDefinitions(clients, servers) = codegen
 
       files = (
         clients
@@ -99,6 +114,7 @@ object Common {
                 , source"""
                   package ${buildPkgTerm(pkgName ++ pkg                             )}
                   import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+                  import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
                   import ${buildPkgTerm(List("_root_") ++ dtoComponents              )}._
                   ..${customImports}
                   ..${clientSrc}
@@ -113,6 +129,7 @@ object Common {
                     package ${buildPkgTerm((pkgName ++ pkg.toList)                    )}
                     ..${extraImports}
                     import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+                    import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
                     import ${buildPkgTerm(List("_root_") ++ dtoComponents              )}._
                     ..${customImports}
                     ..$src
@@ -122,11 +139,15 @@ object Common {
           )
 
       implicits <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
+      frameworkImplicitsFile <- renderFrameworkImplicits(pkgName, frameworkImports, protocolImports, frameworkImplicits)
     } yield (
       protocolDefinitions ++
       List(packageObject) ++
       files ++
-      List(WriteTree(pkgPath.resolve("Implicits.scala"), implicits))
+      List(
+        WriteTree(pkgPath.resolve("Implicits.scala"), implicits),
+        WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile)
+      )
     ).toList
   }
 

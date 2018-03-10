@@ -1,15 +1,16 @@
-package swagger
+package com.twilio.swagger.generators.http4s
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
-import com.twilio.swagger.codegen.generators.AkkaHttp
+import com.twilio.swagger.codegen.generators.Http4s
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 
-class ClientGeneratorTest extends FunSuite with Matchers {
+class DefaultParametersTest extends FunSuite with Matchers {
   import scala.meta._
 
-  val spec: String = s"""
+  val swagger = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -121,10 +122,11 @@ class ClientGeneratorTest extends FunSuite with Matchers {
     |""".stripMargin
 
   test("Ensure responses are generated") {
-    val swagger = new SwaggerParser().parse(spec)
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     tags should equal (Seq("store"))
 
@@ -132,37 +134,21 @@ class ClientGeneratorTest extends FunSuite with Matchers {
 
     val companion = q"""
     object StoreClient {
-      def apply(host: String = "http://petstore.swagger.io")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer): StoreClient =
-        new StoreClient(host = host)(httpClient = httpClient, ec = ec, mat = mat)
-      def httpClient(httpClient: HttpRequest => Future[HttpResponse], host: String = "http://petstore.swagger.io")(implicit ec: ExecutionContext, mat: Materializer): StoreClient =
-        new StoreClient(host = host)(httpClient = httpClient, ec = ec, mat = mat)
+      def apply(host: String = "http://petstore.swagger.io")(implicit httpClient: Client): StoreClient = new StoreClient(host = host)(httpClient = httpClient)
+      def httpClient(httpClient: Client, host: String = "http://petstore.swagger.io"): StoreClient = new StoreClient(host = host)(httpClient = httpClient)
     }
     """
 
     val client = q"""
-    class StoreClient(host: String = "http://petstore.swagger.io")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
+    class StoreClient(host: String = "http://petstore.swagger.io")(implicit httpClient: Client) {
       val basePath: String = ""
-      private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-        EitherT(resp.flatMap(resp => if (resp.status.isSuccess) {
-          Unmarshal(resp.entity).to[T].map(Right.apply _)
-        } else {
-          FastFuture.successful(Left(Right(resp)))
-        }).recover({
-          case e: Throwable =>
-            Left(Left(e))
-        }))
+      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): Task[Order] = {
+        val allHeaders = headers ++ List[Option[Header]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
+        httpClient.expect[Order](Request(method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
-        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-        wrap[Order](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm), entity = entity, headers = allHeaders))
-        })
-      }
-      def deleteOrder(orderId: Long, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[IgnoredEntity](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.DELETE, uri = host + basePath + "/store/order/" + Formatter.addPath(orderId), entity = entity, headers = allHeaders))
-        })
+      def deleteOrder(orderId: Long, headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+        val allHeaders = headers ++ List[Option[Header]]().flatten
+        httpClient.expect[IgnoredEntity](Request(method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
     }
     """

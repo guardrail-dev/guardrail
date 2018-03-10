@@ -1,4 +1,4 @@
-package swagger
+package com.twilio.swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
@@ -9,7 +9,7 @@ import scala.meta._
 
 class SchemeTest extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -32,15 +32,25 @@ class SchemeTest extends FunSuite with Matchers {
     |      id:
     |        type: integer
     |        format: int64
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Use first scheme") {
+    val (
+      _,
+      Clients(Client(tags, className, statements) :: _),
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
+    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+
+
     val companion = q"""
     object Client {
       def apply(host: String = "https://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer): Client = new Client(host = host)(httpClient = httpClient, ec = ec, mat = mat)
       def httpClient(httpClient: HttpRequest => Future[HttpResponse], host: String = "https://localhost:1234")(implicit ec: ExecutionContext, mat: Materializer): Client = new Client(host = host)(httpClient = httpClient, ec = ec, mat = mat)
     }
     """
+
     val client = q"""
       class Client(host: String = "https://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
         val basePath: String = ""
@@ -62,11 +72,6 @@ class SchemeTest extends FunSuite with Matchers {
         }
       }
     """
-
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val Clients(clients, _) = Target.unsafeExtract(ClientGenerator.fromSwagger[CodegenApplication](Context.empty, swagger)(definitions).foldMap(AkkaHttp))
-    val Client(tags, className, statements) :: _ = clients
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     companion.structure should equal(cmp.structure)
     client.structure should equal(cls.structure)

@@ -11,7 +11,7 @@ import com.twilio.swagger.codegen.terms.server._
 import scala.collection.JavaConverters._
 import scala.meta._
 
-case class Servers(servers: List[Server], frameworkImports: List[Import])
+case class Servers(servers: List[Server])
 case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
 case class RenderedRoute(route: Term, methodSig: Decl.Def, responseDefinitions: List[Defn])
@@ -23,7 +23,7 @@ object ServerGenerator {
   def formatClassName(str: String): String = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[F[_]](context: Context, swagger: Swagger)(protocolElems: List[StrictProtocolElems])(implicit S: ServerTerms[F]): Free[F, Servers] = {
+  def fromSwagger[F[_]](context: Context, swagger: Swagger, frameworkImports: List[Import])(protocolElems: List[StrictProtocolElems])(implicit S: ServerTerms[F]): Free[F, Servers] = {
     import S._
 
     val paths: List[(String, Path)] = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
@@ -33,7 +33,6 @@ object ServerGenerator {
       routes <- extractOperations(paths)
       classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
-      frameworkImports <- getFrameworkImports(context.tracing)
       extraImports <- getExtraImports(context.tracing)
       servers <- groupedRoutes.map({ case (className, routes) =>
           val resourceName = formatClassName(className.lastOption.getOrElse(""))
@@ -57,6 +56,6 @@ object ServerGenerator {
             Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
           }
         }).sequenceU
-    } yield Servers(servers, frameworkImports)
+    } yield Servers(servers)
   }
 }

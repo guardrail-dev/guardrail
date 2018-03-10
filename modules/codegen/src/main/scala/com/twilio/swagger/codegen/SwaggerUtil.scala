@@ -337,19 +337,19 @@ object SwaggerUtil {
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => T): Parser[T] =
+    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => Parser[T]): Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[Parser[T]](
           err(s"Unable to find argument ${bindingName}")
-        )(param => ok(f(param)))
+        )(param => f(param))
 
     private[this] val variable: Parser[String] = char('{') ~> many(notChar('}')).map(_.mkString("")) <~ char('}')
 
     def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
       val term: Parser[Term.Apply] = variable.flatMap { binding =>
-        lookupName(binding, pathArgs)(_.paramName).map { paramName =>
-          q"Formatter.addPath(${paramName})"
+        lookupName(binding, pathArgs) { param =>
+          ok(q"Formatter.addPath(${param.paramName})")
         }
       }
       val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
@@ -364,38 +364,29 @@ object SwaggerUtil {
       } yield result
     }
 
-    object extractors {
-      type P = Parser[(Option[Term.Name], Term)]
-      type LP = Parser[List[(Option[Term.Name], Term)]]
-
-      def pathSegmentToAkka: (ScalaParameter, Option[Term]) => Term = { case (ScalaParameter(_, param, _, argName, argType), base) =>
-        base.fold { argType match {
-          case t"String"        => q"Segment"
-          case t"Double"        => q"DoubleNumber"
-          case t"BigDecimal"    => q"Segment.map(BigDecimal.apply _)"
-          case t"Int"           => q"IntNumber"
-          case t"Long"          => q"LongNumber"
-          case t"BigInt"        => q"Segment.map(BigInt.apply _)"
-          case tpe@Type.Name(_) => q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
-        } } { segment => argType match {
-          case t"String"        => segment
-          case t"BigDecimal"    => q"${segment}.map(BigDecimal.apply _)"
-          case t"BigInt"        => q"${segment}.map(BigInt.apply _)"
-          case tpe@Type.Name(_) => q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)"
-        } }
-      }
+    class Extractors[T, TN <: T](
+      pathSegmentConverter: (ScalaParameter, Option[T]) => Either[String, T],
+      buildParamConstraint: ((String, String)) => T,
+      joinParams: (T, T) => T,
+      stringPath: String => T,
+      liftBinding: Term.Name => TN,
+      litRegex: (String, Term.Name, String) => T
+    ) {
+      // (Option[TN], T) is (Option[Binding], Segment)
+      type P = Parser[(Option[TN], T)]
+      type LP = Parser[List[(Option[TN], T)]]
 
       val plainString = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString = many1(noneOf("{}/?")).map(_.toList.mkString)
-      val stringSegment: P = plainNEString.map(s => (None, Lit.String(s)))
+      val stringSegment: P = plainNEString.map(s => (None, stringPath(s)))
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P = (plainString ~ variable ~ plainString).flatMap { case ((before, binding), after) =>
-        lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, _, _) =>
-          if (before.nonEmpty || after.nonEmpty) {
-            val regexSegment = q"""new scala.util.matching.Regex("^" + ${Lit.String(before.mkString)} + "(.*)" + ${Lit.String(after.mkString)} + ${Lit.String("$")})"""
-            (Some(paramName), pathSegmentToAkka(param, Some(regexSegment)))
+        lookupName(binding, pathArgs) { case param@ScalaParameter(_, _, paramName, argName, _) =>
+          val value = if (before.nonEmpty || after.nonEmpty) {
+            pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString))).fold(err, ok)
           } else {
-            (Some(paramName), pathSegmentToAkka(param, None))
+            pathSegmentConverter(param, None).fold(err, ok)
           }
+          value.map((Some(liftBinding(paramName)), _))
         }
       }
 
@@ -403,17 +394,40 @@ object SwaggerUtil {
 
       val qsValueOnly: Parser[(String, String)] = ok("") ~ (char('=') ~> opt(many(noneOf("&"))).map(_.fold("")(_.mkString)))
       val staticQSArg: Parser[(String, String)] = many1(noneOf("=&")).map(_.toList.mkString) ~ opt(char('=') ~> many(noneOf("&"))).map(_.fold("")(_.mkString))
-      val staticQSTerm: Parser[Term] = choice(staticQSArg, qsValueOnly).map { case (k, v) => q" parameter(${Lit.String(k)}).require(_ == ${Lit.String(v)}) " }
+      val staticQSTerm: Parser[T] = choice(staticQSArg, qsValueOnly).map(buildParamConstraint)
       val trailingSlash: Parser[Boolean] = opt(char('/')).map(_.nonEmpty)
-      val staticQS: Parser[Option[Term]] = (opt(char('?') ~> sepBy1(staticQSTerm, char('&')).map(_.reduceLeft((l, r) => q"${l} & ${r}"))) | opt(char('?')).map { _ => None })
-      val emptyPath: Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] = endOfInput ~> ok((List.empty[(Option[Term.Name], Term)], (false, None)))
-      val emptyPathQS: Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] = ok(List.empty[(Option[Term.Name], Term)]) ~ (ok(false) ~ staticQS)
-      def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[Term.Name], Term)], (Boolean, Option[Term]))] =
+      val staticQS: Parser[Option[T]] = (opt(char('?') ~> sepBy1(staticQSTerm, char('&')).map(_.reduceLeft(joinParams))) | opt(char('?')).map { _ => None })
+      val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = endOfInput ~> ok((List.empty[(Option[TN], T)], (false, None)))
+      val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
+      def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
     }
 
-    def generateUrlPathExtractors(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
-      import extractors._
+    object akkaExtractor extends Extractors[Term, Term.Name](
+      pathSegmentConverter = { case (ScalaParameter(_, param, _, argName, argType), base) =>
+        base.fold { argType match {
+          case t"String"        => Right(q"Segment")
+          case t"Double"        => Right(q"DoubleNumber")
+          case t"BigDecimal"    => Right(q"Segment.map(BigDecimal.apply _)")
+          case t"Int"           => Right(q"IntNumber")
+          case t"Long"          => Right(q"LongNumber")
+          case t"BigInt"        => Right(q"Segment.map(BigInt.apply _)")
+          case tpe@Type.Name(_) => Right(q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
+        } } { segment => argType match {
+          case t"String"        => Right(segment)
+          case t"BigDecimal"    => Right(q"${segment}.map(BigDecimal.apply _)")
+          case t"BigInt"        => Right(q"${segment}.map(BigInt.apply _)")
+          case tpe@Type.Name(_) => Right(q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
+        } }
+      },
+      buildParamConstraint = { case (k, v) => q" parameter(${Lit.String(k)}).require(_ == ${Lit.String(v)}) " },
+      joinParams = { (l, r) => q"${l} & ${r}" },
+      stringPath = Lit.String(_),
+      liftBinding = identity,
+      litRegex = (before, _, after) => q"""new scala.util.matching.Regex("^" + ${Lit.String(before)} + "(.*)" + ${Lit.String(after)} + ${Lit.String("$")})""")
+
+    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+      import akkaExtractor._
       for {
         partsQS <- pattern(pathArgs).parse(path).done.either.fold(Target.error(_), Target.pure(_))
         (parts, (trailingSlash, queryParams)) = partsQS

@@ -11,18 +11,11 @@ object ScalaGenerator {
     def apply[T](term: ScalaTerm[T]): Target[T] = term match {
       case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
-        val jsonType: Type = t"io.circe.Json"
-        val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
-        val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
         Target.pure(
           source"""
             package ${pkg}
 
-            ..${customImports}
-
             ..${jsonImports}
-
-            ..${frameworkImports}
 
             import cats.implicits._
             import cats.data.EitherT
@@ -30,9 +23,6 @@ object ScalaGenerator {
             import scala.concurrent.Future
 
             object Implicits {
-              private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
-              private[this] def argEscape(k: String, v: String): String = Uri.Query.apply((k, v)).toString
-
               abstract class AddArg[T] {
                 def addArg(key: String, v: T): String
               }
@@ -42,7 +32,6 @@ object ScalaGenerator {
                   def addArg(key: String, v: T): String = f(key)(v)
                 }
 
-                implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = build[T](key => v => argEscape(key, ev.show(v)))
                 implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgIterable[T](implicit ev: AddArg[T]): AddArg[Iterable[T]] = build[Iterable[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgOption[T](implicit ev: AddArg[T]): AddArg[Option[T]] = build[Option[T]](key => v => v.map(ev.addArg(key, _)).getOrElse(""))
@@ -56,8 +45,6 @@ object ScalaGenerator {
                 def build[T](f: T => String): AddPath[T] = new AddPath[T] {
                   def addPath(v: T): String = f(v)
                 }
-
-                implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = build[T](v => pathEscape(ev.show(v)))
               }
 
               abstract class Show[T] {
@@ -93,42 +80,32 @@ object ScalaGenerator {
                 }
               }
 
-              type HttpClient = HttpRequest => Future[HttpResponse]
-              type TraceBuilder = String => HttpClient => HttpClient
-
-              implicit final def jsonMarshaller(
-                  implicit printer: Printer = Printer.noSpaces
-              ): ToEntityMarshaller[${jsonType}] =
-                Marshaller.withFixedContentType(MediaTypes.${Term.Name("`application/json`")}) { json =>
-                  HttpEntity(MediaTypes.${Term.Name("`application/json`")}, printer.pretty(json))
-                }
-
-              implicit final def jsonEntityMarshaller[A](
-                  implicit J: ${jsonEncoderTypeclass}[A],
-                           printer: Printer = Printer.noSpaces
-              ): ToEntityMarshaller[A] =
-                jsonMarshaller(printer).compose(J.apply)
-
-              implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
-                Unmarshaller.byteStringUnmarshaller
-                  .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
-                  .map {
-                    case ByteString.empty => throw Unmarshaller.NoContentException
-                    case data             => jawn.parseByteBuffer(data.asByteBuffer).fold(throw _, identity)
-                  }
-
-              implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-                def decode(json: ${jsonType}) = J.decodeJson(json).fold(throw _, identity)
-                jsonUnmarshaller.map(decode)
-              }
-
               sealed trait IgnoredEntity
               object IgnoredEntity {
                 val empty: IgnoredEntity = new IgnoredEntity {}
               }
-              implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
-                Unmarshaller.strict(_ => IgnoredEntity.empty)
             }
+          """
+        )
+
+      case RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits) =>
+        val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        Target.pure(
+          source"""
+            package ${pkg}
+
+            ..${jsonImports}
+
+            ..${frameworkImports}
+
+            import cats.implicits._
+            import cats.data.EitherT
+
+            import scala.concurrent.Future
+
+            import ${pkg}.Implicits._
+
+            ${frameworkImplicits}
           """
         )
     }

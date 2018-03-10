@@ -15,7 +15,7 @@ import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.meta._
 
-object AkkaHttpClientGenerator {
+object Http4sClientGenerator {
   object ClientTermInterp extends FunctionK[ClientTerm, Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
@@ -71,17 +71,17 @@ object AkkaHttpClientGenerator {
                   q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
                 }
               })
-          } yield result
+          } yield q"Uri.unsafeFromString(${result})"
         }
 
         def generateFormDataParams(parameters: List[ScalaParameter], needsMultipart: Boolean): Option[Term] = {
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
-            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, v))"
-            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Multipart.FormData.BodyPart(${tName.toLit}, $tParamName))"
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show(v)))"
-            def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show($tParamName)))"
+            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Part.formData(${tName.toLit}, v))"
+            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Part.formData(${tName.toLit}, $tParamName))"
+            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Part.formData(${tName.toLit}, Formatter.show(v)))"
+            def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Multipart(${tName.toLit}, Formatter.show($tParamName)))"
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
               val lifter: (Term.Name, RawParameterName) => Term = param match {
                 case param"$_: Option[BodyPartEntity]" => liftOptionFileTerm _
@@ -111,8 +111,8 @@ object AkkaHttpClientGenerator {
         }
 
         def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
-          def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
-          def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(RawHeader(${tName.toLit}, Formatter.show($tParamName)))"
+          def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Header(${tName.toLit}, Formatter.show(v)))"
+          def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Header(${tName.toLit}, Formatter.show($tParamName)))"
           val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
             val lifter: (Term.Name, RawParameterName) => Term = param match {
               case param"$_: Option[$_]" => liftOptionTerm _
@@ -121,44 +121,43 @@ object AkkaHttpClientGenerator {
             }
             a :+ lifter(paramName, argName)
           }
-          q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
+          q"List[Option[Header]](..$args).flatten"
         }
 
         def build(methodName: String, httpMethod: HttpMethod, urlWithParams: Term, formDataParams: Option[Term], formDataNeedsMultipart: Boolean, headerParams: Term, responseTypeRef: Type, tracing: Boolean
             )(tracingArgsPre: List[ScalaParameter], tracingArgsPost: List[ScalaParameter], pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter], formArgs: List[ScalaParameter], body: Option[ScalaParameter], headerArgs: List[ScalaParameter], extraImplicits: List[Term.Param]
             ): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-          val defaultHeaders = param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
-          val fallbackHttpBody: Option[(Term, Type)] = if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod) Some((q"HttpEntity.Empty", t"HttpEntity.Strict")) else None
-          val safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
+          val defaultHeaders = param"headers: List[Header] = List.empty"
+          val safeBody: Option[(Term, Type)] = body.map(sp => (sp.argName.toLit, sp.argType))
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {
-              q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
+              q"""Multipart($formDataParams.flatten.toVector)"""
             } else {
-              q"""FormData($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*)"""
+              q"""UrlForm($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*)"""
             }
           }
 
-          val entity: Term = formEntity.orElse(safeBody.map(_._1)).getOrElse(q"HttpEntity.Empty")
+          val entity: Term = formEntity.orElse(safeBody.map(_._1)).getOrElse(q"EmptyBody")
           val methodBody: Term = if (tracing) {
             val tracingLabel = q"""s"$${clientName}:$${methodName}""""
             q"""
             {
               val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
               val allHeaders = headers ++ $headerParams
-              wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
-                tracingHttpClient(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders))
-              })
+              /* wrap[{responseTypeRef}]( */
+                tracingHttpClient.expect[${responseTypeRef}](Request(method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
+              /* ) */
             }
             """
           } else {
             q"""
             {
               val allHeaders = headers ++ $headerParams
-              wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
-                httpClient(HttpRequest(method = HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders))
-              })
+              // wrap[{responseTypeRef}](
+                httpClient.expect[${responseTypeRef}](Request(method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
+              // )
             }
             """
           }
@@ -169,7 +168,7 @@ object AkkaHttpClientGenerator {
           ).flatten
 
           q"""
-          def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
+          def ${Term.Name(methodName)}(...${arglists}): Task[$responseTypeRef] = $methodBody
           """
         }
 
@@ -218,20 +217,17 @@ object AkkaHttpClientGenerator {
         } yield defn
       }
 
+
       case GetImports(tracing) => Target.pure(List.empty)
 
       case GetExtraImports(tracing) => Target.pure(List.empty)
 
       case ClientClsArgs(tracingName, schemes, host, tracing) =>
-        val ihc = param"implicit httpClient: HttpRequest => Future[HttpResponse]"
-        val iec = param"implicit ec: ExecutionContext"
-        val imat = param"implicit mat: Materializer"
-        Target.pure(List(List(formatHost(schemes, host)) ++ (if (tracing) Some(formatClientName(tracingName)) else None), List(ihc, iec, imat)))
+        val ihc = param"implicit httpClient: Client"
+        Target.pure(List(List(formatHost(schemes, host)) ++ (if (tracing) Some(formatClientName(tracingName)) else None), List(ihc)))
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String], schemes: List[String], host: Option[String], tpe: Type.Name, ctorCall: Term.New, tracing: Boolean): List[Defn] = {
-          val iec = param"implicit ec: ExecutionContext"
-          val imat = param"implicit mat: Materializer"
           val tracingParams: List[Term.Param] = if (tracing) {
             List(formatClientName(tracingName))
           } else {
@@ -240,7 +236,7 @@ object AkkaHttpClientGenerator {
 
           List(
             q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(schemes, host)}, ..${tracingParams})($iec, $imat): ${tpe} = ${ctorCall}
+              def httpClient(httpClient: Client, ${formatHost(schemes, host)}, ..${tracingParams}): ${tpe} = ${ctorCall}
             """
           )
         }
@@ -265,20 +261,19 @@ object AkkaHttpClientGenerator {
           q"""
             class ${Type.Name(clientName)}(...${ctorArgs}) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
-
-              private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-                EitherT(
-                  resp.flatMap(resp =>
-                    if (resp.status.isSuccess) {
-                      Unmarshal(resp.entity).to[T].map(Right.apply _)
-                    } else {
-                      FastFuture.successful(Left(Right(resp)))
-                    }
-                  ).recover {
-                    case e: Throwable => Left(Left(e))
+              /*
+              private[this] def wrap[T: EntityDecoder](resp: Task[Response]): Task[T] = {
+                resp.flatMap(resp =>
+                  if (resp.status.isSuccess) {
+                    resp.as[T].map(Right.apply _)
+                  } else {
+                    Task.now(Left(Right(resp)))
                   }
-                )
+                ).handle {
+                  case e: Throwable => Left(Left(e))
+                }
               }
+              */
 
               ..$clientCalls
             }
