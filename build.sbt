@@ -1,7 +1,7 @@
 val projectName = "swagger-codegen"
 name := projectName
 organization in ThisBuild := "com.twilio"
-version in ThisBuild := "0.26.0-SNAPSHOT"
+version in ThisBuild := "0.32.0-SNAPSHOT"
 
 crossScalaVersions := Seq("2.11.11", "2.12.3")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
