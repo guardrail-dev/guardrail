@@ -34,7 +34,7 @@ Overview
   - Domain import configuration
   - SBT plugin
   - Precise imports (DTO)
-- Known bugs (Issue tracker link)
+- Known bugs ([Issue tracker](https://github.com/twilio/guardrail/issues))
   - Duplicated class paths
 
 Workflow
