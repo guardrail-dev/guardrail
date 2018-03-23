@@ -73,7 +73,7 @@ object CLICommon {
 
   def unsafePrintHelp(): Unit = {
     val text = s"""
-    | ${AnsiColor.CYAN}swagger-codegen${AnsiColor.RESET}
+    | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
     |
     |  Required:
     |   --specPath path/to/[foo-swagger.json|foo-swagger.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be valid
@@ -90,15 +90,15 @@ object CLICommon {
     |
     |Examples:
     |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
-    |    swagger-codegen --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients --tracing
+    |    guardrail --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients --tracing
     |
     |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
-    |    swagger-codegen \\
+    |    guardrail \\
     |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
     |      --client --specPath client-specs/account-service.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.account --tracing
     |
     |  Generate client and server routes for the same specification:
-    |    swagger-codegen \\
+    |    guardrail \\
     |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
     |      --server --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events
     |""".stripMargin
