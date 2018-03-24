@@ -22,7 +22,7 @@ With a sufficiently powerful typesystem, code that does not follow the specifica
 
 ### Breaking binary dependence
 
-The fewer binary dependencies between projects, the easier it is to manage so-called "dependency hell". When dealing with libraries internal to a company, this can be avoided with appropriate tooling. When integrating with external libraries, however, there are fewer options available for resolving conflicting dependencies. Generated code only depends on what's alreday in your project, freeing you up to integrate with as many downstreams as you like, no matter what they are written in.
+The fewer binary dependencies between projects, the easier it is to manage so-called "dependency hell". When dealing with libraries internal to a company, this can be avoided with appropriate tooling. When integrating with external libraries, however, there are fewer options available for resolving conflicting dependencies. Generated code only depends on what's already in your project, freeing you up to integrate with as many downstreams as you like, no matter what they are written in.
 
 ### Automatic best practices
 
