@@ -4,13 +4,13 @@ import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, ProtocolGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{Context, ClassDefinition, ProtocolDefinitions, ProtocolGenerator, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class ScalaTypesTest extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -23,11 +23,14 @@ class ScalaTypesTest extends FunSuite with Matchers {
     |      foo:
     |        type: string
     |        x-scala-type: com.twilio.foo.bar.Baz
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Generate no definitions") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    definitions.length should equal (1)
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Baz(foo: Option[com.twilio.foo.bar.Baz] = None)
@@ -43,7 +46,6 @@ class ScalaTypesTest extends FunSuite with Matchers {
       }
     """
 
-    val ClassDefinition(_, _, cls, cmp) = definitions.head
     cls.structure shouldEqual definition.structure
     cmp.structure shouldEqual companion.structure
   }

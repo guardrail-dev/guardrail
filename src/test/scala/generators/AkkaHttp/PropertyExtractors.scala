@@ -1,14 +1,15 @@
 package tests.generators.AkkaHttp
 
 import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Client, Context, ClientGenerator, ProtocolGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Context, ProtocolDefinitions}
 import io.swagger.parser.SwaggerParser
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class PropertyExtractors extends FunSuite with Matchers {
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -50,7 +51,7 @@ class PropertyExtractors extends FunSuite with Matchers {
     |        default: "what"
     |      object_property:
     |        type: object
-    |""".stripMargin)
+    |""".stripMargin
 /*
     |      ref_property:
     |        "$$ref": "#/definitions/ref_target_property"
@@ -63,8 +64,12 @@ class PropertyExtractors extends FunSuite with Matchers {
 */
 
   test("Render all primitive types correctly") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
 
     val definition = q"""
       case class Something(
