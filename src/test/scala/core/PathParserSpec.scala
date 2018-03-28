@@ -1,4 +1,4 @@
-package swagger
+package tests.core
 
 import com.twilio.swagger.codegen.{SwaggerUtil, Target}
 import com.twilio.swagger.codegen.generators.ScalaParameter

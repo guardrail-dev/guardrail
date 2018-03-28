@@ -1,4 +1,4 @@
-package core.issues
+package tests.core.issues
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._

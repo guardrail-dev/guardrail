@@ -1,4 +1,4 @@
-package swagger
+package tests.generators.AkkaHttp
 
 import cats.instances.all._
 import com.twilio.swagger.codegen.generators.AkkaHttp

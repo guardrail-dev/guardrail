@@ -1,4 +1,4 @@
-package swagger
+package tests.generators.AkkaHttp
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._

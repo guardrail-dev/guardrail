@@ -1,4 +1,4 @@
-package com.twilio.swagger.generators.http4s
+package tests.generators.http4s
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._

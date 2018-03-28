@@ -1,7 +1,8 @@
-package com.twilio.swagger
+package tests.generators.akkaHttp
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Client, Clients, Context, EnumDefinition, ClientGenerator, ProtocolGenerator, CodegenApplication, ProtocolDefinitions, Target}
 import org.scalatest.{FunSuite, Matchers}
