@@ -131,7 +131,7 @@ object ScalaParameter {
 
   def fromParameters(protocolElems: List[StrictProtocolElems]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
     for {
-      parameters <- params.map(fromParameter(protocolElems)).sequence
+      parameters <- params.traverse(fromParameter(protocolElems))
       counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
     } yield parameters.map { param =>
         val Term.Name(name) = param.paramName

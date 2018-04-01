@@ -157,13 +157,13 @@ object AkkaHttpServerGenerator {
               (code, friendlyName) = httpCode
               statusCodeName = Term.Name(friendlyName)
               statusCode = q"StatusCodes.${statusCodeName}"
-              valueType <- Option(resp.getSchema).map({ prop =>
+              valueType <- Option(resp.getSchema).traverse { prop =>
                 for {
                   meta <- SwaggerUtil.propMeta(prop)
                   resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield baseType
-              }).sequence
+              }
               responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
             } yield {
@@ -219,7 +219,7 @@ object AkkaHttpServerGenerator {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
           parameters <- Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(Target.pure(List.empty[ScalaParameter]))
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
-          _ <- parameters.map(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}")).sequence
+          _ <- parameters.traverse(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
 
           filterParamBy = ScalaParameter.filterParams(parameters)
           bodyArgs = filterParamBy("body").headOption
@@ -268,7 +268,7 @@ object AkkaHttpServerGenerator {
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
           routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
-          _ <- routes.map(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString)).sequence
+          _ <- routes.traverse(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString))
         } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
 
       case RenderHandler(handlerName, methodSigs) =>
@@ -347,7 +347,7 @@ object AkkaHttpServerGenerator {
         optional: Term => Type => Target[Term.Apply]
     )(params: List[ScalaParameter]): Target[Option[Term]] = {
       for {
-        directives <- params.map({ case ScalaParameter(_, param, _, argName, argType) =>
+        directives <- params.traverse { case ScalaParameter(_, param, _, argName, argType) =>
           param match {
             case param"$_: Option[Iterable[$tpe]]" => multiOpt(Lit.String(argName.value))(tpe)
             case param"$_: Option[Iterable[$tpe]] = $_" => multiOpt(Lit.String(argName.value))(tpe)
@@ -357,7 +357,7 @@ object AkkaHttpServerGenerator {
             case param"$_: Iterable[$tpe] = $_" => multi(Lit.String(argName.value))(tpe)
             case _ => required(Lit.String(argName.value))(argType)
           }
-        }).sequence
+        }
       } yield directives match {
         case Nil => Option.empty
         case x :: xs => Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" })

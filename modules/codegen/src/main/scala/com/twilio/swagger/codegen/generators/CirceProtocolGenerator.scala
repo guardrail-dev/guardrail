@@ -272,13 +272,13 @@ object CirceProtocolGenerator {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) => {
         for {
-          entries <- definitions.map({
+          entries <- definitions.traverse {
             case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
               Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
             case (clsName, definition) =>
               SwaggerUtil.modelMetaType(definition)
                 .map(x => (clsName, x))
-          }).sequence
+          }
           result <- SwaggerUtil.ResolvedType.resolve_(entries)
         } yield result.map { case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
           PropMeta(clsName, tpe)

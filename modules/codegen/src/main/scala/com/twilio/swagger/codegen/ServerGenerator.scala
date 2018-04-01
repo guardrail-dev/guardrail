@@ -31,20 +31,20 @@ object ServerGenerator {
 
     for {
       routes <- extractOperations(paths)
-      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequence
+      classNamedRoutes <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
       extraImports <- getExtraImports(context.tracing)
-      servers <- groupedRoutes.map({ case (className, routes) =>
+      servers <- groupedRoutes.traverse { case (className, routes) =>
           val resourceName = formatClassName(className.lastOption.getOrElse(""))
           val handlerName = formatHandlerName(className.lastOption.getOrElse(""))
           for {
-            renderedRoutes <- routes.map({ case sr@ServerRoute(path, method, operation) =>
+            renderedRoutes <- routes.traverse { case sr@ServerRoute(path, method, operation) =>
               for {
                 tracingFields <- buildTracingFields(operation, className, context.tracing)
                 responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
                 rendered <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(sr)
               } yield rendered
-            }).sequence
+            }
             routeTerms = renderedRoutes.map(_.route)
             combinedRouteTerms <- combineRouteTerms(routeTerms)
             methodSigs = renderedRoutes.map(_.methodSig)
@@ -55,7 +55,7 @@ object ServerGenerator {
           } yield {
             Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
           }
-        }).sequence
+        }
     } yield Servers(servers)
   }
 }
