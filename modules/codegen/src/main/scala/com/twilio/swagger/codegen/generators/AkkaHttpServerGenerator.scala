@@ -2,6 +2,7 @@ package com.twilio.swagger.codegen
 package generators
 
 import _root_.io.swagger.models.HttpMethod
+
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
@@ -112,7 +113,7 @@ object AkkaHttpServerGenerator {
                 ServerRoute(pathStr, httpMethod, operation)
               }
             }
-          }).sequenceU.map(_.flatten)
+          }).sequence.map(_.flatten)
         } yield routes
 
       case GetClassName(operation) =>
@@ -162,7 +163,7 @@ object AkkaHttpServerGenerator {
                   resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield baseType
-              }).sequenceU
+              }).sequence
               responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
             } yield {
@@ -178,7 +179,7 @@ object AkkaHttpServerGenerator {
                 )
               }
             })
-          }).sequenceU
+          }).sequence
 
           (terms, aliases, marshallers) = instances.unzip3
 
@@ -218,7 +219,7 @@ object AkkaHttpServerGenerator {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
           parameters <- Option(operation.getParameters).map(_.asScala.toList).map(ScalaParameter.fromParameters(protocolElems)).getOrElse(Target.pure(List.empty[ScalaParameter]))
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
-          _ <- parameters.map(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}")).sequenceU
+          _ <- parameters.map(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}")).sequence
 
           filterParamBy = ScalaParameter.filterParams(parameters)
           bodyArgs = filterParamBy("body").headOption
@@ -267,7 +268,7 @@ object AkkaHttpServerGenerator {
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
           routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
-          _ <- routes.map(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString)).sequenceU
+          _ <- routes.map(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString)).sequence
         } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
 
       case RenderHandler(handlerName, methodSigs) =>
@@ -356,7 +357,7 @@ object AkkaHttpServerGenerator {
             case param"$_: Iterable[$tpe] = $_" => multi(Lit.String(argName.value))(tpe)
             case _ => required(Lit.String(argName.value))(argType)
           }
-        }).sequenceU
+        }).sequence
       } yield directives match {
         case Nil => Option.empty
         case x :: xs => Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" })

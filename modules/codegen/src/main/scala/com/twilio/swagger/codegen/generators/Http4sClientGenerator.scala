@@ -78,9 +78,9 @@ object Http4sClientGenerator {
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
-            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Part.formData(${tName.toLit}, v))"
-            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Part.formData(${tName.toLit}, $tParamName))"
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Part.formData(${tName.toLit}, Formatter.show(v)))"
+            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Part.formData[F](${tName.toLit}, v))"
+            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Part.formData[F](${tName.toLit}, $tParamName))"
+            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Part.formData[F](${tName.toLit}, Formatter.show(v)))"
             def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Multipart(${tName.toLit}, Formatter.show($tParamName)))"
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
               val lifter: (Term.Name, RawParameterName) => Term = param match {
@@ -147,7 +147,7 @@ object Http4sClientGenerator {
               val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
               val allHeaders = headers ++ $headerParams
               /* wrap[{responseTypeRef}]( */
-                tracingHttpClient.expect[${responseTypeRef}](Request(method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
+                tracingHttpClient.expect[${responseTypeRef}](Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
               /* ) */
             }
             """
@@ -156,7 +156,7 @@ object Http4sClientGenerator {
             {
               val allHeaders = headers ++ $headerParams
               // wrap[{responseTypeRef}](
-                httpClient.expect[${responseTypeRef}](Request(method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
+                httpClient.expect[${responseTypeRef}](Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
               // )
             }
             """
@@ -168,7 +168,7 @@ object Http4sClientGenerator {
           ).flatten
 
           q"""
-          def ${Term.Name(methodName)}(...${arglists}): Task[$responseTypeRef] = $methodBody
+          def ${Term.Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
           """
         }
 
@@ -210,7 +210,7 @@ object Http4sClientGenerator {
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
-          tracingArgsPre = if (tracing) List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder")) else List.empty
+          tracingArgsPre = if (tracing) List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]")) else List.empty
           tracingArgsPost = if (tracing) List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}")) else List.empty
           extraImplicits = List.empty
           defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
@@ -223,8 +223,9 @@ object Http4sClientGenerator {
       case GetExtraImports(tracing) => Target.pure(List.empty)
 
       case ClientClsArgs(tracingName, schemes, host, tracing) =>
-        val ihc = param"implicit httpClient: Client"
-        Target.pure(List(List(formatHost(schemes, host)) ++ (if (tracing) Some(formatClientName(tracingName)) else None), List(ihc)))
+        val ihc = param"implicit httpClient: Client[F]"
+        val ief = param"implicit effect: Effect[F]"
+        Target.pure(List(List(formatHost(schemes, host)) ++ (if (tracing) Some(formatClientName(tracingName)) else None), List(ief, ihc)))
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String], schemes: List[String], host: Option[String], tpe: Type.Name, ctorCall: Term.New, tracing: Boolean): List[Defn] = {
@@ -236,7 +237,7 @@ object Http4sClientGenerator {
 
           List(
             q"""
-              def httpClient(httpClient: Client, ${formatHost(schemes, host)}, ..${tracingParams}): ${tpe} = ${ctorCall}
+              def httpClient[F[_]](effect: Effect[F], httpClient: Client[F], ${formatHost(schemes, host)}, ..${tracingParams}): ${tpe}[F] = ${ctorCall}
             """
           )
         }
@@ -244,13 +245,13 @@ object Http4sClientGenerator {
         def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] = params.map({ _.map(_.name.value).map(v => Term.Assign(Term.Name(v), Term.Name(v))).to[List] }).to[List]
         val ctorCall: Term.New = {
           q"""
-            new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})
+            new ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))}(...${paramsToArgs(ctorArgs)})
           """
         }
 
         val companion: Defn.Object = q"""
             object ${Term.Name(clientName)} {
-              def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}
+              def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}
               ..${extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)}
             }
           """
@@ -259,15 +260,15 @@ object Http4sClientGenerator {
       case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, tracing) =>
         val client =
           q"""
-            class ${Type.Name(clientName)}(...${ctorArgs}) {
+            class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
               /*
-              private[this] def wrap[T: EntityDecoder](resp: Task[Response]): Task[T] = {
+              private[this] def wrap[T: EntityDecoder](resp: Response[IO]): IO[T] = {
                 resp.flatMap(resp =>
                   if (resp.status.isSuccess) {
                     resp.as[T].map(Right.apply _)
                   } else {
-                    Task.now(Left(Right(resp)))
+                    IO.pure(Left(Right(resp)))
                   }
                 ).handle {
                   case e: Throwable => Left(Left(e))

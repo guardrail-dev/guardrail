@@ -84,7 +84,7 @@ object Common {
       basePath = Option(swagger.getBasePath)
       paths = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
       routes <- extractOperations(paths)
-      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
+      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequence
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
       frameworkImports <- getFrameworkImports(context.tracing)
       frameworkImplicits <- getFrameworkImplicits()
@@ -158,7 +158,7 @@ object Common {
         targetInterpreter <- extractGenerator(arg.context)
         writeFile <- processArgSet(targetInterpreter)(arg)
       } yield writeFile
-    ).sequenceU
+    ).sequence
   }
 
   def runM[F[_]](args: Array[String])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {

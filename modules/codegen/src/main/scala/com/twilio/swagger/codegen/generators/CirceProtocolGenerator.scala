@@ -278,7 +278,7 @@ object CirceProtocolGenerator {
             case (clsName, definition) =>
               SwaggerUtil.modelMetaType(definition)
                 .map(x => (clsName, x))
-          }).sequenceU
+          }).sequence
           result <- SwaggerUtil.ResolvedType.resolve_(entries)
         } yield result.map { case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
           PropMeta(clsName, tpe)

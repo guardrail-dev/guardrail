@@ -134,21 +134,21 @@ class DefaultParametersTest extends FunSuite with Matchers {
 
     val companion = q"""
     object StoreClient {
-      def apply(host: String = "http://petstore.swagger.io")(implicit httpClient: Client): StoreClient = new StoreClient(host = host)(httpClient = httpClient)
-      def httpClient(httpClient: Client, host: String = "http://petstore.swagger.io"): StoreClient = new StoreClient(host = host)(httpClient = httpClient)
+      def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Client[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
+      def httpClient[F[_]](effect: Effect[F], httpClient: Client[F], host: String = "http://petstore.swagger.io"): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
     }
     """
 
     val client = q"""
-    class StoreClient(host: String = "http://petstore.swagger.io")(implicit httpClient: Client) {
+    class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Client[F]) {
       val basePath: String = ""
-      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): Task[Order] = {
+      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[Order] = {
         val allHeaders = headers ++ List[Option[Header]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-        httpClient.expect[Order](Request(method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[Order](Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def deleteOrder(orderId: Long, headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
     }
     """

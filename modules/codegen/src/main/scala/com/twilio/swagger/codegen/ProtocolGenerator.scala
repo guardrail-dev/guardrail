@@ -1,8 +1,9 @@
 package com.twilio.swagger.codegen
 
 import _root_.io.swagger.models._
+
 import _root_.io.swagger.models.properties.Property
-import cats.data.Coproduct
+import cats.data.EitherK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.swagger.codegen.extract.ScalaType
@@ -55,7 +56,7 @@ object ProtocolGenerator {
     for {
       enum <- extractEnum(swagger)
       tpe <- extractType(swagger)
-      res <- (enum |@| tpe).map(validProg).sequenceU
+      res <- (enum, tpe).mapN(validProg).sequence
     } yield res
   }
 
@@ -83,7 +84,7 @@ object ProtocolGenerator {
     def validProg(props: List[(String,Property)]): Free[F, ClassDefinition] = {
       val needCamelSnakeConversion = props.forall({ case (k, v) => couldBeSnakeCase(k) })
       for {
-        params <- props.map(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled).sequenceU
+        params <- props.map(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled).sequence
         terms = params.map(_.term).to[List]
         defn <- renderDTOClass(clsName, terms)
         deps = params.flatMap(_.dep)
@@ -95,7 +96,7 @@ object ProtocolGenerator {
 
     for {
       props <- extractProperties(model)
-      res <- props.map(validProg).sequenceU
+      res <- props.map(validProg).sequence
     } yield res
   }
 
@@ -145,7 +146,7 @@ object ProtocolGenerator {
             println(s"Warning: ${x} being treated as Json")
             plainTypeAlias(clsName)
         }
-      }).sequenceU
+      }).sequence
       protoImports <- protocolImports
       pkgImports <- packageObjectImports
       pkgObjectContents <- packageObjectContents

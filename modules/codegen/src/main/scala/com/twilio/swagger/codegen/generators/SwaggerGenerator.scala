@@ -26,7 +26,7 @@ object SwaggerGenerator {
                 RouteMeta(pathStr, httpMethod, operation)
               }
             }
-        }).sequenceU.map(_.flatten)
+        }).sequence.map(_.flatten)
 
       case GetClassName(operation) =>
         for {

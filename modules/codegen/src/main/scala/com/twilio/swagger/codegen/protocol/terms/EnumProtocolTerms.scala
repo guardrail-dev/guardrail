@@ -2,10 +2,12 @@ package com.twilio.swagger.codegen
 package terms.protocol
 
 import _root_.io.swagger.models.ModelImpl
-import cats.free.{Free, Inject}
+import cats.InjectK
+import cats.free.Free
+
 import scala.meta._
 
-class EnumProtocolTerms[F[_]](implicit I: Inject[EnumProtocolTerm, F]) {
+class EnumProtocolTerms[F[_]](implicit I: InjectK[EnumProtocolTerm, F]) {
   def extractEnum(swagger: ModelImpl): Free[F, Either[String, List[String]]] =
     Free.inject[EnumProtocolTerm, F](ExtractEnum(swagger))
   def extractType(swagger: ModelImpl): Free[F, Either[String, Type]] =
@@ -23,5 +25,5 @@ class EnumProtocolTerms[F[_]](implicit I: Inject[EnumProtocolTerm, F]) {
 }
 
 object EnumProtocolTerms {
-  implicit def enumProtocolTerms[F[_]](implicit I: Inject[EnumProtocolTerm, F]): EnumProtocolTerms[F] = new EnumProtocolTerms[F]
+  implicit def enumProtocolTerms[F[_]](implicit I: InjectK[EnumProtocolTerm, F]): EnumProtocolTerms[F] = new EnumProtocolTerms[F]
 }

@@ -21,14 +21,13 @@ object Http4sGenerator {
       case GetFrameworkImports(tracing) => Target.pure(List(
         q"import cats.data.EitherT",
         q"import cats.implicits._",
-        q"import fs2.Strategy",
-        q"import fs2.Task",
-        q"import fs2.interop.cats._",
+        q"import cats.effect.IO",
+        q"import cats.effect.Effect",
         q"import org.http4s._",
         q"import org.http4s.circe._",
         q"import org.http4s.client._",
         q"import org.http4s.client.blaze._",
-        q"import org.http4s.dsl._",
+        q"import org.http4s.dsl.io.Path",
         q"import org.http4s.multipart._",
         q"import scala.language.implicitConversions"
       ))
@@ -46,11 +45,12 @@ object Http4sGenerator {
             private[this] def argEscape(k: String, v: String): String = Query.apply((k, Some(v))).toString
             implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = AddArg.build[T](key => v => argEscape(key, ev.show(v)))
 
-            type TraceBuilder = String => org.http4s.client.Client => org.http4s.client.Client
+            type TraceBuilder[F[_]] = String => org.http4s.client.Client[F] => org.http4s.client.Client[F]
 
-            implicit def entityEncoder[T: ${jsonEncoderTypeclass}]: EntityEncoder[T] = jsonEncoderOf[T]
-            implicit def entityDecoder[T: ${jsonDecoderTypeclass}]: EntityDecoder[T] = jsonOf[T]
-            implicit def entityIgnoredEntityDecoder: EntityDecoder[IgnoredEntity] = EntityDecoder[Unit].map { _ => IgnoredEntity.empty }
+            implicit def entityEncoder[F[_]: Effect, T: ${jsonEncoderTypeclass}]: EntityEncoder[F, T] = jsonEncoderOf[F, T]
+            implicit def entityDecoder[F[_]: Effect, T: ${jsonDecoderTypeclass}]: EntityDecoder[F, T] = jsonOf[F, T]
+            implicit def entityIgnoredEntityDecoder[F[_]: Effect]: EntityDecoder[F, IgnoredEntity] = EntityDecoder[F, Unit].map { _ => IgnoredEntity.empty }
+            implicit def emptyEntityEncoder[F[_]: Effect]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
 
             object DoubleNumber {
               def unapply(value: String): Option[Double] = Try(value.toDouble).toOption

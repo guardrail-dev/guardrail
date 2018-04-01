@@ -115,7 +115,7 @@ object ScalaParameter {
               }
             }
         case _ => baseDefaultValue.map(Target.pure _)
-      }).sequenceU
+      }).sequence
     } yield {
       val defaultValue = if (!required) {
         enumDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
@@ -131,7 +131,7 @@ object ScalaParameter {
 
   def fromParameters(protocolElems: List[StrictProtocolElems]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
     for {
-      parameters <- params.map(fromParameter(protocolElems)).sequenceU
+      parameters <- params.map(fromParameter(protocolElems)).sequence
       counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
     } yield parameters.map { param =>
         val Term.Name(name) = param.paramName

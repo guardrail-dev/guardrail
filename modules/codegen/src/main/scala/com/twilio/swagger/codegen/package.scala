@@ -1,7 +1,7 @@
 package com.twilio.swagger
 
 import cats.{Applicative, Id}
-import cats.data.{Coproduct, EitherT, NonEmptyList, WriterT}
+import cats.data.{EitherK, EitherT, NonEmptyList, WriterT}
 import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
@@ -19,7 +19,7 @@ package codegen {
   object Target {
     val A = Applicative[Target]
     def pure[T](x: T): Target[T] = A.pure(x)
-    def error[T](x: String): Target[T] = EitherT.left[Logger, String, T](x.pure[Logger])
+    def error[T](x: String): Target[T] = EitherT.left[T](x.pure[Logger])
     def fromOption[T](x: Option[T], default: => String): Target[T] = EitherT.fromOption(x, default)
     def unsafeExtract[T](x: Target[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
 
@@ -34,7 +34,7 @@ package codegen {
   object CoreTarget {
     def pure[T](x: T): CoreTarget[T] = x.pure[CoreTarget]
     def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] = EitherT.fromOption(x, default)
-    def error[T](x: Error): CoreTarget[T] = EitherT.left[Logger, Error, T](x.pure[Logger])
+    def error[T](x: Error): CoreTarget[T] = EitherT.left[T](x.pure[Logger])
     def unsafeExtract[T](x: CoreTarget[T]): T = x.valueOr({ err => throw new Exception(err.toString) }).value
 
     object log {
@@ -47,15 +47,15 @@ package codegen {
 }
 
 package object codegen {
-  type CodegenApplicationSP[T] = Coproduct[ProtocolSupportTerm, ServerTerm, T]
-  type CodegenApplicationMSP[T] = Coproduct[ModelProtocolTerm, CodegenApplicationSP, T]
-  type CodegenApplicationEMSP[T] = Coproduct[EnumProtocolTerm, CodegenApplicationMSP, T]
-  type CodegenApplicationCEMSP[T] = Coproduct[ClientTerm, CodegenApplicationEMSP, T]
-  type CodegenApplicationACEMSP[T] = Coproduct[AliasProtocolTerm, CodegenApplicationCEMSP, T]
-  type CodegenApplicationACEMSSP[T] = Coproduct[ScalaTerm, CodegenApplicationACEMSP, T]
-  type CodegenApplicationACEMSSPR[T] = Coproduct[ArrayProtocolTerm, CodegenApplicationACEMSSP, T]
-  type CodegenApplicationACEMSSPRS[T] = Coproduct[SwaggerTerm, CodegenApplicationACEMSSPR, T]
-  type CodegenApplicationACEMSSPRSF[T] = Coproduct[FrameworkTerm, CodegenApplicationACEMSSPRS, T]
+  type CodegenApplicationSP[T] = EitherK[ProtocolSupportTerm, ServerTerm, T]
+  type CodegenApplicationMSP[T] = EitherK[ModelProtocolTerm, CodegenApplicationSP, T]
+  type CodegenApplicationEMSP[T] = EitherK[EnumProtocolTerm, CodegenApplicationMSP, T]
+  type CodegenApplicationCEMSP[T] = EitherK[ClientTerm, CodegenApplicationEMSP, T]
+  type CodegenApplicationACEMSP[T] = EitherK[AliasProtocolTerm, CodegenApplicationCEMSP, T]
+  type CodegenApplicationACEMSSP[T] = EitherK[ScalaTerm, CodegenApplicationACEMSP, T]
+  type CodegenApplicationACEMSSPR[T] = EitherK[ArrayProtocolTerm, CodegenApplicationACEMSSP, T]
+  type CodegenApplicationACEMSSPRS[T] = EitherK[SwaggerTerm, CodegenApplicationACEMSSPR, T]
+  type CodegenApplicationACEMSSPRSF[T] = EitherK[FrameworkTerm, CodegenApplicationACEMSSPRS, T]
   type CodegenApplication[T] = CodegenApplicationACEMSSPRSF[T]
 
   type Logger[T] = WriterT[Id, StructuredLogger, T]

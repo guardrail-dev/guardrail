@@ -2,12 +2,14 @@ package com.twilio.swagger.codegen
 package terms.server
 
 import _root_.io.swagger.models.{ModelImpl, Operation, Path}
+import cats.InjectK
 import cats.data.NonEmptyList
-import cats.free.{Free, Inject}
+import cats.free.Free
 import com.twilio.swagger.codegen.generators.ScalaParameter
+
 import scala.meta._
 
-class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
+class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
   def extractOperations(paths: List[(String, Path)]): Free[F, List[ServerRoute]] =
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
@@ -31,5 +33,5 @@ class ServerTerms[F[_]](implicit I: Inject[ServerTerm, F]) {
 }
 
 object ServerTerms {
-  implicit def serverTerms[F[_]](implicit I: Inject[ServerTerm, F]): ServerTerms[F] = new ServerTerms[F]
+  implicit def serverTerms[F[_]](implicit I: InjectK[ServerTerm, F]): ServerTerms[F] = new ServerTerms[F]
 }

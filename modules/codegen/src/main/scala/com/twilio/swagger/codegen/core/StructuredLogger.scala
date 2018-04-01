@@ -42,7 +42,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
     def empty: StructuredLogger = new StructuredLogger(List.empty)
     def combine(x: StructuredLogger, y: StructuredLogger): StructuredLogger = new StructuredLogger({
       (y.levels.foldLeft(x.levels.reverse) {
-        case (end :: acc, next) if end.name == next.name => StructuredLogLevel(end.name, end.lines.concat(next.lines)) :: acc
+        case (end :: acc, next) if end.name == next.name => StructuredLogLevel(end.name, end.lines.concatNel(next.lines)) :: acc
         case (acc, next) => next :: acc
       }).reverse
     })

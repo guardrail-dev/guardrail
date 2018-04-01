@@ -23,7 +23,7 @@ object ClientGenerator {
       clientExtraImports <- getExtraImports(context.tracing)
       clients <- groupedRoutes.map({ case (pkg, routes) =>
         for {
-          clientCalls <- routes.map(generateClientOperation(pkg, context.tracing, protocolElems) _).sequenceU
+          clientCalls <- routes.map(generateClientOperation(pkg, context.tracing, protocolElems) _).sequence
           clientName = s"${pkg.lastOption.getOrElse("").capitalize}Client"
           tracingName = Option(pkg.mkString("-")).filterNot(_.isEmpty)
           ctorArgs <- clientClsArgs(tracingName, schemes, host, context.tracing)
@@ -38,7 +38,7 @@ object ClientGenerator {
 
           Client(pkg, clientName, stats.map(SwaggerUtil.escapeTree))
         }
-      }).sequenceU
+      }).sequence
     } yield Clients(clients)
   }
 }

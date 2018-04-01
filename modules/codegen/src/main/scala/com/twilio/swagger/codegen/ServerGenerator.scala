@@ -31,7 +31,7 @@ object ServerGenerator {
 
     for {
       routes <- extractOperations(paths)
-      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
+      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequence
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
       extraImports <- getExtraImports(context.tracing)
       servers <- groupedRoutes.map({ case (className, routes) =>
@@ -44,7 +44,7 @@ object ServerGenerator {
                 responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
                 rendered <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(sr)
               } yield rendered
-            }).sequenceU
+            }).sequence
             routeTerms = renderedRoutes.map(_.route)
             combinedRouteTerms <- combineRouteTerms(routeTerms)
             methodSigs = renderedRoutes.map(_.methodSig)
@@ -55,7 +55,7 @@ object ServerGenerator {
           } yield {
             Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
           }
-        }).sequenceU
+        }).sequence
     } yield Servers(servers)
   }
 }
