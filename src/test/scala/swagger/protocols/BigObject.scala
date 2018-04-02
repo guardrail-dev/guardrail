@@ -3,14 +3,15 @@ package protocols
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, EnumDefinition, ProtocolGenerator, CodegenApplication, Target}
+import com.twilio.swagger.codegen.{ClassDefinition, Context, ProtocolDefinitions, ProtocolGenerator}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 
 class BigObjectSpec extends FunSuite with Matchers {
 
-  val swagger = new SwaggerParser().parse(s"""
+  val swagger = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -112,11 +113,14 @@ class BigObjectSpec extends FunSuite with Matchers {
     |      v30:
     |        type: integer
     |        format: int32
-    |""".stripMargin)
+    |""".stripMargin
 
   test("Big objects can be generated") {
-    val definitions = Target.unsafeExtract(ProtocolGenerator.fromSwagger[CodegenApplication](swagger).foldMap(AkkaHttp)).elems
-    val ClassDefinition(_, _, cls, cmp) :: _ = definitions
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class BigObject(v1: Option[Int] = None, v2: Option[Int] = None, v3: Option[Int] = None, v4: Option[Int] = None, v5: Option[Int] = None, v6: Option[Int] = None, v7: Option[Int] = None, v8: Option[Int] = None, v9: Option[Int] = None, v10: Option[Int] = None, v11: Option[Int] = None, v12: Option[Int] = None, v13: Option[Int] = None, v14: Option[Int] = None, v15: Option[Int] = None, v16: Option[Int] = None, v17: Option[Int] = None, v18: Option[Int] = None, v19: Option[Int] = None, v20: Option[Int] = None, v21: Option[Int] = None, v22: Option[Int] = None, v23: Option[Int] = None, v24: Option[Int] = None, v25: Option[Int] = None, v26: Option[Int] = None, v27: Option[Int] = None, v28: Option[Int] = None, v29: Option[Int] = None, v30: Option[Int] = None)

@@ -1,9 +1,9 @@
-package com.twilio.swagger.generators.http4s
+package tests.generators.http4s.client
 
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
-import com.twilio.swagger.codegen.generators.Http4s
 import com.twilio.swagger._
+import com.twilio.swagger.codegen.generators.Http4s
 import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 

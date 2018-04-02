@@ -1,7 +1,8 @@
-package com.twilio.swagger
+package tests.core
 
 import cats.instances.all._
 import collection.JavaConverters._
+import com.twilio.swagger._
 import com.twilio.swagger.codegen.generators.AkkaHttp
 import com.twilio.swagger.codegen.{Context, ClassDefinition, EnumDefinition, Client, Clients, ClientGenerator, ProtocolGenerator, ProtocolDefinitions, CodegenApplication, Target}
 import org.scalatest.{FunSuite, Matchers}

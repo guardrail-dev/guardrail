@@ -1,4 +1,4 @@
-package swagger
+package tests.core
 
 import com.twilio.swagger.codegen.SwaggerUtil
 import org.scalatest.{FunSuite, Matchers}
