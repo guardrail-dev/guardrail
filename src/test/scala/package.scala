@@ -30,7 +30,7 @@ package object swagger {
       basePath = Option(swagger.getBasePath)
       paths = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
       routes <- extractOperations(paths)
-      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequenceU
+      classNamedRoutes <- routes.map(route => getClassName(route.operation).map(_ -> route)).sequence
       groupedRoutes = classNamedRoutes.groupBy(_._1).mapValues(_.map(_._2)).toList
       frameworkImports <- getFrameworkImports(context.tracing)
 

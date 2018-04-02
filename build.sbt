@@ -3,13 +3,14 @@ name := projectName
 organization in ThisBuild := "com.twilio"
 version in ThisBuild := "0.33.0-SNAPSHOT"
 
-crossScalaVersions := Seq("2.11.11", "2.12.3")
+crossScalaVersions := Seq("2.11.11", "2.12.4")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 val akkaVersion = "10.0.10"
-val catsVersion = "0.9.0"
-val circeVersion = "0.8.0"
-val http4sVersion = "0.17.6"
+val catsVersion = "1.1.0"
+val catsEffectVersion = "0.10"
+val circeVersion = "0.9.2"
+val http4sVersion = "0.18.5"
 val scalatestVersion = "3.0.1"
 
 mainClass in assembly := Some("com.twilio.swagger.codegen.CLI")
@@ -61,8 +62,11 @@ val codegenSettings = Seq(
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta" % "2.0.1"
     , "io.swagger" % "swagger-parser" % "1.0.32"
-    , "org.tpolecat" %% "atto-core"  % "0.6.0"
-    , "org.typelevel" %% "cats" % catsVersion
+    , "org.tpolecat" %% "atto-core"  % "0.6.1"
+    , "org.typelevel" %% "cats-core" % catsVersion
+    , "org.typelevel" %% "cats-kernel" % catsVersion
+    , "org.typelevel" %% "cats-macros" % catsVersion
+    , "org.typelevel" %% "cats-free" % catsVersion
   )
   // Dev
   , scalacOptions in ThisBuild ++= Seq(
@@ -101,9 +105,7 @@ lazy val sample = (project in file("modules/sample"))
       |import cats._
       |import cats.data.EitherT
       |import cats.implicits._
-      |import fs2.Strategy
-      |import fs2.Task
-      |import fs2.interop.cats._
+      |import cats.effect.IO
       |import io.circe._
       |import java.time._
       |import org.http4s._
@@ -128,7 +130,8 @@ lazy val sample = (project in file("modules/sample"))
       , "org.http4s" %% "http4s-circe" % http4sVersion
       , "org.http4s" %% "http4s-dsl" % http4sVersion
       , "org.scalatest" %% "scalatest" % scalatestVersion % Test
-      , "org.typelevel" %% "cats" % catsVersion
+      , "org.typelevel" %% "cats-core" % catsVersion
+      , "org.typelevel" %% "cats-effect" % catsEffectVersion
     )
   )
 

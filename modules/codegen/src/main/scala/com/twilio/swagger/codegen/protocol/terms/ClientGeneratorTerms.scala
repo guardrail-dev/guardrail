@@ -1,11 +1,12 @@
 package com.twilio.swagger.codegen
 package terms.client
 
-import cats.free.{Free, Inject}
+import cats.InjectK
+import cats.free.Free
 import com.twilio.swagger.codegen.terms.RouteMeta
 import scala.meta._
 
-class ClientTerms[F[_]](implicit I: Inject[ClientTerm, F]) {
+class ClientTerms[F[_]](implicit I: InjectK[ClientTerm, F]) {
   def generateClientOperation(className: List[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(route: RouteMeta): Free[F, Defn] =
     Free.inject[ClientTerm, F](GenerateClientOperation(className, route, tracing, protocolElems))
   def getImports(tracing: Boolean): Free[F, List[Import]] =
@@ -21,5 +22,5 @@ class ClientTerms[F[_]](implicit I: Inject[ClientTerm, F]) {
 }
 
 object ClientTerms {
-  implicit def enumTerms[F[_]](implicit I: Inject[ClientTerm, F]): ClientTerms[F] = new ClientTerms[F]
+  implicit def enumTerms[F[_]](implicit I: InjectK[ClientTerm, F]): ClientTerms[F] = new ClientTerms[F]
 }

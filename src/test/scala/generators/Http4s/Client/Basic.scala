@@ -114,35 +114,35 @@ class BasicTest extends FunSuite with Matchers {
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
-    class Client(host: String = "http://localhost:1234")(implicit httpClient: Client) {
+    class Client[F[_]](host: String = "http://localhost:1234")(implicit effect: Effect[F], httpClient: Client[F]) {
       val basePath: String = ""
-      def getFoo(headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def getFoo(headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def putFoo(headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def putFoo(headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def postFoo(headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def postFoo(headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def deleteFoo(headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def deleteFoo(headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def patchFoo(headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def patchFoo(headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def getBar(headers: List[Header] = List.empty): Task[IgnoredEntity] = {
+      def getBar(headers: List[Header] = List.empty): F[IgnoredEntity] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request(method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[IgnoredEntity](Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
-      def getBaz(headers: List[Header] = List.empty): Task[io.circe.Json] = {
+      def getBaz(headers: List[Header] = List.empty): F[io.circe.Json] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[io.circe.Json](Request(method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders)).withBody(EmptyBody))
+        httpClient.expect[io.circe.Json](Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders)).withBody(EmptyBody))
       }
     }
     """

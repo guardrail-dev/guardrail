@@ -1,13 +1,15 @@
 package com.twilio.swagger.codegen
 package terms
 
+import cats.InjectK
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
-import cats.free.{Free, Inject}
+import cats.free.Free
 import com.twilio.swagger.codegen.{CodegenApplication, Target}
+
 import scala.meta._
 
-class CoreTerms[F[_]](implicit I: Inject[CoreTerm, F]) {
+class CoreTerms[F[_]](implicit I: InjectK[CoreTerm, F]) {
   def getDefaultFramework: Free[F, String] =
     Free.inject[CoreTerm, F](GetDefaultFramework)
   def extractGenerator(context: Context): Free[F, FunctionK[CodegenApplication, Target]] =
@@ -20,5 +22,5 @@ class CoreTerms[F[_]](implicit I: Inject[CoreTerm, F]) {
     Free.inject[CoreTerm, F](ProcessArgSet(targetInterpreter, args))
 }
 object CoreTerms {
-  implicit def coreTerm[F[_]](implicit I: Inject[CoreTerm, F]): CoreTerms[F] = new CoreTerms[F]
+  implicit def coreTerm[F[_]](implicit I: InjectK[CoreTerm, F]): CoreTerms[F] = new CoreTerms[F]
 }
