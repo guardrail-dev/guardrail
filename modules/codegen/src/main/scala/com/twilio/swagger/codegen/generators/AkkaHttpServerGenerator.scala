@@ -104,17 +104,17 @@ object AkkaHttpServerGenerator {
       case ExtractOperations(paths) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
-          routes <- paths.map({ case (pathStr, path) =>
+          routes <- paths.traverse { case (pathStr, path) =>
             for {
               _ <- Target.log.info("AkkaHttpServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
               operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
             } yield {
-              operationMap.asScala.map { case (httpMethod, operation) =>
+              operationMap.asScala.toList.map { case (httpMethod, operation) =>
                 ServerRoute(pathStr, httpMethod, operation)
               }
             }
-          }).sequence.map(_.flatten)
-        } yield routes
+          }
+        } yield routes.flatten
 
       case GetClassName(operation) =>
         for {
