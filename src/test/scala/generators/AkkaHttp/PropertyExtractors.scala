@@ -47,8 +47,6 @@ class PropertyExtractors extends FunSuite with Matchers {
     |        format: double
     |      number_property:
     |        type: number
-    |      property:
-    |        default: "what"
     |      object_property:
     |        type: object
     |""".stripMargin
