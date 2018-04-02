@@ -1,4 +1,4 @@
-guardrail [![Build Status](https://travis-ci.com/twilio/guardrail.svg?branch=master)](https://travis-ci.com/twilio/guardrail)
+guardrail [![Build Status](https://travis-ci.org/twilio/guardrail.svg?branch=master)](https://travis-ci.org/twilio/guardrail)
 ===
 
 Already onboard? [docs/QUICKSTART.md](./docs/QUICKSTART.md)! Interested in contributing? [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)!
