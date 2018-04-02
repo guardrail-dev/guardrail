@@ -1,4 +1,4 @@
-guardrail [![Build Status](https://travis-ci.com/twilio/swagger-codegen.svg?token=fw5GtT8qEoQYxsq4HYES&branch=master)](https://travis-ci.com/twilio/swagger-codegen)
+guardrail [![Build Status](https://travis-ci.com/twilio/guardrail.svg?branch=master)](https://travis-ci.com/twilio/guardrail)
 ===
 
 Already onboard? [docs/QUICKSTART.md](./docs/QUICKSTART.md)! Interested in contributing? [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)!
