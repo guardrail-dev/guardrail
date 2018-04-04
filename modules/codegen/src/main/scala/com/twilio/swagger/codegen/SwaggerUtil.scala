@@ -296,7 +296,7 @@ object SwaggerUtil {
       case d: DecimalProperty =>
         Target.pure(Resolved(t"BigDecimal", None, None))
       case u: UntypedProperty =>
-        Target.error("FIXME: Got an untyped property, currently not supported")
+        Target.pure(Resolved(t"io.circe.Json", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "integer" =>
         Target.pure(Resolved(t"BigInt", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "number" =>
