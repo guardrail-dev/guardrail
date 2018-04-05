@@ -47,7 +47,7 @@ class PropertyExtractors extends FunSuite with Matchers {
     |        format: double
     |      number_property:
     |        type: number
-    |      property:
+    |      untyped_property:
     |        default: "what"
     |      object_property:
     |        type: object
@@ -77,6 +77,7 @@ class PropertyExtractors extends FunSuite with Matchers {
         longProperty: Option[Long] = None, intProperty: Option[Int] = None,
         integerProperty: Option[BigInt] = None, floatProperty: Option[Float] = None,
         doubleProperty: Option[Double] = None, numberProperty: Option[BigDecimal] = None,
+        untypedProperty: Option[io.circe.Json] = None,
         objectProperty: Option[io.circe.Json] = None
         /*, refProperty: Option[ref_target_property] = None, refTargetProperty: Option[String] = None,
         arrayProperty: Option[IndexedSeq[ref_target_property]] = Option(IndexedSeq.empty)
@@ -88,20 +89,20 @@ class PropertyExtractors extends FunSuite with Matchers {
       object Something {
         implicit val encodeSomething = {
           val readOnlyKeys = Set[String]()
-          Encoder.forProduct9(
+          Encoder.forProduct10(
               "boolean_value", "string_value", "long_property", "int_property", "integer_property", "float_property",
-              "double_property", "number_property", "object_property"
+              "double_property", "number_property", "untyped_property", "object_property"
               /*, "ref_property", "ref_target_property", "array_property" */
             )( (o: Something) => (
               o.booleanValue, o.stringValue, o.longProperty, o.intProperty, o.integerProperty, o.floatProperty,
-              o.doubleProperty, o.numberProperty, o.objectProperty
+              o.doubleProperty, o.numberProperty, o.untypedProperty, o.objectProperty
               /* , o.refProperty, o.refTargetProperty, o.arrayProperty */
             )
           ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeSomething = Decoder.forProduct9(
+        implicit val decodeSomething = Decoder.forProduct10(
           "boolean_value", "string_value", "long_property", "int_property", "integer_property", "float_property",
-          "double_property", "number_property", "object_property"
+          "double_property", "number_property", "untyped_property", "object_property"
           /*, "ref_property", "ref_target_property", "array_property" */
         )(Something.apply _)
       }

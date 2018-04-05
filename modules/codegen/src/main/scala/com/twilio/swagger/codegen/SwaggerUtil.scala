@@ -295,6 +295,8 @@ object SwaggerUtil {
         Target.pure(Resolved(t"Double", None, Default(d).extract[Double].map(Lit.Double(_))))
       case d: DecimalProperty =>
         Target.pure(Resolved(t"BigDecimal", None, None))
+      case u: UntypedProperty =>
+        Target.pure(Resolved(t"io.circe.Json", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "integer" =>
         Target.pure(Resolved(t"BigInt", None, None))
       case p: AbstractProperty if p.getType.toLowerCase == "number" =>
