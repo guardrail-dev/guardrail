@@ -1,7 +1,12 @@
-val projectName = "guardrail"
+val projectName = "guardrail-root"
 name := projectName
 organization in ThisBuild := "com.twilio"
-version in ThisBuild := "0.33.0-SNAPSHOT"
+licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
+// Project version is determined by sbt-git based on the most recent tag
+// Publishing information is defined in `bintray.sbt`
+
+enablePlugins(GitVersioning)
+git.useGitDescribe := true
 
 crossScalaVersions := Seq("2.11.11", "2.12.4")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
@@ -57,7 +62,7 @@ val testDependencies = Seq(
 
 val codegenSettings = Seq(
   resolvers ++= Seq(
-    Resolver.url("scalameta", url("http://dl.bintray.com/scalameta/maven"))(Resolver.ivyStylePatterns)
+    Resolver.bintrayRepo("scalameta", "maven")
   ),
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta" % "2.0.1"
@@ -89,13 +94,18 @@ val codegenSettings = Seq(
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= testDependencies
+  , skip in publish := true
   )
   .dependsOn(codegen)
 
 lazy val codegen = (project in file("modules/codegen"))
   .settings(
-    (name := s"${projectName}-core") +:
+    (name := "guardrail") +:
     codegenSettings
+  , bintrayRepository := {
+      if (isSnapshot.value) "snapshots"
+      else "releases"
+    }
   )
 
 lazy val sample = (project in file("modules/sample"))
@@ -133,6 +143,7 @@ lazy val sample = (project in file("modules/sample"))
       , "org.typelevel" %% "cats-core" % catsVersion
       , "org.typelevel" %% "cats-effect" % catsEffectVersion
     )
+  , skip in publish := true
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
