@@ -1,8 +1,9 @@
 val projectName = "guardrail-root"
 name := projectName
 organization in ThisBuild := "com.twilio"
-version in ThisBuild := "0.33.0-SNAPSHOT"
 licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
+// Project version is defined in `version.sbt`
+// Publishing information is defined in `bintray.sbt`
 
 crossScalaVersions := Seq("2.11.11", "2.12.4")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
@@ -90,6 +91,7 @@ val codegenSettings = Seq(
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= testDependencies
+  , skip in publish := true
   )
   .dependsOn(codegen)
 
@@ -97,6 +99,10 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(
     (name := "guardrail") +:
     codegenSettings
+  , bintrayRepository := {
+      if (isSnapshot.value) "snapshots"
+      else "releases"
+    }
   )
 
 lazy val sample = (project in file("modules/sample"))
@@ -134,6 +140,7 @@ lazy val sample = (project in file("modules/sample"))
       , "org.typelevel" %% "cats-core" % catsVersion
       , "org.typelevel" %% "cats-effect" % catsEffectVersion
     )
+  , skip in publish := true
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
