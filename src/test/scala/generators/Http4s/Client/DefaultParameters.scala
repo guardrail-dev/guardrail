@@ -3,8 +3,8 @@ package tests.generators.http4s.client
 import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger._
-import com.twilio.swagger.codegen.generators.Http4s
-import com.twilio.swagger.codegen.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
+import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.{Client, Clients, Context, ClientGenerator, CodegenApplication, ProtocolGenerator, Target}
 import org.scalatest.{FunSuite, Matchers}
 
 class DefaultParametersTest extends FunSuite with Matchers {

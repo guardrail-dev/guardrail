@@ -1,6 +1,6 @@
 package tests.core
 
-import com.twilio.swagger.codegen.SwaggerUtil
+import com.twilio.guardrail.SwaggerUtil
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
 

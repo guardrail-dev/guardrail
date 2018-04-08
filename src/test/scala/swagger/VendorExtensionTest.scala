@@ -1,7 +1,7 @@
 package swagger
 
 import _root_.io.swagger.parser.SwaggerParser
-import com.twilio.swagger.codegen.extract.VendorExtension
+import com.twilio.guardrail.extract.VendorExtension
 import org.scalatest.{FunSuite, Matchers}
 import scala.collection.JavaConverters._
 
