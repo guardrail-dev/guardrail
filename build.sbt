@@ -1,4 +1,4 @@
-val projectName = "guardrail"
+val projectName = "guardrail-root"
 name := projectName
 organization in ThisBuild := "com.twilio"
 version in ThisBuild := "0.33.0-SNAPSHOT"
@@ -94,7 +94,7 @@ lazy val root = (project in file("."))
 
 lazy val codegen = (project in file("modules/codegen"))
   .settings(
-    (name := s"${projectName}-core") +:
+    (name := "guardrail") +:
     codegenSettings
   )
 
