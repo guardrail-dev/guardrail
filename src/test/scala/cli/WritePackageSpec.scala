@@ -4,9 +4,9 @@ import _root_.io.swagger.models.Swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.data.NonEmptyList
 import cats.instances.all._
-import com.twilio.swagger.codegen._
-import com.twilio.swagger.codegen.terms.{CoreTerm, CoreTerms}
-import com.twilio.swagger.codegen.core.CoreTermInterp
+import com.twilio.guardrail._
+import com.twilio.guardrail.terms.{CoreTerm, CoreTerms}
+import com.twilio.guardrail.core.CoreTermInterp
 import java.nio.file.{Path, Paths}
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._

@@ -3,13 +3,13 @@ package com.twilio
 import _root_.io.swagger.models._
 import _root_.io.swagger.parser.SwaggerParser
 import cats.arrow.FunctionK
-import com.twilio.swagger.codegen._
-import com.twilio.swagger.codegen.generators.AkkaHttp
+import com.twilio.guardrail._
+import com.twilio.guardrail.generators.AkkaHttp
 import org.scalatest._
 import scala.collection.JavaConverters._
 import scala.meta._
-import com.twilio.swagger.codegen.terms.{ScalaTerms, SwaggerTerms}
-import com.twilio.swagger.codegen.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 import cats.implicits._
 
 package object swagger {

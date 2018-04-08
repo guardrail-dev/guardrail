@@ -1,7 +1,7 @@
 package tests.core
 
-import com.twilio.swagger.codegen.{SwaggerUtil, Target}
-import com.twilio.swagger.codegen.generators.ScalaParameter
+import com.twilio.guardrail.{SwaggerUtil, Target}
+import com.twilio.guardrail.generators.ScalaParameter
 import org.scalatest.{EitherValues, FunSuite, Matchers, OptionValues}
 import scala.meta._
 import support.ScalaMetaMatchers._

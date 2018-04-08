@@ -13,8 +13,8 @@ Coding guidelines
 - Testability
 - Defer effects
 - Typesafe accessors for Java function calls
-  - [`Extractable`](../modules/codegen/src/main/scala/com/twilio/swagger/codegen/extract/Extractable.scala)
-  - [`VendorExtensible`](../modules/codegen/src/main/scala/com/twilio/swagger/codegen/extract/VendorExtension.scala)
+  - [`Extractable`](../modules/codegen/src/main/scala/com/twilio/guardrail/extract/Extractable.scala)
+  - [`VendorExtensible`](../modules/codegen/src/main/scala/com/twilio/guardrail/extract/VendorExtension.scala)
 
 Useful commands inside sbt console
 ==================================

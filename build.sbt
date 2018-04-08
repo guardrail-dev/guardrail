@@ -13,11 +13,11 @@ val circeVersion = "0.9.2"
 val http4sVersion = "0.18.5"
 val scalatestVersion = "3.0.1"
 
-mainClass in assembly := Some("com.twilio.swagger.codegen.CLI")
+mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
 lazy val runExample = taskKey[Unit]("Run with example args")
 // TODO: akka.NotUsed should exist in all generated sources, but there are no import verifying tests yet.
-fullRunTask(runExample, Test, "com.twilio.swagger.codegen.CLI", """
+fullRunTask(runExample, Test, "com.twilio.guardrail.CLI", """
   --defaults --import akka.NotUsed
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
@@ -40,7 +40,7 @@ artifact in (Compile, assembly) := {
 
 addArtifact(artifact in (Compile, assembly), assembly)
 
-addCommandAlias("cli", "runMain com.twilio.swagger.codegen.CLI")
+addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 

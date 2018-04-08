@@ -2,8 +2,8 @@ package tests.generators.AkkaHttp
 
 import cats.instances.all._
 import com.twilio.swagger._
-import com.twilio.swagger.codegen.generators.AkkaHttp
-import com.twilio.swagger.codegen.{ClassDefinition, Context, ProtocolDefinitions}
+import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
 import io.swagger.parser.SwaggerParser
 import org.scalatest.{FunSuite, Matchers}
 import scala.meta._
