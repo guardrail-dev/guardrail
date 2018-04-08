@@ -62,7 +62,7 @@ val testDependencies = Seq(
 
 val codegenSettings = Seq(
   resolvers ++= Seq(
-    Resolver.url("scalameta", url("http://dl.bintray.com/scalameta/maven"))(Resolver.ivyStylePatterns)
+    Resolver.bintrayRepo("scalameta", "maven")
   ),
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta" % "2.0.1"
