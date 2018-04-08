@@ -2,8 +2,11 @@ val projectName = "guardrail-root"
 name := projectName
 organization in ThisBuild := "com.twilio"
 licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
-// Project version is defined in `version.sbt`
+// Project version is determined by sbt-git based on the most recent tag
 // Publishing information is defined in `bintray.sbt`
+
+enablePlugins(GitVersioning)
+git.useGitDescribe := true
 
 crossScalaVersions := Seq("2.11.11", "2.12.4")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
