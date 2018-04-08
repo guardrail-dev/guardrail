@@ -2,6 +2,7 @@ val projectName = "guardrail-root"
 name := projectName
 organization in ThisBuild := "com.twilio"
 version in ThisBuild := "0.33.0-SNAPSHOT"
+licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 
 crossScalaVersions := Seq("2.11.11", "2.12.4")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
