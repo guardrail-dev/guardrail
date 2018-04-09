@@ -4,3 +4,5 @@ target/
 modules/sample/target/
 modules/sample/src/main/scala/*
 !modules/sample/src/main/scala/App.scala
+
+.idea
