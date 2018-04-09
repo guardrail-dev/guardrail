@@ -8,7 +8,7 @@ licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-crossScalaVersions := Seq("2.11.11", "2.12.4")
+crossScalaVersions := Seq("2.11.11", "2.12.5")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 val akkaVersion = "10.0.10"
@@ -16,7 +16,7 @@ val catsVersion = "1.1.0"
 val catsEffectVersion = "0.10"
 val circeVersion = "0.9.2"
 val http4sVersion = "0.18.5"
-val scalatestVersion = "3.0.1"
+val scalatestVersion = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
