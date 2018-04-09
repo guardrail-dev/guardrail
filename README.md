@@ -58,6 +58,6 @@ https://github.com/twilio/guardrail-maven-plugin
 
 ### sbt plugin
 
-coming soon
+https://github.com/twilio/sbt-guardrail
 
 
