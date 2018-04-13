@@ -1,6 +1,9 @@
 Example Usage
 ===
 
+Pre-requisites:
+* Install sbt and have it in your path
+
 Client
 ---
 
