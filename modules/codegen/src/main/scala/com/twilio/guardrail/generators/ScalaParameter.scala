@@ -8,7 +8,9 @@ import cats.syntax.traverse._
 import cats.instances.all._
 
 case class RawParameterName private[generators] (value: String) { def toLit: Lit.String = Lit.String(value) }
-class ScalaParameter private[generators] (val in: Option[String], val param: Term.Param, val paramName: Term.Name, val argName: RawParameterName, val argType: Type)
+class ScalaParameter private[generators] (val in: Option[String], val param: Term.Param, val paramName: Term.Name, val argName: RawParameterName, val argType: Type) {
+  override def toString: String = s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
+}
 object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
