@@ -15,7 +15,7 @@ object ReadSwagger {
       swagger <- Option(new SwaggerParser().read(absolutePath))
     } yield rs.next(swagger))
       .getOrElse {
-        println(s"${AnsiColor.RED}Error parsing ${rs.path}...${AnsiColor.RESET} skipping")
+        println(s"${AnsiColor.RED}Requested json definition file ${rs.path}...${AnsiColor.RESET} is not found")
         Monoid.empty[T]
       }
   }
