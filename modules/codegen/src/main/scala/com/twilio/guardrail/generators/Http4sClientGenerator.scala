@@ -46,11 +46,6 @@ object Http4sClientGenerator {
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
       case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
-        def toCamelCase(s: String): String = {
-          val fromSnakeOrDashed = "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-          "^([A-Z])".r.replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
-        }
-
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] = {
           for {
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
