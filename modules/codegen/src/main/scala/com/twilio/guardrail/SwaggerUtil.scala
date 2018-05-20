@@ -297,11 +297,11 @@ object SwaggerUtil {
         Target.pure(Resolved(t"BigDecimal", None, None))
       case u: UntypedProperty =>
         Target.pure(Resolved(t"io.circe.Json", None, None))
-      case p: AbstractProperty if p.getType.toLowerCase == "integer" =>
+      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
         Target.pure(Resolved(t"BigInt", None, None))
-      case p: AbstractProperty if p.getType.toLowerCase == "number" =>
+      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
         Target.pure(Resolved(t"BigDecimal", None, None))
-      case p: AbstractProperty if p.getType.toLowerCase == "string" =>
+      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
         Target.pure(Resolved(t"String", None, None))
       case x =>
         Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
