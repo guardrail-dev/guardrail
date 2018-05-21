@@ -8,7 +8,7 @@ licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-crossScalaVersions := Seq("2.11.11", "2.12.5")
+crossScalaVersions := Seq("2.11.11", "2.12.6")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 val akkaVersion = "10.0.10"
