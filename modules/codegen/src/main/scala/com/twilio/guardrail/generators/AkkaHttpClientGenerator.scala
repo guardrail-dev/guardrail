@@ -119,12 +119,13 @@ object AkkaHttpClientGenerator {
           q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
         }
 
-        def build(methodName: String, httpMethod: HttpMethod, urlWithParams: Term, formDataParams: Option[Term], formDataNeedsMultipart: Boolean, headerParams: Term, responseTypeRef: Type, tracing: Boolean
+        def build(methodName: String, httpMethod: HttpMethod, urlWithParams: Term, formDataParams: Option[Term], textPlain: Boolean, formDataNeedsMultipart: Boolean, headerParams: Term, responseTypeRef: Type, tracing: Boolean
             )(tracingArgsPre: List[ScalaParameter], tracingArgsPost: List[ScalaParameter], pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter], formArgs: List[ScalaParameter], body: Option[ScalaParameter], headerArgs: List[ScalaParameter], extraImplicits: List[Term.Param]
             ): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] = if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod) Some((q"HttpEntity.Empty", t"HttpEntity.Strict")) else None
+          val textPlainBody: Option[Term] = if (textPlain) body.map(sp => q"TextPlain(${if (sp.required) sp.paramName else q"""${sp.paramName}.getOrElse("")"""})") else None
           val safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
@@ -135,7 +136,7 @@ object AkkaHttpClientGenerator {
             }
           }
 
-          val entity: Term = formEntity.orElse(safeBody.map(_._1)).getOrElse(q"HttpEntity.Empty")
+          val entity: Term = formEntity.orElse(textPlainBody).orElse(safeBody.map(_._1)).getOrElse(q"HttpEntity.Empty")
           val methodBody: Term = if (tracing) {
             val tracingLabel = q"""s"$${clientName}:$${methodName}""""
             q"""
@@ -172,7 +173,9 @@ object AkkaHttpClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          formDataNeedsMultipart = Option(operation.getConsumes).exists(_.contains("multipart/form-data"))
+          consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
+          textPlain = consumes.contains("text/plain")
+          formDataNeedsMultipart = consumes.contains("multipart/form-data")
 
         // Get the response type
           unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
@@ -209,7 +212,7 @@ object AkkaHttpClientGenerator {
           tracingArgsPre = if (tracing) List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder")) else List.empty
           tracingArgsPost = if (tracing) List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}")) else List.empty
           extraImplicits = List.empty
-          defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
+          defn = build(methodName, httpMethod, urlWithParams, formDataParams, textPlain, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
         } yield defn
       }
 

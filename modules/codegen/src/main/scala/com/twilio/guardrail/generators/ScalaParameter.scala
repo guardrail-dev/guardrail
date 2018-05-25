@@ -8,7 +8,7 @@ import cats.syntax.traverse._
 import cats.instances.all._
 
 case class RawParameterName private[generators] (value: String) { def toLit: Lit.String = Lit.String(value) }
-class ScalaParameter private[generators] (val in: Option[String], val param: Term.Param, val paramName: Term.Name, val argName: RawParameterName, val argType: Type) {
+class ScalaParameter private[generators] (val in: Option[String], val param: Term.Param, val paramName: Term.Name, val argName: RawParameterName, val argType: Type, val required: Boolean) {
   override def toString: String = s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 }
 object ScalaParameter {
@@ -18,12 +18,13 @@ object ScalaParameter {
   def fromParam: Term.Param => ScalaParameter = { param => fromParam(param.name.value)(param) }
   def fromParam(argName: String): Term.Param => ScalaParameter = fromParam(RawParameterName(argName))
   def fromParam(argName: RawParameterName): Term.Param => ScalaParameter = { case param@Term.Param(mods, name, decltype, default) =>
-    val tpe: Type = decltype.flatMap({
-      case Type.ByName(tpe) => Some(tpe)
-      case tpe@Type.Name(_) => Some(tpe)
+    val (tpe, required): (Type, Boolean) = decltype.flatMap({
+      case tpe@Type.Apply(Type.Name("Option"), List(_)) => Some((tpe, false))
+      case Type.ByName(tpe) => Some((tpe, true))
+      case tpe@Type.Name(_) => Some((tpe, true))
       case _ => None
-    }).getOrElse(t"Nothing")
-    new ScalaParameter(None, param, Term.Name(name.value), argName, tpe)
+    }).getOrElse((t"Nothing", true))
+    new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required)
   }
 
   def fromParameter(protocolElems: List[StrictProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
@@ -127,7 +128,7 @@ object ScalaParameter {
 
       val paramName = Term.Name(toCamelCase(parameter.getName))
       val param = param"${paramName}: ${declType}".copy(default=defaultValue)
-      new ScalaParameter(Option(parameter.getIn), param, paramName, RawParameterName(parameter.getName), declType)
+      new ScalaParameter(Option(parameter.getIn), param, paramName, RawParameterName(parameter.getName), declType, required)
     }
   }
 
@@ -144,7 +145,8 @@ object ScalaParameter {
             param.param.copy(name=escapedName),
             escapedName,
             param.argName,
-            param.argType
+            param.argType,
+            param.required
           )
         }
         else param
