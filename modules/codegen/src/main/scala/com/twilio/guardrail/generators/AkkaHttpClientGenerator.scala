@@ -172,7 +172,8 @@ object AkkaHttpClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          formDataNeedsMultipart = Option(operation.getConsumes).exists(_.contains("multipart/form-data"))
+          consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
+          formDataNeedsMultipart = consumes.contains("multipart/form-data")
 
         // Get the response type
           unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
