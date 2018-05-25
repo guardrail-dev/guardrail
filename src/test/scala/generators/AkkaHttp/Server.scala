@@ -14,6 +14,13 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
+    |  /:
+    |    get:
+    |      x-scala-package: store
+    |      operationId: getRoot
+    |      responses:
+    |        200:
+    |          description: Successful
     |  "/store/order/{order_id}":
     |    get:
     |      tags:
@@ -127,6 +134,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
 
     val handler = q"""
       trait StoreHandler {
+        def getRoot(respond: StoreResource.getRootResponse.type)(): scala.concurrent.Future[StoreResource.getRootResponse]
         def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
         def getFoo(respond: StoreResource.getFooResponse.type)(): scala.concurrent.Future[StoreResource.getFooResponse]
         def getFooBar(respond: StoreResource.getFooBarResponse.type)(bar: Long): scala.concurrent.Future[StoreResource.getFooBarResponse]
@@ -144,7 +152,9 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
           string => io.circe.Json.fromString(string).as[T].left.flatMap(err => io.circe.jawn.parse(string).flatMap(_.as[T])).fold(scala.concurrent.Future.failed _, scala.concurrent.Future.successful _)
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & path("store" / "order" / LongNumber) & parameter(Symbol("status").as[OrderStatus]) & discardEntity) {
+          (get & pathEndOrSingleSlash & discardEntity) {
+            complete(handler.getRoot(getRootResponse)())
+          } ~ (get & path("store" / "order" / LongNumber) & parameter(Symbol("status").as[OrderStatus]) & discardEntity) {
             (orderId, status) => complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))
           } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
             complete(handler.getFoo(getFooResponse)())
@@ -153,6 +163,21 @@ class AkkaHttpServerTest extends FunSuite with Matchers {
           } ~ (put & path("bar") & parameter(Symbol("bar").as[Long]) & discardEntity) {
             bar => complete(handler.putBar(putBarResponse)(bar))
           }
+        }
+        sealed abstract class getRootResponse(val statusCode: StatusCode)
+        case object getRootResponseOK extends getRootResponse(StatusCodes.OK)
+        object getRootResponse {
+          implicit val getRootTRM: ToResponseMarshaller[getRootResponse] = Marshaller { implicit ec =>
+            resp => getRootTR(resp)
+          }
+          implicit def getRootTR(value: getRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: getRootResponseOK.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+          }
+          def apply[T](value: T)(implicit ev: T => getRootResponse): getRootResponse = ev(value)
+          def OK: getRootResponse = getRootResponseOK
         }
         sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
         case class getOrderByIdResponseOK(value: Order) extends getOrderByIdResponse(StatusCodes.OK)

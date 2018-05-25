@@ -332,7 +332,7 @@ object AkkaHttpServerGenerator {
         else term
 
       (basePath.getOrElse("") + path).stripPrefix("/") match {
-        case "" => Target.pure(q"pathEnd")
+        case "" => Target.pure(q"pathEndOrSingleSlash")
         case path =>
           for {
             pathDirective <- SwaggerUtil.paths.generateUrlAkkaPathExtractors(path, pathArgs)
