@@ -49,6 +49,15 @@ object AkkaHttpGenerator {
             type HttpClient = HttpRequest => Future[HttpResponse]
             type TraceBuilder = String => HttpClient => HttpClient
 
+            class TextPlain(val value: String)
+            object TextPlain {
+              def apply(value: String): TextPlain = new TextPlain(value)
+              implicit final def textTEM: ToEntityMarshaller[TextPlain] =
+                Marshaller.withFixedContentType(ContentTypes.${Term.Name("`text/plain(UTF-8)`")}) { text =>
+                  HttpEntity(ContentTypes.${Term.Name("`text/plain(UTF-8)`")}, text.value)
+                }
+            }
+
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${jsonType}] =

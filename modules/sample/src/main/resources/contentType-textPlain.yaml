@@ -1,0 +1,39 @@
+swagger: "2.0"
+info:
+  title: 'Content-Type: text/plain spec'
+  version: 1.0.0
+host: localhost:1234
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      x-scala-package: foo
+      consumes:
+        - text/plain
+      produces:
+        - text/plain
+      parameters:
+      - in: body
+        name: body
+        schema:
+          type: string
+      responses:
+        '201':
+          description: "Created"
+  /bar:
+    post:
+      operationId: doBar
+      x-scala-package: foo
+      consumes:
+        - text/plain
+      produces:
+        - text/plain
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: "Created"
