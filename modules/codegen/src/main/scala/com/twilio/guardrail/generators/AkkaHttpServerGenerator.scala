@@ -2,7 +2,6 @@ package com.twilio.guardrail
 package generators
 
 import _root_.io.swagger.models.HttpMethod
-
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
@@ -11,8 +10,9 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.SwaggerUtil
-import com.twilio.guardrail.extract.{ScalaPackage, ServerRawResponse, ScalaTracingLabel}
-import com.twilio.guardrail.terms.server._
+import com.twilio.guardrail.extract.{ScalaPackage, ScalaTracingLabel, ServerRawResponse}
+import com.twilio.guardrail.protocol.terms.server._
+
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -168,14 +168,14 @@ object AkkaHttpServerGenerator {
               responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
             } yield {
               valueType.fold[(Defn, Defn, Case)](
-                ( q"case object ${responseTerm}                      extends ${responseSuperType}(${statusCode})"
-                , q"def ${statusCodeName}: ${responseSuperType} = ${responseTerm}"
-                , p"case r: ${responseTerm}.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+                ( q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                  q"def $statusCodeName: $responseSuperType = $responseTerm",
+                  p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
                 )
               ) { valueType =>
-                ( q"case class  ${responseName}(value: ${valueType}) extends ${responseSuperType}(${statusCode})"
-                , q"def ${statusCodeName}(value: ${valueType}): ${responseSuperType} = ${responseTerm}(value)"
-                , p"case r@${responseTerm}(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                ( q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
+                  q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
+                  p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
                 )
               }
             })

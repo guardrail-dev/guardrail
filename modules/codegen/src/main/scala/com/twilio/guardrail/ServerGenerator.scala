@@ -7,7 +7,8 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.terms.server._
+import com.twilio.guardrail.protocol.terms.server.{ServerTerm, ServerTerms}
+
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -15,6 +16,7 @@ case class Servers(servers: List[Server])
 case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
 case class RenderedRoute(route: Term, methodSig: Decl.Def, responseDefinitions: List[Defn])
+
 object ServerGenerator {
   import NelShim._
 
@@ -23,7 +25,8 @@ object ServerGenerator {
   def formatClassName(str: String): String = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[F[_]](context: Context, swagger: Swagger, frameworkImports: List[Import])(protocolElems: List[StrictProtocolElems])(implicit S: ServerTerms[F]): Free[F, Servers] = {
+  def fromSwagger[F[_]](context: Context, swagger: Swagger, frameworkImports: List[Import])(protocolElems: List[StrictProtocolElems])
+                       (implicit S: ServerTerms[F]): Free[F, Servers] = {
     import S._
 
     val paths: List[(String, Path)] = Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)

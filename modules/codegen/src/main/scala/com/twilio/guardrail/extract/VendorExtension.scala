@@ -1,5 +1,9 @@
 package com.twilio.guardrail.extract
 
+import io.swagger.models._
+import io.swagger.models.parameters._
+import io.swagger.models.properties._
+
 object VendorExtension {
   trait VendorExtensible[F] {
     def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T]
@@ -14,34 +18,34 @@ object VendorExtension {
       }
     }
 
-    implicit val defaultVendorExtensibleModel = build[io.swagger.models.Model](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleOperation = build[io.swagger.models.Operation](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleParameter = build[io.swagger.models.parameters.Parameter](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensiblePath = build[io.swagger.models.Path](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleProperty = build[io.swagger.models.properties.Property](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleResponse = build[io.swagger.models.Response](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleSwagger = build[io.swagger.models.Swagger](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleModel: VendorExtensible[Model] = build[Model](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleOperation: VendorExtensible[Operation] = build[Operation](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleParameter: VendorExtensible[Parameter] = build[Parameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensiblePath: VendorExtensible[Path] = build[Path](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleProperty: VendorExtensible[Property] = build[Property](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleResponse: VendorExtensible[Response] = build[Response](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleSwagger: VendorExtensible[Swagger] = build[Swagger](m => key => m.getVendorExtensions.get(key))
 
-    implicit val defaultVendorExtensibleArrayProperty = build[io.swagger.models.properties.ArrayProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleBaseIntegerProperty = build[io.swagger.models.properties.BaseIntegerProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleBooleanProperty = build[io.swagger.models.properties.BooleanProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleDateProperty = build[io.swagger.models.properties.DateProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleDateTimeProperty = build[io.swagger.models.properties.DateTimeProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleDecimalProperty = build[io.swagger.models.properties.DecimalProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleDoubleProperty = build[io.swagger.models.properties.DoubleProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleFloatProperty = build[io.swagger.models.properties.FloatProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleLongProperty = build[io.swagger.models.properties.LongProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleMapProperty = build[io.swagger.models.properties.MapProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleModelImpl = build[io.swagger.models.ModelImpl](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleObjectProperty = build[io.swagger.models.properties.ObjectProperty](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleStringProperty = build[io.swagger.models.properties.StringProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleArrayProperty: VendorExtensible[ArrayProperty] = build[ArrayProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleBaseIntegerProperty: VendorExtensible[BaseIntegerProperty] = build[BaseIntegerProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleBooleanProperty: VendorExtensible[BooleanProperty] = build[BooleanProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleDateProperty: VendorExtensible[DateProperty] = build[DateProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleDateTimeProperty: VendorExtensible[DateTimeProperty] = build[DateTimeProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleDecimalProperty: VendorExtensible[DecimalProperty] = build[DecimalProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleDoubleProperty: VendorExtensible[DoubleProperty] = build[DoubleProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleFloatProperty: VendorExtensible[FloatProperty] = build[FloatProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleLongProperty: VendorExtensible[LongProperty] = build[LongProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleMapProperty: VendorExtensible[MapProperty] = build[MapProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleModelImpl: VendorExtensible[ModelImpl] = build[ModelImpl](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleObjectProperty: VendorExtensible[ObjectProperty] = build[ObjectProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleStringProperty: VendorExtensible[StringProperty] = build[StringProperty](m => key => m.getVendorExtensions.get(key))
 
-    implicit val defaultVendorExtensibleCookieParameter = build[io.swagger.models.parameters.CookieParameter](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleFormParameter = build[io.swagger.models.parameters.FormParameter](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleHeaderParameter = build[io.swagger.models.parameters.HeaderParameter](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensiblePathParameter = build[io.swagger.models.parameters.PathParameter](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleQueryParameter = build[io.swagger.models.parameters.QueryParameter](m => key => m.getVendorExtensions.get(key))
-    implicit val defaultVendorExtensibleSerializableParameter = build[io.swagger.models.parameters.SerializableParameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleCookieParameter: VendorExtensible[CookieParameter] = build[CookieParameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleFormParameter: VendorExtensible[FormParameter] = build[FormParameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleHeaderParameter: VendorExtensible[HeaderParameter] = build[HeaderParameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensiblePathParameter: VendorExtensible[PathParameter] = build[PathParameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleQueryParameter: VendorExtensible[QueryParameter] = build[QueryParameter](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleSerializableParameter: VendorExtensible[SerializableParameter] = build[SerializableParameter](m => key => m.getVendorExtensions.get(key))
   }
 
   case class VendorExtensibleAdapter[F](from: F) extends AnyVal {

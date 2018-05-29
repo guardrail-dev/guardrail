@@ -1,14 +1,15 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.models._
-
 import _root_.io.swagger.models.properties.Property
 import cats.data.EitherK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
-import com.twilio.guardrail.terms.protocol._
 import java.util.Locale
+
+import com.twilio.guardrail.protocol.terms.protocol._
+
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
 import scala.language.postfixOps

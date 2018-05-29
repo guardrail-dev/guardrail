@@ -1,5 +1,4 @@
-package com.twilio.guardrail
-package terms.protocol
+package com.twilio.guardrail.protocol.terms.protocol
 
 import cats.InjectK
 

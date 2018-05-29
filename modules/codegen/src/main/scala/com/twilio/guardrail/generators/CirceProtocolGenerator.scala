@@ -6,8 +6,11 @@ import _root_.io.swagger.models.properties._
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.extract.{Default, ScalaEmptyIsNull, ScalaType}
-import com.twilio.guardrail.terms.protocol._
+import com.twilio.guardrail.terms
 import java.util.Locale
+
+import com.twilio.guardrail.protocol.terms.protocol._
+
 import scala.collection.JavaConverters._
 import scala.meta._
 

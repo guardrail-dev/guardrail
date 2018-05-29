@@ -1,9 +1,9 @@
-package com.twilio.guardrail
-package terms.server
+package com.twilio.guardrail.protocol.terms.server
 
-import _root_.io.swagger.models.{ModelImpl, Operation, Path}
-import cats.data.NonEmptyList
+import _root_.io.swagger.models.{Operation, Path}
 import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.{RenderedRoute, ServerRoute, StrictProtocolElems}
+
 import scala.meta._
 
 sealed trait ServerTerm[T]

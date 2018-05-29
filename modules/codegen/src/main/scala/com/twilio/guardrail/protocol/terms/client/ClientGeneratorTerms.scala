@@ -1,9 +1,10 @@
-package com.twilio.guardrail
-package terms.client
+package com.twilio.guardrail.protocol.terms.client
 
 import cats.InjectK
 import cats.free.Free
+import com.twilio.guardrail.StrictProtocolElems
 import com.twilio.guardrail.terms.RouteMeta
+
 import scala.meta._
 
 class ClientTerms[F[_]](implicit I: InjectK[ClientTerm, F]) {

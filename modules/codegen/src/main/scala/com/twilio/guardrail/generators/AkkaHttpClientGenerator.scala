@@ -10,17 +10,21 @@ import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.ScalaPackage
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.terms.client._
 import java.util.Locale
+
+import com.twilio.guardrail.protocol.terms.client._
+
 import scala.collection.JavaConverters._
 import scala.meta._
 
 object AkkaHttpClientGenerator {
+
   object ClientTermInterp extends FunctionK[ClientTerm, Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
+
     private[this] def toDashedCase(s: String): String = {
       val lowercased = "^[A-Z]".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
       "([A-Z])".r.replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
@@ -34,15 +38,12 @@ object AkkaHttpClientGenerator {
       )
     }
 
-    private[this] def formatHost(schemes: List[String], host: Option[String]): Term.Param = (
-      host.map {
-        case v if !v.startsWith("http") =>
-          val scheme = schemes.headOption.getOrElse("http")
-          s"${scheme}://${v}"
-        case v => v
-      }.fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
-    )
-
+    private[this] def formatHost(schemes: List[String], host: Option[String]): Term.Param = host.map {
+      case v if !v.startsWith("http") =>
+        val scheme = schemes.headOption.getOrElse("http")
+        s"$scheme://$v"
+      case v => v
+    }.fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
       case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
@@ -62,7 +63,8 @@ object AkkaHttpClientGenerator {
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
 
             result = NonEmptyList.fromList(qsArgs.toList)
-              .fold(base)({ _.foldLeft[Term](q"${base} + ${suffix}") { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+              .fold(base)({
+                _.foldLeft[Term](q"${base} + ${suffix}") { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
                   q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
                 }
               })
@@ -74,9 +76,13 @@ object AkkaHttpClientGenerator {
             None
           } else if (needsMultipart) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, v))"
+
             def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Multipart.FormData.BodyPart(${tName.toLit}, $tParamName))"
+
             def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show(v)))"
+
             def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show($tParamName)))"
+
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
               val lifter: (Term.Name, RawParameterName) => Term = param match {
                 case param"$_: Option[BodyPartEntity]" => liftOptionFileTerm _
@@ -87,12 +93,14 @@ object AkkaHttpClientGenerator {
                 case param"$_: Option[$_] = $_" => liftOptionTerm _
                 case _ => liftTerm _
               }
-                a :+ lifter(paramName, argName)
+              a :+ lifter(paramName, argName)
             }
             Some(q"List(..$args)")
           } else {
             def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"(${tName.toLit}, $tParamName.map(Formatter.show(_)))"
+
             def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"(${tName.toLit}, Some(Formatter.show($tParamName)))"
+
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
               val lifter: (Term.Name, RawParameterName) => Term = param match {
                 case param"$_: Option[$_]" => liftOptionTerm _
@@ -107,7 +115,9 @@ object AkkaHttpClientGenerator {
 
         def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
           def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) = q"$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
+
           def liftTerm(tParamName: Term.Name, tName: RawParameterName) = q"Some(RawHeader(${tName.toLit}, Formatter.show($tParamName)))"
+
           val args: List[Term] = parameters.foldLeft(List.empty[Term]) { case (a, ScalaParameter(_, param, paramName, argName, _)) =>
             val lifter: (Term.Name, RawParameterName) => Term = param match {
               case param"$_: Option[$_]" => liftOptionTerm _
@@ -120,8 +130,8 @@ object AkkaHttpClientGenerator {
         }
 
         def build(methodName: String, httpMethod: HttpMethod, urlWithParams: Term, formDataParams: Option[Term], textPlain: Boolean, formDataNeedsMultipart: Boolean, headerParams: Term, responseTypeRef: Type, tracing: Boolean
-            )(tracingArgsPre: List[ScalaParameter], tracingArgsPost: List[ScalaParameter], pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter], formArgs: List[ScalaParameter], body: Option[ScalaParameter], headerArgs: List[ScalaParameter], extraImplicits: List[Term.Param]
-            ): Defn = {
+                 )(tracingArgsPre: List[ScalaParameter], tracingArgsPost: List[ScalaParameter], pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter], formArgs: List[ScalaParameter], body: Option[ScalaParameter], headerArgs: List[ScalaParameter], extraImplicits: List[Term.Param]
+                 ): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] = if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod) Some((q"HttpEntity.Empty", t"HttpEntity.Strict")) else None
@@ -177,12 +187,12 @@ object AkkaHttpClientGenerator {
           textPlain = consumes.contains("text/plain")
           formDataNeedsMultipart = consumes.contains("multipart/form-data")
 
-        // Get the response type
+          // Get the response type
           unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
           resolvedResponseTypeRef <- SwaggerUtil.ResolvedType.resolve(unresolvedResponseTypeRef, protocolElems)
           responseTypeRef = resolvedResponseTypeRef.tpe
 
-        // Insert the method parameters
+          // Insert the method parameters
           httpMethodStr: String = httpMethod.toString.toLowerCase
           methodName = Option(operation.getOperationId()).map(splitOperationParts).map(_._2).getOrElse(s"$httpMethodStr $pathStr")
 
@@ -243,14 +253,18 @@ object AkkaHttpClientGenerator {
           )
         }
 
-        def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] = params.map({ _.map(_.name.value).map(v => Term.Assign(Term.Name(v), Term.Name(v))).to[List] }).to[List]
+        def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] = params.map({
+          _.map(_.name.value).map(v => Term.Assign(Term.Name(v), Term.Name(v))).to[List]
+        }).to[List]
+
         val ctorCall: Term.New = {
           q"""
             new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})
           """
         }
 
-        val companion: Defn.Object = q"""
+        val companion: Defn.Object =
+          q"""
             object ${Term.Name(clientName)} {
               def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}
               ..${extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)}
@@ -284,4 +298,5 @@ object AkkaHttpClientGenerator {
         Target.pure(client)
     }
   }
+
 }

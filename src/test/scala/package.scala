@@ -3,9 +3,11 @@ package com.twilio
 import _root_.io.swagger.models._
 import _root_.io.swagger.parser.SwaggerParser
 import cats.arrow.FunctionK
+import cats.free.Free
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
 import org.scalatest._
+
 import scala.collection.JavaConverters._
 import scala.meta._
 import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
@@ -14,6 +16,7 @@ import cats.implicits._
 
 package object swagger {
   def runSwaggerSpec(spec: String)(context: Context, framework: FunctionK[CodegenApplication, Target]): (ProtocolDefinitions, Clients, Servers) = runSwagger(new SwaggerParser().parse(spec))(context, framework)
+
   def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target]
       )(implicit F: FrameworkTerms[CodegenApplication], Sc: ScalaTerms[CodegenApplication], Sw: SwaggerTerms[CodegenApplication]
       ): (ProtocolDefinitions, Clients, Servers) = {

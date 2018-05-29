@@ -4,11 +4,11 @@ import _root_.io.swagger.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
+import com.twilio.guardrail.protocol.terms.client.{ClientTerm, ClientTerms}
+
 import scala.collection.JavaConverters._
 import scala.meta.{Lit, Term, Type, _}
-
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.terms.client._
 
 case class Clients(clients: List[Client])
 case class Client(pkg: List[String], clientName: String, lines: List[Stat])

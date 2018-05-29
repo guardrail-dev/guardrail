@@ -1,5 +1,4 @@
-package com.twilio.guardrail
-package terms.protocol
+package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.models.ModelImpl
 import cats.InjectK

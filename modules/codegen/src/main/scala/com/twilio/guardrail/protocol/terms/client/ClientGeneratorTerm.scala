@@ -1,8 +1,8 @@
-package com.twilio.guardrail
-package terms.client
+package com.twilio.guardrail.protocol.terms.client
 
-import _root_.io.swagger.models.{ModelImpl, Operation, Path}
+import com.twilio.guardrail.StrictProtocolElems
 import com.twilio.guardrail.terms.RouteMeta
+
 import scala.meta._
 
 sealed trait ClientTerm[T]

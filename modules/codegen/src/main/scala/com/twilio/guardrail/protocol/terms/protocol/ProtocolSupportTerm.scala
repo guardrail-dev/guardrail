@@ -1,8 +1,8 @@
-package com.twilio.guardrail
-package terms.protocol
+package com.twilio.guardrail.protocol.terms.protocol
+
+import _root_.io.swagger.models.Model
 
 import scala.meta._
-import _root_.io.swagger.models.Model
 
 case class PropMeta(clsName: String, tpe: Type)
 sealed trait ProtocolSupportTerm[T]

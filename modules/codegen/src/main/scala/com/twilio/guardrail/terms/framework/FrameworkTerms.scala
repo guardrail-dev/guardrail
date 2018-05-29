@@ -1,11 +1,8 @@
 package com.twilio.guardrail
 package terms.framework
 
-import _root_.io.swagger.models.{ModelImpl, Operation, Path}
 import cats.InjectK
-import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.generators.ScalaParameter
 
 import scala.meta._
 
