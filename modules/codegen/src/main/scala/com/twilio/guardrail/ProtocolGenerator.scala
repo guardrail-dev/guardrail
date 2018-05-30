@@ -39,13 +39,13 @@ object ProtocolGenerator {
     def validProg(enum: List[String], tpe: Type): Free[F, EnumDefinition] = {
       val elems = enum.map { elem =>
         val valueTerm = Term.Name(toPascalCase(elem))
-        (elem, valueTerm, q"${Term.Name(clsName)}.${valueTerm}")
+        (elem, valueTerm, q"${Term.Name(clsName)}.$valueTerm")
       }
       val pascalValues = elems.map(_._2)
       for {
         members <- renderMembers(clsName, elems)
         accessors = pascalValues.map({ pascalValue => q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}" }).to[List]
-        values = q"val values = Vector(..${pascalValues})"
+        values: Defn.Val = q"val values = Vector(..$pascalValues)"
         encoder <- encodeEnum(clsName)
         decoder <- decodeEnum(clsName)
 

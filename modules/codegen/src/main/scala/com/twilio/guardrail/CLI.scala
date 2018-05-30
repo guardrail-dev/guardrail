@@ -1,18 +1,15 @@
 package com.twilio.guardrail
 
-import cats.data.{EitherT, WriterT}
+import java.nio.file.Path
 import cats.instances.all._
-import cats.syntax.applicative._
-import cats.syntax.either._
-import cats.syntax.traverse._
 import cats.syntax.show._
-import cats.syntax.functor._
+import cats.syntax.traverse._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{LogLevel, LogLevels}
+
 import scala.io.AnsiColor
-import java.nio.file.Path
 
 object CLICommon {
   def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
@@ -46,10 +43,10 @@ object CLICommon {
           unsafePrintHelp()
           fallback
         case UnknownFramework(name) =>
-          println(s"${AnsiColor.RED}Unknown framework specified: ${name}${AnsiColor.RESET}")
+          println(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
           fallback
         case UnparseableArgument(name, message) =>
-          println(s"${AnsiColor.RED}Unparseable argument: --${name}, ${message}")
+          println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
           fallback
       }, _.toList)
 
@@ -62,7 +59,7 @@ object CLICommon {
     val (logger, paths) = deferred.map({ rs =>
       ReadSwagger.unsafeReadSwagger(rs)
         .fold({ err =>
-          println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
+          println(s"${AnsiColor.RED}Error: $err${AnsiColor.RESET}")
           unsafePrintHelp()
           List.empty[Path]
         }, _.map(WriteTree.unsafeWriteTree))

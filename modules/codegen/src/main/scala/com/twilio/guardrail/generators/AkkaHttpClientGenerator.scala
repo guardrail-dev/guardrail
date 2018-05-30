@@ -1,18 +1,14 @@
 package com.twilio.guardrail
 package generators
 
+import java.util.Locale
+
 import _root_.io.swagger.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
-import cats.instances.all._
 import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
-import com.twilio.guardrail.extract.ScalaPackage
-import com.twilio.guardrail.terms.RouteMeta
-import java.util.Locale
-
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.terms.RouteMeta
 
 import scala.collection.JavaConverters._
 import scala.meta._
@@ -46,13 +42,13 @@ object AkkaHttpClientGenerator {
     }.fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
-      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
+      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] = {
           for {
-            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
+            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
             base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
 
-            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
+            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: $qsArgs")
 
             suffix = if (path.contains("?")) {
               Lit.String("&")
@@ -62,10 +58,10 @@ object AkkaHttpClientGenerator {
 
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
 
-            result = NonEmptyList.fromList(qsArgs.toList)
+            result = NonEmptyList.fromList(qsArgs)
               .fold(base)({
-                _.foldLeft[Term](q"${base} + ${suffix}") { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
-                  q""" $a + Formatter.addArg(${Lit.String(argName.value)}, ${paramName})"""
+                _.foldLeft[Term](q"$base + $suffix") { case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                  q""" $a + Formatter.addArg(${Lit.String(argName.value)}, $paramName)"""
                 }
               })
           } yield result
@@ -208,12 +204,12 @@ object AkkaHttpClientGenerator {
           bodyArgs = filterParamBy("body").headOption
           formArgs = filterParamBy("formData")
 
-          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
+          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: $pathArgs")
 
           // Generate the url with path, query parameters
           urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
-          _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
+          _ <- Target.log.debug("generateClientOperation")(s"Generated: $urlWithParams")
           // Generate FormData arguments
           formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
           // Generate header arguments
@@ -224,7 +220,6 @@ object AkkaHttpClientGenerator {
           extraImplicits = List.empty
           defn = build(methodName, httpMethod, urlWithParams, formDataParams, textPlain, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
         } yield defn
-      }
 
       case GetImports(tracing) => Target.pure(List.empty)
 
@@ -248,7 +243,7 @@ object AkkaHttpClientGenerator {
 
           List(
             q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(schemes, host)}, ..${tracingParams})($iec, $imat): ${tpe} = ${ctorCall}
+              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(schemes, host)}, ..$tracingParams)($iec, $imat): $tpe = $ctorCall
             """
           )
         }
@@ -266,7 +261,7 @@ object AkkaHttpClientGenerator {
         val companion: Defn.Object =
           q"""
             object ${Term.Name(clientName)} {
-              def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}
+              def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall
               ..${extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)}
             }
           """
@@ -275,7 +270,7 @@ object AkkaHttpClientGenerator {
       case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, tracing) =>
         val client =
           q"""
-            class ${Type.Name(clientName)}(...${ctorArgs}) {
+            class ${Type.Name(clientName)}(...$ctorArgs) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
               private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {

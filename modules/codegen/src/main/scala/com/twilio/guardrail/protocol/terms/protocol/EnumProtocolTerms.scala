@@ -19,7 +19,7 @@ class EnumProtocolTerms[F[_]](implicit I: InjectK[EnumProtocolTerm, F]) {
     Free.inject[EnumProtocolTerm, F](DecodeEnum(clsName))
   def renderClass(clsName: String, tpe: Type): Free[F, Defn.Class] =
     Free.inject[EnumProtocolTerm, F](RenderClass(clsName, tpe))
-  def renderCompanion(clsName: String, members: Defn.Object, accessors: List[meta.Defn.Val], values: meta.Defn.Val, encoder: Defn.Val, decoder: Defn.Val): Free[F, Defn.Object] =
+  def renderCompanion(clsName: String, members: Defn.Object, accessors: List[Defn.Val], values: Defn.Val, encoder: Defn.Val, decoder: Defn.Val): Free[F, Defn.Object] =
     Free.inject[EnumProtocolTerm, F](RenderCompanion(clsName, members, accessors, values, encoder, decoder))
 }
 

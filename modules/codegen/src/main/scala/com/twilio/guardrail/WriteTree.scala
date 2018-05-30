@@ -21,22 +21,18 @@ object WriteTree {
           .filterNot(Function.const(data.length == exists.length))
 
       diffIdx.foreach { diffIdx =>
-          val existSample = new String(exists, UTF_8).drop(Math.max(diffIdx - 10, diffIdx)).take(50).replace("\n", "\\n")
-          val newSample = new String(data, UTF_8).drop(Math.max(diffIdx - 10, diffIdx)).take(50).replace("\n", "\\n")
+          val existSample = new String(exists, UTF_8).slice(Math.max(diffIdx - 10, diffIdx), Math.max(diffIdx - 10, diffIdx) + 50).replace("\n", "\\n")
+          val newSample = new String(data, UTF_8).slice(Math.max(diffIdx - 10, diffIdx), Math.max(diffIdx - 10, diffIdx) + 50).replace("\n", "\\n")
 
           System.err.println(s"""|
           |${AnsiColor.RED}Warning:${AnsiColor.RESET}
-          |  The file ${path} contained different content than was expected.
+          |  The file $path contained different content than was expected.
           |
-          |  Existing file: ${existSample}
-          |  New file     : ${newSample}
+          |  Existing file: $existSample
+          |  New file     : $newSample
           |""".stripMargin)
       }
     }
-    Files.write(
-      path, data
-      , StandardOpenOption.CREATE
-      , StandardOpenOption.TRUNCATE_EXISTING
-    )
+    Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
   }
 }

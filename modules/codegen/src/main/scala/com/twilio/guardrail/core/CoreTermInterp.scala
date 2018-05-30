@@ -26,7 +26,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
           case "http4s" => CoreTarget.pure(Http4s)
           case unknown => CoreTarget.error(UnknownFramework(unknown))
         })
-        _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: ${framework}")
+        _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: $framework")
       } yield framework
 
     case ValidateArgs(parsed) =>
@@ -87,10 +87,10 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         context = args.context
         customImports <- args.imports.map(x =>
           for {
-            _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse ${x} as an import directive")
+            _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse $x as an import directive")
             importer <- x.parse[Importer].fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
           } yield Import(List(importer))
-        ).toList.sequence[CoreTarget, Import]
+        ).sequence[CoreTarget, Import]
         _ <- CoreTarget.log.debug("core", "processArgSet")("Finished processing arguments")
       } yield {
         ReadSwagger(Paths.get(specPath), { swagger =>
