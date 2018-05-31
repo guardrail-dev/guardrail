@@ -14,5 +14,6 @@ class SwaggerTerms[F[_]](implicit I: InjectK[SwaggerTerm, F]) {
     Free.inject[SwaggerTerm, F](GetClassName(operation))
 }
 object SwaggerTerms {
-  implicit def swaggerTerm[F[_]](implicit I: InjectK[SwaggerTerm, F]): SwaggerTerms[F] = new SwaggerTerms[F]
+  implicit def swaggerTerm[F[_]](implicit I: InjectK[SwaggerTerm, F]): SwaggerTerms[F] =
+    new SwaggerTerms[F]
 }

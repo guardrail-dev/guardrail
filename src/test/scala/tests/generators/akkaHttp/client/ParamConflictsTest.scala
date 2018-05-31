@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 
 import scala.meta._
 
-class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner{
+class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger = s"""
     |swagger: "2.0"

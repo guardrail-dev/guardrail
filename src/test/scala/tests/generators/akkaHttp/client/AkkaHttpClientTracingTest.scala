@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 
 import scala.meta._
 
-class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecRunner{
+class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Manage child tracing span") {
     val swagger = s"""
@@ -33,7 +33,8 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |          description: Success
       |""".stripMargin
 
-    val (_, Clients(Client(_, _, statements) :: _), _) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
+    val (_, Clients(Client(_, _, statements) :: _), _) =
+      runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -87,7 +88,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing=true), AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

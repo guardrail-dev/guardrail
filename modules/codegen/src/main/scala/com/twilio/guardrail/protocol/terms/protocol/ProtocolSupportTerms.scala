@@ -17,5 +17,6 @@ class ProtocolSupportTerms[F[_]](implicit I: InjectK[ProtocolSupportTerm, F]) {
     Free.inject[ProtocolSupportTerm, F](PackageObjectContents())
 }
 object ProtocolSupportTerms {
-  implicit def protocolSupportTerms[F[_]](implicit I: InjectK[ProtocolSupportTerm, F]): ProtocolSupportTerms[F] = new ProtocolSupportTerms[F]
+  implicit def protocolSupportTerms[F[_]](implicit I: InjectK[ProtocolSupportTerm, F]): ProtocolSupportTerms[F] =
+    new ProtocolSupportTerms[F]
 }

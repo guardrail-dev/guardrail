@@ -51,7 +51,7 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
     |      object_property:
     |        type: object
     |""".stripMargin
-/*
+  /*
     |      ref_property:
     |        "$$ref": "#/definitions/ref_target_property"
     |      ref_target_property:
@@ -60,7 +60,7 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
     |        type: array
     |        items:
     |          "$$ref": "#/definitions/ref_target_property"
-*/
+   */
 
   test("Render all primitive types correctly") {
     val (
@@ -68,7 +68,6 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
-
 
     val definition = q"""
       case class Something(

@@ -68,7 +68,6 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |        type: object
     |""".stripMargin
 
-
   test("Generate JSON alias definitions") {
     val (
       ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _),

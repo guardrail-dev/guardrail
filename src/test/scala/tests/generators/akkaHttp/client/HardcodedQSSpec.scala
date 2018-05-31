@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 
 import scala.meta._
 
-class HardcodedQSSpec extends FunSuite with Matchers with SwaggerSpecRunner{
+class HardcodedQSSpec extends FunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""
     |swagger: "2.0"
     |info:

@@ -10,7 +10,8 @@ object ScalaGenerator {
   object ScalaInterp extends (ScalaTerm ~> Target) {
     def apply[T](term: ScalaTerm[T]): Target[T] = term match {
       case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
-        val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        val pkg: Term.Ref =
+          pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
         Target.pure(
           source"""
             package ${pkg}
@@ -89,7 +90,8 @@ object ScalaGenerator {
         )
 
       case RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits) =>
-        val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        val pkg: Term.Ref =
+          pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
         Target.pure(
           source"""
             package ${pkg}

@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 
 import scala.meta._
 
-class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRunner{
+class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger = s"""
     |swagger: "2.0"
@@ -66,7 +66,8 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
       Clients(Client(_, _, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
-    val List(clientCmp, clientCls) = statements.dropWhile(_.isInstanceOf[Import])
+    val List(clientCmp, clientCls) =
+      statements.dropWhile(_.isInstanceOf[Import])
 
     val definition = q"""
       case class propRef(param: Option[Long] = None, array: Option[IndexedSeq[Long]] = None, arrayArray: Option[IndexedSeq[IndexedSeq[Long]]] = None)

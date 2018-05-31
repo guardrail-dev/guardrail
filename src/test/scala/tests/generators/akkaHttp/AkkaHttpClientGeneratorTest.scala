@@ -115,7 +115,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    tags should equal (Seq("store"))
+    tags should equal(Seq("store"))
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -165,9 +165,9 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
       _,
       Clients(List(Client(tags, className, statements))),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(framework=Some("akka-http"), tracing=true), AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), AkkaHttp)
 
-    tags should equal (Seq("store"))
+    tags should equal(Seq("store"))
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

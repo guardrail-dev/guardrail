@@ -12,5 +12,6 @@ class ArrayProtocolTerms[F[_]](implicit I: InjectK[ArrayProtocolTerm, F]) {
 }
 
 object ArrayProtocolTerms {
-  implicit def arrayProtocolTerms[F[_]](implicit I: InjectK[ArrayProtocolTerm, F]): ArrayProtocolTerms[F] = new ArrayProtocolTerms[F]
+  implicit def arrayProtocolTerms[F[_]](implicit I: InjectK[ArrayProtocolTerm, F]): ArrayProtocolTerms[F] =
+    new ArrayProtocolTerms[F]
 }

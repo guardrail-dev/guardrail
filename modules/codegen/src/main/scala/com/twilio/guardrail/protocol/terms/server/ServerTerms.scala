@@ -13,15 +13,25 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
-  def buildTracingFields(operation: Operation, className: List[String], tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
+  def buildTracingFields(operation: Operation,
+                         className: List[String],
+                         tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
     Free.inject(BuildTracingFields(operation, className, tracing))
-  def generateRoute(resourceName: String, basePath: Option[String], tracingFields: Option[(ScalaParameter, Term)], responseDefinitions: List[Defn], protocolElems: List[StrictProtocolElems])(route: ServerRoute): Free[F, RenderedRoute] =
+  def generateRoute(resourceName: String,
+                    basePath: Option[String],
+                    tracingFields: Option[(ScalaParameter, Term)],
+                    responseDefinitions: List[Defn],
+                    protocolElems: List[StrictProtocolElems])(route: ServerRoute): Free[F, RenderedRoute] =
     Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
   def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]): Free[F, List[Defn]] =
     Free.inject(GenerateResponseDefinitions(operation, protocolElems))
-  def renderClass(resourceName: String, handlerName: String, combinedRouteTerms: Term, extraRouteParams: List[Term.Param], responseDefinitions: List[Defn]): Free[F, Stat] =
+  def renderClass(resourceName: String,
+                  handlerName: String,
+                  combinedRouteTerms: Term,
+                  extraRouteParams: List[Term.Param],
+                  responseDefinitions: List[Defn]): Free[F, Stat] =
     Free.inject(RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions))
   def renderHandler(handlerName: String, methodSigs: List[Decl.Def]) =
     Free.inject(RenderHandler(handlerName, methodSigs))
@@ -32,5 +42,6 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
 }
 
 object ServerTerms {
-  implicit def serverTerms[F[_]](implicit I: InjectK[ServerTerm, F]): ServerTerms[F] = new ServerTerms[F]
+  implicit def serverTerms[F[_]](implicit I: InjectK[ServerTerm, F]): ServerTerms[F] =
+    new ServerTerms[F]
 }

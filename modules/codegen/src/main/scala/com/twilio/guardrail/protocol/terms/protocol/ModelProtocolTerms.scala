@@ -11,7 +11,9 @@ import scala.meta._
 class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
   def extractProperties(swagger: ModelImpl): Free[F, Either[String, List[(String, Property)]]] =
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
-  def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(name: String, prop: Property): Free[F, ProtocolParameter] =
+  def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(
+      name: String,
+      prop: Property): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
   def renderDTOClass(clsName: String, terms: List[Term.Param]): Free[F, Defn.Class] =
     Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms))
@@ -23,5 +25,6 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
     Free.inject[ModelProtocolTerm, F](RenderDTOCompanion(clsName, deps, encoder, decoder))
 }
 object ModelProtocolTerms {
-  implicit def modelProtocolTerm[F[_]](implicit I: InjectK[ModelProtocolTerm, F]): ModelProtocolTerms[F] = new ModelProtocolTerms[F]
+  implicit def modelProtocolTerm[F[_]](implicit I: InjectK[ModelProtocolTerm, F]): ModelProtocolTerms[F] =
+    new ModelProtocolTerms[F]
 }

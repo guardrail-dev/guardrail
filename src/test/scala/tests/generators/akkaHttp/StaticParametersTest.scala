@@ -32,7 +32,8 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
     |""".stripMargin
 
   test("Should produce static parameter constraints") {
-    val (_, _, Servers(Server(_, _, genHandler :: genResource :: Nil) :: Nil)) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val (_, _, Servers(Server(_, _, genHandler :: genResource :: Nil) :: Nil)) =
+      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler = q"""
       trait Handler {

@@ -14,7 +14,8 @@ trait ScalaMetaMatchers {
     }
   }
 
-  def matchStructure(right: Term): StructureMatcher = new StructureMatcher(right)
+  def matchStructure(right: Term): StructureMatcher =
+    new StructureMatcher(right)
 }
 
 object ScalaMetaMatchers extends ScalaMetaMatchers

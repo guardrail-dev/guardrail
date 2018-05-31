@@ -126,7 +126,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    tags should equal (Seq("store"))
+    tags should equal(Seq("store"))
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

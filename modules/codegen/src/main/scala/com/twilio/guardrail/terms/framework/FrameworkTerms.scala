@@ -14,5 +14,6 @@ class FrameworkTerms[F[_]](implicit I: InjectK[FrameworkTerm, F]) {
 }
 
 object FrameworkTerms {
-  implicit def serverTerms[F[_]](implicit I: InjectK[FrameworkTerm, F]): FrameworkTerms[F] = new FrameworkTerms[F]
+  implicit def serverTerms[F[_]](implicit I: InjectK[FrameworkTerm, F]): FrameworkTerms[F] =
+    new FrameworkTerms[F]
 }

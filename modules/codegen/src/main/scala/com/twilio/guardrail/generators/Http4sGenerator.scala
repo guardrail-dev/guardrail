@@ -18,19 +18,21 @@ import scala.meta._
 object Http4sGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm, Target] {
     def apply[T](term: FrameworkTerm[T]): Target[T] = term match {
-      case GetFrameworkImports(tracing) => Target.pure(List(
-        q"import cats.data.EitherT",
-        q"import cats.implicits._",
-        q"import cats.effect.IO",
-        q"import cats.effect.Effect",
-        q"import org.http4s._",
-        q"import org.http4s.circe._",
-        q"import org.http4s.client._",
-        q"import org.http4s.client.blaze._",
-        q"import org.http4s.dsl.io.Path",
-        q"import org.http4s.multipart._",
-        q"import scala.language.implicitConversions"
-      ))
+      case GetFrameworkImports(tracing) =>
+        Target.pure(
+          List(
+            q"import cats.data.EitherT",
+            q"import cats.implicits._",
+            q"import cats.effect.IO",
+            q"import cats.effect.Effect",
+            q"import org.http4s._",
+            q"import org.http4s.circe._",
+            q"import org.http4s.client._",
+            q"import org.http4s.client.blaze._",
+            q"import org.http4s.dsl.io.Path",
+            q"import org.http4s.multipart._",
+            q"import scala.language.implicitConversions"
+          ))
 
       case GetFrameworkImplicits() =>
         val jsonType: Type = t"io.circe.Json"

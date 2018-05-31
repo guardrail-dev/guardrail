@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 
 import scala.meta._
 
-class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner{
+class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger = s"""
     |swagger: "2.0"

@@ -273,7 +273,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing=true), AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val handler = q"""
       trait BazHandler {

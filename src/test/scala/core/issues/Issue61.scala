@@ -4,7 +4,18 @@ import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger._
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{ClassDefinition, Client, ClientGenerator, Clients, CodegenApplication, Context, ProtocolDefinitions, ProtocolGenerator, RandomType, Target}
+import com.twilio.guardrail.{
+  ClassDefinition,
+  Client,
+  ClientGenerator,
+  Clients,
+  CodegenApplication,
+  Context,
+  ProtocolDefinitions,
+  ProtocolGenerator,
+  RandomType,
+  Target
+}
 import org.scalatest.{FunSuite, Matchers}
 import support.SwaggerSpecRunner
 

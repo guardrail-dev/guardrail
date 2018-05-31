@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 
 import scala.meta._
 
-class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
+class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger = s"""
     |swagger: "2.0"
@@ -71,7 +71,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    tags should equal (Seq("dashy-package"))
+    tags should equal(Seq("dashy-package"))
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -88,13 +88,15 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
             Left(Left(e))
         }))
       }
-      def ${Term.Name("`dashy-op-id`")}(${Term.Name("dashyParameter")}: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
+      def ${Term.Name("`dashy-op-id`")}(${Term.Name("dashyParameter")}: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type
+      .Name("`dashy-class`")}] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
         })
       }
-      def ${Term.Name("`postDashy-op-id`")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type.Name("`dashy-class`")}] = {
+      def ${Term.Name("`postDashy-op-id`")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type
+      .Name("`dashy-class`")}] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
@@ -109,7 +111,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
     cls.toString should include("def `dashy-op-id`")
     cls.toString should include("dashyParameter: String")
     cls.toString should include("\"dashy-parameter\", dashyParameter")
-    cls.toString shouldNot include ("``")
+    cls.toString shouldNot include("``")
 
     // Note regarding: def ${Term.Name("post /dashy-route")}
     //   This matches the expected behavior of scala.meta regarding terms that contain spaces.
@@ -119,7 +121,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
     //   This behavior may change in scalameta 2.0.0+
     cls.toString should include("def `postDashy-op-id`(dashyParameter")
 
-    cmp.toString shouldNot include ("``")
+    cmp.toString shouldNot include("``")
   }
 
   test("Ensure dtos are generated with escapes") {
@@ -136,25 +138,27 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
     object ${Term.Name("`dashy-class`")} {
       implicit val ${Pat.Var(Term.Name("`encodedashy-class`"))} = {
         val readOnlyKeys = Set[String]()
-        Encoder.forProduct1("dashy-param")((o: ${Type.Name("`dashy-class`")}) => o.${Term.Name("`dashy-param`")}).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+        Encoder.forProduct1("dashy-param")((o: ${Type.Name("`dashy-class`")}) => o.${Term
+      .Name("`dashy-param`")}).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
       }
-      implicit val ${Pat.Var(Term.Name("`decodedashy-class`"))} = Decoder.forProduct1("dashy-param")(${Term.Name("`dashy-class`")}.apply _)
+      implicit val ${Pat.Var(Term.Name("`decodedashy-class`"))} = Decoder.forProduct1("dashy-param")(${Term
+      .Name("`dashy-class`")}.apply _)
     }
     """
 
     cls.structure should equal(definition.structure)
     cls.toString should include("case class `dashy-class`")
     cls.toString should include("`dashy-param`")
-    cls.toString shouldNot include ("``")
+    cls.toString shouldNot include("``")
 
     cmp.structure should equal(companion.structure)
-    cmp.toString should include ("`encodedashy-class`")
-    cmp.toString should include ("`decodedashy-class`")
-    cmp.toString should include ("(`dashy-class`.apply _)")
-    cmp.toString shouldNot include (".dashy-")
-    cmp.toString shouldNot include ("[dashy-")
-    cmp.toString shouldNot include ("= dashy-")
-    cmp.toString shouldNot include ("``")
+    cmp.toString should include("`encodedashy-class`")
+    cmp.toString should include("`decodedashy-class`")
+    cmp.toString should include("(`dashy-class`.apply _)")
+    cmp.toString shouldNot include(".dashy-")
+    cmp.toString shouldNot include("[dashy-")
+    cmp.toString shouldNot include("= dashy-")
+    cmp.toString shouldNot include("``")
   }
 
   test("Ensure enums are generated with escapes") {
@@ -181,27 +185,30 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner{
       val DashyValueC: ${Type.Name("`dashy-enum`")} = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
       def parse(value: String): Option[${Type.Name("`dashy-enum`")}] = values.find(_.value == value)
-      implicit val ${Pat.Var(Term.Name("`encodedashy-enum`"))}: Encoder[${Type.Name("`dashy-enum`")}] = Encoder[String].contramap(_.value)
-      implicit val ${Pat.Var(Term.Name("`decodedashy-enum`"))}: Decoder[${Type.Name("`dashy-enum`")}] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
-      implicit val ${Pat.Var(Term.Name("`addPathdashy-enum`"))}: AddPath[${Type.Name("`dashy-enum`")}] = AddPath.build(_.value)
+      implicit val ${Pat.Var(Term.Name("`encodedashy-enum`"))}: Encoder[${Type
+      .Name("`dashy-enum`")}] = Encoder[String].contramap(_.value)
+      implicit val ${Pat.Var(Term.Name("`decodedashy-enum`"))}: Decoder[${Type
+      .Name("`dashy-enum`")}] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
+      implicit val ${Pat.Var(Term.Name("`addPathdashy-enum`"))}: AddPath[${Type
+      .Name("`dashy-enum`")}] = AddPath.build(_.value)
       implicit val ${Pat.Var(Term.Name("`showdashy-enum`"))}: Show[${Type.Name("`dashy-enum`")}] = Show.build(_.value)
     }
     """
 
     cls.structure should equal(definition.structure)
     cls.toString should include("sealed abstract class `dashy-enum`")
-    cls.toString shouldNot include ("``")
+    cls.toString shouldNot include("``")
 
     cmp.structure should equal(companion.structure)
-    cmp.toString should include ("val DashyValueA")
-    cmp.toString should include ("case object DashyValueB")
-    cmp.toString should include ("`encodedashy-enum`")
-    cmp.toString should include ("`decodedashy-enum`")
-    cmp.toString should include ("def parse(value: String): Option[`dashy-enum`]")
-    cmp.toString should include ("DashyValueC")
-    cmp.toString shouldNot include (".dashy-")
-    cmp.toString shouldNot include ("[dashy-")
-    cmp.toString shouldNot include ("= dashy-")
-    cmp.toString shouldNot include ("``")
+    cmp.toString should include("val DashyValueA")
+    cmp.toString should include("case object DashyValueB")
+    cmp.toString should include("`encodedashy-enum`")
+    cmp.toString should include("`decodedashy-enum`")
+    cmp.toString should include("def parse(value: String): Option[`dashy-enum`]")
+    cmp.toString should include("DashyValueC")
+    cmp.toString shouldNot include(".dashy-")
+    cmp.toString shouldNot include("[dashy-")
+    cmp.toString shouldNot include("= dashy-")
+    cmp.toString shouldNot include("``")
   }
 }

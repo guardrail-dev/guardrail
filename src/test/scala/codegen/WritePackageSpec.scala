@@ -60,34 +60,46 @@ class WritePackageSpec extends FunSuite with Matchers {
   }
 
   test("CLI should provide sane defaults for paths") {
-    val args = NonEmptyList(Args.empty.copy(
-      kind=CodegenTarget.Client
-    , specPath=Some("/tmp/foo.json")
-    , outputPath=Some("/tmp/foo")
-    , packageName=Some(List("com", "twilio", "example", "clients"))
-    , context=Context.empty.copy(framework=Some("akka-http"))
-    ), List.empty)
+    val args = NonEmptyList(
+      Args.empty.copy(
+        kind = CodegenTarget.Client,
+        specPath = Some("/tmp/foo.json"),
+        outputPath = Some("/tmp/foo"),
+        packageName = Some(List("com", "twilio", "example", "clients")),
+        context = Context.empty.copy(framework = Some("akka-http"))
+      ),
+      List.empty
+    )
 
-    val result: List[WriteTree] = CoreTarget.unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp)).toList.flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
+    val result: List[WriteTree] = CoreTarget
+      .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
+      .toList
+      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
     val paths = result.map(_.path)
 
-    val fooPath = Paths.get("/tmp/foo/com/twilio/example/clients/definitions/Foo.scala")
+    val fooPath =
+      Paths.get("/tmp/foo/com/twilio/example/clients/definitions/Foo.scala")
     paths should contain(fooPath)
 
-    val barPath = Paths.get("/tmp/foo/com/twilio/example/clients/definitions/Bar.scala")
+    val barPath =
+      Paths.get("/tmp/foo/com/twilio/example/clients/definitions/Bar.scala")
     paths should contain(barPath)
 
-    val pkgPath = Paths.get("/tmp/foo/com/twilio/example/clients/definitions/package.scala")
+    val pkgPath =
+      Paths.get("/tmp/foo/com/twilio/example/clients/definitions/package.scala")
     paths should contain(pkgPath)
 
-    val clientPath = Paths.get("/tmp/foo/com/twilio/example/clients/foo/FooClient.scala")
+    val clientPath =
+      Paths.get("/tmp/foo/com/twilio/example/clients/foo/FooClient.scala")
     paths should contain(clientPath)
 
-    val implicitsPath = Paths.get("/tmp/foo/com/twilio/example/clients/Implicits.scala")
+    val implicitsPath =
+      Paths.get("/tmp/foo/com/twilio/example/clients/Implicits.scala")
     paths should contain(implicitsPath)
 
-    val frameworkImplicitsPath = Paths.get("/tmp/foo/com/twilio/example/clients/AkkaHttpImplicits.scala")
+    val frameworkImplicitsPath =
+      Paths.get("/tmp/foo/com/twilio/example/clients/AkkaHttpImplicits.scala")
     paths should contain(frameworkImplicitsPath)
 
     val allPaths = Set(fooPath, barPath, pkgPath, clientPath, implicitsPath, frameworkImplicitsPath)
@@ -96,15 +108,21 @@ class WritePackageSpec extends FunSuite with Matchers {
   }
 
   test("CLI properly generates all WriteTrees") {
-    val args = NonEmptyList(Args.empty.copy(
-      kind=CodegenTarget.Client
-    , specPath=Some("/tmp/foo.json")
-    , outputPath=Some("/tmp/foo")
-    , packageName=Some(List("base"))
-    , context=Context.empty.copy(framework=Some("akka-http"))
-    ), List.empty)
+    val args = NonEmptyList(
+      Args.empty.copy(
+        kind = CodegenTarget.Client,
+        specPath = Some("/tmp/foo.json"),
+        outputPath = Some("/tmp/foo"),
+        packageName = Some(List("base")),
+        context = Context.empty.copy(framework = Some("akka-http"))
+      ),
+      List.empty
+    )
 
-    val result: List[WriteTree] = CoreTarget.unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp)).toList.flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
+    val result: List[WriteTree] = CoreTarget
+      .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
+      .toList
+      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
     val paths = result.map(_.path)
 
@@ -128,7 +146,8 @@ class WritePackageSpec extends FunSuite with Matchers {
     paths should contain(implicitsPath)
     extractPackage(implicitsPath, result).structure shouldBe q"base".structure
 
-    val frameworkImplicitsPath = Paths.get("/tmp/foo/base/AkkaHttpImplicits.scala")
+    val frameworkImplicitsPath =
+      Paths.get("/tmp/foo/base/AkkaHttpImplicits.scala")
     paths should contain(frameworkImplicitsPath)
     extractPackage(frameworkImplicitsPath, result).structure shouldBe q"base".structure
 
