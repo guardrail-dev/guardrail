@@ -18,21 +18,23 @@ import scala.meta._
 object AkkaHttpGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm, Target] {
     def apply[T](term: FrameworkTerm[T]): Target[T] = term match {
-      case GetFrameworkImports(tracing) => Target.pure(List(
-        q"import akka.http.scaladsl.model._"
-      , q"import akka.http.scaladsl.model.headers.RawHeader"
-      , q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}"
-      , q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}"
-      , q"import akka.http.scaladsl.server.Directives._"
-      , q"import akka.http.scaladsl.server.{Directive, Directive0, Route}"
-      , q"import akka.http.scaladsl.util.FastFuture"
-      , q"import akka.stream.Materializer"
-      , q"import akka.stream.scaladsl.Source"
-      , q"import akka.util.ByteString"
-      , q"import cats.data.EitherT"
-      , q"import scala.concurrent.{ExecutionContext, Future}"
-      , q"import scala.language.implicitConversions"
-      ))
+      case GetFrameworkImports(tracing) =>
+        Target.pure(
+          List(
+            q"import akka.http.scaladsl.model._",
+            q"import akka.http.scaladsl.model.headers.RawHeader",
+            q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}",
+            q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
+            q"import akka.http.scaladsl.server.Directives._",
+            q"import akka.http.scaladsl.server.{Directive, Directive0, Route}",
+            q"import akka.http.scaladsl.util.FastFuture",
+            q"import akka.stream.Materializer",
+            q"import akka.stream.scaladsl.Source",
+            q"import akka.util.ByteString",
+            q"import cats.data.EitherT",
+            q"import scala.concurrent.{ExecutionContext, Future}",
+            q"import scala.language.implicitConversions"
+          ))
 
       case GetFrameworkImplicits() =>
         val jsonType: Type = t"io.circe.Json"
@@ -53,16 +55,20 @@ object AkkaHttpGenerator {
             object TextPlain {
               def apply(value: String): TextPlain = new TextPlain(value)
               implicit final def textTEM: ToEntityMarshaller[TextPlain] =
-                Marshaller.withFixedContentType(ContentTypes.${Term.Name("`text/plain(UTF-8)`")}) { text =>
-                  HttpEntity(ContentTypes.${Term.Name("`text/plain(UTF-8)`")}, text.value)
+                Marshaller.withFixedContentType(ContentTypes.${Term
+          .Name("`text/plain(UTF-8)`")}) { text =>
+                  HttpEntity(ContentTypes.${Term
+          .Name("`text/plain(UTF-8)`")}, text.value)
                 }
             }
 
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${jsonType}] =
-              Marshaller.withFixedContentType(MediaTypes.${Term.Name("`application/json`")}) { json =>
-                HttpEntity(MediaTypes.${Term.Name("`application/json`")}, printer.pretty(json))
+              Marshaller.withFixedContentType(MediaTypes.${Term
+          .Name("`application/json`")}) { json =>
+                HttpEntity(MediaTypes.${Term
+          .Name("`application/json`")}, printer.pretty(json))
               }
 
             implicit final def jsonEntityMarshaller[A](

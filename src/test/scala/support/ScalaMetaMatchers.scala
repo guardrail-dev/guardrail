@@ -8,13 +8,14 @@ trait ScalaMetaMatchers {
     def apply(left: Term): MatchResult = {
       MatchResult(
         left.structure == right.structure,
-        s"""${left} did not match structure ${right}""",
-        s"""${left} matched structure ${right}"""
+        s"""$left did not match structure $right""",
+        s"""$left matched structure $right"""
       )
     }
   }
 
-  def matchStructure(right: Term): StructureMatcher = new StructureMatcher(right)
+  def matchStructure(right: Term): StructureMatcher =
+    new StructureMatcher(right)
 }
 
 object ScalaMetaMatchers extends ScalaMetaMatchers

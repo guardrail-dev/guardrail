@@ -18,9 +18,11 @@ class CoreTerms[F[_]](implicit I: InjectK[CoreTerm, F]) {
     Free.inject[CoreTerm, F](ParseArgs(args, defaultFramework))
   def validateArgs(parsed: List[Args]): Free[F, NonEmptyList[Args]] =
     Free.inject[CoreTerm, F](ValidateArgs(parsed))
-  def processArgSet(targetInterpreter: FunctionK[CodegenApplication, Target])(args: Args): Free[F, ReadSwagger[Target[List[WriteTree]]]] =
+  def processArgSet(targetInterpreter: FunctionK[CodegenApplication, Target])(
+      args: Args): Free[F, ReadSwagger[Target[List[WriteTree]]]] =
     Free.inject[CoreTerm, F](ProcessArgSet(targetInterpreter, args))
 }
 object CoreTerms {
-  implicit def coreTerm[F[_]](implicit I: InjectK[CoreTerm, F]): CoreTerms[F] = new CoreTerms[F]
+  implicit def coreTerm[F[_]](implicit I: InjectK[CoreTerm, F]): CoreTerms[F] =
+    new CoreTerms[F]
 }

@@ -52,11 +52,13 @@ class VendorExtensionTest extends FunSuite with Matchers {
       _ = VendorExtension(op).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Operation"))
       _ = for {
         param <- op.getParameters.asScala
-        _ = VendorExtension(param).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.parameters.Parameter"))
+        _ = VendorExtension(param)
+          .extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.parameters.Parameter"))
       } ()
       _ = for {
         (_, resp) <- op.getResponses.asScala
-        _ = VendorExtension(resp).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Response"))
+        _ = VendorExtension(resp)
+          .extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Response"))
       } ()
     } ()
 
@@ -65,7 +67,8 @@ class VendorExtensionTest extends FunSuite with Matchers {
       _ = VendorExtension(defn).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Model"))
       _ = for {
         (_, prop) <- defn.getProperties.asScala
-        _ = VendorExtension(prop).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.properties.Property"))
+        _ = VendorExtension(prop)
+          .extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.properties.Property"))
       } ()
     } ()
   }

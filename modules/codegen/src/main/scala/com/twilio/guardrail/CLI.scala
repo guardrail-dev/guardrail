@@ -1,72 +1,82 @@
 package com.twilio.guardrail
 
-import cats.data.{EitherT, WriterT}
+import java.nio.file.Path
 import cats.instances.all._
-import cats.syntax.applicative._
-import cats.syntax.either._
-import cats.syntax.traverse._
 import cats.syntax.show._
-import cats.syntax.functor._
+import cats.syntax.traverse._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{LogLevel, LogLevels}
+
 import scala.io.AnsiColor
-import java.nio.file.Path
 
 object CLICommon {
   def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
     // language themselves.
-    val (levels, newArgs): (Array[String], Array[String]) = args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
+    val (levels, newArgs): (Array[String], Array[String]) =
+      args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val result = Common.runM[CoreTerm](newArgs)
+    val result = Common
+      .runM[CoreTerm](newArgs)
       .foldMap(interpreter)
-      .fold[List[ReadSwagger[Target[List[WriteTree]]]]]({
-        case MissingArg(args, Error.ArgName(arg)) =>
-          println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
-          unsafePrintHelp()
-          fallback
-        case NoArgsSpecified =>
-          println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
-          unsafePrintHelp()
-          fallback
-        case NoFramework =>
-          println(s"${AnsiColor.RED}No framework specified${AnsiColor.RESET}")
-          unsafePrintHelp()
-          fallback
-        case PrintHelp =>
-          unsafePrintHelp()
-          fallback
-        case UnknownArguments(args) =>
-          println(s"${AnsiColor.RED}Unknown arguments: ${args.mkString(" ")}${AnsiColor.RESET}")
-          unsafePrintHelp()
-          fallback
-        case UnknownFramework(name) =>
-          println(s"${AnsiColor.RED}Unknown framework specified: ${name}${AnsiColor.RESET}")
-          fallback
-        case UnparseableArgument(name, message) =>
-          println(s"${AnsiColor.RED}Unparseable argument: --${name}, ${message}")
-          fallback
-      }, _.toList)
+      .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
+        {
+          case MissingArg(args, Error.ArgName(arg)) =>
+            println(
+              s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
+            unsafePrintHelp()
+            fallback
+          case NoArgsSpecified =>
+            println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
+            unsafePrintHelp()
+            fallback
+          case NoFramework =>
+            println(s"${AnsiColor.RED}No framework specified${AnsiColor.RESET}")
+            unsafePrintHelp()
+            fallback
+          case PrintHelp =>
+            unsafePrintHelp()
+            fallback
+          case UnknownArguments(args) =>
+            println(s"${AnsiColor.RED}Unknown arguments: ${args.mkString(" ")}${AnsiColor.RESET}")
+            unsafePrintHelp()
+            fallback
+          case UnknownFramework(name) =>
+            println(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
+            fallback
+          case UnparseableArgument(name, message) =>
+            println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
+            fallback
+        },
+        _.toList
+      )
 
-    implicit val logLevel: LogLevel = level.flatMap(level => LogLevels.members.find(_.level == level.toLowerCase)).getOrElse(LogLevels.Warning)
+    implicit val logLevel: LogLevel = level
+      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
+      .getOrElse(LogLevels.Warning)
 
     val (coreLogger, deferred) = result.run
 
     print(coreLogger.show)
 
-    val (logger, paths) = deferred.map({ rs =>
-      ReadSwagger.unsafeReadSwagger(rs)
-        .fold({ err =>
-          println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
-          unsafePrintHelp()
-          List.empty[Path]
-        }, _.map(WriteTree.unsafeWriteTree))
-      }).sequence.map(_.flatten).run
+    val (logger, paths) = deferred
+      .map({ rs =>
+        ReadSwagger
+          .unsafeReadSwagger(rs)
+          .fold({ err =>
+            println(s"${AnsiColor.RED}Error: $err${AnsiColor.RESET}")
+            unsafePrintHelp()
+            List.empty[Path]
+          }, _.map(WriteTree.unsafeWriteTree))
+      })
+      .sequence
+      .map(_.flatten)
+      .run
 
     print(logger.show)
   }
