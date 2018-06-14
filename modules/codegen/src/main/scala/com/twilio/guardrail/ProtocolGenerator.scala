@@ -16,16 +16,18 @@ import scala.language.postfixOps
 import scala.language.reflectiveCalls
 import scala.meta._
 
-case class ProtocolDefinitions(elems: List[StrictProtocolElems],
-                               protocolImports: List[Import],
-                               packageObjectImports: List[Import],
-                               packageObjectContents: List[Stat])
+case class ProtocolDefinitions(
+    elems: List[StrictProtocolElems],
+    protocolImports: List[Import],
+    packageObjectImports: List[Import],
+    packageObjectContents: List[Stat])
 
-case class ProtocolParameter(term: Term.Param,
-                             name: String,
-                             dep: Option[Term.Name],
-                             readOnlyKey: Option[String],
-                             emptyToNullKey: Option[String])
+case class ProtocolParameter(
+    term: Term.Param,
+    name: String,
+    dep: Option[Term.Name],
+    readOnlyKey: Option[String],
+    emptyToNullKey: Option[String])
 
 object ProtocolGenerator {
   private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(
@@ -148,11 +150,12 @@ object ProtocolGenerator {
     } yield ret
   }
 
-  def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F],
-                                          M: ModelProtocolTerms[F],
-                                          A: AliasProtocolTerms[F],
-                                          R: ArrayProtocolTerms[F],
-                                          S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
+  def fromSwagger[F[_]](swagger: Swagger)(
+      implicit E: EnumProtocolTerms[F],
+      M: ModelProtocolTerms[F],
+      A: AliasProtocolTerms[F],
+      R: ArrayProtocolTerms[F],
+      S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
     import S._
 
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)

@@ -16,13 +16,14 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
-  def writePackage(kind: CodegenTarget,
-                   context: Context,
-                   swagger: Swagger,
-                   outputPath: Path,
-                   pkgName: List[String],
-                   dtoPackage: List[String],
-                   customImports: List[Import])(
+  def writePackage(
+      kind: CodegenTarget,
+      context: Context,
+      swagger: Swagger,
+      outputPath: Path,
+      pkgName: List[String],
+      dtoPackage: List[String],
+      customImports: List[Import])(
       implicit F: FrameworkTerms[CodegenApplication],
       Sc: ScalaTerms[CodegenApplication],
       Sw: SwaggerTerms[CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {

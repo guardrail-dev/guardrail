@@ -8,11 +8,12 @@ import scala.meta._
 
 sealed trait ModelProtocolTerm[T]
 case class ExtractProperties(swagger: ModelImpl) extends ModelProtocolTerm[Either[String, List[(String, Property)]]]
-case class TransformProperty(clsName: String,
-                             name: String,
-                             prop: Property,
-                             needCamelSnakeConversion: Boolean,
-                             concreteTypes: List[PropMeta])
+case class TransformProperty(
+    clsName: String,
+    name: String,
+    prop: Property,
+    needCamelSnakeConversion: Boolean,
+    concreteTypes: List[PropMeta])
     extends ModelProtocolTerm[ProtocolParameter]
 case class RenderDTOClass(clsName: String, terms: List[Term.Param]) extends ModelProtocolTerm[Defn.Class]
 case class EncodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter])

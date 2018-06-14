@@ -15,26 +15,29 @@ class ClientTerms[F[_]](implicit I: InjectK[ClientTerm, F]) {
     Free.inject[ClientTerm, F](GetImports(tracing))
   def getExtraImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject[ClientTerm, F](GetExtraImports(tracing))
-  def clientClsArgs(tracingName: Option[String],
-                    schemes: List[String],
-                    host: Option[String],
-                    tracing: Boolean): Free[F, List[List[Term.Param]]] =
+  def clientClsArgs(
+      tracingName: Option[String],
+      schemes: List[String],
+      host: Option[String],
+      tracing: Boolean): Free[F, List[List[Term.Param]]] =
     Free.inject[ClientTerm, F](ClientClsArgs(tracingName, schemes, host, tracing))
-  def buildCompanion(clientName: String,
-                     tracingName: Option[String],
-                     schemes: List[String],
-                     host: Option[String],
-                     ctorArgs: List[List[Term.Param]],
-                     tracing: Boolean): Free[F, Defn.Object] =
+  def buildCompanion(
+      clientName: String,
+      tracingName: Option[String],
+      schemes: List[String],
+      host: Option[String],
+      ctorArgs: List[List[Term.Param]],
+      tracing: Boolean): Free[F, Defn.Object] =
     Free.inject[ClientTerm, F](BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing))
-  def buildClient(clientName: String,
-                  tracingName: Option[String],
-                  schemes: List[String],
-                  host: Option[String],
-                  basePath: Option[String],
-                  ctorArgs: List[List[Term.Param]],
-                  clientCalls: List[Defn],
-                  tracing: Boolean): Free[F, Defn.Class] =
+  def buildClient(
+      clientName: String,
+      tracingName: Option[String],
+      schemes: List[String],
+      host: Option[String],
+      basePath: Option[String],
+      ctorArgs: List[List[Term.Param]],
+      clientCalls: List[Defn],
+      tracing: Boolean): Free[F, Defn.Class] =
     Free.inject[ClientTerm, F](
       BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, tracing))
 }

@@ -10,12 +10,13 @@ import cats.instances.all._
 case class RawParameterName private[generators] (value: String) {
   def toLit: Lit.String = Lit.String(value)
 }
-class ScalaParameter private[generators] (val in: Option[String],
-                                          val param: Term.Param,
-                                          val paramName: Term.Name,
-                                          val argName: RawParameterName,
-                                          val argType: Type,
-                                          val required: Boolean) {
+class ScalaParameter private[generators] (
+    val in: Option[String],
+    val param: Term.Param,
+    val paramName: Term.Name,
+    val argName: RawParameterName,
+    val argType: Type,
+    val required: Boolean) {
   override def toString: String =
     s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 

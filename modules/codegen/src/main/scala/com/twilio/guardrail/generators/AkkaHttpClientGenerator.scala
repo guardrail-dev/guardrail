@@ -46,9 +46,10 @@ object AkkaHttpClientGenerator {
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
       case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
-        def generateUrlWithParams(path: String,
-                                  pathArgs: List[ScalaParameter],
-                                  qsArgs: List[ScalaParameter]): Target[Term] = {
+        def generateUrlWithParams(
+            path: String,
+            pathArgs: List[ScalaParameter],
+            qsArgs: List[ScalaParameter]): Target[Term] = {
           for {
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(
               s"Using $path and ${pathArgs.map(_.argName)}")
@@ -149,22 +150,24 @@ object AkkaHttpClientGenerator {
           q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
         }
 
-        def build(methodName: String,
-                  httpMethod: HttpMethod,
-                  urlWithParams: Term,
-                  formDataParams: Option[Term],
-                  textPlain: Boolean,
-                  formDataNeedsMultipart: Boolean,
-                  headerParams: Term,
-                  responseTypeRef: Type,
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter],
-                                    tracingArgsPost: List[ScalaParameter],
-                                    pathArgs: List[ScalaParameter],
-                                    qsArgs: List[ScalaParameter],
-                                    formArgs: List[ScalaParameter],
-                                    body: Option[ScalaParameter],
-                                    headerArgs: List[ScalaParameter],
-                                    extraImplicits: List[Term.Param]): Defn = {
+        def build(
+            methodName: String,
+            httpMethod: HttpMethod,
+            urlWithParams: Term,
+            formDataParams: Option[Term],
+            textPlain: Boolean,
+            formDataNeedsMultipart: Boolean,
+            headerParams: Term,
+            responseTypeRef: Type,
+            tracing: Boolean)(
+            tracingArgsPre: List[ScalaParameter],
+            tracingArgsPost: List[ScalaParameter],
+            pathArgs: List[ScalaParameter],
+            qsArgs: List[ScalaParameter],
+            formArgs: List[ScalaParameter],
+            body: Option[ScalaParameter],
+            headerArgs: List[ScalaParameter],
+            extraImplicits: List[Term.Param]): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders =
             param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
@@ -315,12 +318,13 @@ object AkkaHttpClientGenerator {
                List(ihc, iec, imat)))
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
-        def extraConstructors(tracingName: Option[String],
-                              schemes: List[String],
-                              host: Option[String],
-                              tpe: Type.Name,
-                              ctorCall: Term.New,
-                              tracing: Boolean): List[Defn] = {
+        def extraConstructors(
+            tracingName: Option[String],
+            schemes: List[String],
+            host: Option[String],
+            tpe: Type.Name,
+            ctorCall: Term.New,
+            tracing: Boolean): List[Defn] = {
           val iec = param"implicit ec: ExecutionContext"
           val imat = param"implicit mat: Materializer"
           val tracingParams: List[Term.Param] = if (tracing) {

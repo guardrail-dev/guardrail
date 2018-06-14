@@ -50,9 +50,10 @@ object Http4sClientGenerator {
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
       case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
-        def generateUrlWithParams(path: String,
-                                  pathArgs: List[ScalaParameter],
-                                  qsArgs: List[ScalaParameter]): Target[Term] = {
+        def generateUrlWithParams(
+            path: String,
+            pathArgs: List[ScalaParameter],
+            qsArgs: List[ScalaParameter]): Target[Term] = {
           for {
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(
               s"Using ${path} and ${pathArgs.map(_.argName)}")
@@ -153,21 +154,23 @@ object Http4sClientGenerator {
           q"List[Option[Header]](..$args).flatten"
         }
 
-        def build(methodName: String,
-                  httpMethod: HttpMethod,
-                  urlWithParams: Term,
-                  formDataParams: Option[Term],
-                  formDataNeedsMultipart: Boolean,
-                  headerParams: Term,
-                  responseTypeRef: Type,
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter],
-                                    tracingArgsPost: List[ScalaParameter],
-                                    pathArgs: List[ScalaParameter],
-                                    qsArgs: List[ScalaParameter],
-                                    formArgs: List[ScalaParameter],
-                                    body: Option[ScalaParameter],
-                                    headerArgs: List[ScalaParameter],
-                                    extraImplicits: List[Term.Param]): Defn = {
+        def build(
+            methodName: String,
+            httpMethod: HttpMethod,
+            urlWithParams: Term,
+            formDataParams: Option[Term],
+            formDataNeedsMultipart: Boolean,
+            headerParams: Term,
+            responseTypeRef: Type,
+            tracing: Boolean)(
+            tracingArgsPre: List[ScalaParameter],
+            tracingArgsPost: List[ScalaParameter],
+            pathArgs: List[ScalaParameter],
+            qsArgs: List[ScalaParameter],
+            formArgs: List[ScalaParameter],
+            body: Option[ScalaParameter],
+            headerArgs: List[ScalaParameter],
+            extraImplicits: List[Term.Param]): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[Header] = List.empty"
           val safeBody: Option[(Term, Type)] =
@@ -301,12 +304,13 @@ object Http4sClientGenerator {
                List(ief, ihc)))
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
-        def extraConstructors(tracingName: Option[String],
-                              schemes: List[String],
-                              host: Option[String],
-                              tpe: Type.Name,
-                              ctorCall: Term.New,
-                              tracing: Boolean): List[Defn] = {
+        def extraConstructors(
+            tracingName: Option[String],
+            schemes: List[String],
+            host: Option[String],
+            tpe: Type.Name,
+            ctorCall: Term.New,
+            tracing: Boolean): List[Defn] = {
           val tracingParams: List[Term.Param] = if (tracing) {
             List(formatClientName(tracingName))
           } else {

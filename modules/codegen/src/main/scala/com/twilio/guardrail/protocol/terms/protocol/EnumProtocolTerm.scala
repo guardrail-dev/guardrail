@@ -11,10 +11,11 @@ case class RenderMembers(clsName: String, elems: List[(String, Term.Name, Term)]
 case class EncodeEnum(clsName: String) extends EnumProtocolTerm[Defn.Val]
 case class DecodeEnum(clsName: String) extends EnumProtocolTerm[Defn.Val]
 case class RenderClass(clsName: String, tpe: Type) extends EnumProtocolTerm[Defn.Class]
-case class RenderCompanion(clsName: String,
-                           members: Defn.Object,
-                           accessors: List[meta.Defn.Val],
-                           values: meta.Defn.Val,
-                           encoder: Defn.Val,
-                           decoder: Defn.Val)
+case class RenderCompanion(
+    clsName: String,
+    members: Defn.Object,
+    accessors: List[meta.Defn.Val],
+    values: meta.Defn.Val,
+    encoder: Defn.Val,
+    decoder: Defn.Val)
     extends EnumProtocolTerm[Defn.Object]

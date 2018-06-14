@@ -422,9 +422,10 @@ object SwaggerUtil {
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
-  def getResponseType(httpMethod: HttpMethod,
-                      operation: Operation,
-                      ignoredType: Type = t"IgnoredEntity"): Target[ResolvedType] = {
+  def getResponseType(
+      httpMethod: HttpMethod,
+      operation: Operation,
+      ignoredType: Type = t"IgnoredEntity"): Target[ResolvedType] = {
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>
