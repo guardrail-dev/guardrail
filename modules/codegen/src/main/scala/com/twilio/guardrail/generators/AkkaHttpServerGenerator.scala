@@ -288,12 +288,13 @@ object AkkaHttpServerGenerator {
             (pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
             .map(_._1)
             .map(List(_))
+
+          val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
           val fullRouteMatcher =
             List[Option[Term]](Some(akkaMethod),
                                Some(akkaPath),
                                akkaQs,
-                               Some(akkaBody),
-                               akkaForm,
+                               Some(entityProcessor),
                                akkaHeaders,
                                tracingFields.map(_._2)).flatten.reduceLeft { (a, n) =>
               q"${a} & ${n}"
@@ -445,13 +446,11 @@ object AkkaHttpServerGenerator {
         }
     }
 
-    def bodyToAkka(body: Option[ScalaParameter]): Target[Term] = {
+    def bodyToAkka(body: Option[ScalaParameter]): Target[Option[Term]] = {
       Target.pure(
         body.map {
           case ScalaParameter(_, _, _, _, argType) =>
             q"entity(as[${argType}])"
-        } getOrElse {
-          q"discardEntity"
         }
       )
     }
