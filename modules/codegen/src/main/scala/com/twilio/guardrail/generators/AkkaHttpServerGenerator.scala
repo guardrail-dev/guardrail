@@ -424,18 +424,18 @@ object AkkaHttpServerGenerator {
           case ScalaParameter(_, param, _, argName, argType) =>
             param match {
               case param"$_: Option[Iterable[$tpe]]" =>
-                multiOpt(Lit.String(argName.value))(tpe)
+                multiOpt(argName.toLit)(tpe)
               case param"$_: Option[Iterable[$tpe]] = $_" =>
-                multiOpt(Lit.String(argName.value))(tpe)
+                multiOpt(argName.toLit)(tpe)
               case param"$_: Option[$tpe]" =>
-                optional(Lit.String(argName.value))(tpe)
+                optional(argName.toLit)(tpe)
               case param"$_: Option[$tpe] = $_" =>
-                optional(Lit.String(argName.value))(tpe)
+                optional(argName.toLit)(tpe)
               case param"$_: Iterable[$tpe]" =>
-                multi(Lit.String(argName.value))(tpe)
+                multi(argName.toLit)(tpe)
               case param"$_: Iterable[$tpe] = $_" =>
-                multi(Lit.String(argName.value))(tpe)
-              case _ => required(Lit.String(argName.value))(argType)
+                multi(argName.toLit)(tpe)
+              case _ => required(argName.toLit)(argType)
             }
         }
       } yield
