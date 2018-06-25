@@ -36,6 +36,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
     |          in: formData
     |          type: file
     |          required: true
+    |          x-scala-file-hash: SHA-512
     |      responses:
     |        200:
     |          description: Success

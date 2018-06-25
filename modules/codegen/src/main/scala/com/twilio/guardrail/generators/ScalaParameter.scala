@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package generators
 
 import _root_.io.swagger.models.parameters.Parameter
+import com.twilio.guardrail.extract.{Default, ScalaType, ScalaFileHashAlgorithm}
 import java.util.Locale
 import scala.meta._
 import cats.syntax.traverse._
@@ -17,7 +18,9 @@ class ScalaParameter private[generators] (
     val paramName: Term.Name,
     val argName: RawParameterName,
     val argType: Type,
-    val required: Boolean) {
+    val required: Boolean,
+    val hashAlgorithm: Option[String]
+) {
   override def toString: String =
     s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 
@@ -44,7 +47,7 @@ object ScalaParameter {
           case _                  => None
         })
         .getOrElse((t"Nothing", true))
-      new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required)
+      new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required, None)
   }
 
   def fromParameter(protocolElems: List[StrictProtocolElems])(
@@ -57,7 +60,6 @@ object ScalaParameter {
     }
 
     def paramMeta[T <: Parameter](param: T)(implicit gs: GeneratorSettings): Target[SwaggerUtil.ResolvedType] = {
-      import com.twilio.guardrail.extract.{Default, ScalaType}
       import _root_.io.swagger.models.parameters._
       def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
         Option(p.getType)
@@ -163,21 +165,23 @@ object ScalaParameter {
             }
         case _ => baseDefaultValue.map(Target.pure _)
       }).sequence
-    } yield {
-      val defaultValue = if (!required) {
+
+      defaultValue = if (!required) {
         enumDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
       } else {
         enumDefaultValue
       }
-
-      val paramName = Term.Name(toCamelCase(parameter.getName))
+      name <- Target.fromOption(Option(parameter.getName), "Parameter missing \"name\"")
+    } yield {
+      val paramName = Term.Name(toCamelCase(name))
       val param = param"${paramName}: ${declType}".copy(default = defaultValue)
       new ScalaParameter(Option(parameter.getIn),
                          param,
                          paramName,
-                         RawParameterName(parameter.getName),
+                         RawParameterName(name),
                          declType,
-                         required)
+                         required,
+                         ScalaFileHashAlgorithm(parameter))
     }
   }
 
@@ -198,7 +202,8 @@ object ScalaParameter {
             escapedName,
             param.argName,
             param.argType,
-            param.required
+            param.required,
+            None
           )
         } else param
       }

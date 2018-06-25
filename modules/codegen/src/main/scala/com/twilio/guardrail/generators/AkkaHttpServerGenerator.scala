@@ -522,7 +522,7 @@ object AkkaHttpServerGenerator {
         value <- OptionT.liftF({
           (params
             .traverse {
-              case ScalaParameter(a, param, paramName, argName, argType) =>
+              case rawParameter@ScalaParameter(a, param, paramName, argName, argType) =>
                 val containerName = new Binding(paramName.value)
                 val unmarshallerName = new Binding(s"Unmarshall${paramName.value}part")
                 val binding = new Binding(paramName.value)
@@ -543,7 +543,7 @@ object AkkaHttpServerGenerator {
                       q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
                         .Select(partsTerm, containerName.toType)}] = (
-                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}(None, handler.${Term.Name(s"${operationId}MapFileField")}(_, _, _))
+                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}(${rawParameter.hashAlgorithm.fold[Term](q"None")(x => q"Option(${Lit.String(x)})")}, handler.${Term.Name(s"${operationId}MapFileField")}(_, _, _))
                               .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
                             )
                       """,
