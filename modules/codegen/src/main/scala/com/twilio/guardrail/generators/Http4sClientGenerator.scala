@@ -91,10 +91,10 @@ object Http4sClientGenerator {
             None
           } else if (needsMultipart) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"$tParamName.map(v => Part.formData[F](${tName.toLit}, v))"
+              q"$tParamName.map(v => Part.fileData[F](${tName.toLit}, v))"
 
             def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"Some(Part.formData[F](${tName.toLit}, $tParamName))"
+              q"Some(Part.fileData[F](${tName.toLit}, ${tParamName}))"
 
             def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"$tParamName.map(v => Part.formData[F](${tName.toLit}, Formatter.show(v)))"

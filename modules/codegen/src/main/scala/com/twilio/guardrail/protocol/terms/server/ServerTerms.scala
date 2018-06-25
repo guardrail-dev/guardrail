@@ -45,10 +45,17 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
       handlerName: String,
       combinedRouteTerms: Term,
       extraRouteParams: List[Term.Param],
-      responseDefinitions: List[Defn]): Free[F, Stat] =
-    Free.inject(RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions))
-  def renderHandler(handlerName: String, methodSigs: List[Decl.Def]) =
-    Free.inject(RenderHandler(handlerName, methodSigs))
+      responseDefinitions: List[Defn],
+      supportDefinitions: List[Defn]): Free[F, Stat] =
+    Free.inject(
+      RenderClass(resourceName,
+                  handlerName,
+                  combinedRouteTerms,
+                  extraRouteParams,
+                  responseDefinitions,
+                  supportDefinitions))
+  def renderHandler(handlerName: String, methodSigs: List[Decl.Def], handlerDefinitions: List[Stat]) =
+    Free.inject(RenderHandler(handlerName, methodSigs, handlerDefinitions))
   def combineRouteTerms(terms: List[Term]): Free[F, Term] =
     Free.inject(CombineRouteTerms(terms))
   def getExtraImports(tracing: Boolean): Free[F, List[Import]] =

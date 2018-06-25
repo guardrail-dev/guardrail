@@ -26,14 +26,19 @@ object AkkaHttpGenerator {
             q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}",
             q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
             q"import akka.http.scaladsl.server.Directives._",
-            q"import akka.http.scaladsl.server.{Directive, Directive0, Route}",
+            q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MissingFormFieldRejection, Rejection, Route}",
             q"import akka.http.scaladsl.util.FastFuture",
-            q"import akka.stream.Materializer",
-            q"import akka.stream.scaladsl.Source",
+            q"import akka.stream.{IOResult, Materializer}",
+            q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
             q"import akka.util.ByteString",
             q"import cats.data.EitherT",
+            q"import cats.implicits._",
             q"import scala.concurrent.{ExecutionContext, Future}",
-            q"import scala.language.implicitConversions"
+            q"import scala.language.implicitConversions",
+            q"import java.io.File",
+            q"import java.security.MessageDigest",
+            q"import java.util.concurrent.atomic.AtomicReference",
+            q"import scala.util.{Failure, Success}"
           ))
 
       case GetFrameworkImplicits(generatorSettings) =>
@@ -91,6 +96,35 @@ object AkkaHttpGenerator {
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
               Unmarshaller.strict(_ => IgnoredEntity.empty)
+
+            implicit def MFDBPviaFSU[T](implicit ev: Unmarshaller[BodyPartEntity, T], mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { implicit executionContext => entity =>
+              ev.apply(entity.entity)
+            }
+
+            implicit def BPEviaFSU[T](implicit ev: Unmarshaller[String, T], mat: Materializer): Unmarshaller[BodyPartEntity, T] = Unmarshaller { implicit executionContext => entity =>
+              entity.dataBytes
+                .runWith(Sink.fold(ByteString.empty)((accum, bs) => accum.concat(bs)))
+                .map(_.decodeString(java.nio.charset.StandardCharsets.UTF_8))
+                .flatMap(ev.apply(_))
+            }
+
+            def AccumulatingUnmarshaller[T, U, V](accumulator: AtomicReference[List[V]], ev: Unmarshaller[T, U])(acc: U => V)(implicit mat: Materializer): Unmarshaller[T, U] = {
+              ev.map { value =>
+                accumulator.updateAndGet(acc(value) :: _)
+                value
+              }
+            }
+
+            def SafeUnmarshaller[T, U](ev: Unmarshaller[T, U])(implicit mat: Materializer): Unmarshaller[T, Either[Throwable, U]] = Unmarshaller { implicit executionContext => entity =>
+              ev.apply(entity).transform { t => Success(t.toEither) }
+            }
+
+            def StaticUnmarshaller[T](value: T)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { _ => part =>
+              part.entity.discardBytes()
+              Future.successful[T](value)
+            }
+
+            implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
           }
         """)
 

@@ -32,8 +32,10 @@ case class RenderClass(
     handlerName: String,
     combinedRouteTerms: Term,
     extraRouteParams: List[Term.Param],
-    responseDefinitions: List[Defn])
+    responseDefinitions: List[Defn],
+    supportDefinitions: List[Defn])
     extends ServerTerm[Stat]
-case class RenderHandler(handlerName: String, methodSigs: List[Decl.Def]) extends ServerTerm[Stat]
+case class RenderHandler(handlerName: String, methodSigs: List[Decl.Def], handlerDefinitions: List[Stat])
+    extends ServerTerm[Stat]
 case class CombineRouteTerms(terms: List[Term]) extends ServerTerm[Term]
 case class GetExtraImports(tracing: Boolean) extends ServerTerm[List[Import]]

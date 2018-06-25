@@ -16,7 +16,13 @@ import scala.meta._
 case class Servers(servers: List[Server])
 case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
-case class RenderedRoute(route: Term, methodSig: Decl.Def, responseDefinitions: List[Defn])
+case class RenderedRoute(
+    route: Term,
+    methodSig: Decl.Def,
+    responseDefinitions: List[Defn],
+    supportDefinitions: List[Defn],
+    handlerDefinitions: List[Stat]
+)
 
 object ServerGenerator {
   import NelShim._
@@ -66,14 +72,17 @@ object ServerGenerator {
             routeTerms = renderedRoutes.map(_.route)
             combinedRouteTerms <- combineRouteTerms(routeTerms)
             methodSigs = renderedRoutes.map(_.methodSig)
-            handlerSrc <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), methodSigs)
+            handlerSrc <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")),
+                                        methodSigs,
+                                        renderedRoutes.flatMap(_.handlerDefinitions))
             extraRouteParams <- getExtraRouteParams(context.tracing)
             responseDefinitions = renderedRoutes.flatMap(_.responseDefinitions)
             classSrc <- renderClass(resourceName,
                                     handlerName,
                                     combinedRouteTerms,
                                     extraRouteParams,
-                                    responseDefinitions)
+                                    responseDefinitions,
+                                    renderedRoutes.flatMap(_.supportDefinitions))
           } yield {
             Server(className,
                    frameworkImports ++ extraImports,
