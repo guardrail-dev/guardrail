@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import _root_.io.swagger.models.{Operation, Path}
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.{GeneratorSettings, ScalaParameter}
 import com.twilio.guardrail.{RenderedRoute, ServerRoute, StrictProtocolElems}
 
 import scala.meta._
@@ -18,10 +18,14 @@ case class GenerateRoute(
     route: ServerRoute,
     tracingFields: Option[(ScalaParameter, Term)],
     responseDefinitions: List[Defn],
-    protocolElems: List[StrictProtocolElems])
+    protocolElems: List[StrictProtocolElems],
+    generatorSettings: GeneratorSettings)
     extends ServerTerm[RenderedRoute]
 case class GetExtraRouteParams(tracing: Boolean) extends ServerTerm[List[Term.Param]]
-case class GenerateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems])
+case class GenerateResponseDefinitions(
+    operation: Operation,
+    protocolElems: List[StrictProtocolElems],
+    generatorSettings: GeneratorSettings)
     extends ServerTerm[List[Defn]]
 case class RenderClass(
     className: String,

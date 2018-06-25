@@ -34,8 +34,7 @@ object Http4sGenerator {
             q"import scala.language.implicitConversions"
           ))
 
-      case GetFrameworkImplicits() =>
-        val jsonType: Type = t"io.circe.Json"
+      case GetFrameworkImplicits(generatorSettings) =>
         val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
         val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
         Target.pure(q"""
@@ -67,6 +66,9 @@ object Http4sGenerator {
             }
           }
         """)
+
+      case GetGeneratorSettings() =>
+        Target.pure(new GeneratorSettings(t"java.io.File", t"io.circe.Json"))
     }
   }
 }

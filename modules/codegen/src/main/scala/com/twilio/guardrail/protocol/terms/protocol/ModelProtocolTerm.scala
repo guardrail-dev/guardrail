@@ -3,6 +3,7 @@ package com.twilio.guardrail.protocol.terms.protocol
 import _root_.io.swagger.models.ModelImpl
 import _root_.io.swagger.models.properties.Property
 import com.twilio.guardrail.ProtocolParameter
+import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
 
@@ -13,7 +14,8 @@ case class TransformProperty(
     name: String,
     prop: Property,
     needCamelSnakeConversion: Boolean,
-    concreteTypes: List[PropMeta])
+    concreteTypes: List[PropMeta],
+    generatorSettings: GeneratorSettings)
     extends ModelProtocolTerm[ProtocolParameter]
 case class RenderDTOClass(clsName: String, terms: List[Term.Param]) extends ModelProtocolTerm[Defn.Class]
 case class EncodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter])

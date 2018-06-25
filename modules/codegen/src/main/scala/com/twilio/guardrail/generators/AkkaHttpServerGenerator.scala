@@ -158,7 +158,8 @@ object AkkaHttpServerGenerator {
           } else Target.pure(None)
         } yield res
 
-      case GenerateResponseDefinitions(operation, protocolElems) =>
+      case GenerateResponseDefinitions(operation, protocolElems, generatorSettings) =>
+        implicit val gc = generatorSettings
         for {
           operationId <- Target.fromOption(Option(operation.getOperationId())
                                              .map(splitOperationParts)
@@ -248,11 +249,17 @@ object AkkaHttpServerGenerator {
                          route @ ServerRoute(path, method, operation),
                          tracingFields,
                          responseDefinitions,
-                         protocolElems) =>
+                         protocolElems,
+                         generatorSettings) =>
+        implicit val gs = generatorSettings
         // Generate the pair of the Handler method and the actual call to `complete(...)`
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(
             s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+          operationId <- Target.fromOption(Option(operation.getOperationId())
+                                             .map(splitOperationParts)
+                                             .map(_._2),
+                                           "Missing operationId")
           parameters <- Option(operation.getParameters)
             .map(_.asScala.toList)
             .map(ScalaParameter.fromParameters(protocolElems))
@@ -274,10 +281,6 @@ object AkkaHttpServerGenerator {
           akkaBody <- bodyToAkka(bodyArgs)
           akkaForm <- formToAkka(formArgs)
           akkaHeaders <- headersToAkka(headerArgs)
-          operationId <- Target.fromOption(Option(operation.getOperationId())
-                                             .map(splitOperationParts)
-                                             .map(_._2),
-                                           "Missing operationId")
         } yield {
           val (responseCompanionTerm, responseCompanionType) =
             (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
@@ -320,6 +323,7 @@ object AkkaHttpServerGenerator {
 
           val respond: List[List[Term.Param]] = List(
             List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
+
           val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(_.param))
           RenderedRoute(
             fullRoute,

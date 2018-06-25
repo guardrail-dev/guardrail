@@ -7,6 +7,7 @@ import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._
 
+class GeneratorSettings(val fileType: Type, val jsonType: Type)
 case class RawParameterName private[generators] (value: String) {
   def toLit: Lit.String = Lit.String(value)
 }
@@ -46,7 +47,8 @@ object ScalaParameter {
       new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required)
   }
 
-  def fromParameter(protocolElems: List[StrictProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
+  def fromParameter(protocolElems: List[StrictProtocolElems])(
+      implicit gs: GeneratorSettings): Parameter => Target[ScalaParameter] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed =
         "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
@@ -54,7 +56,7 @@ object ScalaParameter {
         .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
 
-    def paramMeta[T <: Parameter](param: T): Target[SwaggerUtil.ResolvedType] = {
+    def paramMeta[T <: Parameter](param: T)(implicit gs: GeneratorSettings): Target[SwaggerUtil.ResolvedType] = {
       import com.twilio.guardrail.extract.{Default, ScalaType}
       import _root_.io.swagger.models.parameters._
       def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
@@ -131,12 +133,7 @@ object ScalaParameter {
     for {
       meta <- paramMeta(parameter)
       resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
-      SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
-      paramType = baseType match {
-        case t"java.io.File" if Option(parameter.getIn) == Some("formData") =>
-          t"BodyPartEntity"
-        case other => other
-      }
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
 
       required = parameter.getRequired()
       declType: Type = if (!required) {
@@ -184,27 +181,27 @@ object ScalaParameter {
     }
   }
 
-  def fromParameters(protocolElems: List[StrictProtocolElems]): List[Parameter] => Target[List[ScalaParameter]] = {
-    params =>
-      for {
-        parameters <- params.traverse(fromParameter(protocolElems))
-        counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
-      } yield
-        parameters.map { param =>
-          val Term.Name(name) = param.paramName
-          if (counts.getOrElse(name, 0) > 1) {
-            val escapedName =
-              Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
-            new ScalaParameter(
-              param.in,
-              param.param.copy(name = escapedName),
-              escapedName,
-              param.argName,
-              param.argType,
-              param.required
-            )
-          } else param
-        }
+  def fromParameters(protocolElems: List[StrictProtocolElems])(
+      implicit gs: GeneratorSettings): List[Parameter] => Target[List[ScalaParameter]] = { params =>
+    for {
+      parameters <- params.traverse(fromParameter(protocolElems))
+      counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
+    } yield
+      parameters.map { param =>
+        val Term.Name(name) = param.paramName
+        if (counts.getOrElse(name, 0) > 1) {
+          val escapedName =
+            Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
+          new ScalaParameter(
+            param.in,
+            param.param.copy(name = escapedName),
+            escapedName,
+            param.argName,
+            param.argType,
+            param.required
+          )
+        } else param
+      }
   }
 
   /**

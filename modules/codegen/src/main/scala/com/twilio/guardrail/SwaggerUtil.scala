@@ -7,7 +7,7 @@ import cats.syntax.either._
 import cats.{FlatMap, Foldable}
 import cats.instances.list._
 import com.twilio.guardrail.extract.{Default, ScalaType}
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.{GeneratorSettings, ScalaParameter}
 import java.util.{Map => JMap}
 import scala.language.reflectiveCalls
 import scala.meta._
@@ -111,7 +111,7 @@ object SwaggerUtil {
     }
   }
 
-  def modelMetaType[T <: Model](model: T): Target[ResolvedType] = {
+  def modelMetaType[T <: Model](model: T)(implicit gs: GeneratorSettings): Target[ResolvedType] = {
     model match {
       case ref: RefModel =>
         for {
@@ -143,7 +143,7 @@ object SwaggerUtil {
   }
 
   case class ParamMeta(tpe: Type, defaultValue: Option[Term])
-  def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
+  def paramMeta[T <: Parameter](param: T)(implicit gs: GeneratorSettings): Target[ParamMeta] = {
     def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] =
       (
         Option(p.getType)
@@ -212,7 +212,8 @@ object SwaggerUtil {
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeName(typeName: String, format: Option[String], customType: Option[String]): Type = {
+  def typeName(typeName: String, format: Option[String], customType: Option[String])(
+      implicit gs: GeneratorSettings): Type = {
     def log(fmt: Option[String], t: Type): Type = {
       fmt.foreach { fmt =>
         println(
@@ -246,8 +247,8 @@ object SwaggerUtil {
         case ("boolean", fmt)              => log(fmt, t"Boolean")
         case ("array", fmt)                => log(fmt, t"Iterable[String]")
         case ("file", o @ Some(fmt))       => log(o, Type.Name(fmt))
-        case ("file", fmt)                 => log(fmt, t"java.io.File")
-        case ("object", fmt)               => log(fmt, t"io.circe.Json")
+        case ("file", fmt)                 => log(fmt, gs.fileType)
+        case ("object", fmt)               => log(fmt, gs.jsonType)
         case (x, fmt) => {
           println(s"Fallback: ${x} (${fmt})")
           Type.Name(x)
@@ -332,7 +333,7 @@ object SwaggerUtil {
     case name                                                   => name
   }
 
-  def propMeta[T <: Property](property: T): Target[ResolvedType] = {
+  def propMeta[T <: Property](property: T)(implicit gs: GeneratorSettings): Target[ResolvedType] = {
     property match {
       case p: ArrayProperty =>
         val title = Option(p.getTitle()).getOrElse("Unnamed array")
@@ -363,7 +364,7 @@ object SwaggerUtil {
           }
         } yield res
       case o: ObjectProperty =>
-        Target.pure(Resolved(t"io.circe.Json", None, None)) // TODO: o.getProperties
+        Target.pure(Resolved(gs.jsonType, None, None)) // TODO: o.getProperties
       case r: RefProperty =>
         Target
           .fromOption(Option(r.getSimpleRef()), "Malformed $ref")
@@ -392,7 +393,7 @@ object SwaggerUtil {
       case d: DecimalProperty =>
         Target.pure(Resolved(t"BigDecimal", None, None))
       case u: UntypedProperty =>
-        Target.pure(Resolved(t"io.circe.Json", None, None))
+        Target.pure(Resolved(gs.jsonType, None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
         Target.pure(Resolved(t"BigInt", None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
@@ -422,10 +423,8 @@ object SwaggerUtil {
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
-  def getResponseType(
-      httpMethod: HttpMethod,
-      operation: Operation,
-      ignoredType: Type = t"IgnoredEntity"): Target[ResolvedType] = {
+  def getResponseType(httpMethod: HttpMethod, operation: Operation, ignoredType: Type = t"IgnoredEntity")(
+      implicit gs: GeneratorSettings): Target[ResolvedType] = {
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>

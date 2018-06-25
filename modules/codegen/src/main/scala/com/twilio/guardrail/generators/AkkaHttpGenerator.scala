@@ -36,8 +36,7 @@ object AkkaHttpGenerator {
             q"import scala.language.implicitConversions"
           ))
 
-      case GetFrameworkImplicits() =>
-        val jsonType: Type = t"io.circe.Json"
+      case GetFrameworkImplicits(generatorSettings) =>
         val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
         val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
         Target.pure(q"""
@@ -64,7 +63,7 @@ object AkkaHttpGenerator {
 
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
-            ): ToEntityMarshaller[${jsonType}] =
+            ): ToEntityMarshaller[${generatorSettings.jsonType}] =
               Marshaller.withFixedContentType(MediaTypes.${Term
           .Name("`application/json`")}) { json =>
                 HttpEntity(MediaTypes.${Term
@@ -77,7 +76,7 @@ object AkkaHttpGenerator {
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
-            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${generatorSettings.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
                 .map {
@@ -86,7 +85,7 @@ object AkkaHttpGenerator {
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              def decode(json: ${jsonType}) = J.decodeJson(json).fold(throw _, identity)
+              def decode(json: ${generatorSettings.jsonType}) = J.decodeJson(json).fold(throw _, identity)
               jsonUnmarshaller.map(decode)
             }
 
@@ -94,6 +93,9 @@ object AkkaHttpGenerator {
               Unmarshaller.strict(_ => IgnoredEntity.empty)
           }
         """)
+
+      case GetGeneratorSettings() =>
+        Target.pure(new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json"))
     }
   }
 }

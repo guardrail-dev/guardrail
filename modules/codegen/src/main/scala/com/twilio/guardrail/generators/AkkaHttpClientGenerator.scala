@@ -45,7 +45,12 @@ object AkkaHttpClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
-      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
+      case GenerateClientOperation(className,
+                                   RouteMeta(pathStr, httpMethod, operation),
+                                   tracing,
+                                   protocolElems,
+                                   generatorSettings) =>
+        implicit val gs = generatorSettings
         def generateUrlWithParams(
             path: String,
             pathArgs: List[ScalaParameter],

@@ -111,8 +111,9 @@ object Common {
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
+      generatorSettings <- getGeneratorSettings()
       frameworkImports <- getFrameworkImports(context.tracing)
-      frameworkImplicits <- getFrameworkImplicits()
+      frameworkImplicits <- getFrameworkImplicits(generatorSettings)
       frameworkImplicitName = frameworkImplicits.name
 
       codegen <- kind match {

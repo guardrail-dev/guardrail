@@ -4,13 +4,17 @@ import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.StrictProtocolElems
 import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
 
 class ClientTerms[F[_]](implicit I: InjectK[ClientTerm, F]) {
-  def generateClientOperation(className: List[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(
-      route: RouteMeta): Free[F, Defn] =
-    Free.inject[ClientTerm, F](GenerateClientOperation(className, route, tracing, protocolElems))
+  def generateClientOperation(
+      className: List[String],
+      tracing: Boolean,
+      protocolElems: List[StrictProtocolElems],
+      generatorSettings: GeneratorSettings)(route: RouteMeta): Free[F, Defn] =
+    Free.inject[ClientTerm, F](GenerateClientOperation(className, route, tracing, protocolElems, generatorSettings))
   def getImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject[ClientTerm, F](GetImports(tracing))
   def getExtraImports(tracing: Boolean): Free[F, List[Import]] =

@@ -31,7 +31,8 @@ object CirceProtocolGenerator {
       case ExtractEnum(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getEnum()).map(_.asScala.to[List]), "Model has no enumerations"))
 
-      case ExtractType(swagger) =>
+      case ExtractType(swagger, generatorSettings) =>
+        implicit val gs = generatorSettings
         // Default to `string` for untyped enums.
         // Currently, only plain strings are correctly supported anyway, so no big loss.
         val tpeName = Option(swagger.getType()).getOrElse("string")
@@ -94,7 +95,8 @@ object CirceProtocolGenerator {
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
 
-      case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
+      case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes, generatorSettings) =>
+        implicit val gs = generatorSettings
         def toCamelCase(s: String): String =
           "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
@@ -283,7 +285,8 @@ object CirceProtocolGenerator {
 
   object ArrayProtocolTermInterp extends (ArrayProtocolTerm ~> Target) {
     def apply[T](term: ArrayProtocolTerm[T]): Target[T] = term match {
-      case ExtractArrayType(arr, concreteTypes) =>
+      case ExtractArrayType(arr, concreteTypes, generatorSettings) =>
+        implicit val gs = generatorSettings
         SwaggerUtil.modelMetaType(arr).flatMap {
           case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
           case SwaggerUtil.Deferred(tpeName) =>
@@ -300,7 +303,8 @@ object CirceProtocolGenerator {
 
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
-      case ExtractConcreteTypes(definitions) => {
+      case ExtractConcreteTypes(definitions, generatorSettings) => {
+        implicit val gs = generatorSettings
         for {
           entries <- definitions.traverse {
             case (clsName, impl: ModelImpl)

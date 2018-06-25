@@ -2,6 +2,7 @@ package com.twilio.guardrail.protocol.terms.client
 
 import com.twilio.guardrail.StrictProtocolElems
 import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
 
@@ -10,7 +11,8 @@ case class GenerateClientOperation(
     className: List[String],
     route: RouteMeta,
     tracing: Boolean,
-    protocolElems: List[StrictProtocolElems])
+    protocolElems: List[StrictProtocolElems],
+    generatorSettings: GeneratorSettings)
     extends ClientTerm[Defn]
 case class GetImports(tracing: Boolean) extends ClientTerm[List[Import]]
 case class GetExtraImports(tracing: Boolean) extends ClientTerm[List[Import]]

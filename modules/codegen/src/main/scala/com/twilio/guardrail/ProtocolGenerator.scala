@@ -8,7 +8,9 @@ import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
 import java.util.Locale
 
+import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
@@ -31,8 +33,10 @@ case class ProtocolParameter(
 
 object ProtocolGenerator {
   private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(
-      implicit E: EnumProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
+      implicit E: EnumProtocolTerms[F],
+      F: FrameworkTerms[F]): Free[F, Either[String, ProtocolElems]] = {
     import E._
+    import F._
 
     val toPascalRegexes = List(
       "[\\._-]([a-z])".r, // dotted, snake, or dashed case
@@ -74,15 +78,18 @@ object ProtocolGenerator {
     }
 
     for {
+      generatorSettings <- getGeneratorSettings()
       enum <- extractEnum(swagger)
-      tpe <- extractType(swagger)
+      tpe <- extractType(swagger, generatorSettings)
       res <- (enum, tpe).traverseN(validProg)
     } yield res
   }
 
   private[this] def fromModel[F[_]](clsName: String, model: ModelImpl, concreteTypes: List[PropMeta])(
-      implicit M: ModelProtocolTerms[F]): Free[F, Either[String, ProtocolElems]] = {
+      implicit M: ModelProtocolTerms[F],
+      F: FrameworkTerms[F]): Free[F, Either[String, ProtocolElems]] = {
     import M._
+    import F._
 
     /**
       * types of things we can losslessly convert between snake and camel case:
@@ -103,36 +110,42 @@ object ProtocolGenerator {
       */
     def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
 
-    def validProg(props: List[(String, Property)]): Free[F, ClassDefinition] = {
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-        terms = params.map(_.term).to[List]
-        defn <- renderDTOClass(clsName, terms)
-        deps = params.flatMap(_.dep)
-        encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
-        decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
-        cmp <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(clsName, Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
+    def validProg(generatorSettings: GeneratorSettings): List[(String, Property)] => Free[F, ClassDefinition] = {
+      props =>
+        val needCamelSnakeConversion = props.forall({
+          case (k, v) => couldBeSnakeCase(k)
+        })
+        for {
+          params <- props.traverse(
+            transformProperty(clsName, needCamelSnakeConversion, concreteTypes, generatorSettings) _ tupled)
+          terms = params.map(_.term).to[List]
+          defn <- renderDTOClass(clsName, terms)
+          deps = params.flatMap(_.dep)
+          encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
+          decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
+          cmp <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
+        } yield ClassDefinition(clsName, Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
     }
 
     for {
+      generatorSettings <- getGeneratorSettings()
       props <- extractProperties(model)
-      res <- props.traverse(validProg)
+      res <- props.traverse(validProg(generatorSettings))
     } yield res
   }
 
-  def modelTypeAlias[F[_]](clsName: String, model: ModelImpl)(
+  def modelTypeAlias[F[_]](clsName: String, model: ModelImpl, generatorSettings: GeneratorSettings)(
       implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+    implicit val gs = generatorSettings
     val tpe = Option(model.getType)
-      .fold[Type](t"io.circe.Json")(raw => SwaggerUtil.typeName(raw, Option(model.getFormat), ScalaType(model)))
+      .fold[Type](generatorSettings.jsonType)(raw =>
+        SwaggerUtil.typeName(raw, Option(model.getFormat), ScalaType(model)))
     typeAlias(clsName, tpe)
   }
 
-  def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
-    typeAlias(clsName, t"io.circe.Json")
+  def plainTypeAlias[F[_]](clsName: String, generatorSettings: GeneratorSettings)(
+      implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+    typeAlias(clsName, generatorSettings.jsonType)
   }
 
   def typeAlias[F[_]](clsName: String, tpe: Type)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
@@ -142,10 +155,13 @@ object ProtocolGenerator {
 
   def fromArray[F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(
       implicit R: ArrayProtocolTerms[F],
-      A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+      A: AliasProtocolTerms[F],
+      F: FrameworkTerms[F]): Free[F, ProtocolElems] = {
     import R._
+    import F._
     for {
-      tpe <- extractArrayType(arr, concreteTypes)
+      generatorSettings <- getGeneratorSettings()
+      tpe <- extractArrayType(arr, concreteTypes, generatorSettings)
       ret <- typeAlias(clsName, tpe)
     } yield ret
   }
@@ -155,13 +171,16 @@ object ProtocolGenerator {
       M: ModelProtocolTerms[F],
       A: AliasProtocolTerms[F],
       R: ArrayProtocolTerms[F],
-      S: ProtocolSupportTerms[F]): Free[F, ProtocolDefinitions] = {
+      S: ProtocolSupportTerms[F],
+      F: FrameworkTerms[F]): Free[F, ProtocolDefinitions] = {
     import S._
+    import F._
 
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
 
     for {
-      concreteTypes <- extractConcreteTypes(definitions)
+      generatorSettings <- getGeneratorSettings()
+      concreteTypes <- extractConcreteTypes(definitions, generatorSettings)
       elems <- definitions.traverse {
         case (clsName, model) =>
           model match {
@@ -169,13 +188,13 @@ object ProtocolGenerator {
               for {
                 enum <- fromEnum(clsName, m)
                 model <- fromModel(clsName, m, concreteTypes)
-                alias <- modelTypeAlias(clsName, m)
+                alias <- modelTypeAlias(clsName, m, generatorSettings)
               } yield enum.orElse(model).getOrElse(alias)
             case arr: ArrayModel =>
               fromArray(clsName, arr, concreteTypes)
             case x =>
               println(s"Warning: ${x} being treated as Json")
-              plainTypeAlias(clsName)
+              plainTypeAlias(clsName, generatorSettings)
           }
       }
       protoImports <- protocolImports

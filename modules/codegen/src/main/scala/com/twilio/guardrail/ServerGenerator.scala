@@ -7,6 +7,7 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.server.{ServerTerm, ServerTerms}
 
 import scala.collection.JavaConverters._
@@ -26,14 +27,16 @@ object ServerGenerator {
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
   def fromSwagger[F[_]](context: Context, swagger: Swagger, frameworkImports: List[Import])(
-      protocolElems: List[StrictProtocolElems])(implicit S: ServerTerms[F]): Free[F, Servers] = {
+      protocolElems: List[StrictProtocolElems])(implicit S: ServerTerms[F], F: FrameworkTerms[F]): Free[F, Servers] = {
     import S._
+    import F._
 
     val paths: List[(String, Path)] =
       Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
     val basePath: Option[String] = Option(swagger.getBasePath)
 
     for {
+      generatorSettings <- getGeneratorSettings()
       routes <- extractOperations(paths)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
       groupedRoutes = classNamedRoutes
@@ -51,9 +54,13 @@ object ServerGenerator {
               case sr @ ServerRoute(path, method, operation) =>
                 for {
                   tracingFields <- buildTracingFields(operation, className, context.tracing)
-                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
-                  rendered <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(
-                    sr)
+                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems, generatorSettings)
+                  rendered <- generateRoute(resourceName,
+                                            basePath,
+                                            tracingFields,
+                                            responseDefinitions,
+                                            protocolElems,
+                                            generatorSettings)(sr)
                 } yield rendered
             }
             routeTerms = renderedRoutes.map(_.route)

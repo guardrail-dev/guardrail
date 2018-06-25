@@ -49,7 +49,12 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
-      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
+      case GenerateClientOperation(className,
+                                   RouteMeta(pathStr, httpMethod, operation),
+                                   tracing,
+                                   protocolElems,
+                                   generatorSettings) => {
+        implicit val gs = generatorSettings
         def generateUrlWithParams(
             path: String,
             pathArgs: List[ScalaParameter],
@@ -99,18 +104,19 @@ object Http4sClientGenerator {
 
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-                val lifter: (Term.Name, RawParameterName) => Term =
+                val lifter: (Term.Name, RawParameterName) => Term = {
                   param match {
-                    case param"$_: Option[BodyPartEntity]" =>
+                    case param"$_: Option[java.io.File]" =>
                       liftOptionFileTerm _
-                    case param"$_: Option[BodyPartEntity] = $_" =>
+                    case param"$_: Option[java.io.File] = $_" =>
                       liftOptionFileTerm _
-                    case param"$_: BodyPartEntity"      => liftFileTerm _
-                    case param"$_: BodyPartEntity = $_" => liftFileTerm _
-                    case param"$_: Option[$_]"          => liftOptionTerm _
-                    case param"$_: Option[$_] = $_"     => liftOptionTerm _
-                    case _                              => liftTerm _
+                    case param"$_: java.io.File"      => liftFileTerm _
+                    case param"$_: java.io.File = $_" => liftFileTerm _
+                    case param"$_: Option[$_]"        => liftOptionTerm _
+                    case param"$_: Option[$_] = $_"   => liftOptionTerm _
+                    case _                            => liftTerm _
                   }
+                }
                 a :+ lifter(paramName, argName)
             }
             Some(q"List(..$args)")

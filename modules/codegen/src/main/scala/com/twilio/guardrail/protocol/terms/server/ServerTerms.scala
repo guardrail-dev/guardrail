@@ -3,7 +3,7 @@ package com.twilio.guardrail.protocol.terms.server
 import _root_.io.swagger.models.{Operation, Path}
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.{GeneratorSettings, ScalaParameter}
 import com.twilio.guardrail.{RenderedRoute, ServerRoute, StrictProtocolElems}
 
 import scala.meta._
@@ -23,12 +23,23 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
       basePath: Option[String],
       tracingFields: Option[(ScalaParameter, Term)],
       responseDefinitions: List[Defn],
-      protocolElems: List[StrictProtocolElems])(route: ServerRoute): Free[F, RenderedRoute] =
-    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions, protocolElems))
+      protocolElems: List[StrictProtocolElems],
+      generatorSettings: GeneratorSettings)(route: ServerRoute): Free[F, RenderedRoute] =
+    Free.inject(
+      GenerateRoute(resourceName,
+                    basePath,
+                    route,
+                    tracingFields,
+                    responseDefinitions,
+                    protocolElems,
+                    generatorSettings))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
-  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]): Free[F, List[Defn]] =
-    Free.inject(GenerateResponseDefinitions(operation, protocolElems))
+  def generateResponseDefinitions(
+      operation: Operation,
+      protocolElems: List[StrictProtocolElems],
+      generatorSettings: GeneratorSettings): Free[F, List[Defn]] =
+    Free.inject(GenerateResponseDefinitions(operation, protocolElems, generatorSettings))
   def renderClass(
       resourceName: String,
       handlerName: String,
