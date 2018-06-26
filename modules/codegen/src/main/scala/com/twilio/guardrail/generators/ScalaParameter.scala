@@ -18,6 +18,9 @@ class ScalaParameter private[generators] (val in: Option[String],
                                           val required: Boolean) {
   override def toString: String =
     s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
+
+  def withType(newArgType: Type): ScalaParameter =
+    new ScalaParameter(in, param, paramName, argName, newArgType, required, hashAlgorithm)
 }
 object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
