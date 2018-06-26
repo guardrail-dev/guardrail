@@ -138,7 +138,8 @@ object AkkaHttpServerGenerator {
           className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
         } yield className
 
-      case BuildTracingFields(operation, resourceName, tracing) =>
+      case BuildTracingFields(operation, resourceName, tracing, generatorSettings) =>
+        implicit val gs = generatorSettings
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(
             s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")

@@ -59,7 +59,7 @@ object ServerGenerator {
             renderedRoutes <- routes.traverse {
               case sr @ ServerRoute(path, method, operation) =>
                 for {
-                  tracingFields <- buildTracingFields(operation, className, context.tracing)
+                  tracingFields <- buildTracingFields(operation, className, context.tracing, generatorSettings)
                   responseDefinitions <- generateResponseDefinitions(operation, protocolElems, generatorSettings)
                   rendered <- generateRoute(resourceName,
                                             basePath,

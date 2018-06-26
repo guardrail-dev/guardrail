@@ -16,8 +16,8 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
   def buildTracingFields(
       operation: Operation,
       className: List[String],
-      tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
-    Free.inject(BuildTracingFields(operation, className, tracing))
+      tracing: Boolean, generatorSettings: GeneratorSettings): Free[F, Option[(ScalaParameter, Term)]] =
+    Free.inject(BuildTracingFields(operation, className, tracing, generatorSettings))
   def generateRoute(
       resourceName: String,
       basePath: Option[String],

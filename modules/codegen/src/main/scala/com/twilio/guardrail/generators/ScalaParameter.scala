@@ -32,12 +32,12 @@ object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam: Term.Param => ScalaParameter = { param =>
+  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = {
     fromParam(param.name.value)(param)
   }
-  def fromParam(argName: String): Term.Param => ScalaParameter =
-    fromParam(RawParameterName(argName))
-  def fromParam(argName: RawParameterName): Term.Param => ScalaParameter = {
+  def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
+    fromParam(RawParameterName(argName))(param)
+  def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = param match {
     case param @ Term.Param(mods, name, decltype, default) =>
       val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
         .flatMap({
@@ -55,7 +55,7 @@ object ScalaParameter {
                          tpe,
                          required,
                          None,
-                         innerTpe == t"BodyPartEntity") // TODO: Get GeneratorSettings in here so we can test properly
+                         innerTpe == gs.fileType)
   }
 
   def fromParameter(protocolElems: List[StrictProtocolElems])(
