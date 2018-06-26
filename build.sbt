@@ -55,6 +55,7 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
