@@ -486,6 +486,14 @@
             "description": "file to upload",
             "required": true,
             "type": "file"
+          },
+          {
+            "name": "file3",
+            "in": "formData",
+            "description": "file to upload",
+            "required": true,
+            "type": "file",
+            "x-scala-file-hash": "SHA-256"
           }
         ],
         "responses": {

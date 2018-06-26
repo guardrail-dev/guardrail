@@ -67,7 +67,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
           petId: Long,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -127,7 +128,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
           petId: Long,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -172,7 +174,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
           petId: Long,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -211,7 +214,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
           petId: Long,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -221,5 +225,66 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       .fold({ err =>
         failTest(err.toString)
       }, { _ == IgnoredEntity.empty })
+  }
+
+  test("round-trip: File uploads") {
+    val petId: Long = 123L
+    val apiKey: String = "foobar"
+    val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
+      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def deletePet(respond: PetResource.deletePetResponse.type)(
+          _petId: Long,
+          includeChildren: Option[Boolean],
+          status: Option[sdefs.PetStatus],
+          _apiKey: Option[String] = None) = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]) = ???
+      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus) = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String]) = ???
+      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long) = ???
+      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet) = ???
+      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(
+          petId: Long,
+          name: Option[String] = None,
+          status: Option[String] = None) = ???
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
+        java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+          petId: Long,
+          additionalMetadata: Option[String],
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String)) = {
+        val f1Length = file.flatMap({ case (f, _, _) => if (f.exists) { Some(f.length) } else None })
+        val f2Length = if (file2._1.exists) { Some(file2._1.length) } else None
+        val f3Length = if (file3._1.exists) { Some(file3._1.length) } else None
+
+        assert(file3._4 == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+               "Empty file hash does not match")
+
+        val code = file.count(_._1.exists) + (if (file2._1.exists) 1 else 0) + (if (file3._1.exists) 1 else 0)
+
+        Future.successful(
+          respond.OK(sdefs.ApiResponse(code = Some(code), message = Some(s"${f1Length} ${f2Length} ${f3Length}"))))
+      }
+    }))
+
+    val petClient = PetClient.httpClient(httpClient)
+
+    val result = petClient
+      .uploadFile(
+        petId,
+        Some("Additional metadata"),
+        None,
+        HttpEntity(ContentTypes.`application/json`, ""),
+        HttpEntity(ContentTypes.`application/json`, "")
+      )
+      .value
+      .futureValue
+    result
+      .fold({ err =>
+        failTest(err.toString)
+      }, { resp =>
+        assert(resp.code.exists(_ == 2), "Unexpected number of file uploads!")
+      })
   }
 }
