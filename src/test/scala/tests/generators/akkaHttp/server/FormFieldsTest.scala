@@ -95,11 +95,11 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
               case class bar(value: Long) extends Part
               case class baz(value: (File, Option[String], ContentType, String)) extends Part
             }
-            val Unmarshallfoopart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller { implicit executionContext =>
-              part => implicitly[Unmarshaller[Multipart.FormData.BodyPart, String]].apply(part).map(putFooParts.foo.apply)
+            val Unmarshallfoopart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller.withMaterializer { implicit executionContext =>
+              materializer => part => Unmarshaller.firstOf(implicitly[Unmarshaller[Multipart.FormData.BodyPart, String]], MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)).apply(part).map(putFooParts.foo.apply)
             }
-            val Unmarshallbarpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller { implicit executionContext =>
-              part => implicitly[Unmarshaller[Multipart.FormData.BodyPart, Long]].apply(part).map(putFooParts.bar.apply)
+            val Unmarshallbarpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller.withMaterializer { implicit executionContext =>
+              materializer => part => Unmarshaller.firstOf(implicitly[Unmarshaller[Multipart.FormData.BodyPart, Long]], MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)).apply(part).map(putFooParts.bar.apply)
             }
             val Unmarshallbazpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile[Id]("SHA-512", handler.putFooMapFileField(_, _, _)).map({
               case (v1, v2, v3, v4) =>
