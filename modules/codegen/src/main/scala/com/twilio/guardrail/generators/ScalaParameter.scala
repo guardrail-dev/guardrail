@@ -19,13 +19,14 @@ class ScalaParameter private[generators] (
     val argName: RawParameterName,
     val argType: Type,
     val required: Boolean,
-    val hashAlgorithm: Option[String]
+    val hashAlgorithm: Option[String],
+    val isFile: Boolean
 ) {
   override def toString: String =
     s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 
   def withType(newArgType: Type): ScalaParameter =
-    new ScalaParameter(in, param, paramName, argName, newArgType, required, hashAlgorithm)
+    new ScalaParameter(in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
@@ -38,16 +39,23 @@ object ScalaParameter {
     fromParam(RawParameterName(argName))
   def fromParam(argName: RawParameterName): Term.Param => ScalaParameter = {
     case param @ Term.Param(mods, name, decltype, default) =>
-      val (tpe, required): (Type, Boolean) = decltype
+      val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
         .flatMap({
-          case tpe @ Type.Apply(Type.Name("Option"), List(_)) =>
-            Some((tpe, false))
-          case Type.ByName(tpe)   => Some((tpe, true))
-          case tpe @ Type.Name(_) => Some((tpe, true))
+          case tpe @ t"Option[$inner]" =>
+            Some((tpe, inner, false))
+          case Type.ByName(tpe)   => Some((tpe, tpe, true))
+          case tpe @ Type.Name(_) => Some((tpe, tpe, true))
           case _                  => None
         })
-        .getOrElse((t"Nothing", true))
-      new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required, None)
+        .getOrElse((t"Nothing", t"Nothing", true))
+      new ScalaParameter(None,
+                         param,
+                         Term.Name(name.value),
+                         argName,
+                         tpe,
+                         required,
+                         None,
+                         innerTpe == t"BodyPartEntity") // TODO: Get GeneratorSettings in here so we can test properly
   }
 
   def fromParameter(protocolElems: List[StrictProtocolElems])(
@@ -181,7 +189,8 @@ object ScalaParameter {
                          RawParameterName(name),
                          declType,
                          required,
-                         ScalaFileHashAlgorithm(parameter))
+                         ScalaFileHashAlgorithm(parameter),
+                         paramType == gs.fileType)
     }
   }
 
@@ -203,7 +212,8 @@ object ScalaParameter {
             param.argName,
             param.argType,
             param.required,
-            None
+            param.hashAlgorithm,
+            param.isFile
           )
         } else param
       }
