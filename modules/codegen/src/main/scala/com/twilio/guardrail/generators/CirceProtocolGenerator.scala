@@ -1,11 +1,11 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.{ArrayModel, Model, ModelImpl, RefModel}
+import _root_.io.swagger.models.{ ArrayModel, Model, ModelImpl, RefModel }
 import _root_.io.swagger.models.properties._
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.{Default, ScalaEmptyIsNull, ScalaType}
+import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
 import com.twilio.guardrail.terms
 import java.util.Locale
 
@@ -19,12 +19,11 @@ object CirceProtocolGenerator {
 
   def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
-  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] = {
+  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] =
     concreteTypes
       .find(_.clsName == tpeName)
       .map(_.tpe)
       .map(f)
-  }
 
   object EnumProtocolTermInterp extends (EnumProtocolTerm ~> Target) {
     def apply[T](term: EnumProtocolTerm[T]): Target[T] = term match {
@@ -59,10 +58,9 @@ object CirceProtocolGenerator {
       case DecodeEnum(clsName) =>
         Target.pure(q"""
           implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-            Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(
-          Term.Name("s"),
-          List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
-          List(Term.Name("value")))}))
+            Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(Term.Name("s"),
+                                                                                  List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
+                                                                                  List(Term.Name("value")))}))
         """)
 
       case RenderClass(clsName, tpe) =>
@@ -81,10 +79,8 @@ object CirceProtocolGenerator {
           List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)") ++
           List(encoder) ++
           List(decoder) ++
-          List(
-            q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)") ++
-          List(
-            q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)")}
+          List(q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)") ++
+          List(q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)")}
           }
         """)
     }
@@ -101,8 +97,7 @@ object CirceProtocolGenerator {
           "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
         for {
-          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(
-            s"Generated ProtocolParameter(${term}, ${name}, ...)")
+          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
 
           argName = if (needCamelSnakeConversion) toCamelCase(name) else name
           meta <- SwaggerUtil.propMeta(property)
@@ -158,7 +153,7 @@ object CirceProtocolGenerator {
               (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
-          dep = rawDep.filterNot(_.value == clsName) // Filter out our own class name
+          dep  = rawDep.filterNot(_.value == clsName) // Filter out our own class name
         } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
 
       case RenderDTOClass(clsName, terms) =>
@@ -168,14 +163,14 @@ object CirceProtocolGenerator {
 
       case EncodeModel(clsName, needCamelSnakeConversion, params) =>
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
-        val paramCount = params.length
-        val typeName = Type.Name(clsName)
+        val paramCount                 = params.length
+        val typeName                   = Type.Name(clsName)
         val encVal = if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
             .to[List]
             .unzip
-          val List(name) = names
+          val List(name)  = names
           val List(field) = fields
           q"""
             Encoder.forProduct1(${name})((o: ${Type.Name(clsName)}) => o.${field})
@@ -218,7 +213,7 @@ object CirceProtocolGenerator {
 
       case DecodeModel(clsName, needCamelSnakeConversion, params) =>
         val emptyToNullKeys: List[String] = params.flatMap(_.emptyToNullKey).toList
-        val paramCount = params.length
+        val paramCount                    = params.length
         val decVal = if (paramCount <= 22 && emptyToNullKeys.isEmpty) {
           val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
           q"""
@@ -292,11 +287,9 @@ object CirceProtocolGenerator {
           case SwaggerUtil.Deferred(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
           case SwaggerUtil.DeferredArray(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"),
-                              s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
           case SwaggerUtil.DeferredMap(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"),
-                              s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
         }
     }
   }
@@ -307,8 +300,7 @@ object CirceProtocolGenerator {
         implicit val gs = generatorSettings
         for {
           entries <- definitions.traverse {
-            case (clsName, impl: ModelImpl)
-                if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
+            case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
               Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
             case (clsName, definition) =>
               SwaggerUtil
@@ -330,14 +322,16 @@ object CirceProtocolGenerator {
             q"import io.circe.syntax._",
             q"import io.circe.generic.semiauto._",
             q"import cats.syntax.either._"
-          ))
+          )
+        )
 
       case PackageObjectImports() =>
         Target.pure(
           List(
             q"import java.time._",
             q"import io.circe.java8.{ time => j8time }"
-          ))
+          )
+        )
 
       case PackageObjectContents() =>
         Target.pure(q"""

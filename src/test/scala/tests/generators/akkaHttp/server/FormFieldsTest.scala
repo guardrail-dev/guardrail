@@ -1,8 +1,8 @@
 package tests.generators.akkaHttp.server
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Context, Server, Servers}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Context, Server, Servers }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -49,7 +49,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
       Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    val handler = q"""
+    val handler  = q"""
       trait Handler {
         def putFoo(respond: Resource.putFooResponse.type)(foo: String, bar: Long, baz: (File, Option[String], ContentType, String)): scala.concurrent.Future[Resource.putFooResponse]
         def putFooMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File

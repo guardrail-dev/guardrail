@@ -9,13 +9,11 @@ object Default {
   }
 
   object GetDefault {
-    def build[F](f: F => Any): GetDefault[F] = {
+    def build[F](f: F => Any): GetDefault[F] =
       new GetDefault[F] {
-        def extract[T](from: F)(implicit T: Extractable[T]): Option[T] = {
+        def extract[T](from: F)(implicit T: Extractable[T]): Option[T] =
           T.extract(f(from)).toOption
-        }
       }
-    }
 
     implicit val getDefaultBooleanProperty: GetDefault[BooleanProperty] =
       build[BooleanProperty](_.getDefault)

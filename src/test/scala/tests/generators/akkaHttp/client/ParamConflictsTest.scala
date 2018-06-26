@@ -2,7 +2,7 @@ package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -88,7 +88,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val definition = q"""
       case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)
     """
-    val companion = q"""
+    val companion  = q"""
       object Foo {
         implicit val encodeFoo = {
           val readOnlyKeys = Set[String]()

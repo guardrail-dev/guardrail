@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.{Files, Path, StandardOpenOption}
+import java.nio.file.{ Files, Path, StandardOpenOption }
 import scala.io.AnsiColor
 import scala.meta._
 

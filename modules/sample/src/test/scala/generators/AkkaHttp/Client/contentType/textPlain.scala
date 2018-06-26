@@ -8,19 +8,13 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import _root_.tests.scalatest.EitherTValues
 
-class TextPlainTest
-    extends FunSuite
-    with Matchers
-    with EitherValues
-    with EitherTValues
-    with ScalaFutures
-    with ScalatestRouteTest {
+class TextPlainTest extends FunSuite with Matchers with EitherValues with EitherTValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(1000.millis, 1000.millis)
   test("Plain text should be emitted for optional parameters") {
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
@@ -33,7 +27,7 @@ class TextPlainTest
       })
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
-    val fooClient = FooClient.httpClient(client)
+    val fooClient                                   = FooClient.httpClient(client)
     new EitherTValuable(fooClient.doFoo(Some("sample"))).rightValue.futureValue shouldBe IgnoredEntity.empty
   }
 
@@ -48,7 +42,7 @@ class TextPlainTest
       })
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
-    val fooClient = FooClient.httpClient(client)
+    val fooClient                                   = FooClient.httpClient(client)
     new EitherTValuable(fooClient.doBar("sample")).rightValue.futureValue shouldBe IgnoredEntity.empty
   }
 }

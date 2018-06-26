@@ -8,9 +8,7 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import scala.meta._
 
 class ProtocolSupportTerms[F[_]](implicit I: InjectK[ProtocolSupportTerm, F]) {
-  def extractConcreteTypes(
-      models: List[(String, Model)],
-      generatorSettings: GeneratorSettings): Free[F, List[PropMeta]] =
+  def extractConcreteTypes(models: List[(String, Model)], generatorSettings: GeneratorSettings): Free[F, List[PropMeta]] =
     Free.inject[ProtocolSupportTerm, F](ExtractConcreteTypes(models, generatorSettings))
   def protocolImports(): Free[F, List[Import]] =
     Free.inject[ProtocolSupportTerm, F](ProtocolImports())

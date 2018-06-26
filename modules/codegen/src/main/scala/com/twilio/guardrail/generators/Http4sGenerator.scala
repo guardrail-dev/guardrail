@@ -32,7 +32,8 @@ object Http4sGenerator {
             q"import org.http4s.dsl.io.Path",
             q"import org.http4s.multipart._",
             q"import scala.language.implicitConversions"
-          ))
+          )
+        )
 
       case GetFrameworkImplicits(generatorSettings) =>
         val jsonEncoderTypeclass: Type = t"io.circe.Encoder"

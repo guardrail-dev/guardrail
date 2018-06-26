@@ -16,7 +16,7 @@ import com.twilio.guardrail.{
   RandomType,
   Target
 }
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._

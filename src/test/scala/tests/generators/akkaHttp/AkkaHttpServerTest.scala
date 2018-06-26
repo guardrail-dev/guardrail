@@ -1,8 +1,8 @@
 package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Context, Server, Servers}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Context, Server, Servers }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -130,7 +130,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
       Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    val handler = q"""
+    val handler  = q"""
       trait StoreHandler {
         def getRoot(respond: StoreResource.getRootResponse.type)(): scala.concurrent.Future[StoreResource.getRootResponse]
         def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
@@ -275,7 +275,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
       Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
     ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
-    val handler = q"""
+    val handler  = q"""
       trait BazHandler {
         def getFoo(bar: Long)(implicit traceBuilder: TraceBuilder): scala.concurrent.Future[Boolean]
       }

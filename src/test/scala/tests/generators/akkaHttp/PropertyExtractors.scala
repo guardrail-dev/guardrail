@@ -1,8 +1,8 @@
 package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._

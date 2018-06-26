@@ -4,35 +4,37 @@ import _root_.io.swagger.models._
 import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
 import cats.syntax.either._
-import cats.{FlatMap, Foldable}
+import cats.{ FlatMap, Foldable }
 import cats.instances.list._
-import com.twilio.guardrail.extract.{Default, ScalaType}
-import com.twilio.guardrail.generators.{GeneratorSettings, ScalaParameter}
-import java.util.{Map => JMap}
+import com.twilio.guardrail.extract.{ Default, ScalaType }
+import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter }
+import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
 
 object SwaggerUtil {
   sealed trait ResolvedType
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
-  sealed trait LazyResolvedType extends ResolvedType
-  case class Deferred(value: String) extends LazyResolvedType
-  case class DeferredArray(value: String) extends LazyResolvedType
-  case class DeferredMap(value: String) extends LazyResolvedType
+  sealed trait LazyResolvedType                                                           extends ResolvedType
+  case class Deferred(value: String)                                                      extends LazyResolvedType
+  case class DeferredArray(value: String)                                                 extends LazyResolvedType
+  case class DeferredMap(value: String)                                                   extends LazyResolvedType
   object ResolvedType {
     implicit class FoldableExtension[F[_]](F: Foldable[F]) {
-      import cats.{Alternative, Monoid}
+      import cats.{ Alternative, Monoid }
       def partitionEither[A, B, C](value: F[A])(f: A => Either[B, C])(implicit A: Alternative[F]): (F[B], F[C]) = {
         import cats.instances.tuple._
 
         implicit val mb: Monoid[F[B]] = A.algebra[B]
         implicit val mc: Monoid[F[C]] = A.algebra[C]
 
-        F.foldMap(value)(a =>
-          f(a) match {
-            case Left(b)  => (A.pure(b), A.empty[C])
-            case Right(c) => (A.empty[B], A.pure(c))
-        })
+        F.foldMap(value)(
+          a =>
+            f(a) match {
+              case Left(b)  => (A.pure(b), A.empty[C])
+              case Right(c) => (A.empty[B], A.pure(c))
+          }
+        )
       }
     }
 
@@ -42,17 +44,14 @@ object SwaggerUtil {
         case (clsName, x: LazyResolvedType) => Left((clsName, x))
       }
 
-      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(
-          f: Type => Type): Option[(String, Resolved)] = {
+      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] =
         resolvedTypes
           .find(_._1 == tpeName)
           .map(_._2.tpe)
           .map(x => (clsName, Resolved(f(x), None, None)))
-      }
 
       FlatMap[Target]
-        .tailRecM[(List[(String, LazyResolvedType)], List[(String, Resolved)]), List[(String, Resolved)]](
-          (lazyTypes, resolvedTypes)) {
+        .tailRecM[(List[(String, LazyResolvedType)], List[(String, Resolved)]), List[(String, Resolved)]]((lazyTypes, resolvedTypes)) {
           case (lazyTypes, resolvedTypes) =>
             if (lazyTypes.isEmpty) {
               Target.pure(Right(resolvedTypes))
@@ -72,7 +71,7 @@ object SwaggerUtil {
         }
     }
 
-    def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] = {
+    def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] =
       value match {
         case x @ Resolved(tpe, _, default) => Target.pure(x)
         case Deferred(name) =>
@@ -108,10 +107,9 @@ object SwaggerUtil {
                 Resolved(t"Map[String, ${tpe}]", None, None)
             }
       }
-    }
   }
 
-  def modelMetaType[T <: Model](model: T)(implicit gs: GeneratorSettings): Target[ResolvedType] = {
+  def modelMetaType[T <: Model](model: T)(implicit gs: GeneratorSettings): Target[ResolvedType] =
     model match {
       case ref: RefModel =>
         for {
@@ -120,7 +118,7 @@ object SwaggerUtil {
       case arr: ArrayModel =>
         for {
           items <- Target.fromOption(Option(arr.getItems()), "items.type unspecified")
-          meta <- propMeta(items)
+          meta  <- propMeta(items)
           res <- meta match {
             case Resolved(inner, dep, default) =>
               Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
@@ -140,7 +138,6 @@ object SwaggerUtil {
           )
         } yield Resolved(typeName(tpeName, Option(impl.getFormat()), ScalaType(impl)), None, None)
     }
-  }
 
   case class ParamMeta(tpe: Type, defaultValue: Option[Term])
   def paramMeta[T <: Parameter](param: T)(implicit gs: GeneratorSettings): Target[ParamMeta] = {
@@ -171,7 +168,7 @@ object SwaggerUtil {
       case x: BodyParameter =>
         for {
           schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
-          tpe <- modelMetaType(schema)
+          tpe    <- modelMetaType(schema)
           meta <- tpe match {
             case SwaggerUtil.Resolved(tpe, _, _) =>
               Target.pure(ParamMeta(tpe, None))
@@ -212,18 +209,16 @@ object SwaggerUtil {
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeName(typeName: String, format: Option[String], customType: Option[String])(
-      implicit gs: GeneratorSettings): Type = {
+  def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings): Type = {
     def log(fmt: Option[String], t: Type): Type = {
       fmt.foreach { fmt =>
-        println(
-          s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
+        println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
       }
 
       t
     }
     def liftCustomType(s: String): Option[Type] = {
-      val terms = s.split('.').toList
+      val terms        = s.split('.').toList
       val (init, last) = (terms.init, terms.last)
       init.map(Term.Name.apply _) match {
         case Nil if last == "" => None
@@ -267,7 +262,7 @@ object SwaggerUtil {
         ctor.copy(tpe = Type.Name(escapeReserved(name))) // Literal "this" in ctor names is OK
     }).asInstanceOf[T]
 
-  val unbacktick = "^`(.*)`$".r
+  val unbacktick     = "^`(.*)`$".r
   val leadingNumeric = "^[0-9\"]".r
   val invalidSymbols = "[-`\"'()\\.]".r
   val reservedWords = Set(
@@ -333,13 +328,13 @@ object SwaggerUtil {
     case name                                                   => name
   }
 
-  def propMeta[T <: Property](property: T)(implicit gs: GeneratorSettings): Target[ResolvedType] = {
+  def propMeta[T <: Property](property: T)(implicit gs: GeneratorSettings): Target[ResolvedType] =
     property match {
       case p: ArrayProperty =>
         val title = Option(p.getTitle()).getOrElse("Unnamed array")
         for {
           items <- Target.fromOption(Option(p.getItems()), s"${title} has no items")
-          rec <- propMeta(items)
+          rec   <- propMeta(items)
           res <- rec match {
             case DeferredMap(_) =>
               Target.error("FIXME: Got an Array of Maps, currently not supported")
@@ -372,10 +367,7 @@ object SwaggerUtil {
       case b: BooleanProperty =>
         Target.pure(Resolved(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
       case s: StringProperty =>
-        Target.pure(
-          Resolved(typeName("string", Option(s.getFormat()), ScalaType(s)),
-                   None,
-                   Default(s).extract[String].map(Lit.String(_))))
+        Target.pure(Resolved(typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
 
       case d: DateProperty =>
         Target.pure(Resolved(t"java.time.LocalDate", None, None))
@@ -403,7 +395,6 @@ object SwaggerUtil {
       case x =>
         Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
     }
-  }
 
   /*
     Required \ Default  || Defined  || Undefined / NULL ||
@@ -424,28 +415,29 @@ object SwaggerUtil {
     successCodesWithoutEntities.exists(responses.containsKey)
 
   def getResponseType(httpMethod: HttpMethod, operation: Operation, ignoredType: Type = t"IgnoredEntity")(
-      implicit gs: GeneratorSettings): Target[ResolvedType] = {
+      implicit gs: GeneratorSettings
+  ): Target[ResolvedType] =
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>
           getBestSuccessResponse(responses)
             .flatMap(resp => Option(resp.getSchema))
             .map(propMeta)
-            .orElse(if (hasEmptySuccessType(responses))
-              Some(Target.pure(Resolved(ignoredType, None, None): ResolvedType))
-            else None)
+            .orElse(
+              if (hasEmptySuccessType(responses))
+                Some(Target.pure(Resolved(ignoredType, None, None): ResolvedType))
+              else None
+            )
         }
         .getOrElse(Target.pure(Resolved(ignoredType, None, None)))
     } else {
       Target.pure(Resolved(ignoredType, None, None))
     }
-  }
 
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(
-        f: ScalaParameter => Parser[T]): Parser[T] =
+    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => Parser[T]): Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[Parser[T]](
@@ -461,9 +453,8 @@ object SwaggerUtil {
           ok(q"Formatter.addPath(${param.paramName})")
         }
       }
-      val other: Parser[String] = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: Parser[List[Either[String, Term.Apply]]] = many(
-        either(term, other).map(_.swap: Either[String, Term.Apply]))
+      val other: Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
+      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(term, other).map(_.swap: Either[String, Term.Apply]))
 
       for {
         parts <- pattern
@@ -488,11 +479,11 @@ object SwaggerUtil {
         litRegex: (String, Term.Name, String) => T
     ) {
       // (Option[TN], T) is (Option[Binding], Segment)
-      type P = Parser[(Option[TN], T)]
+      type P  = Parser[(Option[TN], T)]
       type LP = Parser[List[(Option[TN], T)]]
 
-      val plainString = many(noneOf("{}/?")).map(_.mkString)
-      val plainNEString = many1(noneOf("{}/?")).map(_.toList.mkString)
+      val plainString      = many(noneOf("{}/?")).map(_.mkString)
+      val plainNEString    = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P = plainNEString.map(s => (None, stringPath(s)))
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P =
         (plainString ~ variable ~ plainString).flatMap {
@@ -523,13 +514,12 @@ object SwaggerUtil {
       val trailingSlash: Parser[Boolean] = opt(char('/')).map(_.nonEmpty)
       val staticQS: Parser[Option[T]] = (opt(
         char('?') ~> sepBy1(staticQSTerm, char('&'))
-          .map(_.reduceLeft(joinParams))) | opt(char('?')).map { _ =>
+          .map(_.reduceLeft(joinParams))
+      ) | opt(char('?')).map { _ =>
         None
       })
-      val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = endOfInput ~> ok(
-        (List.empty[(Option[TN], T)], (false, None)))
-      val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(
-        false) ~ staticQS)
+      val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = endOfInput ~> ok((List.empty[(Option[TN], T)], (false, None)))
+      val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
       def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
     }
@@ -588,13 +578,13 @@ object SwaggerUtil {
           .foldLeft[(Term, List[Term.Name])]((q"pathEnd", List.empty))({
             case ((q"pathEnd   ", bindings), (termName, b)) =>
               (q"path(${b}       )", bindings ++ termName)
-            case ((q"path(${a})", bindings), (termName, c)) =>
+            case ((q"path(${a })", bindings), (termName, c)) =>
               (q"path(${a} / ${c})", bindings ++ termName)
           })
         trailingSlashed = if (trailingSlash) {
           directive match {
-            case q"path(${a})" => q"pathPrefix(${a}) & pathEndOrSingleSlash"
-            case q"pathEnd"    => q"pathEndOrSingleSlash"
+            case q"path(${a })" => q"pathPrefix(${a}) & pathEndOrSingleSlash"
+            case q"pathEnd"     => q"pathEndOrSingleSlash"
           }
         } else directive
         result = queryParams.fold(trailingSlashed) { qs =>

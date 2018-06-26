@@ -40,7 +40,8 @@ object AkkaHttpGenerator {
             q"import java.security.MessageDigest",
             q"import java.util.concurrent.atomic.AtomicReference",
             q"import scala.util.{Failure, Success}"
-          ))
+          )
+        )
 
       case GetFrameworkImplicits(generatorSettings) =>
         val jsonEncoderTypeclass: Type = t"io.circe.Encoder"

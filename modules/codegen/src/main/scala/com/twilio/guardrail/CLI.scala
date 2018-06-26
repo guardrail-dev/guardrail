@@ -7,7 +7,7 @@ import cats.syntax.traverse._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
-import com.twilio.swagger.core.{LogLevel, LogLevels}
+import com.twilio.swagger.core.{ LogLevel, LogLevels }
 
 import scala.io.AnsiColor
 
@@ -27,8 +27,7 @@ object CLICommon {
       .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
         {
           case MissingArg(args, Error.ArgName(arg)) =>
-            println(
-              s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
+            println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
             unsafePrintHelp()
             fallback
           case NoArgsSpecified =>
@@ -120,9 +119,8 @@ object CLICommon {
 trait CLICommon {
   val interpreter: CoreTerm ~> CoreTarget
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
     CLICommon.run(args)(interpreter)
-  }
 }
 
 object CLI extends CLICommon {

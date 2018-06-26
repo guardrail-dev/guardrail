@@ -1,6 +1,6 @@
 package swagger
 
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import clients.akkaHttp.Implicits
 import clients.akkaHttp.AkkaHttpImplicits._
 

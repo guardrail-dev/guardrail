@@ -1,14 +1,14 @@
 package com.twilio
 
-import cats.{Applicative, Id}
-import cats.data.{EitherK, EitherT, NonEmptyList, WriterT}
+import cats.{ Applicative, Id }
+import cats.data.{ EitherK, EitherT, NonEmptyList, WriterT }
 import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm
-import com.twilio.guardrail.terms.{ScalaTerm, SwaggerTerm}
+import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 import com.twilio.guardrail.terms.framework.FrameworkTerm
 
 import scala.meta._
@@ -18,8 +18,8 @@ package guardrail {
   case class CodegenDefinitions(clients: List[Client], servers: List[Server])
 
   object Target {
-    val A = Applicative[Target]
-    def pure[T](x: T): Target[T] = A.pure(x)
+    val A                              = Applicative[Target]
+    def pure[T](x: T): Target[T]       = A.pure(x)
     def error[T](x: String): Target[T] = EitherT.left[T](x.pure[Logger])
     def fromOption[T](x: Option[T], default: => String): Target[T] =
       EitherT.fromOption(x, default)
@@ -85,7 +85,7 @@ package object guardrail {
     EitherK[FrameworkTerm, CodegenApplicationACEMSSPRS, T]
   type CodegenApplication[T] = CodegenApplicationACEMSSPRSF[T]
 
-  type Logger[T] = WriterT[Id, StructuredLogger, T]
-  type Target[A] = EitherT[Logger, String, A]
+  type Logger[T]     = WriterT[Id, StructuredLogger, T]
+  type Target[A]     = EitherT[Logger, String, A]
   type CoreTarget[A] = EitherT[Logger, Error, A]
 }

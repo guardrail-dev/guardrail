@@ -2,7 +2,7 @@ package tests.core
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._

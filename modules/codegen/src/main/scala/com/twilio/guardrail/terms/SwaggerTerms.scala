@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package terms
 
-import _root_.io.swagger.models.{ModelImpl, Operation, Path}
+import _root_.io.swagger.models.{ ModelImpl, Operation, Path }
 import cats.InjectK
 import cats.free.Free
 

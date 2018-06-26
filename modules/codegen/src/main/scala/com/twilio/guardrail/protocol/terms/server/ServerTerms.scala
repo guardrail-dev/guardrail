@@ -1,10 +1,10 @@
 package com.twilio.guardrail.protocol.terms.server
 
-import _root_.io.swagger.models.{Operation, Path}
+import _root_.io.swagger.models.{ Operation, Path }
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.generators.{GeneratorSettings, ScalaParameter}
-import com.twilio.guardrail.{RenderedRoute, ServerRoute, StrictProtocolElems}
+import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter }
+import com.twilio.guardrail.{ RenderedRoute, ServerRoute, StrictProtocolElems }
 
 import scala.meta._
 
@@ -13,47 +13,29 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
-  def buildTracingFields(
-      operation: Operation,
-      className: List[String],
-      tracing: Boolean, generatorSettings: GeneratorSettings): Free[F, Option[(ScalaParameter, Term)]] =
+  def buildTracingFields(operation: Operation,
+                         className: List[String],
+                         tracing: Boolean,
+                         generatorSettings: GeneratorSettings): Free[F, Option[(ScalaParameter, Term)]] =
     Free.inject(BuildTracingFields(operation, className, tracing, generatorSettings))
-  def generateRoute(
-      resourceName: String,
-      basePath: Option[String],
-      tracingFields: Option[(ScalaParameter, Term)],
-      responseDefinitions: List[Defn],
-      protocolElems: List[StrictProtocolElems],
-      generatorSettings: GeneratorSettings)(route: ServerRoute): Free[F, RenderedRoute] =
-    Free.inject(
-      GenerateRoute(resourceName,
-                    basePath,
-                    route,
-                    tracingFields,
-                    responseDefinitions,
-                    protocolElems,
-                    generatorSettings))
+  def generateRoute(resourceName: String,
+                    basePath: Option[String],
+                    tracingFields: Option[(ScalaParameter, Term)],
+                    responseDefinitions: List[Defn],
+                    protocolElems: List[StrictProtocolElems],
+                    generatorSettings: GeneratorSettings)(route: ServerRoute): Free[F, RenderedRoute] =
+    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions, protocolElems, generatorSettings))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
-  def generateResponseDefinitions(
-      operation: Operation,
-      protocolElems: List[StrictProtocolElems],
-      generatorSettings: GeneratorSettings): Free[F, List[Defn]] =
+  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems], generatorSettings: GeneratorSettings): Free[F, List[Defn]] =
     Free.inject(GenerateResponseDefinitions(operation, protocolElems, generatorSettings))
-  def renderClass(
-      resourceName: String,
-      handlerName: String,
-      combinedRouteTerms: Term,
-      extraRouteParams: List[Term.Param],
-      responseDefinitions: List[Defn],
-      supportDefinitions: List[Defn]): Free[F, Stat] =
-    Free.inject(
-      RenderClass(resourceName,
-                  handlerName,
-                  combinedRouteTerms,
-                  extraRouteParams,
-                  responseDefinitions,
-                  supportDefinitions))
+  def renderClass(resourceName: String,
+                  handlerName: String,
+                  combinedRouteTerms: Term,
+                  extraRouteParams: List[Term.Param],
+                  responseDefinitions: List[Defn],
+                  supportDefinitions: List[Defn]): Free[F, Stat] =
+    Free.inject(RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions))
   def renderHandler(handlerName: String, methodSigs: List[Decl.Def], handlerDefinitions: List[Stat]) =
     Free.inject(RenderHandler(handlerName, methodSigs, handlerDefinitions))
   def combineRouteTerms(terms: List[Term]): Free[F, Term] =

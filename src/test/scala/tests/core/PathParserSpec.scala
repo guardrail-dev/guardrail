@@ -1,8 +1,8 @@
 package tests.core
 
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.{SwaggerUtil, Target}
-import org.scalatest.{EitherValues, FunSuite, Matchers, OptionValues}
+import com.twilio.guardrail.{ SwaggerUtil, Target }
+import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
 import com.twilio.guardrail.generators.GeneratorSettings
 
@@ -26,10 +26,8 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     ("/foo/", q""" host + basePath + "/foo/" """),
     ("/{foo}", q""" host + basePath + "/" + Formatter.addPath(foo) """),
     ("/{foo}.json", q""" host + basePath + "/" + Formatter.addPath(foo) + ".json" """),
-    ("/{foo}/{bar}.json",
-     q""" host + basePath + "/" + Formatter.addPath(foo) + "/" + Formatter.addPath(bar) + ".json" """),
-    ("/{foo_bar}/{bar_baz}.json",
-     q""" host + basePath + "/" + Formatter.addPath(fooBar) + "/" + Formatter.addPath(barBaz) + ".json" """)
+    ("/{foo}/{bar}.json", q""" host + basePath + "/" + Formatter.addPath(foo) + "/" + Formatter.addPath(bar) + ".json" """),
+    ("/{foo_bar}/{bar_baz}.json", q""" host + basePath + "/" + Formatter.addPath(fooBar) + "/" + Formatter.addPath(barBaz) + ".json" """)
   ).foreach {
     case (str, expected) =>
       test(s"Client $str") {

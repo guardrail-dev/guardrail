@@ -12,13 +12,11 @@ import scala.meta._
 class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
   def extractProperties(swagger: ModelImpl): Free[F, Either[String, List[(String, Property)]]] =
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
-  def transformProperty(
-      clsName: String,
-      needCamelSnakeConversion: Boolean,
-      concreteTypes: List[PropMeta],
-      generatorSettings: GeneratorSettings)(name: String, prop: Property): Free[F, ProtocolParameter] =
-    Free.inject[ModelProtocolTerm, F](
-      TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes, generatorSettings))
+  def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta], generatorSettings: GeneratorSettings)(
+      name: String,
+      prop: Property
+  ): Free[F, ProtocolParameter] =
+    Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes, generatorSettings))
   def renderDTOClass(clsName: String, terms: List[Term.Param]): Free[F, Defn.Class] =
     Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms))
   def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =

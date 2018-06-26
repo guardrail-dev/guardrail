@@ -1,8 +1,8 @@
 package tests.generators.akkaHttp.client.contentType
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Client, Clients, Context}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Client, Clients, Context }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -38,7 +38,7 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                  = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
@@ -47,7 +47,7 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
         def httpClient(httpClient: HttpRequest => Future[HttpResponse], host: String = "http://localhost:1234")(implicit ec: ExecutionContext, mat: Materializer): Client = new Client(host = host)(httpClient = httpClient, ec = ec, mat = mat)
       }
     """
-    val client = q"""
+    val client    = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
         val basePath: String = ""
         private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {

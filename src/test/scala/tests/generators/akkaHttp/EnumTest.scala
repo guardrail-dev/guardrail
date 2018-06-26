@@ -2,7 +2,7 @@ package tests.generators.akkaHttp
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -65,7 +65,7 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
       override def toString: String = value.toString
     }
     """
-    val companion = q"""
+    val companion  = q"""
     object Bar {
       object members {
         case object V1 extends Bar("v1")

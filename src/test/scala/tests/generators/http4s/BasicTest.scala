@@ -2,7 +2,7 @@ package tests.generators.http4s
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.Http4s
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -108,7 +108,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    )                  = runSwaggerSpec(swagger)(Context.empty, Http4s)
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""

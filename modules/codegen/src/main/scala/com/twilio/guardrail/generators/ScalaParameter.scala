@@ -2,7 +2,7 @@ package com.twilio.guardrail
 package generators
 
 import _root_.io.swagger.models.parameters.Parameter
-import com.twilio.guardrail.extract.{Default, ScalaType, ScalaFileHashAlgorithm}
+import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
 import java.util.Locale
 import scala.meta._
 import cats.syntax.traverse._
@@ -32,9 +32,8 @@ object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = {
+  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
     fromParam(param.name.value)(param)
-  }
   def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
     fromParam(RawParameterName(argName))(param)
   def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = param match {
@@ -48,18 +47,10 @@ object ScalaParameter {
           case _                  => None
         })
         .getOrElse((t"Nothing", t"Nothing", true))
-      new ScalaParameter(None,
-                         param,
-                         Term.Name(name.value),
-                         argName,
-                         tpe,
-                         required,
-                         None,
-                         innerTpe == gs.fileType)
+      new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required, None, innerTpe == gs.fileType)
   }
 
-  def fromParameter(protocolElems: List[StrictProtocolElems])(
-      implicit gs: GeneratorSettings): Parameter => Target[ScalaParameter] = { parameter =>
+  def fromParameter(protocolElems: List[StrictProtocolElems])(implicit gs: GeneratorSettings): Parameter => Target[ScalaParameter] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed =
         "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
@@ -95,7 +86,7 @@ object ScalaParameter {
         case x: BodyParameter =>
           for {
             schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
-            rtpe <- SwaggerUtil.modelMetaType(schema)
+            rtpe   <- SwaggerUtil.modelMetaType(schema)
           } yield rtpe
         case x: HeaderParameter =>
           for {
@@ -141,7 +132,7 @@ object ScalaParameter {
     }
 
     for {
-      meta <- paramMeta(parameter)
+      meta     <- paramMeta(parameter)
       resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
 
@@ -165,8 +156,7 @@ object ScalaParameter {
                   case Lit.String(name) =>
                     elems
                       .find(_._1 == name)
-                      .fold(Target.error[Term](s"Enumeration ${tpeName} is not defined for default value ${name}"))(
-                        value => Target.pure(value._3))
+                      .fold(Target.error[Term](s"Enumeration ${tpeName} is not defined for default value ${name}"))(value => Target.pure(value._3))
                   case _ =>
                     Target.error[Term](s"Enumeration ${tpeName} somehow has a default value that isn't a string")
                 }
@@ -182,7 +172,7 @@ object ScalaParameter {
       name <- Target.fromOption(Option(parameter.getName), "Parameter missing \"name\"")
     } yield {
       val paramName = Term.Name(toCamelCase(name))
-      val param = param"${paramName}: ${declType}".copy(default = defaultValue)
+      val param     = param"${paramName}: ${declType}".copy(default = defaultValue)
       new ScalaParameter(Option(parameter.getIn),
                          param,
                          paramName,
@@ -194,8 +184,7 @@ object ScalaParameter {
     }
   }
 
-  def fromParameters(protocolElems: List[StrictProtocolElems])(
-      implicit gs: GeneratorSettings): List[Parameter] => Target[List[ScalaParameter]] = { params =>
+  def fromParameters(protocolElems: List[StrictProtocolElems])(implicit gs: GeneratorSettings): List[Parameter] => Target[List[ScalaParameter]] = { params =>
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
       counts = parameters.groupBy(_.paramName.value).mapValues(_.length)

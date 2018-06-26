@@ -6,5 +6,4 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import scala.meta._
 
 sealed trait ArrayProtocolTerm[T]
-case class ExtractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta], generatorSettings: GeneratorSettings)
-    extends ArrayProtocolTerm[Type]
+case class ExtractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta], generatorSettings: GeneratorSettings) extends ArrayProtocolTerm[Type]

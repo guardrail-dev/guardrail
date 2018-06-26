@@ -1,9 +1,9 @@
 package swagger
 
-import _root_.tracer.clients.{definitions => cdefs}
-import _root_.tracer.servers.addresses.{AddressesHandler, AddressesResource}
-import _root_.tracer.servers.users.{UsersHandler, UsersResource}
-import _root_.tracer.servers.{definitions => sdefs}
+import _root_.tracer.clients.{ definitions => cdefs }
+import _root_.tracer.servers.addresses.{ AddressesHandler, AddressesResource }
+import _root_.tracer.servers.users.{ UsersHandler, UsersResource }
+import _root_.tracer.servers.{ definitions => sdefs }
 import _root_.tracer.clients.users.UsersClient
 import _root_.tracer.clients.addresses.AddressesClient
 import _root_.tracer.servers.AkkaHttpImplicits.TraceBuilder
@@ -13,20 +13,14 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{EitherValues, FunSuite, Matchers}
-import scala.concurrent.{ExecutionContext, Future}
+import org.scalatest.concurrent.{ IntegrationPatience, ScalaFutures }
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 
-class FullTracer
-    extends FunSuite
-    with Matchers
-    with EitherValues
-    with ScalaFutures
-    with ScalatestRouteTest
-    with IntegrationPatience {
+class FullTracer extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
 
-  val traceHeaderKey = "tracer-label"
+  val traceHeaderKey          = "tracer-label"
   def log(line: String): Unit = ()
 
   def trace(implicit ec: ExecutionContext): String => Directive1[TraceBuilder] = { name =>
@@ -48,7 +42,7 @@ class FullTracer
       for {
         res <- httpClient(req.mapHeaders(RawHeader(traceHeaderKey, parentValue) +: _))
         after = System.currentTimeMillis
-        () = log(s"Request took ${after - before}ms")
+        ()    = log(s"Request took ${after - before}ms")
       } yield res
     }
   }
@@ -58,16 +52,16 @@ class FullTracer
     val server2: HttpRequest => Future[HttpResponse] = Route.asyncHandler(
       AddressesResource.routes(
         new AddressesHandler {
-          def getAddress(respond: AddressesResource.getAddressResponse.type)(id: String)(traceBuilder: TraceBuilder) = {
+          def getAddress(respond: AddressesResource.getAddressResponse.type)(id: String)(traceBuilder: TraceBuilder) =
             Future.successful(if (id == "addressId") {
               respond.OK(sdefs.Address(Some("line1"), Some("line2"), Some("line3")))
             } else respond.NotFound)
-          }
           def getAddresses(respond: AddressesResource.getAddressesResponse.type)()(traceBuilder: TraceBuilder) =
             Future.successful(respond.NotFound)
         },
         trace
-      ))
+      )
+    )
 
     // Establish the "User" server
     val server1: HttpRequest => Future[HttpResponse] = Route.asyncHandler(
@@ -75,16 +69,16 @@ class FullTracer
         new UsersHandler {
           // ... using the "Address" server explicitly in the addressesClient
           val addressesClient = AddressesClient.httpClient(server2)
-          def getUser(respond: UsersResource.getUserResponse.type)(id: String)(traceBuilder: TraceBuilder) = {
+          def getUser(respond: UsersResource.getUserResponse.type)(id: String)(traceBuilder: TraceBuilder) =
             addressesClient
               .getAddress(traceBuilder, "addressId")
               .fold(_ => respond.NotFound, { address =>
                 respond.OK(sdefs.User("1234", sdefs.UserAddress(address.line1, address.line2, address.line3)))
               })
-          }
         },
         trace
-      ))
+      )
+    )
 
     // Build a UsersClient using the User server
     val usersClient = UsersClient.httpClient(server1)

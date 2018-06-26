@@ -2,7 +2,7 @@ package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail._
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -108,7 +108,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                  = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""

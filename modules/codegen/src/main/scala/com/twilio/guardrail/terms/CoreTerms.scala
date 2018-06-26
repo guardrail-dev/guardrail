@@ -5,7 +5,7 @@ import cats.InjectK
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.{CodegenApplication, Target}
+import com.twilio.guardrail.{ CodegenApplication, Target }
 
 import scala.meta._
 
@@ -18,8 +18,7 @@ class CoreTerms[F[_]](implicit I: InjectK[CoreTerm, F]) {
     Free.inject[CoreTerm, F](ParseArgs(args, defaultFramework))
   def validateArgs(parsed: List[Args]): Free[F, NonEmptyList[Args]] =
     Free.inject[CoreTerm, F](ValidateArgs(parsed))
-  def processArgSet(targetInterpreter: FunctionK[CodegenApplication, Target])(
-      args: Args): Free[F, ReadSwagger[Target[List[WriteTree]]]] =
+  def processArgSet(targetInterpreter: FunctionK[CodegenApplication, Target])(args: Args): Free[F, ReadSwagger[Target[List[WriteTree]]]] =
     Free.inject[CoreTerm, F](ProcessArgSet(targetInterpreter, args))
 }
 object CoreTerms {

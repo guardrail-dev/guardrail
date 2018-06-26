@@ -1,8 +1,8 @@
 package tests.generators.http4s.client
 
 import com.twilio.guardrail.generators.Http4s
-import com.twilio.guardrail.{Client, Clients, Context}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Client, Clients, Context }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunner {
