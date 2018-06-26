@@ -31,6 +31,7 @@ object AkkaHttpGenerator {
             q"import akka.stream.{IOResult, Materializer}",
             q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
             q"import akka.util.ByteString",
+            q"import cats.{Functor, Id}",
             q"import cats.data.EitherT",
             q"import cats.implicits._",
             q"import scala.concurrent.{ExecutionContext, Future}",

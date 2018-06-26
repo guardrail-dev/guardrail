@@ -66,8 +66,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
           petId: Long,
           additionalMetadata: Option[String],
-          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])) = ???
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -126,8 +126,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
           petId: Long,
           additionalMetadata: Option[String],
-          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])) = ???
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -171,8 +171,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
           petId: Long,
           additionalMetadata: Option[String],
-          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])) = ???
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -210,8 +210,8 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
           petId: Long,
           additionalMetadata: Option[String],
-          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])],
-          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, Option[String])) = ???
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType)) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)

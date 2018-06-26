@@ -273,7 +273,7 @@ object AkkaHttpServerGenerator {
           formArgs = filterParamBy("formData").toList.map({ x =>
             x.withType(
               if (x.isFile) {
-                val fileParams = t"(File, Option[String], ContentType, Option[String])"
+                val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
                 if (x.required) {
                   t"(..${fileParams})"
                 } else {
@@ -342,7 +342,7 @@ object AkkaHttpServerGenerator {
           val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(scalaParam =>
             scalaParam.param.copy(decltpe=(
               if (scalaParam.isFile) {
-                val fileParams = t"(File, Option[String], ContentType, Option[String])"
+                val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
                 if (scalaParam.required) {
                   Some(t"(..${fileParams})")
                 } else {
@@ -552,8 +552,10 @@ object AkkaHttpServerGenerator {
                       q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
                         .Select(partsTerm, containerName.toType)}] = (
-                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}(${rawParameter.hashAlgorithm.fold[Term](q"None")(x => q"Option(${Lit.String(x)})")}, handler.${Term.Name(s"${operationId}MapFileField")}(_, _, _))
-                              .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm.fold(t"Option")(Function.const(t"Id"))}](${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term.Name(s"${operationId}MapFileField")}(_, _, _))
+                              .map({ case (v1, v2, v3, v4) =>
+                                ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))}))
+                              })
                             )
                       """,
                       Case(
@@ -566,9 +568,9 @@ object AkkaHttpServerGenerator {
                       q"""
                         val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(List(Case(
                         Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
-                                    List(p"((v1, v2, v3, v4))")),
+                                    List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
                         None,
-                        q"(v1, v2, v3, v4)"
+                        q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
                       )))})
                       """
                     )
@@ -648,10 +650,10 @@ object AkkaHttpServerGenerator {
           def ${Term.Name(s"${operationId}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
           """,
           q"""
-            def ${Term.Name(s"${operationId}UnmarshalToFile")}(hashType: Option[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, Option[String])] = Unmarshaller { implicit executionContext => part =>
+            def ${Term.Name(s"${operationId}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
               val dest = destFn(part.name, part.filename, part.entity.contentType)
               val messageDigest = hashType.map(MessageDigest.getInstance(_))
-              val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => messageDigest.foreach(_.update(chunk.toArray[Byte])); chunk }
+              val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
 
               part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
                 .transform({

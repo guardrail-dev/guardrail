@@ -51,27 +51,27 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
 
     val handler = q"""
       trait Handler {
-        def putFoo(respond: Resource.putFooResponse.type)(foo: String, bar: Long, baz: (File, Option[String], ContentType, Option[String])): scala.concurrent.Future[Resource.putFooResponse]
+        def putFoo(respond: Resource.putFooResponse.type)(foo: String, bar: Long, baz: (File, Option[String], ContentType, String)): scala.concurrent.Future[Resource.putFooResponse]
         def putFooMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File
-        def putFooUnmarshalToFile(hashType: Option[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, Option[String])] = Unmarshaller { implicit executionContext =>
+        def putFooUnmarshalToFile[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext =>
           part => {
             val dest = destFn(part.name, part.filename, part.entity.contentType)
             val messageDigest = hashType.map(MessageDigest.getInstance(_))
             val fileSink: Sink[ByteString, Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk =>
-              messageDigest.foreach(_.update(chunk.toArray[Byte]))
+              val _ = messageDigest.map(_.update(chunk.toArray[Byte]))
               chunk
             }
-            part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
-              .transform({
-                case IOResult(_, Success(_)) =>
-                  val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
-                  (dest, part.filename, part.entity.contentType, hash)
-                case IOResult(_, Failure(t)) =>
-                  throw t
-              }, { case t =>
+            part.entity.dataBytes.toMat(fileSink)(Keep.right).run().transform({
+              case IOResult(_, Success(_)) =>
+                val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
+                (dest, part.filename, part.entity.contentType, hash)
+              case IOResult(_, Failure(t)) =>
+                throw t
+            }, {
+              case t =>
                 dest.delete()
                 t
-              })
+            })
           }
         }
       }
@@ -93,7 +93,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
               case class IgnoredPart(unit: Unit) extends Part
               case class foo(value: String) extends Part
               case class bar(value: Long) extends Part
-              case class baz(value: (File, Option[String], ContentType, Option[String])) extends Part
+              case class baz(value: (File, Option[String], ContentType, String)) extends Part
             }
             val Unmarshallfoopart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller { implicit executionContext =>
               part => implicitly[Unmarshaller[Multipart.FormData.BodyPart, String]].apply(part).map(putFooParts.foo.apply)
@@ -101,12 +101,15 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
             val Unmarshallbarpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller { implicit executionContext =>
               part => implicitly[Unmarshaller[Multipart.FormData.BodyPart, Long]].apply(part).map(putFooParts.bar.apply)
             }
-            val Unmarshallbazpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile(Option("SHA-512"), handler.putFooMapFileField(_, _, _)).map(putFooParts.baz.apply)
+            val Unmarshallbazpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile[Id]("SHA-512", handler.putFooMapFileField(_, _, _)).map({
+              case (v1, v2, v3, v4) =>
+                putFooParts.baz((v1, v2, v3, v4))
+            })
             val fileReferences = new AtomicReference(List.empty[File])
             extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
                 entity(as[Multipart.FormData]).flatMap { formData =>
-                  val collectedPartsF: Future[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, Option[String])])]] = for (results <- formData.parts.mapConcat {
+                  val collectedPartsF: Future[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, String)])]] = for (results <- formData.parts.mapConcat {
                     part => if (Set[String]("foo", "bar", "baz").contains(part.name)) part :: Nil else {
                       part.entity.discardBytes()
                       Nil
@@ -154,12 +157,12 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
               }
             }.flatMap(_.fold(t => throw t, {
               case (fooO, barO, bazO) =>
-                val maybe: Either[Rejection, (String, Long, (File, Option[String], ContentType, Option[String]))] = for (foo <- fooO.toRight(MissingFormFieldRejection("foo")); bar <- barO.toRight(MissingFormFieldRejection("bar")); baz <- bazO.toRight(MissingFormFieldRejection("baz"))) yield {
+                val maybe: Either[Rejection, (String, Long, (File, Option[String], ContentType, String))] = for (foo <- fooO.toRight(MissingFormFieldRejection("foo")); bar <- barO.toRight(MissingFormFieldRejection("bar")); baz <- bazO.toRight(MissingFormFieldRejection("baz"))) yield {
                   (foo, bar, baz)
                 }
                 maybe.fold(reject(_), tprovide(_))
             }))
-          }: Directive[(String, Long, (File, Option[String], ContentType, Option[String]))])) {
+          }: Directive[(String, Long, (File, Option[String], ContentType, String))])) {
             (foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz))
           }
         }
