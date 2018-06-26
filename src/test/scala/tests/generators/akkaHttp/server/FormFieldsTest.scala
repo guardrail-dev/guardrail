@@ -61,16 +61,17 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
               messageDigest.foreach(_.update(chunk.toArray[Byte]))
               chunk
             }
-            part.entity.dataBytes.toMat(fileSink)(Keep.right).run().transform({
-              case Failure(t) =>
+            part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
+              .transform({
+                case IOResult(_, Success(_)) =>
+                  val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
+                  (dest, part.filename, part.entity.contentType, hash)
+                case IOResult(_, Failure(t)) =>
+                  throw t
+              }, { case t =>
                 dest.delete()
-                Failure(t)
-              case Success(IOResult(_, Success(_))) =>
-                val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
-                Success((dest, part.filename, part.entity.contentType, hash))
-              case Success(IOResult(_, Failure(t))) =>
-                Failure(t)
-            })
+                t
+              })
           }
         }
       }

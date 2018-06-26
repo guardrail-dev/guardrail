@@ -645,16 +645,16 @@ object AkkaHttpServerGenerator {
               val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => messageDigest.foreach(_.update(chunk.toArray[Byte])); chunk }
 
               part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
-                .transform {
-                  case Failure(t) =>
-                    dest.delete()
-                    Failure(t)
-                  case Success(IOResult(_, Success(_))) =>
+                .transform({
+                  case IOResult(_, Success(_)) =>
                     val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
-                    Success((dest, part.filename, part.entity.contentType, hash))
-                  case Success(IOResult(_, Failure(t))) =>
-                    Failure(t)
-                }
+                    (dest, part.filename, part.entity.contentType, hash)
+                  case IOResult(_, Failure(t)) =>
+                    throw t
+                }, { case t =>
+                  dest.delete()
+                  t
+                })
             }
           """
         )
