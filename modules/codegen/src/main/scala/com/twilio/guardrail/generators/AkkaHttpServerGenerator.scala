@@ -270,11 +270,20 @@ object AkkaHttpServerGenerator {
 
           filterParamBy = ScalaParameter.filterParams(parameters)
           bodyArgs = filterParamBy("body").headOption
-          formArgs = filterParamBy("formData").toList.map({ x => x.withType(x.argType match {
-            case t"BodyPartEntity" => t"(File, Option[String], ContentType, Option[String])"
-            case t"Option[BodyPartEntity]" => t"Option[(File, Option[String], ContentType, Option[String])]"
-            case x => x
-          }) })
+          formArgs = filterParamBy("formData").toList.map({ x =>
+            x.withType(
+              if (x.isFile) {
+                val fileParams = t"(File, Option[String], ContentType, Option[String])"
+                if (x.required) {
+                  t"(..${fileParams})"
+                } else {
+                  t"Option[(..${fileParams})]"
+                }
+              } else {
+                x.argType
+              }
+            )
+          })
           headerArgs = filterParamBy("header").toList
           pathArgs = filterParamBy("path").toList
           qsArgs = filterParamBy("query").toList
@@ -283,11 +292,7 @@ object AkkaHttpServerGenerator {
           akkaPath <- pathStrToAkka(basePath, path, pathArgs)
           akkaQs <- qsToAkka(qsArgs)
           akkaBody <- bodyToAkka(bodyArgs)
-          asyncFormProcessing = formArgs.exists(_.argType match {
-            case t"(File, Option[String], ContentType, Option[String])" => true
-            case t"Option[(File, Option[String], ContentType, Option[String])]" => true
-            case _ => false
-          })
+          asyncFormProcessing = formArgs.exists(_.isFile)
           akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
           (akkaForm, handlerDefinitions) = akkaForm_
           akkaHeaders <- headersToAkka(headerArgs)
@@ -334,11 +339,19 @@ object AkkaHttpServerGenerator {
           val respond: List[List[Term.Param]] = List(
             List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 
-          val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(_.param)).map(_.map(p => p.copy(decltpe=p.decltpe match {
-            case Some(t"BodyPartEntity") => Some(t"(File, Option[String], ContentType, Option[String])")
-            case Some(t"Option[BodyPartEntity]") => Some(t"Option[(File, Option[String], ContentType, Option[String])]")
-            case x => x
-          })))
+          val params: List[List[Term.Param]] = respond ++ orderedParameters.map(_.map(scalaParam =>
+            scalaParam.param.copy(decltpe=(
+              if (scalaParam.isFile) {
+                val fileParams = t"(File, Option[String], ContentType, Option[String])"
+                if (scalaParam.required) {
+                  Some(t"(..${fileParams})")
+                } else {
+                  Some(t"Option[(..${fileParams})]")
+                }
+              } else {
+                scalaParam.param.decltpe
+              }
+            ))))
           RenderedRoute(
             fullRoute,
             q"""
@@ -528,11 +541,7 @@ object AkkaHttpServerGenerator {
                 val binding = new Binding(paramName.value)
                 val collected = new Binding(s"${paramName.value}O")
 
-                val isFile: Boolean = argType match {
-                  case t"(File, Option[String], ContentType, Option[String])" => true
-                  case t"Option[(File, Option[String], ContentType, Option[String])]" => true
-                  case _ => false
-                }
+                val isFile: Boolean = rawParameter.isFile
                 val (isOptional, realType): (Boolean, Type) = argType match {
                   case t"Option[$x]" => (true, x)
                   case x => (false, x)
