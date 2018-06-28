@@ -22,17 +22,15 @@ object ClientGenerator {
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[F], F: FrameworkTerms[F]): Free[F, Clients] = {
+  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[F]): Free[F, Clients] = {
     import C._
-    import F._
     for {
-      generatorSettings  <- getGeneratorSettings()
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       clients <- groupedRoutes.traverse({
         case (pkg, routes) =>
           for {
-            clientCalls <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems, generatorSettings) _)
+            clientCalls <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
             clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
             tracingName = Option(pkg.mkString("-")).filterNot(_.isEmpty)
             ctorArgs  <- clientClsArgs(tracingName, schemes, host, context.tracing)

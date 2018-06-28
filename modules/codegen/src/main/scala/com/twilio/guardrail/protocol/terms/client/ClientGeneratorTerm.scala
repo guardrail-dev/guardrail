@@ -7,11 +7,7 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import scala.meta._
 
 sealed trait ClientTerm[T]
-case class GenerateClientOperation(className: List[String],
-                                   route: RouteMeta,
-                                   tracing: Boolean,
-                                   protocolElems: List[StrictProtocolElems],
-                                   generatorSettings: GeneratorSettings)
+case class GenerateClientOperation(className: List[String], route: RouteMeta, tracing: Boolean, protocolElems: List[StrictProtocolElems])
     extends ClientTerm[Defn]
 case class GetImports(tracing: Boolean)                                                                              extends ClientTerm[List[Import]]
 case class GetExtraImports(tracing: Boolean)                                                                         extends ClientTerm[List[Import]]

@@ -10,6 +10,7 @@ import cats.syntax.traverse._
 import cats.~>
 import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.generators.GeneratorSettings
 import java.nio.file.{ Path, Paths }
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
@@ -111,9 +112,8 @@ object Common {
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
-      generatorSettings  <- getGeneratorSettings()
       frameworkImports   <- getFrameworkImports(context.tracing)
-      frameworkImplicits <- getFrameworkImplicits(generatorSettings)
+      frameworkImplicits <- getFrameworkImplicits()
       frameworkImplicitName = frameworkImplicits.name
 
       codegen <- kind match {
@@ -185,18 +185,21 @@ object Common {
       ).toList
   }
 
-  def processArgs[F[_]](args: NonEmptyList[Args])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  def processArgs[F[_]](
+      args: NonEmptyList[Args]
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
     args.traverse(
       arg =>
         for {
           targetInterpreter <- extractGenerator(arg.context)
+          generatorSettings <- extractGeneratorSettings(arg.context)
           writeFile         <- processArgSet(targetInterpreter)(arg)
-        } yield writeFile
+        } yield (generatorSettings, writeFile)
     )
   }
 
-  def runM[F[_]](args: Array[String])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  def runM[F[_]](args: Array[String])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
 
     for {

@@ -10,8 +10,8 @@ import scala.meta._
 class EnumProtocolTerms[F[_]](implicit I: InjectK[EnumProtocolTerm, F]) {
   def extractEnum(swagger: ModelImpl): Free[F, Either[String, List[String]]] =
     Free.inject[EnumProtocolTerm, F](ExtractEnum(swagger))
-  def extractType(swagger: ModelImpl, generatorSettings: GeneratorSettings): Free[F, Either[String, Type]] =
-    Free.inject[EnumProtocolTerm, F](ExtractType(swagger, generatorSettings))
+  def extractType(swagger: ModelImpl): Free[F, Either[String, Type]] =
+    Free.inject[EnumProtocolTerm, F](ExtractType(swagger))
   def renderMembers(clsName: String, elems: List[(String, Term.Name, Term)]): Free[F, Defn.Object] =
     Free.inject[EnumProtocolTerm, F](RenderMembers(clsName, elems))
   def encodeEnum(clsName: String): Free[F, Defn.Val] =

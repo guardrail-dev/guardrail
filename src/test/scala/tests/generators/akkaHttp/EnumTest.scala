@@ -4,7 +4,7 @@ import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -58,7 +58,7 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(EnumDefinition(_, _, _, cls, cmp) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
     sealed abstract class Bar(val value: String) {
@@ -94,7 +94,7 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

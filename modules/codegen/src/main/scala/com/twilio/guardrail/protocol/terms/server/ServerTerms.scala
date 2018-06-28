@@ -13,22 +13,18 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
-  def buildTracingFields(operation: Operation,
-                         className: List[String],
-                         tracing: Boolean,
-                         generatorSettings: GeneratorSettings): Free[F, Option[(ScalaParameter, Term)]] =
-    Free.inject(BuildTracingFields(operation, className, tracing, generatorSettings))
+  def buildTracingFields(operation: Operation, className: List[String], tracing: Boolean): Free[F, Option[(ScalaParameter, Term)]] =
+    Free.inject(BuildTracingFields(operation, className, tracing))
   def generateRoute(resourceName: String,
                     basePath: Option[String],
                     tracingFields: Option[(ScalaParameter, Term)],
                     responseDefinitions: List[Defn],
-                    protocolElems: List[StrictProtocolElems],
-                    generatorSettings: GeneratorSettings)(route: ServerRoute): Free[F, RenderedRoute] =
-    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions, protocolElems, generatorSettings))
+                    protocolElems: List[StrictProtocolElems])(route: ServerRoute): Free[F, RenderedRoute] =
+    Free.inject(GenerateRoute(resourceName, basePath, route, tracingFields, responseDefinitions, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
-  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems], generatorSettings: GeneratorSettings): Free[F, List[Defn]] =
-    Free.inject(GenerateResponseDefinitions(operation, protocolElems, generatorSettings))
+  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]): Free[F, List[Defn]] =
+    Free.inject(GenerateResponseDefinitions(operation, protocolElems))
   def renderClass(resourceName: String,
                   handlerName: String,
                   combinedRouteTerms: Term,

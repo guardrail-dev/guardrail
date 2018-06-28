@@ -8,8 +8,8 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import scala.meta._
 
 class ArrayProtocolTerms[F[_]](implicit I: InjectK[ArrayProtocolTerm, F]) {
-  def extractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta], generatorSettings: GeneratorSettings): Free[F, Type] =
-    Free.inject[ArrayProtocolTerm, F](ExtractArrayType(arr, concreteTypes, generatorSettings))
+  def extractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta]): Free[F, Type] =
+    Free.inject[ArrayProtocolTerm, F](ExtractArrayType(arr, concreteTypes))
 }
 
 object ArrayProtocolTerms {

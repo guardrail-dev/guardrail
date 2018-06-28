@@ -27,7 +27,7 @@ object Http4sClientGenerator {
 
     private[this] def toDashedCase(s: String): String = {
       val lowercased =
-        "^[A-Z]".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
+        "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
       "([A-Z])".r
         .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
     }
@@ -48,8 +48,7 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
-      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems, generatorSettings) => {
-        implicit val gs = generatorSettings
+      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
@@ -219,69 +218,70 @@ object Http4sClientGenerator {
           """
         }
 
-        for {
-          // Placeholder for when more functions get logging
-          _ <- Target.pure(())
+        Target.getGeneratorSettings.flatMap { implicit gs =>
+          for {
+            // Placeholder for when more functions get logging
+            _ <- Target.pure(())
 
-          formDataNeedsMultipart = Option(operation.getConsumes)
-            .exists(_.contains("multipart/form-data"))
+            formDataNeedsMultipart = Option(operation.getConsumes)
+              .exists(_.contains("multipart/form-data"))
 
-          // Get the response type
-          unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
-          resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
-            .resolve(unresolvedResponseTypeRef, protocolElems)
-          responseTypeRef = resolvedResponseTypeRef.tpe
+            // Get the response type
+            unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
+            resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
+              .resolve(unresolvedResponseTypeRef, protocolElems)
+            responseTypeRef = resolvedResponseTypeRef.tpe
 
-          // Insert the method parameters
-          httpMethodStr: String = httpMethod.toString.toLowerCase
-          methodName = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .map(_._2)
-            .getOrElse(s"$httpMethodStr $pathStr")
+            // Insert the method parameters
+            httpMethodStr: String = httpMethod.toString.toLowerCase
+            methodName = Option(operation.getOperationId())
+              .map(splitOperationParts)
+              .map(_._2)
+              .getOrElse(s"$httpMethodStr $pathStr")
 
-          _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
+            _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
-          allParams <- Option(operation.getParameters)
-            .map(_.asScala.toList)
-            .map(ScalaParameter.fromParameters(protocolElems))
-            .getOrElse(Target.pure(List.empty[ScalaParameter]))
-          _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
+            allParams <- Option(operation.getParameters)
+              .map(_.asScala.toList)
+              .map(ScalaParameter.fromParameters(protocolElems))
+              .getOrElse(Target.pure(List.empty[ScalaParameter]))
+            _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
 
-          filterParamBy = ScalaParameter.filterParams(allParams)
-          headerArgs    = filterParamBy("header")
-          pathArgs      = filterParamBy("path")
-          qsArgs        = filterParamBy("query")
-          bodyArgs      = filterParamBy("body").headOption
-          formArgs      = filterParamBy("formData")
+            filterParamBy = ScalaParameter.filterParams(allParams)
+            headerArgs    = filterParamBy("header")
+            pathArgs      = filterParamBy("path")
+            qsArgs        = filterParamBy("query")
+            bodyArgs      = filterParamBy("body").headOption
+            formArgs      = filterParamBy("formData")
 
-          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
+            _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
 
-          // Generate the url with path, query parameters
-          urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
+            // Generate the url with path, query parameters
+            urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
-          _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
-          // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
-          // Generate header arguments
-          headerParams = generateHeaderParams(headerArgs)
+            _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
+            // Generate FormData arguments
+            formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
+            // Generate header arguments
+            headerParams = generateHeaderParams(headerArgs)
 
-          tracingArgsPre = if (tracing)
-            List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
-          else List.empty
-          tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
-          else List.empty
-          extraImplicits = List.empty
-          defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre,
-                                                                                                                                              tracingArgsPost,
-                                                                                                                                              pathArgs,
-                                                                                                                                              qsArgs,
-                                                                                                                                              formArgs,
-                                                                                                                                              bodyArgs,
-                                                                                                                                              headerArgs,
-                                                                                                                                              extraImplicits)
-        } yield defn
-      }
+            tracingArgsPre = if (tracing)
+              List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
+            else List.empty
+            tracingArgsPost = if (tracing)
+              List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
+            else List.empty
+            extraImplicits = List.empty
+            defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre,
+                                                                                                                                                tracingArgsPost,
+                                                                                                                                                pathArgs,
+                                                                                                                                                qsArgs,
+                                                                                                                                                formArgs,
+                                                                                                                                                bodyArgs,
+                                                                                                                                                headerArgs,
+                                                                                                                                                extraImplicits)
+          } yield defn
+        }
 
       case GetImports(tracing) => Target.pure(List.empty)
 

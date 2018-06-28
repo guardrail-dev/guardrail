@@ -43,10 +43,11 @@ object AkkaHttpGenerator {
           )
         )
 
-      case GetFrameworkImplicits(generatorSettings) =>
-        val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
-        val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
-        Target.pure(q"""
+      case GetFrameworkImplicits() =>
+        Target.getGeneratorSettings.map { implicit gs =>
+          val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
+          val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
+          q"""
           object AkkaHttpImplicits {
             private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
@@ -62,19 +63,19 @@ object AkkaHttpGenerator {
               def apply(value: String): TextPlain = new TextPlain(value)
               implicit final def textTEM: ToEntityMarshaller[TextPlain] =
                 Marshaller.withFixedContentType(ContentTypes.${Term
-          .Name("`text/plain(UTF-8)`")}) { text =>
+            .Name("`text/plain(UTF-8)`")}) { text =>
                   HttpEntity(ContentTypes.${Term
-          .Name("`text/plain(UTF-8)`")}, text.value)
+            .Name("`text/plain(UTF-8)`")}, text.value)
                 }
             }
 
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
-            ): ToEntityMarshaller[${generatorSettings.jsonType}] =
+            ): ToEntityMarshaller[${gs.jsonType}] =
               Marshaller.withFixedContentType(MediaTypes.${Term
-          .Name("`application/json`")}) { json =>
+            .Name("`application/json`")}) { json =>
                 HttpEntity(MediaTypes.${Term
-          .Name("`application/json`")}, printer.pretty(json))
+            .Name("`application/json`")}, printer.pretty(json))
               }
 
             implicit final def jsonEntityMarshaller[A](
@@ -83,7 +84,7 @@ object AkkaHttpGenerator {
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
-            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${generatorSettings.jsonType}] =
+            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
                 .map {
@@ -92,7 +93,7 @@ object AkkaHttpGenerator {
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              def decode(json: ${generatorSettings.jsonType}) = J.decodeJson(json).fold(throw _, identity)
+              def decode(json: ${gs.jsonType}) = J.decodeJson(json).fold(throw _, identity)
               jsonUnmarshaller.map(decode)
             }
 
@@ -128,10 +129,11 @@ object AkkaHttpGenerator {
 
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
           }
-        """)
+        """
+        }
 
       case GetGeneratorSettings() =>
-        Target.pure(new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json"))
+        Target.getGeneratorSettings
     }
   }
 }

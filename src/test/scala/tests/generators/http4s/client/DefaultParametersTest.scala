@@ -4,6 +4,7 @@ import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import com.twilio.guardrail.tests._
 
 class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
@@ -124,7 +125,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s, defaults.http4sGeneratorSettings)
 
     tags should equal(Seq("store"))
 

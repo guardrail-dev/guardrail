@@ -9,20 +9,17 @@ import scala.meta._
 sealed trait ServerTerm[T]
 case class ExtractOperations(paths: List[(String, Path)]) extends ServerTerm[List[ServerRoute]]
 
-case class GetClassName(operation: Operation) extends ServerTerm[List[String]]
-case class BuildTracingFields(operation: Operation, className: List[String], tracing: Boolean, generatorSettings: GeneratorSettings)
-    extends ServerTerm[Option[(ScalaParameter, Term)]]
+case class GetClassName(operation: Operation)                                                  extends ServerTerm[List[String]]
+case class BuildTracingFields(operation: Operation, className: List[String], tracing: Boolean) extends ServerTerm[Option[(ScalaParameter, Term)]]
 case class GenerateRoute(resourceName: String,
                          basePath: Option[String],
                          route: ServerRoute,
                          tracingFields: Option[(ScalaParameter, Term)],
                          responseDefinitions: List[Defn],
-                         protocolElems: List[StrictProtocolElems],
-                         generatorSettings: GeneratorSettings)
+                         protocolElems: List[StrictProtocolElems])
     extends ServerTerm[RenderedRoute]
-case class GetExtraRouteParams(tracing: Boolean) extends ServerTerm[List[Term.Param]]
-case class GenerateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems], generatorSettings: GeneratorSettings)
-    extends ServerTerm[List[Defn]]
+case class GetExtraRouteParams(tracing: Boolean)                                                       extends ServerTerm[List[Term.Param]]
+case class GenerateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]) extends ServerTerm[List[Defn]]
 case class RenderClass(className: String,
                        handlerName: String,
                        combinedRouteTerms: Term,

@@ -5,7 +5,7 @@ import com.twilio.guardrail.{ SwaggerUtil, Target }
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
 import com.twilio.guardrail.generators.GeneratorSettings
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {
@@ -31,7 +31,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Client $str") {
-        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathParams(str, args))
+        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathParams(str, args), defaults.akkaGeneratorSettings)
         gen.toString shouldBe expected.toString
       }
   }
@@ -57,7 +57,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Server ${str}") {
-        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args))
+        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args), defaults.akkaGeneratorSettings)
         gen.toString shouldBe (expected.toString)
       }
   }

@@ -43,9 +43,8 @@ object ServerGenerator {
     val basePath: Option[String] = Option(swagger.getBasePath)
 
     for {
-      generatorSettings <- getGeneratorSettings()
-      routes            <- extractOperations(paths)
-      classNamedRoutes  <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
+      routes           <- extractOperations(paths)
+      classNamedRoutes <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
         .mapValues(_.map(_._2))
@@ -60,9 +59,9 @@ object ServerGenerator {
             renderedRoutes <- routes.traverse {
               case sr @ ServerRoute(path, method, operation) =>
                 for {
-                  tracingFields       <- buildTracingFields(operation, className, context.tracing, generatorSettings)
-                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems, generatorSettings)
-                  rendered            <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems, generatorSettings)(sr)
+                  tracingFields       <- buildTracingFields(operation, className, context.tracing)
+                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
+                  rendered            <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(sr)
                 } yield rendered
             }
             routeTerms = renderedRoutes.map(_.route)

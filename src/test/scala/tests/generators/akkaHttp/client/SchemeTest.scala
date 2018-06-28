@@ -4,7 +4,7 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -36,7 +36,7 @@ class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Use first scheme") {
     val (_, Clients(Client(_, _, statements) :: _), _) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+      runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

@@ -9,13 +9,16 @@ trait SwaggerSpecRunner {
   import com.twilio.guardrail._
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+  import com.twilio.guardrail.generators.GeneratorSettings
 
   import scala.collection.JavaConverters._
 
-  def runSwaggerSpec(spec: String)(context: Context, framework: FunctionK[CodegenApplication, Target]): (ProtocolDefinitions, Clients, Servers) =
-    runSwagger(new SwaggerParser().parse(spec))(context, framework)
+  def runSwaggerSpec(
+      spec: String
+  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients, Servers) =
+    runSwagger(new SwaggerParser().parse(spec)) _
 
-  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target])(
+  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
       implicit F: FrameworkTerms[CodegenApplication],
       Sc: ScalaTerms[CodegenApplication],
       Sw: SwaggerTerms[CodegenApplication]
@@ -50,7 +53,7 @@ trait SwaggerSpecRunner {
         .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)
 
-    Target.unsafeExtract(prog.foldMap(framework))
+    Target.unsafeExtract(prog.foldMap(framework), generatorSettings)
   }
 
 }

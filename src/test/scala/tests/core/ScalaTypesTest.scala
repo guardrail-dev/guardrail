@@ -4,6 +4,7 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import com.twilio.guardrail.tests._
 
 import scala.meta._
 
@@ -29,7 +30,7 @@ class ScalaTypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class Baz(foo: Option[com.twilio.foo.bar.Baz] = None)
