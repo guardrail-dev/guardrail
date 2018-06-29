@@ -5,7 +5,6 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
-import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 import scala.collection.JavaConverters._
 import scala.meta.{ Lit, Term, Type, _ }
