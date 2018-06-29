@@ -96,13 +96,13 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
               case class bar(value: Long) extends Part
               case class baz(value: (File, Option[String], ContentType, String)) extends Part
             }
-            val Unmarshallfoopart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller.withMaterializer { implicit executionContext =>
+            val UnmarshalfooPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller.withMaterializer { implicit executionContext =>
               materializer => part => Unmarshaller.firstOf(implicitly[Unmarshaller[Multipart.FormData.BodyPart, String]], MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)).apply(part).map(putFooParts.foo.apply)
             }
-            val Unmarshallbarpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller.withMaterializer { implicit executionContext =>
+            val UnmarshalbarPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller.withMaterializer { implicit executionContext =>
               materializer => part => Unmarshaller.firstOf(implicitly[Unmarshaller[Multipart.FormData.BodyPart, Long]], MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)).apply(part).map(putFooParts.bar.apply)
             }
-            val Unmarshallbazpart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile[Id]("SHA-512", handler.putFooMapFileField(_, _, _)).map({
+            val UnmarshalbazPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile[Id]("SHA-512", handler.putFooMapFileField(_, _, _)).map({
               case (v1, v2, v3, v4) =>
                 putFooParts.baz((v1, v2, v3, v4))
             })
@@ -119,11 +119,11 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                     {
                       part.name match {
                         case "foo" =>
-                          SafeUnmarshaller(Unmarshallfoopart).apply(part)
+                          SafeUnmarshaller(UnmarshalfooPart).apply(part)
                         case "bar" =>
-                          SafeUnmarshaller(Unmarshallbarpart).apply(part)
+                          SafeUnmarshaller(UnmarshalbarPart).apply(part)
                         case "baz" =>
-                          SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, Unmarshallbazpart)(_.value._1)).apply(part)
+                          SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, UnmarshalbazPart)(_.value._1)).apply(part)
                         case _ =>
                           SafeUnmarshaller(implicitly[Unmarshaller[Multipart.FormData.BodyPart, Unit]].map(putFooParts.IgnoredPart.apply(_))).apply(part)
                       }

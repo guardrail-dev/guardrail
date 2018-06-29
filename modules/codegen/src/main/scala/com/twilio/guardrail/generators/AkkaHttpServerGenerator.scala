@@ -517,93 +517,92 @@ object AkkaHttpServerGenerator {
         def toType: Type.Name = Type.Name(value)
       }
       (for {
-        params <- OptionT.fromOption[Target](NonEmptyList.fromList(params))
-        partsTerm = Term.Name(s"${operationId}Parts")
-        value <- OptionT.liftF({
-          (params
-            .traverse {
-              case rawParameter @ ScalaParameter(a, param, paramName, argName, argType) =>
-                val containerName    = new Binding(paramName.value)
-                val unmarshallerName = new Binding(s"Unmarshall${paramName.value}part")
-                val binding          = new Binding(paramName.value)
-                val collected        = new Binding(s"${paramName.value}O")
+        params <- NonEmptyList.fromList(params)
+      } yield {
+        val partsTerm = Term.Name(s"${operationId}Parts")
+        val value = params
+          .map({
+            case rawParameter @ ScalaParameter(a, param, paramName, argName, argType) =>
+              val containerName    = new Binding(paramName.value)
+              val unmarshallerName = new Binding(s"Unmarshal${paramName.value}Part")
+              val binding          = new Binding(paramName.value)
+              val collected        = new Binding(s"${paramName.value}O")
 
-                val isFile: Boolean = rawParameter.isFile
-                val (isOptional, realType): (Boolean, Type) = argType match {
-                  case t"Option[$x]" => (true, x)
-                  case x             => (false, x)
-                }
-                val (unmarshaller, caseMatch, grabHead) = isFile match {
-                  case true =>
-                    (
-                      q"""
+              val isFile: Boolean = rawParameter.isFile
+              val (isOptional, realType): (Boolean, Type) = argType match {
+                case t"Option[$x]" => (true, x)
+                case x             => (false, x)
+              }
+              val (unmarshaller, caseMatch, grabHead) = isFile match {
+                case true =>
+                  (
+                    q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                        .Select(partsTerm, containerName.toType)}] = (
+                      .Select(partsTerm, containerName.toType)}] = (
                             handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm
-                        .fold(t"Option")(Function.const(t"Id"))}](${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
-                        .Name(s"${operationId}MapFileField")}(_, _, _))
+                      .fold(t"Option")(Function.const(t"Id"))}](${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
+                      .Name(s"${operationId}MapFileField")}(_, _, _))
                               .map({ case (v1, v2, v3, v4) =>
                                 ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
-                        .map(Function.const(q"v4"))}))
+                      .map(Function.const(q"v4"))}))
                               })
                             )
                       """,
-                      Case(
-                        argName.toLit,
-                        None,
-                        q"""
+                    Case(
+                      argName.toLit,
+                      None,
+                      q"""
                           SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
                       """
-                      ),
-                      q"""
+                    ),
+                    q"""
                         val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
-                        List(
-                          Case(
-                            Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
-                                        List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
-                            None,
-                            q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
-                          )
+                      List(
+                        Case(
+                          Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
+                                      List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
+                          None,
+                          q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
                         )
-                      )})
+                      )
+                    )})
                       """
-                    )
-                  case false =>
-                    (
-                      q"""
+                  )
+                case false =>
+                  (
+                    q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                        .Select(partsTerm, containerName.toType)}] = Unmarshaller.withMaterializer { implicit executionContext => materializer => part =>
+                      .Select(partsTerm, containerName.toType)}] = Unmarshaller.withMaterializer { implicit executionContext => materializer => part =>
                           Unmarshaller.firstOf(
                             implicitly[Unmarshaller[Multipart.FormData.BodyPart, ${realType}]],
                             MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)
                           ).apply(part).map(${Term
-                        .Select(partsTerm, containerName.toTerm)}.apply)
+                      .Select(partsTerm, containerName.toTerm)}.apply)
                         }
                       """,
-                      Case(argName.toLit, None, q"""
+                    Case(argName.toLit, None, q"""
                           SafeUnmarshaller(${unmarshallerName.toTerm}).apply(part)
                       """),
-                      q"""
+                    q"""
                         val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
-                        List(Case(Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(Pat.Var(Term.Name("v1")))), None, Term.Name("v1")))
-                      )})
+                      List(Case(Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(Pat.Var(Term.Name("v1")))), None, Term.Name("v1")))
+                    )})
                       """
-                    )
-                }
+                  )
+              }
 
-                val partContainer = q"case class ${containerName.toType}(..${List(param"value: ${realType}")}) extends Part"
+              val partContainer = q"case class ${containerName.toType}(..${List(param"value: ${realType}")}) extends Part"
 
-                val unpacker = if (isOptional) {
-                  enumerator""" ${binding.toVar} <- Either.right[MissingFormFieldRejection, ${argType}](${collected.toTerm}) """
-                } else {
-                  enumerator""" ${binding.toVar} <- ${collected.toTerm}.toRight(MissingFormFieldRejection(${argName.toLit})) """
-                }
+              val unpacker = if (isOptional) {
+                enumerator""" ${binding.toVar} <- Either.right[MissingFormFieldRejection, ${argType}](${collected.toTerm}) """
+              } else {
+                enumerator""" ${binding.toVar} <- ${collected.toTerm}.toRight(MissingFormFieldRejection(${argName.toLit})) """
+              }
 
-                Target.pure((partContainer, unmarshaller, caseMatch, (binding, collected), unpacker, argType, grabHead))
-            })
-            .map(_.unzip7)
-        })
-      } yield {
+              (partContainer, unmarshaller, caseMatch, (binding, collected), unpacker, argType, grabHead)
+          })
+          .unzip7
+
         val (partContainers, unmarshallers, matchers, _terms, unpacks, termTypes, grabHeads) = value
         val (termPatterns, optionalTermPatterns)                                             = _terms.unzip
         val optionalTuple                                                                    = p"(..${optionalTermPatterns.map(_.toPat)})"
@@ -725,7 +724,7 @@ object AkkaHttpServerGenerator {
         )
 
         (directive, handlerDefinitions)
-      }).fold((Option.empty[Term], List.empty[Stat]))({ case (v1, v2) => (Option(v1), v2) })
+      }).fold(Target.pure((Option.empty[Term], List.empty[Stat])))({ case (v1, v2) => Target.pure((Option(v1), v2)) })
     }
   }
 }
