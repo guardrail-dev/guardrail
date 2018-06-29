@@ -1,9 +1,10 @@
 package tests.core
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import com.twilio.guardrail.tests._
 
 import scala.meta._
 
@@ -64,7 +65,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class Types(array: Option[IndexedSeq[Boolean]] = Option(IndexedSeq.empty), obj: Option[io.circe.Json] = None, bool: Option[Boolean] = None, string: Option[String] = None, date: Option[java.time.LocalDate] = None, dateTime: Option[java.time.OffsetDateTime] = None, long: Option[Long] = None, int: Option[Int] = None, float: Option[Float] = None, double: Option[Double] = None, number: Option[BigDecimal] = None, integer: Option[BigInt] = None, untyped: Option[io.circe.Json] = None)

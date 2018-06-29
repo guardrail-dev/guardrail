@@ -1,10 +1,10 @@
 package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -67,7 +67,7 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class Something(

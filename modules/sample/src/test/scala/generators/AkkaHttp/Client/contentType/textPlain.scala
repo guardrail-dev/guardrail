@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -27,7 +27,7 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
       })
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
-    val fooClient = FooClient.httpClient(client)
+    val fooClient                                   = FooClient.httpClient(client)
     new EitherTValuable(fooClient.doFoo(Some("sample"))).rightValue.futureValue shouldBe IgnoredEntity.empty
   }
 
@@ -42,7 +42,7 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
       })
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
-    val fooClient = FooClient.httpClient(client)
+    val fooClient                                   = FooClient.httpClient(client)
     new EitherTValuable(fooClient.doBar("sample")).rightValue.futureValue shouldBe IgnoredEntity.empty
   }
 }

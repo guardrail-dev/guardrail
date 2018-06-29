@@ -8,9 +8,10 @@ import cats.syntax.either._
 import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import cats.~>
-import com.twilio.guardrail.terms.{CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms}
+import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import java.nio.file.{Path, Paths}
+import com.twilio.guardrail.generators.GeneratorSettings
+import java.nio.file.{ Path, Paths }
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
@@ -22,15 +23,14 @@ object Common {
                    outputPath: Path,
                    pkgName: List[String],
                    dtoPackage: List[String],
-                   customImports: List[Import])(
-      implicit F: FrameworkTerms[CodegenApplication],
-      Sc: ScalaTerms[CodegenApplication],
-      Sw: SwaggerTerms[CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
+                   customImports: List[Import])(implicit F: FrameworkTerms[CodegenApplication],
+                                                Sc: ScalaTerms[CodegenApplication],
+                                                Sw: SwaggerTerms[CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
     import F._
     import Sc._
     import Sw._
 
-    val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+    val resolveFile: Path => List[String] => Path       = root => _.foldLeft(root)(_.resolve(_))
     val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
 
     val buildPackage: String => Option[Term.Ref] = pkg =>
@@ -38,10 +38,10 @@ object Common {
         .map(dtoPackage ++ _)
         .map(_.map(Term.Name.apply _).reduceLeft(Term.Select.apply _))
 
-    val pkgPath = resolveFile(outputPath)(pkgName)
+    val pkgPath        = resolveFile(outputPath)(pkgName)
     val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
 
-    val definitions: List[String] = pkgName :+ "definitions"
+    val definitions: List[String]   = pkgName :+ "definitions"
     val dtoComponents: List[String] = definitions ++ dtoPackage
     val buildPkgTerm: List[String] => Term.Ref =
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
@@ -49,8 +49,8 @@ object Common {
     for {
       proto <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-      implicitsImport = q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._"
-      imports = customImports ++ protocolImports ++ List(implicitsImport)
+      implicitsImport                                                                                  = q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._"
+      imports                                                                                          = customImports ++ protocolImports ++ List(implicitsImport)
 
       protoOut = protocolElems
         .map({
@@ -64,7 +64,8 @@ object Common {
                 $cls
                 $obj
               """
-               )),
+               )
+             ),
              List.empty[Stat])
 
           case ClassDefinition(_, _, cls, obj) =>
@@ -77,7 +78,8 @@ object Common {
                 $cls
                 $obj
               """
-               )),
+               )
+             ),
              List.empty[Stat])
 
           case RandomType(_, _) =>
@@ -99,18 +101,18 @@ object Common {
 
       schemes = Option(swagger.getSchemes)
         .fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
-      host = Option(swagger.getHost)
+      host     = Option(swagger.getHost)
       basePath = Option(swagger.getBasePath)
       paths = Option(swagger.getPaths)
         .map(_.asScala.toList)
         .getOrElse(List.empty)
-      routes <- extractOperations(paths)
+      routes           <- extractOperations(paths)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
-      frameworkImports <- getFrameworkImports(context.tracing)
+      frameworkImports   <- getFrameworkImports(context.tracing)
       frameworkImplicits <- getFrameworkImplicits()
       frameworkImplicitName = frameworkImplicits.name
 
@@ -118,8 +120,7 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(
-                protocolElems)
+              .fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
             Clients(clients) = clientMeta
           } yield CodegenDefinitions(clients, List.empty)
 
@@ -170,7 +171,7 @@ object Common {
           .to[List]
         )
 
-      implicits <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
+      implicits              <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- renderFrameworkImplicits(pkgName, frameworkImports, protocolImports, frameworkImplicits)
     } yield
       (
@@ -184,25 +185,28 @@ object Common {
       ).toList
   }
 
-  def processArgs[F[_]](args: NonEmptyList[Args])(
-      implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  def processArgs[F[_]](
+      args: NonEmptyList[Args]
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
-    args.traverse(arg =>
-      for {
-        targetInterpreter <- extractGenerator(arg.context)
-        writeFile <- processArgSet(targetInterpreter)(arg)
-      } yield writeFile)
+    args.traverse(
+      arg =>
+        for {
+          targetInterpreter <- extractGenerator(arg.context)
+          generatorSettings <- extractGeneratorSettings(arg.context)
+          writeFile         <- processArgSet(targetInterpreter)(arg)
+        } yield (generatorSettings, writeFile)
+    )
   }
 
-  def runM[F[_]](args: Array[String])(
-      implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  def runM[F[_]](args: Array[String])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
 
     for {
       defaultFramework <- getDefaultFramework
-      parsed <- parseArgs(args, defaultFramework)
-      args <- validateArgs(parsed)
-      writeTrees <- processArgs(args)
+      parsed           <- parseArgs(args, defaultFramework)
+      args             <- validateArgs(parsed)
+      writeTrees       <- processArgs(args)
     } yield writeTrees
   }
 }

@@ -2,7 +2,7 @@ package swagger
 
 import _root_.io.swagger.parser.SwaggerParser
 import com.twilio.guardrail.extract.VendorExtension
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import scala.collection.JavaConverters._
 
 class VendorExtensionTest extends FunSuite with Matchers {

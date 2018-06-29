@@ -26,21 +26,28 @@ object AkkaHttpGenerator {
             q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}",
             q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
             q"import akka.http.scaladsl.server.Directives._",
-            q"import akka.http.scaladsl.server.{Directive, Directive0, Route}",
+            q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MissingFormFieldRejection, Rejection, Route}",
             q"import akka.http.scaladsl.util.FastFuture",
-            q"import akka.stream.Materializer",
-            q"import akka.stream.scaladsl.Source",
+            q"import akka.stream.{IOResult, Materializer}",
+            q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
             q"import akka.util.ByteString",
+            q"import cats.{Functor, Id}",
             q"import cats.data.EitherT",
+            q"import cats.implicits._",
             q"import scala.concurrent.{ExecutionContext, Future}",
-            q"import scala.language.implicitConversions"
-          ))
+            q"import scala.language.implicitConversions",
+            q"import java.io.File",
+            q"import java.security.MessageDigest",
+            q"import java.util.concurrent.atomic.AtomicReference",
+            q"import scala.util.{Failure, Success}"
+          )
+        )
 
       case GetFrameworkImplicits() =>
-        val jsonType: Type = t"io.circe.Json"
-        val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
-        val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
-        Target.pure(q"""
+        Target.getGeneratorSettings.map { implicit gs =>
+          val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
+          val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
+          q"""
           object AkkaHttpImplicits {
             private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
@@ -56,19 +63,19 @@ object AkkaHttpGenerator {
               def apply(value: String): TextPlain = new TextPlain(value)
               implicit final def textTEM: ToEntityMarshaller[TextPlain] =
                 Marshaller.withFixedContentType(ContentTypes.${Term
-          .Name("`text/plain(UTF-8)`")}) { text =>
+            .Name("`text/plain(UTF-8)`")}) { text =>
                   HttpEntity(ContentTypes.${Term
-          .Name("`text/plain(UTF-8)`")}, text.value)
+            .Name("`text/plain(UTF-8)`")}, text.value)
                 }
             }
 
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
-            ): ToEntityMarshaller[${jsonType}] =
+            ): ToEntityMarshaller[${gs.jsonType}] =
               Marshaller.withFixedContentType(MediaTypes.${Term
-          .Name("`application/json`")}) { json =>
+            .Name("`application/json`")}) { json =>
                 HttpEntity(MediaTypes.${Term
-          .Name("`application/json`")}, printer.pretty(json))
+            .Name("`application/json`")}, printer.pretty(json))
               }
 
             implicit final def jsonEntityMarshaller[A](
@@ -77,7 +84,7 @@ object AkkaHttpGenerator {
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
-            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
                 .map {
@@ -86,14 +93,47 @@ object AkkaHttpGenerator {
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              def decode(json: ${jsonType}) = J.decodeJson(json).fold(throw _, identity)
+              def decode(json: ${gs.jsonType}) = J.decodeJson(json).fold(throw _, identity)
               jsonUnmarshaller.map(decode)
             }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
               Unmarshaller.strict(_ => IgnoredEntity.empty)
+
+            implicit def MFDBPviaFSU[T](implicit ev: Unmarshaller[BodyPartEntity, T], mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { implicit executionContext => entity =>
+              ev.apply(entity.entity)
+            }
+
+            implicit def BPEviaFSU[T](implicit ev: Unmarshaller[String, T], mat: Materializer): Unmarshaller[BodyPartEntity, T] = Unmarshaller { implicit executionContext => entity =>
+              entity.dataBytes
+                .runWith(Sink.fold(ByteString.empty)((accum, bs) => accum.concat(bs)))
+                .map(_.decodeString(java.nio.charset.StandardCharsets.UTF_8))
+                .flatMap(ev.apply(_))
+            }
+
+            def AccumulatingUnmarshaller[T, U, V](accumulator: AtomicReference[List[V]], ev: Unmarshaller[T, U])(acc: U => V)(implicit mat: Materializer): Unmarshaller[T, U] = {
+              ev.map { value =>
+                accumulator.updateAndGet(acc(value) :: _)
+                value
+              }
+            }
+
+            def SafeUnmarshaller[T, U](ev: Unmarshaller[T, U])(implicit mat: Materializer): Unmarshaller[T, Either[Throwable, U]] = Unmarshaller { implicit executionContext => entity =>
+              ev.apply(entity).map[Either[Throwable, U]](Right(_)).recover({ case t => Left(t) })
+            }
+
+            def StaticUnmarshaller[T](value: T)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { _ => part =>
+              part.entity.discardBytes()
+              Future.successful[T](value)
+            }
+
+            implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
           }
-        """)
+        """
+        }
+
+      case GetGeneratorSettings() =>
+        Target.getGeneratorSettings
     }
   }
 }

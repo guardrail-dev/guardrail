@@ -1,10 +1,10 @@
 package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Context, Server, Servers}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Context, Server, Servers }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -33,7 +33,7 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
 
   test("Should produce static parameter constraints") {
     val (_, _, Servers(Server(_, _, genHandler :: genResource :: Nil) :: Nil)) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+      runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val handler = q"""
       trait Handler {

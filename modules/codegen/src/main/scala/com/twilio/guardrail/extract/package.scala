@@ -11,4 +11,6 @@ package object extract {
     VendorExtension(v).extract[Boolean]("x-server-raw-response")
   def ScalaEmptyIsNull[F: VendorExtension.VendorExtensible](v: F): Option[Boolean] =
     VendorExtension(v).extract[Boolean]("x-scala-empty-is-null")
+  def ScalaFileHashAlgorithm[F: VendorExtension.VendorExtensible](v: F): Option[String] =
+    VendorExtension(v).extract[String]("x-scala-file-hash")
 }

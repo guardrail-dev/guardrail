@@ -1,6 +1,6 @@
 package codegen
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.{ Path, Paths }
 
 import _root_.io.swagger.models.Swagger
 import _root_.io.swagger.parser.SwaggerParser
@@ -8,7 +8,8 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
+import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
 
@@ -53,8 +54,8 @@ class WritePackageSpec extends FunSuite with Matchers {
   def injectSwagger[T](s: Swagger, rs: ReadSwagger[T]): T = rs.next(s)
 
   def extractPackage(path: Path, results: List[WriteTree]): Term.Ref = {
-    val Some(source"""package ${fooPkg}
-    ..${stats}
+    val Some(source"""package ${fooPkg }
+    ..${stats }
     """) = results.find(_.path == path).headOption.map(_.contents)
     fooPkg
   }
@@ -70,11 +71,12 @@ class WritePackageSpec extends FunSuite with Matchers {
       ),
       List.empty
     )
+    val generatorSettings = new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json")
 
     val result: List[WriteTree] = CoreTarget
       .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
       .toList
-      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
+      .flatMap({ case (_, x) => Target.unsafeExtract(injectSwagger(swagger, x), generatorSettings) })
 
     val paths = result.map(_.path)
 
@@ -118,11 +120,12 @@ class WritePackageSpec extends FunSuite with Matchers {
       ),
       List.empty
     )
+    val generatorSettings = new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json")
 
     val result: List[WriteTree] = CoreTarget
       .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
       .toList
-      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
+      .flatMap({ case (_, x) => Target.unsafeExtract(injectSwagger(swagger, x), generatorSettings) })
 
     val paths = result.map(_.path)
 

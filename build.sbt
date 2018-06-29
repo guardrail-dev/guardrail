@@ -14,12 +14,12 @@ scalaVersion in ThisBuild := crossScalaVersions.value.last
 scalafmtOnCompile in ThisBuild := true
 scalafmtFailTest in ThisBuild := false
 
-val akkaVersion = "10.0.10"
-val catsVersion = "1.1.0"
+val akkaVersion       = "10.0.10"
+val catsVersion       = "1.1.0"
 val catsEffectVersion = "0.10"
-val circeVersion = "0.9.3"
-val http4sVersion = "0.18.12"
-val scalatestVersion = "3.0.5"
+val circeVersion      = "0.9.3"
+val http4sVersion     = "0.18.12"
+val scalatestVersion  = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
@@ -55,6 +55,7 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
@@ -74,13 +75,13 @@ val codegenSettings = Seq(
     Resolver.bintrayRepo("scalameta", "maven")
   ),
   libraryDependencies ++= testDependencies ++ Seq(
-    "org.scalameta" %% "scalameta" % "2.0.1",
-    "io.swagger" % "swagger-parser" % "1.0.34",
-    "org.tpolecat" %% "atto-core" % "0.6.1",
-    "org.typelevel" %% "cats-core" % catsVersion,
-    "org.typelevel" %% "cats-kernel" % catsVersion,
-    "org.typelevel" %% "cats-macros" % catsVersion,
-    "org.typelevel" %% "cats-free" % catsVersion
+    "org.scalameta" %% "scalameta"     % "3.7.4",
+    "io.swagger"    % "swagger-parser" % "1.0.34",
+    "org.tpolecat"  %% "atto-core"     % "0.6.1",
+    "org.typelevel" %% "cats-core"     % catsVersion,
+    "org.typelevel" %% "cats-kernel"   % catsVersion,
+    "org.typelevel" %% "cats-macros"   % catsVersion,
+    "org.typelevel" %% "cats-free"     % catsVersion
   )
   // Dev
   ,
@@ -140,19 +141,19 @@ lazy val sample = (project in file("modules/sample"))
       |import scala.meta._
       |""".stripMargin,
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
-      "io.circe" %% "circe-core" % circeVersion,
-      "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-java8" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
-      "org.http4s" %% "http4s-blaze-client" % http4sVersion,
-      "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s" %% "http4s-circe" % http4sVersion,
-      "org.http4s" %% "http4s-dsl" % http4sVersion,
-      "org.scalatest" %% "scalatest" % scalatestVersion % Test,
-      "org.typelevel" %% "cats-core" % catsVersion,
-      "org.typelevel" %% "cats-effect" % catsEffectVersion
+      "com.typesafe.akka" %% "akka-http"           % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-testkit"   % akkaVersion,
+      "io.circe"          %% "circe-core"          % circeVersion,
+      "io.circe"          %% "circe-generic"       % circeVersion,
+      "io.circe"          %% "circe-java8"         % circeVersion,
+      "io.circe"          %% "circe-parser"        % circeVersion,
+      "org.http4s"        %% "http4s-blaze-client" % http4sVersion,
+      "org.http4s"        %% "http4s-blaze-server" % http4sVersion,
+      "org.http4s"        %% "http4s-circe"        % http4sVersion,
+      "org.http4s"        %% "http4s-dsl"          % http4sVersion,
+      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"           % catsVersion,
+      "org.typelevel"     %% "cats-effect"         % catsEffectVersion
     ),
     skip in publish := true
   )

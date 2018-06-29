@@ -27,16 +27,15 @@ object Http4sClientGenerator {
 
     private[this] def toDashedCase(s: String): String = {
       val lowercased =
-        "^[A-Z]".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
+        "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
       "([A-Z])".r
         .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
     }
 
-    private[this] def formatClientName(clientName: Option[String]): Term.Param = {
+    private[this] def formatClientName(clientName: Option[String]): Term.Param =
       clientName.fold(
         param"clientName: String"
       )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
-    }
 
     private[this] def formatHost(schemes: List[String], host: Option[String]): Term.Param =
       host
@@ -49,13 +48,10 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[T]): Target[T] = term match {
-      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) => {
-        def generateUrlWithParams(path: String,
-                                  pathArgs: List[ScalaParameter],
-                                  qsArgs: List[ScalaParameter]): Target[Term] = {
+      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
+        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
           for {
-            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(
-              s"Using ${path} and ${pathArgs.map(_.argName)}")
+            _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
             base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
 
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
@@ -78,17 +74,16 @@ object Http4sClientGenerator {
                 }
               })
           } yield q"Uri.unsafeFromString(${result})"
-        }
 
-        def generateFormDataParams(parameters: List[ScalaParameter], needsMultipart: Boolean): Option[Term] = {
+        def generateFormDataParams(parameters: List[ScalaParameter], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"$tParamName.map(v => Part.formData[F](${tName.toLit}, v))"
+              q"$tParamName.map(v => Part.fileData[F](${tName.toLit}, v))"
 
             def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"Some(Part.formData[F](${tName.toLit}, $tParamName))"
+              q"Some(Part.fileData[F](${tName.toLit}, ${tParamName}))"
 
             def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"$tParamName.map(v => Part.formData[F](${tName.toLit}, Formatter.show(v)))"
@@ -98,18 +93,19 @@ object Http4sClientGenerator {
 
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-                val lifter: (Term.Name, RawParameterName) => Term =
+                val lifter: (Term.Name, RawParameterName) => Term = {
                   param match {
-                    case param"$_: Option[BodyPartEntity]" =>
+                    case param"$_: Option[java.io.File]" =>
                       liftOptionFileTerm _
-                    case param"$_: Option[BodyPartEntity] = $_" =>
+                    case param"$_: Option[java.io.File] = $_" =>
                       liftOptionFileTerm _
-                    case param"$_: BodyPartEntity"      => liftFileTerm _
-                    case param"$_: BodyPartEntity = $_" => liftFileTerm _
-                    case param"$_: Option[$_]"          => liftOptionTerm _
-                    case param"$_: Option[$_] = $_"     => liftOptionTerm _
-                    case _                              => liftTerm _
+                    case param"$_: java.io.File"      => liftFileTerm _
+                    case param"$_: java.io.File = $_" => liftFileTerm _
+                    case param"$_: Option[$_]"        => liftOptionTerm _
+                    case param"$_: Option[$_] = $_"   => liftOptionTerm _
+                    case _                            => liftTerm _
                   }
+                }
                 a :+ lifter(paramName, argName)
             }
             Some(q"List(..$args)")
@@ -132,7 +128,6 @@ object Http4sClientGenerator {
             }
             Some(q"List(..$args)")
           }
-        }
 
         def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
           def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
@@ -212,7 +207,8 @@ object Http4sClientGenerator {
               (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
                 .map(_.param) ++ formArgs.map(_.param) ++ body
                 .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)) :+ defaultHeaders),
+                .map(_.param)) :+ defaultHeaders
+            ),
             implicitParams
           ).flatten
 
@@ -222,70 +218,70 @@ object Http4sClientGenerator {
           """
         }
 
-        for {
-          // Placeholder for when more functions get logging
-          _ <- Target.pure(())
+        Target.getGeneratorSettings.flatMap { implicit gs =>
+          for {
+            // Placeholder for when more functions get logging
+            _ <- Target.pure(())
 
-          formDataNeedsMultipart = Option(operation.getConsumes)
-            .exists(_.contains("multipart/form-data"))
+            formDataNeedsMultipart = Option(operation.getConsumes)
+              .exists(_.contains("multipart/form-data"))
 
-          // Get the response type
-          unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
-          resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
-            .resolve(unresolvedResponseTypeRef, protocolElems)
-          responseTypeRef = resolvedResponseTypeRef.tpe
+            // Get the response type
+            unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
+            resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
+              .resolve(unresolvedResponseTypeRef, protocolElems)
+            responseTypeRef = resolvedResponseTypeRef.tpe
 
-          // Insert the method parameters
-          httpMethodStr: String = httpMethod.toString.toLowerCase
-          methodName = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .map(_._2)
-            .getOrElse(s"$httpMethodStr $pathStr")
+            // Insert the method parameters
+            httpMethodStr: String = httpMethod.toString.toLowerCase
+            methodName = Option(operation.getOperationId())
+              .map(splitOperationParts)
+              .map(_._2)
+              .getOrElse(s"$httpMethodStr $pathStr")
 
-          _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
+            _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
-          allParams <- Option(operation.getParameters)
-            .map(_.asScala.toList)
-            .map(ScalaParameter.fromParameters(protocolElems))
-            .getOrElse(Target.pure(List.empty[ScalaParameter]))
-          _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
+            allParams <- Option(operation.getParameters)
+              .map(_.asScala.toList)
+              .map(ScalaParameter.fromParameters(protocolElems))
+              .getOrElse(Target.pure(List.empty[ScalaParameter]))
+            _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
 
-          filterParamBy = ScalaParameter.filterParams(allParams)
-          headerArgs = filterParamBy("header")
-          pathArgs = filterParamBy("path")
-          qsArgs = filterParamBy("query")
-          bodyArgs = filterParamBy("body").headOption
-          formArgs = filterParamBy("formData")
+            filterParamBy = ScalaParameter.filterParams(allParams)
+            headerArgs    = filterParamBy("header")
+            pathArgs      = filterParamBy("path")
+            qsArgs        = filterParamBy("query")
+            bodyArgs      = filterParamBy("body").headOption
+            formArgs      = filterParamBy("formData")
 
-          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
+            _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
 
-          // Generate the url with path, query parameters
-          urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
+            // Generate the url with path, query parameters
+            urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
-          _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
-          // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
-          // Generate header arguments
-          headerParams = generateHeaderParams(headerArgs)
+            _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
+            // Generate FormData arguments
+            formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
+            // Generate header arguments
+            headerParams = generateHeaderParams(headerArgs)
 
-          tracingArgsPre = if (tracing)
-            List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
-          else List.empty
-          tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
-          else List.empty
-          extraImplicits = List.empty
-          defn = build(
-            methodName,
-            httpMethod,
-            urlWithParams,
-            formDataParams,
-            formDataNeedsMultipart,
-            headerParams,
-            responseTypeRef,
-            tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
-        } yield defn
-      }
+            tracingArgsPre = if (tracing)
+              List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
+            else List.empty
+            tracingArgsPost = if (tracing)
+              List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
+            else List.empty
+            extraImplicits = List.empty
+            defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre,
+                                                                                                                                                tracingArgsPost,
+                                                                                                                                                pathArgs,
+                                                                                                                                                qsArgs,
+                                                                                                                                                formArgs,
+                                                                                                                                                bodyArgs,
+                                                                                                                                                headerArgs,
+                                                                                                                                                extraImplicits)
+          } yield defn
+        }
 
       case GetImports(tracing) => Target.pure(List.empty)
 
@@ -298,7 +294,8 @@ object Http4sClientGenerator {
           List(List(formatHost(schemes, host)) ++ (if (tracing)
                                                      Some(formatClientName(tracingName))
                                                    else None),
-               List(ief, ihc)))
+               List(ief, ihc))
+        )
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],

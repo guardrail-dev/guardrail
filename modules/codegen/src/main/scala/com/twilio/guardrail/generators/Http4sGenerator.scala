@@ -32,10 +32,10 @@ object Http4sGenerator {
             q"import org.http4s.dsl.io.Path",
             q"import org.http4s.multipart._",
             q"import scala.language.implicitConversions"
-          ))
+          )
+        )
 
       case GetFrameworkImplicits() =>
-        val jsonType: Type = t"io.circe.Json"
         val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
         val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
         Target.pure(q"""
@@ -67,6 +67,9 @@ object Http4sGenerator {
             }
           }
         """)
+
+      case GetGeneratorSettings() =>
+        Target.getGeneratorSettings
     }
   }
 }

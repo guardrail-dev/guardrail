@@ -6,8 +6,8 @@ import cats.instances.all._
 import cats.syntax.flatMap._
 import cats.syntax.either._
 import cats.syntax.traverse._
-import cats.{~>, FlatMap}
-import com.twilio.guardrail.generators.{AkkaHttp, Http4s}
+import cats.{ FlatMap, ~> }
+import com.twilio.guardrail.generators.{ AkkaHttp, GeneratorSettings, Http4s }
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
 import scala.io.AnsiColor
@@ -22,14 +22,24 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
     case ExtractGenerator(context) =>
       for {
         _ <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
-        framework <- context.framework.fold(
-          CoreTarget.error[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
+        framework <- context.framework.fold(CoreTarget.error[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
           case "akka-http" => CoreTarget.pure(AkkaHttp)
           case "http4s"    => CoreTarget.pure(Http4s)
           case unknown     => CoreTarget.error(UnknownFramework(unknown))
         })
         _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: $framework")
       } yield framework
+
+    case ExtractGeneratorSettings(context) =>
+      for {
+        _ <- CoreTarget.log.debug("core", "extractGeneratorSettings")("Looking up generator settings")
+        generatorSettings <- context.framework.fold(CoreTarget.error[GeneratorSettings](NoFramework))({
+          case "akka-http" => CoreTarget.pure(new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json"))
+          case "http4s"    => CoreTarget.pure(new GeneratorSettings(t"java.io.File", t"io.circe.Json"))
+          case unknown     => CoreTarget.error(UnknownFramework(unknown))
+        })
+        _ <- CoreTarget.log.debug("core", "extractGeneratorSettings")(s"Using $generatorSettings")
+      } yield generatorSettings
 
     case ValidateArgs(parsed) =>
       for {
@@ -47,7 +57,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         Args.empty.copy(context = Args.empty.context.copy(framework = Some(defaultFramework)), defaults = true)
 
       type From = (List[Args], List[String])
-      type To = List[Args]
+      type To   = List[Args]
       val start: From = (List.empty[Args], args.toList)
       import CoreTarget.log.debug
       FlatMap[CoreTarget].tailRecM[From, To](start)({
@@ -88,7 +98,8 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
                 Continue(
                   (sofar
                      .copy(outputPath = Option(expandTilde(value))) :: already,
-                   xs))
+                   xs)
+                )
               case (sofar :: already, "--packageName" :: value :: xs) =>
                 Continue((sofar.copy(packageName = Option(value.trim.split('.').to[List])) :: already, xs))
               case (sofar :: already, "--dtoPackage" :: value :: xs) =>
@@ -109,22 +120,23 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         case Parsed.Success(tree) => Right(tree)
       }
       for {
-        _ <- CoreTarget.log.debug("core", "processArgSet")("Processing arguments")
-        specPath <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
+        _          <- CoreTarget.log.debug("core", "processArgSet")("Processing arguments")
+        specPath   <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
         outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
-        pkgName <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
-        kind = args.kind
+        pkgName    <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
+        kind       = args.kind
         dtoPackage = args.dtoPackage
-        context = args.context
+        context    = args.context
         customImports <- args.imports
-          .map(x =>
-            for {
-              _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse $x as an import directive")
-              importer <- x
-                .parse[Importer]
-                .fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)),
-                                            CoreTarget.pure(_))
-            } yield Import(List(importer)))
+          .map(
+            x =>
+              for {
+                _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse $x as an import directive")
+                importer <- x
+                  .parse[Importer]
+                  .fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
+              } yield Import(List(importer))
+          )
           .sequence[CoreTarget, Import]
         _ <- CoreTarget.log.debug("core", "processArgSet")("Finished processing arguments")
       } yield {

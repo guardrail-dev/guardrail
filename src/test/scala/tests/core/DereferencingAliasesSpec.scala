@@ -2,8 +2,9 @@ package tests.core
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import com.twilio.guardrail.tests._
 
 import scala.meta._
 
@@ -65,7 +66,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
       Clients(Client(_, _, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
     val List(clientCmp, clientCls) =
       statements.dropWhile(_.isInstanceOf[Import])
 

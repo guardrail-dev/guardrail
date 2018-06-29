@@ -2,9 +2,9 @@ package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -46,7 +46,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -83,12 +83,12 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)
     """
-    val companion = q"""
+    val companion  = q"""
       object Foo {
         implicit val encodeFoo = {
           val readOnlyKeys = Set[String]()

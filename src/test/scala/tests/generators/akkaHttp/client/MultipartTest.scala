@@ -1,10 +1,10 @@
 package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Client, Clients, Context}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Client, Clients, Context }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class MultipartTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -51,7 +51,7 @@ class MultipartTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(_, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
     val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""

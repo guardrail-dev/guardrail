@@ -2,9 +2,10 @@ package swagger
 package protocols
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import com.twilio.guardrail.tests._
 
 import scala.meta._
 
@@ -116,12 +117,12 @@ class BigObjectSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Big objects can be generated") {
     val (ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _), _, _) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+      runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class BigObject(v1: Option[Int] = None, v2: Option[Int] = None, v3: Option[Int] = None, v4: Option[Int] = None, v5: Option[Int] = None, v6: Option[Int] = None, v7: Option[Int] = None, v8: Option[Int] = None, v9: Option[Int] = None, v10: Option[Int] = None, v11: Option[Int] = None, v12: Option[Int] = None, v13: Option[Int] = None, v14: Option[Int] = None, v15: Option[Int] = None, v16: Option[Int] = None, v17: Option[Int] = None, v18: Option[Int] = None, v19: Option[Int] = None, v20: Option[Int] = None, v21: Option[Int] = None, v22: Option[Int] = None, v23: Option[Int] = None, v24: Option[Int] = None, v25: Option[Int] = None, v26: Option[Int] = None, v27: Option[Int] = None, v28: Option[Int] = None, v29: Option[Int] = None, v30: Option[Int] = None)
     """
-    val companion = q"""
+    val companion  = q"""
       object BigObject {
         implicit val encodeBigObject = {
           val readOnlyKeys = Set[String]()

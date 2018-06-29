@@ -1,10 +1,10 @@
 package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Client, Clients, Context}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Client, Clients, Context }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -34,7 +34,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |""".stripMargin
 
     val (_, Clients(Client(_, _, statements) :: _), _) =
-      runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
+      runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
 
     val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
@@ -88,7 +88,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
 
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 

@@ -1,9 +1,10 @@
 package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{Client, Clients, Context}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ Client, Clients, Context }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import com.twilio.guardrail.tests._
 
 class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
@@ -124,7 +125,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     tags should equal(Seq("store"))
 

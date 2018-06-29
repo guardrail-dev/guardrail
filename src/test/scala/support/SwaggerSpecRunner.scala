@@ -8,19 +8,21 @@ trait SwaggerSpecRunner {
   import cats.implicits._
   import com.twilio.guardrail._
   import com.twilio.guardrail.terms.framework.FrameworkTerms
-  import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
+  import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+  import com.twilio.guardrail.generators.GeneratorSettings
 
   import scala.collection.JavaConverters._
 
-  def runSwaggerSpec(spec: String)(
-      context: Context,
-      framework: FunctionK[CodegenApplication, Target]): (ProtocolDefinitions, Clients, Servers) =
-    runSwagger(new SwaggerParser().parse(spec))(context, framework)
+  def runSwaggerSpec(
+      spec: String
+  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients, Servers) =
+    runSwagger(new SwaggerParser().parse(spec)) _
 
-  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target])(
+  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
       implicit F: FrameworkTerms[CodegenApplication],
       Sc: ScalaTerms[CodegenApplication],
-      Sw: SwaggerTerms[CodegenApplication]): (ProtocolDefinitions, Clients, Servers) = {
+      Sw: SwaggerTerms[CodegenApplication]
+  ): (ProtocolDefinitions, Clients, Servers) = {
     import F._
     import Sw._
 
@@ -30,7 +32,7 @@ trait SwaggerSpecRunner {
 
       schemes = Option(swagger.getSchemes)
         .fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
-      host = Option(swagger.getHost)
+      host     = Option(swagger.getHost)
       basePath = Option(swagger.getBasePath)
       paths = Option(swagger.getPaths)
         .map(_.asScala.toList)
@@ -51,7 +53,7 @@ trait SwaggerSpecRunner {
         .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)
 
-    Target.unsafeExtract(prog.foldMap(framework))
+    Target.unsafeExtract(prog.foldMap(framework), generatorSettings)
   }
 
 }

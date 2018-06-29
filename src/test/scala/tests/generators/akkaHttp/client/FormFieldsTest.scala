@@ -1,4 +1,4 @@
-package tests.generators.akkaHttp.client.contentType
+package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Client, Clients, Context }
@@ -7,7 +7,7 @@ import support.SwaggerSpecRunner
 import com.twilio.guardrail.tests._
 import scala.meta._
 
-class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class FormFieldsTest extends FunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""
     |swagger: "2.0"
     |info:
@@ -21,13 +21,21 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |    put:
     |      operationId: putFoo
     |      consumes:
-    |        - text/plain
+    |        - multipart/form-data
     |      parameters:
-    |        - name: body
-    |          in: body
+    |        - name: foo
+    |          in: formData
+    |          type: string
     |          required: true
-    |          schema:
-    |            type: string
+    |        - name: bar
+    |          in: formData
+    |          type: integer
+    |          format: int64
+    |          required: true
+    |        - name: baz
+    |          in: formData
+    |          type: file
+    |          required: true
     |      responses:
     |        200:
     |          description: Success
@@ -38,16 +46,11 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, statements) :: _),
       _
-    )                  = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
-    val companion = q"""
-      object Client {
-        def apply(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer): Client = new Client(host = host)(httpClient = httpClient, ec = ec, mat = mat)
-        def httpClient(httpClient: HttpRequest => Future[HttpResponse], host: String = "http://localhost:1234")(implicit ec: ExecutionContext, mat: Materializer): Client = new Client(host = host)(httpClient = httpClient, ec = ec, mat = mat)
-      }
-    """
-    val client    = q"""
+    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+
+    val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
         val basePath: String = ""
         private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
@@ -60,16 +63,17 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(e))
           }))
         }
-        def putFoo(body: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def putFoo(foo: String, bar: Long, baz: BodyPartEntity, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          wrap[IgnoredEntity](Marshal(TextPlain(body)).to[RequestEntity].flatMap {
+          wrap[IgnoredEntity](Marshal(Multipart.FormData(Source.fromIterator {
+            () => List(Some(Multipart.FormData.BodyPart("foo", Formatter.show(foo))), Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("baz", baz))).flatten.iterator
+          })).to[RequestEntity].flatMap {
             entity => httpClient(HttpRequest(method = HttpMethods.PUT, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
           })
         }
       }
     """
 
-    cmp.structure should equal(companion.structure)
     cls.structure should equal(client.structure)
   }
 }

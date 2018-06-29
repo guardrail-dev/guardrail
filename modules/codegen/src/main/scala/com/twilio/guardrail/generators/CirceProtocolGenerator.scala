@@ -1,11 +1,11 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.{ArrayModel, Model, ModelImpl, RefModel}
+import _root_.io.swagger.models.{ ArrayModel, Model, ModelImpl, RefModel }
 import _root_.io.swagger.models.properties._
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.{Default, ScalaEmptyIsNull, ScalaType}
+import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
 import com.twilio.guardrail.terms
 import java.util.Locale
 
@@ -19,12 +19,11 @@ object CirceProtocolGenerator {
 
   def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
-  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] = {
+  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] =
     concreteTypes
       .find(_.clsName == tpeName)
       .map(_.tpe)
       .map(f)
-  }
 
   object EnumProtocolTermInterp extends (EnumProtocolTerm ~> Target) {
     def apply[T](term: EnumProtocolTerm[T]): Target[T] = term match {
@@ -35,7 +34,9 @@ object CirceProtocolGenerator {
         // Default to `string` for untyped enums.
         // Currently, only plain strings are correctly supported anyway, so no big loss.
         val tpeName = Option(swagger.getType()).getOrElse("string")
-        Target.pure(Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger))))
+        Target.getGeneratorSettings.map { implicit gs =>
+          Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger)))
+        }
 
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
@@ -58,10 +59,9 @@ object CirceProtocolGenerator {
       case DecodeEnum(clsName) =>
         Target.pure(q"""
           implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-            Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(
-          Term.Name("s"),
-          List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
-          List(Term.Name("value")))}))
+            Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(Term.Name("s"),
+                                                                                  List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
+                                                                                  List(Term.Name("value")))}))
         """)
 
       case RenderClass(clsName, tpe) =>
@@ -80,10 +80,8 @@ object CirceProtocolGenerator {
           List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)") ++
           List(encoder) ++
           List(decoder) ++
-          List(
-            q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)") ++
-          List(
-            q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)")}
+          List(q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)") ++
+          List(q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)")}
           }
         """)
     }
@@ -98,66 +96,67 @@ object CirceProtocolGenerator {
         def toCamelCase(s: String): String =
           "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
-        for {
-          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(
-            s"Generated ProtocolParameter(${term}, ${name}, ...)")
+        Target.getGeneratorSettings.flatMap { implicit gs =>
+          for {
+            _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
-          meta <- SwaggerUtil.propMeta(property)
+            argName = if (needCamelSnakeConversion) toCamelCase(name) else name
+            meta <- SwaggerUtil.propMeta(property)
 
-          defaultValue = property match {
-            case _: MapProperty =>
-              Option(q"Map.empty")
-            case _: ArrayProperty =>
-              Option(q"IndexedSeq.empty")
-            case p: BooleanProperty =>
-              Default(p).extract[Boolean].map(Lit.Boolean(_))
-            case p: DoubleProperty =>
-              Default(p).extract[Double].map(Lit.Double(_))
-            case p: FloatProperty =>
-              Default(p).extract[Float].map(Lit.Float(_))
-            case p: IntegerProperty =>
-              Default(p).extract[Int].map(Lit.Int(_))
-            case p: LongProperty =>
-              Default(p).extract[Long].map(Lit.Long(_))
-            case p: StringProperty =>
-              Default(p).extract[String].map(Lit.String(_))
-            case _ =>
-              None
-          }
+            defaultValue = property match {
+              case _: MapProperty =>
+                Option(q"Map.empty")
+              case _: ArrayProperty =>
+                Option(q"IndexedSeq.empty")
+              case p: BooleanProperty =>
+                Default(p).extract[Boolean].map(Lit.Boolean(_))
+              case p: DoubleProperty =>
+                Default(p).extract[Double].map(Lit.Double(_))
+              case p: FloatProperty =>
+                Default(p).extract[Float].map(Lit.Float(_))
+              case p: IntegerProperty =>
+                Default(p).extract[Int].map(Lit.Int(_))
+              case p: LongProperty =>
+                Default(p).extract[Long].map(Lit.Long(_))
+              case p: StringProperty =>
+                Default(p).extract[String].map(Lit.String(_))
+              case _ =>
+                None
+            }
 
-          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-          needsEmptyToNull = property match {
-            case d: DateProperty      => ScalaEmptyIsNull(d)
-            case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
-            case s: StringProperty    => ScalaEmptyIsNull(s)
-            case _                    => None
-          }
-          emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
+            readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
+            needsEmptyToNull = property match {
+              case d: DateProperty      => ScalaEmptyIsNull(d)
+              case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
+              case s: StringProperty    => ScalaEmptyIsNull(s)
+              case _                    => None
+            }
+            emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
 
-          (tpe, rawDep) = meta match {
-            case SwaggerUtil.Resolved(declType, rawDep, _) =>
-              (declType, rawDep)
-            case SwaggerUtil.Deferred(tpeName) =>
-              val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
-                println(s"Unable to find definition for ${tpeName}, just inlining")
-                Type.Name(tpeName)
-              }
-              (tpe, Option.empty)
-            case SwaggerUtil.DeferredArray(tpeName) =>
-              (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
-            case SwaggerUtil.DeferredMap(tpeName) =>
-              (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
-          }
+            (tpe, rawDep) = meta match {
+              case SwaggerUtil.Resolved(declType, rawDep, _) =>
+                (declType, rawDep)
+              case SwaggerUtil.Deferred(tpeName) =>
+                val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
+                  println(s"Unable to find definition for ${tpeName}, just inlining")
+                  Type.Name(tpeName)
+                }
+                (tpe, Option.empty)
+              case SwaggerUtil.DeferredArray(tpeName) =>
+                (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
+              case SwaggerUtil.DeferredMap(tpeName) =>
+                (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
+            }
 
-          (finalDeclType, finalDefaultValue) = Option(property.getRequired)
-            .filterNot(_ == false)
-            .fold[(Type, Option[Term])](
-              (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-            )(Function.const((tpe, defaultValue)) _)
-          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
-          dep = rawDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
+            (finalDeclType, finalDefaultValue) = Option(property.getRequired)
+              .filterNot(_ == false)
+              .fold[(Type, Option[Term])](
+                (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+              )(Function.const((tpe, defaultValue)) _)
+            term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+            dep  = rawDep.filterNot(_.value == clsName) // Filter out our own class name
+          } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
+        }
 
       case RenderDTOClass(clsName, terms) =>
         Target.pure(q"""
@@ -166,14 +165,14 @@ object CirceProtocolGenerator {
 
       case EncodeModel(clsName, needCamelSnakeConversion, params) =>
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
-        val paramCount = params.length
-        val typeName = Type.Name(clsName)
+        val paramCount                 = params.length
+        val typeName                   = Type.Name(clsName)
         val encVal = if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
             .to[List]
             .unzip
-          val List(name) = names
+          val List(name)  = names
           val List(field) = fields
           q"""
             Encoder.forProduct1(${name})((o: ${Type.Name(clsName)}) => o.${field})
@@ -216,7 +215,7 @@ object CirceProtocolGenerator {
 
       case DecodeModel(clsName, needCamelSnakeConversion, params) =>
         val emptyToNullKeys: List[String] = params.flatMap(_.emptyToNullKey).toList
-        val paramCount = params.length
+        val paramCount                    = params.length
         val decVal = if (paramCount <= 22 && emptyToNullKeys.isEmpty) {
           val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
           q"""
@@ -289,35 +288,33 @@ object CirceProtocolGenerator {
           case SwaggerUtil.Deferred(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
           case SwaggerUtil.DeferredArray(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"),
-                              s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
           case SwaggerUtil.DeferredMap(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"),
-                              s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
         }
     }
   }
 
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
     def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
-      case ExtractConcreteTypes(definitions) => {
-        for {
-          entries <- definitions.traverse {
-            case (clsName, impl: ModelImpl)
-                if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
-              Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
-            case (clsName, definition) =>
-              SwaggerUtil
-                .modelMetaType(definition)
-                .map(x => (clsName, x))
-          }
-          result <- SwaggerUtil.ResolvedType.resolve_(entries)
-        } yield
-          result.map {
-            case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
-              PropMeta(clsName, tpe)
-          }
-      }
+      case ExtractConcreteTypes(definitions) =>
+        Target.getGeneratorSettings.flatMap { implicit gs =>
+          for {
+            entries <- definitions.traverse {
+              case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
+                Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
+              case (clsName, definition) =>
+                SwaggerUtil
+                  .modelMetaType(definition)
+                  .map(x => (clsName, x))
+            }
+            result <- SwaggerUtil.ResolvedType.resolve_(entries)
+          } yield
+            result.map {
+              case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
+                PropMeta(clsName, tpe)
+            }
+        }
 
       case ProtocolImports() =>
         Target.pure(
@@ -326,14 +323,16 @@ object CirceProtocolGenerator {
             q"import io.circe.syntax._",
             q"import io.circe.generic.semiauto._",
             q"import cats.syntax.either._"
-          ))
+          )
+        )
 
       case PackageObjectImports() =>
         Target.pure(
           List(
             q"import java.time._",
             q"import io.circe.java8.{ time => j8time }"
-          ))
+          )
+        )
 
       case PackageObjectContents() =>
         Target.pure(q"""

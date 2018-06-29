@@ -5,6 +5,7 @@ import _root_.io.swagger.models.properties.Property
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.ProtocolParameter
+import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
 
@@ -13,7 +14,8 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(
       name: String,
-      prop: Property): Free[F, ProtocolParameter] =
+      prop: Property
+  ): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
   def renderDTOClass(clsName: String, terms: List[Term.Param]): Free[F, Defn.Class] =
     Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms))

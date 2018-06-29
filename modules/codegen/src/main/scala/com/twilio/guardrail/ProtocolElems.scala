@@ -5,28 +5,22 @@ import scala.meta._
 
 sealed trait ProtocolElems
 
-sealed trait LazyProtocolElems extends ProtocolElems { def name: String }
-case class Deferred(name: String) extends LazyProtocolElems
+sealed trait LazyProtocolElems         extends ProtocolElems { def name: String }
+case class Deferred(name: String)      extends LazyProtocolElems
 case class DeferredArray(name: String) extends LazyProtocolElems
-case class DeferredMap(name: String) extends LazyProtocolElems
+case class DeferredMap(name: String)   extends LazyProtocolElems
 
-sealed trait StrictProtocolElems extends ProtocolElems { def name: String }
-case class RandomType(name: String, tpe: Type) extends StrictProtocolElems
-case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object)
-    extends StrictProtocolElems
-case class EnumDefinition(name: String,
-                          tpe: Type.Name,
-                          elems: List[(String, Term.Name, Term.Select)],
-                          cls: Defn.Class,
-                          companion: Defn.Object)
+sealed trait StrictProtocolElems                                                                  extends ProtocolElems { def name: String }
+case class RandomType(name: String, tpe: Type)                                                    extends StrictProtocolElems
+case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object) extends StrictProtocolElems
+case class EnumDefinition(name: String, tpe: Type.Name, elems: List[(String, Term.Name, Term.Select)], cls: Defn.Class, companion: Defn.Object)
     extends StrictProtocolElems
 
 object ProtocolElems {
-  def resolve[F[_]](elems: List[ProtocolElems], limit: Int = 10)(
-      implicit M: MonadError[F, String]): F[List[StrictProtocolElems]] = {
+  def resolve[F[_]](elems: List[ProtocolElems], limit: Int = 10)(implicit M: MonadError[F, String]): F[List[StrictProtocolElems]] =
     M.tailRecM[(Int, List[ProtocolElems]), List[StrictProtocolElems]]((limit, elems))({
       case (iters, xs) if iters > 0 =>
-        val lazyElems = xs.collect { case x: LazyProtocolElems     => x }
+        val lazyElems   = xs.collect { case x: LazyProtocolElems   => x }
         val strictElems = xs.collect { case x: StrictProtocolElems => x }
         if (lazyElems.nonEmpty) {
           val newElems = strictElems ++ lazyElems.map {
@@ -73,5 +67,4 @@ object ProtocolElems {
         val lazyElems = xs.collect { case x: LazyProtocolElems => x }
         M.raiseError(s"Unable to resolve: ${lazyElems.map(_.name)}")
     })
-  }
 }

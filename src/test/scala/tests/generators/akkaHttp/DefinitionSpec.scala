@@ -1,10 +1,10 @@
 package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{ClassDefinition, Context, EnumDefinition, ProtocolDefinitions}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, EnumDefinition, ProtocolDefinitions }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-
+import com.twilio.guardrail.tests._
 import scala.meta._
 
 class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -72,12 +72,12 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class First(a: Option[Int] = None)
     """
-    val companion = q"""
+    val companion  = q"""
       object First {
         implicit val encodeFirst = {
         val readOnlyKeys = Set[String]()
@@ -96,14 +96,14 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: EnumDefinition(_, _, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
     sealed abstract class Third(val value: String) {
       override def toString: String = value.toString
     }
     """
-    val companion = q"""
+    val companion  = q"""
     object Third {
       object members {
         case object V1 extends Third("v1")
@@ -132,12 +132,12 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class Fifth(aBCD: Option[Int] = None, bCDE: Option[Int] = None)
     """
-    val companion = q"""
+    val companion  = q"""
       object Fifth {
         implicit val encodeFifth = {
           val readOnlyKeys = Set[String]()
@@ -156,12 +156,12 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
       case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))
     """
-    val companion = q"""
+    val companion  = q"""
       object Sixth {
         implicit val encodeSixth = {
           val readOnlyKeys = Set[String]()

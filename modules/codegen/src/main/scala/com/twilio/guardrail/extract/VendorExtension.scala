@@ -10,13 +10,11 @@ object VendorExtension {
   }
 
   object VendorExtensible {
-    def build[F](f: F => String => Any): VendorExtensible[F] = {
+    def build[F](f: F => String => Any): VendorExtensible[F] =
       new VendorExtensible[F] {
-        def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T] = {
+        def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T] =
           T.extract(f(from)(key)).toOption
-        }
       }
-    }
 
     implicit val defaultVendorExtensibleModel: VendorExtensible[Model] =
       build[Model](m => key => m.getVendorExtensions.get(key))

@@ -16,7 +16,8 @@ import com.twilio.guardrail.{
   RandomType,
   Target
 }
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.tests._
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -45,7 +46,7 @@ class Issue61 extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(RandomType(_, tpe) :: _ :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     tpe.structure shouldBe t"IndexedSeq[String]".structure
   }
@@ -55,7 +56,7 @@ class Issue61 extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: RandomType(_, tpe) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     tpe.structure shouldBe t"Long".structure
   }
