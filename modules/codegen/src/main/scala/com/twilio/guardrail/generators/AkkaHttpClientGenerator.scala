@@ -196,20 +196,26 @@ object AkkaHttpClientGenerator {
             {
               val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
               val allHeaders = headers ++ $headerParams
-              wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
-                tracingHttpClient(HttpRequest(method = HttpMethods.${Term
-              .Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders))
-              })
+              makeRequest(
+                HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)},
+                ${urlWithParams},
+                allHeaders,
+                ${entity},
+                HttpProtocols.`HTTP/1.1`
+              ).flatMap(req => wrap[${responseTypeRef}](tracingHttpClient, req))
             }
             """
           } else {
             q"""
             {
               val allHeaders = headers ++ $headerParams
-              wrap[${responseTypeRef}](Marshal(${entity}).to[RequestEntity].flatMap { entity =>
-                httpClient(HttpRequest(method = HttpMethods.${Term
-              .Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, entity = entity, headers = allHeaders))
-              })
+              makeRequest(
+                HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)},
+                ${urlWithParams},
+                allHeaders,
+                ${entity},
+                HttpProtocols.`HTTP/1.1`
+              ).flatMap(req => wrap[${responseTypeRef}](httpClient, req))
             }
             """
           }
@@ -366,9 +372,34 @@ object AkkaHttpClientGenerator {
             class ${Type.Name(clientName)}(...$ctorArgs) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
-              private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
+              private[this] def makeRequest[T: ToEntityMarshaller](
+                method: HttpMethod,
+                uri: Uri,
+                headers: scala.collection.immutable.Seq[HttpHeader],
+                entity: T,
+                protocol: HttpProtocol
+              ): EitherT[Future, Either[Throwable, HttpResponse], HttpRequest] = {
                 EitherT(
-                  resp.flatMap(resp =>
+                  Marshal(entity)
+                    .to[RequestEntity]
+                    .map[Either[Either[Throwable, HttpResponse], HttpRequest]]({ entity =>
+                      Right(HttpRequest(
+                        method=method,
+                        uri=uri,
+                        headers=headers,
+                        entity=entity,
+                        protocol=protocol
+                      ))
+                    })
+                    .recover({ case t =>
+                      Left(Left(t))
+                    })
+                )
+              }
+
+              private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
+                EitherT(
+                  client(request).flatMap(resp =>
                     if (resp.status.isSuccess) {
                       Unmarshal(resp.entity).to[T].map(Right.apply _)
                     } else {

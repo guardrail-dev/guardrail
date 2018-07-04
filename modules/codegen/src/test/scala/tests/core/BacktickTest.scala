@@ -79,8 +79,16 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val client = q"""
     class `Dashy-packageClient`(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
       val basePath: String = ""
-      private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-        EitherT(resp.flatMap(resp => if (resp.status.isSuccess) {
+      private[this] def makeRequest[T: ToEntityMarshaller](method: HttpMethod, uri: Uri, headers: scala.collection.immutable.Seq[HttpHeader], entity: T, protocol: HttpProtocol): EitherT[Future, Either[Throwable, HttpResponse], HttpRequest] = {
+        EitherT(Marshal(entity).to[RequestEntity].map[Either[Either[Throwable, HttpResponse], HttpRequest]] {
+          entity => Right(HttpRequest(method = method, uri = uri, headers = headers, entity = entity, protocol = protocol))
+        }.recover({
+          case t =>
+            Left(Left(t))
+        }))
+      }
+      private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
+        EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
           Unmarshal(resp.entity).to[T].map(Right.apply _)
         } else {
           FastFuture.successful(Left(Right(resp)))
@@ -91,17 +99,12 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
       }
       def `dashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[`dashy-class`](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
-        })
+        makeRequest(HttpMethods.GET, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[`dashy-class`](httpClient, req))
       }
       def `postDashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[`dashy-class`](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
-          httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
-        })
+        makeRequest(HttpMethods.POST, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[`dashy-class`](httpClient, req))
       }
-
     }
     """
 
