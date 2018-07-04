@@ -90,7 +90,9 @@ object Common {
 
       packageObject = WriteTree(
         dtoPackagePath.resolve("package.scala"),
-        source"""package ${Term.Name(dtoComponents.dropRight(1).mkString("."))}
+        source"""package ${dtoComponents.init.tail.foldLeft[Term.Ref](Term.Name(dtoComponents.head)) {
+          case (acc, next) => Term.Select(acc, Term.Name(next))
+        }}
             ..${customImports ++ packageObjectImports ++ protocolImports}
 
             package object ${Term.Name(dtoComponents.last)} {
