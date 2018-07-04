@@ -197,7 +197,7 @@ object ScalaParameter {
         val Term.Name(name) = param.paramName
         if (counts.getOrElse(name, 0) > 1) {
           val escapedName =
-            Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
+            Term.Name(param.argName.value)
           new ScalaParameter(
             param.in,
             param.param.copy(name = escapedName),
