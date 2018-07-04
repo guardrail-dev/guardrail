@@ -75,7 +75,7 @@ val codegenSettings = Seq(
     Resolver.bintrayRepo("scalameta", "maven")
   ),
   libraryDependencies ++= testDependencies ++ Seq(
-    "org.scalameta" %% "scalameta"     % "3.7.4",
+    "org.scalameta" %% "scalameta"     % "3.7.5",
     "io.swagger"    % "swagger-parser" % "1.0.34",
     "org.tpolecat"  %% "atto-core"     % "0.6.1",
     "org.typelevel" %% "cats-core"     % catsVersion,
