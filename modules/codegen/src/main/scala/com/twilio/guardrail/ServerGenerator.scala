@@ -75,7 +75,7 @@ object ServerGenerator {
                                     responseDefinitions,
                                     renderedRoutes.flatMap(_.supportDefinitions))
           } yield {
-            Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
+            Server(className, frameworkImports ++ extraImports, List(handlerSrc, classSrc))
           }
       }
     } yield Servers(servers)

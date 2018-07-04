@@ -42,7 +42,7 @@ object ClientGenerator {
                 client
             )
 
-            Client(pkg, clientName, stats.map(SwaggerUtil.escapeTree))
+            Client(pkg, clientName, stats)
           }
       })
     } yield Clients(clients)

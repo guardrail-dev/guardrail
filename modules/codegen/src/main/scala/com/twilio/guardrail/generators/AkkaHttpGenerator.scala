@@ -62,20 +62,16 @@ object AkkaHttpGenerator {
             object TextPlain {
               def apply(value: String): TextPlain = new TextPlain(value)
               implicit final def textTEM: ToEntityMarshaller[TextPlain] =
-                Marshaller.withFixedContentType(ContentTypes.${Term
-            .Name("`text/plain(UTF-8)`")}) { text =>
-                  HttpEntity(ContentTypes.${Term
-            .Name("`text/plain(UTF-8)`")}, text.value)
+                Marshaller.withFixedContentType(ContentTypes.`text/plain(UTF-8)`) { text =>
+                  HttpEntity(ContentTypes.`text/plain(UTF-8)`, text.value)
                 }
             }
 
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${gs.jsonType}] =
-              Marshaller.withFixedContentType(MediaTypes.${Term
-            .Name("`application/json`")}) { json =>
-                HttpEntity(MediaTypes.${Term
-            .Name("`application/json`")}, printer.pretty(json))
+              Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
+                HttpEntity(MediaTypes.`application/json`, printer.pretty(json))
               }
 
             implicit final def jsonEntityMarshaller[A](
@@ -86,7 +82,7 @@ object AkkaHttpGenerator {
 
             implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
-                .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
+                .forContentTypes(MediaTypes.`application/json`)
                 .map {
                   case ByteString.empty => throw Unmarshaller.NoContentException
                   case data             => jawn.parseByteBuffer(data.asByteBuffer).valueOr(throw _)
