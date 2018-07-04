@@ -57,14 +57,14 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; codegen/test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
 resetSample := { "git clean -fdx modules/sample/src modules/sample/target" ! }
 
 addCommandAlias("example", "; resetSample ; runExample ; sample/test")
-addCommandAlias("testSuite", "; test ; resetSample; runExample ; sample/test")
+addCommandAlias("testSuite", "; codegen/test ; resetSample; runExample ; sample/test")
 
 addCommandAlias(
   "publishBintray",
