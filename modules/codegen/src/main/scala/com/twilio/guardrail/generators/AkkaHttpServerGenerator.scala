@@ -393,7 +393,6 @@ object AkkaHttpServerGenerator {
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         } yield q"""
           object ${Term.Name(resourceName)} {
-            import cats.syntax.either._
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
             implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T]({
               implicit ev => string =>
