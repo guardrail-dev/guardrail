@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import support.PositiveLong
 
 class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(1000 millis, 1000 millis)
+  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Placeholder until property testing
   val id: Option[Long]              = None
