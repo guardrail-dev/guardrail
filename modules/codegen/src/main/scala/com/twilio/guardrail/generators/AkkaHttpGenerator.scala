@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models._
+import io.swagger.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
