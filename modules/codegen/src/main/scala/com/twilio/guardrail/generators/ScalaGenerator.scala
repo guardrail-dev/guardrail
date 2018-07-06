@@ -60,6 +60,8 @@ object ScalaGenerator {
                 implicit val showString = build[String](identity)
                 implicit val showInt = build[Int](_.toString)
                 implicit val showLong = build[Long](_.toString)
+                implicit val showFloat = build[Float](_.toString)
+                implicit val showDouble = build[Double](_.toString)
                 implicit val showBigInt = build[BigInt](_.toString)
                 implicit val showBigDecimal = build[BigDecimal](_.toString)
                 implicit val showBoolean = build[Boolean](_.toString)
