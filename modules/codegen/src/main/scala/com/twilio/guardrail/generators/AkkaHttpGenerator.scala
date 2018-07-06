@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models._
+import io.swagger.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
@@ -23,7 +23,7 @@ object AkkaHttpGenerator {
           List(
             q"import akka.http.scaladsl.model._",
             q"import akka.http.scaladsl.model.headers.RawHeader",
-            q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}",
+            q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller, FromStringUnmarshaller}",
             q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
             q"import akka.http.scaladsl.server.Directives._",
             q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MissingFormFieldRejection, Rejection, Route}",
@@ -89,22 +89,34 @@ object AkkaHttpGenerator {
                 .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
                 .map {
                   case ByteString.empty => throw Unmarshaller.NoContentException
-                  case data             => jawn.parseByteBuffer(data.asByteBuffer).fold(throw _, identity)
+                  case data             => jawn.parseByteBuffer(data.asByteBuffer).valueOr(throw _)
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              def decode(json: ${gs.jsonType}) = J.decodeJson(json).fold(throw _, identity)
+              def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
               jsonUnmarshaller.map(decode)
+            }
+
+            final val jsonStringUnmarshaller: FromStringUnmarshaller[${gs.jsonType}] = Unmarshaller.strict {
+              case "" =>
+                throw Unmarshaller.NoContentException
+              case data =>
+                jawn.parse(data).getOrElse(Json.fromString(data))
+            }
+
+            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
+              def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
+              jsonStringUnmarshaller.map(decode _)
             }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
               Unmarshaller.strict(_ => IgnoredEntity.empty)
 
-            implicit def MFDBPviaFSU[T](implicit ev: Unmarshaller[BodyPartEntity, T], mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { implicit executionContext => entity =>
+            implicit def MFDBPviaFSU[T](implicit ev: Unmarshaller[BodyPartEntity, T]): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller.withMaterializer { implicit executionContext => implicit mat => entity =>
               ev.apply(entity.entity)
             }
 
-            implicit def BPEviaFSU[T](implicit ev: Unmarshaller[String, T], mat: Materializer): Unmarshaller[BodyPartEntity, T] = Unmarshaller { implicit executionContext => entity =>
+            implicit def BPEviaFSU[T](implicit ev: Unmarshaller[String, T]): Unmarshaller[BodyPartEntity, T] = Unmarshaller.withMaterializer { implicit executionContext => implicit mat => entity =>
               entity.dataBytes
                 .runWith(Sink.fold(ByteString.empty)((accum, bs) => accum.concat(bs)))
                 .map(_.decodeString(java.nio.charset.StandardCharsets.UTF_8))

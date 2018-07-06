@@ -30,7 +30,7 @@ fullRunTask(
   Test,
   "com.twilio.guardrail.CLI",
   """
-  --defaults --import akka.NotUsed
+  --defaults --import akka.NotUsed --import support.PositiveLong
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers

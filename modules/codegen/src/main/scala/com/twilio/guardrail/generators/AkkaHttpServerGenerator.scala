@@ -393,7 +393,6 @@ object AkkaHttpServerGenerator {
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         } yield q"""
           object ${Term.Name(resourceName)} {
-            import cats.syntax.either._
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
             implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T]({
               implicit ev => string =>
@@ -572,12 +571,10 @@ object AkkaHttpServerGenerator {
                   (
                     q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                      .Select(partsTerm, containerName.toType)}] = Unmarshaller.withMaterializer { implicit executionContext => materializer => part =>
-                          Unmarshaller.firstOf(
-                            implicitly[Unmarshaller[Multipart.FormData.BodyPart, ${realType}]],
-                            MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)
-                          ).apply(part).map(${Term
-                      .Select(partsTerm, containerName.toTerm)}.apply)
+                      .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
+                          val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
+                          val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
+                          Unmarshaller.firstOf(json, string).apply(part).map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
                         }
                       """,
                     Case(argName.toLit, None, q"""

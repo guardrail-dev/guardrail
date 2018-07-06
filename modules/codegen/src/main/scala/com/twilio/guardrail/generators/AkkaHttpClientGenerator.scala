@@ -189,6 +189,7 @@ object AkkaHttpClientGenerator {
             .orElse(textPlainBody)
             .orElse(safeBody.map(_._1))
             .getOrElse(q"HttpEntity.Empty")
+
           val methodBody: Term = if (tracing) {
             val tracingLabel = q"""s"$${clientName}:$${methodName}""""
             q"""
@@ -224,8 +225,7 @@ object AkkaHttpClientGenerator {
           ).flatten
 
           q"""
-          def ${Term
-            .Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
+          def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
           """
         }
 

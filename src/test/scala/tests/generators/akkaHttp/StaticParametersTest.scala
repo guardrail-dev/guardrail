@@ -44,7 +44,6 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
 
     val resource = q"""
       object Resource {
-        import cats.syntax.either._
         def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap { req =>
           req.discardEntityBytes().future
           Directive.Empty

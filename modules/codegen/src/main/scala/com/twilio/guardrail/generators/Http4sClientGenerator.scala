@@ -89,7 +89,7 @@ object Http4sClientGenerator {
               q"$tParamName.map(v => Part.formData[F](${tName.toLit}, Formatter.show(v)))"
 
             def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"Some(Multipart(${tName.toLit}, Formatter.show($tParamName)))"
+              q"Some(Part.formData[F](${tName.toLit}, Formatter.show($tParamName)))"
 
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
