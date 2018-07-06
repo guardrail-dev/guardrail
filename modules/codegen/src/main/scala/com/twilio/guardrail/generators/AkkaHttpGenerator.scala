@@ -101,7 +101,7 @@ object AkkaHttpGenerator {
               case "" =>
                 throw Unmarshaller.NoContentException
               case data =>
-                jawn.parse(data).valueOr(throw _)
+                jawn.parse(data).getOrElse(Json.fromString(data))
             }
 
             def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
