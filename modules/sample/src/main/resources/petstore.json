@@ -464,7 +464,8 @@
             "description": "ID of pet to update",
             "required": true,
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "x-scala-type": "PositiveLong"
           },
           {
             "name": "additionalMetadata",
@@ -494,6 +495,14 @@
             "required": true,
             "type": "file",
             "x-scala-file-hash": "SHA-256"
+          },
+          {
+            "name": "custom-value",
+            "in": "formData",
+            "required": true,
+            "type": "number",
+            "format": "int64",
+            "x-scala-type": "PositiveLong"
           }
         ],
         "responses": {
