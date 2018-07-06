@@ -572,11 +572,9 @@ object AkkaHttpServerGenerator {
                     q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
                       .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
-                          Unmarshaller.firstOf(
-                            implicitly[Unmarshaller[Multipart.FormData.BodyPart, ${realType}]],
-                            MFDBPviaFSU(Unmarshaller.stringUnmarshaller)
-                          ).apply(part).map(${Term
-                      .Select(partsTerm, containerName.toTerm)}.apply)
+                          val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
+                          val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
+                          Unmarshaller.firstOf(json, string).apply(part).map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
                         }
                       """,
                     Case(argName.toLit, None, q"""

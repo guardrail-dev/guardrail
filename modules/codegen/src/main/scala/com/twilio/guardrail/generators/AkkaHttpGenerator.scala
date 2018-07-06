@@ -23,7 +23,7 @@ object AkkaHttpGenerator {
           List(
             q"import akka.http.scaladsl.model._",
             q"import akka.http.scaladsl.model.headers.RawHeader",
-            q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller}",
+            q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller, FromStringUnmarshaller}",
             q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
             q"import akka.http.scaladsl.server.Directives._",
             q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MissingFormFieldRejection, Rejection, Route}",
@@ -95,6 +95,18 @@ object AkkaHttpGenerator {
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
               def decode(json: ${gs.jsonType}) = J.decodeJson(json).fold(throw _, identity)
               jsonUnmarshaller.map(decode)
+            }
+
+            final val jsonStringUnmarshaller: FromStringUnmarshaller[${gs.jsonType}] = Unmarshaller.strict {
+              case "" =>
+                throw Unmarshaller.NoContentException
+              case data =>
+                jawn.parse(data).valueOr(throw _)
+            }
+
+            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
+              def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
+              jsonStringUnmarshaller.map(decode _)
             }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
