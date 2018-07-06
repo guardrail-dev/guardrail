@@ -64,7 +64,6 @@ object ScalaGenerator {
                 implicit val showBigDecimal = build[BigDecimal](_.toString)
                 implicit val showBoolean = build[Boolean](_.toString)
                 implicit val showOffsetDateTime = build[java.time.OffsetDateTime](_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-                implicit val showAnyVal = build[AnyVal](_.toString)
               }
 
               object Formatter {
