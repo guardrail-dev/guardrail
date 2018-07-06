@@ -222,14 +222,15 @@ object SwaggerUtil {
       t
     }
     def liftCustomType(s: String): Option[Type] = {
-      val terms        = s.split('.').toList
-      val (init, last) = (terms.init, terms.last)
-      init.map(Term.Name.apply _) match {
-        case Nil if last == "" => None
-        case Nil               => Some(Type.Name(last))
-        case rest =>
-          Some(Type.Select(rest.reduceLeft(Term.Select.apply _), Type.Name(last)))
-      }
+      val tpe = s.trim
+      if (tpe.nonEmpty) {
+        tpe
+          .parse[Type]
+          .fold({ err =>
+            println(s"Warning: Unparsable x-scala-type: ${tpe} ${err}")
+            None
+          }, Option.apply _)
+      } else None
     }
 
     customType.flatMap(liftCustomType _).getOrElse {
