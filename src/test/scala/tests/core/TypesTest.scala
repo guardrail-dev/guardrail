@@ -58,6 +58,12 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |        type: integer
     |      untyped:
     |        description: Untyped
+    |      custom:
+    |        type: string
+    |        x-scala-type: Foo
+    |      customComplex:
+    |        type: string
+    |        x-scala-type: Foo[Bar]
     |""".stripMargin
 
   test("Generate no definitions") {
@@ -68,18 +74,32 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
-      case class Types(array: Option[IndexedSeq[Boolean]] = Option(IndexedSeq.empty), obj: Option[io.circe.Json] = None, bool: Option[Boolean] = None, string: Option[String] = None, date: Option[java.time.LocalDate] = None, dateTime: Option[java.time.OffsetDateTime] = None, long: Option[Long] = None, int: Option[Int] = None, float: Option[Float] = None, double: Option[Double] = None, number: Option[BigDecimal] = None, integer: Option[BigInt] = None, untyped: Option[io.circe.Json] = None)
+      case class Types(
+        array: Option[IndexedSeq[Boolean]] = Option(IndexedSeq.empty),
+        obj: Option[io.circe.Json] = None,
+        bool: Option[Boolean] = None,
+        string: Option[String] = None,
+        date: Option[java.time.LocalDate] = None,
+        date_time: Option[java.time.OffsetDateTime] = None,
+        long: Option[Long] = None,
+        int: Option[Int] = None,
+        float: Option[Float] = None,
+        double: Option[Double] = None,
+        number: Option[BigDecimal] = None,
+        integer: Option[BigInt] = None,
+        untyped: Option[io.circe.Json] = None,
+        custom: Option[Foo] = None,
+        customComplex: Option[Foo[Bar]] = None
+      )
     """
 
     val companion = q"""
       object Types {
         implicit val encodeTypes = {
           val readOnlyKeys = Set[String]()
-          Encoder.forProduct13("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped")( (o: Types) =>
-            (o.array, o.obj, o.bool, o.string, o.date, o.dateTime, o.long, o.int, o.float, o.double, o.number, o.integer, o.untyped)
-          ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.forProduct15("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex")((o: Types) => (o.array, o.obj, o.bool, o.string, o.date, o.date_time, o.long, o.int, o.float, o.double, o.number, o.integer, o.untyped, o.custom, o.customComplex)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeTypes = Decoder.forProduct13("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped")(Types.apply _)
+        implicit val decodeTypes = Decoder.forProduct15("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex")(Types.apply _)
       }
     """
 
