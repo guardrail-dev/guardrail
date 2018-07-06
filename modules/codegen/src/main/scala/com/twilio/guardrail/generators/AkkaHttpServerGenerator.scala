@@ -572,10 +572,10 @@ object AkkaHttpServerGenerator {
                   (
                     q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                      .Select(partsTerm, containerName.toType)}] = Unmarshaller.withMaterializer { implicit executionContext => materializer => part =>
+                      .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
                           Unmarshaller.firstOf(
                             implicitly[Unmarshaller[Multipart.FormData.BodyPart, ${realType}]],
-                            MFDBPviaFSU(Unmarshaller.stringUnmarshaller, materializer)
+                            MFDBPviaFSU(Unmarshaller.stringUnmarshaller)
                           ).apply(part).map(${Term
                       .Select(partsTerm, containerName.toTerm)}.apply)
                         }

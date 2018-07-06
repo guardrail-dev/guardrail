@@ -100,11 +100,11 @@ object AkkaHttpGenerator {
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
               Unmarshaller.strict(_ => IgnoredEntity.empty)
 
-            implicit def MFDBPviaFSU[T](implicit ev: Unmarshaller[BodyPartEntity, T], mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { implicit executionContext => entity =>
+            implicit def MFDBPviaFSU[T](implicit ev: Unmarshaller[BodyPartEntity, T]): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller.withMaterializer { implicit executionContext => implicit mat => entity =>
               ev.apply(entity.entity)
             }
 
-            implicit def BPEviaFSU[T](implicit ev: Unmarshaller[String, T], mat: Materializer): Unmarshaller[BodyPartEntity, T] = Unmarshaller { implicit executionContext => entity =>
+            implicit def BPEviaFSU[T](implicit ev: Unmarshaller[String, T]): Unmarshaller[BodyPartEntity, T] = Unmarshaller.withMaterializer { implicit executionContext => implicit mat => entity =>
               entity.dataBytes
                 .runWith(Sink.fold(ByteString.empty)((accum, bs) => accum.concat(bs)))
                 .map(_.decodeString(java.nio.charset.StandardCharsets.UTF_8))
