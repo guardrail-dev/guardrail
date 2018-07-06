@@ -65,7 +65,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
                                                                    file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
                                                                    file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
                                                                    file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   customValue: support.PositiveLong) = ???
+                                                                   longValue: Long, customValue: support.PositiveLong, customOptionalValue: Option[support.PositiveLong]) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -124,7 +124,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
                                                                    file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
                                                                    file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
                                                                    file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   customValue: support.PositiveLong) = ???
+                                                                   longValue: Long, customValue: support.PositiveLong, customOptionalValue: Option[support.PositiveLong]) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -167,7 +167,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
                                                                    file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
                                                                    file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
                                                                    file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   customValue: support.PositiveLong) = ???
+                                                                   longValue: Long, customValue: support.PositiveLong, customOptionalValue: Option[support.PositiveLong]) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -202,7 +202,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
                                                                    file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
                                                                    file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
                                                                    file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   customValue: support.PositiveLong) = ???
+                                                                   longValue: Long, customValue: support.PositiveLong, customOptionalValue: Option[support.PositiveLong]) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -236,7 +236,7 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
                                                                    file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
                                                                    file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
                                                                    file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   customValue: support.PositiveLong) = {
+                                                                   longValue: Long, customValue: support.PositiveLong, customOptionalValue: Option[support.PositiveLong]) = {
         val f1Length = file.flatMap({ case (f, _, _) => if (f.exists) { Some(f.length) } else None })
         val f2Length = if (file2._1.exists) { Some(file2._1.length) } else None
         val f3Length = if (file3._1.exists) { Some(file3._1.length) } else None
@@ -258,7 +258,9 @@ class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaF
         None,
         HttpEntity(ContentTypes.`application/json`, ""),
         HttpEntity(ContentTypes.`application/json`, ""),
-        PositiveLong(10L).get
+        5L,
+        PositiveLong(10L).get,
+        PositiveLong(20L)
       )
       .value
       .futureValue

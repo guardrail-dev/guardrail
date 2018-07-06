@@ -497,9 +497,23 @@
             "x-scala-file-hash": "SHA-256"
           },
           {
+            "name": "long-value",
+            "in": "formData",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
             "name": "custom-value",
             "in": "formData",
             "required": true,
+            "type": "integer",
+            "format": "int64",
+            "x-scala-type": "PositiveLong"
+          },
+          {
+            "name": "custom-optional-value",
+            "in": "formData",
             "type": "number",
             "format": "int64",
             "x-scala-type": "PositiveLong"
