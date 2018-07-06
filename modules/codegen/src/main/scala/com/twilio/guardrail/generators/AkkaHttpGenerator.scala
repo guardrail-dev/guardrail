@@ -89,11 +89,11 @@ object AkkaHttpGenerator {
                 .forContentTypes(MediaTypes.${Term.Name("`application/json`")})
                 .map {
                   case ByteString.empty => throw Unmarshaller.NoContentException
-                  case data             => jawn.parseByteBuffer(data.asByteBuffer).fold(throw _, identity)
+                  case data             => jawn.parseByteBuffer(data.asByteBuffer).valueOr(throw _)
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              def decode(json: ${gs.jsonType}) = J.decodeJson(json).fold(throw _, identity)
+              def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
               jsonUnmarshaller.map(decode)
             }
 
