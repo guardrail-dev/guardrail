@@ -15,6 +15,7 @@ paths:
       parameters:
       - in: body
         name: body
+        required: true
         schema:
           type: string
       responses:
@@ -33,7 +34,6 @@ paths:
       parameters:
       - in: body
         name: body
-        required: true
         schema:
           type: string
       responses:
