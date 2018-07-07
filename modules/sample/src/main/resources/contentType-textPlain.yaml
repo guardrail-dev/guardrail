@@ -18,8 +18,10 @@ paths:
         schema:
           type: string
       responses:
-        '201':
+        201:
           description: "Created"
+        406:
+          description: "Invalid"
   /bar:
     post:
       operationId: doBar
@@ -35,5 +37,7 @@ paths:
         schema:
           type: string
       responses:
-        '201':
+        201:
           description: "Created"
+        406:
+          description: "Invalid"

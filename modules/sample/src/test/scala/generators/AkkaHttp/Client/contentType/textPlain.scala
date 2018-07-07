@@ -20,9 +20,9 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
       complete({
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
-          StatusCodes.OK
+          StatusCodes.Created
         } else {
-          StatusCodes.BadRequest
+          StatusCodes.NotAcceptable
         }
       })
     }
@@ -35,9 +35,9 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
     val route: Route = (path("bar") & extractRequestEntity & entity(as[String])) { (entity, value) =>
       complete({
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
-          StatusCodes.OK
+          StatusCodes.Created
         } else {
-          StatusCodes.BadRequest
+          StatusCodes.NotAcceptable
         }
       })
     }
