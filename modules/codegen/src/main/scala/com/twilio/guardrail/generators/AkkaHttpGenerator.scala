@@ -80,6 +80,15 @@ object AkkaHttpGenerator {
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
+            final val stringJsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .map({
+                  case ByteString.empty =>
+                    throw Unmarshaller.NoContentException
+                  case data =>
+                    Json.fromString(data.decodeString("utf-8"))
+                })
+
             implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`application/json`)
@@ -90,7 +99,7 @@ object AkkaHttpGenerator {
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
               def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
-              jsonUnmarshaller.map(decode)
+              Unmarshaller.firstOf(jsonUnmarshaller, stringJsonUnmarshaller).map(decode)
             }
 
             final val jsonStringUnmarshaller: FromStringUnmarshaller[${gs.jsonType}] = Unmarshaller.strict {
