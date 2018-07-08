@@ -101,8 +101,8 @@ object AkkaHttpGenerator {
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
-              Unmarshaller.firstOf(jsonUnmarshaller, stringJsonUnmarshaller).map(decode)
+              Unmarshaller.firstOf(jsonUnmarshaller, stringJsonUnmarshaller)
+                .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
             }
 
             final val jsonStringUnmarshaller: FromStringUnmarshaller[${gs.jsonType}] = Unmarshaller.strict {
