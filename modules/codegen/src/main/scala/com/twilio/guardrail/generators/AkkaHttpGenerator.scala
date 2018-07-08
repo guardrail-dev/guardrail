@@ -92,9 +92,12 @@ object AkkaHttpGenerator {
             implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`application/json`)
-                .map {
-                  case ByteString.empty => throw Unmarshaller.NoContentException
-                  case data             => jawn.parseByteBuffer(data.asByteBuffer).valueOr(throw _)
+                .flatMapWithInput { (httpEntity, byteString) =>
+                  val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
+                    case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
+                    case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
+                  }
+                  parseResult.fold(FastFuture.failed, FastFuture.successful)
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
