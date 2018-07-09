@@ -80,8 +80,9 @@ object AkkaHttpGenerator {
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
-            final val stringJsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
+            final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`text/plain`)
                 .map({
                   case ByteString.empty =>
                     throw Unmarshaller.NoContentException
@@ -89,7 +90,7 @@ object AkkaHttpGenerator {
                     Json.fromString(data.decodeString("utf-8"))
                 })
 
-            implicit final val jsonUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
+            implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`application/json`)
                 .flatMapWithInput { (httpEntity, byteString) =>
@@ -97,12 +98,12 @@ object AkkaHttpGenerator {
                     case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
                     case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
                   }
-                  parseResult.fold(FastFuture.failed, FastFuture.successful)
+                  parseResult.fold(_ => FastFuture.failed(Unmarshaller.NoContentException), FastFuture.successful)
                 }
 
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              Unmarshaller.firstOf(jsonUnmarshaller, stringJsonUnmarshaller)
-                .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+              Unmarshaller.firstOf(structuredJsonEntityUnmarshaller, stringyJsonEntityUnmarshaller)
+                .flatMap(_ => _ => json => J.decodeJson(json).fold(_ => FastFuture.failed(Unmarshaller.NoContentException), FastFuture.successful))
             }
 
             final val jsonStringUnmarshaller: FromStringUnmarshaller[${gs.jsonType}] = Unmarshaller.strict {
