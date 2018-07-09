@@ -1,0 +1,45 @@
+swagger: "2.0"
+info:
+  title: 'x-www-form-urlencoded tests'
+  version: 1.0.0
+host: localhost:1234
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      x-scala-package: foo
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: Status
+          in: formData
+          type: string
+          x-scala-type: Status
+          required: true
+      responses:
+        200:
+          description: "Created"
+        406:
+          description: "Invalid"
+  /bar:
+    post:
+      operationId: doBar
+      x-scala-package: foo
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: Status
+          in: formData
+          type: string
+          x-scala-type: Status
+      responses:
+        200:
+          description: "Created"
+        406:
+          description: "Invalid"
+definitions:
+  Status:
+    type: string
+    enum:
+      - OK
+      - NotOK
