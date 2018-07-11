@@ -24,6 +24,21 @@ object ScalaGenerator {
             import scala.concurrent.Future
 
             object Implicits {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
               abstract class AddArg[T] {
                 def addArg(key: String, v: T): String
               }
