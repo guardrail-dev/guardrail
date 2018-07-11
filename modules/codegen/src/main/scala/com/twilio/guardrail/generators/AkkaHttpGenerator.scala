@@ -113,9 +113,9 @@ object AkkaHttpGenerator {
                 jawn.parse(data).getOrElse(Json.fromString(data))
             }
 
-            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
-              def decode(json: ${gs.jsonType}) = J.decodeJson(json).valueOr(throw _)
-              jsonStringUnmarshaller.map(decode _)
+            implicit def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
+              jsonStringUnmarshaller
+                .flatMap(_ => _ => json => J.decodeJson(json).fold(_ => FastFuture.failed(Unmarshaller.NoContentException), FastFuture.successful))
             }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =

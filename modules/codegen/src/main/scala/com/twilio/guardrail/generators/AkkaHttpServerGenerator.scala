@@ -394,12 +394,6 @@ object AkkaHttpServerGenerator {
         } yield q"""
           object ${Term.Name(resourceName)} {
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
-            implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T]({
-              implicit ev => string =>
-               io.circe.Json.fromString(string).as[T]
-                .left.flatMap(err => io.circe.jawn.parse(string).flatMap(_.as[T]))
-                .fold(scala.concurrent.Future.failed _, scala.concurrent.Future.successful _)
-            })
 
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
