@@ -83,9 +83,6 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
           req.discardEntityBytes().future
           Directive.Empty
         }
-        implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T] { implicit ev =>
-          string => io.circe.Json.fromString(string).as[T].left.flatMap(err => io.circe.jawn.parse(string).flatMap(_.as[T])).fold(scala.concurrent.Future.failed _, scala.concurrent.Future.successful _)
-        }
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
           (put & path("foo") & ({
             object putFooParts {
