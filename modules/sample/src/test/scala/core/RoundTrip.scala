@@ -1,8 +1,8 @@
 package swagger
 
+import _root_.clients.akkaHttp.Implicits.IgnoredEntity
 import _root_.clients.akkaHttp.pet.PetClient
 import _root_.clients.akkaHttp.{ definitions => cdefs }
-import _root_.clients.akkaHttp.Implicits.IgnoredEntity
 import _root_.servers.pet.{ PetHandler, PetResource }
 import _root_.servers.{ definitions => sdefs }
 import akka.http.scaladsl.model._
