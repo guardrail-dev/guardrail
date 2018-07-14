@@ -185,7 +185,8 @@ lazy val sample = (project in file("modules/sample"))
       "org.typelevel"     %% "cats-core"           % catsVersion,
       "org.typelevel"     %% "cats-effect"         % catsEffectVersion
     ),
-    skip in publish := true
+    skip in publish := true,
+    scalafmtOnCompile := false
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
