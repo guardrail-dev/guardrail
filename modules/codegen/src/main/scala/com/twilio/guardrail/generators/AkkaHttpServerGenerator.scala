@@ -407,9 +407,12 @@ object AkkaHttpServerGenerator {
       case GetExtraImports(tracing) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraImports(${tracing})")
-        } yield
-          if (tracing) List(q"import akka.http.scaladsl.server.Directive1")
-          else List.empty
+        } yield {
+          List(
+            if (tracing) Option(q"import akka.http.scaladsl.server.Directive1") else None,
+            Option(q"import scala.language.higherKinds")
+          ).flatten
+        }
     }
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {
