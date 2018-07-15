@@ -1,0 +1,55 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  Bar:
+    type: string
+    enum:
+      - v1
+      - v2
+      - i like spaces
+  User:
+    type: object
+    required:
+      - id
+      - address
+    properties:
+      id:
+        type: string
+      address:
+        $ref: '#/definitions/UserAddress'
+  UserAddress:
+    type: object
+    properties:
+      line1:
+        type: string
+      line2:
+        type: string
+      line3:
+        type: string
+paths:
+  /user/{id}:
+    get:
+      operationId: getUser
+      x-scala-package: users
+      parameters:
+      - name: id
+        in: path
+        required: true
+        type: string
+      - name: CustomHeader
+        in: header
+        type: string
+        x-scala-type: Bar
+        required: true
+
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+        '404':
+          description: Not found
