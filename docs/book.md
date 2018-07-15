@@ -170,9 +170,44 @@ The following is a complete, annotated OpenAPI specification file:
 Generating a Server
 ===================
 
-- Separation of business logic
-- API structure slip is impossible
-- Generating test-only (real) server mocks for unit tests
+Guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The `Resource` contains all the routing logic, and accepts a `Handler` as an argument to the `route` function in order to provide an HTTP service in whatever HTTP framework you're hosting your service in. The following is an example from the akka-http server generator:
+
+    trait UserHandler {
+      def createUser(respond: UserResource.createUserResponse.type)(body: User): scala.concurrent.Future[UserResource.createUserResponse]
+      def createUsersWithArrayInput(respond: UserResource.createUsersWithArrayInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithArrayInputResponse]
+      def createUsersWithListInput(respond: UserResource.createUsersWithListInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithListInputResponse]
+      def loginUser(respond: UserResource.loginUserResponse.type)(username: String, password: String): scala.concurrent.Future[UserResource.loginUserResponse]
+      def logoutUser(respond: UserResource.logoutUserResponse.type)(): scala.concurrent.Future[UserResource.logoutUserResponse]
+      def getUserByName(respond: UserResource.getUserByNameResponse.type)(username: String): scala.concurrent.Future[UserResource.getUserByNameResponse]
+      def updateUser(respond: UserResource.updateUserResponse.type)(username: String, body: User): scala.concurrent.Future[UserResource.updateUserResponse]
+      def deleteUser(respond: UserResource.deleteUserResponse.type)(username: String): scala.concurrent.Future[UserResource.deleteUserResponse]
+    }
+    object UserResource {
+      def routes(handler: UserHandler)(implicit mat: akka.stream.Materializer): Route = {
+        (post & path("v2" / "user") & entity(as[User])) {
+          body => complete(handler.createUser(createUserResponse)(body))
+        } ~ (post & path("v2" / "user" / "createWithArray") & entity(as[IndexedSeq[User]])) {
+          body => complete(handler.createUsersWithArrayInput(createUsersWithArrayInputResponse)(body))
+        } ~ (post & path("v2" / "user" / "createWithList") & entity(as[IndexedSeq[User]])) {
+          body => complete(handler.createUsersWithListInput(createUsersWithListInputResponse)(body))
+        } ~ (get & path("v2" / "user" / "login") & (parameter(Symbol("username").as[String]) & parameter(Symbol("password").as[String])) & discardEntity) {
+          (username, password) => complete(handler.loginUser(loginUserResponse)(username, password))
+        } ~ (get & path("v2" / "user" / "logout") & discardEntity) {
+          complete(handler.logoutUser(logoutUserResponse)())
+        } ~ (get & path("v2" / "user" / Segment) & discardEntity) {
+          username => complete(handler.getUserByName(getUserByNameResponse)(username))
+        } ~ (put & path("v2" / "user" / Segment) & entity(as[User])) {
+          (username, body) => complete(handler.updateUser(updateUserResponse)(username, body))
+        } ~ (delete & path("v2" / "user" / Segment) & discardEntity) {
+          username => complete(handler.deleteUser(deleteUserResponse)(username))
+        }
+      }
+      ...
+    }
+
+As all parameters are provided as arguments to the function stubs in the trait, there's no concern of forgetting to extract a query string parameter, introducing a typo in a form parameter name, or forgetting to close the bytestream for the streaming HTTP Request.
+
+- TODO: Generating test-only (real) server mocks for unit tests
 
 Separation of business logic
 ----------------------------
