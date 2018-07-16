@@ -251,6 +251,27 @@ One other strategy for testing non-guardrail generated clients is to bind `userR
 
     binding.unbind().futureValue
 
+A note about scalatest integration
+----------------------------------
+
+The default `ExceptionHandler` in akka-http swallows exceptions, so if you intend to `fail()` tests from inside guardrail-generated HTTP Servers, you'll likely want to have the following implicit in scope:
+
+    implicit def exceptionHandler: ExceptionHandler = new ExceptionHandler {
+      def withFallback(that: ExceptionHandler): ExceptionHandler = this
+      def seal(settings: RoutingSettings): ExceptionHandler = this
+
+      def isDefinedAt(error: Throwable) = error.isInstanceOf[org.scalatest.TestFailedException]
+      def apply(error: Throwable) = throw error
+    }
+
+This passes all `TestFailedExceptions` through to the underlying infrastructure. In our tests, when we call:
+
+    val userClient: UserClient = UserClient.httpCLient(userHttpClient)
+    val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
+    val user: User = getUserResponse.value.futureValue.right.value
+
+`futureValue` will raise the `TestFailedException` with the relevant stack trace.
+
 Generating clients
 ==================
 
