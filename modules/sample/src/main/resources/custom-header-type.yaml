@@ -17,13 +17,26 @@ paths:
     get:
       operationId: getFoo
       parameters:
+      - name: Header
+        in: header
+        type: string
+        required: true
+      - name: LongHeader
+        in: header
+        type: integer
+        format: int64
+        required: true
       - name: CustomHeader
         in: header
         type: string
         x-scala-type: Bar
         required: true
+      - name: CustomOptionHeader
+        in: header
+        type: string
+        x-scala-type: Bar
       responses:
         '200':
           description: OK
-        '404':
+        '400':
           description: Not found
