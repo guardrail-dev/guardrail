@@ -275,25 +275,35 @@ This passes all `TestFailedExceptions` through to the underlying infrastructure.
 Generating clients
 ==================
 
-- Separation of protocol-concerns from API-level concerns
-- Thin clients, by design.
-- No exceptions, errors are values.
+As we've seen in [Generating a Server](), guardrail-generated servers establish a mapping between our business logic and a cordoned off a subset of HTTP. This permits us to focus on our business logic, without getting overloaded with the complexities of managing such a large protocol. The same is true with guardrail generated HTTP Clients: from a consumer's standpoint, HTTP calls should look like regular function calls, accepting domain-specific arguments and producing domain-specific results.
+
+By generating minimal clients that only have enough business knowledge to map domain types to and from HTTP, opportunities for logical errors are effecitvely removed. While this does not eliminate logical errors entirely, establishing a firm boundary between the underlying protocol and hand-written code drastically reduces the scope of possible bugs.
 
 Separation of protocol-concerns from API-level concerns
 -------------------------------------------------------
 
-- Protocol-concerns (retry, queueing, exponential backoff, execution contexts, metrics)
-- API-level concerns (serialization/deserialization, file streaming)
-- Compositional
+As guardrail clients are built ontop of the function type `HttpRequest => Future[HttpResponse]`, client configuration is reduced to function composition. Some ideas:
 
-Thin clients, by design
------------------------
+    val singleRequestHttpClient = { (req: HttpRequest) =>
+      Http().singleRequest(req)
+    }
 
-- Building complex logic into clients breaks the Principle of Least Astonishment
-- Well-typed parameters and return types establish a firm foundation on which to build abstractions
-- 
+    val retryingHttpClient = { nextClient: (HttpRequest => Future[HttpResponse]) =>
+        req: HttpRequest => nextClient(req).flatMap(resp => if (resp.status.intValue >= 500) nextClient(req) else Future.successful(resp))
+    }
 
-No exceptions, errors are values
---------------------------------
+    val metricsHttpClient = { nextClient: (HttpRequest => Future[HttpResponse]) =>
+        req: HttpRequest => {
+            val resp = nextClient(req)
+            resp.onSuccess { _resp =>
+                trackMetrics(req.uri.path, _resp.status)
+            }
+            resp
+        }
+    }
 
-- 
+    // Track metrics for every request, even retries
+    val retryingMetricsClient1: HttpRequest => Future[HttpResponse] = retryingHttpClient(metricsHttpClient(singleRequestHttpClient))
+
+    // Only track metrics for requests we didn't have to retry
+    val retryingMetricsClient2: HttpRequest => Future[HttpResponse] = metricsHttpClient(retryingHttpClient(singleRequestHttpClient))
