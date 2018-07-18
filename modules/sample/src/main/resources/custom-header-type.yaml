@@ -35,6 +35,10 @@ paths:
         in: header
         type: string
         x-scala-type: Bar
+      - name: MissingCustomOptionHeader
+        in: header
+        type: string
+        x-scala-type: Bar
       responses:
         '200':
           description: OK
