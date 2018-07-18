@@ -43,40 +43,40 @@ class CustomHeaderTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val (_, Clients(client :: Nil), Servers(Server(_, _, genHandler :: genResource :: Nil) :: Nil)) =
       runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
-    println(client.lines)
-
     val handler =
       q"""trait Handler { def getFoo(respond: Resource.getFooResponse.type)(customHeader: Bar): scala.concurrent.Future[Resource.getFooResponse] }"""
 
-    val resource = q"""object Resource {
-                        def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap { req =>
-                          req.discardEntityBytes().future
-                          Directive.Empty
-                        }
-                        implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T] { implicit ev =>
-                          string => io.circe.Json.fromString(string).as[T].left.flatMap(err => io.circe.jawn.parse(string).flatMap(_.as[T])).fold(scala.concurrent.Future.failed _, scala.concurrent.Future.successful _)
-                        }
-                        def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
-                          (get & path("foo") & discardEntity & headerValueByName("CustomHeader")) {
-                            customHeader => complete(handler.getFoo(getFooResponse)(customHeader))
-                          }
-                        }
-                        sealed abstract class getFooResponse(val statusCode: StatusCode)
-                        case object getFooResponseOK extends getFooResponse(StatusCodes.OK)
-                        object getFooResponse {
-                          implicit val getFooTRM: ToResponseMarshaller[getFooResponse] = Marshaller { implicit ec =>
-                            resp => getFooTR(resp)
-                          }
-                          implicit def getFooTR(value: getFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-                            case r: getFooResponseOK.type =>
-                              scala.concurrent.Future.successful(Marshalling.Opaque {
-                                () => HttpResponse(r.statusCode)
-                              } :: Nil)
-                          }
-                          def apply[T](value: T)(implicit ev: T => getFooResponse): getFooResponse = ev(value)
-                          def OK: getFooResponse = getFooResponseOK
-                        }
-                      }"""
+    val resource = q"""
+      object Resource {
+        def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap { req =>
+          req.discardEntityBytes().future
+          Directive.Empty
+        }
+        implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T] { implicit ev =>
+          string => io.circe.Json.fromString(string).as[T].left.flatMap(err => io.circe.jawn.parse(string).flatMap(_.as[T])).fold(scala.concurrent.Future.failed _, scala.concurrent.Future.successful _)
+        }
+        def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
+          (get & path("foo") & discardEntity & headerValueByName("CustomHeader").flatMap(str => onSuccess(Unmarshal(str).to[Bar]))) {
+            customHeader => complete(handler.getFoo(getFooResponse)(customHeader))
+          }
+        }
+        sealed abstract class getFooResponse(val statusCode: StatusCode)
+        case object getFooResponseOK extends getFooResponse(StatusCodes.OK)
+        object getFooResponse {
+          implicit val getFooTRM: ToResponseMarshaller[getFooResponse] = Marshaller { implicit ec =>
+            resp => getFooTR(resp)
+          }
+          implicit def getFooTR(value: getFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: getFooResponseOK.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+          }
+          def apply[T](value: T)(implicit ev: T => getFooResponse): getFooResponse = ev(value)
+          def OK: getFooResponse = getFooResponseOK
+        }
+      }
+    """
 
     genHandler.structure should equal(handler.structure)
     genResource.structure should equal(resource.structure)
