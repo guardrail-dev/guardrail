@@ -23,7 +23,7 @@ val scalatestVersion  = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
-lazy val runExample = taskKey[Unit]("Run with example args")
+lazy val runExample: TaskKey[Unit] = taskKey[Unit]("Run with example args")
 // TODO: akka.NotUsed should exist in all generated sources, but there are no import verifying tests yet.
 fullRunTask(
   runExample,
@@ -44,6 +44,8 @@ fullRunTask(
   --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client
   --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server
   --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults
+  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader
+  --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
 
