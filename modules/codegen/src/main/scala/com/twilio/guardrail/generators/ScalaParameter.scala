@@ -4,9 +4,11 @@ package generators
 import _root_.io.swagger.models.parameters.Parameter
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
 import java.util.Locale
+
 import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._
+import com.twilio.guardrail.swagger.{ Escape, SwaggerUtil }
 
 class GeneratorSettings(val fileType: Type, val jsonType: Type)
 case class RawParameterName private[generators] (value: String) {
@@ -197,7 +199,7 @@ object ScalaParameter {
         val Term.Name(name) = param.paramName
         if (counts.getOrElse(name, 0) > 1) {
           val escapedName =
-            Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
+            Term.Name(Escape.escapeReserved(param.argName.value))
           new ScalaParameter(
             param.in,
             param.param.copy(name = escapedName),

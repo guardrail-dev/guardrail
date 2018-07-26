@@ -1,11 +1,13 @@
 package tests.core
 
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.{ SwaggerUtil, Target }
+import com.twilio.guardrail.Target
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.swagger.SwaggerUtil
 import com.twilio.guardrail.tests._
+
 import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {

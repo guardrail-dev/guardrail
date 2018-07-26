@@ -49,6 +49,8 @@ fullRunTask(
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
 
+//--server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName tests.polymorphism
+
 artifact in (Compile, assembly) := {
   val art = (artifact in (Compile, assembly)).value
   art.copy(`classifier` = Some("assembly"))
@@ -84,9 +86,7 @@ val codegenSettings = Seq(
     "org.typelevel" %% "cats-kernel"   % catsVersion,
     "org.typelevel" %% "cats-macros"   % catsVersion,
     "org.typelevel" %% "cats-free"     % catsVersion
-  )
-  // Dev
-  ,
+  ),
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-language:higherKinds",
