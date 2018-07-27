@@ -18,10 +18,11 @@ case class EnumDefinition(name: String, tpe: Type.Name, elems: List[(String, Ter
 
 object ProtocolElems {
   def resolve[F[_]](elems: List[ProtocolElems], limit: Int = 10)(implicit M: MonadError[F, String]): F[List[StrictProtocolElems]] =
-    M.tailRecM[(Int, List[ProtocolElems]), List[StrictProtocolElems]]((limit, elems))({
+    M.tailRecM[(Int, List[ProtocolElems]), List[StrictProtocolElems]]((limit, elems)) {
       case (iters, xs) if iters > 0 =>
         val lazyElems   = xs.collect { case x: LazyProtocolElems   => x }
         val strictElems = xs.collect { case x: StrictProtocolElems => x }
+
         if (lazyElems.nonEmpty) {
           val newElems = strictElems ++ lazyElems.map {
             case d @ Deferred(name) =>
@@ -66,5 +67,5 @@ object ProtocolElems {
       case (_, xs) =>
         val lazyElems = xs.collect { case x: LazyProtocolElems => x }
         M.raiseError(s"Unable to resolve: ${lazyElems.map(_.name)}")
-    })
+    }
 }

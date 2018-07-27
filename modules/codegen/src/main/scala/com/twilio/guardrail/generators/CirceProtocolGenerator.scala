@@ -18,7 +18,7 @@ import scala.meta._
 object CirceProtocolGenerator {
   import ProtocolGenerator._
 
-  def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
+  def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"$prefix${clsName}"))
 
   def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] =
     concreteTypes
@@ -35,7 +35,7 @@ object CirceProtocolGenerator {
         // Default to `string` for untyped enums.
         // Currently, only plain strings are correctly supported anyway, so no big loss.
         val tpeName = Option(swagger.getType).getOrElse("string")
-        Target.getGeneratorSettings.map { implicit gs =>
+        Target.getGeneratorSettings.map { implicit gs: GeneratorSettings =>
           Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat), ScalaType(swagger)))
         }
 
@@ -88,15 +88,15 @@ object CirceProtocolGenerator {
     }
   }
 
+  def toCamelCase(s: String): String =
+    "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
+
   object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
 
       case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
-        def toCamelCase(s: String): String =
-          "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-
         Target.getGeneratorSettings.flatMap { implicit gs =>
           for {
             _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
@@ -160,9 +160,7 @@ object CirceProtocolGenerator {
         }
 
       case RenderDTOClass(clsName, terms) =>
-        Target.pure(q"""
-          case class ${Type.Name(clsName)}(..${terms})
-        """)
+        Target.pure(q"""case class ${Type.Name(clsName)}(..${terms})""")
 
       case EncodeModel(clsName, needCamelSnakeConversion, params) =>
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
@@ -171,8 +169,8 @@ object CirceProtocolGenerator {
         val encVal = if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
-            .to[List]
             .unzip
+
           val List(name)  = names
           val List(field) = fields
           q"""
@@ -181,13 +179,11 @@ object CirceProtocolGenerator {
         } else if (paramCount >= 2 && paramCount <= 22) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
-            .to[List]
             .unzip
           val tupleFields = fields
             .map({ field =>
               Term.Select(Term.Name("o"), field)
             })
-            .to[List]
 
           val unapply: Term.Function = Term.Function(
             List(param"o: ${Type.Name(clsName)}"),
@@ -199,7 +195,6 @@ object CirceProtocolGenerator {
         } else {
           val pairs: List[Term.Tuple] = params
             .map(param => q"""(${Lit.String(param.name)}, a.${Term.Name(param.term.name.value)}.asJson)""")
-            .to[List]
           q"""
             new ObjectEncoder[${Type.Name(clsName)}] {
               final def encodeObject(a: ${Type

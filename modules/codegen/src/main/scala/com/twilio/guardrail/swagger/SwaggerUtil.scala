@@ -17,18 +17,25 @@ import scala.meta._
 import scala.util.matching.Regex
 
 object SwaggerUtil {
+
   sealed trait ResolvedType
+
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
 
   sealed trait LazyResolvedType extends ResolvedType
 
-  case class Deferred(value: String)      extends LazyResolvedType
+  case class Deferred(value: String) extends LazyResolvedType
+
   case class DeferredArray(value: String) extends LazyResolvedType
-  case class DeferredMap(value: String)   extends LazyResolvedType
+
+  case class DeferredMap(value: String) extends LazyResolvedType
 
   object ResolvedType {
+
     implicit class FoldableExtension[F[_]](F: Foldable[F]) {
+
       import cats.{ Alternative, Monoid }
+
       def partitionEither[A, B, C](value: F[A])(f: A => Either[B, C])(implicit A: Alternative[F]): (F[B], F[C]) = {
         import cats.instances.tuple._
 
@@ -120,15 +127,17 @@ object SwaggerUtil {
     Target.getGeneratorSettings.flatMap { implicit gs =>
       model match {
         case comp: ComposedModel =>
+          print(comp)
           for {
             ref <- Target.fromOption(Option(comp.getReference), s"Unspecified $comp")
           } yield Deferred(ref)
 
         case ref: RefModel =>
-          for {
-            ref <- Target.fromOption(Option(ref.getSimpleRef), s"Unspecified $ref")
-          } yield Deferred(ref)
+          print(ref)
+          Target.fromOption(Option(ref.getSimpleRef), s"Unspecified $ref").map(Deferred)
+
         case arr: ArrayModel =>
+          print(arr)
           for {
             items <- Target.fromOption(Option(arr.getItems), "items.type unspecified")
             meta  <- propMeta(items)
@@ -155,28 +164,28 @@ object SwaggerUtil {
 
   case class ParamMeta(tpe: Type, defaultValue: Option[Term])
 
-  def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
-    def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] =
-      Option(p.getType)
-        .flatMap { _type =>
-          val fmt = Option(p.getFormat)
-          (_type, fmt) match {
-            case ("string", None) =>
-              Default(p).extract[String].map(Lit.String(_))
-            case ("number", Some("float")) =>
-              Default(p).extract[Float].map(Lit.Float(_))
-            case ("number", Some("double")) =>
-              Default(p).extract[Double].map(Lit.Double(_))
-            case ("integer", Some("int32")) =>
-              Default(p).extract[Int].map(Lit.Int(_))
-            case ("integer", Some("int64")) =>
-              Default(p).extract[Long].map(Lit.Long(_))
-            case ("boolean", None) =>
-              Default(p).extract[Boolean].map(Lit.Boolean(_))
-            case _ => None
-          }
+  def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] =
+    Option(p.getType)
+      .flatMap { _type =>
+        val fmt = Option(p.getFormat)
+        (_type, fmt) match {
+          case ("string", None) =>
+            Default(p).extract[String].map(Lit.String(_))
+          case ("number", Some("float")) =>
+            Default(p).extract[Float].map(Lit.Float(_))
+          case ("number", Some("double")) =>
+            Default(p).extract[Double].map(Lit.Double(_))
+          case ("integer", Some("int32")) =>
+            Default(p).extract[Int].map(Lit.Int(_))
+          case ("integer", Some("int64")) =>
+            Default(p).extract[Long].map(Lit.Long(_))
+          case ("boolean", None) =>
+            Default(p).extract[Boolean].map(Lit.Boolean(_))
+          case _ => None
         }
+      }
 
+  def paramMeta[T <: Parameter](param: T): Target[ParamMeta] =
     Target.getGeneratorSettings.flatMap { implicit gs: GeneratorSettings =>
       param match {
         case x: BodyParameter =>
@@ -222,7 +231,6 @@ object SwaggerUtil {
           Target.error(s"Unsure how to handle $x")
       }
     }
-  }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings): Type = {
@@ -273,9 +281,9 @@ object SwaggerUtil {
     Target.getGeneratorSettings.flatMap { implicit gs =>
       property match {
         case p: ArrayProperty =>
-          val title = Option(p.getTitle()).getOrElse("Unnamed array")
+          val title = Option(p.getTitle).getOrElse("Unnamed array")
           for {
-            items <- Target.fromOption(Option(p.getItems()), s"${title} has no items")
+            items <- Target.fromOption(Option(p.getItems), s"$title has no items")
             rec   <- propMeta(items)
             res <- rec match {
               case DeferredMap(_) =>
@@ -284,7 +292,7 @@ object SwaggerUtil {
                 Target.error("FIXME: Got an Array of Arrays, currently not supported")
               case Deferred(inner) => Target.pure(DeferredArray(inner))
               case Resolved(inner, dep, default) =>
-                Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
+                Target.pure(Resolved(t"IndexedSeq[$inner]", dep, default.map(x => q"IndexedSeq(${x})")))
             }
           } yield res
         case m: MapProperty =>
@@ -304,12 +312,12 @@ object SwaggerUtil {
           Target.pure(Resolved(gs.jsonType, None, None)) // TODO: o.getProperties
         case r: RefProperty =>
           Target
-            .fromOption(Option(r.getSimpleRef()), "Malformed $ref")
+            .fromOption(Option(r.getSimpleRef), "Malformed $ref")
             .map(Deferred.apply _)
         case b: BooleanProperty =>
           Target.pure(Resolved(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
         case s: StringProperty =>
-          Target.pure(Resolved(typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
+          Target.pure(Resolved(typeName("string", Option(s.getFormat), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
 
         case d: DateProperty =>
           Target.pure(Resolved(t"java.time.LocalDate", None, None))
@@ -335,7 +343,7 @@ object SwaggerUtil {
         case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
           Target.pure(Resolved(t"String", None, None))
         case x =>
-          Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
+          Target.error(s"Unsupported swagger class ${x.getClass().getName} ($x)")
       }
     }
 
@@ -354,6 +362,7 @@ object SwaggerUtil {
     successCodesWithEntities
       .find(responses.containsKey)
       .flatMap(code => Option(responses.get(code)))
+
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
@@ -376,6 +385,7 @@ object SwaggerUtil {
     }
 
   object paths {
+
     import atto._
     import Atto._
 
@@ -427,6 +437,7 @@ object SwaggerUtil {
       val plainString      = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString    = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P = plainNEString.map(s => (None, stringPath(s)))
+
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
@@ -462,6 +473,7 @@ object SwaggerUtil {
       }
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = endOfInput ~> ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
+
       def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
     }
@@ -530,9 +542,10 @@ object SwaggerUtil {
           }
         } else directive
         result = queryParams.fold(trailingSlashed) { qs =>
-          q"${trailingSlashed} & ${qs}"
+          q"$trailingSlashed & $qs"
         }
       } yield result
     }
   }
+
 }

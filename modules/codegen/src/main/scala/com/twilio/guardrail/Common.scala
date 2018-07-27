@@ -173,16 +173,15 @@ object Common {
 
       implicits              <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- renderFrameworkImplicits(pkgName, frameworkImports, protocolImports, frameworkImplicits)
-    } yield
-      (
-        protocolDefinitions ++
-          List(packageObject) ++
-          files ++
-          List(
-            WriteTree(pkgPath.resolve("Implicits.scala"), implicits),
-            WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile)
-          )
-      ).toList
+    } yield {
+      protocolDefinitions ++
+        List(packageObject) ++
+        files ++
+        List(
+          WriteTree(pkgPath.resolve("Implicits.scala"), implicits),
+          WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile)
+        )
+    }
   }
 
   def processArgs[F[_]](
