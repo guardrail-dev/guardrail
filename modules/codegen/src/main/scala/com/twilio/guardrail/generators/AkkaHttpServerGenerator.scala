@@ -9,9 +9,9 @@ import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
-import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
 import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.swagger.SwaggerUtil
 
 import scala.collection.JavaConverters._
 import scala.meta._

@@ -1,6 +1,9 @@
 package com.twilio.guardrail
 
 import java.nio.file.Path
+
+import cats.data.NonEmptyList
+import cats.free.Free
 import cats.instances.all._
 import cats.syntax.show._
 import cats.syntax.traverse._
@@ -22,8 +25,10 @@ object CLICommon {
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
     val fallback = List.empty[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]
-    val result = Common
-      .runM[CoreTerm](newArgs)
+
+    val x: Free[CoreTerm, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = Common.runM[CoreTerm](newArgs)
+
+    val result: Logger[List[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = x
       .foldMap(interpreter)
       .fold[List[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]](
         {
@@ -65,17 +70,18 @@ object CLICommon {
     print(coreLogger.show)
 
     val (logger, paths) = deferred
-      .traverse({
+      .traverse {
         case (generatorSettings, rs) =>
-          ReadSwagger
+          val paths: Settings[List[Path]] = ReadSwagger
             .unsafeReadSwagger(rs)
             .fold({ err =>
               println(s"${AnsiColor.RED}Error: $err${AnsiColor.RESET}")
               unsafePrintHelp()
               List.empty[Path]
             }, _.map(WriteTree.unsafeWriteTree))
-            .run(generatorSettings)
-      })
+
+          paths.run(generatorSettings)
+      }
       .map(_.flatten)
       .run
 
@@ -83,48 +89,42 @@ object CLICommon {
   }
 
   def unsafePrintHelp(): Unit = {
-    val text = s"""
-    | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
-    |
+    val text =
+      s"""
+         | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
+         |
     |  Required:
-    |   --specPath path/to/[foo-swagger.json|foo-swagger.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be valid
-    |   --outputPath path/to/project                           : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, intermediate paths will be created
-    |   --packageName com.twilio.myservice.clients             : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, Where to store your clients. Files will end up in the directory specified by replacing all dots with slashes.
-    |
+         |   --specPath path/to/[foo-swagger.json|foo-swagger.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be valid
+         |   --outputPath path/to/project                           : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, intermediate paths will be created
+         |   --packageName com.twilio.myservice.clients             : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, Where to store your clients. Files will end up in the directory specified by replacing all dots with slashes.
+         |
     |  Argmuent list separators:
-    |   --client                                               : Start specifying arguments for a new client
-    |   --server                                               : Start specifying arguments for a new server
-    |
+         |   --client                                               : Start specifying arguments for a new client
+         |   --server                                               : Start specifying arguments for a new server
+         |
     |  Optional:
-    |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
-    |   --tracing                                              : Pass through tracing context to all requests
-    |
+         |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
+         |   --tracing                                              : Pass through tracing context to all requests
+         |
     |Examples:
-    |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
-    |    guardrail --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients --tracing
-    |
+         |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
+         |    guardrail --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients --tracing
+         |
     |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
-    |    guardrail \\
-    |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
-    |      --client --specPath client-specs/account-service.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.account --tracing
-    |
+         |    guardrail \\
+         |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
+         |      --client --specPath client-specs/account-service.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.account --tracing
+         |
     |  Generate client and server routes for the same specification:
-    |    guardrail \\
-    |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
-    |      --server --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events
-    |""".stripMargin
+         |    guardrail \\
+         |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
+         |      --server --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events
+         |""".stripMargin
 
     System.err.println(text)
   }
 }
 
-trait CLICommon {
-  val interpreter: CoreTerm ~> CoreTarget
-
-  def main(args: Array[String]): Unit =
-    CLICommon.run(args)(interpreter)
-}
-
-object CLI extends CLICommon {
-  val interpreter = CoreTermInterp
+object CLI {
+  def main(args: Array[String]): Unit = CLICommon.run(args)(CoreTermInterp)
 }

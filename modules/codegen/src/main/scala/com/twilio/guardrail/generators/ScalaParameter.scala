@@ -4,14 +4,18 @@ package generators
 import _root_.io.swagger.models.parameters.Parameter
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
 import java.util.Locale
+
 import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._
+import com.twilio.guardrail.swagger.{ Escape, SwaggerUtil }
 
 class GeneratorSettings(val fileType: Type, val jsonType: Type)
+
 case class RawParameterName private[generators] (value: String) {
   def toLit: Lit.String = Lit.String(value)
 }
+
 class ScalaParameter private[generators] (
     val in: Option[String],
     val param: Term.Param,
@@ -23,19 +27,22 @@ class ScalaParameter private[generators] (
     val isFile: Boolean
 ) {
   override def toString: String =
-    s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
+    s"ScalaParameter($in, $param, $paramName, $argName, $argType)"
 
   def withType(newArgType: Type): ScalaParameter =
     new ScalaParameter(in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
 }
+
 object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParam(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
     fromParam(param.name.value)(param)
+
   def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
     fromParam(RawParameterName(argName))(param)
+
   def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = param match {
     case param @ Term.Param(mods, name, decltype, default) =>
       val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
@@ -60,7 +67,7 @@ object ScalaParameter {
 
     def paramMeta[T <: Parameter](param: T): Target[SwaggerUtil.ResolvedType] = {
       import _root_.io.swagger.models.parameters._
-      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
+      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] =
         Option(p.getType)
           .flatMap { _type =>
             val fmt = Option(p.getFormat)
@@ -80,21 +87,20 @@ object ScalaParameter {
               case x => None
             }
           }
-      )
 
       Target.getGeneratorSettings.flatMap { implicit gs =>
         param match {
           case x: BodyParameter =>
             for {
-              schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
+              schema <- Target.fromOption(Option(x.getSchema), "Schema not specified")
               rtpe   <- SwaggerUtil.modelMetaType(schema)
             } yield rtpe
           case x: HeaderParameter =>
             for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
+              tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
             } yield
               SwaggerUtil
-                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
+                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat), ScalaType(x)), None, getDefault(x))
           case x: PathParameter =>
             for {
               tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
@@ -139,7 +145,7 @@ object ScalaParameter {
         resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
         SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
 
-        required = parameter.getRequired()
+        required = parameter.getRequired
         declType: Type = if (!required) {
           t"Option[$paramType]"
         } else {
@@ -149,10 +155,7 @@ object ScalaParameter {
         enumDefaultValue <- (paramType match {
           case tpe @ Type.Name(tpeName) =>
             protocolElems
-              .collect({
-                case x @ EnumDefinition(_, Type.Name(`tpeName`), _, _, _) => x
-              })
-              .headOption
+              .collectFirst { case x @ EnumDefinition(_, Type.Name(`tpeName`), _, _, _) => x }
               .fold(baseDefaultValue.map(Target.pure _)) {
                 case EnumDefinition(_, _, elems, _, _) => // FIXME: Is there a better way to do this? There's a gap of coverage here
                   baseDefaultValue.map {
@@ -197,7 +200,7 @@ object ScalaParameter {
         val Term.Name(name) = param.paramName
         if (counts.getOrElse(name, 0) > 1) {
           val escapedName =
-            Term.Name(SwaggerUtil.escapeReserved(param.argName.value))
+            Term.Name(Escape.escapeReserved(param.argName.value))
           new ScalaParameter(
             param.in,
             param.param.copy(name = escapedName),
@@ -218,6 +221,6 @@ object ScalaParameter {
     * @return
     */
   def filterParams(params: List[ScalaParameter]): String => List[ScalaParameter] = { in =>
-    params.filter(_.in == Some(in))
+    params.filter(_.in.contains(in))
   }
 }

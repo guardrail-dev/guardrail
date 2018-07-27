@@ -5,6 +5,7 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
+import com.twilio.guardrail.swagger.Escape
 
 import scala.collection.JavaConverters._
 import scala.meta.{ Lit, Term, Type, _ }
@@ -36,13 +37,8 @@ object ClientGenerator {
             companion <- buildCompanion(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
             client    <- buildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, context.tracing)
           } yield {
-            val stats: List[Stat] = (
-              (clientImports ++ frameworkImports ++ clientExtraImports) :+
-                companion :+
-                client
-            )
-
-            Client(pkg, clientName, stats.map(SwaggerUtil.escapeTree))
+            val stats: List[Stat] = clientImports ++ frameworkImports ++ clientExtraImports :+ companion :+ client
+            Client(pkg, clientName, stats.map(Escape.escapeTree))
           }
       })
     } yield Clients(clients)

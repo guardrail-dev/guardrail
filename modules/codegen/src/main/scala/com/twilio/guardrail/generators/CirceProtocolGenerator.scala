@@ -10,6 +10,7 @@ import com.twilio.guardrail.terms
 import java.util.Locale
 
 import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.swagger.SwaggerUtil
 
 import scala.collection.JavaConverters._
 import scala.meta._
@@ -17,7 +18,7 @@ import scala.meta._
 object CirceProtocolGenerator {
   import ProtocolGenerator._
 
-  def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
+  def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"$prefix${clsName}"))
 
   def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] =
     concreteTypes
@@ -33,9 +34,9 @@ object CirceProtocolGenerator {
       case ExtractType(swagger) =>
         // Default to `string` for untyped enums.
         // Currently, only plain strings are correctly supported anyway, so no big loss.
-        val tpeName = Option(swagger.getType()).getOrElse("string")
-        Target.getGeneratorSettings.map { implicit gs =>
-          Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger)))
+        val tpeName = Option(swagger.getType).getOrElse("string")
+        Target.getGeneratorSettings.map { implicit gs: GeneratorSettings =>
+          Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat), ScalaType(swagger)))
         }
 
       case RenderMembers(clsName, elems) =>
@@ -87,15 +88,15 @@ object CirceProtocolGenerator {
     }
   }
 
+  def toCamelCase(s: String): String =
+    "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
+
   object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
 
       case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
-        def toCamelCase(s: String): String =
-          "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-
         Target.getGeneratorSettings.flatMap { implicit gs =>
           for {
             _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
@@ -159,9 +160,7 @@ object CirceProtocolGenerator {
         }
 
       case RenderDTOClass(clsName, terms) =>
-        Target.pure(q"""
-          case class ${Type.Name(clsName)}(..${terms})
-        """)
+        Target.pure(q"""case class ${Type.Name(clsName)}(..${terms})""")
 
       case EncodeModel(clsName, needCamelSnakeConversion, params) =>
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
@@ -170,8 +169,8 @@ object CirceProtocolGenerator {
         val encVal = if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
-            .to[List]
             .unzip
+
           val List(name)  = names
           val List(field) = fields
           q"""
@@ -180,13 +179,11 @@ object CirceProtocolGenerator {
         } else if (paramCount >= 2 && paramCount <= 22) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
-            .to[List]
             .unzip
           val tupleFields = fields
             .map({ field =>
               Term.Select(Term.Name("o"), field)
             })
-            .to[List]
 
           val unapply: Term.Function = Term.Function(
             List(param"o: ${Type.Name(clsName)}"),
@@ -198,7 +195,6 @@ object CirceProtocolGenerator {
         } else {
           val pairs: List[Term.Tuple] = params
             .map(param => q"""(${Lit.String(param.name)}, a.${Term.Name(param.term.name.value)}.asJson)""")
-            .to[List]
           q"""
             new ObjectEncoder[${Type.Name(clsName)}] {
               final def encodeObject(a: ${Type
@@ -265,12 +261,14 @@ object CirceProtocolGenerator {
         val extraImports: List[Import] = deps.map { term =>
           q"import ${term}._"
         }
-        Target.pure(q"""object ${Term.Name(clsName)} {
+        Target.pure(
+          q"""object ${Term.Name(clsName)} {
             ..${extraImports :+
-          encoder :+
-          decoder}
+            encoder :+
+            decoder}
           }
-          """)
+          """
+        )
     }
   }
 
@@ -284,13 +282,14 @@ object CirceProtocolGenerator {
     def apply[T](term: ArrayProtocolTerm[T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>
         SwaggerUtil.modelMetaType(arr).flatMap {
-          case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+          case SwaggerUtil.Resolved(tpe, dep, default) =>
+            Target.pure(tpe)
           case SwaggerUtil.Deferred(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference $tpeName")
           case SwaggerUtil.DeferredArray(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[$tpe]"), s"Unresolved reference $tpeName")
           case SwaggerUtil.DeferredMap(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
+            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, $tpe]]"), s"Unresolved reference $tpeName")
         }
     }
   }
@@ -301,7 +300,7 @@ object CirceProtocolGenerator {
         Target.getGeneratorSettings.flatMap { implicit gs =>
           for {
             entries <- definitions.traverse {
-              case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
+              case (clsName, impl: ModelImpl) if Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined =>
                 Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
               case (clsName, definition) =>
                 SwaggerUtil

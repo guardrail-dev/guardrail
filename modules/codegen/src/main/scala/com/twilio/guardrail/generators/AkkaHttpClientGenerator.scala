@@ -8,6 +8,7 @@ import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.syntax.flatMap._
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.swagger.SwaggerUtil
 import com.twilio.guardrail.terms.RouteMeta
 
 import scala.collection.JavaConverters._

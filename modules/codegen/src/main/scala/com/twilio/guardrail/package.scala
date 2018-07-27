@@ -89,8 +89,9 @@ package object guardrail {
     EitherK[FrameworkTerm, CodegenApplicationACEMSSPRS, T]
   type CodegenApplication[T] = CodegenApplicationACEMSSPRSF[T]
 
-  type Logger[T]     = WriterT[Id, StructuredLogger, T]
-  type Settings[T]   = ReaderT[Logger, GeneratorSettings, T]
+  type Logger[T]   = WriterT[Id, StructuredLogger, T]
+  type Settings[T] = ReaderT[Logger, GeneratorSettings, T]
+
   type Target[A]     = EitherT[Settings, String, A]
   type CoreTarget[A] = EitherT[Logger, Error, A]
 }

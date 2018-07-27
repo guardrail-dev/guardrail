@@ -23,7 +23,7 @@ val scalatestVersion  = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
-lazy val runExample: TaskKey[Unit] = taskKey[Unit]("Run with example args")
+lazy val runExample = taskKey[Unit]("Run with example args")
 // TODO: akka.NotUsed should exist in all generated sources, but there are no import verifying tests yet.
 fullRunTask(
   runExample,
@@ -48,6 +48,8 @@ fullRunTask(
   --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
+
+//--server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName tests.polymorphism
 
 artifact in (Compile, assembly) := {
   val art = (artifact in (Compile, assembly)).value
@@ -84,9 +86,7 @@ val codegenSettings = Seq(
     "org.typelevel" %% "cats-kernel"   % catsVersion,
     "org.typelevel" %% "cats-macros"   % catsVersion,
     "org.typelevel" %% "cats-free"     % catsVersion
-  )
-  // Dev
-  ,
+  ),
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-language:higherKinds",

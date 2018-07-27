@@ -10,6 +10,7 @@ import java.util.Locale
 
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.swagger.{ Escape, SwaggerUtil }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 import scala.collection.JavaConverters._
@@ -61,7 +62,7 @@ object ProtocolGenerator {
 
         defn      <- renderClass(clsName, tpe)
         companion <- renderCompanion(clsName, members, accessors, values, encoder, decoder)
-      } yield EnumDefinition(clsName, Type.Name(clsName), elems, SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(companion))
+      } yield EnumDefinition(clsName, Type.Name(clsName), elems, Escape.escapeTree(defn), Escape.escapeTree(companion))
     }
 
     for {
@@ -109,7 +110,7 @@ object ProtocolGenerator {
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
         decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
         cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(clsName, Type.Name(clsName), SwaggerUtil.escapeTree(defn), SwaggerUtil.escapeTree(cmp))
+      } yield ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp))
     }
 
     for {

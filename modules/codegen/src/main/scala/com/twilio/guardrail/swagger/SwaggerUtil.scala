@@ -1,27 +1,41 @@
-package com.twilio.guardrail
+package com.twilio.guardrail.swagger
+
+import java.util.{ Map => JMap }
 
 import _root_.io.swagger.models._
 import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
+import cats.instances.list._
 import cats.syntax.either._
 import cats.{ FlatMap, Foldable }
-import cats.instances.list._
+import com.twilio.guardrail._
 import com.twilio.guardrail.extract.{ Default, ScalaType }
 import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter }
-import java.util.{ Map => JMap }
+
 import scala.language.reflectiveCalls
 import scala.meta._
+import scala.util.matching.Regex
 
 object SwaggerUtil {
+
   sealed trait ResolvedType
+
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
-  sealed trait LazyResolvedType                                                           extends ResolvedType
-  case class Deferred(value: String)                                                      extends LazyResolvedType
-  case class DeferredArray(value: String)                                                 extends LazyResolvedType
-  case class DeferredMap(value: String)                                                   extends LazyResolvedType
+
+  sealed trait LazyResolvedType extends ResolvedType
+
+  case class Deferred(value: String) extends LazyResolvedType
+
+  case class DeferredArray(value: String) extends LazyResolvedType
+
+  case class DeferredMap(value: String) extends LazyResolvedType
+
   object ResolvedType {
+
     implicit class FoldableExtension[F[_]](F: Foldable[F]) {
+
       import cats.{ Alternative, Monoid }
+
       def partitionEither[A, B, C](value: F[A])(f: A => Either[B, C])(implicit A: Alternative[F]): (F[B], F[C]) = {
         import cats.instances.tuple._
 
@@ -76,35 +90,35 @@ object SwaggerUtil {
         case x @ Resolved(tpe, _, default) => Target.pure(x)
         case Deferred(name) =>
           Target
-            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve $name")
             .map {
-              case RandomType(name, tpe) => Resolved(tpe, None, None)
-              case ClassDefinition(name, tpe, cls, companion) =>
+              case RandomType(_, tpe) => Resolved(tpe, None, None)
+              case ClassDefinition(_, tpe, _, _) =>
                 Resolved(tpe, None, None)
-              case EnumDefinition(name, tpe, elems, cls, companion) =>
+              case EnumDefinition(_, tpe, _, _, _) =>
                 Resolved(tpe, None, None)
             }
         case DeferredArray(name) =>
           Target
-            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve $name")
             .map {
               case RandomType(name, tpe) =>
-                Resolved(t"IndexedSeq[${tpe}]", None, None)
+                Resolved(t"IndexedSeq[$tpe]", None, None)
               case ClassDefinition(name, tpe, cls, companion) =>
-                Resolved(t"IndexedSeq[${tpe}]", None, None)
+                Resolved(t"IndexedSeq[$tpe]", None, None)
               case EnumDefinition(name, tpe, elems, cls, companion) =>
-                Resolved(t"IndexedSeq[${tpe}]", None, None)
+                Resolved(t"IndexedSeq[$tpe]", None, None)
             }
         case DeferredMap(name) =>
           Target
-            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve $name")
             .map {
               case RandomType(name, tpe) =>
-                Resolved(t"Map[String, ${tpe}]", None, None)
+                Resolved(t"Map[String, $tpe]", None, None)
               case ClassDefinition(_, tpe, _, _) =>
-                Resolved(t"Map[String, ${tpe}]", None, None)
+                Resolved(t"Map[String, $tpe]", None, None)
               case EnumDefinition(_, tpe, _, _, _) =>
-                Resolved(t"Map[String, ${tpe}]", None, None)
+                Resolved(t"Map[String, $tpe]", None, None)
             }
       }
   }
@@ -112,17 +126,24 @@ object SwaggerUtil {
   def modelMetaType[T <: Model](model: T): Target[ResolvedType] =
     Target.getGeneratorSettings.flatMap { implicit gs =>
       model match {
-        case ref: RefModel =>
+        case comp: ComposedModel =>
+          print(comp)
           for {
-            ref <- Target.fromOption(Option(ref.getSimpleRef()), "Unspecified $ref")
+            ref <- Target.fromOption(Option(comp.getReference), s"Unspecified $comp")
           } yield Deferred(ref)
+
+        case ref: RefModel =>
+          print(ref)
+          Target.fromOption(Option(ref.getSimpleRef), s"Unspecified $ref").map(Deferred)
+
         case arr: ArrayModel =>
+          print(arr)
           for {
-            items <- Target.fromOption(Option(arr.getItems()), "items.type unspecified")
+            items <- Target.fromOption(Option(arr.getItems), "items.type unspecified")
             meta  <- propMeta(items)
             res <- meta match {
               case Resolved(inner, dep, default) =>
-                Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
+                Target.pure(Resolved(t"IndexedSeq[$inner]", dep, default.map(x => q"IndexedSeq(${x})")))
               case Deferred(tpe) => Target.pure(DeferredArray(tpe))
               case DeferredArray(_) =>
                 Target.error("FIXME: Got an Array of Arrays, currently not supported")
@@ -131,86 +152,85 @@ object SwaggerUtil {
             }
           } yield res
         case impl: ModelImpl =>
+          println(s"${impl.getDescription} (${impl.getEnum} ${impl.getName} ${impl.getType} ${impl.getFormat})")
           for {
             tpeName <- Target.fromOption(
-              Option(impl.getType()),
-              s"Unable to resolve type for ${impl.getDescription()} (${impl
-                .getEnum()} ${impl.getName()} ${impl.getType()} ${impl.getFormat()})"
+              Option(impl.getType),
+              s"Unable to resolve type for ${impl.getDescription} (${impl.getEnum} ${impl.getName} ${impl.getType} ${impl.getFormat})"
             )
-          } yield Resolved(typeName(tpeName, Option(impl.getFormat()), ScalaType(impl)), None, None)
+          } yield Resolved(typeName(tpeName, Option(impl.getFormat), ScalaType(impl)), None, None)
       }
     }
 
   case class ParamMeta(tpe: Type, defaultValue: Option[Term])
-  def paramMeta[T <: Parameter](param: T): Target[ParamMeta] = {
-    def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] =
-      (
-        Option(p.getType)
-          .flatMap { _type =>
-            val fmt = Option(p.getFormat)
-            (_type, fmt) match {
-              case ("string", None) =>
-                Default(p).extract[String].map(Lit.String(_))
-              case ("number", Some("float")) =>
-                Default(p).extract[Float].map(Lit.Float(_))
-              case ("number", Some("double")) =>
-                Default(p).extract[Double].map(Lit.Double(_))
-              case ("integer", Some("int32")) =>
-                Default(p).extract[Int].map(Lit.Int(_))
-              case ("integer", Some("int64")) =>
-                Default(p).extract[Long].map(Lit.Long(_))
-              case ("boolean", None) =>
-                Default(p).extract[Boolean].map(Lit.Boolean(_))
-              case x => None
-            }
-          }
-      )
 
-    Target.getGeneratorSettings.flatMap { implicit gs =>
+  def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] =
+    Option(p.getType)
+      .flatMap { _type =>
+        val fmt = Option(p.getFormat)
+        (_type, fmt) match {
+          case ("string", None) =>
+            Default(p).extract[String].map(Lit.String(_))
+          case ("number", Some("float")) =>
+            Default(p).extract[Float].map(Lit.Float(_))
+          case ("number", Some("double")) =>
+            Default(p).extract[Double].map(Lit.Double(_))
+          case ("integer", Some("int32")) =>
+            Default(p).extract[Int].map(Lit.Int(_))
+          case ("integer", Some("int64")) =>
+            Default(p).extract[Long].map(Lit.Long(_))
+          case ("boolean", None) =>
+            Default(p).extract[Boolean].map(Lit.Boolean(_))
+          case _ => None
+        }
+      }
+
+  def paramMeta[T <: Parameter](param: T): Target[ParamMeta] =
+    Target.getGeneratorSettings.flatMap { implicit gs: GeneratorSettings =>
       param match {
         case x: BodyParameter =>
           for {
-            schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
+            schema <- Target.fromOption(Option(x.getSchema), "Schema not specified")
             tpe    <- modelMetaType(schema)
             meta <- tpe match {
               case SwaggerUtil.Resolved(tpe, _, _) =>
                 Target.pure(ParamMeta(tpe, None))
-              case xs => Target.error(s"Unresolved references: ${xs}")
+              case xs =>
+                Target.error(s"Unresolved references: $xs")
             }
           } yield meta
         case x: HeaderParameter =>
           for {
-            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+            tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
+          } yield ParamMeta(typeName(tpeName, Option(x.getFormat), ScalaType(x)), getDefault(x))
         case x: PathParameter =>
           for {
-            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+            tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
+          } yield ParamMeta(typeName(tpeName, Option(x.getFormat), ScalaType(x)), getDefault(x))
         case x: QueryParameter =>
           for {
-            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+            tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
+          } yield ParamMeta(typeName(tpeName, Option(x.getFormat), ScalaType(x)), getDefault(x))
         case x: CookieParameter =>
           for {
-            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+            tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
+          } yield ParamMeta(typeName(tpeName, Option(x.getFormat), ScalaType(x)), getDefault(x))
         case x: FormParameter =>
           for {
-            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x))
+            tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
+          } yield ParamMeta(typeName(tpeName, Option(x.getFormat), ScalaType(x)), getDefault(x))
         case r: RefParameter =>
           for {
-            tpeName <- Target.fromOption(Option(r.getSimpleRef()), "$ref not defined")
+            tpeName <- Target.fromOption(Option(r.getSimpleRef), "$ref not defined")
           } yield ParamMeta(Type.Name(tpeName), None)
         case x: SerializableParameter =>
           for {
-            tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-          } yield ParamMeta(typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None)
+            tpeName <- Target.fromOption(Option(x.getType), s"Missing type")
+          } yield ParamMeta(typeName(tpeName, Option(x.getFormat), ScalaType(x)), None)
         case x =>
-          Target.error(s"Unsure how to handle ${x}")
+          Target.error(s"Unsure how to handle $x")
       }
     }
-  }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings): Type = {
@@ -221,6 +241,7 @@ object SwaggerUtil {
 
       t
     }
+
     def liftCustomType(s: String): Option[Type] = {
       val terms        = s.split('.').toList
       val (init, last) = (terms.init, terms.last)
@@ -256,89 +277,13 @@ object SwaggerUtil {
     }
   }
 
-  def escapeTree[T <: Tree]: T => T =
-    _.transform({
-      case Term.Name(name) => Term.Name(escapeReserved(name))
-      case p @ Term.Param(_, Term.Name(name), _, _) =>
-        p.copy(name = Term.Name(escapeReserved(name)))
-      case Type.Name(name) => Type.Name(escapeReserved(name))
-      case ctor @ Init(Type.Name(name), _, _) if name != "this" =>
-        ctor.copy(tpe = Type.Name(escapeReserved(name))) // Literal "this" in ctor names is OK
-    }).asInstanceOf[T]
-
-  val unbacktick     = "^`(.*)`$".r
-  val leadingNumeric = "^[0-9\"]".r
-  val invalidSymbols = "[-`\"'()\\.]".r
-  val reservedWords = Set(
-    "abstract",
-    "case",
-    "catch",
-    "class",
-    "def",
-    "do",
-    "else",
-    "extends",
-    "false",
-    "final",
-    "finally",
-    "for",
-    "forSome",
-    "if",
-    "implicit",
-    "import",
-    "lazy",
-    "macro",
-    "match",
-    "new",
-    "null",
-    "object",
-    "override",
-    "package",
-    "private",
-    "protected",
-    "return",
-    "sealed",
-    "super",
-    "this",
-    "throw",
-    "trait",
-    "try",
-    "true",
-    "type",
-    "val",
-    "var",
-    "while",
-    "with",
-    "yield",
-    "_",
-    ":",
-    "=",
-    "=>",
-    "<-",
-    "<:",
-    "<%",
-    ">:",
-    "#",
-    "@"
-  )
-
-  def escapeReserved: String => String = {
-    case name if unbacktick.findFirstMatchIn(name).nonEmpty => name
-    case name if name.contains(' ') =>
-      name // scala.meta will automatically escape. See `EscapeTreeSpec.scala`
-    case name if reservedWords.contains(name)                   => s"`${name}`"
-    case name if invalidSymbols.findFirstMatchIn(name).nonEmpty => s"`${name}`"
-    case name if leadingNumeric.findFirstMatchIn(name).nonEmpty => s"`${name}`"
-    case name                                                   => name
-  }
-
   def propMeta[T <: Property](property: T): Target[ResolvedType] =
     Target.getGeneratorSettings.flatMap { implicit gs =>
       property match {
         case p: ArrayProperty =>
-          val title = Option(p.getTitle()).getOrElse("Unnamed array")
+          val title = Option(p.getTitle).getOrElse("Unnamed array")
           for {
-            items <- Target.fromOption(Option(p.getItems()), s"${title} has no items")
+            items <- Target.fromOption(Option(p.getItems), s"$title has no items")
             rec   <- propMeta(items)
             res <- rec match {
               case DeferredMap(_) =>
@@ -347,7 +292,7 @@ object SwaggerUtil {
                 Target.error("FIXME: Got an Array of Arrays, currently not supported")
               case Deferred(inner) => Target.pure(DeferredArray(inner))
               case Resolved(inner, dep, default) =>
-                Target.pure(Resolved(t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
+                Target.pure(Resolved(t"IndexedSeq[$inner]", dep, default.map(x => q"IndexedSeq(${x})")))
             }
           } yield res
         case m: MapProperty =>
@@ -367,12 +312,12 @@ object SwaggerUtil {
           Target.pure(Resolved(gs.jsonType, None, None)) // TODO: o.getProperties
         case r: RefProperty =>
           Target
-            .fromOption(Option(r.getSimpleRef()), "Malformed $ref")
+            .fromOption(Option(r.getSimpleRef), "Malformed $ref")
             .map(Deferred.apply _)
         case b: BooleanProperty =>
           Target.pure(Resolved(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
         case s: StringProperty =>
-          Target.pure(Resolved(typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
+          Target.pure(Resolved(typeName("string", Option(s.getFormat), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
 
         case d: DateProperty =>
           Target.pure(Resolved(t"java.time.LocalDate", None, None))
@@ -398,7 +343,7 @@ object SwaggerUtil {
         case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
           Target.pure(Resolved(t"String", None, None))
         case x =>
-          Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
+          Target.error(s"Unsupported swagger class ${x.getClass().getName} ($x)")
       }
     }
 
@@ -417,6 +362,7 @@ object SwaggerUtil {
     successCodesWithEntities
       .find(responses.containsKey)
       .flatMap(code => Option(responses.get(code)))
+
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
@@ -439,7 +385,9 @@ object SwaggerUtil {
     }
 
   object paths {
-    import atto._, Atto._
+
+    import atto._
+    import Atto._
 
     private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => Parser[T]): Parser[T] =
       pathArgs
@@ -489,6 +437,7 @@ object SwaggerUtil {
       val plainString      = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString    = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P = plainNEString.map(s => (None, stringPath(s)))
+
       def regexSegment(implicit pathArgs: List[ScalaParameter]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
@@ -516,14 +465,15 @@ object SwaggerUtil {
       val staticQSTerm: Parser[T] =
         choice(staticQSArg, qsValueOnly).map(buildParamConstraint)
       val trailingSlash: Parser[Boolean] = opt(char('/')).map(_.nonEmpty)
-      val staticQS: Parser[Option[T]] = (opt(
+      val staticQS: Parser[Option[T]] = opt(
         char('?') ~> sepBy1(staticQSTerm, char('&'))
           .map(_.reduceLeft(joinParams))
       ) | opt(char('?')).map { _ =>
         None
-      })
+      }
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = endOfInput ~> ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
+
       def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
     }
@@ -592,9 +542,10 @@ object SwaggerUtil {
           }
         } else directive
         result = queryParams.fold(trailingSlashed) { qs =>
-          q"${trailingSlashed} & ${qs}"
+          q"$trailingSlashed & $qs"
         }
       } yield result
     }
   }
+
 }

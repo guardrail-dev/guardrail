@@ -8,6 +8,7 @@ import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
+import com.twilio.guardrail.swagger.Escape
 
 import scala.collection.JavaConverters._
 import scala.meta._
@@ -75,7 +76,7 @@ object ServerGenerator {
                                     responseDefinitions,
                                     renderedRoutes.flatMap(_.supportDefinitions))
           } yield {
-            Server(className, frameworkImports ++ extraImports, List(SwaggerUtil.escapeTree(handlerSrc), SwaggerUtil.escapeTree(classSrc)))
+            Server(className, frameworkImports ++ extraImports, List(Escape.escapeTree(handlerSrc), Escape.escapeTree(classSrc)))
           }
       }
     } yield Servers(servers)

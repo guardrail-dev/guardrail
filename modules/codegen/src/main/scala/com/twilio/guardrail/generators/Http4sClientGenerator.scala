@@ -13,6 +13,7 @@ import com.twilio.guardrail.terms.RouteMeta
 import java.util.Locale
 
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.swagger.SwaggerUtil
 
 import scala.collection.JavaConverters._
 import scala.meta._

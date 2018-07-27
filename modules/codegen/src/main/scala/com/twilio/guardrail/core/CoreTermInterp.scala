@@ -14,10 +14,13 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
+
+  def expandTilde(path: String): String =
+    path.replaceFirst("^~", System.getProperty("user.home"))
+
   def apply[T](x: CoreTerm[T]): CoreTarget[T] = x match {
     case GetDefaultFramework =>
-      CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget
-        .pure("akka-http")
+      CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget.pure("akka-http")
 
     case ExtractGenerator(context) =>
       for {
@@ -50,9 +53,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         else CoreTarget.pure(args)
       } yield args
 
-    case ParseArgs(args, defaultFramework) => {
-      def expandTilde(path: String): String =
-        path.replaceFirst("^~", System.getProperty("user.home"))
+    case ParseArgs(args, defaultFramework) =>
       val defaultArgs =
         Args.empty.copy(context = Args.empty.context.copy(framework = Some(defaultFramework)), defaults = true)
 
@@ -60,6 +61,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
       type To   = List[Args]
       val start: From = (List.empty[Args], args.toList)
       import CoreTarget.log.debug
+
       FlatMap[CoreTarget].tailRecM[From, To](start)({
         case pair @ (sofar, rest) =>
           val empty = sofar
@@ -68,14 +70,13 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             .headOption
             .getOrElse(defaultArgs)
             .copy(defaults = false)
-          def Continue(x: From): CoreTarget[Either[From, To]] =
-            CoreTarget.pure(Either.left(x))
-          def Return(x: To): CoreTarget[Either[From, To]] =
-            CoreTarget.pure(Either.right(x))
-          def Bail(x: Error): CoreTarget[Either[From, To]] = CoreTarget.error(x)
+
+          def Continue(x: From): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.left(x))
+          def Return(x: To): CoreTarget[Either[From, To]]     = CoreTarget.pure(Either.right(x))
+          def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.error(x)
+
           for {
-            _ <- debug("core", "parseArgs")(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..."
-            else ""} of ${rest.length}")
+            _ <- debug("core", "parseArgs")(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
             step <- pair match {
               case (already, Nil) =>
                 debug("core", "parseArgs")("Finished") >> Return(already)
@@ -111,7 +112,6 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             }
           } yield step
       })
-    }
 
     case ProcessArgSet(targetInterpreter, args) =>
       import scala.meta.parsers.Parsed
@@ -119,6 +119,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         case x: Parsed.Error      => Left(x)
         case Parsed.Success(tree) => Right(tree)
       }
+
       for {
         _          <- CoreTarget.log.debug("core", "processArgSet")("Processing arguments")
         specPath   <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
@@ -138,6 +139,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
               } yield Import(List(importer))
           )
           .sequence[CoreTarget, Import]
+
         _ <- CoreTarget.log.debug("core", "processArgSet")("Finished processing arguments")
       } yield {
         ReadSwagger(
