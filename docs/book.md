@@ -89,7 +89,7 @@ paths:                                      # All HTTP paths are direct children
                                             # represented as `Option[T]`
 
         type: string                        # One of the primitive types supported in the OpenAPI specification.
-                                            # FIXME: Include a link to the specification for types and formats
+                                            # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#dataTypes
 
         x-scala-type: CustomString          # Escape hatch to explicitly introduce a custom type. This is an
                                             # advanced technique to introduce completely custom
@@ -139,7 +139,7 @@ definitions:                                # All non-primitive structures are d
                                             # camelCase identifier.
 
         type: string                        # One of the primitive types supported in the OpenAPI specification.
-                                            # FIXME: Include a link to the specification for types and formats
+                                            # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#dataTypes
 
       user_addresses:                       # Similar to `id`, though `user_addresses` can be safely transformed into
                                             # `userAddress`, so this is done to expose idiomatic Scala. The underlying
