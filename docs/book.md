@@ -43,14 +43,14 @@ Traditionally written and maintained client libraries invariably accumulate cruf
 
 Altering the shape of an API by providing a thick HTTP client reduces the shared terminology between service maintainers and their consumers, or even between consumers coming from different languages.
 
-Additionally, by hardcoding even a well-behaved HTTP client into a client library, now consumers are forced to work around that dependency. This may manifest as learning how to use and configure a brand new HTTP client under time pressure, or writing and maintaining brittle [ABI]()-compatible adapter layers that attempt to use the configuration already present in the rest of the codebase.
+Additionally, by hardcoding even a well-behaved HTTP client into a client library, now consumers are forced to work around that dependency. This may manifest as learning how to use and configure a brand new HTTP client under time pressure, or writing and maintaining brittle [Application Binary Interface (ABI)](https://en.wikipedia.org/wiki/Application_binary_interface)-compatible adapter layers that attempt to use the configuration already present in the rest of the codebase.
 
 Once these bespoke HTTP client configurations are built, both they and their dependencies are now added to the grab bag of dependency versions that must be maintained through the life of any given piece of infrastructure. This presents hidden barriers for upgrading all dependencies, as the possibility of transitive dependency conflicts increase as dependency trees become deeper.
 
 Installation
 ============
 
-Guardrail is available as a modular core, with both [sbt]() and [Maven]() integration. The core can also be run as a stand-alone [CLI]() application, with full support for all features.
+Guardrail is available as a modular core, with both [sbt](https://github.com/twilio/sbt-guardrail) and [Maven](https://github.com/twilio/guardrail-maven-plugin) integration. The core can also be run as a stand-alone [CLI](https://github.com/twilio/guardrail/blob/978a92db3dd46812aa19f05050995f864cbb5bb3/build.sbt#L33-L48) application, with full support for all features.
 
 Sample API specification
 ========================
