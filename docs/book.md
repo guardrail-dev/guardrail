@@ -1,7 +1,7 @@
 Table of Contents
 =================
 
-1. [Design philosophy](#design-philosophy)
+1. [What is guardrail](#what-is-guardrail)
    1. [Single Point of Truth](#single-point-of-truth)
    1. [Unexpected API changes are compiler errors](#unexpected-api-changes-are-compiler-errors)
    1. [Fewer binary dependencies](#fewer-binary-dependencies)
@@ -16,14 +16,16 @@ Table of Contents
    1. [Separation of protocol-concerns from API-level concerns](#separation-of-protocol-concerns-from-api-level-concerns)
 1. [Guardrail Extensions](#guardrail-extensions)
 
-Design Philosophy
-=================
+What is guardrail?
+==================
+
+Guardrail is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating Scala source code, primarily targeting the akka-http and http4s web frameworks, using circe for JSON encoding/decoding.
 
 Guardrail has three primary goals:
 
 - Documentation: Single point of truth for the interface to a software system
-- Better Servers: Unexpected API changes are compiler errors through server routing layer code generation
-- Better Clients: Fewer binary dependencies through client library code generation
+- Better Servers: Unexpected API changes surface as compiler errors via server routing layer code generation
+- Better Clients: Fewer binary dependencies via client library code generation
 
 Describing software is tricky. Incomplete specifications, slippage between specification and implementation, or even additional semantics of infrastructure that aren't easily communicated through static documents; these are only a few challenges you'll face when attempting to write a specification for your API. A reasonable question you may be asking is what motivations are there for going through these cumbersome and often frustrating tasks? We'll investigate some answers to this question in the following sections.
 
