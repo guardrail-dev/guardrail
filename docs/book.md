@@ -21,9 +21,9 @@ Describing software is tricky. Incomplete specifications, slippage between speci
 Single Point of Truth
 ---------------------
 
-By describing the shape of an API statically, there are far fewer variables to worry about. HTTP is a _very_ flexible protocol, with many features. By constraining that protocol to a subset that expresses the interface to our server (or service, or microservice), we drastrically reduce the burden of handling the entirety of HTTP to the core terms of our API. Focus on semantics of APIs once the basics (routing, data validation) are figured out.
+By describing the shape of an API statically, there are far fewer variables to worry about. HTTP is a _very_ flexible protocol, with many features. By constraining that protocol to a subset that expresses the interface to our server (or service, or microservice), we drastically reduce the burden of handling the entirety of HTTP to the core terms of our API. Focus on semantics of APIs once the basics (routing, data validation) are figured out.
 
-A secondary benefit of static specifications lies in tooling. Hand-written routing logic can hide security holes, miss best practices, and obscure intent if written incorrectly. This problem is multipled across as many different languages are supported inside any given company, manifesting as wasted effort implementing the same feature in different languages, or a bug that only occurs 10 percent of the time due to a buggy golang client.
+A secondary benefit of static specifications lies in tooling. Hand-written routing logic can hide security holes, miss best practices, and obscure intent if written incorrectly. This problem is multipled across as many different languages as are supported inside any given company, manifesting as wasted effort implementing the same feature in different languages, or a bug that only occurs 10 percent of the time due to a buggy golang client.
 
 Attempting to derive what the attack surface of a server is from the implementation is often the job of entire teams in large companies, and even that may not be enough. Conversely, with a static specification, those teams can build intelligent traffic analysis tools to detect anomalies or intentionally malicious clients built to inject bad data to find bugs.
 
@@ -170,7 +170,7 @@ The following is a complete, annotated OpenAPI specification file:
 Generating a Server
 ===================
 
-Guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The `Resource` contains all the routing logic, and accepts a `Handler` as an argument to the `route` function in order to provide an HTTP service in whatever HTTP framework you're hosting your service in. The following is an example from the akka-http server generator:
+Guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The `Resource` contains all the routing logic, accepting a `Handler` as an argument to the `route` function in order to provide an HTTP service in whichever supported HTTP framework you're hosting your service in. The following is an example from the [akka-http](https://github.com/akka/akka-http) server generator:
 
     trait UserHandler {
       def createUser(respond: UserResource.createUserResponse.type)(body: User): scala.concurrent.Future[UserResource.createUserResponse]
@@ -253,6 +253,8 @@ One other strategy for testing non-guardrail generated clients is to bind `userR
 
 A note about scalatest integration
 ----------------------------------
+
+### akka-http
 
 The default `ExceptionHandler` in akka-http swallows exceptions, so if you intend to `fail()` tests from inside guardrail-generated HTTP Servers, you'll likely want to have the following implicit in scope:
 
