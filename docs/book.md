@@ -1,11 +1,20 @@
 Table of Contents
 =================
 
-1. [Design philosophy](#Design-Philosophy)
-1. Installation
-1. Sample API specification
-1. Generating a Server
-1. Generating clients
+1. [Design philosophy](#design-philosophy)
+   1. [Single Point of Truth](#single-point-of-truth)
+   1. [Unexpected API changes are compiler errors](#unexpected-api-changes-are-compiler-errors)
+   1. [Fewer binary dependencies](#fewer-binary-dependencies)
+1. [Installation](#installation)
+1. [Sample API specification](#sample-api-specification)
+1. [Generating a Server](#generating-a-server)
+   1. [Separation of business logic](#separation-of-business-logic)
+   1. [API structure slip is impossible](#api-structure-slip-is-impossible)
+   1. [Generating test-only (real) server mocks for unit tests](#generating-test-only-real-server-mocks-for-unit-tests)
+   1. [A note about scalatest integration](#a-note-about-scalatest-integration)
+1. [Generating clients](#generating-clients)
+   1. [Separation of protocol-concerns from API-level concerns](#separation-of-protocol-concerns-from-api-level-concerns)
+1. [Guardrail Extensions](#guardrail-extensions)
 
 Design Philosophy
 =================
