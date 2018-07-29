@@ -12,9 +12,9 @@ Design Philosophy
 
 Guardrail has three primary goals:
 
-- Single point of truth
-- Unexpected API changes are compiler errors
-- Fewer binary dependencies
+- Documentation: Single point of truth for the interface to a software system
+- Better Servers: Unexpected API changes are compiler errors through server routing layer code generation
+- Better Clients: Fewer binary dependencies through client library code generation
 
 Describing software is tricky. Incomplete specifications, slippage between specification and implementation, or even additional semantics of infrastructure that aren't easily communicated through static documents; these are only a few challenges you'll face when attempting to write a specification for your API. A reasonable question you may be asking is what motivations are there for going through these cumbersome and often frustrating tasks? We'll investigate some answers to this question in the following sections.
 
