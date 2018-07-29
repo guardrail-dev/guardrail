@@ -66,7 +66,7 @@ Guardrail is available as a modular core, with both [sbt](https://github.com/twi
 Sample API specification
 ========================
 
-The following is a complete, annotated OpenAPI specification file:
+The following is a complete, annotated OpenAPI specification file: (guardrail extensions are documented in [Guardrail Extensions](#guardrail-extensions))
 
 ```yaml
 swagger: "2.0"                              # Which version of the OpenAPI/Swagger specification we are following
