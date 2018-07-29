@@ -218,16 +218,18 @@ As all parameters are provided as arguments to the function stubs in the trait, 
 Separation of business logic
 ----------------------------
 
-- Implementing functions is intuitive
-- Fewer moving pieces
-- Unit test routing layer separately from business logic
+Providing an implementating of a function with a well-defined set of inputs and outputs is natural for any developer. By reducing the scope of the interface a developer writes against, implementations are more clear and concise.
+
+Furthermore, by providing business logic as an implementation of an abstract class, unit tests can test the routing layer and business logic independently, by design.
 
 API structure slip is impossible
 --------------------------------
 
-- Iterating on an API by adding new parameters (required or optional!) _anywhere_ in the spec causes a compiler error that must be addressed
-- As only defined response codes can be used, it's impossible to intentionally respond with a different repsonse code than is in your spec
-- Forgetting to handle one of your endpoints is a compiler error
+As parameters are explicitly provided as arguments to functions in `Handler`s, any alteration to parameters constitute a new function interface that must be implemented. As a result, if providing an implementation for an externally managed specification, the compiler informs when a previously written function is no longer sufficient.
+
+By representing different response codes and structures as members of a sealed trait, it's impossible to return a structure that violates the specification, even for less frequently used response codes.
+
+Finally, describing an endpoint in your specification without providing an implementation for it is a compiler error. This prevents reduction of functionality due to refactors, human error, or miscommunication with other teams.
 
 Generating test-only (real) server mocks for unit tests
 -------------------------------------------------------
