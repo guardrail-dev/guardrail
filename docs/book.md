@@ -57,153 +57,161 @@ Sample API specification
 
 The following is a complete, annotated OpenAPI specification file:
 
-    swagger: "2.0"                              # Which version of the OpenAPI/Swagger specification we are following
-    info:                                       # Primarily for consumption by documentation generation tools
-      title: My Service
-      version: 0.1.0
-    host: localhost:1234                        # Default host (and optional port) to connect to for generated clients
-    schemes:
-      - http
-    paths:                                      # All HTTP paths are direct children of the `paths` field
+```yaml
+swagger: "2.0"                              # Which version of the OpenAPI/Swagger specification we are following
+info:                                       # Primarily for consumption by documentation generation tools
+  title: My Service
+  version: 0.1.0
+host: localhost:1234                        # Default host (and optional port) to connect to for generated clients
+schemes:
+  - http
+paths:                                      # All HTTP paths are direct children of the `paths` field
 
-      /user/{id}:                               # Paths can have variable patterns in paths
+  /user/{id}:                               # Paths can have variable patterns in paths
 
-        get:                                    # HTTP method
+    get:                                    # HTTP method
 
-          operationId: getUser                  # Friendly name, ends up as the function name (in clients and servers)
+      operationId: getUser                  # Friendly name, ends up as the function name (in clients and servers)
 
-          x-scala-package: users                # Relative package for this client to live in. For convenience, the
-                                                # last package parameter is turned into a class name for clients and
-                                                # servers. In this case, `UsersClient`.
+      x-scala-package: users                # Relative package for this client to live in. For convenience, the
+                                            # last package parameter is turned into a class name for clients and
+                                            # servers. In this case, `UsersClient`.
 
-          parameters:                           # All parameters (including path parameters) are listed here.
+      parameters:                           # All parameters (including path parameters) are listed here.
 
-          - name: id                            # The field name (case matters!), used to both identify the correct
-                                                # field to match, as well as generate a best-guess idiomatic Scala
-                                                # parameter name.
+      - name: id                            # The field name (case matters!), used to both identify the correct
+                                            # field to match, as well as generate a best-guess idiomatic Scala
+                                            # parameter name.
 
-            in: path                            # Where to look for the parameter
+        in: path                            # Where to look for the parameter
 
-            required: true                      # Required fields cannot be missing. `required: false` fields are
-                                                # represented as `Option[T]`
+        required: true                      # Required fields cannot be missing. `required: false` fields are
+                                            # represented as `Option[T]`
 
-            type: string                        # One of the primitive types supported in the OpenAPI specification.
-                                                # FIXME: Include a link to the specification for types and formats
+        type: string                        # One of the primitive types supported in the OpenAPI specification.
+                                            # FIXME: Include a link to the specification for types and formats
 
-            x-scala-type: CustomString          # Escape hatch to explicitly introduce a custom type. This is an
-                                                # advanced technique to introduce completely custom
-                                                # marshalling/unmarshalling/validation logic. Keep in mind, everyone
-                                                # else will just see a plain string!
+        x-scala-type: CustomString          # Escape hatch to explicitly introduce a custom type. This is an
+                                            # advanced technique to introduce completely custom
+                                            # marshalling/unmarshalling/validation logic. Keep in mind, everyone
+                                            # else will just see a plain string!
 
-          responses:                            # All response codes that are possible are listed here
+      responses:                            # All response codes that are possible are listed here
 
-            200:                                # Each HTTP status code is mapped to the corresponding textual
-                                                # representation in guardrail-generated servers.
+        200:                                # Each HTTP status code is mapped to the corresponding textual
+                                            # representation in guardrail-generated servers.
 
-              schema:                           # The optional `schema` parameter describes what's possible to return
-                                                # as the body of a response
+          schema:                           # The optional `schema` parameter describes what's possible to return
+                                            # as the body of a response
 
-                $ref: '#/definitions/User'      # In the generated `UsersHandler` `getUser` function, we can call
-                                                # `respond.OK(user)`, where `user: definitions.User`
+            $ref: '#/definitions/User'      # In the generated `UsersHandler` `getUser` function, we can call
+                                            # `respond.OK(user)`, where `user: definitions.User`
 
-            404:                                # We must represent our failure cases as well, otherwise we can
-                                                # never express failure!
+        404:                                # We must represent our failure cases as well, otherwise we can
+                                            # never express failure!
 
-              description: Not found            # The optional `description` parameter is not used in guardrail,
-                                                # but is useful here as an indicator that we don't have a response
-                                                # body for `404 Not Found` responses.
+          description: Not found            # The optional `description` parameter is not used in guardrail,
+                                            # but is useful here as an indicator that we don't have a response
+                                            # body for `404 Not Found` responses.
 
-    definitions:                                # All non-primitive structures are defined inside `definitions`
+definitions:                                # All non-primitive structures are defined inside `definitions`
 
-      User:                                     # This identifies a symbolic structure name. Not all names are
-                                                # translated into classes when rendered, depending on whether they
-                                                # identify classes with structure, or defer to standard classes
-                                                # like `IndexedSeq` for `type: array`.
+  User:                                     # This identifies a symbolic structure name. Not all names are
+                                            # translated into classes when rendered, depending on whether they
+                                            # identify classes with structure, or defer to standard classes
+                                            # like `IndexedSeq` for `type: array`.
 
-        type: object                            # will generate a `User` case class in the `definitions` package
+    type: object                            # will generate a `User` case class in the `definitions` package
 
-        required:                               # A list of which parameters are required. This is enforced for
-                                                # clients by having non-optional parameters, and for servers by
-                                                # ensuring all submitted data to the endpoint validates the schema
-                                                # before getting to your `Handler` function.
+    required:                               # A list of which parameters are required. This is enforced for
+                                            # clients by having non-optional parameters, and for servers by
+                                            # ensuring all submitted data to the endpoint validates the schema
+                                            # before getting to your `Handler` function.
 
-          - id                                  # These names must match the `properties` names exactly
-          - user_addresses
+      - id                                  # These names must match the `properties` names exactly
+      - user_addresses
 
-        properties:                             # `object`s are permitted to have `properties`. These are translated 
-                                                # into fields in the generated case classes.
+    properties:                             # `object`s are permitted to have `properties`. These are translated
+                                            # into fields in the generated case classes.
 
-          id:                                   # Case matters for `properties`! A heuristic determines whether it's
-                                                # possible to translate a property name into a unique, non-reserved
-                                                # camelCase identifier.
+      id:                                   # Case matters for `properties`! A heuristic determines whether it's
+                                            # possible to translate a property name into a unique, non-reserved
+                                            # camelCase identifier.
 
-            type: string                        # One of the primitive types supported in the OpenAPI specification.
-                                                # FIXME: Include a link to the specification for types and formats
+        type: string                        # One of the primitive types supported in the OpenAPI specification.
+                                            # FIXME: Include a link to the specification for types and formats
 
-          user_addresses:                       # Similar to `id`, though `user_addresses` can be safely transformed into
-                                                # `userAddress`, so this is done to expose idiomatic Scala. The underlying
-                                                # marshallers and unmarshallers maintain this mapping for you though,
-                                                # so no chance of protocol violations.
+      user_addresses:                       # Similar to `id`, though `user_addresses` can be safely transformed into
+                                            # `userAddress`, so this is done to expose idiomatic Scala. The underlying
+                                            # marshallers and unmarshallers maintain this mapping for you though,
+                                            # so no chance of protocol violations.
 
-            $ref: '#/definitions/UserAddresses' # Ensures that tye type of `userAddress` will be `IndexedSeq[UserAddress]`
+        $ref: '#/definitions/UserAddresses' # Ensures that tye type of `userAddress` will be `IndexedSeq[UserAddress]`
 
-      UserAddresses:
-        type: array
+  UserAddresses:
+    type: array
 
-        items:                                  # `items` is a special key for `type: array`, identifying the structure of the
-                                                # sequence members
+    items:                                  # `items` is a special key for `type: array`, identifying the structure of the
+                                            # sequence members
 
-          $ref: '#/definitions/UserAddress'     # Primitive types could be listed here, but as we're referring to another class,
-                                                # we need to explicitly use a `$ref`. This may change in the future,
-                                                # see https://github.com/twilio/guardrail/issues/76
+      $ref: '#/definitions/UserAddress'     # Primitive types could be listed here, but as we're referring to another class,
+                                            # we need to explicitly use a `$ref`. This may change in the future,
+                                            # see https://github.com/twilio/guardrail/issues/76
 
-      UserAddress:
-        type: object
-        properties:
-          line1:
-            type: string
-          line2:
-            type: string
-          line3:
-            type: string
+  UserAddress:
+    type: object
+    properties:
+      line1:
+        type: string
+      line2:
+        type: string
+      line3:
+        type: string
+```
 
 Generating a Server
 ===================
 
 Guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The `Resource` contains all the routing logic, accepting a `Handler` as an argument to the `route` function in order to provide an HTTP service in whichever supported HTTP framework you're hosting your service in. The following is an example from the [akka-http](https://github.com/akka/akka-http) server generator:
 
-    trait UserHandler {
-      def createUser(respond: UserResource.createUserResponse.type)(body: User): scala.concurrent.Future[UserResource.createUserResponse]
-      def createUsersWithArrayInput(respond: UserResource.createUsersWithArrayInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithArrayInputResponse]
-      def createUsersWithListInput(respond: UserResource.createUsersWithListInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithListInputResponse]
-      def loginUser(respond: UserResource.loginUserResponse.type)(username: String, password: String): scala.concurrent.Future[UserResource.loginUserResponse]
-      def logoutUser(respond: UserResource.logoutUserResponse.type)(): scala.concurrent.Future[UserResource.logoutUserResponse]
-      def getUserByName(respond: UserResource.getUserByNameResponse.type)(username: String): scala.concurrent.Future[UserResource.getUserByNameResponse]
-      def updateUser(respond: UserResource.updateUserResponse.type)(username: String, body: User): scala.concurrent.Future[UserResource.updateUserResponse]
-      def deleteUser(respond: UserResource.deleteUserResponse.type)(username: String): scala.concurrent.Future[UserResource.deleteUserResponse]
+```scala
+// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
+// structural alterations (`F[_]` instead of `Future[_]` as the return type) the same handlers can be used with
+// different `Resource` implementations from different framework generators. This permits greater compatibility between
+// different frameworks without changing your business logic.
+trait UserHandler {
+  def createUser(respond: UserResource.createUserResponse.type)(body: User): scala.concurrent.Future[UserResource.createUserResponse]
+  def createUsersWithArrayInput(respond: UserResource.createUsersWithArrayInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithArrayInputResponse]
+  def createUsersWithListInput(respond: UserResource.createUsersWithListInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithListInputResponse]
+  def loginUser(respond: UserResource.loginUserResponse.type)(username: String, password: String): scala.concurrent.Future[UserResource.loginUserResponse]
+  def logoutUser(respond: UserResource.logoutUserResponse.type)(): scala.concurrent.Future[UserResource.logoutUserResponse]
+  def getUserByName(respond: UserResource.getUserByNameResponse.type)(username: String): scala.concurrent.Future[UserResource.getUserByNameResponse]
+  def updateUser(respond: UserResource.updateUserResponse.type)(username: String, body: User): scala.concurrent.Future[UserResource.updateUserResponse]
+  def deleteUser(respond: UserResource.deleteUserResponse.type)(username: String): scala.concurrent.Future[UserResource.deleteUserResponse]
+}
+object UserResource {
+  def routes(handler: UserHandler)(implicit mat: akka.stream.Materializer): Route = {
+    (post & path("v2" / "user") & entity(as[User])) {
+      body => complete(handler.createUser(createUserResponse)(body))
+    } ~ (post & path("v2" / "user" / "createWithArray") & entity(as[IndexedSeq[User]])) {
+      body => complete(handler.createUsersWithArrayInput(createUsersWithArrayInputResponse)(body))
+    } ~ (post & path("v2" / "user" / "createWithList") & entity(as[IndexedSeq[User]])) {
+      body => complete(handler.createUsersWithListInput(createUsersWithListInputResponse)(body))
+    } ~ (get & path("v2" / "user" / "login") & (parameter(Symbol("username").as[String]) & parameter(Symbol("password").as[String])) & discardEntity) {
+      (username, password) => complete(handler.loginUser(loginUserResponse)(username, password))
+    } ~ (get & path("v2" / "user" / "logout") & discardEntity) {
+      complete(handler.logoutUser(logoutUserResponse)())
+    } ~ (get & path("v2" / "user" / Segment) & discardEntity) {
+      username => complete(handler.getUserByName(getUserByNameResponse)(username))
+    } ~ (put & path("v2" / "user" / Segment) & entity(as[User])) {
+      (username, body) => complete(handler.updateUser(updateUserResponse)(username, body))
+    } ~ (delete & path("v2" / "user" / Segment) & discardEntity) {
+      username => complete(handler.deleteUser(deleteUserResponse)(username))
     }
-    object UserResource {
-      def routes(handler: UserHandler)(implicit mat: akka.stream.Materializer): Route = {
-        (post & path("v2" / "user") & entity(as[User])) {
-          body => complete(handler.createUser(createUserResponse)(body))
-        } ~ (post & path("v2" / "user" / "createWithArray") & entity(as[IndexedSeq[User]])) {
-          body => complete(handler.createUsersWithArrayInput(createUsersWithArrayInputResponse)(body))
-        } ~ (post & path("v2" / "user" / "createWithList") & entity(as[IndexedSeq[User]])) {
-          body => complete(handler.createUsersWithListInput(createUsersWithListInputResponse)(body))
-        } ~ (get & path("v2" / "user" / "login") & (parameter(Symbol("username").as[String]) & parameter(Symbol("password").as[String])) & discardEntity) {
-          (username, password) => complete(handler.loginUser(loginUserResponse)(username, password))
-        } ~ (get & path("v2" / "user" / "logout") & discardEntity) {
-          complete(handler.logoutUser(logoutUserResponse)())
-        } ~ (get & path("v2" / "user" / Segment) & discardEntity) {
-          username => complete(handler.getUserByName(getUserByNameResponse)(username))
-        } ~ (put & path("v2" / "user" / Segment) & entity(as[User])) {
-          (username, body) => complete(handler.updateUser(updateUserResponse)(username, body))
-        } ~ (delete & path("v2" / "user" / Segment) & discardEntity) {
-          username => complete(handler.deleteUser(deleteUserResponse)(username))
-        }
-      }
-      ...
-    }
+  }
+  ...
+}
+```
 
 As all parameters are provided as arguments to the function stubs in the trait, there's no concern of forgetting to extract a query string parameter, introducing a typo in a form parameter name, or forgetting to close the bytestream for the streaming HTTP Request.
 
@@ -226,30 +234,34 @@ Generating test-only (real) server mocks for unit tests
 
 Often, we'll also want to have mock HTTP clients for use in unit tests. Mocking requires stringent adherence to the specification, otherwise our mock clients are unrepresentative of the production systems they are intending to mock. The following is an example of a "mock" HTTP Client generated by guardrail; it speaks real HTTP, though doesn't need to bind to a port in order to run. This permits parallelized tests to be run without concern of port contention.
 
-    val userRoutes: Route = UserResource.routes(new UserHandler {
-      override def getUserByName(respond: UserResource.getUserByNameResponse.type)(username: String): scala.concurrent.Future[UserResource.getUserByNameResponse] = {
-        if (username == "foo") {
-          Future.successful(respond.OK(User(id=Some(1234L), username=Some("foo"))))
-        } else {
-          Future.successful(respond.NotFound)
-        }
-      }
-    })
-    val userHttpClient: HttpRequest => Future[HttpResponse] = Route.asyncHandler(userRoutes)
-    val userClient: UserClient = UserClient.httpCLient(userHttpClient)
-    val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
-    val user: User = getUserResponse.value.futureValue.right.value // Unwraps `User(id=Some(1234L), username=Some("foo"))` using scalatest's `ScalaFutures` and `EitherValues` unwrappers.
+```scala
+val userRoutes: Route = UserResource.routes(new UserHandler {
+  override def getUserByName(respond: UserResource.getUserByNameResponse.type)(username: String): scala.concurrent.Future[UserResource.getUserByNameResponse] = {
+    if (username == "foo") {
+      Future.successful(respond.OK(User(id=Some(1234L), username=Some("foo"))))
+    } else {
+      Future.successful(respond.NotFound)
+    }
+  }
+})
+val userHttpClient: HttpRequest => Future[HttpResponse] = Route.asyncHandler(userRoutes)
+val userClient: UserClient = UserClient.httpCLient(userHttpClient)
+val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
+val user: User = getUserResponse.value.futureValue.right.value // Unwraps `User(id=Some(1234L), username=Some("foo"))` using scalatest's `ScalaFutures` and `EitherValues` unwrappers.
+```
 
 This strategy of mocking ensures we follow the spec, even when the specification changes. This means not only more robust tests, but also tests that communicate failures via compiler errors instead of at runtime. Having a clear separation of where errors can come from permits trusting our tests more. If the tests compile, any and all errors that occur are in the domain of business logic.
 
 One other strategy for testing non-guardrail generated clients is to bind `userRoutes` from above to a port, run tests that use hand-rolled or vendor-supplied HTTP clients, then unbind the port when the test ends:
 
-    val binding: ServerBinding =
-      Http().bindAndHandle(userRoutes, "localhost", 1234).futureValue
+```scala
+val binding: ServerBinding =
+  Http().bindAndHandle(userRoutes, "localhost", 1234).futureValue
 
-    // run tests
+// run tests
 
-    binding.unbind().futureValue
+binding.unbind().futureValue
+```
 
 A note about scalatest integration
 ----------------------------------
@@ -258,19 +270,23 @@ A note about scalatest integration
 
 The default `ExceptionHandler` in akka-http swallows exceptions, so if you intend to `fail()` tests from inside guardrail-generated HTTP Servers, you'll likely want to have the following implicit in scope:
 
-    implicit def exceptionHandler: ExceptionHandler = new ExceptionHandler {
-      def withFallback(that: ExceptionHandler): ExceptionHandler = this
-      def seal(settings: RoutingSettings): ExceptionHandler = this
+```scala
+implicit def exceptionHandler: ExceptionHandler = new ExceptionHandler {
+  def withFallback(that: ExceptionHandler): ExceptionHandler = this
+  def seal(settings: RoutingSettings): ExceptionHandler = this
 
-      def isDefinedAt(error: Throwable) = error.isInstanceOf[org.scalatest.TestFailedException]
-      def apply(error: Throwable) = throw error
-    }
+  def isDefinedAt(error: Throwable) = error.isInstanceOf[org.scalatest.TestFailedException]
+  def apply(error: Throwable) = throw error
+}
+```
 
 This passes all `TestFailedExceptions` through to the underlying infrastructure. In our tests, when we call:
 
-    val userClient: UserClient = UserClient.httpCLient(userHttpClient)
-    val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
-    val user: User = getUserResponse.value.futureValue.right.value
+```scala
+val userClient: UserClient = UserClient.httpCLient(userHttpClient)
+val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
+val user: User = getUserResponse.value.futureValue.right.value
+```
 
 `futureValue` will raise the `TestFailedException` with the relevant stack trace.
 
@@ -286,26 +302,28 @@ Separation of protocol-concerns from API-level concerns
 
 As guardrail clients are built ontop of the function type `HttpRequest => Future[HttpResponse]`, client configuration is reduced to function composition. Some ideas:
 
-    val singleRequestHttpClient = { (req: HttpRequest) =>
-      Http().singleRequest(req)
-    }
+```scala
+val singleRequestHttpClient = { (req: HttpRequest) =>
+  Http().singleRequest(req)
+}
 
-    val retryingHttpClient = { nextClient: (HttpRequest => Future[HttpResponse]) =>
-        req: HttpRequest => nextClient(req).flatMap(resp => if (resp.status.intValue >= 500) nextClient(req) else Future.successful(resp))
-    }
+val retryingHttpClient = { nextClient: (HttpRequest => Future[HttpResponse]) =>
+    req: HttpRequest => nextClient(req).flatMap(resp => if (resp.status.intValue >= 500) nextClient(req) else Future.successful(resp))
+}
 
-    val metricsHttpClient = { nextClient: (HttpRequest => Future[HttpResponse]) =>
-        req: HttpRequest => {
-            val resp = nextClient(req)
-            resp.onSuccess { _resp =>
-                trackMetrics(req.uri.path, _resp.status)
-            }
-            resp
+val metricsHttpClient = { nextClient: (HttpRequest => Future[HttpResponse]) =>
+    req: HttpRequest => {
+        val resp = nextClient(req)
+        resp.onSuccess { _resp =>
+            trackMetrics(req.uri.path, _resp.status)
         }
+        resp
     }
+}
 
-    // Track metrics for every request, even retries
-    val retryingMetricsClient1: HttpRequest => Future[HttpResponse] = retryingHttpClient(metricsHttpClient(singleRequestHttpClient))
+// Track metrics for every request, even retries
+val retryingMetricsClient1: HttpRequest => Future[HttpResponse] = retryingHttpClient(metricsHttpClient(singleRequestHttpClient))
 
-    // Only track metrics for requests we didn't have to retry
-    val retryingMetricsClient2: HttpRequest => Future[HttpResponse] = metricsHttpClient(retryingHttpClient(singleRequestHttpClient))
+// Only track metrics for requests we didn't have to retry
+val retryingMetricsClient2: HttpRequest => Future[HttpResponse] = metricsHttpClient(retryingHttpClient(singleRequestHttpClient))
+```
