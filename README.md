@@ -26,9 +26,9 @@ Build tool plugins
 Contributors
 ============
 
-- @blast-hardcheese
-- @conniec
-- @kelnos
-- @andrew-domino
-- @sullis
-- @stanislav
+- [blast-hardcheese](https://github.com/blast-hardcheese)
+- [conniec](https://github.com/conniec)
+- [kelnos](https://github.com/kelnos)
+- [andrew-domino](https://github.com/andrew-domino)
+- [sullis](https://github.com/sullis)
+- [stanislav](https://github.com/stanislav)
