@@ -69,8 +69,8 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             .getOrElse(defaultArgs)
             .copy(defaults = false)
           def Continue(x: From): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.left(x))
-          def Return(x: To): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.right(x))
-          def Bail(x: Error): CoreTarget[Either[From, To]] = CoreTarget.error(x)
+          def Return(x: To): CoreTarget[Either[From, To]]     = CoreTarget.pure(Either.right(x))
+          def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.error(x)
           for {
             _ <- debug("core", "parseArgs")(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
             step <- pair match {
@@ -92,7 +92,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
               case (sofar :: already, "--tracing" :: xs) =>
                 Continue((sofar.copy(context = sofar.context.copy(tracing = true)) :: already, xs))
               case (sofar :: already, "--outputPath" :: value :: xs) =>
-                Continue((sofar .copy(outputPath = Option(expandTilde(value))) :: already, xs))
+                Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
               case (sofar :: already, "--packageName" :: value :: xs) =>
                 Continue((sofar.copy(packageName = Option(value.trim.split('.').to[List])) :: already, xs))
               case (sofar :: already, "--dtoPackage" :: value :: xs) =>
