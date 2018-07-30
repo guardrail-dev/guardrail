@@ -1,63 +1,34 @@
 guardrail [![Build Status](https://travis-ci.org/twilio/guardrail.svg?branch=master)](https://travis-ci.org/twilio/guardrail)
 ===
 
-Already onboard? [docs/QUICKSTART.md](./docs/QUICKSTART.md)! Interested in contributing? [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)!
+Guardrail is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating Scala source code, primarily targeting the akka-http and http4s web frameworks, using circe for JSON encoding/decoding.
 
-The Little Big Book of `guardrail`
-===
+New to guardrail?
+---
 
-## Motivation
+Check out the [book](docs/book.md)!
 
-### Documentation
+Interested in contributing?
+---
 
-Documentation is good. Having a common language to express an API specification allows discussion at a high level, and a greater level of visibility into the implementation (architecture/security review), all without looking at the code at all.
+[CONTRIBUTING.md](CONTRIBUTING.md) provides an overview of how the project is structured, expectations, and information around writing new integration tests.
+The [issue tracker](https://github.com/twilio/guardrail/issues) also has tags for [`help wanted`](https://github.com/twilio/guardrail/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and [`good first issue`](https://github.com/twilio/guardrail/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
-### Static analysis
+Build tool plugins
+------------------
 
-By specifying your protocol completely in a specification, a linter could be used to determine whether or not your new protocol is compatible with existing clients, preventing accidental slip-ups and rework.
+- SBT
+  - [`twilio/sbt-guardrail`](https://github.com/twilio/sbt-guardrail)
 
-### Enforced protocol adherence
+- Maven
+  - [`twilio/guardrail-maven-plugin`](https://github.com/twilio/guardrail-maven-plugin)
 
-With a sufficiently powerful typesystem, code that does not follow the specification should not compile.
+Contributors
+============
 
-### Breaking binary dependence
-
-The fewer binary dependencies between projects, the easier it is to manage so-called "dependency hell". When dealing with libraries internal to a company, this can be avoided with appropriate tooling. When integrating with external libraries, however, there are fewer options available for resolving conflicting dependencies. Generated code only depends on what's already in your project, freeing you up to integrate with as many downstreams as you like, no matter what they are written in.
-
-### Automatic best practices
-
-#### DTO mapping
-
-Boilerplate reduction by automatically mapping requests and responses to Data Transfer Objects (DTOs, Protocols) for requests and responses in both clients and servers.
-
-#### Business logic isolation
-
-Especially considering the akka-http routing DSL, it's very convenient to mix business logic in your routing layer. Despite making this difficult to read, it also poses a business risk. Libraries, styles, and protocols come and go, but the business logic stays largely the same. If unpacking the request/response at the boundary of business logic, you are free to change your implementation at any point (possibly by regenerating your clients or servers with different parameters!)
-
-#### Enhanced testing
-
-Generating downstream services as static HTTP clients, functional tests can be written entirely statically, permitting high parallelism. With many tests, this becomes a significant win, due to removing the need for port binding or maintaining state between tests.
-
-#### Generated boilerplate
-
-'nuff said
-
-#### Automated input validation
-
-By permitting business domain types for input parameters (for example, `AccountSid` vs `String`), services become more resilient to failure or data leaks by doing input validation as soon as possible in the pipeline.
-
-### Generate idiomatic clients per language from the same spec
-
-Generating backend servers and clients from the same specification enables tight (and correct) coupling between services, almost entirely for free.
-
-## Build tool plugins
-
-### Maven plugin
-
-https://github.com/twilio/guardrail-maven-plugin
-
-### sbt plugin
-
-https://github.com/twilio/sbt-guardrail
-
-
+- @blast-hardcheese
+- @conniec
+- @kelnos
+- @andrew-domino
+- @sullis
+- @stanislav

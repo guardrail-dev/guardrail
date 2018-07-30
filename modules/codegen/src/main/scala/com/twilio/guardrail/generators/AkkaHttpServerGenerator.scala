@@ -545,12 +545,11 @@ object AkkaHttpServerGenerator {
                 case true =>
                   (
                     q"""
-                        val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                      .Select(partsTerm, containerName.toType)}] = (
-                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm
-                      .fold(t"Option")(Function.const(t"Id"))}](${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
-                      .Name(s"${operationId}MapFileField")}(_, _, _))
-                              .map({ case (v1, v2, v3, v4) =>
+                        val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type.Select(partsTerm, containerName.toType)}] = (
+                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm.fold(t"Option")(Function.const(t"Id"))}](
+                                ${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
+                      .Name(s"${operationId}MapFileField")}(_, _, _)
+                              ).map({ case (v1, v2, v3, v4) =>
                                 ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
                       .map(Function.const(q"v4"))}))
                               })
