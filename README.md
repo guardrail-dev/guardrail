@@ -22,3 +22,13 @@ Build tool plugins
 
 - Maven
   - [`twilio/guardrail-maven-plugin`](https://github.com/twilio/guardrail-maven-plugin)
+
+Contributors
+============
+
+- @blast-hardcheese
+- @conniec
+- @kelnos
+- @andrew-domino
+- @sullis
+- @stanislav
