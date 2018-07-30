@@ -1,0 +1,6 @@
+Swagger Model =---> ProtocolGenerator =-----------------------> "Model" Files
+               |-----------------------+--> ClientGenerator --> Client Files
+               \-----------------------+--> ServerGenerator --> Server Files
+
+
+

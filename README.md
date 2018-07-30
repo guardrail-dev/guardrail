@@ -18,10 +18,13 @@ Build tool plugins
 ------------------
 
 - SBT
-  - [`twilio/sbt-guardrail`](https://github.com/twilio/sbt-guardrail)
+  - [`twilio/sbt-guardrail`](https://github.com/twilio/sbt-guardrail) [docs](docs/plugins/sbt.md)
 
 - Maven
-  - [`twilio/guardrail-maven-plugin`](https://github.com/twilio/guardrail-maven-plugin)
+  - [`twilio/guardrail-maven-plugin`](https://github.com/twilio/guardrail-maven-plugin) [docs](docs/plugins/maven.md)
+
+- Makefile
+  - [docs](docs/plugins/make.md)
 
 Contributors
 ============
