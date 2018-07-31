@@ -69,12 +69,14 @@ object ServerGenerator {
             handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), methodSigs, renderedRoutes.flatMap(_.handlerDefinitions))
             extraRouteParams <- getExtraRouteParams(context.tracing)
             responseDefinitions = renderedRoutes.flatMap(_.responseDefinitions)
-            classSrc <- renderClass(resourceName,
-                                    handlerName,
-                                    combinedRouteTerms,
-                                    extraRouteParams,
-                                    responseDefinitions,
-                                    renderedRoutes.flatMap(_.supportDefinitions))
+            classSrc <- renderClass(
+              resourceName,
+              handlerName,
+              combinedRouteTerms,
+              extraRouteParams,
+              responseDefinitions,
+              renderedRoutes.flatMap(_.supportDefinitions)
+            )
           } yield {
             Server(className, frameworkImports ++ extraImports, List(Escape.escapeTree(handlerSrc), Escape.escapeTree(classSrc)))
           }

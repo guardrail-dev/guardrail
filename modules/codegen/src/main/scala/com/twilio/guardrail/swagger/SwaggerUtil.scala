@@ -20,6 +20,8 @@ object SwaggerUtil {
 
   sealed trait ResolvedType
 
+  //fixme classDep might be now what I'm looking for
+  // more likely it is type could be Option[User] and class dep is User
   case class Resolved(tpe: Type, classDep: Option[Term.Name], defaultValue: Option[Term]) extends ResolvedType
 
   sealed trait LazyResolvedType extends ResolvedType
@@ -29,6 +31,9 @@ object SwaggerUtil {
   case class DeferredArray(value: String) extends LazyResolvedType
 
   case class DeferredMap(value: String) extends LazyResolvedType
+
+  //fixme
+  case class DeferredPoly(resolved: Resolved, parent: Term.Name) extends LazyResolvedType
 
   object ResolvedType {
 
@@ -52,17 +57,17 @@ object SwaggerUtil {
       }
     }
 
+    def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] =
+      resolvedTypes
+        .find(_._1 == tpeName)
+        .map(_._2.tpe)
+        .map(x => (clsName, Resolved(f(x), None, None)))
+
     def resolve_(values: List[(String, ResolvedType)]): Target[List[(String, Resolved)]] = {
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, x: Resolved)         => Right((clsName, x))
         case (clsName, x: LazyResolvedType) => Left((clsName, x))
       }
-
-      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] =
-        resolvedTypes
-          .find(_._1 == tpeName)
-          .map(_._2.tpe)
-          .map(x => (clsName, Resolved(f(x), None, None)))
 
       FlatMap[Target]
         .tailRecM[(List[(String, LazyResolvedType)], List[(String, Resolved)]), List[(String, Resolved)]]((lazyTypes, resolvedTypes)) {
@@ -75,9 +80,9 @@ object SwaggerUtil {
                   case x @ (clsName, Deferred(tpeName)) =>
                     Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(identity), x)
                   case x @ (clsName, DeferredArray(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"IndexedSeq[${tpe}]"), x)
+                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"IndexedSeq[$tpe]"), x)
                   case x @ (clsName, DeferredMap(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, ${tpe}]"), x)
+                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, $tpe]"), x)
                 }
 
               Target.pure(Left((newLazyTypes, resolvedTypes ++ newResolvedTypes)))
@@ -92,11 +97,10 @@ object SwaggerUtil {
           Target
             .fromOption(protocolElems.find(_.name == name), s"Unable to resolve $name")
             .map {
-              case RandomType(_, tpe) => Resolved(tpe, None, None)
-              case ClassDefinition(_, tpe, _, _) =>
-                Resolved(tpe, None, None)
-              case EnumDefinition(_, tpe, _, _, _) =>
-                Resolved(tpe, None, None)
+              case RandomType(_, tpe)      => Resolved(tpe, None, None)
+              case clsDef: ClassDefinition => Resolved(clsDef.tpe, None, None)
+              case enumDef: EnumDefinition => Resolved(enumDef.tpe, None, None)
+              case adt: ADT                => Resolved(adt.tpe, None, None)
             }
         case DeferredArray(name) =>
           Target
@@ -104,7 +108,7 @@ object SwaggerUtil {
             .map {
               case RandomType(name, tpe) =>
                 Resolved(t"IndexedSeq[$tpe]", None, None)
-              case ClassDefinition(name, tpe, cls, companion) =>
+              case ClassDefinition(name, tpe, cls, companion, _) =>
                 Resolved(t"IndexedSeq[$tpe]", None, None)
               case EnumDefinition(name, tpe, elems, cls, companion) =>
                 Resolved(t"IndexedSeq[$tpe]", None, None)
@@ -115,7 +119,7 @@ object SwaggerUtil {
             .map {
               case RandomType(name, tpe) =>
                 Resolved(t"Map[String, $tpe]", None, None)
-              case ClassDefinition(_, tpe, _, _) =>
+              case ClassDefinition(_, tpe, _, _, _) =>
                 Resolved(t"Map[String, $tpe]", None, None)
               case EnumDefinition(_, tpe, _, _, _) =>
                 Resolved(t"Map[String, $tpe]", None, None)
@@ -129,7 +133,8 @@ object SwaggerUtil {
         case comp: ComposedModel =>
           print(comp)
           for {
-            ref <- Target.fromOption(Option(comp.getReference), s"Unspecified $comp")
+            //fixme
+            ref <- Target.fromOption(Option("Cat"), s"Unspecified ${comp.getReference}")
           } yield Deferred(ref)
 
         case ref: RefModel =>
@@ -269,10 +274,9 @@ object SwaggerUtil {
         case ("file", o @ Some(fmt))       => log(o, Type.Name(fmt))
         case ("file", fmt)                 => log(fmt, gs.fileType)
         case ("object", fmt)               => log(fmt, gs.jsonType)
-        case (x, fmt) => {
-          println(s"Fallback: ${x} (${fmt})")
+        case (x, fmt) =>
+          println(s"Fallback: $x ($fmt)")
           Type.Name(x)
-        }
       }
     }
   }

@@ -1,22 +1,24 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.circe.protocol
 
-import _root_.io.swagger.models.{ ArrayModel, Model, ModelImpl, RefModel }
-import _root_.io.swagger.models.properties._
-import cats.implicits._
-import cats.~>
-import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
-import com.twilio.guardrail.terms
 import java.util.Locale
 
+import _root_.io.swagger.models.ModelImpl
+import _root_.io.swagger.models.properties._
+import cats.data.EitherT
+import cats.implicits._
+import cats.kernel.Semigroup
+import cats.~>
+import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
+import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.swagger.SwaggerUtil
+import com.twilio.guardrail.{ ProtocolParameter, Target }
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable
 import scala.meta._
 
 object CirceProtocolGenerator {
-  import ProtocolGenerator._
 
   def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"$prefix${clsName}"))
 
@@ -60,9 +62,8 @@ object CirceProtocolGenerator {
       case DecodeEnum(clsName) =>
         Target.pure(q"""
           implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-            Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(Term.Name("s"),
-                                                                                  List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
-                                                                                  List(Term.Name("value")))}))
+            Decoder[String].emap(value => parse(value).toRight(${Term
+          .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
         """)
 
       case RenderClass(clsName, tpe) =>
@@ -93,6 +94,14 @@ object CirceProtocolGenerator {
 
   object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
+      case ExtractAdtChildProperties(parent, child) =>
+        val allProps = Semigroup[Option[List[(String, Property)]]].combine(
+          Option(parent.getProperties).map(_.asScala.toList),
+          Option(child.getProperties).map(_.asScala.toList)
+        )
+
+        Target.pure(Either.fromOption(allProps, "Model has no properties"))
+
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
 
@@ -294,65 +303,20 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
-    def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
-      case ExtractConcreteTypes(definitions) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            entries <- definitions.traverse {
-              case (clsName, impl: ModelImpl) if Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined =>
-                Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
-              case (clsName, definition) =>
-                SwaggerUtil
-                  .modelMetaType(definition)
-                  .map(x => (clsName, x))
-            }
-            result <- SwaggerUtil.ResolvedType.resolve_(entries)
-          } yield
-            result.map {
-              case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
-                PropMeta(clsName, tpe)
-            }
+  //fixme checkpoint
+  object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
+    override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
+      case RenderSealedTrait(className, terms) =>
+        val testTerms = terms.map { t =>
+          q"""def ${Term.Name(t.name.value)} : ${t.decltpe.get}"""
         }
 
-      case ProtocolImports() =>
-        Target.pure(
-          List(
-            q"import io.circe._",
-            q"import io.circe.syntax._",
-            q"import io.circe.generic.semiauto._"
-          )
-        )
+        //fixme: Discriminator shouldn't be rendered
 
-      case PackageObjectImports() =>
-        Target.pure(
-          List(
-            q"import java.time._",
-            q"import io.circe.java8.{ time => j8time }"
-          )
-        )
-
-      case PackageObjectContents() =>
-        Target.pure(q"""
-          val decodeLong = implicitly[Decoder[Long]]
-
-          implicit def decodeInstant: Decoder[Instant] = j8time.decodeInstant.or(decodeLong.map(Instant.ofEpochMilli))
-          implicit def decodeLocalDate: Decoder[LocalDate] = j8time.decodeLocalDateDefault.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDate))
-          implicit def decodeOffsetDateTime: Decoder[OffsetDateTime] = j8time.decodeOffsetDateTimeDefault.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))
-
-          // Unused
-          //implicit def decodeLocalDateTime: Decoder[Instant] = ???
-          //implicit def decodeLocalTime: Decoder[Instant] = ???
-          // implicit def decodeZonedDateTime: Decoder[Instant] = ???
-
-          // Mirror
-          implicit val encodeInstant = j8time.encodeInstant
-          implicit val encodeLocalDateDefault = j8time.encodeLocalDateDefault
-          implicit val encodeLocalDateTimeDefault = j8time.encodeLocalDateTimeDefault
-          implicit val encodeLocalTimeDefault = j8time.encodeLocalTimeDefault
-          implicit val encodeOffsetDateTimeDefault = j8time.encodeOffsetDateTimeDefault
-          implicit val encodeZonedDateTimeDefault = j8time.encodeZonedDateTimeDefault
-        """.stats)
+        Target.pure {
+          q"""sealed trait ${Type.Name(className)} {..${testTerms}}"""
+        }
     }
   }
+
 }

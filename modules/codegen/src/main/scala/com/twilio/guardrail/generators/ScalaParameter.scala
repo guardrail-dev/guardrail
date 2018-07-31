@@ -179,14 +179,16 @@ object ScalaParameter {
       } yield {
         val paramName = Term.Name(toCamelCase(name))
         val param     = param"${paramName}: ${declType}".copy(default = defaultValue)
-        new ScalaParameter(Option(parameter.getIn),
-                           param,
-                           paramName,
-                           RawParameterName(name),
-                           declType,
-                           required,
-                           ScalaFileHashAlgorithm(parameter),
-                           paramType == gs.fileType)
+        new ScalaParameter(
+          Option(parameter.getIn),
+          param,
+          paramName,
+          RawParameterName(name),
+          declType,
+          required,
+          ScalaFileHashAlgorithm(parameter),
+          paramType == gs.fileType
+        )
       }
     }
   }

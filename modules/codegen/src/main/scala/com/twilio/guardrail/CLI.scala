@@ -12,10 +12,11 @@ import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels }
 import com.twilio.guardrail.generators.GeneratorSettings
-
 import scala.io.AnsiColor
 
-object CLICommon {
+object CLI {
+  def main(args: Array[String]): Unit = run(args)(CoreTermInterp)
+
   def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
@@ -123,8 +124,4 @@ object CLICommon {
 
     System.err.println(text)
   }
-}
-
-object CLI {
-  def main(args: Array[String]): Unit = CLICommon.run(args)(CoreTermInterp)
 }

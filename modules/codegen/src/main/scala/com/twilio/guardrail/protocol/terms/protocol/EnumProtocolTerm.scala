@@ -1,8 +1,6 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.models.ModelImpl
-import com.twilio.guardrail.generators.GeneratorSettings
-
 import scala.meta._
 
 sealed trait EnumProtocolTerm[T]

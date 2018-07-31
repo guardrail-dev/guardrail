@@ -3,24 +3,18 @@ info:
   title: Parsing Error Sample
   version: 1.0.0
 paths:
-  /pet/{name}:
+  /pet:
     get:
-      parameters:
-        - $ref: '#/parameters/PetNamePathParam'
+      operationId: getPets
       responses:
         200:
           description: Return the details about the pet
           schema:
-            $ref: '#/definitions/Pet'
+            $ref: '#/definitions/AbstractPet'
 parameters:
-  PetNamePathParam:
-    name: name
-    description: Unique name of the pet
-    in: path
-    type: string
-    required: true
+
 definitions:
-  Pet:
+  AbstractPet:
     type: object
     discriminator: petType
     properties:
@@ -31,10 +25,11 @@ definitions:
     required:
     - name
     - petType
+
   Cat:
     description: A representation of a cat
     allOf:
-    - $ref: '#/definitions/Pet'
+    - $ref: '#/definitions/AbstractPet'
     - type: object
       properties:
         huntingSkill:
@@ -48,10 +43,11 @@ definitions:
           - aggressive
       required:
       - huntingSkill
+
   Dog:
     description: A representation of a dog
     allOf:
-    - $ref: '#/definitions/Pet'
+    - $ref: '#/definitions/AbstractPet'
     - type: object
       properties:
         packSize:

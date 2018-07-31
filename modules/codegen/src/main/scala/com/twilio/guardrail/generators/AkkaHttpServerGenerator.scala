@@ -28,80 +28,79 @@ object AkkaHttpServerGenerator {
   }
 
   object HttpHelper {
-    def apply(code: String): Option[(Int, String)] =
-      code match {
-        case "100" => Option((100, "Continue"))
-        case "101" => Option((101, "SwitchingProtocols"))
-        case "102" => Option((102, "Processing"))
+    val codeMappings: Map[Int, String] = Map(
+      100 -> "Continue",
+      101 -> "SwitchingProtocols",
+      102 -> "Processing",
+      200 -> "OK",
+      201 -> "Created",
+      202 -> "Accepted",
+      203 -> "NonAuthoritativeInformation",
+      204 -> "NoContent",
+      205 -> "ResetContent",
+      206 -> "PartialContent",
+      207 -> "MultiStatus",
+      208 -> "AlreadyReported",
+      226 -> "IMUsed",
+      300 -> "MultipleChoices",
+      301 -> "MovedPermanently",
+      302 -> "Found",
+      303 -> "SeeOther",
+      304 -> "NotModified",
+      305 -> "UseProxy",
+      307 -> "TemporaryRedirect",
+      308 -> "PermanentRedirect",
+      400 -> "BadRequest",
+      401 -> "Unauthorized",
+      402 -> "PaymentRequired",
+      403 -> "Forbidden",
+      404 -> "NotFound",
+      405 -> "MethodNotAllowed",
+      406 -> "NotAcceptable",
+      407 -> "ProxyAuthenticationRequired",
+      408 -> "RequestTimeout",
+      409 -> "Conflict",
+      410 -> "Gone",
+      411 -> "LengthRequired",
+      412 -> "PreconditionFailed",
+      413 -> "RequestEntityTooLarge",
+      414 -> "RequestUriTooLong",
+      415 -> "UnsupportedMediaType",
+      416 -> "RequestedRangeNotSatisfiable",
+      417 -> "ExpectationFailed",
+      418 -> "ImATeapot",
+      420 -> "EnhanceYourCalm",
+      422 -> "UnprocessableEntity",
+      423 -> "Locked",
+      424 -> "FailedDependency",
+      425 -> "UnorderedCollection",
+      426 -> "UpgradeRequired",
+      428 -> "PreconditionRequired",
+      429 -> "TooManyRequests",
+      431 -> "RequestHeaderFieldsTooLarge",
+      449 -> "RetryWith",
+      450 -> "BlockedByParentalControls",
+      451 -> "UnavailableForLegalReasons",
+      500 -> "InternalServerError",
+      501 -> "NotImplemented",
+      502 -> "BadGateway",
+      503 -> "ServiceUnavailable",
+      504 -> "GatewayTimeout",
+      505 -> "HTTPVersionNotSupported",
+      506 -> "VariantAlsoNegotiates",
+      507 -> "InsufficientStorage",
+      508 -> "LoopDetected",
+      509 -> "BandwidthLimitExceeded",
+      510 -> "NotExtended",
+      511 -> "NetworkAuthenticationRequired",
+      598 -> "NetworkReadTimeout",
+      599 -> "NetworkConnectTimeout"
+    )
 
-        case "200" => Option((200, "OK"))
-        case "201" => Option((201, "Created"))
-        case "202" => Option((202, "Accepted"))
-        case "203" => Option((203, "NonAuthoritativeInformation"))
-        case "204" => Option((204, "NoContent"))
-        case "205" => Option((205, "ResetContent"))
-        case "206" => Option((206, "PartialContent"))
-        case "207" => Option((207, "MultiStatus"))
-        case "208" => Option((208, "AlreadyReported"))
-        case "226" => Option((226, "IMUsed"))
-
-        case "300" => Option((300, "MultipleChoices"))
-        case "301" => Option((301, "MovedPermanently"))
-        case "302" => Option((302, "Found"))
-        case "303" => Option((303, "SeeOther"))
-        case "304" => Option((304, "NotModified"))
-        case "305" => Option((305, "UseProxy"))
-        case "307" => Option((307, "TemporaryRedirect"))
-        case "308" => Option((308, "PermanentRedirect"))
-
-        case "400" => Option((400, "BadRequest"))
-        case "401" => Option((401, "Unauthorized"))
-        case "402" => Option((402, "PaymentRequired"))
-        case "403" => Option((403, "Forbidden"))
-        case "404" => Option((404, "NotFound"))
-        case "405" => Option((405, "MethodNotAllowed"))
-        case "406" => Option((406, "NotAcceptable"))
-        case "407" => Option((407, "ProxyAuthenticationRequired"))
-        case "408" => Option((408, "RequestTimeout"))
-        case "409" => Option((409, "Conflict"))
-        case "410" => Option((410, "Gone"))
-        case "411" => Option((411, "LengthRequired"))
-        case "412" => Option((412, "PreconditionFailed"))
-        case "413" => Option((413, "RequestEntityTooLarge"))
-        case "414" => Option((414, "RequestUriTooLong"))
-        case "415" => Option((415, "UnsupportedMediaType"))
-        case "416" => Option((416, "RequestedRangeNotSatisfiable"))
-        case "417" => Option((417, "ExpectationFailed"))
-        case "418" => Option((418, "ImATeapot"))
-        case "420" => Option((420, "EnhanceYourCalm"))
-        case "422" => Option((422, "UnprocessableEntity"))
-        case "423" => Option((423, "Locked"))
-        case "424" => Option((424, "FailedDependency"))
-        case "425" => Option((425, "UnorderedCollection"))
-        case "426" => Option((426, "UpgradeRequired"))
-        case "428" => Option((428, "PreconditionRequired"))
-        case "429" => Option((429, "TooManyRequests"))
-        case "431" => Option((431, "RequestHeaderFieldsTooLarge"))
-        case "449" => Option((449, "RetryWith"))
-        case "450" => Option((450, "BlockedByParentalControls"))
-        case "451" => Option((451, "UnavailableForLegalReasons"))
-
-        case "500" => Option((500, "InternalServerError"))
-        case "501" => Option((501, "NotImplemented"))
-        case "502" => Option((502, "BadGateway"))
-        case "503" => Option((503, "ServiceUnavailable"))
-        case "504" => Option((504, "GatewayTimeout"))
-        case "505" => Option((505, "HTTPVersionNotSupported"))
-        case "506" => Option((506, "VariantAlsoNegotiates"))
-        case "507" => Option((507, "InsufficientStorage"))
-        case "508" => Option((508, "LoopDetected"))
-        case "509" => Option((509, "BandwidthLimitExceeded"))
-        case "510" => Option((510, "NotExtended"))
-        case "511" => Option((511, "NetworkAuthenticationRequired"))
-        case "598" => Option((598, "NetworkReadTimeout"))
-        case "599" => Option((599, "NetworkConnectTimeout"))
-        case _     => None
-      }
+    def apply(code: String): Option[(Int, String)] = {
+      val codeInt = code.toInt
+      codeMappings.get(codeInt).map(codeInt -> _)
+    }
   }
 
   object ServerTermInterp extends FunctionK[ServerTerm, Target] {
@@ -109,14 +108,15 @@ object AkkaHttpServerGenerator {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
+
     def apply[T](term: ServerTerm[T]): Target[T] = term match {
       case ExtractOperations(paths) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations($paths)")
           routes <- paths.traverse {
             case (pathStr, path) =>
               for {
-                _            <- Target.log.info("AkkaHttpServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
+                _            <- Target.log.info("AkkaHttpServerGenerator", "server", "extractOperations")(s"($pathStr, $path)")
                 operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
               } yield {
                 operationMap.asScala.toList.map {
@@ -129,7 +129,7 @@ object AkkaHttpServerGenerator {
 
       case GetClassName(operation) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getClassName(${operation})")
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getClassName($operation)")
 
           pkg = ScalaPackage(operation)
             .map(_.split('.').toVector)
@@ -152,10 +152,12 @@ object AkkaHttpServerGenerator {
             _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
             res <- if (tracing) {
               for {
-                operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                   .map(splitOperationParts)
-                                                   .map(_._2),
-                                                 "Missing operationId")
+                operationId <- Target.fromOption(
+                  Option(operation.getOperationId())
+                    .map(splitOperationParts)
+                    .map(_._2),
+                  "Missing operationId"
+                )
                 label <- Target.fromOption(
                   ScalaTracingLabel(operation)
                     .map(Lit.String(_))
@@ -169,10 +171,12 @@ object AkkaHttpServerGenerator {
 
       case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
-          operationId <- Target.fromOption(Option(operation.getOperationId())
-                                             .map(splitOperationParts)
-                                             .map(_._2),
-                                           "Missing operationId")
+          operationId <- Target.fromOption(
+            Option(operation.getOperationId)
+              .map(splitOperationParts)
+              .map(_._2),
+            "Missing operationId"
+          )
           responses <- Target
             .fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
           responseSuperType = Type.Name(s"${operationId}Response")
@@ -199,13 +203,17 @@ object AkkaHttpServerGenerator {
                   responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
                 } yield {
                   valueType.fold[(Defn, Defn, Case)](
-                    (q"case object $responseTerm                      extends $responseSuperType($statusCode)",
-                     q"def $statusCodeName: $responseSuperType = $responseTerm",
-                     p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)")
+                    (
+                      q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                      q"def $statusCodeName: $responseSuperType = $responseTerm",
+                      p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+                    )
                   ) { valueType =>
-                    (q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
-                     q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                     p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }")
+                    (
+                      q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
+                      q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
+                      p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                    )
                   }
                 })
             })
@@ -256,10 +264,12 @@ object AkkaHttpServerGenerator {
         // Generate the pair of the Handler method and the actual call to `complete(...)`
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-          operationId <- Target.fromOption(Option(operation.getOperationId())
-                                             .map(splitOperationParts)
-                                             .map(_._2),
-                                           "Missing operationId")
+          operationId <- Target.fromOption(
+            Option(operation.getOperationId())
+              .map(splitOperationParts)
+              .map(_._2),
+            "Missing operationId"
+          )
           parameters <- Option(operation.getParameters)
             .map(_.asScala.toList)
             .map(ScalaParameter.fromParameters(protocolElems))
@@ -335,19 +345,16 @@ object AkkaHttpServerGenerator {
             _.map(
               scalaParam =>
                 scalaParam.param.copy(
-                  decltpe =
-                    (
-                      if (scalaParam.isFile) {
-                        val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
-                        if (scalaParam.required) {
-                          Some(t"(..${fileParams})")
-                        } else {
-                          Some(t"Option[(..${fileParams})]")
-                        }
-                      } else {
-                        scalaParam.param.decltpe
-                      }
-                    )
+                  decltpe = if (scalaParam.isFile) {
+                    val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
+                    if (scalaParam.required) {
+                      Some(t"(..${fileParams})")
+                    } else {
+                      Some(t"Option[(..${fileParams})]")
+                    }
+                  } else {
+                    scalaParam.param.decltpe
+                  }
               )
             )
           )
@@ -567,8 +574,10 @@ object AkkaHttpServerGenerator {
                         val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
                       List(
                         Case(
-                          Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
-                                      List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
+                          Pat.Extract(
+                            Term.Select(partsTerm, containerName.toTerm),
+                            List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")
+                          ),
                           None,
                           q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
                         )

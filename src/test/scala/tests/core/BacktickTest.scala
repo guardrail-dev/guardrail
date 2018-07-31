@@ -127,7 +127,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Ensure dtos are generated with escapes") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)

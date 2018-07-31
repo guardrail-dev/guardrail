@@ -97,9 +97,11 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
                 Continue((sofar.copy(context = sofar.context.copy(tracing = true)) :: already, xs))
               case (sofar :: already, "--outputPath" :: value :: xs) =>
                 Continue(
-                  (sofar
-                     .copy(outputPath = Option(expandTilde(value))) :: already,
-                   xs)
+                  (
+                    sofar
+                      .copy(outputPath = Option(expandTilde(value))) :: already,
+                    xs
+                  )
                 )
               case (sofar :: already, "--packageName" :: value :: xs) =>
                 Continue((sofar.copy(packageName = Option(value.trim.split('.').to[List])) :: already, xs))

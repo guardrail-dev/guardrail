@@ -31,6 +31,7 @@ fullRunTask(
   "com.twilio.guardrail.CLI",
   """
   --defaults --import akka.NotUsed --import support.PositiveLong
+  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName tests.polymorphism
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers
@@ -75,9 +76,6 @@ val testDependencies = Seq(
 )
 
 val codegenSettings = Seq(
-  resolvers ++= Seq(
-    Resolver.bintrayRepo("scalameta", "maven")
-  ),
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta"     % "3.7.4",
     "io.swagger"    % "swagger-parser" % "1.0.34",

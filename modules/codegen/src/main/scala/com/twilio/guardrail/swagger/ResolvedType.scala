@@ -78,7 +78,7 @@ object ResolvedType {
           .fromOption(protocolElems.find(_.name == comp.value), s"Unable to resolve ${comp.value}")
           .map {
             case RandomType(_, tpe) => Resolved(tpe, None, None)
-            case ClassDefinition(_, tpe, _, _) =>
+            case ClassDefinition(_, tpe, _, _, _) =>
               Resolved(tpe, None, None)
             case EnumDefinition(_, tpe, _, _, _) =>
               Resolved(tpe, None, None)
@@ -90,7 +90,7 @@ object ResolvedType {
           .fromOption(protocolElems.find(_.name == name), s"Unable to resolve $name")
           .map {
             case RandomType(_, tpe) => Resolved(tpe, None, None)
-            case ClassDefinition(_, tpe, _, _) =>
+            case ClassDefinition(_, tpe, _, _, _) =>
               Resolved(tpe, None, None)
             case EnumDefinition(_, tpe, _, _, _) =>
               Resolved(tpe, None, None)
@@ -101,7 +101,7 @@ object ResolvedType {
           .map {
             case RandomType(name, tpe) =>
               Resolved(t"IndexedSeq[$tpe]", None, None)
-            case ClassDefinition(name, tpe, cls, companion) =>
+            case ClassDefinition(name, tpe, cls, companion, _) =>
               Resolved(t"IndexedSeq[$tpe]", None, None)
             case EnumDefinition(name, tpe, elems, cls, companion) =>
               Resolved(t"IndexedSeq[$tpe]", None, None)
@@ -112,7 +112,7 @@ object ResolvedType {
           .map {
             case RandomType(name, tpe) =>
               Resolved(t"Map[String, $tpe]", None, None)
-            case ClassDefinition(_, tpe, _, _) =>
+            case ClassDefinition(_, tpe, _, _, _) =>
               Resolved(t"Map[String, $tpe]", None, None)
             case EnumDefinition(_, tpe, _, _, _) =>
               Resolved(t"Map[String, $tpe]", None, None)

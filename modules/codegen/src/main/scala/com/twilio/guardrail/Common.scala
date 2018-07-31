@@ -12,20 +12,28 @@ import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerm
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.generators.GeneratorSettings
 import java.nio.file.{ Path, Paths }
+
+import com.twilio.guardrail.protocol.terms.protocol.PolyProtocolTerms
+
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
-  def writePackage(kind: CodegenTarget,
-                   context: Context,
-                   swagger: Swagger,
-                   outputPath: Path,
-                   pkgName: List[String],
-                   dtoPackage: List[String],
-                   customImports: List[Import])(implicit F: FrameworkTerms[CodegenApplication],
-                                                Sc: ScalaTerms[CodegenApplication],
-                                                Sw: SwaggerTerms[CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
+  def writePackage(
+      kind: CodegenTarget,
+      context: Context,
+      swagger: Swagger,
+      outputPath: Path,
+      pkgName: List[String],
+      dtoPackage: List[String],
+      customImports: List[Import]
+  )(
+      implicit F: FrameworkTerms[CodegenApplication],
+      Sc: ScalaTerms[CodegenApplication],
+      Pol: PolyProtocolTerms[CodegenApplication],
+      Sw: SwaggerTerms[CodegenApplication]
+  ): Free[CodegenApplication, List[WriteTree]] = {
     import F._
     import Sc._
     import Sw._
@@ -53,38 +61,58 @@ object Common {
       imports                                                                                          = customImports ++ protocolImports ++ List(implicitsImport)
 
       protoOut = protocolElems
-        .map({
+        .map {
           case EnumDefinition(_, _, _, cls, obj) =>
-            (List(
-               WriteTree(
-                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                 source"""
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                  source"""
               package ${buildPkgTerm(definitions)}
                 ..${imports}
                 $cls
                 $obj
               """
-               )
-             ),
-             List.empty[Stat])
+                )
+              ),
+              List.empty[Stat]
+            )
 
-          case ClassDefinition(_, _, cls, obj) =>
-            (List(
-               WriteTree(
-                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                 source"""
+          case ClassDefinition(_, _, cls, obj, _) =>
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                  source"""
               package ${buildPkgTerm(dtoComponents)}
                 ..${imports}
                 $cls
                 $obj
               """
-               )
-             ),
-             List.empty[Stat])
+                )
+              ),
+              List.empty[Stat]
+            )
+
+          //todo add info about the children
+          case ADT(name, tpe, trt, children) =>
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"${name}.scala"),
+                  source"""
+              package ${buildPkgTerm(dtoComponents)}
+                ..$imports
+                $trt
+              """
+                )
+              ),
+              List.empty[Stat]
+            )
 
           case RandomType(_, _) =>
             (List.empty, List.empty)
-        })
+        }
         .foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
       (protocolDefinitions, extraTypes) = protoOut
 

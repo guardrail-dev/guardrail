@@ -28,8 +28,10 @@ class SwaggerEscapeTreeSpec extends FunSuite with Matchers {
   List[(Tree, Tree)](
     (Init(Type.Name("dashy-enum"), Name("what"), List()), Init(Type.Name("`dashy-enum`"), Name("what"), List())),
     (Term.Name("dashy-class"), Term.Name("`dashy-class`")),
-    (Term.Param(Nil, Term.Name("dashy-param"), Some(Type.Apply(Type.Name("Option"), List(Type.Name("Long")))), Some(Term.Name("None"))),
-     Term.Param(Nil, Term.Name("`dashy-param`"), Some(Type.Apply(Type.Name("Option"), List(Type.Name("Long")))), Some(Term.Name("None")))),
+    (
+      Term.Param(Nil, Term.Name("dashy-param"), Some(Type.Apply(Type.Name("Option"), List(Type.Name("Long")))), Some(Term.Name("None"))),
+      Term.Param(Nil, Term.Name("`dashy-param`"), Some(Type.Apply(Type.Name("Option"), List(Type.Name("Long")))), Some(Term.Name("None")))
+    ),
     (Type.Name("dashy-class"), Type.Name("`dashy-class`"))
   ).foreach {
     case (x, y) =>

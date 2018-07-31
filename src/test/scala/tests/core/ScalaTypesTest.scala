@@ -27,7 +27,7 @@ class ScalaTypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate no definitions") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: Nil, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
