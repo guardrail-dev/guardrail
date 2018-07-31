@@ -77,7 +77,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
-    class ${Type.Name("`Dashy-packageClient`")}(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
+    class `Dashy-packageClient`(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
       val basePath: String = ""
       private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
         EitherT(resp.flatMap(resp => if (resp.status.isSuccess) {
@@ -89,17 +89,15 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
             Left(Left(e))
         }))
       }
-      def ${Term.Name("`dashy-op-id`")}(${Term.Name("dashyParameter")}: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type
-      .Name("`dashy-class`")}] = {
+      def `dashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+        wrap[`dashy-class`](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
         })
       }
-      def ${Term.Name("`postDashy-op-id`")}(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], ${Type
-      .Name("`dashy-class`")}] = {
+      def `postDashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[${Type.Name("`dashy-class`")}](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
+        wrap[`dashy-class`](Marshal(HttpEntity.Empty).to[RequestEntity].flatMap { entity =>
           httpClient(HttpRequest(method = HttpMethods.POST, uri = host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), entity = entity, headers = allHeaders))
         })
       }
@@ -133,17 +131,15 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
-    case class ${Type.Name("`dashy-class`")}(${Term.Name("`dashy-param`")}: Option[Long] = None)
+    case class `dashy-class`(`dashy-param`: Option[Long] = None)
     """
     val companion = q"""
-    object ${Term.Name("`dashy-class`")} {
-      implicit val ${Pat.Var(Term.Name("`encodedashy-class`"))} = {
+    object `dashy-class` {
+      implicit val `encodedashy-class` = {
         val readOnlyKeys = Set[String]()
-        Encoder.forProduct1("dashy-param")((o: ${Type.Name("`dashy-class`")}) => o.${Term
-      .Name("`dashy-param`")}).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+        Encoder.forProduct1("dashy-param")((o: `dashy-class`) => o.`dashy-param`).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
       }
-      implicit val ${Pat.Var(Term.Name("`decodedashy-class`"))} = Decoder.forProduct1("dashy-param")(${Term
-      .Name("`dashy-class`")}.apply _)
+      implicit val `decodedashy-class` = Decoder.forProduct1("dashy-param")(`dashy-class`.apply _)
     }
     """
 
@@ -170,29 +166,26 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""
-    sealed abstract class ${Type.Name("`dashy-enum`")}(val value: String) {
+    sealed abstract class `dashy-enum`(val value: String) {
       override def toString: String = value.toString
     }
     """
     val companion = q"""
-    object ${Term.Name("`dashy-enum`")} {
+    object `dashy-enum` {
       object members {
-        case object DashyValueA extends ${Type.Name("`dashy-enum`")}("dashy-value-a")
-        case object DashyValueB extends ${Type.Name("`dashy-enum`")}("dashy-value-b")
-        case object DashyValueC extends ${Type.Name("`dashy-enum`")}("dashy-value.c")
+        case object DashyValueA extends `dashy-enum`("dashy-value-a")
+        case object DashyValueB extends `dashy-enum`("dashy-value-b")
+        case object DashyValueC extends `dashy-enum`("dashy-value.c")
       }
-      val DashyValueA: ${Type.Name("`dashy-enum`")} = members.DashyValueA
-      val DashyValueB: ${Type.Name("`dashy-enum`")} = members.DashyValueB
-      val DashyValueC: ${Type.Name("`dashy-enum`")} = members.DashyValueC
+      val DashyValueA: `dashy-enum` = members.DashyValueA
+      val DashyValueB: `dashy-enum` = members.DashyValueB
+      val DashyValueC: `dashy-enum` = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
-      def parse(value: String): Option[${Type.Name("`dashy-enum`")}] = values.find(_.value == value)
-      implicit val ${Pat.Var(Term.Name("`encodedashy-enum`"))}: Encoder[${Type
-      .Name("`dashy-enum`")}] = Encoder[String].contramap(_.value)
-      implicit val ${Pat.Var(Term.Name("`decodedashy-enum`"))}: Decoder[${Type
-      .Name("`dashy-enum`")}] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
-      implicit val ${Pat.Var(Term.Name("`addPathdashy-enum`"))}: AddPath[${Type
-      .Name("`dashy-enum`")}] = AddPath.build(_.value)
-      implicit val ${Pat.Var(Term.Name("`showdashy-enum`"))}: Show[${Type.Name("`dashy-enum`")}] = Show.build(_.value)
+      def parse(value: String): Option[`dashy-enum`] = values.find(_.value == value)
+      implicit val `encodedashy-enum`: Encoder[`dashy-enum`] = Encoder[String].contramap(_.value)
+      implicit val `decodedashy-enum`: Decoder[`dashy-enum`] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
+      implicit val `addPathdashy-enum`: AddPath[`dashy-enum`] = AddPath.build(_.value)
+      implicit val `showdashy-enum`: Show[`dashy-enum`] = Show.build(_.value)
     }
     """
 
