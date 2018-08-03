@@ -133,7 +133,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val definition = q"""
     case class `dashy-class`(`dashy-param`: Option[Long] = None)
     """
-    val companion = q"""
+    val companion  = q"""
     object `dashy-class` {
       implicit val `encodedashy-class` = {
         val readOnlyKeys = Set[String]()
@@ -170,7 +170,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
       override def toString: String = value.toString
     }
     """
-    val companion = q"""
+    val companion  = q"""
     object `dashy-enum` {
       object members {
         case object DashyValueA extends `dashy-enum`("dashy-value-a")
