@@ -119,7 +119,9 @@ lazy val codegen = (project in file("modules/codegen"))
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
       else "releases"
-    }
+    },
+    description := "Principled code generation for Scala services from OpenAPI specifications",
+    homepage := Some(url("https://github.com/twilio/guardrail"))
   )
 
 lazy val sample = (project in file("modules/sample"))
