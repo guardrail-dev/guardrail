@@ -121,7 +121,21 @@ lazy val codegen = (project in file("modules/codegen"))
       else "releases"
     },
     description := "Principled code generation for Scala services from OpenAPI specifications",
-    homepage := Some(url("https://github.com/twilio/guardrail"))
+    homepage := Some(url("https://github.com/twilio/guardrail")),
+    scmInfo := Some(
+      ScmInfo(
+        url("https://github.com/twilio/guardrail"),
+        "scm:git@github.com:twilio/guardrail.git"
+      )
+    ),
+    developers := List(
+      Developer(
+        id = "blast_hardcheese",
+        name = "Devon Stewart",
+        email = "blast@hardchee.se",
+        url = url("http://hardchee.se/")
+      )
+    )
   )
 
 lazy val sample = (project in file("modules/sample"))
