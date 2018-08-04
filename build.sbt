@@ -70,6 +70,10 @@ addCommandAlias(
   "publishBintray",
   "; set publishTo in codegen := (publishTo in bintray in codegen).value; codegen/publishSigned"
 )
+addCommandAlias(
+  "publishSonatype",
+  "; sonatypeOpen \"guardrail release\"; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
+)
 
 publishMavenStyle := true
 
