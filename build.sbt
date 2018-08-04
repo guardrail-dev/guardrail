@@ -66,6 +66,11 @@ resetSample := { "git clean -fdx modules/sample/src modules/sample/target" ! }
 addCommandAlias("example", "; resetSample ; runExample ; sample/test")
 addCommandAlias("testSuite", "; test ; resetSample; runExample ; sample/test")
 
+addCommandAlias(
+  "publishBintray",
+  "; set publishTo in codegen := (publishTo in bintray in codegen).value; codegen/publishSigned"
+)
+
 publishMavenStyle := true
 
 val testDependencies = Seq(
