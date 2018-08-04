@@ -120,6 +120,11 @@ lazy val codegen = (project in file("modules/codegen"))
       if (isSnapshot.value) "snapshots"
       else "releases"
     },
+    bintrayPackageLabels := Seq(
+      "codegen",
+      "openapi",
+      "swagger"
+    ),
     description := "Principled code generation for Scala services from OpenAPI specifications",
     homepage := Some(url("https://github.com/twilio/guardrail")),
     scmInfo := Some(
