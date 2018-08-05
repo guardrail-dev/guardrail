@@ -72,7 +72,7 @@ addCommandAlias(
 )
 addCommandAlias(
   "publishSonatype",
-  "; sonatypeOpen \"guardrail release\"; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
+  "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
 )
 
 publishMavenStyle := true
