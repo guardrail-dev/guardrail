@@ -1,3 +1,11 @@
+v0.37.1
+=======
+
+- #88 Adds support for other encoding charsets for JSON payloads
+- #88 Using a plain unmarshaller for text/plain
+- #88 Removing jsonFSU from clients in favor of the ones in AkkaImplicits
+- #88 Returning `NoContextException` from failed unmarshallers instead of the Circe exceptions so we can try the next available unmarshaller
+
 v0.37.1-M1
 ==========
 
