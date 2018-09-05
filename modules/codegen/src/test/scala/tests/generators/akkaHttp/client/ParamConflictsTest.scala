@@ -51,28 +51,34 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
-    class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
-      val basePath: String = ""
-      private[this] def wrap[T: FromEntityUnmarshaller](resp: Future[HttpResponse]): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-        EitherT(resp.flatMap(resp => if (resp.status.isSuccess) {
-          Unmarshal(resp.entity).to[T].map(Right.apply _)
-        } else {
-          FastFuture.successful(Left(Right(resp)))
-        }).recover({
-          case e: Throwable =>
-            Left(Left(e))
-        }))
+      class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
+        val basePath: String = ""
+        private[this] def makeRequest[T: ToEntityMarshaller](method: HttpMethod, uri: Uri, headers: scala.collection.immutable.Seq[HttpHeader], entity: T, protocol: HttpProtocol): EitherT[Future, Either[Throwable, HttpResponse], HttpRequest] = {
+          EitherT(Marshal(entity).to[RequestEntity].map[Either[Either[Throwable, HttpResponse], HttpRequest]] {
+            entity => Right(HttpRequest(method = method, uri = uri, headers = headers, entity = entity, protocol = protocol))
+          }.recover({
+            case t =>
+              Left(Left(t))
+          }))
+        }
+        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
+          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
+            Unmarshal(resp.entity).to[T].map(Right.apply _)
+          } else {
+            FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          }))
+        }
+        def getFoo(conflicting_name: String, ConflictingName: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, FormData(List(("conflicting_name", Some(Formatter.show(conflicting_name))), ("ConflictingName", Some(Formatter.show(ConflictingName)))).collect({
+            case (n, Some(v)) =>
+              (n, v)
+          }): _*), HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+        }
       }
-      def getFoo(conflicting_name: String, ConflictingName: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        wrap[IgnoredEntity](Marshal(FormData(List(("conflicting_name", Some(Formatter.show(conflicting_name))), ("ConflictingName", Some(Formatter.show(ConflictingName)))).collect({
-          case (n, Some(v)) =>
-            (n, v)
-        }): _*)).to[RequestEntity].flatMap {
-          entity => httpClient(HttpRequest(method = HttpMethods.GET, uri = host + basePath + "/foo", entity = entity, headers = allHeaders))
-        })
-      }
-    }
     """
 
     cls.structure should equal(client.structure)

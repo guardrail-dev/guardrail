@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  title: 'Content-Type: text/plain spec'
+  title: 'x-www-form-urlencoded tests'
   version: 1.0.0
 host: localhost:1234
 paths:
@@ -9,17 +9,15 @@ paths:
       operationId: doFoo
       x-scala-package: foo
       consumes:
-        - text/plain
-      produces:
-        - text/plain
+        - application/x-www-form-urlencoded
       parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
+        - name: Status
+          in: formData
           type: string
+          x-scala-type: Status
+          required: true
       responses:
-        201:
+        200:
           description: "Created"
         406:
           description: "Invalid"
@@ -28,16 +26,20 @@ paths:
       operationId: doBar
       x-scala-package: foo
       consumes:
-        - text/plain
-      produces:
-        - text/plain
+        - application/x-www-form-urlencoded
       parameters:
-      - in: body
-        name: body
-        schema:
+        - name: Status
+          in: formData
           type: string
+          x-scala-type: Status
       responses:
-        201:
+        200:
           description: "Created"
         406:
           description: "Invalid"
+definitions:
+  Status:
+    type: string
+    enum:
+      - OK
+      - NotOK

@@ -394,12 +394,6 @@ object AkkaHttpServerGenerator {
         } yield q"""
           object ${Term.Name(resourceName)} {
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
-            implicit def jsonFSU[T: io.circe.Decoder]: Unmarshaller[String, T] = Unmarshaller[String, T]({
-              implicit ev => string =>
-               io.circe.Json.fromString(string).as[T]
-                .left.flatMap(err => io.circe.jawn.parse(string).flatMap(_.as[T]))
-                .fold(scala.concurrent.Future.failed _, scala.concurrent.Future.successful _)
-            })
 
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
@@ -413,9 +407,12 @@ object AkkaHttpServerGenerator {
       case GetExtraImports(tracing) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraImports(${tracing})")
-        } yield
-          if (tracing) List(q"import akka.http.scaladsl.server.Directive1")
-          else List.empty
+        } yield {
+          List(
+            if (tracing) Option(q"import akka.http.scaladsl.server.Directive1") else None,
+            Option(q"import scala.language.higherKinds")
+          ).flatten
+        }
     }
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {

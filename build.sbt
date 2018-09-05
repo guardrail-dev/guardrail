@@ -36,6 +36,7 @@ fullRunTask(
   --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers
   --client --specPath modules/sample/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos
   --client --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain
+  --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain
   --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server
   --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers --tracing
   --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients --tracing
@@ -57,14 +58,14 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; codegen/test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
 resetSample := { "git clean -fdx modules/sample/src modules/sample/target" ! }
 
 addCommandAlias("example", "; resetSample ; runExample ; sample/test")
-addCommandAlias("testSuite", "; test ; resetSample; runExample ; sample/test")
+addCommandAlias("testSuite", "; codegen/test ; resetSample; runExample ; sample/test")
 
 addCommandAlias(
   "publishBintray",
@@ -184,7 +185,8 @@ lazy val sample = (project in file("modules/sample"))
       "org.typelevel"     %% "cats-core"           % catsVersion,
       "org.typelevel"     %% "cats-effect"         % catsEffectVersion
     ),
-    skip in publish := true
+    skip in publish := true,
+    scalafmtOnCompile := false
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
