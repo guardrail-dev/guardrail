@@ -94,13 +94,14 @@ object CirceProtocolGenerator {
 
   object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
-      case ExtractAdtChildProperties(parent, child) =>
+      case ExtractChildProperties(parent, child, discriminator) =>
         val allProps = Semigroup[Option[List[(String, Property)]]].combine(
           Option(parent.getProperties).map(_.asScala.toList),
-          Option(child.getProperties).map(_.asScala.toList)
+          Option(child.getChild.getProperties).map(_.asScala.toList)
         )
+        val omitDiscriminator = allProps.map(_.filter { case (p, _) => p != discriminator })
 
-        Target.pure(Either.fromOption(allProps, "Model has no properties"))
+        Target.pure(Either.fromOption(omitDiscriminator, "Model has no properties"))
 
       case ExtractProperties(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
@@ -168,8 +169,13 @@ object CirceProtocolGenerator {
           } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
         }
 
-      case RenderDTOClass(clsName, terms) =>
-        Target.pure(q"""case class ${Type.Name(clsName)}(..${terms})""")
+      case RenderDTOClass(clsName, terms, parentNameOpt) =>
+        val code = parentNameOpt
+          .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
+            parentName => q"""case class ${Type.Name(clsName)}(..${terms}) extends AbstractPet"""
+          )
+
+        Target.pure(code)
 
       case EncodeModel(clsName, needCamelSnakeConversion, params) =>
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
@@ -298,7 +304,8 @@ object CirceProtocolGenerator {
           case SwaggerUtil.DeferredArray(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[$tpe]"), s"Unresolved reference $tpeName")
           case SwaggerUtil.DeferredMap(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, $tpe]]"), s"Unresolved reference $tpeName")
+            Target
+              .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, $tpe]]"), s"Unresolved reference $tpeName")
         }
     }
   }
@@ -306,12 +313,13 @@ object CirceProtocolGenerator {
   //fixme checkpoint
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
-      case RenderSealedTrait(className, terms) =>
-        val testTerms = terms.map { t =>
-          q"""def ${Term.Name(t.name.value)} : ${t.decltpe.get}"""
-        }
-
+      case RenderSealedTrait(className, terms, discriminator: String) =>
         //fixme: Discriminator shouldn't be rendered
+        val testTerms = terms
+          .filter(_.name.value != discriminator)
+          .map { t =>
+            q"""def ${Term.Name(t.name.value)} : ${t.decltpe.getOrElse(Type.Name("Any"))}"""
+          }
 
         Target.pure {
           q"""sealed trait ${Type.Name(className)} {..${testTerms}}"""

@@ -96,14 +96,18 @@ object Common {
 
           //todo add info about the children
           case ADT(name, tpe, trt, children) =>
+            val childDefs = children.map(_.cls)
+
             (
               List(
                 WriteTree(
                   resolveFile(outputPath)(dtoComponents).resolve(s"${name}.scala"),
                   source"""
-              package ${buildPkgTerm(dtoComponents)}
-                ..$imports
-                $trt
+                    package ${buildPkgTerm(dtoComponents)}
+
+                    ..$imports
+                    $trt
+                    ..$childDefs
               """
                 )
               ),
@@ -226,7 +230,9 @@ object Common {
     )
   }
 
-  def runM[F[_]](args: Array[String])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
+  def runM[F[_]](
+      args: Array[String]
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
 
     for {

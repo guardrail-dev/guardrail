@@ -42,7 +42,9 @@ object SwaggerGenerator {
             .map(_.split('.').toVector)
             .orElse({
               Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
+                println(
+                  s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension"
+                )
                 tags.asScala
               }
             })

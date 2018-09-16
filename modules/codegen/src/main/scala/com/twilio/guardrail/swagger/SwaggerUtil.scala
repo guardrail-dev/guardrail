@@ -57,7 +57,9 @@ object SwaggerUtil {
       }
     }
 
-    def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] =
+    def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(
+        f: Type => Type
+    ): Option[(String, Resolved)] =
       resolvedTypes
         .find(_._1 == tpeName)
         .map(_._2.tpe)
@@ -241,7 +243,9 @@ object SwaggerUtil {
   def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings): Type = {
     def log(fmt: Option[String], t: Type): Type = {
       fmt.foreach { fmt =>
-        println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
+        println(
+          s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types"
+        )
       }
 
       t

@@ -9,11 +9,11 @@ import scala.meta.{ Defn, Term }
   */
 sealed trait PolyProtocolTerm[T]
 
-case class RenderSealedTrait(className: String, terms: List[Term.Param]) extends PolyProtocolTerm[Defn.Trait]
+case class RenderSealedTrait(className: String, terms: List[Term.Param], discriminator: String) extends PolyProtocolTerm[Defn.Trait]
 
 class PolyProtocolTerms[F[_]](implicit I: InjectK[PolyProtocolTerm, F]) {
-  def renderSealedTrait(className: String, terms: List[Term.Param]): Free[F, Defn.Trait] =
-    Free.inject[PolyProtocolTerm, F](RenderSealedTrait(className, terms))
+  def renderSealedTrait(className: String, terms: List[Term.Param], discriminator: String): Free[F, Defn.Trait] =
+    Free.inject[PolyProtocolTerm, F](RenderSealedTrait(className, terms, discriminator))
 }
 
 object PolyProtocolTerms {

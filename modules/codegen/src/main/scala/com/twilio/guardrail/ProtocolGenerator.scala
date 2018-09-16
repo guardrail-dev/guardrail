@@ -26,7 +26,13 @@ case class ProtocolDefinitions(
     packageObjectContents: List[Stat]
 )
 
-case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
+case class ProtocolParameter(
+    term: Term.Param,
+    name: String,
+    dep: Option[Term.Name],
+    readOnlyKey: Option[String],
+    emptyToNullKey: Option[String]
+)
 
 object ProtocolGenerator {
 
@@ -96,7 +102,7 @@ object ProtocolGenerator {
     // has to be a composite model!!!
     def meth(parent: ModelImpl, model: ComposedModel, className: String): Free[F, Either[String, ClassDefinition]] =
       for {
-        props <- extractChildProperties(parent, model)
+        props <- extractChildProperties(parent, model, parent.getDiscriminator)
         res   <- props.traverse(validProg(className))
       } yield res
 
@@ -107,7 +113,7 @@ object ProtocolGenerator {
       for {
         params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
         terms = params.map(_.term)
-        defn <- renderDTOClass(clsName, terms)
+        defn <- renderDTOClass(clsName, terms, Some(hierarchy.parentName))
         deps = params.flatMap(_.dep)
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
         decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
@@ -125,7 +131,7 @@ object ProtocolGenerator {
       }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
       terms = params.map(_.term)
-      definition <- renderSealedTrait(hierarchy.parentName, terms)
+      definition <- renderSealedTrait(hierarchy.parentName, terms, hierarchy.parentModel.getDiscriminator)
     } yield {
       ADT(hierarchy.parentName, Type.Name(hierarchy.parentName), definition, childDefs.map(_.right.get))
     }
@@ -166,7 +172,7 @@ object ProtocolGenerator {
       for {
         params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
         terms = params.map(_.term)
-        defn <- renderDTOClass(clsName, terms)
+        defn <- renderDTOClass(clsName, terms, None)
         deps = params.flatMap(_.dep)
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
         decoder <- decodeModel(clsName, needCamelSnakeConversion, params)

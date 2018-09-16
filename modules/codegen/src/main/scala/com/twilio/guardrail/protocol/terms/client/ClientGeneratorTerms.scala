@@ -17,7 +17,12 @@ class ClientTerms[F[_]](implicit I: InjectK[ClientTerm, F]) {
     Free.inject[ClientTerm, F](GetImports(tracing))
   def getExtraImports(tracing: Boolean): Free[F, List[Import]] =
     Free.inject[ClientTerm, F](GetExtraImports(tracing))
-  def clientClsArgs(tracingName: Option[String], schemes: List[String], host: Option[String], tracing: Boolean): Free[F, List[List[Term.Param]]] =
+  def clientClsArgs(
+      tracingName: Option[String],
+      schemes: List[String],
+      host: Option[String],
+      tracing: Boolean
+  ): Free[F, List[List[Term.Param]]] =
     Free.inject[ClientTerm, F](ClientClsArgs(tracingName, schemes, host, tracing))
   def buildCompanion(
       clientName: String,

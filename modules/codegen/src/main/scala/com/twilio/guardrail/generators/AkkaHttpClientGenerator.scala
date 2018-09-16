@@ -290,7 +290,17 @@ object AkkaHttpClientGenerator {
               List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
             else List.empty
             extraImplicits = List.empty
-            defn = build(methodName, httpMethod, urlWithParams, formDataParams, textPlain, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(
+            defn = build(
+              methodName,
+              httpMethod,
+              urlWithParams,
+              formDataParams,
+              textPlain,
+              formDataNeedsMultipart,
+              headerParams,
+              responseTypeRef,
+              tracing
+            )(
               tracingArgsPre,
               tracingArgsPost,
               pathArgs,

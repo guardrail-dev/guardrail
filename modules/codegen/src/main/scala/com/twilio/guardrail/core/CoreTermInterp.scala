@@ -76,7 +76,9 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
           def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.error(x)
 
           for {
-            _ <- debug("core", "parseArgs")(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
+            _ <- debug("core", "parseArgs")(
+              s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}"
+            )
             step <- pair match {
               case (already, Nil) =>
                 debug("core", "parseArgs")("Finished") >> Return(already)

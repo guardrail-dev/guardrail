@@ -18,7 +18,9 @@ trait SwaggerSpecRunner {
   ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients, Servers) =
     runSwagger(new SwaggerParser().parse(spec)) _
 
-  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
+  def runSwagger(
+      swagger: Swagger
+  )(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
       implicit F: FrameworkTerms[CodegenApplication],
       Sc: ScalaTerms[CodegenApplication],
       Sw: SwaggerTerms[CodegenApplication]

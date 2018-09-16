@@ -14,8 +14,12 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
 
   // For ADTs
-  def extractChildProperties(parent: ModelImpl, child: ComposedModel): Free[F, Either[String, List[(String, Property)]]] =
-    Free.inject[ModelProtocolTerm, F](ExtractAdtChildProperties(parent, child))
+  def extractChildProperties(
+      parent: ModelImpl,
+      child: ComposedModel,
+      discriminator: String
+  ): Free[F, Either[String, List[(String, Property)]]] =
+    Free.inject[ModelProtocolTerm, F](ExtractChildProperties(parent, child, discriminator))
 
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(
       name: String,
@@ -23,8 +27,8 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
   ): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
 
-  def renderDTOClass(clsName: String, terms: List[Term.Param]): Free[F, Defn.Class] =
-    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms))
+  def renderDTOClass(clsName: String, terms: List[Term.Param], parentName: Option[String]): Free[F, Defn.Class] =
+    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms, parentName))
 
   def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =
     Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params))

@@ -162,7 +162,9 @@ object ScalaParameter {
                     case Lit.String(name) =>
                       elems
                         .find(_._1 == name)
-                        .fold(Target.error[Term](s"Enumeration ${tpeName} is not defined for default value ${name}"))(value => Target.pure(value._3))
+                        .fold(Target.error[Term](s"Enumeration ${tpeName} is not defined for default value ${name}"))(
+                          value => Target.pure(value._3)
+                        )
                     case _ =>
                       Target.error[Term](s"Enumeration ${tpeName} somehow has a default value that isn't a string")
                   }
