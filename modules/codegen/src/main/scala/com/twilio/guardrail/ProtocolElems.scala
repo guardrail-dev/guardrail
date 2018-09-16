@@ -18,7 +18,8 @@ case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, compan
 
 // Added by me
 //fixme add more fields, should have list of classes
-case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, children: List[ClassDefinition]) extends StrictProtocolElems
+case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, children: List[ClassDefinition], companion: Defn.Object)
+    extends StrictProtocolElems
 
 case class EnumDefinition(
     name: String,

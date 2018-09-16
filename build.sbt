@@ -32,6 +32,7 @@ fullRunTask(
   """
   --defaults --import akka.NotUsed --import support.PositiveLong
   --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName tests.polymorphism
+  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName tests.polymorphism
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers
@@ -141,19 +142,20 @@ lazy val sample = (project in file("modules/sample"))
       |import scala.meta._
       |""".stripMargin,
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http"           % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-testkit"   % akkaVersion,
-      "io.circe"          %% "circe-core"          % circeVersion,
-      "io.circe"          %% "circe-generic"       % circeVersion,
-      "io.circe"          %% "circe-java8"         % circeVersion,
-      "io.circe"          %% "circe-parser"        % circeVersion,
-      "org.http4s"        %% "http4s-blaze-client" % http4sVersion,
-      "org.http4s"        %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s"        %% "http4s-circe"        % http4sVersion,
-      "org.http4s"        %% "http4s-dsl"          % http4sVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % catsVersion,
-      "org.typelevel"     %% "cats-effect"         % catsEffectVersion
+      "com.typesafe.akka" %% "akka-http"            % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-testkit"    % akkaVersion,
+      "io.circe"          %% "circe-core"           % circeVersion,
+      "io.circe"          %% "circe-generic"        % circeVersion,
+      "io.circe"          %% "circe-generic-extras" % circeVersion,
+      "io.circe"          %% "circe-java8"          % circeVersion,
+      "io.circe"          %% "circe-parser"         % circeVersion,
+      "org.http4s"        %% "http4s-blaze-client"  % http4sVersion,
+      "org.http4s"        %% "http4s-blaze-server"  % http4sVersion,
+      "org.http4s"        %% "http4s-circe"         % http4sVersion,
+      "org.http4s"        %% "http4s-dsl"           % http4sVersion,
+      "org.scalatest"     %% "scalatest"            % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"            % catsVersion,
+      "org.typelevel"     %% "cats-effect"          % catsEffectVersion
     ),
     skip in publish := true
   )

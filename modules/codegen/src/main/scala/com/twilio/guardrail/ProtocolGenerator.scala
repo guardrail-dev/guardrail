@@ -115,13 +115,15 @@ object ProtocolGenerator {
         terms = params.map(_.term)
         defn <- renderDTOClass(clsName, terms, Some(hierarchy.parentName))
         deps = params.flatMap(_.dep)
-        encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
-        decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
+        encoder <- encodeModel(clsName, needCamelSnakeConversion, params) //fixme remove - not used
+        decoder <- decodeModel(clsName, needCamelSnakeConversion, params) //fixme remove - not used
         cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
       } yield {
         ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp))
       }
     }
+
+    val discriminator: String = hierarchy.parentModel.getDiscriminator
 
     val x: Free[F, ProtocolElems] = for {
       childDefs <- methSeq(hierarchy)
@@ -131,9 +133,13 @@ object ProtocolGenerator {
       }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
       terms = params.map(_.term)
-      definition <- renderSealedTrait(hierarchy.parentName, terms, hierarchy.parentModel.getDiscriminator)
+      definition <- renderSealedTrait(hierarchy.parentName, terms, discriminator)
+      encoder    <- encodeADT(hierarchy.parentName, needCamelSnakeConversion, params, discriminator)
+      decoder    <- decodeADT(hierarchy.parentName, needCamelSnakeConversion, params, discriminator)
+      cmp        <- renderDTOCompanion(hierarchy.parentName, List.empty, encoder, decoder)
+
     } yield {
-      ADT(hierarchy.parentName, Type.Name(hierarchy.parentName), definition, childDefs.map(_.right.get))
+      ADT(hierarchy.parentName, Type.Name(hierarchy.parentName), definition, childDefs.map(_.right.get), cmp)
     }
 
     x

@@ -25,11 +25,13 @@ class CustomHeadersTest extends FlatSpec with Matchers with ScalaFutures with Ei
     implicit val as  = ActorSystem()
     implicit val mat = ActorMaterializer()
     val client = Client.httpClient(Route.asyncHandler(Resource.routes(new Handler {
-      def getFoo(respond: Resource.getFooResponse.type)(header: String,
-                                                        longHeader: Long,
-                                                        customHeader: Bar,
-                                                        customOptionHeader: Option[Bar],
-                                                        missingCustomOptionHeader: Option[Bar]): Future[Resource.getFooResponse] =
+      def getFoo(respond: Resource.getFooResponse.type)(
+          header: String,
+          longHeader: Long,
+          customHeader: Bar,
+          customOptionHeader: Option[Bar],
+          missingCustomOptionHeader: Option[Bar]
+      ): Future[Resource.getFooResponse] =
         (header, longHeader, customHeader, customOptionHeader, missingCustomOptionHeader) match {
           case ("foo", 5L, Bar.V1, Some(Bar.V2), None) => Future.successful(respond.OK)
           case _                                       => Future.successful(respond.BadRequest)

@@ -313,6 +313,21 @@ object CirceProtocolGenerator {
   //fixme checkpoint
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
+      case DecodeADT(clsName, needCamelSnakeConversion, params, discriminator) =>
+        val code = q"""implicit val decoder: Decoder[AbstractPet] = deriveDecoder[AbstractPet]"""
+        Target.pure(code)
+
+      //implicit val decWrap: Decoder[Pet] = deriveDecoder[Pet]
+
+      case EncodeADT(clsName, needCamelSnakeConversion, params, discriminator) =>
+        //fixme imports for the Configuration should be in a separate place/command
+
+        val code = q"""import io.circe.generic.extras.semiauto._
+          implicit val configuration: Configuration = Configuration.default.withDiscriminator($discriminator)
+          implicit val encoder: Encoder[AbstractPet] = deriveEncoder[AbstractPet]"""
+
+        Target.pure(code)
+
       case RenderSealedTrait(className, terms, discriminator: String) =>
         //fixme: Discriminator shouldn't be rendered
         val testTerms = terms

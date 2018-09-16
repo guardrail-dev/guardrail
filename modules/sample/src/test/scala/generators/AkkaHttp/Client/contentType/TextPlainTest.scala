@@ -1,4 +1,4 @@
-package tests.generators.AkkaHttp.Client.contentType
+package generators.AkkaHttp.Client.contentType
 
 import _root_.tests.contentTypes.textPlain.Implicits.IgnoredEntity
 import _root_.tests.contentTypes.textPlain.foo.FooClient

@@ -94,9 +94,9 @@ object Common {
               List.empty[Stat]
             )
 
-          //todo add info about the children
-          case ADT(name, tpe, trt, children) =>
-            val childDefs = children.map(_.cls)
+          case ADT(name, tpe, trt, children, obj) =>
+            val childDefs           = children.map(_.cls) //fixme passing a lot of unused fields
+            val polyImports: Import = q"""import io.circe.generic.extras._"""
 
             (
               List(
@@ -106,9 +106,12 @@ object Common {
                     package ${buildPkgTerm(dtoComponents)}
 
                     ..$imports
+                    $polyImports
                     $trt
                     ..$childDefs
-              """
+                    $obj
+
+                  """
                 )
               ),
               List.empty[Stat]
