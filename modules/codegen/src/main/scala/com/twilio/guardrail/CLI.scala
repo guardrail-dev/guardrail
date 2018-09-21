@@ -68,8 +68,6 @@ object CLI {
 
     val (coreLogger, deferred) = result.run
 
-    print(coreLogger.show)
-
     val (logger, paths) = deferred
       .traverse {
         case (generatorSettings, rs) =>
@@ -85,8 +83,6 @@ object CLI {
       }
       .map(_.flatten)
       .run
-
-    print(logger.show)
   }
 
   def unsafePrintHelp(): Unit = {

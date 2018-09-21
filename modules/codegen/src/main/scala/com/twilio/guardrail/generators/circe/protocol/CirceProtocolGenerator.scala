@@ -310,7 +310,6 @@ object CirceProtocolGenerator {
     }
   }
 
-  //fixme checkpoint
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
       case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
@@ -318,34 +317,32 @@ object CirceProtocolGenerator {
             ..${List(discriminator, encoder, decoder)}
           }
           """
-
         Target.pure(code)
 
       case RenderDiscriminator(discriminator) =>
         val code = q"""implicit val configuration: Configuration = Configuration.default.withDiscriminator($discriminator)"""
         Target.pure(code)
 
-      case DecodeADT(clsName, needCamelSnakeConversion, params) =>
+      case DecodeADT(clsName, needCamelSnakeConversion) =>
         val code = if (needCamelSnakeConversion) {
-          q"""implicit val decoder: Decoder[AbstractPet] = deriveDecoder[AbstractPet](io.circe.derivation.renaming.snakeCase)"""
+          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] =
+                  deriveDecoder[${Type.Name(clsName)}](io.circe.derivation.renaming.snakeCase)"""
         } else {
-          q"""implicit val decoder: Decoder[AbstractPet] = deriveDecoder[AbstractPet]"""
+          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = deriveDecoder[${Type.Name(clsName)}]"""
         }
-
         Target.pure(code)
 
-      case EncodeADT(clsName, needCamelSnakeConversion, params) =>
-        // import io.circe.generic.extras.semiauto._
+      case EncodeADT(clsName, needCamelSnakeConversion) =>
         val code = if (needCamelSnakeConversion) {
-          q"""implicit val encoder: Encoder[AbstractPet] = deriveEncoder[AbstractPet](io.circe.derivation.renaming.snakeCase)"""
+          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = deriveEncoder[${Type
+            .Name(clsName)}](io.circe.derivation.renaming.snakeCase)"""
         } else {
-          q"""implicit val encoder: Encoder[AbstractPet] = deriveEncoder[AbstractPet]"""
+          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = deriveEncoder[${Type.Name(clsName)}]"""
         }
 
         Target.pure(code)
 
       case RenderSealedTrait(className, terms, discriminator: String) =>
-        //fixme: Discriminator shouldn't be rendered
         val testTerms = terms
           .filter(_.name.value != discriminator)
           .map { t =>
@@ -353,7 +350,7 @@ object CirceProtocolGenerator {
           }
 
         Target.pure {
-          q"""sealed trait ${Type.Name(className)} {..${testTerms}}"""
+          q"""sealed trait ${Type.Name(className)} {..$testTerms}"""
         }
     }
   }

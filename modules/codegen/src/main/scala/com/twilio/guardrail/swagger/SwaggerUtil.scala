@@ -132,13 +132,6 @@ object SwaggerUtil {
   def modelMetaType[T <: Model](model: T): Target[ResolvedType] =
     Target.getGeneratorSettings.flatMap { implicit gs =>
       model match {
-        case comp: ComposedModel =>
-//          print(comp)
-          for {
-            //fixme
-            ref <- Target.fromOption(Option("Cat"), s"Unspecified ${comp.getReference}")
-          } yield Deferred(ref)
-
         case ref: RefModel =>
           Target.fromOption(Option(ref.getSimpleRef), s"Unspecified $ref").map(Deferred)
 

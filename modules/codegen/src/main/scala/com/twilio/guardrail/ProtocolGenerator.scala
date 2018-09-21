@@ -123,8 +123,8 @@ object ProtocolGenerator {
       discriminator = hierarchy.parentModel.getDiscriminator
       definition        <- renderSealedTrait(hierarchy.parentName, terms, discriminator)
       discriminatorStat <- renderDiscriminator(discriminator)
-      encoder           <- encodeADT(hierarchy.parentName, needCamelSnakeConversion, params)
-      decoder           <- decodeADT(hierarchy.parentName, needCamelSnakeConversion, params)
+      encoder           <- encodeADT(hierarchy.parentName, needCamelSnakeConversion)
+      decoder           <- decodeADT(hierarchy.parentName, needCamelSnakeConversion)
       cmp               <- renderADTCompanion(hierarchy.parentName, discriminatorStat, encoder, decoder)
 
     } yield {
