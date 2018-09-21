@@ -83,66 +83,59 @@ object ProtocolGenerator {
 
   def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
 
-  //TODO
+  /**
+    * Handle polymorphic model
+    */
   private[this] def fromPoly[F[_]](
       hierarchy: ClassHierarchy,
       concreteTypes: List[PropMeta]
   )(implicit F: FrameworkTerms[F], P: PolyProtocolTerms[F], M: ModelProtocolTerms[F]): Free[F, ProtocolElems] = {
-
     import P._
     import M._
 
-    //fixme: get parameters!!
-    //fixme: render companion (probably needed only once per hierarchy -> for the parent)
-    //fixme: get Pet's parameters
+    def compositeSeq(hierarchy: ClassHierarchy): Free[F, List[Either[String, Defn.Class]]] =
+      hierarchy.children.traverse { case (childCls, compModel) => composite(hierarchy.parentModel, compModel, childCls) }
 
-    def methSeq(hierarchy: ClassHierarchy): Free[F, List[Either[String, ClassDefinition]]] =
-      hierarchy.children.traverse { case (childCls, compModel) => meth(hierarchy.parentModel, compModel, childCls) }
+    def composite(parent: ModelImpl, model: ComposedModel, className: String): Free[F, Either[String, Defn.Class]] = {
+      def validProg(clsName: String)(props: List[(String, Property)]): Free[F, Defn.Class] = {
+        val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+        for {
+          params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+          terms = params.map(_.term)
+          definition <- renderDTOClass(clsName, terms, Some(hierarchy.parentName))
+        } yield {
+          Escape.escapeTree(definition)
+        }
+      }
 
-    // has to be a composite model!!!
-    def meth(parent: ModelImpl, model: ComposedModel, className: String): Free[F, Either[String, ClassDefinition]] =
       for {
         props <- extractChildProperties(parent, model, parent.getDiscriminator)
         res   <- props.traverse(validProg(className))
       } yield res
-
-    def validProg(clsName: String)(props: List[(String, Property)]): Free[F, ClassDefinition] = {
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-        terms = params.map(_.term)
-        defn <- renderDTOClass(clsName, terms, Some(hierarchy.parentName))
-        deps = params.flatMap(_.dep)
-        encoder <- encodeModel(clsName, needCamelSnakeConversion, params) //fixme remove - not used
-        decoder <- decodeModel(clsName, needCamelSnakeConversion, params) //fixme remove - not used
-        cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield {
-        ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp))
-      }
     }
 
-    val discriminator: String = hierarchy.parentModel.getDiscriminator
-
-    val x: Free[F, ProtocolElems] = for {
-      childDefs <- methSeq(hierarchy)
+    for {
+      childDefs <- compositeSeq(hierarchy)
       props     <- extractProperties(hierarchy.parentModel).map(_.right.get) //fixme unsafe
-      needCamelSnakeConversion = props.forall {
-        case (k, v) => couldBeSnakeCase(k)
-      }
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
-      terms = params.map(_.term)
-      definition <- renderSealedTrait(hierarchy.parentName, terms, discriminator)
-      encoder    <- encodeADT(hierarchy.parentName, needCamelSnakeConversion, params, discriminator)
-      decoder    <- decodeADT(hierarchy.parentName, needCamelSnakeConversion, params, discriminator)
-      cmp        <- renderDTOCompanion(hierarchy.parentName, List.empty, encoder, decoder)
+      terms         = params.map(_.term)
+      discriminator = hierarchy.parentModel.getDiscriminator
+      definition        <- renderSealedTrait(hierarchy.parentName, terms, discriminator)
+      discriminatorStat <- renderDiscriminator(discriminator)
+      encoder           <- encodeADT(hierarchy.parentName, needCamelSnakeConversion, params)
+      decoder           <- decodeADT(hierarchy.parentName, needCamelSnakeConversion, params)
+      cmp               <- renderADTCompanion(hierarchy.parentName, discriminatorStat, encoder, decoder)
 
     } yield {
-      ADT(hierarchy.parentName, Type.Name(hierarchy.parentName), definition, childDefs.map(_.right.get), cmp)
+      ADT(
+        name = hierarchy.parentName,
+        tpe = Type.Name(hierarchy.parentName),
+        trt = definition,
+        children = childDefs.map(_.right.get), //fixme unsafe
+        companion = cmp
+      )
     }
-
-    x
   }
 
   private[this] def fromModel[F[_]](clsName: String, model: ModelImpl, concreteTypes: List[PropMeta])(

@@ -149,6 +149,7 @@ lazy val sample = (project in file("modules/sample"))
       "io.circe"          %% "circe-generic-extras" % circeVersion,
       "io.circe"          %% "circe-java8"          % circeVersion,
       "io.circe"          %% "circe-parser"         % circeVersion,
+      "io.circe"          %% "circe-derivation"     % "0.9.0-M5",
       "org.http4s"        %% "http4s-blaze-client"  % http4sVersion,
       "org.http4s"        %% "http4s-blaze-server"  % http4sVersion,
       "org.http4s"        %% "http4s-circe"         % http4sVersion,

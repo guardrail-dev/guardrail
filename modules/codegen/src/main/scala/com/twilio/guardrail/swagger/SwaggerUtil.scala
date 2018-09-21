@@ -33,7 +33,7 @@ object SwaggerUtil {
   case class DeferredMap(value: String) extends LazyResolvedType
 
   //fixme
-  case class DeferredPoly(resolved: Resolved, parent: Term.Name) extends LazyResolvedType
+//  case class DeferredPoly(resolved: Resolved, parent: Term.Name) extends LazyResolvedType
 
   object ResolvedType {
 

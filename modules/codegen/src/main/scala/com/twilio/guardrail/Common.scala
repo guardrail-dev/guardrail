@@ -95,20 +95,20 @@ object Common {
             )
 
           case ADT(name, tpe, trt, children, obj) =>
-            val childDefs           = children.map(_.cls) //fixme passing a lot of unused fields
             val polyImports: Import = q"""import io.circe.generic.extras._"""
 
             (
               List(
                 WriteTree(
-                  resolveFile(outputPath)(dtoComponents).resolve(s"${name}.scala"),
+                  resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
                   source"""
                     package ${buildPkgTerm(dtoComponents)}
 
                     ..$imports
                     $polyImports
                     $trt
-                    ..$childDefs
+                    ..$children
+
                     $obj
 
                   """

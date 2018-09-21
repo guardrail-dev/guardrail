@@ -16,9 +16,7 @@ case class RandomType(name: String, tpe: Type) extends StrictProtocolElems
 case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object, parent: Option[String] = None)
     extends StrictProtocolElems
 
-// Added by me
-//fixme add more fields, should have list of classes
-case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, children: List[ClassDefinition], companion: Defn.Object)
+case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, children: List[Defn.Class], companion: Defn.Object)
     extends StrictProtocolElems
 
 case class EnumDefinition(
