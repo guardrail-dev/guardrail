@@ -13,11 +13,10 @@ case class DeferredMap(name: String)   extends LazyProtocolElems
 sealed trait StrictProtocolElems extends ProtocolElems
 
 case class RandomType(name: String, tpe: Type) extends StrictProtocolElems
-case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object, parent: Option[String] = None)
+case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object, parents: List[SupperClass] = Nil)
     extends StrictProtocolElems
 
-case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, children: List[Defn.Class], companion: Defn.Object)
-    extends StrictProtocolElems
+case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, companion: Defn.Object) extends StrictProtocolElems
 
 case class EnumDefinition(
     name: String,

@@ -94,7 +94,7 @@ object Common {
               List.empty[Stat]
             )
 
-          case ADT(name, tpe, trt, children, obj) =>
+          case ADT(name, tpe, trt, obj) =>
             val polyImports: Import = q"""import io.circe.generic.extras._"""
 
             (
@@ -107,8 +107,6 @@ object Common {
                     ..$imports
                     $polyImports
                     $trt
-                    ..$children
-
                     $obj
 
                   """

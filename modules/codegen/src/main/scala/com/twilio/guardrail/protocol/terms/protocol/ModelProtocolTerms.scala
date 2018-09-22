@@ -1,25 +1,17 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import _root_.io.swagger.models.{ ComposedModel, ModelImpl }
+import _root_.io.swagger.models.{ ComposedModel, Model, ModelImpl }
 import _root_.io.swagger.models.properties.Property
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.ProtocolParameter
+import com.twilio.guardrail.{ ProtocolParameter, SupperClass }
 
 import scala.meta._
 
 class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
 
-  def extractProperties(swagger: ModelImpl): Free[F, Either[String, List[(String, Property)]]] =
+  def extractProperties(swagger: Model): Free[F, Either[String, List[(String, Property)]]] =
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
-
-  // For ADTs
-  def extractChildProperties(
-      parent: ModelImpl,
-      child: ComposedModel,
-      discriminator: String
-  ): Free[F, Either[String, List[(String, Property)]]] =
-    Free.inject[ModelProtocolTerm, F](ExtractChildProperties(parent, child, discriminator))
 
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(
       name: String,
@@ -27,14 +19,24 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
   ): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
 
-  def renderDTOClass(clsName: String, terms: List[Term.Param], parentName: Option[String]): Free[F, Defn.Class] =
-    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms, parentName))
+  def renderDTOClass(clsName: String, terms: List[Term.Param], parents: List[SupperClass] = Nil): Free[F, Defn.Class] =
+    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms, parents))
 
-  def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =
-    Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params))
+  def encodeModel(
+      clsName: String,
+      needCamelSnakeConversion: Boolean,
+      params: List[ProtocolParameter],
+      parents: List[SupperClass] = Nil
+  ): Free[F, Stat] =
+    Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params, parents))
 
-  def decodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =
-    Free.inject[ModelProtocolTerm, F](DecodeModel(clsName, needCamelSnakeConversion, params))
+  def decodeModel(
+      clsName: String,
+      needCamelSnakeConversion: Boolean,
+      params: List[ProtocolParameter],
+      parents: List[SupperClass] = Nil
+  ): Free[F, Stat] =
+    Free.inject[ModelProtocolTerm, F](DecodeModel(clsName, needCamelSnakeConversion, params, parents))
 
   def renderDTOCompanion(clsName: String, deps: List[Term.Name], encoder: Stat, decoder: Stat): Free[F, Defn.Object] =
     Free.inject[ModelProtocolTerm, F](RenderDTOCompanion(clsName, deps, encoder, decoder))

@@ -1,6 +1,8 @@
 package com.twilio.guardrail.protocol.terms.protocol
 import cats.InjectK
 import cats.free.Free
+import com.twilio.guardrail.{ ProtocolParameter, SupperClass }
+
 import scala.meta.{ Defn, Stat, Term }
 
 /**
@@ -8,7 +10,8 @@ import scala.meta.{ Defn, Stat, Term }
   */
 sealed trait PolyProtocolTerm[T]
 
-case class RenderSealedTrait(className: String, terms: List[Term.Param], discriminator: String) extends PolyProtocolTerm[Defn.Trait]
+case class RenderSealedTrait(className: String, terms: List[Term.Param], discriminator: String, parents: List[SupperClass] = Nil)
+    extends PolyProtocolTerm[Defn.Trait]
 
 case class EncodeADT(clsName: String, needCamelSnakeConversion: Boolean) extends PolyProtocolTerm[Stat]
 
@@ -19,8 +22,13 @@ case class RenderDiscriminator(discriminator: String) extends PolyProtocolTerm[S
 case class RenderADTCompanion(clsName: String, discriminator: Stat, encoder: Stat, decoder: Stat) extends PolyProtocolTerm[Defn.Object]
 
 class PolyProtocolTerms[F[_]](implicit I: InjectK[PolyProtocolTerm, F]) {
-  def renderSealedTrait(className: String, terms: List[Term.Param], discriminator: String): Free[F, Defn.Trait] =
-    Free.inject[PolyProtocolTerm, F](RenderSealedTrait(className, terms, discriminator))
+  def renderSealedTrait(
+      className: String,
+      terms: List[Term.Param],
+      discriminator: String,
+      parents: List[SupperClass] = Nil
+  ): Free[F, Defn.Trait] =
+    Free.inject[PolyProtocolTerm, F](RenderSealedTrait(className, terms, discriminator, parents))
 
   def encodeADT(clsName: String, needCamelSnakeConversion: Boolean): Free[F, Stat] =
     Free.inject[PolyProtocolTerm, F](EncodeADT(clsName, needCamelSnakeConversion))
