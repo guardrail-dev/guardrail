@@ -94,6 +94,8 @@ object SwaggerUtil {
                 Resolved(t"IndexedSeq[${tpe}]", None, None)
               case EnumDefinition(name, tpe, elems, cls, companion) =>
                 Resolved(t"IndexedSeq[${tpe}]", None, None)
+              case ADT(_, tpe, _, _) =>
+                Resolved(t"IndexedSeq[$tpe]", None, None)
             }
         case DeferredMap(name) =>
           Target
@@ -105,6 +107,8 @@ object SwaggerUtil {
                 Resolved(t"Map[String, ${tpe}]", None, None)
               case EnumDefinition(_, tpe, _, _, _) =>
                 Resolved(t"Map[String, ${tpe}]", None, None)
+              case ADT(_, tpe, _, _) =>
+                Resolved(t"Map[String, $tpe]", None, None)
             }
       }
   }

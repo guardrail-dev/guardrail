@@ -78,9 +78,31 @@ object Common {
                 $cls
                 $obj
               """
-               )
-             ),
-             List.empty[Stat])
+                )
+              ),
+              List.empty[Stat]
+            )
+
+          case ADT(name, tpe, trt, obj) =>
+            val polyImports: Import = q"""import io.circe.generic.extras._"""
+
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
+                  source"""
+                    package ${buildPkgTerm(dtoComponents)}
+
+                    ..$imports
+                    $polyImports
+                    $trt
+                    $obj
+
+                  """
+                )
+              ),
+              List.empty[Stat]
+            )
 
           case RandomType(_, _) =>
             (List.empty, List.empty)

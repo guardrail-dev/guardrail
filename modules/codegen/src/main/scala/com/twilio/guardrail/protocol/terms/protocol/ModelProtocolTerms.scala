@@ -4,7 +4,7 @@ import _root_.io.swagger.models.ModelImpl
 import _root_.io.swagger.models.properties.Property
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.ProtocolParameter
+import com.twilio.guardrail.{ProtocolParameter, SupperClass}
 import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
@@ -17,12 +17,12 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
       prop: Property
   ): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
-  def renderDTOClass(clsName: String, terms: List[Term.Param]): Free[F, Defn.Class] =
-    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms))
-  def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =
-    Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params))
-  def decodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter]): Free[F, Stat] =
-    Free.inject[ModelProtocolTerm, F](DecodeModel(clsName, needCamelSnakeConversion, params))
+  def renderDTOClass(clsName: String, terms: List[Term.Param], parents: List[SupperClass] = Nil): Free[F, Defn.Class] =
+    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms, parents))
+  def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter], parents: List[SupperClass] = Nil): Free[F, Stat] =
+    Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params, parents))
+  def decodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter], parents: List[SupperClass] = Nil): Free[F, Stat] =
+    Free.inject[ModelProtocolTerm, F](DecodeModel(clsName, needCamelSnakeConversion, params, parents))
   def renderDTOCompanion(clsName: String, deps: List[Term.Name], encoder: Stat, decoder: Stat): Free[F, Defn.Object] =
     Free.inject[ModelProtocolTerm, F](RenderDTOCompanion(clsName, deps, encoder, decoder))
 }
