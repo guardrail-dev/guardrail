@@ -368,7 +368,7 @@ object CirceProtocolGenerator {
         Target.pure(
           parentNameOpt.fold(q"""sealed trait ${Type.Name(className)} {..${testTerms}}""")(
             parentName =>
-              q"""sealed trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parentName)}(...$Nil)"}{..${testTerms}}"} """
+              q"""trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parentName)}(...$Nil)"}{..${testTerms}}"} """
           )
         )
 
