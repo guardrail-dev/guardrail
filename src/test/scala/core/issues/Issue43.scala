@@ -130,7 +130,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     }
 
     it("should generate parent as trait") {
-      trtPet.structure shouldBe q"sealed trait Pet { def name: String }".structure
+      trtPet.structure shouldBe q"trait Pet { def name: String }".structure
     }
 
     it("should be right parent companion object") {
@@ -289,9 +289,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     }
 
     it("should generate parent as trait") {
-      trtPet.structure shouldBe q"sealed trait Pet { def name: String }".structure
+      trtPet.structure shouldBe q"trait Pet { def name: String }".structure
       println(trtCat.toString())
-      trtCat.structure shouldBe q"sealed trait Cat extends Pet { def huntingSkill: String }".structure
+      trtCat.structure shouldBe q"trait Cat extends Pet { def huntingSkill: String }".structure
     }
 
     it("should be right parent companion object") {
