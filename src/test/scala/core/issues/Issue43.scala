@@ -135,9 +135,20 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     it("should be right parent companion object") {
       companion.structure shouldBe q"""object Pet {
-      implicit val encoder: Encoder[Pet] = deriveEncoder[Pet]
-      implicit val decoder: Decoder[Pet] = deriveDecoder[Pet]
-    }""".structure
+        val discriminator: String = "petType"
+        implicit val encoder: Encoder[Pet] = Encoder.instance({
+          case e: Cat =>
+            e.asJsonObject.add(discriminator, "Cat".asJson).asJson
+          case e: Dog =>
+            e.asJsonObject.add(discriminator, "Dog".asJson).asJson
+        })
+        implicit val decoder: Decoder[Pet] = Decoder.instance(c => c.downField(discriminator).as[String].flatMap({
+          case "Cat" =>
+            c.as[Cat]
+          case "Dog" =>
+            c.as[Dog]
+        }))
+      }""".structure
     }
 
   }
@@ -296,13 +307,32 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     it("should be right parent companion object") {
       companionPet.structure shouldBe q"""object Pet {
-      implicit val encoder: Encoder[Pet] = deriveEncoder[Pet]
-      implicit val decoder: Decoder[Pet] = deriveDecoder[Pet]
-    }""".structure
+        val discriminator: String = "petType"
+        implicit val encoder: Encoder[Pet] = Encoder.instance({
+         case e: Dog =>
+            e.asJsonObject.add(discriminator, "Dog".asJson).asJson
+          case e: PersianCat =>
+            e.asJsonObject.add(discriminator, "PersianCat".asJson).asJson
+        })
+        implicit val decoder: Decoder[Pet] = Decoder.instance(c => c.downField(discriminator).as[String].flatMap({
+          case "Dog" =>
+            c.as[Dog]
+         case "PersianCat" =>
+            c.as[PersianCat]
+        }))
+      }""".structure
+      println(companionCat.toString())
       companionCat.structure shouldBe q"""object Cat {
-      implicit val encoder: Encoder[Cat] = deriveEncoder[Cat]
-      implicit val decoder: Decoder[Cat] = deriveDecoder[Cat]
-    }""".structure
+        val discriminator: String = "petType"
+        implicit val encoder: Encoder[Cat] = Encoder.instance({
+          case e: PersianCat =>
+            e.asJsonObject.add(discriminator, "PersianCat".asJson).asJson
+        })
+        implicit val decoder: Decoder[Cat] = Decoder.instance(c => c.downField(discriminator).as[String].flatMap({
+          case "PersianCat" =>
+            c.as[PersianCat]
+        }))
+      }""".structure
     }
 
   }

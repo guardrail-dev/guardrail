@@ -326,39 +326,41 @@ object CirceProtocolGenerator {
 
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
-      case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
-        val code = q"""object ${Term.Name(clsName)} extends AutoDerivation {
-            ..${List(discriminator, encoder, decoder)}
+      case RenderADTCompanion(clsName, needCamelSnakeConversion, discriminator, encoder, decoder) =>
+        val normalizedDiscriminator =
+          if (needCamelSnakeConversion) q"io.circe.derivation.renaming.snakeCase(${Lit.String(discriminator)})"
+          else Lit.String(discriminator)
+        val code = q"""object ${Term.Name(clsName)} {
+             val discriminator:String = ${normalizedDiscriminator}
+            ..${List(encoder, decoder)}
           }
           """
         Target.pure(code)
 
-      case RenderDiscriminator(discriminator) =>
-        val code = q"""implicit val configuration: Configuration = Configuration.default.withDiscriminator($discriminator)"""
+      case DecodeADT(clsName, children) =>
+        val childrenCases = children.map(
+          child => p"case ${Lit.String(child)} => c.as[${Type.Name(child)}]"
+        )
+        val code =
+          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance(c =>
+                 c.downField(discriminator).as[String].flatMap {
+                   ..case $childrenCases
+                 }
+            )"""
         Target.pure(code)
 
-      case DecodeADT(clsName, needCamelSnakeConversion) =>
-        val code = if (needCamelSnakeConversion) {
-          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] =
-                  deriveDecoder[${Type.Name(clsName)}](io.circe.derivation.renaming.snakeCase)"""
-        } else {
-          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = deriveDecoder[${Type.Name(clsName)}]"""
-        }
-        Target.pure(code)
-
-      case EncodeADT(clsName, needCamelSnakeConversion) =>
-        val code = if (needCamelSnakeConversion) {
-          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = deriveEncoder[${Type
-            .Name(clsName)}](io.circe.derivation.renaming.snakeCase)"""
-        } else {
-          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = deriveEncoder[${Type.Name(clsName)}]"""
-        }
-
+      case EncodeADT(clsName, children) =>
+        val childrenCases = children.map(
+          child => p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(child)}.asJson).asJson"
+        )
+        val code =
+          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
+              ..case $childrenCases
+          }"""
         Target.pure(code)
 
       case RenderSealedTrait(className, terms, discriminator, parents) =>
         val parentNameOpt = parents.headOption.map(_.clsName)
-        //fixme: Discriminator shouldn't be rendered
         val testTerms = terms
           .filter(_.name.value != discriminator)
           .map { t =>

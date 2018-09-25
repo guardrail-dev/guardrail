@@ -102,27 +102,34 @@ object ProtocolGenerator {
     import P._
     import M._
 
-    //fixme: get parameters!!
-    //fixme: render companion (probably needed only once per hierarchy -> for the parent)
-    //fixme: get Pet's parameters
+    def child(hierarchy: ClassHierarchy): List[String] =
+      if (hierarchy.children.nonEmpty) hierarchy.children.map(_.parentName) ::: hierarchy.children.flatMap(child)
+      else Nil
+    def father(hierarchy: ClassHierarchy): List[String] =
+      if (hierarchy.children.nonEmpty) hierarchy.parentName :: hierarchy.children.flatMap(father)
+      else Nil
 
-    val discriminator: String = hierarchy.discriminator
+    val children      = child(hierarchy).diff(father(hierarchy)).distinct
+    val discriminator = hierarchy.discriminator.get //fixme unsafe
 
     for {
       parents <- extractParents(hierarchy.parentModel, definitions, concreteTypes)
       props   <- extractProperties(hierarchy.parentModel).map(_.right.get) //fixme unsafe
-      needCamelSnakeConversion = props.forall {
-        case (k, v) => couldBeSnakeCase(k)
-      }
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
       terms = params.map(_.term)
       definition <- renderSealedTrait(hierarchy.parentName, terms, discriminator, parents)
-      encoder    <- encodeADT(hierarchy.parentName, needCamelSnakeConversion)
-      decoder    <- decodeADT(hierarchy.parentName, needCamelSnakeConversion)
-      cmp        <- renderDTOCompanion(hierarchy.parentName, List.empty, encoder, decoder)
+      encoder    <- encodeADT(hierarchy.parentName, children)
+      decoder    <- decodeADT(hierarchy.parentName, children)
+      cmp        <- renderADTCompanion(hierarchy.parentName, needCamelSnakeConversion, discriminator, encoder, decoder)
 
     } yield {
-      ADT(hierarchy.parentName, Type.Name(hierarchy.parentName), definition, cmp)
+      ADT(
+        name = hierarchy.parentName,
+        tpe = Type.Name(hierarchy.parentName),
+        trt = definition,
+        companion = cmp
+      )
     }
   }
 
@@ -271,7 +278,7 @@ object ProtocolGenerator {
     } yield ret
   }
 
-  case class ClassHierarchy(parentName: String, parentModel: Model, discriminator: String)
+  case class ClassHierarchy(parentName: String, parentModel: Model, children: List[ClassHierarchy], discriminator: Option[String] = None)
 
   /**
     * returns objects grouped into hierarchies
@@ -291,16 +298,23 @@ object ProtocolGenerator {
         case _                      => None
       }
 
-    definitions
-      .collect {
-        case (clsName, comp: ComposedModel) if definitions.exists {
-              case (_, m: ComposedModel) => m.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName)
-              case _                     => false
-            } =>
-          ClassHierarchy(clsName, comp, firstInHierarchy(comp).get.getDiscriminator) //todo unsafe
-        case (clsName, model: ModelImpl) if Option(model.getDiscriminator).isDefined =>
-          ClassHierarchy(clsName, model, model.getDiscriminator)
+    def children(cls: String, model: Model): List[ClassHierarchy] = definitions.collect {
+      case (clsName, comp: ComposedModel) if comp.getInterfaces.asScala.headOption.exists(_.getSimpleRef == cls) =>
+        classHierarchy(clsName, comp)
+    }
+
+    def classHierarchy(cls: String, model: Model): ClassHierarchy = ClassHierarchy(
+      cls,
+      model,
+      children(cls, model),
+      model match {
+        case m: ModelImpl     => Option(m.getDiscriminator)
+        case c: ComposedModel => firstInHierarchy(c).map(_.getDiscriminator)
+        case _                => None
       }
+    )
+
+    definitions.map(classHierarchy _ tupled).filter(_.children.nonEmpty)
 
   }
 
