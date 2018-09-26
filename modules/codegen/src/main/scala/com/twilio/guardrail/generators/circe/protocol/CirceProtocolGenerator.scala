@@ -96,14 +96,11 @@ object CirceProtocolGenerator {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         Target.pure(
-          Either.fromOption(
-            (swagger match {
-              case m: ModelImpl        => Option(m.getProperties)
-              case comp: ComposedModel => comp.getAllOf().asScala.toList.get(1).flatMap(prop => Option(prop.getProperties))
-              case _                   => None
-            }).map(_.asScala.toList),
-            "Model has no properties"
-          )
+          (swagger match {
+            case m: ModelImpl        => Option(m.getProperties)
+            case comp: ComposedModel => comp.getAllOf().asScala.toList.get(1).flatMap(prop => Option(prop.getProperties))
+            case _                   => None
+          }).map(_.asScala.toList).toList.flatten
         )
 
       case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>

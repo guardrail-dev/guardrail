@@ -8,7 +8,7 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import scala.meta._
 
 sealed trait ModelProtocolTerm[T]
-case class ExtractProperties(swagger: Model) extends ModelProtocolTerm[Either[String, List[(String, Property)]]]
+case class ExtractProperties(swagger: Model) extends ModelProtocolTerm[List[(String, Property)]]
 
 case class TransformProperty(
     clsName: String,

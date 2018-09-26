@@ -10,7 +10,7 @@ import scala.meta._
 
 class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
 
-  def extractProperties(swagger: Model): Free[F, Either[String, List[(String, Property)]]] =
+  def extractProperties(swagger: Model): Free[F, List[(String, Property)]] =
     Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
 
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(

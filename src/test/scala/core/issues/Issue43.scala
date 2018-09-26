@@ -272,7 +272,6 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     it("should generate right case class") {
       clsDog.structure shouldBe q"""case class Dog(name: String, packSize: Int = 0) extends Pet""".structure
-      println(persianCatParents)
       clsPersianCat.structure shouldBe q"""case class PersianCat(huntingSkill: String = "lazy", name: String, wool: Option[Int] = Option(10)) extends Cat""".structure
     }
 
@@ -301,7 +300,6 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     it("should generate parent as trait") {
       trtPet.structure shouldBe q"trait Pet { def name: String }".structure
-      println(trtCat.toString())
       trtCat.structure shouldBe q"trait Cat extends Pet { def huntingSkill: String }".structure
     }
 
@@ -321,7 +319,6 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
             c.as[PersianCat]
         }))
       }""".structure
-      println(companionCat.toString())
       companionCat.structure shouldBe q"""object Cat {
         val discriminator: String = "petType"
         implicit val encoder: Encoder[Cat] = Encoder.instance({
@@ -335,6 +332,40 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       }""".structure
     }
 
+  }
+
+  describe("Generate hierarchical classes with empty properties") {
+    val swagger: String = """
+      |swagger: '2.0'
+      |info:
+      |  title: Parsing Error Sample
+      |  version: 1.0.0
+      |definitions:
+      |  Pet:
+      |    type: object
+      |    discriminator: petType
+      |    properties:
+      |      name:
+      |        type: string
+      |      petType:
+      |        type: string
+      |    required:
+      |    - name
+      |    - petType
+      |  Cat:
+      |    description: A representation of a cat
+      |    allOf:
+      |    - $ref: '#/definitions/Pet'
+      |    - type: object""".stripMargin
+
+    val (
+      ProtocolDefinitions(ClassDefinition(cls, _, defCls, _, _) :: ADT(_, _, _, _) :: Nil, _, _, _),
+      _,
+      _
+      ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+
+    cls shouldBe "Cat"
+    defCls.structure shouldBe q"""case class Cat(name: String) extends Pet""".structure
   }
 
 }

@@ -114,7 +114,7 @@ object ProtocolGenerator {
 
     for {
       parents <- extractParents(hierarchy.parentModel, definitions, concreteTypes)
-      props   <- extractProperties(hierarchy.parentModel).map(_.right.get) //fixme unsafe
+      props   <- extractProperties(hierarchy.parentModel)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
       terms = params.map(_.term)
@@ -152,36 +152,22 @@ object ProtocolGenerator {
         case _                 => Nil
       }
 
-    def validProg(clsName: String)(props: List[(String, Property)]): Free[F, List[ProtocolParameter]] = {
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-      } yield params
-    }
-
     for {
       a <- Free.pure(allParents(elem))
       supper <- a.traverse { parents =>
         val (clsName, parent) = parents
         for {
           props <- extractProperties(parent)
-          proto <- props.traverse(validProg(clsName))
+          needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+          params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
         } yield
-          proto.map { a =>
-            SupperClass(clsName, Type.Name(clsName), a, parent match {
-              case m: ModelImpl => Option(m.getDiscriminator)
-              case _            => None
-            })
-          }
+          SupperClass(clsName, Type.Name(clsName), params, parent match {
+            case m: ModelImpl => Option(m.getDiscriminator)
+            case _            => None
+          })
       }
 
-    } yield
-      supper.collect {
-        case Right(x) => x
-      }
-
+    } yield supper
   }
 
   private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SupperClass], concreteTypes: List[PropMeta])(
@@ -208,27 +194,20 @@ object ProtocolGenerator {
       * so essentially we have to return false if:
       *   - there are any uppercase characters
       */
-    def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
-
-    def validProg: List[(String, Property)] => Free[F, ClassDefinition] = { props =>
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-        terms = params.map(_.term)
-        defn <- renderDTOClass(clsName, terms, parents)
-        deps = params.flatMap(_.dep)
-        encoder <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
-        decoder <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
-        cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp), parents)
-    }
 
     for {
       props <- extractProperties(model)
-      res   <- props.traverse(validProg)
-    } yield res
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+      params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+      terms = params.map(_.term)
+      defn <- renderDTOClass(clsName, terms, parents)
+      deps = params.flatMap(_.dep)
+      encoder <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
+      decoder <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
+      cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
+    } yield
+      if (parents.isEmpty && props.isEmpty) Left("Entity isn't model")
+      else Right(ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp), parents))
   }
 
   def modelTypeAlias[F[_]](clsName: String, abstractModel: Model)(
