@@ -121,7 +121,7 @@ object ProtocolGenerator {
       definition <- renderSealedTrait(hierarchy.parentName, terms, discriminator, parents)
       encoder    <- encodeADT(hierarchy.parentName, children)
       decoder    <- decodeADT(hierarchy.parentName, children)
-      cmp        <- renderADTCompanion(hierarchy.parentName, needCamelSnakeConversion, discriminator, encoder, decoder)
+      cmp        <- renderADTCompanion(hierarchy.parentName, discriminator, encoder, decoder)
 
     } yield {
       ADT(
@@ -194,7 +194,6 @@ object ProtocolGenerator {
       * so essentially we have to return false if:
       *   - there are any uppercase characters
       */
-
     for {
       props <- extractProperties(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }

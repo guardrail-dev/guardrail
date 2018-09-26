@@ -323,12 +323,9 @@ object CirceProtocolGenerator {
 
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
-      case RenderADTCompanion(clsName, needCamelSnakeConversion, discriminator, encoder, decoder) =>
-        val normalizedDiscriminator =
-          if (needCamelSnakeConversion) q"io.circe.derivation.renaming.snakeCase(${Lit.String(discriminator)})"
-          else Lit.String(discriminator)
+      case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
         val code = q"""object ${Term.Name(clsName)} {
-             val discriminator:String = ${normalizedDiscriminator}
+             val discriminator:String = ${Lit.String(discriminator)}
             ..${List(encoder, decoder)}
           }
           """

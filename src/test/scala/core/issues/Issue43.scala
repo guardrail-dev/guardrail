@@ -362,7 +362,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(cls, _, defCls, _, _) :: ADT(_, _, _, _) :: Nil, _, _, _),
       _,
       _
-      ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     cls shouldBe "Cat"
     defCls.structure shouldBe q"""case class Cat(name: String) extends Pet""".structure

@@ -17,8 +17,7 @@ case class EncodeADT(clsName: String, children: List[String] = Nil) extends Poly
 
 case class DecodeADT(clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[Stat]
 
-case class RenderADTCompanion(clsName: String, needCamelSnakeConversion: Boolean, discriminator: String, encoder: Stat, decoder: Stat)
-    extends PolyProtocolTerm[Defn.Object]
+case class RenderADTCompanion(clsName: String, discriminator: String, encoder: Stat, decoder: Stat) extends PolyProtocolTerm[Defn.Object]
 
 class PolyProtocolTerms[F[_]](implicit I: InjectK[PolyProtocolTerm, F]) {
   def renderSealedTrait(
@@ -37,12 +36,11 @@ class PolyProtocolTerms[F[_]](implicit I: InjectK[PolyProtocolTerm, F]) {
 
   def renderADTCompanion(
       clsName: String,
-      needCamelSnakeConversion: Boolean,
       discriminator: String,
       encoder: Stat,
       decoder: Stat
   ): Free[F, Defn.Object] =
-    Free.inject[PolyProtocolTerm, F](RenderADTCompanion(clsName, needCamelSnakeConversion, discriminator, encoder, decoder))
+    Free.inject[PolyProtocolTerm, F](RenderADTCompanion(clsName, discriminator, encoder, decoder))
 
 }
 
