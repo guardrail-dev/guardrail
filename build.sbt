@@ -30,23 +30,41 @@ fullRunTask(
   Test,
   "com.twilio.guardrail.CLI",
   """
-  --defaults --import akka.NotUsed --import support.PositiveLong
+  --defaults --import support.PositiveLong
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers
-  --client --specPath modules/sample/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos
-  --client --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain
-  --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain
-  --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server
-  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers --tracing
-  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients --tracing
-  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers --tracing
-  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients --tracing
-  --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client
-  --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server
-  --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults
-  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader
-  --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader
+  --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.client.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.server.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
+  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
+  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
+  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
+  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
+  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
+  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
+  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
+  --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.client.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.server.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.client.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.akkaHttp --framework akka-http
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
 

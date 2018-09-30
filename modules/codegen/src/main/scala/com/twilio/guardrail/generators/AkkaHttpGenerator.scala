@@ -67,6 +67,11 @@ object AkkaHttpGenerator {
                 }
             }
 
+            sealed trait IgnoredEntity
+            object IgnoredEntity {
+              val empty: IgnoredEntity = new IgnoredEntity {}
+            }
+
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${gs.jsonType}] =

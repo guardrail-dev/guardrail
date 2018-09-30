@@ -1,12 +1,12 @@
-package swagger
+package core.AkkaHttp
 
-import _root_.tracer.clients.{ definitions => cdefs }
-import _root_.tracer.servers.addresses.{ AddressesHandler, AddressesResource }
-import _root_.tracer.servers.users.{ UsersHandler, UsersResource }
-import _root_.tracer.servers.{ definitions => sdefs }
-import _root_.tracer.clients.users.UsersClient
-import _root_.tracer.clients.addresses.AddressesClient
-import _root_.tracer.servers.AkkaHttpImplicits.TraceBuilder
+import _root_.tracer.clients.akkaHttp.{ definitions => cdefs }
+import _root_.tracer.servers.akkaHttp.addresses.{ AddressesHandler, AddressesResource }
+import _root_.tracer.servers.akkaHttp.users.{ UsersHandler, UsersResource }
+import _root_.tracer.servers.akkaHttp.{ definitions => sdefs }
+import _root_.tracer.clients.akkaHttp.users.UsersClient
+import _root_.tracer.clients.akkaHttp.addresses.AddressesClient
+import _root_.tracer.servers.akkaHttp.AkkaHttpImplicits.TraceBuilder
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
@@ -18,7 +18,7 @@ import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 
-class FullTracer extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
+class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
 
   val traceHeaderKey          = "tracer-label"
   def log(line: String): Unit = ()

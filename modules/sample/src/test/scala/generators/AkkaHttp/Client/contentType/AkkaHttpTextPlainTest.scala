@@ -1,7 +1,8 @@
-package tests.generators.AkkaHttp.Client.contentType
+package generators.AkkaHttp.Client.contentType
 
-import _root_.tests.contentTypes.textPlain.Implicits.IgnoredEntity
-import _root_.tests.contentTypes.textPlain.foo.{ FooClient, FooHandler, FooResource }
+import _root_.tests.contentTypes.textPlain.client.akkaHttp.AkkaHttpImplicits.IgnoredEntity
+import _root_.tests.contentTypes.textPlain.client.akkaHttp.foo.FooClient
+import _root_.tests.contentTypes.textPlain.server.akkaHttp.foo.{ FooHandler, FooResource }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -14,7 +15,7 @@ import scala.concurrent.duration._
 
 import _root_.tests.scalatest.EitherTValues
 
-class TextPlainTest extends FunSuite with Matchers with EitherValues with EitherTValues with ScalaFutures with ScalatestRouteTest {
+class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues with EitherTValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(1000.millis, 1000.millis)
   test("Plain text should be emitted for required parameters (raw)") {
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
@@ -49,16 +50,16 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
   test("Plain text should be emitted for required parameters") {
     val route: Route = FooResource.routes(new FooHandler {
       def doFoo(
-          respond: tests.contentTypes.textPlain.foo.FooResource.doFooResponse.type
-      )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.foo.FooResource.doFooResponse] =
+          respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doFooResponse.type
+      )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doFooResponse] =
         if (body == "sample") {
           Future.successful(respond.Created)
         } else {
           Future.successful(respond.NotAcceptable)
         }
-      def doBar(respond: tests.contentTypes.textPlain.foo.FooResource.doBarResponse.type)(
+      def doBar(respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse.type)(
           body: Option[String]
-      ): scala.concurrent.Future[tests.contentTypes.textPlain.foo.FooResource.doBarResponse] = ???
+      ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse] = ???
     })
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
@@ -69,11 +70,11 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
   test("Plain text should be emitted for present optional parameters") {
     val route: Route = FooResource.routes(new FooHandler {
       def doFoo(
-          respond: tests.contentTypes.textPlain.foo.FooResource.doFooResponse.type
-      )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.foo.FooResource.doFooResponse] = ???
-      def doBar(respond: tests.contentTypes.textPlain.foo.FooResource.doBarResponse.type)(
+          respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doFooResponse.type
+      )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doFooResponse] = ???
+      def doBar(respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse.type)(
           body: Option[String]
-      ): scala.concurrent.Future[tests.contentTypes.textPlain.foo.FooResource.doBarResponse] =
+      ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse] =
         if (body.contains("sample")) {
           Future.successful(respond.Created)
         } else {
@@ -89,11 +90,11 @@ class TextPlainTest extends FunSuite with Matchers with EitherValues with Either
   test("Plain text should be emitted for missing optional parameters") {
     val route: Route = FooResource.routes(new FooHandler {
       def doFoo(
-          respond: tests.contentTypes.textPlain.foo.FooResource.doFooResponse.type
-      )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.foo.FooResource.doFooResponse] = ???
-      def doBar(respond: tests.contentTypes.textPlain.foo.FooResource.doBarResponse.type)(
+          respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doFooResponse.type
+      )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doFooResponse] = ???
+      def doBar(respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse.type)(
           body: Option[String]
-      ): scala.concurrent.Future[tests.contentTypes.textPlain.foo.FooResource.doBarResponse] =
+      ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse] =
         if (body.isEmpty) {
           Future.successful(respond.Created)
         } else {

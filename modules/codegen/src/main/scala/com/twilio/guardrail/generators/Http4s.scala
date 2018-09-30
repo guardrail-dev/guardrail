@@ -5,7 +5,7 @@ import cats.~>
 import cats.arrow.FunctionK
 
 import Http4sClientGenerator._
-import AkkaHttpServerGenerator._
+import Http4sServerGenerator._
 import Http4sGenerator._
 import CirceProtocolGenerator._
 import ScalaGenerator._

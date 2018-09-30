@@ -80,10 +80,10 @@ object Http4sClientGenerator {
             None
           } else if (needsMultipart) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"$tParamName.map(v => Part.fileData[F](${tName.toLit}, v))"
+              q"$tParamName.map(v => Part.fileData[F](${tName.toLit}, v._1, v._2))"
 
             def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"Some(Part.fileData[F](${tName.toLit}, ${tParamName}))"
+              q"Some(Part.fileData[F](${tName.toLit}, ${tParamName}._1, ${tParamName}._2))"
 
             def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"$tParamName.map(v => Part.formData[F](${tName.toLit}, Formatter.show(v)))"
@@ -154,7 +154,9 @@ object Http4sClientGenerator {
                   formDataParams: Option[Term],
                   formDataNeedsMultipart: Boolean,
                   headerParams: Term,
-                  responseTypeRef: Type,
+                  responses: List[(Term.Name, Option[Type])],
+                  produces: Seq[String],
+                  consumes: Seq[String],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter],
                                     tracingArgsPost: List[ScalaParameter],
                                     pathArgs: List[ScalaParameter],
@@ -162,60 +164,95 @@ object Http4sClientGenerator {
                                     formArgs: List[ScalaParameter],
                                     body: Option[ScalaParameter],
                                     headerArgs: List[ScalaParameter],
-                                    extraImplicits: List[Term.Param]): Defn = {
+                                    extraImplicits: List[Term.Param]): RenderedClientOperation = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[Header] = List.empty"
           val safeBody: Option[(Term, Type)] =
-            body.map(sp => (sp.argName.toLit, sp.argType))
+            body.map(sp => (sp.paramName, sp.argType))
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {
-              q"""Multipart($formDataParams.flatten.toVector)"""
+              q"""_multipart"""
             } else {
               q"""UrlForm($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*)"""
             }
           }
 
-          val entity: Term =
-            formEntity.orElse(safeBody.map(_._1)).getOrElse(q"EmptyBody")
-          val methodBody: Term = if (tracing) {
-            val tracingLabel = q"""s"$${clientName}:$${methodName}""""
-            q"""
-            {
-              val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
-              val allHeaders = headers ++ $headerParams
-              /* wrap[{responseTypeRef}]( */
-                tracingHttpClient.expect[${responseTypeRef}](Request[F](method = Method.${Term
-              .Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
-              /* ) */
-            }
-            """
+          val (tracingExpr, httpClientName) =
+            if (tracing)
+              (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
+            else
+              (List(), q"httpClient")
+          val multipartExpr =
+            formDataParams.filter(_ => formDataNeedsMultipart).map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
+          val headersExpr = if (formDataNeedsMultipart) {
+            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers")
           } else {
+            List(q"val allHeaders = headers ++ $headerParams")
+          }
+          val req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
+          val reqWithBody = formEntity
+            .map(e => q"$req.withBody($e)")
+            .orElse(safeBody.map(_._1).map(e => q"$req.withBody($e)(effect, ${Term.Name(s"${methodName}Encoder")})"))
+            .getOrElse(req)
+          val reqExpr = List(
+            q"val req = $reqWithBody"
+          )
+          val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+          val cases = responses.map {
+            case (statusCodeName, valueType) =>
+              val responseTerm = Term.Name(s"${statusCodeName.value}")
+              valueType.fold[Case](
+                p"case $statusCodeName(_) => effect.pure($responseCompanionTerm.$responseTerm)"
+              ) { _ =>
+                p"case $statusCodeName(resp) => ${Term.Name(s"$methodName${statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, identity).map($responseCompanionTerm.$responseTerm)"
+              }
+          }
+          // Get the response type
+          val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
+          val executeReqExpr  = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
+          val methodBody: Term =
             q"""
             {
-              val allHeaders = headers ++ $headerParams
-              // wrap[{responseTypeRef}](
-                httpClient.expect[${responseTypeRef}](Request[F](method = Method.${Term
-              .Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders)).withBody(${entity}))
-              // )
+              ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
             }
             """
-          }
+
+          val formParams = formArgs.map(
+            scalaParam =>
+              scalaParam.param.copy(
+                decltpe =
+                  (
+                    if (scalaParam.isFile) {
+                      if (scalaParam.required) {
+                        Some(t"(String, Stream[F, Byte])")
+                      } else {
+                        Some(t"Option[(String, Stream[F, Byte])]")
+                      }
+                    } else {
+                      scalaParam.param.decltpe
+                    }
+                  )
+            )
+          )
 
           val arglists: List[List[Term.Param]] = List(
             Some(
               (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                .map(_.param) ++ formArgs.map(_.param) ++ body
+                .map(_.param) ++ formParams ++ body
                 .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
                 .map(_.param)) :+ defaultHeaders
             ),
             implicitParams
           ).flatten
 
-          q"""
-          def ${Term
-            .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
-          """
+          RenderedClientOperation(
+            q"""
+              def ${Term
+              .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
+            """,
+            generateCodecs(methodName, body, responses, produces, consumes)
+          )
         }
 
         Target.getGeneratorSettings.flatMap { implicit gs =>
@@ -226,18 +263,14 @@ object Http4sClientGenerator {
             formDataNeedsMultipart = Option(operation.getConsumes)
               .exists(_.contains("multipart/form-data"))
 
-            // Get the response type
-            unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
-            resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
-              .resolve(unresolvedResponseTypeRef, protocolElems)
-            responseTypeRef = resolvedResponseTypeRef.tpe
-
             // Insert the method parameters
             httpMethodStr: String = httpMethod.toString.toLowerCase
             methodName = Option(operation.getOperationId())
               .map(splitOperationParts)
               .map(_._2)
               .getOrElse(s"$httpMethodStr $pathStr")
+
+            responses <- Http4sHelper.getResponses(methodName, operation.getResponses, protocolElems)
 
             _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
@@ -272,23 +305,27 @@ object Http4sClientGenerator {
               List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
             else List.empty
             extraImplicits = List.empty
-            defn = build(methodName, httpMethod, urlWithParams, formDataParams, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(tracingArgsPre,
-                                                                                                                                                tracingArgsPost,
-                                                                                                                                                pathArgs,
-                                                                                                                                                qsArgs,
-                                                                                                                                                formArgs,
-                                                                                                                                                bodyArgs,
-                                                                                                                                                headerArgs,
-                                                                                                                                                extraImplicits)
-          } yield defn
+            produces       = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
+            consumes       = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
+            renderedClientOperation = build(methodName,
+                                            httpMethod,
+                                            urlWithParams,
+                                            formDataParams,
+                                            formDataNeedsMultipart,
+                                            headerParams,
+                                            responses,
+                                            produces,
+                                            consumes,
+                                            tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
+          } yield renderedClientOperation
         }
 
-      case GetImports(tracing) => Target.pure(List.empty)
+      case GetImports(tracing) => Target.pure(List(q"import org.http4s.Status._"))
 
       case GetExtraImports(tracing) => Target.pure(List.empty)
 
       case ClientClsArgs(tracingName, schemes, host, tracing) =>
-        val ihc = param"implicit httpClient: Client[F]"
+        val ihc = param"implicit httpClient: Http4sClient[F]"
         val ief = param"implicit effect: Effect[F]"
         Target.pure(
           List(List(formatHost(schemes, host)) ++ (if (tracing)
@@ -296,6 +333,9 @@ object Http4sClientGenerator {
                                                    else None),
                List(ief, ihc))
         )
+
+      case GenerateResponseDefinitions(operation, protocolElems) =>
+        Http4sHelper.generateResponseDefinitions(operation, protocolElems)
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
@@ -312,7 +352,7 @@ object Http4sClientGenerator {
 
           List(
             q"""
-              def httpClient[F[_]](effect: Effect[F], httpClient: Client[F], ${formatHost(schemes, host)}, ..${tracingParams}): ${tpe}[F] = ${ctorCall}
+              def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(schemes, host)}, ..${tracingParams})(implicit effect: Effect[F]): ${tpe}[F] = ${ctorCall}
             """
           )
         }
@@ -343,30 +383,37 @@ object Http4sClientGenerator {
           """
         Target.pure(companion)
 
-      case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, tracing) =>
+      case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val client =
           q"""
             class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
-              /*
-              private[this] def wrap[T: EntityDecoder](resp: Response[IO]): IO[T] = {
-                resp.flatMap(resp =>
-                  if (resp.status.isSuccess) {
-                    resp.as[T].map(Right.apply _)
-                  } else {
-                    IO.pure(Left(Right(resp)))
-                  }
-                ).handle {
-                  case e: Throwable => Left(Left(e))
-                }
-              }
-              */
 
+             ..${supportDefinitions};
               ..$clientCalls
             }
           """
         Target.pure(client)
     }
+
+    def generateCodecs(methodName: String,
+                       bodyArgs: Option[ScalaParameter],
+                       responses: List[(Term.Name, Option[Type])],
+                       produces: Seq[String],
+                       consumes: Seq[String]): List[Defn.Val] =
+      generateEncoders(methodName, bodyArgs, produces) ++ generateDecoders(methodName, responses, consumes)
+
+    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter], produces: Seq[String]): List[Defn.Val] =
+      bodyArgs.toList.flatMap {
+        case ScalaParameter(_, _, _, _, argType) =>
+          List(q"val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, produces)}")
+      }
+
+    def generateDecoders(methodName: String, responses: List[(Term.Name, Option[Type])], consumes: Seq[String]): List[Defn.Val] =
+      for {
+        (statusCodeName, valueType) <- responses
+        tpe                         <- valueType
+      } yield q"val ${Pat.Var(Term.Name(s"$methodName${statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, consumes)}"
   }
 
 }

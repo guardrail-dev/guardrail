@@ -82,11 +82,6 @@ object ScalaGenerator {
                   ev.addPath(value)
                 }
               }
-
-              sealed trait IgnoredEntity
-              object IgnoredEntity {
-                val empty: IgnoredEntity = new IgnoredEntity {}
-              }
             }
           """
         )

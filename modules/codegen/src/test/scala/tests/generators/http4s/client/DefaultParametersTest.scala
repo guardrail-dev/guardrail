@@ -129,30 +129,52 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
 
     tags should equal(Seq("store"))
 
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    val actual = statements.dropWhile(_.isInstanceOf[Import])
 
-    val companion = q"""
-    object StoreClient {
-      def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Client[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
-      def httpClient[F[_]](effect: Effect[F], httpClient: Client[F], host: String = "http://petstore.swagger.io"): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
-    }
-    """
-
-    val client = q"""
-    class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Client[F]) {
+    val expected = List(
+      q"""object StoreClient {
+      def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
+      def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://petstore.swagger.io")(implicit effect: Effect[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
+    }""",
+      q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
-      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[Order] = {
+      val getOrderByIdOkDecoder = jsonOf[F, Order]
+      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[GetOrderByIdResponse] = {
         val allHeaders = headers ++ List[Option[Header]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-        httpClient.expect[Order](Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders)).withBody(EmptyBody))
+        val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
+        httpClient.fetch(req)({
+          case Ok(resp) =>
+            getOrderByIdOkDecoder.decode(resp, strict = false).fold(throw _, identity).map(GetOrderByIdResponse.Ok)
+          case BadRequest(_) =>
+            effect.pure(GetOrderByIdResponse.BadRequest)
+          case NotFound(_) =>
+            effect.pure(GetOrderByIdResponse.NotFound)
+        })
       }
-      def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[IgnoredEntity] = {
+      def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[DeleteOrderResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
-        httpClient.expect[IgnoredEntity](Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders)).withBody(EmptyBody))
+        val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders))
+        httpClient.fetch(req)({
+          case BadRequest(_) =>
+            effect.pure(DeleteOrderResponse.BadRequest)
+          case NotFound(_) =>
+            effect.pure(DeleteOrderResponse.NotFound)
+        })
       }
-    }
-    """
+    }""",
+      q"""sealed abstract class GetOrderByIdResponse""",
+      q"""object GetOrderByIdResponse {
+      case class Ok(value: Order) extends GetOrderByIdResponse
+      case object BadRequest extends GetOrderByIdResponse
+      case object NotFound extends GetOrderByIdResponse
+    }""",
+      q"""sealed abstract class DeleteOrderResponse""",
+      q"""object DeleteOrderResponse {
+      case object BadRequest extends DeleteOrderResponse
+      case object NotFound extends DeleteOrderResponse
+    }"""
+    )
 
-    cmp.structure should equal(companion.structure)
-    cls.structure should equal(client.structure)
+    actual.map(_.structure) should equal(expected.map(_.structure))
   }
 }
