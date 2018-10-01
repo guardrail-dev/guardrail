@@ -167,7 +167,7 @@ object CirceProtocolGenerator {
         }
 
       case RenderDTOClass(clsName, selfTerms, parents) =>
-        val discriminator = parents.collectFirst { case SuperClass(_, _, _, Some(discriminator)) => discriminator }
+        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator) //collectFirst { case SuperClass(_, _, _, Some(discriminator)) => discriminator }
         val parentNameOpt = parents.headOption.map(_.clsName)
         val terms = (parents.flatMap(_.params.map(_.term)) ++ selfTerms).filterNot(
           param => discriminator.contains(param.name.value)
@@ -181,7 +181,7 @@ object CirceProtocolGenerator {
         Target.pure(code)
 
       case EncodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        val discriminator = parents.collectFirst { case SuperClass(_, _, _, Some(discriminator)) => discriminator }
+        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator)
         val params = (parents.flatMap(_.params) ++ selfParams).filterNot(
           param => discriminator.contains(param.name)
         )
@@ -232,7 +232,7 @@ object CirceProtocolGenerator {
         """)
 
       case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        val discriminator = parents.collectFirst { case SuperClass(_, _, _, Some(discriminator)) => discriminator }
+        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator)
         val params = (parents.flatMap(_.params) ++ selfParams).filterNot(
           param => discriminator.contains(param.name)
         )
