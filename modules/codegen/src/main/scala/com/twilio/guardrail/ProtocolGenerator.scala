@@ -34,7 +34,7 @@ case class ProtocolParameter(
     emptyToNullKey: Option[String]
 )
 
-case class SupperClass(
+case class SuperClass(
     clsName: String,
     tpl: Type,
     params: List[ProtocolParameter],
@@ -103,13 +103,12 @@ object ProtocolGenerator {
     import M._
 
     def child(hierarchy: ClassHierarchy): List[String] =
-      if (hierarchy.children.nonEmpty) hierarchy.children.map(_.parentName) ::: hierarchy.children.flatMap(child)
-      else Nil
-    def father(hierarchy: ClassHierarchy): List[String] =
-      if (hierarchy.children.nonEmpty) hierarchy.parentName :: hierarchy.children.flatMap(father)
+      hierarchy.children.map(_.parentName) ::: hierarchy.children.flatMap(child)
+    def parent(hierarchy: ClassHierarchy): List[String] =
+      if (hierarchy.children.nonEmpty) hierarchy.parentName :: hierarchy.children.flatMap(parent)
       else Nil
 
-    val children      = child(hierarchy).diff(father(hierarchy)).distinct
+    val children      = child(hierarchy).diff(parent(hierarchy)).distinct
     val discriminator = hierarchy.discriminator.get //fixme unsafe
 
     for {
@@ -136,7 +135,7 @@ object ProtocolGenerator {
   def extractParents[F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta])(
       implicit M: ModelProtocolTerms[F],
       F: FrameworkTerms[F]
-  ): Free[F, List[SupperClass]] = {
+  ): Free[F, List[SuperClass]] = {
     import scala.collection.JavaConverters._
     import M._
 
@@ -161,7 +160,7 @@ object ProtocolGenerator {
           needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
           params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
         } yield
-          SupperClass(clsName, Type.Name(clsName), params, parent match {
+          SuperClass(clsName, Type.Name(clsName), params, parent match {
             case m: ModelImpl => Option(m.getDiscriminator)
             case _            => None
           })
@@ -170,7 +169,7 @@ object ProtocolGenerator {
     } yield supper
   }
 
-  private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SupperClass], concreteTypes: List[PropMeta])(
+  private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SuperClass], concreteTypes: List[PropMeta])(
       implicit M: ModelProtocolTerms[F],
       F: FrameworkTerms[F]
   ): Free[F, Either[String, ProtocolElems]] = {

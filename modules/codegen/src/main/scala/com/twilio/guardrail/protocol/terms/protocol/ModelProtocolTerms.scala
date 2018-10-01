@@ -4,7 +4,7 @@ import _root_.io.swagger.models.{ ComposedModel, Model, ModelImpl }
 import _root_.io.swagger.models.properties.Property
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ ProtocolParameter, SupperClass }
+import com.twilio.guardrail.{ ProtocolParameter, SuperClass }
 
 import scala.meta._
 
@@ -19,14 +19,14 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
   ): Free[F, ProtocolParameter] =
     Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
 
-  def renderDTOClass(clsName: String, terms: List[Term.Param], parents: List[SupperClass] = Nil): Free[F, Defn.Class] =
+  def renderDTOClass(clsName: String, terms: List[Term.Param], parents: List[SuperClass] = Nil): Free[F, Defn.Class] =
     Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms, parents))
 
   def encodeModel(
       clsName: String,
       needCamelSnakeConversion: Boolean,
       params: List[ProtocolParameter],
-      parents: List[SupperClass] = Nil
+      parents: List[SuperClass] = Nil
   ): Free[F, Stat] =
     Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params, parents))
 
@@ -34,7 +34,7 @@ class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
       clsName: String,
       needCamelSnakeConversion: Boolean,
       params: List[ProtocolParameter],
-      parents: List[SupperClass] = Nil
+      parents: List[SuperClass] = Nil
   ): Free[F, Stat] =
     Free.inject[ModelProtocolTerm, F](DecodeModel(clsName, needCamelSnakeConversion, params, parents))
 

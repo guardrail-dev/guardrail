@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms.protocol
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ ProtocolParameter, SupperClass }
+import com.twilio.guardrail.{ ProtocolParameter, SuperClass }
 
 import scala.meta.{ Defn, Stat, Term }
 
@@ -10,7 +10,7 @@ import scala.meta.{ Defn, Stat, Term }
   */
 sealed trait PolyProtocolTerm[T]
 
-case class RenderSealedTrait(className: String, terms: List[Term.Param], discriminator: String, parents: List[SupperClass] = Nil)
+case class RenderSealedTrait(className: String, terms: List[Term.Param], discriminator: String, parents: List[SuperClass] = Nil)
     extends PolyProtocolTerm[Defn.Trait]
 
 case class EncodeADT(clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[Stat]
@@ -24,7 +24,7 @@ class PolyProtocolTerms[F[_]](implicit I: InjectK[PolyProtocolTerm, F]) {
       className: String,
       terms: List[Term.Param],
       discriminator: String,
-      parents: List[SupperClass] = Nil
+      parents: List[SuperClass] = Nil
   ): Free[F, Defn.Trait] =
     Free.inject[PolyProtocolTerm, F](RenderSealedTrait(className, terms, discriminator, parents))
 
