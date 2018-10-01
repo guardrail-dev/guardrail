@@ -224,7 +224,7 @@ object ProtocolGenerator {
     }
     getGeneratorSettings().flatMap { implicit generatorSettings =>
       val tpe = model
-        .map(_.getType)
+        .flatMap(model => Option(model.getType))
         .fold[Type](generatorSettings.jsonType)(
           raw => SwaggerUtil.typeName(raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
         )

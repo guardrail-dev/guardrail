@@ -358,7 +358,16 @@ object CirceProtocolGenerator {
         val testTerms = terms
           .filter(_.name.value != discriminator)
           .map { t =>
-            q"""def ${Term.Name(t.name.value)} : ${t.decltpe.getOrElse(Type.Name("Any"))}"""
+            val tpe: Type = t.decltpe
+              .flatMap({
+                case tpe: Type => Some(tpe)
+                case x =>
+                  println(s"Unsure how to map ${x.structure}, please report this bug!")
+                  None
+              })
+              .get
+
+            q"""def ${Term.Name(t.name.value)} : ${tpe}"""
           }
 
         Target.pure(
