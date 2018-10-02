@@ -95,7 +95,10 @@ object Common {
             )
 
           case ADT(name, tpe, trt, obj) =>
-            val polyImports: Import = q"""import io.circe.generic.extras._"""
+            val polyImports: List[Import] = List(
+              q"""import io.circe.generic.extras._""",
+              q"""import cats.syntax.either._"""
+            )
 
             (
               List(
@@ -105,7 +108,7 @@ object Common {
                     package ${buildPkgTerm(dtoComponents)}
 
                     ..$imports
-                    $polyImports
+                    ..$polyImports
                     $trt
                     $obj
 

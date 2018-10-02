@@ -39,9 +39,10 @@ object ProtocolElems {
               strictElems
                 .find(_.name == name)
                 .map {
-                  case RandomType(`name`, tpe)                              => RandomType(name, tpe)
-                  case ClassDefinition(`name`, tpe, cls, companion, parent) => RandomType(name, tpe)
-                  case EnumDefinition(`name`, tpe, `elems`, cls, companion) => RandomType(name, tpe)
+                  case RandomType(name, tpe)                              => RandomType(name, tpe)
+                  case ClassDefinition(name, tpe, cls, companion, parent) => RandomType(name, tpe)
+                  case EnumDefinition(name, tpe, elems, cls, companion)   => RandomType(name, tpe)
+                  case ADT(name, tpe, _, _)                               => RandomType(name, tpe)
                 }
                 .getOrElse(d)
 
@@ -49,9 +50,10 @@ object ProtocolElems {
               strictElems
                 .find(_.name == name)
                 .map {
-                  case RandomType(`name`, tpe)                              => RandomType(name, t"IndexedSeq[$tpe]")
-                  case ClassDefinition(`name`, tpe, cls, companion, _)      => RandomType(name, t"IndexedSeq[$tpe]")
-                  case EnumDefinition(`name`, tpe, `elems`, cls, companion) => RandomType(name, t"IndexedSeq[$tpe]")
+                  case RandomType(name, tpe)                            => RandomType(name, t"IndexedSeq[$tpe]")
+                  case ClassDefinition(name, tpe, cls, companion, _)    => RandomType(name, t"IndexedSeq[$tpe]")
+                  case EnumDefinition(name, tpe, elems, cls, companion) => RandomType(name, t"IndexedSeq[$tpe]")
+                  case ADT(name, tpe, _, _)                             => RandomType(name, t"IndexedSeq[$tpe]")
                 }
                 .getOrElse(d)
 
@@ -59,9 +61,10 @@ object ProtocolElems {
               strictElems
                 .find(_.name == name)
                 .map {
-                  case RandomType(`name`, tpe)                              => RandomType(name, t"Map[String, $tpe]")
-                  case ClassDefinition(`name`, tpe, cls, companion, _)      => RandomType(name, t"Map[String, $tpe]")
-                  case EnumDefinition(`name`, tpe, `elems`, cls, companion) => RandomType(name, t"Map[String, $tpe]")
+                  case RandomType(name, tpe)                            => RandomType(name, t"Map[String, $tpe]")
+                  case ClassDefinition(name, tpe, cls, companion, _)    => RandomType(name, t"Map[String, $tpe]")
+                  case EnumDefinition(name, tpe, elems, cls, companion) => RandomType(name, t"Map[String, $tpe]")
+                  case ADT(name, tpe, _, _)                             => RandomType(name, t"Map[String, $tpe]")
                 }
                 .getOrElse(d)
           }
