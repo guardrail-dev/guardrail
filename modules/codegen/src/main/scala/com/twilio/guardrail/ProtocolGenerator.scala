@@ -34,6 +34,13 @@ case class ProtocolParameter(
     emptyToNullKey: Option[String]
 )
 
+case class SuperClass(
+    clsName: String,
+    tpl: Type,
+    params: List[ProtocolParameter],
+    discriminator: Option[String]
+)
+
 object ProtocolGenerator {
 
   val toPascalRegexes = List(
@@ -88,57 +95,81 @@ object ProtocolGenerator {
     */
   private[this] def fromPoly[F[_]](
       hierarchy: ClassHierarchy,
-      concreteTypes: List[PropMeta]
+      concreteTypes: List[PropMeta],
+      definitions: List[(String, Model)]
   )(implicit F: FrameworkTerms[F], P: PolyProtocolTerms[F], M: ModelProtocolTerms[F]): Free[F, ProtocolElems] = {
+
     import P._
     import M._
 
-    def compositeSeq(hierarchy: ClassHierarchy): Free[F, List[Either[String, Defn.Class]]] =
-      hierarchy.children.traverse { case (childCls, compModel) => composite(hierarchy.parentModel, compModel, childCls) }
+    def child(hierarchy: ClassHierarchy): List[String] =
+      hierarchy.children.map(_.parentName) ::: hierarchy.children.flatMap(child)
+    def parent(hierarchy: ClassHierarchy): List[String] =
+      if (hierarchy.children.nonEmpty) hierarchy.parentName :: hierarchy.children.flatMap(parent)
+      else Nil
 
-    def composite(parent: ModelImpl, model: ComposedModel, className: String): Free[F, Either[String, Defn.Class]] = {
-      def validProg(clsName: String)(props: List[(String, Property)]): Free[F, Defn.Class] = {
-        val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-        for {
-          params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-          terms = params.map(_.term)
-          definition <- renderDTOClass(clsName, terms, Some(hierarchy.parentName))
-        } yield {
-          Escape.escapeTree(definition)
-        }
-      }
-
-      for {
-        props <- extractChildProperties(parent, model, parent.getDiscriminator)
-        res   <- props.traverse(validProg(className))
-      } yield res
-    }
+    val children      = child(hierarchy).diff(parent(hierarchy)).distinct
+    val discriminator = hierarchy.discriminator.get //fixme unsafe
 
     for {
-      childDefs <- compositeSeq(hierarchy)
-      props     <- extractProperties(hierarchy.parentModel).map(_.right.get) //fixme unsafe
+      parents <- extractParents(hierarchy.parentModel, definitions, concreteTypes)
+      props   <- extractProperties(hierarchy.parentModel)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
-      terms         = params.map(_.term)
-      discriminator = hierarchy.parentModel.getDiscriminator
-      definition        <- renderSealedTrait(hierarchy.parentName, terms, discriminator)
-      discriminatorStat <- renderDiscriminator(discriminator)
-      encoder           <- encodeADT(hierarchy.parentName, needCamelSnakeConversion)
-      decoder           <- decodeADT(hierarchy.parentName, needCamelSnakeConversion)
-      cmp               <- renderADTCompanion(hierarchy.parentName, discriminatorStat, encoder, decoder)
+      terms = params.map(_.term)
+      definition <- renderSealedTrait(hierarchy.parentName, terms, discriminator, parents)
+      encoder    <- encodeADT(hierarchy.parentName, children)
+      decoder    <- decodeADT(hierarchy.parentName, children)
+      cmp        <- renderADTCompanion(hierarchy.parentName, discriminator, encoder, decoder)
 
     } yield {
       ADT(
         name = hierarchy.parentName,
         tpe = Type.Name(hierarchy.parentName),
         trt = definition,
-        children = childDefs.map(_.right.get), //fixme unsafe
         companion = cmp
       )
     }
   }
 
-  private[this] def fromModel[F[_]](clsName: String, model: ModelImpl, concreteTypes: List[PropMeta])(
+  def extractParents[F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta])(
+      implicit M: ModelProtocolTerms[F],
+      F: FrameworkTerms[F]
+  ): Free[F, List[SuperClass]] = {
+    import scala.collection.JavaConverters._
+    import M._
+
+    def allParents(model: Model): List[(String, Model)] =
+      (model match {
+        case elem: ComposedModel =>
+          definitions.collectFirst {
+            case (clsName, e) if elem.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName) => (clsName, e)
+          }
+        case _ => None
+      }) match {
+        case Some(x @ (_, el)) => x :: allParents(el)
+        case _                 => Nil
+      }
+
+    for {
+      a <- Free.pure(allParents(elem))
+      supper <- a.traverse { parents =>
+        val (clsName, parent) = parents
+        for {
+          props <- extractProperties(parent)
+          needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+          params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+        } yield
+          SuperClass(clsName, Type.Name(clsName), params, parent match {
+            case m: ModelImpl => Option(m.getDiscriminator)
+            case _            => None
+          })
+      }
+
+    } yield supper
+  }
+
+  private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SuperClass], concreteTypes: List[PropMeta])(
       implicit M: ModelProtocolTerms[F],
       F: FrameworkTerms[F]
   ): Free[F, Either[String, ProtocolElems]] = {
@@ -162,37 +193,41 @@ object ProtocolGenerator {
       * so essentially we have to return false if:
       *   - there are any uppercase characters
       */
-    def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
-
-    def validProg: List[(String, Property)] => Free[F, ClassDefinition] = { props =>
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-        terms = params.map(_.term)
-        defn <- renderDTOClass(clsName, terms, None)
-        deps = params.flatMap(_.dep)
-        encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
-        decoder <- decodeModel(clsName, needCamelSnakeConversion, params)
-        cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp))
-    }
-
     for {
       props <- extractProperties(model)
-      res   <- props.traverse(validProg)
-    } yield res
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+      params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+      terms = params.map(_.term)
+      defn <- renderDTOClass(clsName, terms, parents)
+      deps = params.flatMap(_.dep)
+      encoder <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
+      decoder <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
+      cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
+    } yield
+      if (parents.isEmpty && props.isEmpty) Left("Entity isn't model")
+      else Right(ClassDefinition(clsName, Type.Name(clsName), Escape.escapeTree(defn), Escape.escapeTree(cmp), parents))
   }
 
-  def modelTypeAlias[F[_]](clsName: String, model: ModelImpl)(
+  def modelTypeAlias[F[_]](clsName: String, abstractModel: Model)(
       implicit A: AliasProtocolTerms[F],
       F: FrameworkTerms[F]
   ): Free[F, ProtocolElems] = {
     import F._
+    val model = abstractModel match {
+      case m: ModelImpl => Some(m)
+      case m: ComposedModel =>
+        m.getAllOf.asScala.toList.get(1).flatMap {
+          case m: ModelImpl => Some(m)
+          case _            => None
+        }
+      case _ => None
+    }
     getGeneratorSettings().flatMap { implicit generatorSettings =>
-      val tpe = Option(model.getType)
-        .fold[Type](generatorSettings.jsonType)(raw => SwaggerUtil.typeName(raw, Option(model.getFormat), ScalaType(model)))
+      val tpe = model
+        .flatMap(model => Option(model.getType))
+        .fold[Type](generatorSettings.jsonType)(
+          raw => SwaggerUtil.typeName(raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
+        )
       typeAlias(clsName, tpe)
     }
   }
@@ -220,41 +255,44 @@ object ProtocolGenerator {
     } yield ret
   }
 
-  case class ClassHierarchy(parentName: String, parentModel: ModelImpl, children: List[(String, ComposedModel)])
+  case class ClassHierarchy(parentName: String, parentModel: Model, children: List[ClassHierarchy], discriminator: Option[String] = None)
 
   /**
     * returns objects grouped into hierarchies
     */
   def groupHierarchies(definitions: List[(String, Model)]): List[ClassHierarchy] = {
 
-    // parent -> child
-    val children: Map[String, List[(String, ComposedModel)]] = definitions
-      .map {
-        case (clsName, comp: ComposedModel) if comp.getInterfaces.asScala.headOption.map(_.getSimpleRef).isDefined =>
-          val parentName = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef).get
-          Some((parentName, (clsName, comp)))
+    def firstInHierarchy(model: Model): Option[ModelImpl] =
+      (model match {
+        case elem: ComposedModel =>
+          definitions.collectFirst {
+            case (clsName, element) if elem.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName) => element
+          }
         case _ => None
+      }) match {
+        case Some(x: ComposedModel) => firstInHierarchy(x)
+        case Some(x: ModelImpl)     => Some(x)
+        case _                      => None
       }
-      .collect { case Some(x) => x }
-      .groupBy(_._1)
-      .mapValues(_.map(_._2))
 
-    val parents: Map[String, ModelImpl] = definitions
-      .map { // Fixme here should be List
-        case (clsName, impl: ModelImpl) if Option(impl.getDiscriminator).isDefined =>
-          Some((clsName, impl))
-        case _ => None
-      }
-      .collect { case Some(x) => x }
-      .toMap
+    def children(cls: String, model: Model): List[ClassHierarchy] = definitions.collect {
+      case (clsName, comp: ComposedModel) if comp.getInterfaces.asScala.headOption.exists(_.getSimpleRef == cls) =>
+        classHierarchy(clsName, comp)
+    }
 
-    parents
-      .map {
-        case (parentName, model) =>
-          children.get(parentName).map(children => ClassHierarchy(parentName, model, children))
+    def classHierarchy(cls: String, model: Model): ClassHierarchy = ClassHierarchy(
+      cls,
+      model,
+      children(cls, model),
+      model match {
+        case m: ModelImpl     => Option(m.getDiscriminator)
+        case c: ComposedModel => firstInHierarchy(c).map(_.getDiscriminator)
+        case _                => None
       }
-      .collect { case Some(x) => x }
-      .toList
+    )
+
+    definitions.map(classHierarchy _ tupled).filter(_.children.nonEmpty)
+
   }
 
   def fromSwagger[F[_]](swagger: Swagger)(
@@ -275,24 +313,37 @@ object ProtocolGenerator {
 
     val hierarchies = groupHierarchies(definitions)
 
+    // todo without trait
     val definitionsWithoutPoly: List[(String, Model)] = definitions.filter { // filter out polymorphic definitions
-      case (_, _: ComposedModel)                                     => false
+      case (clsName, _: ComposedModel) if definitions.exists {
+            case (_, m: ComposedModel) => m.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName)
+            case _                     => false
+          } =>
+        false
       case (_, m: ModelImpl) if Option(m.getDiscriminator).isDefined => false
       case _                                                         => true
     }
 
     for {
       concreteTypes <- extractConcreteTypes(definitions)
-      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes))
+      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
           model match {
             case m: ModelImpl =>
               for {
-                enum  <- fromEnum(clsName, m)
-                model <- fromModel(clsName, m, concreteTypes)
-                alias <- modelTypeAlias(clsName, m)
+                enum    <- fromEnum(clsName, m)
+                parents <- extractParents(m, definitions, concreteTypes)
+                model   <- fromModel(clsName, m, parents, concreteTypes)
+                alias   <- modelTypeAlias(clsName, m)
               } yield enum.orElse(model).getOrElse(alias)
+
+            case comp: ComposedModel =>
+              for {
+                parents <- extractParents(comp, definitions, concreteTypes)
+                model   <- fromModel(clsName, comp, parents, concreteTypes)
+                alias   <- modelTypeAlias(clsName, comp)
+              } yield model.getOrElse(alias)
 
             case arr: ArrayModel =>
               fromArray(clsName, arr, concreteTypes)

@@ -13,11 +13,10 @@ case class DeferredMap(name: String)   extends LazyProtocolElems
 sealed trait StrictProtocolElems extends ProtocolElems
 
 case class RandomType(name: String, tpe: Type) extends StrictProtocolElems
-case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object, parent: Option[String] = None)
+case class ClassDefinition(name: String, tpe: Type.Name, cls: Defn.Class, companion: Defn.Object, parents: List[SuperClass] = Nil)
     extends StrictProtocolElems
 
-case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, children: List[Defn.Class], companion: Defn.Object)
-    extends StrictProtocolElems
+case class ADT(name: String, tpe: Type.Name, trt: Defn.Trait, companion: Defn.Object) extends StrictProtocolElems
 
 case class EnumDefinition(
     name: String,
@@ -40,9 +39,10 @@ object ProtocolElems {
               strictElems
                 .find(_.name == name)
                 .map {
-                  case RandomType(`name`, tpe)                              => RandomType(name, tpe)
-                  case ClassDefinition(`name`, tpe, cls, companion, parent) => RandomType(name, tpe)
-                  case EnumDefinition(`name`, tpe, `elems`, cls, companion) => RandomType(name, tpe)
+                  case RandomType(name, tpe)                              => RandomType(name, tpe)
+                  case ClassDefinition(name, tpe, cls, companion, parent) => RandomType(name, tpe)
+                  case EnumDefinition(name, tpe, elems, cls, companion)   => RandomType(name, tpe)
+                  case ADT(name, tpe, _, _)                               => RandomType(name, tpe)
                 }
                 .getOrElse(d)
 
@@ -50,9 +50,10 @@ object ProtocolElems {
               strictElems
                 .find(_.name == name)
                 .map {
-                  case RandomType(`name`, tpe)                              => RandomType(name, t"IndexedSeq[$tpe]")
-                  case ClassDefinition(`name`, tpe, cls, companion, _)      => RandomType(name, t"IndexedSeq[$tpe]")
-                  case EnumDefinition(`name`, tpe, `elems`, cls, companion) => RandomType(name, t"IndexedSeq[$tpe]")
+                  case RandomType(name, tpe)                            => RandomType(name, t"IndexedSeq[$tpe]")
+                  case ClassDefinition(name, tpe, cls, companion, _)    => RandomType(name, t"IndexedSeq[$tpe]")
+                  case EnumDefinition(name, tpe, elems, cls, companion) => RandomType(name, t"IndexedSeq[$tpe]")
+                  case ADT(name, tpe, _, _)                             => RandomType(name, t"IndexedSeq[$tpe]")
                 }
                 .getOrElse(d)
 
@@ -60,9 +61,10 @@ object ProtocolElems {
               strictElems
                 .find(_.name == name)
                 .map {
-                  case RandomType(`name`, tpe)                              => RandomType(name, t"Map[String, $tpe]")
-                  case ClassDefinition(`name`, tpe, cls, companion, _)      => RandomType(name, t"Map[String, $tpe]")
-                  case EnumDefinition(`name`, tpe, `elems`, cls, companion) => RandomType(name, t"Map[String, $tpe]")
+                  case RandomType(name, tpe)                            => RandomType(name, t"Map[String, $tpe]")
+                  case ClassDefinition(name, tpe, cls, companion, _)    => RandomType(name, t"Map[String, $tpe]")
+                  case EnumDefinition(name, tpe, elems, cls, companion) => RandomType(name, t"Map[String, $tpe]")
+                  case ADT(name, tpe, _, _)                             => RandomType(name, t"Map[String, $tpe]")
                 }
                 .getOrElse(d)
           }

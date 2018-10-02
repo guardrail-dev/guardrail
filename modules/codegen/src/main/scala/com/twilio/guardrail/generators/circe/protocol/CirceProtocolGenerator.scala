@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.circe.protocol
 
 import java.util.Locale
 
-import _root_.io.swagger.models.ModelImpl
+import _root_.io.swagger.models.{ ComposedModel, ModelImpl }
 import _root_.io.swagger.models.properties._
 import cats.data.EitherT
 import cats.implicits._
@@ -12,7 +12,7 @@ import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.swagger.SwaggerUtil
-import com.twilio.guardrail.{ ProtocolParameter, Target }
+import com.twilio.guardrail.{ ProtocolParameter, SuperClass, Target }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable
@@ -94,17 +94,14 @@ object CirceProtocolGenerator {
 
   object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
-      case ExtractChildProperties(parent, child, discriminator) =>
-        val allProps = Semigroup[Option[List[(String, Property)]]].combine(
-          Option(parent.getProperties).map(_.asScala.toList),
-          Option(child.getChild.getProperties).map(_.asScala.toList)
-        )
-        val omitDiscriminator = allProps.map(_.filter { case (p, _) => p != discriminator })
-
-        Target.pure(Either.fromOption(omitDiscriminator, "Model has no properties"))
-
       case ExtractProperties(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
+        Target.pure(
+          (swagger match {
+            case m: ModelImpl        => Option(m.getProperties)
+            case comp: ComposedModel => comp.getAllOf().asScala.toList.get(1).flatMap(prop => Option(prop.getProperties))
+            case _                   => None
+          }).map(_.asScala.toList).toList.flatten
+        )
 
       case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
         Target.getGeneratorSettings.flatMap { implicit gs =>
@@ -169,15 +166,25 @@ object CirceProtocolGenerator {
           } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
         }
 
-      case RenderDTOClass(clsName, terms, parentNameOpt) =>
+      case RenderDTOClass(clsName, selfTerms, parents) =>
+        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator) //collectFirst { case SuperClass(_, _, _, Some(discriminator)) => discriminator }
+        val parentNameOpt = parents.headOption.map(_.clsName)
+        val terms = (parents.flatMap(_.params.map(_.term)) ++ selfTerms).filterNot(
+          param => discriminator.contains(param.name.value)
+        )
         val code = parentNameOpt
           .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
-            parentName => q"""case class ${Type.Name(clsName)}(..${terms}) extends AbstractPet"""
+            parentName =>
+              q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"${init"${Type.Name(parentName)}(...$Nil)"}"}"""
           )
 
         Target.pure(code)
 
-      case EncodeModel(clsName, needCamelSnakeConversion, params) =>
+      case EncodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
+        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator)
+        val params = (parents.flatMap(_.params) ++ selfParams).filterNot(
+          param => discriminator.contains(param.name)
+        )
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
         val paramCount                 = params.length
         val typeName                   = Type.Name(clsName)
@@ -224,7 +231,11 @@ object CirceProtocolGenerator {
           }
         """)
 
-      case DecodeModel(clsName, needCamelSnakeConversion, params) =>
+      case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
+        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator)
+        val params = (parents.flatMap(_.params) ++ selfParams).filterNot(
+          param => discriminator.contains(param.name)
+        )
         val emptyToNullKeys: List[String] = params.flatMap(_.emptyToNullKey).toList
         val paramCount                    = params.length
         val decVal = if (paramCount <= 22 && emptyToNullKeys.isEmpty) {
@@ -313,45 +324,59 @@ object CirceProtocolGenerator {
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
       case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
-        val code = q"""object ${Term.Name(clsName)} extends AutoDerivation {
-            ..${List(discriminator, encoder, decoder)}
+        val code = q"""object ${Term.Name(clsName)} {
+             val discriminator:String = ${Lit.String(discriminator)}
+            ..${List(encoder, decoder)}
           }
           """
         Target.pure(code)
 
-      case RenderDiscriminator(discriminator) =>
-        val code = q"""implicit val configuration: Configuration = Configuration.default.withDiscriminator($discriminator)"""
+      case DecodeADT(clsName, children) =>
+        val childrenCases = children.map(
+          child => p"case ${Lit.String(child)} => c.as[${Type.Name(child)}]"
+        )
+        val code =
+          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance(c =>
+                 c.downField(discriminator).as[String].flatMap {
+                   ..case $childrenCases
+                 }
+            )"""
         Target.pure(code)
 
-      case DecodeADT(clsName, needCamelSnakeConversion) =>
-        val code = if (needCamelSnakeConversion) {
-          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] =
-                  deriveDecoder[${Type.Name(clsName)}](io.circe.derivation.renaming.snakeCase)"""
-        } else {
-          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = deriveDecoder[${Type.Name(clsName)}]"""
-        }
+      case EncodeADT(clsName, children) =>
+        val childrenCases = children.map(
+          child => p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(child)}.asJson).asJson"
+        )
+        val code =
+          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
+              ..case $childrenCases
+          }"""
         Target.pure(code)
 
-      case EncodeADT(clsName, needCamelSnakeConversion) =>
-        val code = if (needCamelSnakeConversion) {
-          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = deriveEncoder[${Type
-            .Name(clsName)}](io.circe.derivation.renaming.snakeCase)"""
-        } else {
-          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = deriveEncoder[${Type.Name(clsName)}]"""
-        }
-
-        Target.pure(code)
-
-      case RenderSealedTrait(className, terms, discriminator: String) =>
+      case RenderSealedTrait(className, terms, discriminator, parents) =>
+        val parentNameOpt = parents.headOption.map(_.clsName)
         val testTerms = terms
           .filter(_.name.value != discriminator)
           .map { t =>
-            q"""def ${Term.Name(t.name.value)} : ${t.decltpe.getOrElse(Type.Name("Any"))}"""
+            val tpe: Type = t.decltpe
+              .flatMap({
+                case tpe: Type => Some(tpe)
+                case x =>
+                  println(s"Unsure how to map ${x.structure}, please report this bug!")
+                  None
+              })
+              .get
+
+            q"""def ${Term.Name(t.name.value)} : ${tpe}"""
           }
 
-        Target.pure {
-          q"""sealed trait ${Type.Name(className)} {..$testTerms}"""
-        }
+        Target.pure(
+          parentNameOpt.fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(
+            parentName =>
+              q"""trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parentName)}(...$Nil)"}{..${testTerms}}"} """
+          )
+        )
+
     }
   }
 

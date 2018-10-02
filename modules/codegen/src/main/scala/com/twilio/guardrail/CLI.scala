@@ -14,8 +14,7 @@ import com.twilio.swagger.core.{ LogLevel, LogLevels }
 import com.twilio.guardrail.generators.GeneratorSettings
 import scala.io.AnsiColor
 
-object CLI {
-  def main(args: Array[String]): Unit = run(args)(CoreTermInterp)
+object CLICommon {
 
   def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
     // Hacky loglevel parsing, only supports levels that come before absolutely
@@ -68,6 +67,8 @@ object CLI {
 
     val (coreLogger, deferred) = result.run
 
+    print(coreLogger.show)
+
     val (logger, paths) = deferred
       .traverse {
         case (generatorSettings, rs) =>
@@ -83,6 +84,8 @@ object CLI {
       }
       .map(_.flatten)
       .run
+
+    print(logger.show)
   }
 
   def unsafePrintHelp(): Unit = {
@@ -120,4 +123,15 @@ object CLI {
 
     System.err.println(text)
   }
+}
+
+trait CLICommon {
+  val interpreter: CoreTerm ~> CoreTarget
+
+  def main(args: Array[String]): Unit =
+    CLICommon.run(args)(interpreter)
+}
+
+object CLI extends CLICommon {
+  val interpreter = CoreTermInterp
 }
