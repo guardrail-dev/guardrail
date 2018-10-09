@@ -110,10 +110,10 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
               case (v1, v2, v3, v4) =>
                 putFooParts.baz((v1, v2, v3, v4))
             })
-            val fileReferences = new AtomicReference(List.empty[File])
             extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
                 entity(as[Multipart.FormData]).flatMap { formData =>
+                  val fileReferences = new AtomicReference(List.empty[File])
                   val collectedPartsF: Future[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, String)])]] = for (results <- formData.parts.mapConcat {
                     part => if (Set[String]("foo", "bar", "baz").contains(part.name)) part :: Nil else {
                       part.entity.discardBytes()
