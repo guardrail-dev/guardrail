@@ -163,7 +163,7 @@ definitions:                                # All non-primitive structures are d
                                             # marshallers and unmarshallers maintain this mapping for you though,
                                             # so no chance of protocol violations.
 
-        $ref: '#/definitions/UserAddresses' # Ensures that tye type of `userAddress` will be `IndexedSeq[UserAddress]`
+        $ref: '#/definitions/UserAddresses' # Ensures that the type of `userAddress` will be `IndexedSeq[UserAddress]`
 
   UserAddresses:
     type: array
