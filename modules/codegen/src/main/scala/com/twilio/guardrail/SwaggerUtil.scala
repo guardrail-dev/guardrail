@@ -235,6 +235,7 @@ object SwaggerUtil {
 
     customType.flatMap(liftCustomType _).getOrElse {
       (typeName, format) match {
+        case ("string", Some("date"))      => t"java.time.LocalDate"
         case ("string", Some("date-time")) => t"java.time.OffsetDateTime"
         case ("string", o @ Some(fmt))     => log(o, Type.Name(fmt))
         case ("string", None)              => log(None, t"String")
@@ -295,33 +296,33 @@ object SwaggerUtil {
             .fromOption(Option(r.getSimpleRef()), "Malformed $ref")
             .map(Deferred.apply _)
         case b: BooleanProperty =>
-          Target.pure(Resolved(t"Boolean", None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
+          Target.pure(Resolved(typeName("boolean", None, ScalaType(b)), None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
         case s: StringProperty =>
           Target.pure(Resolved(typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
 
         case d: DateProperty =>
-          Target.pure(Resolved(t"java.time.LocalDate", None, None))
+          Target.pure(Resolved(typeName("string", Some("date"), ScalaType(d)), None, None))
         case d: DateTimeProperty =>
-          Target.pure(Resolved(t"java.time.OffsetDateTime", None, None))
+          Target.pure(Resolved(typeName("string", Some("date-time"), ScalaType(d)), None, None))
 
         case l: LongProperty =>
-          Target.pure(Resolved(t"Long", None, Default(l).extract[Long].map(Lit.Long(_))))
+          Target.pure(Resolved(typeName("integer", Some("int64"), ScalaType(l)), None, Default(l).extract[Long].map(Lit.Long(_))))
         case i: IntegerProperty =>
-          Target.pure(Resolved(t"Int", None, Default(i).extract[Int].map(Lit.Int(_))))
+          Target.pure(Resolved(typeName("integer", Some("int32"), ScalaType(i)), None, Default(i).extract[Int].map(Lit.Int(_))))
         case f: FloatProperty =>
-          Target.pure(Resolved(t"Float", None, Default(f).extract[Float].map(Lit.Float(_))))
+          Target.pure(Resolved(typeName("number", Some("float"), ScalaType(f)), None, Default(f).extract[Float].map(Lit.Float(_))))
         case d: DoubleProperty =>
-          Target.pure(Resolved(t"Double", None, Default(d).extract[Double].map(Lit.Double(_))))
+          Target.pure(Resolved(typeName("number", Some("double"), ScalaType(d)), None, Default(d).extract[Double].map(Lit.Double(_))))
         case d: DecimalProperty =>
-          Target.pure(Resolved(t"BigDecimal", None, None))
+          Target.pure(Resolved(typeName("number", None, ScalaType(d)), None, None))
         case u: UntypedProperty =>
           Target.pure(Resolved(gs.jsonType, None, None))
         case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
-          Target.pure(Resolved(t"BigInt", None, None))
+          Target.pure(Resolved(typeName("integer", None, ScalaType(p)), None, None))
         case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
-          Target.pure(Resolved(t"BigDecimal", None, None))
+          Target.pure(Resolved(typeName("number", None, ScalaType(p)), None, None))
         case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
-          Target.pure(Resolved(t"String", None, None))
+          Target.pure(Resolved(typeName("string", None, ScalaType(p)), None, None))
         case x =>
           Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
       }

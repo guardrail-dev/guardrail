@@ -31,6 +31,8 @@ object VendorExtension {
     implicit val defaultVendorExtensibleSwagger: VendorExtensible[Swagger] =
       build[Swagger](m => key => m.getVendorExtensions.get(key))
 
+    implicit val defaultVendorExtensibleAbstractProperty: VendorExtensible[AbstractProperty] =
+      build[AbstractProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleArrayProperty: VendorExtensible[ArrayProperty] =
       build[ArrayProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleBaseIntegerProperty: VendorExtensible[BaseIntegerProperty] =
@@ -47,6 +49,8 @@ object VendorExtension {
       build[DoubleProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleFloatProperty: VendorExtensible[FloatProperty] =
       build[FloatProperty](m => key => m.getVendorExtensions.get(key))
+    implicit val defaultVendorExtensibleIntegerProperty: VendorExtensible[IntegerProperty] =
+      build[IntegerProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleLongProperty: VendorExtensible[LongProperty] =
       build[LongProperty](m => key => m.getVendorExtensions.get(key))
     implicit val defaultVendorExtensibleMapProperty: VendorExtensible[MapProperty] =
