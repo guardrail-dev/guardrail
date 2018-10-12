@@ -1,3 +1,16 @@
+v0.39.0
+=======
+
+- #102 http4s server generation
+
+v0.38.0
+=======
+
+- #110 File Accumulator leak causes missing files on filesystem on name collision
+- #101 Exposing more error information to build tooling
+- #111 Bumping scalameta
+- #112 Making `x-scala-type` work for all non-container types instead of just string
+
 v0.37.1
 =======
 
