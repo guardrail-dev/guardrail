@@ -301,7 +301,7 @@ object AkkaHttpClientGenerator {
               headerArgs,
               extraImplicits
             )
-          } yield defn
+          } yield RenderedClientOperation(defn, List.empty)
         }
 
       case GetImports(tracing) => Target.pure(List.empty)
@@ -319,6 +319,8 @@ object AkkaHttpClientGenerator {
                                                    else None),
                List(ihc, iec, imat))
         )
+
+      case GenerateResponseDefinitions(operation, protocolElems) => Target.pure(List.empty)
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
@@ -366,7 +368,7 @@ object AkkaHttpClientGenerator {
           """
         Target.pure(companion)
 
-      case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, tracing) =>
+      case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val client =
           q"""
             class ${Type.Name(clientName)}(...$ctorArgs) {

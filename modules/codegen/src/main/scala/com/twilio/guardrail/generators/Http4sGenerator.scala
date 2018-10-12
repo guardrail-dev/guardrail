@@ -25,19 +25,22 @@ object Http4sGenerator {
             q"import cats.implicits._",
             q"import cats.effect.IO",
             q"import cats.effect.Effect",
-            q"import org.http4s._",
+            q"import org.http4s.{Status => _, _}",
             q"import org.http4s.circe._",
-            q"import org.http4s.client._",
+            q"import org.http4s.client.{Client => Http4sClient}",
             q"import org.http4s.client.blaze._",
             q"import org.http4s.dsl.io.Path",
             q"import org.http4s.multipart._",
+            q"import org.http4s.headers._",
+            q"import org.http4s.EntityEncoder._",
+            q"import org.http4s.EntityDecoder._",
+            q"import fs2.Stream",
+            q"import io.circe.Json",
             q"import scala.language.implicitConversions"
           )
         )
 
       case GetFrameworkImplicits() =>
-        val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
-        val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
         Target.pure(q"""
           object Http4sImplicits {
             import scala.util.Try
@@ -49,9 +52,6 @@ object Http4sGenerator {
 
             type TraceBuilder[F[_]] = String => org.http4s.client.Client[F] => org.http4s.client.Client[F]
 
-            implicit def entityEncoder[F[_]: Effect, T: ${jsonEncoderTypeclass}]: EntityEncoder[F, T] = jsonEncoderOf[F, T]
-            implicit def entityDecoder[F[_]: Effect, T: ${jsonDecoderTypeclass}]: EntityDecoder[F, T] = jsonOf[F, T]
-            implicit def entityIgnoredEntityDecoder[F[_]: Effect]: EntityDecoder[F, IgnoredEntity] = EntityDecoder[F, Unit].map { _ => IgnoredEntity.empty }
             implicit def emptyEntityEncoder[F[_]: Effect]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
 
             object DoubleNumber {

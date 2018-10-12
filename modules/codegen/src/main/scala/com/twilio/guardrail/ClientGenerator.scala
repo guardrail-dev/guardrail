@@ -12,6 +12,10 @@ import com.twilio.guardrail.terms.RouteMeta
 
 case class Clients(clients: List[Client])
 case class Client(pkg: List[String], clientName: String, lines: List[Stat])
+case class RenderedClientOperation(
+    clientOperation: Defn,
+    supportDefinitions: List[Defn]
+)
 
 object ClientGenerator {
   type ClientGenerator[A] = ClientTerm[A]
@@ -29,17 +33,34 @@ object ClientGenerator {
       clients <- groupedRoutes.traverse({
         case (pkg, routes) =>
           for {
-            clientCalls <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
+            responseDefinitions <- routes.flatTraverse {
+              case rm @ RouteMeta(path, method, operation) =>
+                for {
+                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
+                } yield responseDefinitions
+            }
+            clientOperations <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
             clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
             tracingName = Option(pkg.mkString("-")).filterNot(_.isEmpty)
             ctorArgs  <- clientClsArgs(tracingName, schemes, host, context.tracing)
             companion <- buildCompanion(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
-            client    <- buildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, context.tracing)
+            client <- buildClient(
+              clientName,
+              tracingName,
+              schemes,
+              host,
+              basePath,
+              ctorArgs,
+              clientOperations.map(_.clientOperation),
+              clientOperations.flatMap(_.supportDefinitions),
+              context.tracing
+            )
           } yield {
             val stats: List[Stat] = (
-              (clientImports ++ frameworkImports ++ clientExtraImports) :+
+              ((clientImports ++ frameworkImports ++ clientExtraImports) :+
                 companion :+
-                client
+                client) ++
+                responseDefinitions
             )
 
             Client(pkg, clientName, stats)

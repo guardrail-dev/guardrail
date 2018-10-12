@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.HttpMethod
+import _root_.io.swagger.models.{ HttpMethod, Operation }
 import cats.arrow.FunctionK
 import cats.data.{ NonEmptyList, OptionT }
 import cats.instances.all._
@@ -146,27 +146,6 @@ object AkkaHttpServerGenerator {
           className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
         } yield className
 
-      case BuildTracingFields(operation, resourceName, tracing) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-            res <- if (tracing) {
-              for {
-                operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                   .map(splitOperationParts)
-                                                   .map(_._2),
-                                                 "Missing operationId")
-                label <- Target.fromOption(
-                  ScalaTracingLabel(operation)
-                    .map(Lit.String(_))
-                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                  "Missing client name"
-                )
-              } yield Some((ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
-            } else Target.pure(None)
-          } yield res
-        }
-
       case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
           operationId <- Target.fromOption(Option(operation.getOperationId())
@@ -252,123 +231,26 @@ object AkkaHttpServerGenerator {
             companion
           )
 
-      case GenerateRoute(resourceName, basePath, route @ ServerRoute(path, method, operation), tracingFields, responseDefinitions, protocolElems) =>
-        // Generate the pair of the Handler method and the actual call to `complete(...)`
+      case GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-          operationId <- Target.fromOption(Option(operation.getOperationId())
-                                             .map(splitOperationParts)
-                                             .map(_._2),
-                                           "Missing operationId")
-          parameters <- Option(operation.getParameters)
-            .map(_.asScala.toList)
-            .map(ScalaParameter.fromParameters(protocolElems))
-            .getOrElse(Target.pure(List.empty[ScalaParameter]))
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
-          _ <- parameters.traverse(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
-
-          filterParamBy = ScalaParameter.filterParams(parameters)
-          bodyArgs      = filterParamBy("body").headOption
-          formArgs = filterParamBy("formData").toList.map({ x =>
-            x.withType(
-              if (x.isFile) {
-                val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
-                if (x.required) {
-                  t"(..${fileParams})"
-                } else {
-                  t"Option[(..${fileParams})]"
-                }
-              } else {
-                x.argType
-              }
-            )
-          })
-          headerArgs = filterParamBy("header").toList
-          pathArgs   = filterParamBy("path").toList
-          qsArgs     = filterParamBy("query").toList
-
-          akkaMethod <- httpMethodToAkka(method)
-          akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
-          akkaQs     <- qsToAkka(qsArgs)
-          akkaBody   <- bodyToAkka(bodyArgs)
-          asyncFormProcessing = formArgs.exists(_.isFile)
-          akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
-          (akkaForm, handlerDefinitions) = akkaForm_
-          akkaHeaders <- headersToAkka(headerArgs)
-        } yield {
-          val (responseCompanionTerm, responseCompanionType) =
-            (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
-          val responseType = ServerRawResponse(operation)
-            .filter(_ == true)
-            .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
-          val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
-            .map(_._1)
-            .map(List(_))
-
-          val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
-          val fullRouteMatcher =
-            List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(entityProcessor), akkaHeaders, tracingFields.map(_._2)).flatten.reduceLeft {
-              (a, n) =>
-                q"${a} & ${n}"
-            }
-          val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-          val fullRoute: Term.Apply = orderedParameters match {
-            case List(List()) =>
-              q"""
-              ${fullRouteMatcher} {
-                complete(handler.${Term
-                .Name(operationId)}(...${handlerCallArgs}))
-              }
-              """
-            case params =>
-              q"""
-              ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
-                complete(handler.${Term
-                .Name(operationId)}(...${handlerCallArgs}))
-              }
-              """
+          renderedRoutes <- routes.traverse {
+            case sr @ ServerRoute(path, method, operation) =>
+              for {
+                tracingFields <- buildTracingFields(operation, className, tracing)
+                rendered      <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
+              } yield rendered
           }
-
-          val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
-
-          val params: List[List[Term.Param]] = respond ++ orderedParameters.map(
-            _.map(
-              scalaParam =>
-                scalaParam.param.copy(
-                  decltpe =
-                    (
-                      if (scalaParam.isFile) {
-                        val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
-                        if (scalaParam.required) {
-                          Some(t"(..${fileParams})")
-                        } else {
-                          Some(t"Option[(..${fileParams})]")
-                        }
-                      } else {
-                        scalaParam.param.decltpe
-                      }
-                    )
-              )
-            )
-          )
-          RenderedRoute(
-            fullRoute,
-            q"""
-              def ${Term
-              .Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
-            """,
-            responseDefinitions,
-            List.empty,
-            handlerDefinitions
+          routeTerms = renderedRoutes.map(_.route)
+          combinedRouteTerms <- combineRouteTerms(routeTerms)
+          methodSigs = renderedRoutes.map(_.methodSig)
+        } yield {
+          RenderedRoutes(
+            combinedRouteTerms,
+            methodSigs,
+            renderedRoutes.flatMap(_.supportDefinitions),
+            renderedRoutes.flatMap(_.handlerDefinitions)
           )
         }
-
-      case CombineRouteTerms(terms) =>
-        for {
-          _      <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
-          routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
-          _      <- routes.traverse(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString))
-        } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
 
       case RenderHandler(handlerName, methodSigs, handlerDefinitions) =>
         for {
@@ -391,7 +273,7 @@ object AkkaHttpServerGenerator {
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
-        } yield q"""
+        } yield List(q"""
           object ${Term.Name(resourceName)} {
             def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
 
@@ -402,7 +284,7 @@ object AkkaHttpServerGenerator {
 
             ..${responseDefinitions}
           }
-        """
+        """)
 
       case GetExtraImports(tracing) =>
         for {
@@ -728,5 +610,150 @@ object AkkaHttpServerGenerator {
         (directive, handlerDefinitions)
       }).fold(Target.pure((Option.empty[Term], List.empty[Stat])))({ case (v1, v2) => Target.pure((Option(v1), v2)) })
     }
+
+    def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Target[Option[(ScalaParameter, Term)]] =
+      Target.getGeneratorSettings.flatMap { implicit gs =>
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          res <- if (tracing) {
+            for {
+              operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                 .map(splitOperationParts)
+                                                 .map(_._2),
+                                               "Missing operationId")
+              label <- Target.fromOption(
+                ScalaTracingLabel(operation)
+                  .map(Lit.String(_))
+                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                "Missing client name"
+              )
+            } yield Some((ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+          } else Target.pure(None)
+        } yield res
+      }
+
+    case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
+
+    def generateRoute(resourceName: String,
+                      basePath: Option[String],
+                      route: ServerRoute,
+                      tracingFields: Option[(ScalaParameter, Term)],
+                      protocolElems: List[StrictProtocolElems]): Target[RenderedRoute] =
+      // Generate the pair of the Handler method and the actual call to `complete(...)`
+      for {
+        _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        ServerRoute(path, method, operation) = route
+        operationId <- Target.fromOption(Option(operation.getOperationId())
+                                           .map(splitOperationParts)
+                                           .map(_._2),
+                                         "Missing operationId")
+        parameters <- Option(operation.getParameters)
+          .map(_.asScala.toList)
+          .map(ScalaParameter.fromParameters(protocolElems))
+          .getOrElse(Target.pure(List.empty[ScalaParameter]))
+        _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
+        _ <- parameters.traverse(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
+
+        filterParamBy = ScalaParameter.filterParams(parameters)
+        bodyArgs      = filterParamBy("body").headOption
+        formArgs = filterParamBy("formData").toList.map({ x =>
+          x.withType(
+            if (x.isFile) {
+              val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
+              if (x.required) {
+                t"(..${fileParams})"
+              } else {
+                t"Option[(..${fileParams})]"
+              }
+            } else {
+              x.argType
+            }
+          )
+        })
+        headerArgs = filterParamBy("header").toList
+        pathArgs   = filterParamBy("path").toList
+        qsArgs     = filterParamBy("query").toList
+
+        akkaMethod <- httpMethodToAkka(method)
+        akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
+        akkaQs     <- qsToAkka(qsArgs)
+        akkaBody   <- bodyToAkka(bodyArgs)
+        asyncFormProcessing = formArgs.exists(_.isFile)
+        akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
+        (akkaForm, handlerDefinitions) = akkaForm_
+        akkaHeaders <- headersToAkka(headerArgs)
+      } yield {
+        val (responseCompanionTerm, responseCompanionType) =
+          (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
+        val responseType = ServerRawResponse(operation)
+          .filter(_ == true)
+          .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
+        val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
+          .map(_._1)
+          .map(List(_))
+
+        val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
+        val fullRouteMatcher =
+          List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(entityProcessor), akkaHeaders, tracingFields.map(_._2)).flatten.reduceLeft {
+            (a, n) =>
+              q"${a} & ${n}"
+          }
+        val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
+        val fullRoute: Term.Apply = orderedParameters match {
+          case List(List()) =>
+            q"""
+              ${fullRouteMatcher} {
+                complete(handler.${Term
+              .Name(operationId)}(...${handlerCallArgs}))
+              }
+              """
+          case params =>
+            q"""
+              ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
+                complete(handler.${Term
+              .Name(operationId)}(...${handlerCallArgs}))
+              }
+              """
+        }
+
+        val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
+
+        val params: List[List[Term.Param]] = respond ++ orderedParameters.map(
+          _.map(
+            scalaParam =>
+              scalaParam.param.copy(
+                decltpe =
+                  (
+                    if (scalaParam.isFile) {
+                      val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
+                      if (scalaParam.required) {
+                        Some(t"(..${fileParams})")
+                      } else {
+                        Some(t"Option[(..${fileParams})]")
+                      }
+                    } else {
+                      scalaParam.param.decltpe
+                    }
+                  )
+            )
+          )
+        )
+        RenderedRoute(
+          fullRoute,
+          q"""
+              def ${Term
+            .Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
+            """,
+          List.empty,
+          handlerDefinitions
+        )
+      }
+
+    def combineRouteTerms(terms: List[Term]): Target[Term] =
+      for {
+        _      <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
+        routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
+        _      <- routes.traverse(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString))
+      } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
   }
 }

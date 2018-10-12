@@ -15,10 +15,9 @@ import scala.meta._
 case class Servers(servers: List[Server])
 case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
-case class RenderedRoute(
-    route: Term,
-    methodSig: Decl.Def,
-    responseDefinitions: List[Defn],
+case class RenderedRoutes(
+    routes: Term,
+    methodSigs: List[Decl.Def],
     supportDefinitions: List[Defn],
     handlerDefinitions: List[Stat]
 )
@@ -54,28 +53,23 @@ object ServerGenerator {
           val handlerName =
             formatHandlerName(className.lastOption.getOrElse(""))
           for {
-            renderedRoutes <- routes.traverse {
+            responseDefinitions <- routes.flatTraverse {
               case sr @ ServerRoute(path, method, operation) =>
                 for {
-                  tracingFields       <- buildTracingFields(operation, className, context.tracing)
                   responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
-                  rendered            <- generateRoute(resourceName, basePath, tracingFields, responseDefinitions, protocolElems)(sr)
-                } yield rendered
+                } yield responseDefinitions
             }
-            routeTerms = renderedRoutes.map(_.route)
-            combinedRouteTerms <- combineRouteTerms(routeTerms)
-            methodSigs = renderedRoutes.map(_.methodSig)
-            handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), methodSigs, renderedRoutes.flatMap(_.handlerDefinitions))
+            renderedRoutes   <- generateRoutes(className, resourceName, basePath, context.tracing, protocolElems)(routes)
+            handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
-            responseDefinitions = renderedRoutes.flatMap(_.responseDefinitions)
             classSrc <- renderClass(resourceName,
                                     handlerName,
-                                    combinedRouteTerms,
+                                    renderedRoutes.routes,
                                     extraRouteParams,
                                     responseDefinitions,
-                                    renderedRoutes.flatMap(_.supportDefinitions))
+                                    renderedRoutes.supportDefinitions)
           } yield {
-            Server(className, frameworkImports ++ extraImports, List(handlerSrc, classSrc))
+            Server(className, frameworkImports ++ extraImports, handlerSrc +: classSrc)
           }
       }
     } yield Servers(servers)

@@ -30,6 +30,8 @@ paths:
     get:
       operationId: getUser
       x-scala-package: users
+      produces:
+        - application/json
       parameters:
       - name: id
         in: path

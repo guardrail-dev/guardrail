@@ -1,10 +1,10 @@
-package swagger
+package core.AkkaHttp
 
-import _root_.clients.akkaHttp.Implicits.IgnoredEntity
+import _root_.clients.akkaHttp.AkkaHttpImplicits.IgnoredEntity
 import _root_.clients.akkaHttp.pet.PetClient
 import _root_.clients.akkaHttp.{ definitions => cdefs }
-import _root_.servers.pet.{ PetHandler, PetResource }
-import _root_.servers.{ definitions => sdefs }
+import _root_.servers.akkaHttp.pet.{ PetHandler, PetResource }
+import _root_.servers.akkaHttp.{ definitions => sdefs }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
@@ -16,7 +16,7 @@ import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.Future
 import support.PositiveLong
 
-class RoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Placeholder until property testing

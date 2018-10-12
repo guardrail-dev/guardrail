@@ -20,6 +20,8 @@ paths:
     get:
       operationId: getAddresses
       x-scala-package: addresses
+      produces:
+        - application/json
       responses:
         '200':
           type: array
@@ -31,6 +33,8 @@ paths:
     get:
       operationId: getAddress
       x-scala-package: addresses
+      produces:
+        - application/json
       parameters:
       - name: id
         in: path

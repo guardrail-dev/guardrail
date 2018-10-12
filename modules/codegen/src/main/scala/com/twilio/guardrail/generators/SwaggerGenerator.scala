@@ -36,7 +36,7 @@ object SwaggerGenerator {
 
       case GetClassName(operation) =>
         for {
-          _ <- Target.log.debug("AkkaHttpClientGenerator", "client")(s"getClassName(${operation})")
+          _ <- Target.log.debug("SwaggerGenerator", "swagger")(s"getClassName(${operation})")
 
           pkg = ScalaPackage(operation)
             .map(_.split('.').toVector)
