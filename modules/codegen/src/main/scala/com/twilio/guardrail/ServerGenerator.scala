@@ -62,12 +62,7 @@ object ServerGenerator {
             renderedRoutes   <- generateRoutes(className, resourceName, basePath, context.tracing, protocolElems)(routes)
             handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
-            classSrc <- renderClass(resourceName,
-                                    handlerName,
-                                    renderedRoutes.routes,
-                                    extraRouteParams,
-                                    responseDefinitions,
-                                    renderedRoutes.supportDefinitions)
+            classSrc         <- renderClass(resourceName, handlerName, renderedRoutes.routes, extraRouteParams, responseDefinitions, renderedRoutes.supportDefinitions)
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc +: classSrc)
           }

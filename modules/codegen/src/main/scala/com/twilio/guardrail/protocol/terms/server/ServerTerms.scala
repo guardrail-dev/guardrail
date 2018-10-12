@@ -13,11 +13,9 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
-  def generateRoutes(className: List[String],
-                     resourceName: String,
-                     basePath: Option[String],
-                     tracing: Boolean,
-                     protocolElems: List[StrictProtocolElems])(routes: List[ServerRoute]): Free[F, RenderedRoutes] =
+  def generateRoutes(className: List[String], resourceName: String, basePath: Option[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(
+      routes: List[ServerRoute]
+  ): Free[F, RenderedRoutes] =
     Free.inject(GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
