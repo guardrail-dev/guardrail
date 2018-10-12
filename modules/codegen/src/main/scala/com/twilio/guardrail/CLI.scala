@@ -1,6 +1,7 @@
 package com.twilio.guardrail
 
 import java.nio.file.Path
+import cats.Applicative
 import cats.instances.all._
 import cats.syntax.show._
 import cats.syntax.traverse._
@@ -68,12 +69,18 @@ object CLICommon {
       .traverse({
         case (generatorSettings, rs) =>
           ReadSwagger
-            .unsafeReadSwagger(rs)
-            .fold({ err =>
-              println(s"${AnsiColor.RED}Error: $err${AnsiColor.RESET}")
-              unsafePrintHelp()
-              List.empty[Path]
-            }, _.map(WriteTree.unsafeWriteTree))
+            .readSwagger(rs)
+            .fold(
+              { err =>
+                println(s"${AnsiColor.RED}${err}${AnsiColor.RESET}")
+                Applicative[Settings].pure(List.empty[Path])
+              },
+              _.fold({ err =>
+                println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
+                unsafePrintHelp()
+                List.empty[Path]
+              }, _.map(WriteTree.unsafeWriteTree))
+            )
             .run(generatorSettings)
       })
       .map(_.flatten)

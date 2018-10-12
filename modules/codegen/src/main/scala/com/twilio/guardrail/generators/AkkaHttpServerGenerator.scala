@@ -548,10 +548,10 @@ object AkkaHttpServerGenerator {
 
             ..${unmarshallers};
 
-            val fileReferences = new AtomicReference(List.empty[File])
             (extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
                 entity(as[Multipart.FormData]).flatMap { formData =>
+                  val fileReferences = new AtomicReference(List.empty[File])
                   val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
                     results <- formData.parts
                       .mapConcat({ part =>
