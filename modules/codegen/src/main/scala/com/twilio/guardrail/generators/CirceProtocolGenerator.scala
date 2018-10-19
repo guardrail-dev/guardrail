@@ -338,8 +338,8 @@ object CirceProtocolGenerator {
           val decodeLong = implicitly[Decoder[Long]]
 
           implicit def decodeInstant: Decoder[Instant] = j8time.decodeInstant.or(decodeLong.map(Instant.ofEpochMilli))
-          implicit def decodeLocalDate: Decoder[LocalDate] = j8time.decodeLocalDateDefault.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDate))
-          implicit def decodeOffsetDateTime: Decoder[OffsetDateTime] = j8time.decodeOffsetDateTimeDefault.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))
+          implicit def decodeLocalDate: Decoder[LocalDate] = j8time.decodeLocalDate.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDate))
+          implicit def decodeOffsetDateTime: Decoder[OffsetDateTime] = j8time.decodeOffsetDateTime.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))
 
           // Unused
           //implicit def decodeLocalDateTime: Decoder[Instant] = ???
@@ -348,11 +348,11 @@ object CirceProtocolGenerator {
 
           // Mirror
           implicit val encodeInstant = j8time.encodeInstant
-          implicit val encodeLocalDateDefault = j8time.encodeLocalDateDefault
-          implicit val encodeLocalDateTimeDefault = j8time.encodeLocalDateTimeDefault
-          implicit val encodeLocalTimeDefault = j8time.encodeLocalTimeDefault
-          implicit val encodeOffsetDateTimeDefault = j8time.encodeOffsetDateTimeDefault
-          implicit val encodeZonedDateTimeDefault = j8time.encodeZonedDateTimeDefault
+          implicit val encodeLocalDateDefault = j8time.encodeLocalDate
+          implicit val encodeLocalDateTimeDefault = j8time.encodeLocalDateTime
+          implicit val encodeLocalTimeDefault = j8time.encodeLocalTime
+          implicit val encodeOffsetDateTimeDefault = j8time.encodeOffsetDateTime
+          implicit val encodeZonedDateTimeDefault = j8time.encodeZonedDateTime
         """.stats)
     }
   }
