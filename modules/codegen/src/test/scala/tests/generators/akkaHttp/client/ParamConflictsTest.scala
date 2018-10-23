@@ -86,7 +86,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate non-conflicting names in definitions") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)

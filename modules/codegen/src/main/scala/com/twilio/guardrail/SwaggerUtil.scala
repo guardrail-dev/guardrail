@@ -79,9 +79,11 @@ object SwaggerUtil {
             .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
             .map {
               case RandomType(name, tpe) => Resolved(tpe, None, None)
-              case ClassDefinition(name, tpe, cls, companion) =>
+              case ClassDefinition(name, tpe, cls, companion, _) =>
                 Resolved(tpe, None, None)
               case EnumDefinition(name, tpe, elems, cls, companion) =>
+                Resolved(tpe, None, None)
+              case ADT(_, tpe, _, _) =>
                 Resolved(tpe, None, None)
             }
         case DeferredArray(name) =>
@@ -90,7 +92,7 @@ object SwaggerUtil {
             .map {
               case RandomType(name, tpe) =>
                 Resolved(t"IndexedSeq[${tpe}]", None, None)
-              case ClassDefinition(name, tpe, cls, companion) =>
+              case ClassDefinition(name, tpe, cls, companion, _) =>
                 Resolved(t"IndexedSeq[${tpe}]", None, None)
               case EnumDefinition(name, tpe, elems, cls, companion) =>
                 Resolved(t"IndexedSeq[${tpe}]", None, None)
@@ -103,7 +105,7 @@ object SwaggerUtil {
             .map {
               case RandomType(name, tpe) =>
                 Resolved(t"Map[String, ${tpe}]", None, None)
-              case ClassDefinition(_, tpe, _, _) =>
+              case ClassDefinition(_, tpe, _, _, _) =>
                 Resolved(t"Map[String, ${tpe}]", None, None)
               case EnumDefinition(_, tpe, _, _, _) =>
                 Resolved(t"Map[String, ${tpe}]", None, None)

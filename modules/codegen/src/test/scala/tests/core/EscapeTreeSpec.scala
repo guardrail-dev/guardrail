@@ -1,6 +1,5 @@
 package tests.core
 
-import com.twilio.guardrail.SwaggerUtil
 import org.scalatest.{ FunSuite, Matchers }
 
 import scala.meta._
@@ -16,8 +15,10 @@ class EscapeTreeSpec extends FunSuite with Matchers {
   List[(Tree, String)](
     (Init(Type.Name("dashy-enum"), Name("what"), List()), "`dashy-enum`"),
     (Term.Name("dashy-class"), "`dashy-class`"),
-    (Term.Param(Nil, Term.Name("dashy-param"), Some(Type.Apply(Type.Name("Option"), List(Type.Name("Long")))), Some(Term.Name("None"))),
-     "`dashy-param`: Option[Long] = None"),
+    (
+      Term.Param(Nil, Term.Name("dashy-param"), Some(Type.Apply(Type.Name("Option"), List(Type.Name("Long")))), Some(Term.Name("None"))),
+      "`dashy-param`: Option[Long] = None"
+    ),
     (Type.Name("dashy-class"), "`dashy-class`")
   ).foreach {
     case (x, y) =>

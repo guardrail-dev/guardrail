@@ -47,7 +47,7 @@ class Issue105 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate plain array alias definition") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: Nil, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)

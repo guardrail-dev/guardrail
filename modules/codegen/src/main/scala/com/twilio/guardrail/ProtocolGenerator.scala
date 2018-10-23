@@ -25,7 +25,7 @@ case class ProtocolDefinitions(elems: List[StrictProtocolElems],
 
 case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
 
-case class SupperClass(
+case class SuperClass(
     clsName: String,
     tpl: Type,
     params: List[ProtocolParameter],
@@ -78,7 +78,6 @@ object ProtocolGenerator {
     } yield res
   }
 
-  private[this] def fromModel[F[_]](clsName: String, model: ModelImpl, concreteTypes: List[PropMeta])(
   def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
 
   /**
@@ -92,34 +91,40 @@ object ProtocolGenerator {
     import P._
     import M._
 
-    //fixme: get parameters!!
-    //fixme: render companion (probably needed only once per hierarchy -> for the parent)
-    //fixme: get Pet's parameters
+    def child(hierarchy: ClassHierarchy): List[String] =
+      hierarchy.children.map(_.parentName) ::: hierarchy.children.flatMap(child)
+    def parent(hierarchy: ClassHierarchy): List[String] =
+      if (hierarchy.children.nonEmpty) hierarchy.parentName :: hierarchy.children.flatMap(parent)
+      else Nil
 
-    val discriminator: String = hierarchy.discriminator
+    val children      = child(hierarchy).diff(parent(hierarchy)).distinct
+    val discriminator = hierarchy.discriminator.get //fixme unsafe
 
     for {
       parents <- extractParents(hierarchy.parentModel, definitions, concreteTypes)
-      props   <- extractProperties(hierarchy.parentModel).map(_.right.get) //fixme unsafe
-      needCamelSnakeConversion = props.forall {
-        case (k, v) => couldBeSnakeCase(k)
-      }
+      props   <- extractProperties(hierarchy.parentModel)
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse(transformProperty(hierarchy.parentName, needCamelSnakeConversion, concreteTypes) _ tupled)
       terms = params.map(_.term)
       definition <- renderSealedTrait(hierarchy.parentName, terms, discriminator, parents)
-      encoder    <- encodeADT(hierarchy.parentName, needCamelSnakeConversion)
-      decoder    <- decodeADT(hierarchy.parentName, needCamelSnakeConversion)
-      cmp        <- renderDTOCompanion(hierarchy.parentName, List.empty, encoder, decoder)
+      encoder    <- encodeADT(hierarchy.parentName, children)
+      decoder    <- decodeADT(hierarchy.parentName, children)
+      cmp        <- renderADTCompanion(hierarchy.parentName, discriminator, encoder, decoder)
 
     } yield {
-      ADT(hierarchy.parentName, Type.Name(hierarchy.parentName), definition, cmp)
+      ADT(
+        name = hierarchy.parentName,
+        tpe = Type.Name(hierarchy.parentName),
+        trt = definition,
+        companion = cmp
+      )
     }
   }
 
   def extractParents[F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta])(
       implicit M: ModelProtocolTerms[F],
       F: FrameworkTerms[F]
-  ): Free[F, List[SupperClass]] = {
+  ): Free[F, List[SuperClass]] = {
     import scala.collection.JavaConverters._
     import M._
 
@@ -135,39 +140,25 @@ object ProtocolGenerator {
         case _                 => Nil
       }
 
-    def validProg(clsName: String)(props: List[(String, Property)]): Free[F, List[ProtocolParameter]] = {
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-      } yield params
-    }
-
     for {
       a <- Free.pure(allParents(elem))
       supper <- a.traverse { parents =>
         val (clsName, parent) = parents
         for {
           props <- extractProperties(parent)
-          proto <- props.traverse(validProg(clsName))
+          needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+          params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
         } yield
-          proto.map { a =>
-            SupperClass(clsName, Type.Name(clsName), a, parent match {
-              case m: ModelImpl => Option(m.getDiscriminator)
-              case _            => None
-            })
-          }
+          SuperClass(clsName, Type.Name(clsName), params, parent match {
+            case m: ModelImpl => Option(m.getDiscriminator)
+            case _            => None
+          })
       }
 
-    } yield
-      supper.collect {
-        case Right(x) => x
-      }
-
+    } yield supper
   }
 
-  private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SupperClass], concreteTypes: List[PropMeta])(
+  private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SuperClass], concreteTypes: List[PropMeta])(
       implicit M: ModelProtocolTerms[F],
       F: FrameworkTerms[F]
   ): Free[F, Either[String, ProtocolElems]] = {
@@ -191,28 +182,19 @@ object ProtocolGenerator {
       * so essentially we have to return false if:
       *   - there are any uppercase characters
       */
-    def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
-
-    def validProg: List[(String, Property)] => Free[F, ClassDefinition] = { props =>
-      val needCamelSnakeConversion = props.forall({
-        case (k, v) => couldBeSnakeCase(k)
-      })
-      for {
-        params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-        terms = params.map(_.term).to[List]
-        defn <- renderDTOClass(clsName, terms, parents)
-        defn <- renderDTOClass(clsName, terms)
-        deps = params.flatMap(_.dep)
-        encoder <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
-        decoder <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
-        cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      } yield ClassDefinition(clsName, Type.Name(clsName), defn, cmp, parents)
-    }
-
     for {
       props <- extractProperties(model)
-      res   <- props.traverse(validProg)
-    } yield res
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+      params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+      terms = params.map(_.term)
+      defn <- renderDTOClass(clsName, terms, parents)
+      deps = params.flatMap(_.dep)
+      encoder <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
+      decoder <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
+      cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
+    } yield
+      if (parents.isEmpty && props.isEmpty) Left("Entity isn't model")
+      else Right(ClassDefinition(clsName, Type.Name(clsName), defn, cmp, parents))
   }
 
   def modelTypeAlias[F[_]](clsName: String, abstractModel: Model)(
@@ -231,8 +213,10 @@ object ProtocolGenerator {
     }
     getGeneratorSettings().flatMap { implicit generatorSettings =>
       val tpe = model
-        .map(_.getType)
-        .fold[Type](generatorSettings.jsonType)(raw => SwaggerUtil.typeName(raw, model.map(_.getFormat), model.flatMap(ScalaType(_))))
+        .flatMap(model => Option(model.getType))
+        .fold[Type](generatorSettings.jsonType)(
+          raw => SwaggerUtil.typeName(raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
+        )
       typeAlias(clsName, tpe)
     }
   }
@@ -258,13 +242,7 @@ object ProtocolGenerator {
     } yield ret
   }
 
-  def fromSwagger[F[_]](swagger: Swagger)(implicit E: EnumProtocolTerms[F],
-                                          M: ModelProtocolTerms[F],
-                                          A: AliasProtocolTerms[F],
-                                          R: ArrayProtocolTerms[F],
-                                          S: ProtocolSupportTerms[F],
-                                          F: FrameworkTerms[F]): Free[F, ProtocolDefinitions] = {
-  case class ClassHierarchy(parentName: String, parentModel: Model, discriminator: String)
+  case class ClassHierarchy(parentName: String, parentModel: Model, children: List[ClassHierarchy], discriminator: Option[String] = None)
 
   /**
     * returns objects grouped into hierarchies
@@ -284,16 +262,23 @@ object ProtocolGenerator {
         case _                      => None
       }
 
-    definitions
-      .collect {
-        case (clsName, comp: ComposedModel) if definitions.exists {
-              case (_, m: ComposedModel) => m.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName)
-              case _                     => false
-            } =>
-          ClassHierarchy(clsName, comp, firstInHierarchy(comp).get.getDiscriminator) //todo unsafe
-        case (clsName, model: ModelImpl) if Option(model.getDiscriminator).isDefined =>
-          ClassHierarchy(clsName, model, model.getDiscriminator)
+    def children(cls: String, model: Model): List[ClassHierarchy] = definitions.collect {
+      case (clsName, comp: ComposedModel) if comp.getInterfaces.asScala.headOption.exists(_.getSimpleRef == cls) =>
+        classHierarchy(clsName, comp)
+    }
+
+    def classHierarchy(cls: String, model: Model): ClassHierarchy = ClassHierarchy(
+      cls,
+      model,
+      children(cls, model),
+      model match {
+        case m: ModelImpl     => Option(m.getDiscriminator)
+        case c: ComposedModel => firstInHierarchy(c).map(_.getDiscriminator)
+        case _                => None
       }
+    )
+
+    definitions.map(classHierarchy _ tupled).filter(_.children.nonEmpty)
 
   }
 
@@ -308,6 +293,7 @@ object ProtocolGenerator {
   ): Free[F, ProtocolDefinitions] = {
     import S._
     import F._
+    import P._
 
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
     val hierarchies = groupHierarchies(definitions)
@@ -354,7 +340,9 @@ object ProtocolGenerator {
       protoImports      <- protocolImports
       pkgImports        <- packageObjectImports
       pkgObjectContents <- packageObjectContents
-      strictElems = ProtocolElems.resolve(elems).right.get
-    } yield ProtocolDefinitions(strictElems, protoImports, pkgImports, pkgObjectContents)
+
+      polyADTElems                           = ProtocolElems.resolve(polyADTs).right.get
+      strictElems: List[StrictProtocolElems] = ProtocolElems.resolve(elems).right.get
+    } yield ProtocolDefinitions(strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents)
   }
 }
