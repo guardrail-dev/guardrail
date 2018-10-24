@@ -417,7 +417,7 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       <td>string</td>
       <td nowrap>clients/servers, paths</td>
       <td>
-        A dot-separated package segment concatinated to the end of the supplied
+        A dot-separated package segment concatenated to the end of the supplied
         <code>packageName</code>. This permits splitting up large specifications
         into smaller, domain-specific <code>Handler</code>s.
       </td>
