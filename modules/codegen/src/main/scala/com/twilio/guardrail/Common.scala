@@ -12,7 +12,6 @@ import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerm
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.generators.GeneratorSettings
 import java.nio.file.{ Path, Paths }
-
 import com.twilio.guardrail.protocol.terms.protocol.PolyProtocolTerms
 
 import scala.collection.JavaConverters._

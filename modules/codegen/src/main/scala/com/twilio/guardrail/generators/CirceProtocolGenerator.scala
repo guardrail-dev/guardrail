@@ -172,7 +172,7 @@ object CirceProtocolGenerator {
         )
         val code = parentNameOpt
           .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
-            parentName => q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"${init"${Type.Name(parentName)}(...$Nil)"}"}"""
+            parentName => q"""case class ${Type.Name(clsName)}(..${terms}) extends ${Type.Name(parentName)}(...$Nil)"""
           )
 
         Target.pure(code)
@@ -381,6 +381,9 @@ object CirceProtocolGenerator {
           implicit val encodeOffsetDateTimeDefault = j8time.encodeOffsetDateTimeDefault
           implicit val encodeZonedDateTimeDefault = j8time.encodeZonedDateTimeDefault
         """.stats)
+
+      case ResolveProtocolElems(elems) =>
+        ProtocolElems.resolve(elems).fold(Target.error _, Target.pure _)
     }
   }
 
@@ -417,28 +420,29 @@ object CirceProtocolGenerator {
         Target.pure(code)
 
       case RenderSealedTrait(className, terms, discriminator, parents) =>
-        val parentNameOpt = parents.headOption.map(_.clsName)
-        val testTerms = terms
-          .filter(_.name.value != discriminator)
-          .map { t =>
-            val tpe: Type = t.decltpe
-              .flatMap({
-                case tpe: Type => Some(tpe)
-                case x =>
-                  println(s"Unsure how to map ${x.structure}, please report this bug!")
-                  None
-              })
-              .get
-
-            q"""def ${Term.Name(t.name.value)} : ${tpe}"""
-          }
-
-        Target.pure(
-          parentNameOpt.fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(
-            parentName => q"""trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parentName)}(...$Nil)"}{..${testTerms}}"} """
+        for {
+          testTerms <- (
+            terms
+              .filter(_.name.value != discriminator)
+              .traverse { t =>
+                for {
+                  tpe <- Target.fromOption(
+                    t.decltpe
+                      .flatMap({
+                        case tpe: Type => Some(tpe)
+                        case x         => None
+                      }),
+                    t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!")
+                  )
+                } yield q"""def ${Term.Name(t.name.value)}: ${tpe}"""
+              }
           )
-        )
-
+        } yield {
+          parents.headOption
+            .fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(
+              parent => q"""trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parent.clsName)}(...$Nil)"}{..${testTerms}}"} """
+            )
+        }
     }
   }
 }

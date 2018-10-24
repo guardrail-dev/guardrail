@@ -309,7 +309,6 @@ object ProtocolGenerator {
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
     val hierarchies = groupHierarchies(definitions)
 
-    // todo without trait
     val definitionsWithoutPoly: List[(String, Model)] = definitions.filter { // filter out polymorphic definitions
       case (clsName, _: ComposedModel) if definitions.exists {
             case (_, m: ComposedModel) => m.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName)
@@ -352,8 +351,8 @@ object ProtocolGenerator {
       pkgImports        <- packageObjectImports
       pkgObjectContents <- packageObjectContents
 
-      polyADTElems                           = ProtocolElems.resolve(polyADTs).right.get
-      strictElems: List[StrictProtocolElems] = ProtocolElems.resolve(elems).right.get
+      polyADTElems <- resolveProtocolElems(polyADTs)
+      strictElems  <- resolveProtocolElems(elems)
     } yield ProtocolDefinitions(strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents)
   }
 }
