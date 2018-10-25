@@ -1,7 +1,8 @@
 package com.twilio.guardrail.protocol.terms.protocol
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ ProtocolParameter, SuperClass }
+import com.twilio.guardrail.SuperClass
+import io.swagger.models.{ Model, RefModel }
 
 import scala.meta.{ Defn, Stat, Term }
 
@@ -9,6 +10,8 @@ import scala.meta.{ Defn, Stat, Term }
   * Protocol for Polymorphic models
   */
 sealed trait PolyProtocolTerm[T]
+
+case class ExtractSuperClass(swagger: Model, definitions: List[(String, Model)]) extends PolyProtocolTerm[List[(String, Model, List[RefModel])]]
 
 case class RenderSealedTrait(className: String, terms: List[Term.Param], discriminator: String, parents: List[SuperClass] = Nil)
     extends PolyProtocolTerm[Defn.Trait]
@@ -20,6 +23,8 @@ case class DecodeADT(clsName: String, children: List[String] = Nil) extends Poly
 case class RenderADTCompanion(clsName: String, discriminator: String, encoder: Stat, decoder: Stat) extends PolyProtocolTerm[Defn.Object]
 
 class PolyProtocolTerms[F[_]](implicit I: InjectK[PolyProtocolTerm, F]) {
+  def extractSuperClass(swagger: Model, definitions: List[(String, Model)]): Free[F, List[(String, Model, List[RefModel])]] =
+    Free.inject[PolyProtocolTerm, F](ExtractSuperClass(swagger, definitions))
   def renderSealedTrait(
       className: String,
       terms: List[Term.Param],

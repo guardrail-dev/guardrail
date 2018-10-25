@@ -457,4 +457,105 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     }
 
   }
+
+  describe("Support multiple inheritance.") {
+
+    val swagger: String =
+      """
+        | swagger: '2.0'
+        | info:
+        |   title: Parsing Error Sample
+        |   version: 1.0.0
+        | definitions:
+        |   Pet:
+        |     type: object
+        |     discriminator: petType
+        |     properties:
+        |       petType:
+        |         type: string
+        |     required:
+        |     - petType
+        |   Mammal:
+        |     type: object
+        |     discriminator: mammalType
+        |     properties:
+        |       mammalType:
+        |         type: string
+        |       wool:
+        |         type: boolean
+        |     required:
+        |     - mammalType
+        |     - wool
+        |   Cat:
+        |     description: A representation of a cat
+        |     allOf:
+        |     - $ref: '#/definitions/Pet'
+        |     - $ref: '#/definitions/Mammal'
+        |     - type: object
+        |       properties:
+        |         catBreed:
+        |           type: string
+        |       required:
+        |       - catBreed
+        |     """.stripMargin
+
+    val (
+      ProtocolDefinitions(
+        ClassDefinition(nameCat, tpeCat, clsCat, companionCat, catParents)
+          :: ADT(namePet, tpePet, trtPet, companionPet) :: ADT(nameMammal, tpeMammal, trtMammal, companionMammal) :: Nil,
+        _,
+        _,
+        _
+      ),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+
+    it("should generate right case class") {
+      clsCat.structure shouldBe q"""case class Cat(wool: Boolean, catBreed: String) extends Pet with Mammal""".structure
+    }
+
+    it("should generate right companion object") {
+      companionCat.toString.replaceAll("\n", "") shouldBe
+        """object Cat {
+          |  implicit val encodeCat = {
+          |    val readOnlyKeys = Set[String]()
+          |    Encoder.forProduct2("wool", "catBreed") { (o: Cat) => (o.wool, o.catBreed) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          |  }
+          |  implicit val decodeCat = Decoder.forProduct2("wool", "catBreed")(Cat.apply _)
+          |}
+          |
+          |""".stripMargin.replaceAll("\n", "")
+    }
+
+    it("should generate parent as trait") {
+      trtMammal.structure shouldBe q"trait Mammal { def wool: Boolean }".structure
+    }
+
+    it("should be right parent companion object") {
+      companionPet.structure shouldBe q"""object Pet {
+        val discriminator: String = "petType"
+        implicit val encoder: Encoder[Pet] = Encoder.instance({
+          case e: Cat =>
+            e.asJsonObject.add(discriminator, "Cat".asJson).asJson
+        })
+        implicit val decoder: Decoder[Pet] = Decoder.instance(c => c.downField(discriminator).as[String].flatMap({
+          case "Cat" =>
+            c.as[Cat]
+        }))
+      }""".structure
+      companionMammal.structure shouldBe q"""object Mammal {
+        val discriminator: String = "mammalType"
+        implicit val encoder: Encoder[Mammal] = Encoder.instance({
+          case e: Cat =>
+            e.asJsonObject.add(discriminator, "Cat".asJson).asJson
+        })
+        implicit val decoder: Decoder[Mammal] = Decoder.instance(c => c.downField(discriminator).as[String].flatMap({
+          case "Cat" =>
+            c.as[Cat]
+        }))
+      }""".structure
+    }
+
+  }
 }

@@ -93,8 +93,10 @@ object CirceProtocolGenerator {
         Target.pure(
           (swagger match {
             case m: ModelImpl        => Option(m.getProperties)
-            case comp: ComposedModel => comp.getAllOf().asScala.toList.get(1).flatMap(prop => Option(prop.getProperties))
-            case _                   => None
+            case comp: ComposedModel => comp.getAllOf().asScala.toList.lastOption.flatMap(prop => Option(prop.getProperties))
+            case comp: RefModel =>
+              Option(comp.getProperties)
+            case _ => None
           }).map(_.asScala.toList).toList.flatten
         )
 
@@ -165,22 +167,24 @@ object CirceProtocolGenerator {
         }
 
       case RenderDTOClass(clsName, selfTerms, parents) =>
-        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator) //collectFirst { case SuperClass(_, _, _, Some(discriminator)) => discriminator }
-        val parentNameOpt = parents.headOption.map(_.clsName)
+        val discriminators = parents.flatMap(_.discriminators)
+        val parenOpt       = parents.headOption
         val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfTerms).filterNot(
-          param => discriminator.contains(param.name.value)
+          param => discriminators.contains(param.name.value)
         )
-        val code = parentNameOpt
+        val code = parenOpt
           .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
-            parentName => q"""case class ${Type.Name(clsName)}(..${terms}) extends ${Type.Name(parentName)}(...$Nil)"""
+            parent =>
+              q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces
+                .map(a => init"${Type.Name(a)}(...$Nil)")}"}"""
           )
 
         Target.pure(code)
 
       case EncodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator)
+        val discriminators = parents.flatMap(_.discriminators)
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminator.contains(param.name)
+          param => discriminators.contains(param.name)
         )
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
         val paramCount                 = params.length
@@ -232,9 +236,9 @@ object CirceProtocolGenerator {
         """)
 
       case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        val discriminator = parents.find(_.discriminator.isDefined).flatMap(_.discriminator)
+        val discriminators = parents.flatMap(_.discriminators)
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminator.contains(param.name)
+          param => discriminators.contains(param.name)
         )
         val emptyToNullKeys: List[String] = params.flatMap(_.emptyToNullKey).toList
         val paramCount                    = params.length
@@ -389,6 +393,22 @@ object CirceProtocolGenerator {
 
   object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
+      case ExtractSuperClass(swagger, definitions) =>
+        def allParents(model: Model): List[(String, Model, List[RefModel])] =
+          (model match {
+            case elem: ComposedModel =>
+              definitions.collectFirst {
+                case (clsName, e) if elem.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName) =>
+                  (clsName, e, elem.getInterfaces.asScala.tail.toList)
+              }
+            case _ => None
+          }) match {
+            case Some(x @ (_, el, _)) => x :: allParents(el)
+            case _                    => Nil
+          }
+
+        Target.pure(allParents(swagger))
+
       case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
         val code = q"""object ${Term.Name(clsName)} {
              val discriminator:String = ${Lit.String(discriminator)}

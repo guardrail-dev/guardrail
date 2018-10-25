@@ -28,8 +28,9 @@ case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Na
 case class SuperClass(
     clsName: String,
     tpl: Type,
+    interfaces: List[String],
     params: List[ProtocolParameter],
-    discriminator: Option[String]
+    discriminators: List[String]
 )
 
 object ProtocolGenerator {
@@ -140,36 +141,41 @@ object ProtocolGenerator {
 
   def extractParents[F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta])(
       implicit M: ModelProtocolTerms[F],
-      F: FrameworkTerms[F]
+      F: FrameworkTerms[F],
+      P: PolyProtocolTerms[F]
   ): Free[F, List[SuperClass]] = {
-    import scala.collection.JavaConverters._
     import M._
-
-    def allParents(model: Model): List[(String, Model)] =
-      (model match {
-        case elem: ComposedModel =>
-          definitions.collectFirst {
-            case (clsName, e) if elem.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName) => (clsName, e)
-          }
-        case _ => None
-      }) match {
-        case Some(x @ (_, el)) => x :: allParents(el)
-        case _                 => Nil
-      }
+    import P._
 
     for {
-      a <- Free.pure(allParents(elem))
-      supper <- a.traverse { parents =>
-        val (clsName, parent) = parents
+      a <- extractSuperClass(elem, definitions)
+      supper <- a.traverse { structure =>
+        val (clsName, _extends, interfaces) = structure
+        val concreteInterfaces = interfaces
+          .flatMap(
+            x =>
+              definitions.collectFirst {
+                case (cls, y: ModelImpl) if x.getSimpleRef == cls     => y
+                case (cls, y: ComposedModel) if x.getSimpleRef == cls => y
+            }
+          )
         for {
-          props <- extractProperties(parent)
+          _extendsProps <- extractProperties(_extends)
+          _withProps    <- concreteInterfaces.traverse(extractProperties)
+          props                    = _extendsProps ++ _withProps.flatten
           needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
           params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+          interfacesCls = interfaces.map(_.getSimpleRef)
         } yield
-          SuperClass(clsName, Type.Name(clsName), params, parent match {
-            case m: ModelImpl => Option(m.getDiscriminator)
-            case _            => None
-          })
+          SuperClass(
+            clsName,
+            Type.Name(clsName),
+            interfacesCls,
+            params,
+            (_extends :: concreteInterfaces).collect {
+              case m: ModelImpl if Option(m.getDiscriminator).isDefined => m.getDiscriminator
+            }
+          )
       }
 
     } yield supper
@@ -269,7 +275,7 @@ object ProtocolGenerator {
       }
 
     def children(cls: String, model: Model): List[ClassChild] = definitions.collect {
-      case (clsName, comp: ComposedModel) if comp.getInterfaces.asScala.headOption.exists(_.getSimpleRef == cls) =>
+      case (clsName, comp: ComposedModel) if comp.getInterfaces.asScala.exists(_.getSimpleRef == cls) =>
         ClassChild(clsName, comp, children(clsName, comp))
     }
 
