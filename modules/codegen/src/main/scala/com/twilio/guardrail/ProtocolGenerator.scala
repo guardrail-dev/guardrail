@@ -78,6 +78,23 @@ object ProtocolGenerator {
     } yield res
   }
 
+  /**
+    * types of things we can losslessly convert between snake and camel case:
+    *   - foo
+    *   - foo_bar
+    *   - foo_bar_baz
+    *   - foo.bar
+    *
+    * types of things we canNOT losslessly convert between snake and camel case:
+    *   - Foo
+    *   - Foo_bar
+    *   - Foo_Bar
+    *   - FooBar
+    *   - foo_barBaz
+    *
+    * so essentially we have to return false if:
+    *   - there are any uppercase characters
+    */
   def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
 
   /**
@@ -165,23 +182,6 @@ object ProtocolGenerator {
     import M._
     import F._
 
-    /**
-      * types of things we can losslessly convert between snake and camel case:
-      *   - foo
-      *   - foo_bar
-      *   - foo_bar_baz
-      *   - foo.bar
-      *
-      * types of things we canNOT losslessly convert between snake and camel case:
-      *   - Foo
-      *   - Foo_bar
-      *   - Foo_Bar
-      *   - FooBar
-      *   - foo_barBaz
-      *
-      * so essentially we have to return false if:
-      *   - there are any uppercase characters
-      */
     for {
       props <- extractProperties(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
