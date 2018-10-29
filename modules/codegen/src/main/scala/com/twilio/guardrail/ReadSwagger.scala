@@ -1,12 +1,12 @@
 package com.twilio.guardrail
 
+import java.nio.file.Path
+
 import _root_.io.swagger.models.Swagger
 import _root_.io.swagger.parser._
 import cats._
-import java.nio.file.Path
+
 import scala.io.AnsiColor
-import scala.util.Try
-import cats.syntax.either._
 
 case class ReadSwagger[T](path: Path, next: Swagger => T)
 object ReadSwagger {
@@ -19,11 +19,11 @@ object ReadSwagger {
       }, identity)
 
   def readSwagger[T](rs: ReadSwagger[T]): Either[String, T] =
-    Either.fromOption(
-      (for {
-        absolutePath <- Try(rs.path.toAbsolutePath.toString).toOption
-        swagger      <- Option(new SwaggerParser().read(absolutePath))
-      } yield rs.next(swagger)),
-      s"Spec file ${rs.path} is either incorrectly formatted or missing."
-    )
+    if (rs.path.toFile.exists()) {
+      Option(new SwaggerParser().read(rs.path.toAbsolutePath.toString))
+        .map(rs.next)
+        .toRight(s"Spec file ${rs.path} is incorrectly formatted.")
+    } else {
+      Left(s"Spec file ${rs.path} does not exist.")
+    }
 }
