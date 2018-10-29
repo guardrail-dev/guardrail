@@ -3,7 +3,7 @@ Project structure
 
 - `root`: Contains tests and nothing else
   - `codegen`: Codegen core. Defines algebras and default interpreters.
-  - `sample`: Target for `run`, as well as integration tests for generated code. Can be generated via `run` in the sbt console.
+  - `sample`: Contains integration tests for generated code. May be generated via `example` in the sbt console.
 
 Coding guidelines
 =================
