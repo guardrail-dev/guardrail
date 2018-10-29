@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.{ ArrayModel, Model, ModelImpl, RefModel }
+import _root_.io.swagger.models.{ ArrayModel, ComposedModel, Model, ModelImpl, RefModel }
 import _root_.io.swagger.models.properties._
 import cats.implicits._
 import cats.~>
@@ -90,7 +90,15 @@ object CirceProtocolGenerator {
   object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
     def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getProperties()).map(_.asScala.toList), "Model has no properties"))
+        Target.pure(
+          (swagger match {
+            case m: ModelImpl        => Option(m.getProperties)
+            case comp: ComposedModel => comp.getAllOf().asScala.toList.lastOption.flatMap(prop => Option(prop.getProperties))
+            case comp: RefModel =>
+              Option(comp.getProperties)
+            case _ => None
+          }).map(_.asScala.toList).toList.flatten
+        )
 
       case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
         def toCamelCase(s: String): String =
@@ -158,12 +166,26 @@ object CirceProtocolGenerator {
           } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
         }
 
-      case RenderDTOClass(clsName, terms) =>
-        Target.pure(q"""
-          case class ${Type.Name(clsName)}(..${terms})
-        """)
+      case RenderDTOClass(clsName, selfTerms, parents) =>
+        val discriminators = parents.flatMap(_.discriminators)
+        val parenOpt       = parents.headOption
+        val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfTerms).filterNot(
+          param => discriminators.contains(param.name.value)
+        )
+        val code = parenOpt
+          .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
+            parent =>
+              q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces
+                .map(a => init"${Type.Name(a)}(...$Nil)")}"}"""
+          )
 
-      case EncodeModel(clsName, needCamelSnakeConversion, params) =>
+        Target.pure(code)
+
+      case EncodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
+        val discriminators = parents.flatMap(_.discriminators)
+        val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
+          param => discriminators.contains(param.name)
+        )
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
         val paramCount                 = params.length
         val typeName                   = Type.Name(clsName)
@@ -213,7 +235,11 @@ object CirceProtocolGenerator {
           }
         """)
 
-      case DecodeModel(clsName, needCamelSnakeConversion, params) =>
+      case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
+        val discriminators = parents.flatMap(_.discriminators)
+        val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
+          param => discriminators.contains(param.name)
+        )
         val emptyToNullKeys: List[String] = params.flatMap(_.emptyToNullKey).toList
         val paramCount                    = params.length
         val decVal = if (paramCount <= 22 && emptyToNullKeys.isEmpty) {
@@ -303,6 +329,11 @@ object CirceProtocolGenerator {
             entries <- definitions.traverse {
               case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
                 Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
+              case (clsName, comp: ComposedModel) =>
+                val parentSimpleRef: Option[String]        = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef)
+                val parentTerm                             = parentSimpleRef.map(n => Term.Name(n))
+                val resolvedType: SwaggerUtil.ResolvedType = SwaggerUtil.Resolved(Type.Name(clsName), parentTerm, None)
+                Target.pure((clsName, resolvedType))
               case (clsName, definition) =>
                 SwaggerUtil
                   .modelMetaType(definition)
@@ -354,6 +385,84 @@ object CirceProtocolGenerator {
           implicit val encodeOffsetDateTimeDefault = j8time.encodeOffsetDateTimeDefault
           implicit val encodeZonedDateTimeDefault = j8time.encodeZonedDateTimeDefault
         """.stats)
+
+      case ResolveProtocolElems(elems) =>
+        ProtocolElems.resolve(elems).fold(Target.error _, Target.pure _)
+    }
+  }
+
+  object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
+    override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
+      case ExtractSuperClass(swagger, definitions) =>
+        def allParents(model: Model): List[(String, Model, List[RefModel])] =
+          (model match {
+            case elem: ComposedModel =>
+              definitions.collectFirst {
+                case (clsName, e) if elem.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName) =>
+                  (clsName, e, elem.getInterfaces.asScala.tail.toList)
+              }
+            case _ => None
+          }) match {
+            case Some(x @ (_, el, _)) => x :: allParents(el)
+            case _                    => Nil
+          }
+
+        Target.pure(allParents(swagger))
+
+      case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
+        val code = q"""object ${Term.Name(clsName)} {
+             val discriminator:String = ${Lit.String(discriminator)}
+            ..${List(encoder, decoder)}
+          }
+          """
+        Target.pure(code)
+
+      case DecodeADT(clsName, children) =>
+        val childrenCases = children.map(
+          child => p"case ${Lit.String(child)} => c.as[${Type.Name(child)}]"
+        )
+        val code =
+          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance(c =>
+                 c.downField(discriminator).as[String].flatMap {
+                   ..case $childrenCases
+                 }
+            )"""
+        Target.pure(code)
+
+      case EncodeADT(clsName, children) =>
+        val childrenCases = children.map(
+          child => p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(child)}.asJson).asJson"
+        )
+        val code =
+          q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
+              ..case $childrenCases
+          }"""
+        Target.pure(code)
+
+      case RenderSealedTrait(className, terms, discriminator, parents) =>
+        for {
+          testTerms <- (
+            terms
+              .filter(_.name.value != discriminator)
+              .traverse { t =>
+                for {
+                  tpe <- Target.fromOption(
+                    t.decltpe
+                      .flatMap({
+                        case tpe: Type => Some(tpe)
+                        case x         => None
+                      }),
+                    t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!")
+                  )
+                } yield q"""def ${Term.Name(t.name.value)}: ${tpe}"""
+              }
+          )
+        } yield {
+          parents.headOption
+            .fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(
+              parent => q"""trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parent.clsName)}(...$Nil)"}{..${testTerms}}"} """
+            )
+        }
     }
   }
 }

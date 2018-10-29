@@ -4,6 +4,7 @@ package generators
 import _root_.io.swagger.models.parameters.Parameter
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
 import java.util.Locale
+
 import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._

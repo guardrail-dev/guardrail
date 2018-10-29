@@ -116,7 +116,7 @@ class BigObjectSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     |""".stripMargin
 
   test("Big objects can be generated") {
-    val (ProtocolDefinitions(ClassDefinition(_, _, cls, cmp) :: Nil, _, _, _), _, _) =
+    val (ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: Nil, _, _, _), _, _) =
       runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val definition = q"""

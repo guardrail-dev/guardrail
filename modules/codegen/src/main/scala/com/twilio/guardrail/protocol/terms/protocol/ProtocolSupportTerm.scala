@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.models.Model
+import com.twilio.guardrail.{ ProtocolElems, StrictProtocolElems }
 
 import scala.meta._
 
@@ -10,3 +11,4 @@ case class ExtractConcreteTypes(models: List[(String, Model)]) extends ProtocolS
 case class ProtocolImports()                                   extends ProtocolSupportTerm[List[Import]]
 case class PackageObjectImports()                              extends ProtocolSupportTerm[List[Import]]
 case class PackageObjectContents()                             extends ProtocolSupportTerm[List[Stat]]
+case class ResolveProtocolElems(elems: List[ProtocolElems])    extends ProtocolSupportTerm[List[StrictProtocolElems]]
