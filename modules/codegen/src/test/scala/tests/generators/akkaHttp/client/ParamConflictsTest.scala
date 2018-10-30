@@ -73,10 +73,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
         }
         def getFoo(conflicting_name: String, ConflictingName: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, FormData(List(("conflicting_name", Some(Formatter.show(conflicting_name))), ("ConflictingName", Some(Formatter.show(ConflictingName)))).collect({
-            case (n, Some(v)) =>
-              (n, v)
-          }): _*), HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, FormData(List(List(("conflicting_name", Formatter.show(conflicting_name))), List(("ConflictingName", Formatter.show(ConflictingName)))).flatten: _*), HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
         }
       }
     """

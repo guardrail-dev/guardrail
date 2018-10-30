@@ -105,23 +105,31 @@ object AkkaHttpClientGenerator {
             }
             Some(q"List(..$args)")
           } else {
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"(${tName.toLit}, $tParamName.map(Formatter.show(_)))"
+            def liftTerm(tParamName: Term, tName: RawParameterName) =
+              q"List((${tName.toLit}, Formatter.show($tParamName)))"
 
-            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"(${tName.toLit}, Some(Formatter.show($tParamName)))"
+            def liftIterable(tParamName: Term, tName: RawParameterName) =
+              q"$tParamName.toList.map((${tName.toLit}, _))"
+
+            def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
+              val lifter = tpe match {
+                case t"Iterable[$_]" => liftIterable _
+                case _               => liftTerm _
+              }
+              q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
+            }
 
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
                 val lifter: (Term.Name, RawParameterName) => Term =
                   param match {
-                    case param"$_: Option[$_]"      => liftOptionTerm _
-                    case param"$_: Option[$_] = $_" => liftOptionTerm _
-                    case _                          => liftTerm _
+                    case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
+                    case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
+                    case _                            => liftTerm _
                   }
                 a :+ lifter(paramName, argName)
             }
-            Some(q"List(..$args)")
+            Some(q"List(..$args).flatten")
           }
 
         def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
@@ -181,7 +189,7 @@ object AkkaHttpClientGenerator {
             if (formDataNeedsMultipart) {
               q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
             } else {
-              q"""FormData($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*)"""
+              q"""FormData($formDataParams: _*)"""
             }
           }
 
