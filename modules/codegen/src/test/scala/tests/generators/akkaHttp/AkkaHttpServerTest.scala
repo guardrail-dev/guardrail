@@ -134,10 +134,10 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val handler  = q"""
       trait StoreHandler {
         def getRoot(respond: StoreResource.getRootResponse.type)(): scala.concurrent.Future[StoreResource.getRootResponse]
-        def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
+        def putBar(respond: StoreResource.putBarResponse.type)(bar: Long): scala.concurrent.Future[HttpResponse]
         def getFoo(respond: StoreResource.getFooResponse.type)(): scala.concurrent.Future[StoreResource.getFooResponse]
         def getFooBar(respond: StoreResource.getFooBarResponse.type)(bar: Long): scala.concurrent.Future[StoreResource.getFooBarResponse]
-        def putBar(respond: StoreResource.putBarResponse.type)(bar: Long): scala.concurrent.Future[HttpResponse]
+        def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
       }
     """
     val resource = q"""
@@ -149,14 +149,14 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
           (get & pathEndOrSingleSlash & discardEntity) {
             complete(handler.getRoot(getRootResponse)())
-          } ~ (get & path("store" / "order" / LongNumber) & parameter(Symbol("status").as[OrderStatus]) & discardEntity) {
-            (orderId, status) => complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))
+          } ~ (put & path("bar") & parameter(Symbol("bar").as[Long]) & discardEntity) {
+            bar => complete(handler.putBar(putBarResponse)(bar))
           } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
             complete(handler.getFoo(getFooResponse)())
           } ~ (get & path("foo" / LongNumber) & discardEntity) {
             bar => complete(handler.getFooBar(getFooBarResponse)(bar))
-          } ~ (put & path("bar") & parameter(Symbol("bar").as[Long]) & discardEntity) {
-            bar => complete(handler.putBar(putBarResponse)(bar))
+          } ~ (get & path("store" / "order" / LongNumber) & parameter(Symbol("status").as[OrderStatus]) & discardEntity) {
+            (orderId, status) => complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
@@ -174,35 +174,23 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           def apply[T](value: T)(implicit ev: T => getRootResponse): getRootResponse = ev(value)
           def OK: getRootResponse = getRootResponseOK
         }
-        sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
-        case class getOrderByIdResponseOK(value: Order) extends getOrderByIdResponse(StatusCodes.OK)
-        case object getOrderByIdResponseBadRequest extends getOrderByIdResponse(StatusCodes.BadRequest)
-        case object getOrderByIdResponseNotFound extends getOrderByIdResponse(StatusCodes.NotFound)
-        object getOrderByIdResponse {
-          implicit val getOrderByIdTRM: ToResponseMarshaller[getOrderByIdResponse] = Marshaller { implicit ec =>
-            resp => getOrderByIdTR(resp)
+        sealed abstract class putBarResponse(val statusCode: StatusCode)
+        case class putBarResponseOK(value: Boolean) extends putBarResponse(StatusCodes.OK)
+        object putBarResponse {
+          implicit val putBarTRM: ToResponseMarshaller[putBarResponse] = Marshaller { implicit ec =>
+            resp => putBarTR(resp)
           }
-          implicit def getOrderByIdTR(value: getOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ getOrderByIdResponseOK(value) =>
+          implicit def putBarTR(value: putBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ putBarResponseOK(value) =>
               Marshal(value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
               }
-            case r: getOrderByIdResponseBadRequest.type =>
-              scala.concurrent.Future.successful(Marshalling.Opaque {
-                () => HttpResponse(r.statusCode)
-              } :: Nil)
-            case r: getOrderByIdResponseNotFound.type =>
-              scala.concurrent.Future.successful(Marshalling.Opaque {
-                () => HttpResponse(r.statusCode)
-              } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => getOrderByIdResponse): getOrderByIdResponse = ev(value)
-          implicit def OKEv(value: Order): getOrderByIdResponse = OK(value)
-          def OK(value: Order): getOrderByIdResponse = getOrderByIdResponseOK(value)
-          def BadRequest: getOrderByIdResponse = getOrderByIdResponseBadRequest
-          def NotFound: getOrderByIdResponse = getOrderByIdResponseNotFound
+          def apply[T](value: T)(implicit ev: T => putBarResponse): putBarResponse = ev(value)
+          implicit def OKEv(value: Boolean): putBarResponse = OK(value)
+          def OK(value: Boolean): putBarResponse = putBarResponseOK(value)
         }
         sealed abstract class getFooResponse(val statusCode: StatusCode)
         case class getFooResponseOK(value: Boolean) extends getFooResponse(StatusCodes.OK)
@@ -240,23 +228,35 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           implicit def OKEv(value: Boolean): getFooBarResponse = OK(value)
           def OK(value: Boolean): getFooBarResponse = getFooBarResponseOK(value)
         }
-        sealed abstract class putBarResponse(val statusCode: StatusCode)
-        case class putBarResponseOK(value: Boolean) extends putBarResponse(StatusCodes.OK)
-        object putBarResponse {
-          implicit val putBarTRM: ToResponseMarshaller[putBarResponse] = Marshaller { implicit ec =>
-            resp => putBarTR(resp)
+        sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
+        case class getOrderByIdResponseOK(value: Order) extends getOrderByIdResponse(StatusCodes.OK)
+        case object getOrderByIdResponseBadRequest extends getOrderByIdResponse(StatusCodes.BadRequest)
+        case object getOrderByIdResponseNotFound extends getOrderByIdResponse(StatusCodes.NotFound)
+        object getOrderByIdResponse {
+          implicit val getOrderByIdTRM: ToResponseMarshaller[getOrderByIdResponse] = Marshaller { implicit ec =>
+            resp => getOrderByIdTR(resp)
           }
-          implicit def putBarTR(value: putBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ putBarResponseOK(value) =>
+          implicit def getOrderByIdTR(value: getOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getOrderByIdResponseOK(value) =>
               Marshal(value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
               }
+            case r: getOrderByIdResponseBadRequest.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+            case r: getOrderByIdResponseNotFound.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => putBarResponse): putBarResponse = ev(value)
-          implicit def OKEv(value: Boolean): putBarResponse = OK(value)
-          def OK(value: Boolean): putBarResponse = putBarResponseOK(value)
+          def apply[T](value: T)(implicit ev: T => getOrderByIdResponse): getOrderByIdResponse = ev(value)
+          implicit def OKEv(value: Order): getOrderByIdResponse = OK(value)
+          def OK(value: Order): getOrderByIdResponse = getOrderByIdResponseOK(value)
+          def BadRequest: getOrderByIdResponse = getOrderByIdResponseBadRequest
+          def NotFound: getOrderByIdResponse = getOrderByIdResponseNotFound
         }
       }
     """

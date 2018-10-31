@@ -37,8 +37,8 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
 
     val handler = q"""
       trait Handler {
-        def getFoo1(respond: Resource.getFoo1Response.type)(): scala.concurrent.Future[Resource.getFoo1Response]
         def getFoo2(respond: Resource.getFoo2Response.type)(): scala.concurrent.Future[Resource.getFoo2Response]
+        def getFoo1(respond: Resource.getFoo1Response.type)(): scala.concurrent.Future[Resource.getFoo1Response]
       }
     """
 
@@ -49,26 +49,11 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
           Directive.Empty
         }
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & (path("foo") & parameter("bar").require(_ == "1")) & discardEntity) {
-            complete(handler.getFoo1(getFoo1Response)())
-          } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2")) & discardEntity) {
+          (get & (pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2")) & discardEntity) {
             complete(handler.getFoo2(getFoo2Response)())
+          } ~ (get & (path("foo") & parameter("bar").require(_ == "1")) & discardEntity) {
+            complete(handler.getFoo1(getFoo1Response)())
           }
-        }
-        sealed abstract class getFoo1Response(val statusCode: StatusCode)
-        case object getFoo1ResponseOK extends getFoo1Response(StatusCodes.OK)
-        object getFoo1Response {
-          implicit val getFoo1TRM: ToResponseMarshaller[getFoo1Response] = Marshaller { implicit ec =>
-            resp => getFoo1TR(resp)
-          }
-          implicit def getFoo1TR(value: getFoo1Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r: getFoo1ResponseOK.type =>
-              scala.concurrent.Future.successful(Marshalling.Opaque {
-                () => HttpResponse(r.statusCode)
-              } :: Nil)
-          }
-          def apply[T](value: T)(implicit ev: T => getFoo1Response): getFoo1Response = ev(value)
-          def OK: getFoo1Response = getFoo1ResponseOK
         }
         sealed abstract class getFoo2Response(val statusCode: StatusCode)
         case object getFoo2ResponseOK extends getFoo2Response(StatusCodes.OK)
@@ -84,6 +69,21 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
           }
           def apply[T](value: T)(implicit ev: T => getFoo2Response): getFoo2Response = ev(value)
           def OK: getFoo2Response = getFoo2ResponseOK
+        }
+        sealed abstract class getFoo1Response(val statusCode: StatusCode)
+        case object getFoo1ResponseOK extends getFoo1Response(StatusCodes.OK)
+        object getFoo1Response {
+          implicit val getFoo1TRM: ToResponseMarshaller[getFoo1Response] = Marshaller { implicit ec =>
+            resp => getFoo1TR(resp)
+          }
+          implicit def getFoo1TR(value: getFoo1Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: getFoo1ResponseOK.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+          }
+          def apply[T](value: T)(implicit ev: T => getFoo1Response): getFoo1Response = ev(value)
+          def OK: getFoo1Response = getFoo1ResponseOK
         }
       }
     """

@@ -201,11 +201,16 @@ object AkkaHttpServerGenerator {
             .groupBy(_._1)
             .flatMap({
               case (tpe, (_, name) :: Nil) =>
-                Some(q"implicit def ${Term
-                  .Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)")
-              case _ => None
+                Some(tpe -> name)
+              case _ =>
+                None
             })
             .toList
+            .sortBy(_._2.value)
+            .map {
+              case (tpe, name) =>
+                q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)"
+            }
 
           companion = q"""
             object ${responseSuperTerm} {
