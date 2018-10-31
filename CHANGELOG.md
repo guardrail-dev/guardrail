@@ -1,3 +1,10 @@
+v0.40.0
+=======
+
+- #43 Missing Support for ComposedModels
+- #89 Submitting a list of a form parameter is not supported
+- #122 Guardrail doesn't support Array type for Form Params
+
 v0.39.0
 =======
 
