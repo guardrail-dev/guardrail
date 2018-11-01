@@ -63,7 +63,7 @@ object ServerGenerator {
                 } yield responseDefinitions
             }
             tracingFields    <- routes.traverse { case ServerRoute(_, _, operation) => buildTracingFields(operation, className, context.tracing) }
-            renderedRoutes   <- generateRoutes(className, resourceName, basePath, context.tracing, protocolElems)(tracingFields.zip(routes))
+            renderedRoutes   <- generateRoutes(resourceName, basePath, tracingFields.zip(routes), protocolElems)
             handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc         <- renderClass(resourceName, handlerName, renderedRoutes.routes, extraRouteParams, responseDefinitions, renderedRoutes.supportDefinitions)

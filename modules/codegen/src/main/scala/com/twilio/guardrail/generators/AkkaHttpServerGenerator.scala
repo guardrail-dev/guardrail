@@ -257,7 +257,7 @@ object AkkaHttpServerGenerator {
           } yield res
         }
 
-      case GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems) =>
+      case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {
             case (tracingFields, sr @ ServerRoute(path, method, operation)) =>

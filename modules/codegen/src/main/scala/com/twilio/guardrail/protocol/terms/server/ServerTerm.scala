@@ -11,11 +11,9 @@ case class ExtractOperations(paths: List[(String, Path)]) extends ServerTerm[Lis
 
 case class GetClassName(operation: Operation)                                                     extends ServerTerm[List[String]]
 case class BuildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[Option[TracingField]]
-case class GenerateRoutes(className: List[String],
-                          resourceName: String,
+case class GenerateRoutes(resourceName: String,
                           basePath: Option[String],
                           routes: List[(Option[TracingField], ServerRoute)],
-                          tracing: Boolean,
                           protocolElems: List[StrictProtocolElems])
     extends ServerTerm[RenderedRoutes]
 case class GetExtraRouteParams(tracing: Boolean)                                                       extends ServerTerm[List[Term.Param]]
