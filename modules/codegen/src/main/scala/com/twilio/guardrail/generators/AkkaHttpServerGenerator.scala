@@ -408,6 +408,8 @@ object AkkaHttpServerGenerator {
         def toVar: Pat.Var    = Pat.Var(toTerm)
         def toTerm: Term.Name = Term.Name(value)
         def toType: Type.Name = Type.Name(value)
+
+        override def toString(): String = s"Binding($value)"
       }
       (for {
         params <- NonEmptyList.fromList(params)
@@ -495,7 +497,10 @@ object AkkaHttpServerGenerator {
 
         val (partContainers, unmarshallers, matchers, _terms, unpacks, termTypes, grabHeads) = value
         val (termPatterns, optionalTermPatterns)                                             = _terms.unzip
-        val optionalTuple                                                                    = p"(..${optionalTermPatterns.map(_.toPat)})"
+        val optionalTuple = optionalTermPatterns match {
+          case binding :: Nil => p"Tuple1(${binding.toPat})"
+          case xs             => p"(..${xs.map(_.toPat)})"
+        }
 
         val _trait              = q"sealed trait Part"
         val ignoredPart         = q"case class IgnoredPart(unit: Unit) extends Part"
@@ -508,11 +513,17 @@ object AkkaHttpServerGenerator {
         """
 
         val fieldNames = q"""Set[String](..${params.toList.map(_.argName.toLit)})"""
-        val optionalTypes = t"(..${termTypes.map({
+        val optionalTypes = termTypes.map({
           case x @ t"Option[$_]" => x
           case x                 => t"Option[$x]"
-        })})"
-        val unpackedTypes = t"(..${termTypes})"
+        }) match {
+          case tpe :: Nil => t"Tuple1[${tpe}]"
+          case xs         => t"(..${xs})"
+        }
+        val unpackedTypes = termTypes match {
+          case tpe :: Nil => t"Tuple1[${tpe}]"
+          case xs         => t"(..${xs})"
+        }
 
         val allCases: List[Case] = matchers ++ List(ignoredUnmarshaller)
 
@@ -573,7 +584,10 @@ object AkkaHttpServerGenerator {
                       results.toList.sequence.map({ successes =>
                         ..${grabHeads}
 
-                        (..${optionalTermPatterns.map(_.toTerm)})
+                        ${optionalTermPatterns.map(_.toTerm) match {
+            case term :: Nil => q"Tuple1(${term})"
+            case xs          => q"(..${xs})"
+          }}
                       })
                     }
 
@@ -602,7 +616,10 @@ object AkkaHttpServerGenerator {
               val maybe: Either[Rejection, ${unpackedTypes}] = for {
                 ..${unpacks}
               } yield {
-                (..${termPatterns.map(_.toTerm)})
+                ${termPatterns.map(_.toTerm) match {
+                  case term :: Nil => q"Tuple1(${term})"
+                  case xs          => q"(..${xs})"
+                }}
               }
               maybe.fold(reject(_), tprovide(_))
             """
