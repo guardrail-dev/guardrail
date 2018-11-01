@@ -69,6 +69,7 @@ fullRunTask(
   --client --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.client.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.http4s --framework http4s
   --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/issues/issue127.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue127
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
 
