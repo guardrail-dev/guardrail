@@ -16,7 +16,7 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
   def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField]] =
     Free.inject(BuildTracingFields(operation, resourceName, tracing))
   def generateRoutes(className: List[String], resourceName: String, basePath: Option[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(
-      routes: List[ServerRoute]
+      routes: List[(Option[TracingField], ServerRoute)]
   ): Free[F, RenderedRoutes] =
     Free.inject(GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =

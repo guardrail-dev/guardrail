@@ -14,7 +14,7 @@ case class BuildTracingFields(operation: Operation, resourceName: List[String], 
 case class GenerateRoutes(className: List[String],
                           resourceName: String,
                           basePath: Option[String],
-                          routes: List[ServerRoute],
+                          routes: List[(Option[TracingField], ServerRoute)],
                           tracing: Boolean,
                           protocolElems: List[StrictProtocolElems])
     extends ServerTerm[RenderedRoutes]

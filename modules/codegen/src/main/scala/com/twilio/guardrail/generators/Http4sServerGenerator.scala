@@ -95,7 +95,7 @@ object Http4sServerGenerator {
         for {
           renderedRoutes <- routes
             .traverse {
-              case sr @ ServerRoute(path, method, operation) =>
+              case (_, sr @ ServerRoute(path, method, operation)) =>
                 for {
                   tracingFields <- buildTracingFields(operation, className, tracing)
                   rendered      <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
@@ -105,7 +105,7 @@ object Http4sServerGenerator {
           routeTerms = renderedRoutes.map(_.route)
           combinedRouteTerms <- combineRouteTerms(routeTerms)
           methodSigs = renderedRoutes.map(_.methodSig)
-          supportDefinitions <- generateSupportDefinitions(routes, protocolElems)
+          supportDefinitions <- generateSupportDefinitions(routes.unzip._2, protocolElems)
         } yield {
           RenderedRoutes(
             combinedRouteTerms,
