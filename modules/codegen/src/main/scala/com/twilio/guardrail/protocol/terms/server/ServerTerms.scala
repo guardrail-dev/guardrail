@@ -4,7 +4,7 @@ import _root_.io.swagger.models.{ Operation, Path }
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems }
+import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems, TracingField }
 
 import scala.meta._
 
@@ -13,10 +13,13 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
-  def generateRoutes(className: List[String], resourceName: String, basePath: Option[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(
-      routes: List[ServerRoute]
-  ): Free[F, RenderedRoutes] =
-    Free.inject(GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems))
+  def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField]] =
+    Free.inject(BuildTracingFields(operation, resourceName, tracing))
+  def generateRoutes(resourceName: String,
+                     basePath: Option[String],
+                     routes: List[(Option[TracingField], ServerRoute)],
+                     protocolElems: List[StrictProtocolElems]): Free[F, RenderedRoutes] =
+    Free.inject(GenerateRoutes(resourceName, basePath, routes, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[Term.Param]] =
     Free.inject(GetExtraRouteParams(tracing))
   def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]): Free[F, List[Defn]] =

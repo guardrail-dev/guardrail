@@ -14,6 +14,7 @@ import scala.meta._
 
 case class Servers(servers: List[Server])
 case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
+case class TracingField(param: ScalaParameter, term: Term)
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
 case class RenderedRoutes(
     routes: Term,
@@ -61,7 +62,8 @@ object ServerGenerator {
                   responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
                 } yield responseDefinitions
             }
-            renderedRoutes   <- generateRoutes(className, resourceName, basePath, context.tracing, protocolElems)(routes)
+            tracingFields    <- routes.traverse { case ServerRoute(_, _, operation) => buildTracingFields(operation, className, context.tracing) }
+            renderedRoutes   <- generateRoutes(resourceName, basePath, tracingFields.zip(routes), protocolElems)
             handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc         <- renderClass(resourceName, handlerName, renderedRoutes.routes, extraRouteParams, responseDefinitions, renderedRoutes.supportDefinitions)

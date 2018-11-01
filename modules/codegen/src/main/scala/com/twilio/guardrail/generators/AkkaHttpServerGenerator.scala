@@ -236,13 +236,33 @@ object AkkaHttpServerGenerator {
             companion
           )
 
-      case GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems) =>
+      case BuildTracingFields(operation, resourceName, tracing) =>
+        Target.getGeneratorSettings.flatMap { implicit gs =>
+          for {
+            _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+            res <- if (tracing) {
+              for {
+                operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                   .map(splitOperationParts)
+                                                   .map(_._2),
+                                                 "Missing operationId")
+                label <- Target.fromOption(
+                  ScalaTracingLabel(operation)
+                    .map(Lit.String(_))
+                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                  "Missing client name"
+                )
+              } yield Some(TracingField(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+            } else Target.pure(None)
+          } yield res
+        }
+
+      case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {
-            case sr @ ServerRoute(path, method, operation) =>
+            case (tracingFields, sr @ ServerRoute(path, method, operation)) =>
               for {
-                tracingFields <- buildTracingFields(operation, className, tracing)
-                rendered      <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
+                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
               } yield rendered
           }
           routeTerms = renderedRoutes.map(_.route)
@@ -634,33 +654,12 @@ object AkkaHttpServerGenerator {
       }).fold(Target.pure((Option.empty[Term], List.empty[Stat])))({ case (v1, v2) => Target.pure((Option(v1), v2)) })
     }
 
-    def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Target[Option[(ScalaParameter, Term)]] =
-      Target.getGeneratorSettings.flatMap { implicit gs =>
-        for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-          res <- if (tracing) {
-            for {
-              operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                 .map(splitOperationParts)
-                                                 .map(_._2),
-                                               "Missing operationId")
-              label <- Target.fromOption(
-                ScalaTracingLabel(operation)
-                  .map(Lit.String(_))
-                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                "Missing client name"
-              )
-            } yield Some((ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
-          } else Target.pure(None)
-        } yield res
-      }
-
     case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
     def generateRoute(resourceName: String,
                       basePath: Option[String],
                       route: ServerRoute,
-                      tracingFields: Option[(ScalaParameter, Term)],
+                      tracingFields: Option[TracingField],
                       protocolElems: List[StrictProtocolElems]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
@@ -712,12 +711,12 @@ object AkkaHttpServerGenerator {
           .filter(_ == true)
           .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
         val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
-          .map(_._1)
+          .map(_.param)
           .map(List(_))
 
         val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
         val fullRouteMatcher =
-          List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(entityProcessor), akkaHeaders, tracingFields.map(_._2)).flatten.reduceLeft {
+          List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(entityProcessor), akkaHeaders, tracingFields.map(_.term)).flatten.reduceLeft {
             (a, n) =>
               q"${a} & ${n}"
           }

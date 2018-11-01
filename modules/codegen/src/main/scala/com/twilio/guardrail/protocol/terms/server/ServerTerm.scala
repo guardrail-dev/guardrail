@@ -2,19 +2,18 @@ package com.twilio.guardrail.protocol.terms.server
 
 import _root_.io.swagger.models.{ Operation, Path }
 import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems }
+import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems, TracingField }
 
 import scala.meta._
 
 sealed trait ServerTerm[T]
 case class ExtractOperations(paths: List[(String, Path)]) extends ServerTerm[List[ServerRoute]]
 
-case class GetClassName(operation: Operation) extends ServerTerm[List[String]]
-case class GenerateRoutes(className: List[String],
-                          resourceName: String,
+case class GetClassName(operation: Operation)                                                     extends ServerTerm[List[String]]
+case class BuildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[Option[TracingField]]
+case class GenerateRoutes(resourceName: String,
                           basePath: Option[String],
-                          routes: List[ServerRoute],
-                          tracing: Boolean,
+                          routes: List[(Option[TracingField], ServerRoute)],
                           protocolElems: List[StrictProtocolElems])
     extends ServerTerm[RenderedRoutes]
 case class GetExtraRouteParams(tracing: Boolean)                                                       extends ServerTerm[List[Term.Param]]
