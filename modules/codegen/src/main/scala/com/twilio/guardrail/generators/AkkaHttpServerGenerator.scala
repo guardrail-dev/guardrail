@@ -298,12 +298,13 @@ object AkkaHttpServerGenerator {
     }
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {
-      case HttpMethod.DELETE => Target.pure(q"delete")
-      case HttpMethod.GET    => Target.pure(q"get")
-      case HttpMethod.PATCH  => Target.pure(q"patch")
-      case HttpMethod.POST   => Target.pure(q"post")
-      case HttpMethod.PUT    => Target.pure(q"put")
-      case other             => Target.error(s"Unknown method: ${other}")
+      case HttpMethod.DELETE  => Target.pure(q"delete")
+      case HttpMethod.GET     => Target.pure(q"get")
+      case HttpMethod.PATCH   => Target.pure(q"patch")
+      case HttpMethod.POST    => Target.pure(q"post")
+      case HttpMethod.PUT     => Target.pure(q"put")
+      case HttpMethod.OPTIONS => Target.pure(q"options")
+      case other              => Target.error(s"Unknown method: ${other}")
     }
 
     def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
