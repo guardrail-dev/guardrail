@@ -236,6 +236,27 @@ object AkkaHttpServerGenerator {
             companion
           )
 
+      case BuildTracingFields(operation, resourceName, tracing) =>
+        Target.getGeneratorSettings.flatMap { implicit gs =>
+          for {
+            _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+            res <- if (tracing) {
+              for {
+                operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                   .map(splitOperationParts)
+                                                   .map(_._2),
+                                                 "Missing operationId")
+                label <- Target.fromOption(
+                  ScalaTracingLabel(operation)
+                    .map(Lit.String(_))
+                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                  "Missing client name"
+                )
+              } yield Some(TracingField(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+            } else Target.pure(None)
+          } yield res
+        }
+
       case GenerateRoutes(className, resourceName, basePath, routes, tracing, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {

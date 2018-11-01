@@ -4,7 +4,7 @@ import _root_.io.swagger.models.{ Operation, Path }
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems }
+import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems, TracingField }
 
 import scala.meta._
 
@@ -13,6 +13,8 @@ class ServerTerms[F[_]](implicit I: InjectK[ServerTerm, F]) {
     Free.inject(ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject(GetClassName(operation))
+  def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField]] =
+    Free.inject(BuildTracingFields(operation, resourceName, tracing))
   def generateRoutes(className: List[String], resourceName: String, basePath: Option[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(
       routes: List[ServerRoute]
   ): Free[F, RenderedRoutes] =
