@@ -7,7 +7,7 @@ import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
 
 import scala.collection.JavaConverters._
-import scala.meta.{ Lit, Term, Type, _ }
+import scala.meta.{ Defn, Import, Lit, Stat, Term, Type }
 import com.twilio.guardrail.terms.RouteMeta
 
 case class Clients(clients: List[Client])
