@@ -1,3 +1,10 @@
+v0.41.0
+=======
+
+- #125 Sorting generated routes to avoid unnecessary changes
+- #126 Adding OPTIONS support
+- #129 Making BuildTracingFields overridable
+
 v0.40.0
 =======
 
