@@ -5,7 +5,6 @@ import cats.InjectK
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.{ CodegenApplication, Target }
 import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.meta._
