@@ -26,8 +26,6 @@ case class RenderedRoutes(
 object ServerGenerator {
   import NelShim._
 
-  type ServerGenerator[A] = ServerTerm[A]
-
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 

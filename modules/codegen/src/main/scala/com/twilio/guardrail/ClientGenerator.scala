@@ -18,8 +18,6 @@ case class RenderedClientOperation(
 )
 
 object ClientGenerator {
-  type ClientGenerator[A] = ClientTerm[A]
-
   def fromSwagger[F[_]](context: Context, frameworkImports: List[Import])(
       schemes: List[String],
       host: Option[String],
