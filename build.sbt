@@ -8,7 +8,7 @@ licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-crossScalaVersions := Seq("2.11.12", "2.12.7")
+crossScalaVersions := Seq("2.11.12", "2.12.3")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 scalafmtOnCompile in ThisBuild := true
