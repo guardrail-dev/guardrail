@@ -7,12 +7,12 @@ import _root_.tracer.servers.{ http4s => sdefs }
 import _root_.tracer.clients.http4s.users.UsersClient
 import _root_.tracer.clients.http4s.addresses.AddressesClient
 import _root_.tracer.servers.http4s.Http4sImplicits.TraceBuilder
-import cats.data.Kleisli
 import cats.effect.IO
-import org.http4s.{ Header, HttpService, Request }
+import org.http4s.{Header, HttpRoutes, Request}
 import org.http4s.client.Client
+import org.http4s.implicits._
 import org.http4s.syntax.StringSyntax
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.{EitherValues, FunSuite, Matchers}
 
 class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with StringSyntax {
 
@@ -27,21 +27,14 @@ class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with
   }
 
   def traceBuilder(parentValue: String): TraceBuilder[IO] = { name => httpClient =>
-    httpClient.copy(open = Kleisli { req =>
-      // Rudimentary testing. As we have the response object in res, we could
-      // also log error codes or other interesting metrics.
-      val before = System.currentTimeMillis
-      for {
-        res <- httpClient.open(req.putHeaders(Header(traceHeaderKey, parentValue)))
-        after = System.currentTimeMillis
-        ()    = log(s"Request took ${after - before}ms")
-      } yield res
-    })
+    Client { req =>
+      httpClient.run(req.putHeaders(Header(traceHeaderKey, parentValue)))
+    }
   }
 
   test("full tracer: passing headers through multiple levels") {
     // Establish the "Address" server
-    val server2: HttpService[IO] =
+    val server2: HttpRoutes[IO] =
       new AddressesResource(trace).routes(
         new AddressesHandler[IO] {
           def getAddress(respond: GetAddressResponse.type)(id: String)(traceBuilder: TraceBuilder[IO]) =
@@ -54,11 +47,11 @@ class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with
       )
 
     // Establish the "User" server
-    val server1: HttpService[IO] =
+    val server1: HttpRoutes[IO] =
       new UsersResource(trace).routes(
         new UsersHandler[IO] {
           // ... using the "Address" server explicitly in the addressesClient
-          val addressesClient = AddressesClient.httpClient(Client.fromHttpService(server2))
+          val addressesClient = AddressesClient.httpClient(Client.fromHttpApp(server2.orNotFound))
           def getUser(respond: GetUserResponse.type)(id: String)(traceBuilder: TraceBuilder[IO]) =
             addressesClient
               .getAddress(traceBuilder, "addressId")
@@ -70,7 +63,7 @@ class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with
       )
 
     // Build a UsersClient using the User server
-    val usersClient = UsersClient.httpClient(Client.fromHttpService(server1))
+    val usersClient = UsersClient.httpClient(Client.fromHttpApp(server1.orNotFound))
     // As this is the entry point, we either have a tracing header from
     // somewhere else, or we generate one for top-level request.
     val testTrace = traceBuilder("top-level-request")
