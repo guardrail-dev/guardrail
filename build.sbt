@@ -102,6 +102,10 @@ addCommandAlias(
   "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
 )
 
+resolvers += Resolver.sonatypeRepo("releases")
+addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.8")
+addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.8" cross CrossVersion.binary)
+
 publishMavenStyle := true
 
 val testDependencies = Seq(
@@ -109,6 +113,8 @@ val testDependencies = Seq(
 )
 
 val codegenSettings = Seq(
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.8"),
+  addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.8" cross CrossVersion.binary),
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta"     % "4.0.0",
     "io.swagger"    % "swagger-parser" % "1.0.39",
