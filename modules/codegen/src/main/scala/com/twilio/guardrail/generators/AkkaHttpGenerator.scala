@@ -14,10 +14,11 @@ import com.twilio.guardrail.terms.framework._
 import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.meta._
+import com.twilio.guardrail.languages.ScalaLanguage
 
 object AkkaHttpGenerator {
-  object FrameworkInterp extends FunctionK[FrameworkTerm, Target] {
-    def apply[T](term: FrameworkTerm[T]): Target[T] = term match {
+  object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
+    def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
       case GetFrameworkImports(tracing) =>
         Target.pure(
           List(

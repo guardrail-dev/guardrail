@@ -6,6 +6,14 @@ class LanguageAbstraction {
 
   type Import
 
+  // Terms
+
+  type Term
+  type TermName
+
+  // Declarations
+  type MethodDeclaration
+
   // Definitions
   type Definition
   type AbstractClass

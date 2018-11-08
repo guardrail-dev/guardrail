@@ -6,23 +6,31 @@ class ScalaLanguage extends LanguageAbstraction {
 
   type Import = scala.meta.Import
 
+  // Terms
+
+  type Term     = scala.meta.Term
+  type TermName = scala.meta.Term.Name
+
+  // Declarations
+  type MethodDeclaration = scala.meta.Decl.Def
+
   // Definitions
   type Definition          = scala.meta.Defn
   type AbstractClass       = Nothing
   type ClassDefinition     = scala.meta.Defn.Class
   type InterfaceDefinition = Nothing
   type ObjectDefinition    = scala.meta.Defn.Object
-  type Trait               = Nothing
+  type Trait               = scala.meta.Defn.Trait
 
   // Functions
   type InstanceMethod = Nothing
   type StaticMethod   = Nothing
 
   // Values
-  type ValueDefinition = Nothing
+  type ValueDefinition = scala.meta.Defn.Val
   type MethodParameter = scala.meta.Term.Param
   type Type            = scala.meta.Type
 
   // Result
-  type FileContents = Nothing
+  type FileContents = scala.meta.Source
 }

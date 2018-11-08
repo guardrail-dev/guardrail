@@ -3,27 +3,27 @@ package com.twilio.guardrail.protocol.terms.server
 import _root_.io.swagger.models.{ Operation, Path }
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems, TracingField }
+import com.twilio.guardrail.languages.LA
 
-import scala.meta._
+sealed trait ServerTerm[L <: LA, T]
+case class ExtractOperations[L <: LA](paths: List[(String, Path)]) extends ServerTerm[L, List[ServerRoute]]
 
-sealed trait ServerTerm[T]
-case class ExtractOperations(paths: List[(String, Path)]) extends ServerTerm[List[ServerRoute]]
-
-case class GetClassName(operation: Operation)                                                     extends ServerTerm[List[String]]
-case class BuildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[Option[TracingField]]
-case class GenerateRoutes(resourceName: String,
-                          basePath: Option[String],
-                          routes: List[(Option[TracingField], ServerRoute)],
-                          protocolElems: List[StrictProtocolElems])
-    extends ServerTerm[RenderedRoutes]
-case class GetExtraRouteParams(tracing: Boolean)                                                       extends ServerTerm[List[Term.Param]]
-case class GenerateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]) extends ServerTerm[List[Defn]]
-case class RenderClass(className: String,
-                       handlerName: String,
-                       combinedRouteTerms: Term,
-                       extraRouteParams: List[Term.Param],
-                       responseDefinitions: List[Defn],
-                       supportDefinitions: List[Defn])
-    extends ServerTerm[List[Stat]]
-case class RenderHandler(handlerName: String, methodSigs: List[Decl.Def], handlerDefinitions: List[Stat]) extends ServerTerm[Stat]
-case class GetExtraImports(tracing: Boolean)                                                              extends ServerTerm[List[Import]]
+case class GetClassName[L <: LA](operation: Operation)                                                     extends ServerTerm[L, List[String]]
+case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField]]
+case class GenerateRoutes[L <: LA](resourceName: String,
+                                   basePath: Option[String],
+                                   routes: List[(Option[TracingField], ServerRoute)],
+                                   protocolElems: List[StrictProtocolElems])
+    extends ServerTerm[L, RenderedRoutes]
+case class GetExtraRouteParams[L <: LA](tracing: Boolean)                                                       extends ServerTerm[L, List[L#MethodParameter]]
+case class GenerateResponseDefinitions[L <: LA](operation: Operation, protocolElems: List[StrictProtocolElems]) extends ServerTerm[L, List[L#Definition]]
+case class RenderClass[L <: LA](className: String,
+                                handlerName: String,
+                                combinedRouteTerms: L#Term,
+                                extraRouteParams: List[L#MethodParameter],
+                                responseDefinitions: List[L#Definition],
+                                supportDefinitions: List[L#Definition])
+    extends ServerTerm[L, List[L#Statement]]
+case class RenderHandler[L <: LA](handlerName: String, methodSigs: List[L#MethodDeclaration], handlerDefinitions: List[L#Statement])
+    extends ServerTerm[L, L#Statement]
+case class GetExtraImports[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#Import]]

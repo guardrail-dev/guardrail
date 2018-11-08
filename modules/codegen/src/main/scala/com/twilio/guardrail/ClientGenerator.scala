@@ -4,7 +4,8 @@ import _root_.io.swagger.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.collection.JavaConverters._
 import scala.meta.{ Defn, Import, Lit, Stat, Term, Type }
@@ -23,7 +24,7 @@ object ClientGenerator {
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[F]): Free[F, Clients] = {
+  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[ScalaLanguage, F]): Free[F, Clients] = {
     import C._
     for {
       clientImports      <- getImports(context.tracing)

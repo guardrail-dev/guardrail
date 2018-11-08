@@ -9,8 +9,8 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
-
 import scala.collection.JavaConverters._
 import scala.meta.{ Term, _ }
 
@@ -25,12 +25,12 @@ object Http4sServerGenerator {
       }
   }
 
-  object ServerTermInterp extends FunctionK[ServerTerm, Target] {
+  object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
-    def apply[T](term: ServerTerm[T]): Target[T] = term match {
+    def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractOperations(paths) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"extractOperations(${paths})")

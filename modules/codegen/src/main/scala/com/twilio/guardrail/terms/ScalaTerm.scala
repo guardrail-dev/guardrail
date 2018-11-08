@@ -1,10 +1,13 @@
 package com.twilio.guardrail
 package terms
 
-import scala.meta._
+import com.twilio.guardrail.languages.LA
 
-sealed trait ScalaTerm[T]
-case class RenderImplicits(pkgName: List[String], frameworkImports: List[Import], jsonImports: List[Import], customImports: List[Import])
-    extends ScalaTerm[Source]
-case class RenderFrameworkImplicits(pkgName: List[String], frameworkImports: List[Import], jsonImports: List[Import], frameworkImplicits: Defn.Object)
-    extends ScalaTerm[Source]
+sealed trait ScalaTerm[L <: LA, T]
+case class RenderImplicits[L <: LA](pkgName: List[String], frameworkImports: List[L#Import], jsonImports: List[L#Import], customImports: List[L#Import])
+    extends ScalaTerm[L, L#FileContents]
+case class RenderFrameworkImplicits[L <: LA](pkgName: List[String],
+                                             frameworkImports: List[L#Import],
+                                             jsonImports: List[L#Import],
+                                             frameworkImplicits: L#ObjectDefinition)
+    extends ScalaTerm[L, L#FileContents]

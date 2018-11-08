@@ -3,12 +3,13 @@ package generators
 
 import cats.syntax.either._
 import cats.~>
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import scala.meta._
 
 object ScalaGenerator {
-  object ScalaInterp extends (ScalaTerm ~> Target) {
-    def apply[T](term: ScalaTerm[T]): Target[T] = term match {
+  object ScalaInterp extends (ScalaTerm[ScalaLanguage, ?] ~> Target) {
+    def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
       case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)

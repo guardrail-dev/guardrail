@@ -7,8 +7,6 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import com.twilio.guardrail.generators.GeneratorSettings
 
-import scala.meta._
-
 class CoreTerms[F[_]](implicit I: InjectK[CoreTerm, F]) {
   def getDefaultFramework: Free[F, String] =
     Free.inject[CoreTerm, F](GetDefaultFramework)

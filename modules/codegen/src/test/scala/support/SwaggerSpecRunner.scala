@@ -7,10 +7,10 @@ trait SwaggerSpecRunner {
   import cats.arrow.FunctionK
   import cats.implicits._
   import com.twilio.guardrail._
+  import com.twilio.guardrail.generators.GeneratorSettings
+  import com.twilio.guardrail.languages.ScalaLanguage
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
-  import com.twilio.guardrail.generators.GeneratorSettings
-
   import scala.collection.JavaConverters._
 
   def runSwaggerSpec(
@@ -19,9 +19,9 @@ trait SwaggerSpecRunner {
     runSwagger(new SwaggerParser().parse(spec)) _
 
   def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
-      implicit F: FrameworkTerms[CodegenApplication],
-      Sc: ScalaTerms[CodegenApplication],
-      Sw: SwaggerTerms[CodegenApplication]
+      implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
+      Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
+      Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]
   ): (ProtocolDefinitions, Clients, Servers) = {
     import F._
     import Sw._

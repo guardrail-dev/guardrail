@@ -3,20 +3,19 @@ package terms.framework
 
 import cats.InjectK
 import cats.free.Free
-
-import scala.meta._
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.LA
 
-class FrameworkTerms[F[_]](implicit I: InjectK[FrameworkTerm, F]) {
-  def getFrameworkImports(tracing: Boolean): Free[F, List[Import]] =
-    Free.inject(GetFrameworkImports(tracing))
-  def getFrameworkImplicits(): Free[F, Defn.Object] =
-    Free.inject(GetFrameworkImplicits())
+class FrameworkTerms[L <: LA, F[_]](implicit I: InjectK[FrameworkTerm[L, ?], F]) {
+  def getFrameworkImports(tracing: Boolean): Free[F, List[L#Import]] =
+    Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImports[L](tracing))
+  def getFrameworkImplicits(): Free[F, L#ObjectDefinition] =
+    Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImplicits[L]())
   def getGeneratorSettings(): Free[F, GeneratorSettings] =
-    Free.inject(GetGeneratorSettings())
+    Free.inject[FrameworkTerm[L, ?], F](GetGeneratorSettings[L]())
 }
 
 object FrameworkTerms {
-  implicit def serverTerms[F[_]](implicit I: InjectK[FrameworkTerm, F]): FrameworkTerms[F] =
-    new FrameworkTerms[F]
+  implicit def serverTerms[L <: LA, F[_]](implicit I: InjectK[FrameworkTerm[L, ?], F]): FrameworkTerms[L, F] =
+    new FrameworkTerms[L, F]
 }

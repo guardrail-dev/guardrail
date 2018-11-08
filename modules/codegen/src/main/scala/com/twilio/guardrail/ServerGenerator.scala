@@ -7,8 +7,8 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
-
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -31,7 +31,7 @@ object ServerGenerator {
 
   def fromSwagger[F[_]](context: Context, swagger: Swagger, frameworkImports: List[Import])(
       protocolElems: List[StrictProtocolElems]
-  )(implicit S: ServerTerms[F]): Free[F, Servers] = {
+  )(implicit S: ServerTerms[ScalaLanguage, F]): Free[F, Servers] = {
     import S._
 
     val paths: List[(String, Path)] =

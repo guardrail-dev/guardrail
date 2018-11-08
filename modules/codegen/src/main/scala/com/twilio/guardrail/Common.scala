@@ -8,15 +8,16 @@ import cats.syntax.either._
 import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import cats.~>
-import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.generators.GeneratorSettings
-import java.nio.file.{ Path, Paths }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol.PolyProtocolTerms
-
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
+import java.nio.file.{ Path, Paths }
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
+import com.twilio.guardrail.languages.ScalaLanguage
 
 object Common {
   def writePackage(kind: CodegenTarget,
@@ -25,10 +26,10 @@ object Common {
                    outputPath: Path,
                    pkgName: List[String],
                    dtoPackage: List[String],
-                   customImports: List[Import])(implicit F: FrameworkTerms[CodegenApplication],
-                                                Sc: ScalaTerms[CodegenApplication],
-                                                Pol: PolyProtocolTerms[CodegenApplication],
-                                                Sw: SwaggerTerms[CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
+                   customImports: List[Import])(implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
+                                                Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
+                                                Pol: PolyProtocolTerms[ScalaLanguage, CodegenApplication],
+                                                Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
     import F._
     import Sc._
     import Sw._

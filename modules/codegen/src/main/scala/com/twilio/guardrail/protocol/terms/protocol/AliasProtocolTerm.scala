@@ -1,3 +1,5 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-sealed trait AliasProtocolTerm[T]
+import com.twilio.guardrail.languages.LA
+
+sealed trait AliasProtocolTerm[L <: LA, T]

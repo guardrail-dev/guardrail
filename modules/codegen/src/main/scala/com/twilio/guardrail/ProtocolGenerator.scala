@@ -11,6 +11,7 @@ import java.util.Locale
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
@@ -34,8 +35,8 @@ case class SuperClass(
 )
 
 object ProtocolGenerator {
-  private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(implicit E: EnumProtocolTerms[F],
-                                                                        F: FrameworkTerms[F]): Free[F, Either[String, ProtocolElems]] = {
+  private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(implicit E: EnumProtocolTerms[ScalaLanguage, F],
+                                                                        F: FrameworkTerms[ScalaLanguage, F]): Free[F, Either[String, ProtocolElems]] = {
     import E._
     import F._
 
@@ -105,7 +106,7 @@ object ProtocolGenerator {
       hierarchy: ClassParent,
       concreteTypes: List[PropMeta],
       definitions: List[(String, Model)]
-  )(implicit F: FrameworkTerms[F], P: PolyProtocolTerms[F], M: ModelProtocolTerms[F]): Free[F, ProtocolElems] = {
+  )(implicit F: FrameworkTerms[ScalaLanguage, F], P: PolyProtocolTerms[ScalaLanguage, F], M: ModelProtocolTerms[ScalaLanguage, F]): Free[F, ProtocolElems] = {
     import P._
     import M._
 
@@ -140,9 +141,9 @@ object ProtocolGenerator {
   }
 
   def extractParents[F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta])(
-      implicit M: ModelProtocolTerms[F],
-      F: FrameworkTerms[F],
-      P: PolyProtocolTerms[F]
+      implicit M: ModelProtocolTerms[ScalaLanguage, F],
+      F: FrameworkTerms[ScalaLanguage, F],
+      P: PolyProtocolTerms[ScalaLanguage, F]
   ): Free[F, List[SuperClass]] = {
     import M._
     import P._
@@ -182,8 +183,8 @@ object ProtocolGenerator {
   }
 
   private[this] def fromModel[F[_]](clsName: String, model: Model, parents: List[SuperClass], concreteTypes: List[PropMeta])(
-      implicit M: ModelProtocolTerms[F],
-      F: FrameworkTerms[F]
+      implicit M: ModelProtocolTerms[ScalaLanguage, F],
+      F: FrameworkTerms[ScalaLanguage, F]
   ): Free[F, Either[String, ProtocolElems]] = {
     import M._
     import F._
@@ -204,8 +205,8 @@ object ProtocolGenerator {
   }
 
   def modelTypeAlias[F[_]](clsName: String, abstractModel: Model)(
-      implicit A: AliasProtocolTerms[F],
-      F: FrameworkTerms[F]
+      implicit A: AliasProtocolTerms[ScalaLanguage, F],
+      F: FrameworkTerms[ScalaLanguage, F]
   ): Free[F, ProtocolElems] = {
     import F._
     val model = abstractModel match {
@@ -227,20 +228,20 @@ object ProtocolGenerator {
     }
   }
 
-  def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[F], F: FrameworkTerms[F]): Free[F, ProtocolElems] = {
+  def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[ScalaLanguage, F], F: FrameworkTerms[ScalaLanguage, F]): Free[F, ProtocolElems] = {
     import F._
     getGeneratorSettings().flatMap { implicit generatorSettings =>
       typeAlias(clsName, generatorSettings.jsonType)
     }
   }
 
-  def typeAlias[F[_]](clsName: String, tpe: Type)(implicit A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+  def typeAlias[F[_]](clsName: String, tpe: Type)(implicit A: AliasProtocolTerms[ScalaLanguage, F]): Free[F, ProtocolElems] = {
     import A._
     Free.pure(RandomType(clsName, tpe))
   }
 
-  def fromArray[F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(implicit R: ArrayProtocolTerms[F],
-                                                                                       A: AliasProtocolTerms[F]): Free[F, ProtocolElems] = {
+  def fromArray[F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(implicit R: ArrayProtocolTerms[ScalaLanguage, F],
+                                                                                       A: AliasProtocolTerms[ScalaLanguage, F]): Free[F, ProtocolElems] = {
     import R._
     for {
       tpe <- extractArrayType(arr, concreteTypes)
@@ -300,13 +301,13 @@ object ProtocolGenerator {
   }
 
   def fromSwagger[F[_]](swagger: Swagger)(
-      implicit E: EnumProtocolTerms[F],
-      M: ModelProtocolTerms[F],
-      A: AliasProtocolTerms[F],
-      R: ArrayProtocolTerms[F],
-      S: ProtocolSupportTerms[F],
-      F: FrameworkTerms[F],
-      P: PolyProtocolTerms[F]
+      implicit E: EnumProtocolTerms[ScalaLanguage, F],
+      M: ModelProtocolTerms[ScalaLanguage, F],
+      A: AliasProtocolTerms[ScalaLanguage, F],
+      R: ArrayProtocolTerms[ScalaLanguage, F],
+      S: ProtocolSupportTerms[ScalaLanguage, F],
+      F: FrameworkTerms[ScalaLanguage, F],
+      P: PolyProtocolTerms[ScalaLanguage, F]
   ): Free[F, ProtocolDefinitions] = {
     import S._
     import F._

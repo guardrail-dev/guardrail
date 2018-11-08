@@ -1,10 +1,10 @@
 package com.twilio.guardrail
 package terms.framework
+
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.LA
 
-import scala.meta._
-
-sealed trait FrameworkTerm[T]
-case class GetFrameworkImports(tracing: Boolean) extends FrameworkTerm[List[Import]]
-case class GetFrameworkImplicits()               extends FrameworkTerm[Defn.Object]
-case class GetGeneratorSettings()                extends FrameworkTerm[GeneratorSettings]
+sealed trait FrameworkTerm[L <: LA, T]
+case class GetFrameworkImports[L <: LA](tracing: Boolean) extends FrameworkTerm[L, List[L#Import]]
+case class GetFrameworkImplicits[L <: LA]()               extends FrameworkTerm[L, L#ObjectDefinition]
+case class GetGeneratorSettings[L <: LA]()                extends FrameworkTerm[L, GeneratorSettings]

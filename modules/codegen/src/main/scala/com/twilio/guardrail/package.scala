@@ -5,12 +5,13 @@ import cats.data.{ EitherK, EitherT, NonEmptyList, ReaderT, WriterT }
 import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
+import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm
-import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 import com.twilio.guardrail.terms.framework.FrameworkTerm
-import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 
 import scala.meta._
 import com.twilio.swagger.core.StructuredLogger
@@ -70,23 +71,23 @@ package guardrail {
 }
 
 package object guardrail {
-  type DefinitionPM[T]     = EitherK[ProtocolSupportTerm, ModelProtocolTerm, T]
-  type DefinitionPME[T]    = EitherK[EnumProtocolTerm, DefinitionPM, T]
-  type DefinitionPMEA[T]   = EitherK[AliasProtocolTerm, DefinitionPME, T]
-  type DefinitionPMEAA[T]  = EitherK[ArrayProtocolTerm, DefinitionPMEA, T]
-  type DefinitionPMEAAP[T] = EitherK[PolyProtocolTerm, DefinitionPMEAA, T]
+  type DefinitionPM[T]     = EitherK[ProtocolSupportTerm[ScalaLanguage, ?], ModelProtocolTerm[ScalaLanguage, ?], T]
+  type DefinitionPME[T]    = EitherK[EnumProtocolTerm[ScalaLanguage, ?], DefinitionPM, T]
+  type DefinitionPMEA[T]   = EitherK[AliasProtocolTerm[ScalaLanguage, ?], DefinitionPME, T]
+  type DefinitionPMEAA[T]  = EitherK[ArrayProtocolTerm[ScalaLanguage, ?], DefinitionPMEA, T]
+  type DefinitionPMEAAP[T] = EitherK[PolyProtocolTerm[ScalaLanguage, ?], DefinitionPMEAA, T]
 
   type ModelInterpreters[T] = DefinitionPMEAAP[T]
 
-  type FrameworkC[T]   = EitherK[ClientTerm, ModelInterpreters, T]
-  type FrameworkCS[T]  = EitherK[ServerTerm, FrameworkC, T]
-  type FrameworkCSF[T] = EitherK[FrameworkTerm, FrameworkCS, T]
+  type FrameworkC[T]   = EitherK[ClientTerm[ScalaLanguage, ?], ModelInterpreters, T]
+  type FrameworkCS[T]  = EitherK[ServerTerm[ScalaLanguage, ?], FrameworkC, T]
+  type FrameworkCSF[T] = EitherK[FrameworkTerm[ScalaLanguage, ?], FrameworkCS, T]
 
   type ClientServerTerms[T] = FrameworkCSF[T]
 
-  type Parser[T] = EitherK[SwaggerTerm, ClientServerTerms, T]
+  type Parser[T] = EitherK[SwaggerTerm[ScalaLanguage, ?], ClientServerTerms, T]
 
-  type CodegenApplication[T] = EitherK[ScalaTerm, Parser, T]
+  type CodegenApplication[T] = EitherK[ScalaTerm[ScalaLanguage, ?], Parser, T]
 
   type Logger[T]     = WriterT[Id, StructuredLogger, T]
   type Settings[T]   = ReaderT[Logger, GeneratorSettings, T]

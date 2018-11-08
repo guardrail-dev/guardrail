@@ -8,6 +8,7 @@ import cats.~>
 import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
 import com.twilio.guardrail.terms
 import java.util.Locale
+import com.twilio.guardrail.languages.ScalaLanguage
 
 import com.twilio.guardrail.protocol.terms.protocol._
 
@@ -25,8 +26,8 @@ object CirceProtocolGenerator {
       .map(_.tpe)
       .map(f)
 
-  object EnumProtocolTermInterp extends (EnumProtocolTerm ~> Target) {
-    def apply[T](term: EnumProtocolTerm[T]): Target[T] = term match {
+  object EnumProtocolTermInterp extends (EnumProtocolTerm[ScalaLanguage, ?] ~> Target) {
+    def apply[T](term: EnumProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getEnum()).map(_.asScala.to[List]), "Model has no enumerations"))
 
@@ -87,8 +88,8 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ModelProtocolTermInterp extends (ModelProtocolTerm ~> Target) {
-    def apply[T](term: ModelProtocolTerm[T]): Target[T] = term match {
+  object ModelProtocolTermInterp extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
+    def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         Target.pure(
           (swagger match {
@@ -300,14 +301,14 @@ object CirceProtocolGenerator {
     }
   }
 
-  object AliasProtocolTermInterp extends (AliasProtocolTerm ~> Target) {
-    def apply[T](term: AliasProtocolTerm[T]): Target[T] = term match {
+  object AliasProtocolTermInterp extends (AliasProtocolTerm[ScalaLanguage, ?] ~> Target) {
+    def apply[T](term: AliasProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case _ => ???
     }
   }
 
-  object ArrayProtocolTermInterp extends (ArrayProtocolTerm ~> Target) {
-    def apply[T](term: ArrayProtocolTerm[T]): Target[T] = term match {
+  object ArrayProtocolTermInterp extends (ArrayProtocolTerm[ScalaLanguage, ?] ~> Target) {
+    def apply[T](term: ArrayProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>
         SwaggerUtil.modelMetaType(arr).flatMap {
           case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
@@ -321,8 +322,8 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ProtocolSupportTermInterp extends (ProtocolSupportTerm ~> Target) {
-    def apply[T](term: ProtocolSupportTerm[T]): Target[T] = term match {
+  object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
+    def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
         Target.getGeneratorSettings.flatMap { implicit gs =>
           for {
@@ -387,8 +388,8 @@ object CirceProtocolGenerator {
     }
   }
 
-  object PolyProtocolTermInterp extends (PolyProtocolTerm ~> Target) {
-    override def apply[A](fa: PolyProtocolTerm[A]): Target[A] = fa match {
+  object PolyProtocolTermInterp extends (PolyProtocolTerm[ScalaLanguage, ?] ~> Target) {
+    override def apply[A](fa: PolyProtocolTerm[ScalaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
         def allParents(model: Model): List[(String, Model, List[RefModel])] =
           (model match {
