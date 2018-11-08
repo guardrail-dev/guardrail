@@ -15,10 +15,10 @@ scalafmtOnCompile in ThisBuild := true
 scalafmtFailTest in ThisBuild := false
 
 val akkaVersion       = "10.0.10"
-val catsVersion       = "1.1.0"
-val catsEffectVersion = "0.10"
-val circeVersion      = "0.9.3"
-val http4sVersion     = "0.18.12"
+val catsVersion       = "1.4.0"
+val catsEffectVersion = "1.0.0"
+val circeVersion      = "0.10.1"
+val http4sVersion     = "0.19.0"
 val scalatestVersion  = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")

@@ -149,7 +149,7 @@ object Http4sHelper {
       tpe match {
         case t"String"     => q"EntityDecoder[F, String]"
         case t"Option[$_]" => q"""
-                  decodeBy(MediaType.`text/plain`) { msg =>
+                  decodeBy(MediaType.text.plain) { msg =>
                     msg.contentLength.filter(_ > 0).fold[DecodeResult[F, $tpe]](DecodeResult.success(None)){ _ =>
                       DecodeResult.success(decodeString(msg)).flatMap { str =>
                         Json.fromString(str).as[$tpe]
@@ -179,8 +179,8 @@ object Http4sHelper {
       tpe match {
         case t"String"     => q"EntityEncoder[F, String]"
         case t"Option[$_]" => q"""
-                  encodeBy(`Content-Type`(MediaType.`text/plain`, Charset.`UTF-8`)) { a: $tpe =>
-                    a.fold[F[Entity[F]]](effect.pure(Entity.empty))(e => EntityEncoder[F, String].toEntity(e.toString))
+                  encodeBy(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`)) { a: $tpe =>
+                    a.fold[Entity[F]](Entity.empty)(e => EntityEncoder[F, String].toEntity(e.toString))
                   }
                 """
         case _             => q"EntityEncoder[F, String].contramap[$tpe](_.toString)"
