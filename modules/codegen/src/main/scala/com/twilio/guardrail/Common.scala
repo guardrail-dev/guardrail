@@ -164,16 +164,16 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
+              .fromSwagger[ScalaLanguage, CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
             Clients(clients) = clientMeta
-          } yield CodegenDefinitions(clients, List.empty)
+          } yield CodegenDefinitions[ScalaLanguage](clients, List.empty)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
               .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(protocolElems)
             Servers(servers) = serverMeta
-          } yield CodegenDefinitions(List.empty, servers)
+          } yield CodegenDefinitions[ScalaLanguage](List.empty, servers)
       }
 
       CodegenDefinitions(clients, servers) = codegen
@@ -181,7 +181,7 @@ object Common {
       files = (
         clients
           .map({
-            case Client(pkg, clientName, clientSrc) =>
+            case Client(pkg, clientName, imports, companion, client, responseDefinitions) =>
               WriteTree(
                 resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
                 source"""
@@ -189,8 +189,11 @@ object Common {
                   import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
                   import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
                   import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
-                  ..${customImports}
-                  ..${clientSrc}
+                  ..${customImports};
+                  ..${imports};
+                  ${companion};
+                  ${client};
+                  ..${responseDefinitions}
                   """
               )
           })

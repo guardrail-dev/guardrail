@@ -6,7 +6,7 @@ import cats.instances.all._
 import cats.syntax.applicative._
 import cats.syntax.either._
 import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm
@@ -17,7 +17,7 @@ import scala.meta._
 import com.twilio.swagger.core.StructuredLogger
 
 package guardrail {
-  case class CodegenDefinitions(clients: List[Client], servers: List[Server])
+  case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server])
 
   object Target {
     val A                              = Applicative[Target]

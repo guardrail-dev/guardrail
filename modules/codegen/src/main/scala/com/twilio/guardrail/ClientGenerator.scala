@@ -6,25 +6,30 @@ import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.languages.LA
 
 import scala.collection.JavaConverters._
-import scala.meta.{ Defn, Import, Lit, Stat, Term, Type }
 import com.twilio.guardrail.terms.RouteMeta
 
-case class Clients(clients: List[Client])
-case class Client(pkg: List[String], clientName: String, lines: List[Stat])
-case class RenderedClientOperation(
-    clientOperation: Defn,
-    supportDefinitions: List[Defn]
+case class Clients[L <: LA](clients: List[Client[L]])
+case class Client[L <: LA](pkg: List[String],
+                           clientName: String,
+                           imports: List[L#Import],
+                           companion: L#ObjectDefinition,
+                           client: L#ClassDefinition,
+                           responseDefinitions: List[L#Definition])
+case class RenderedClientOperation[L <: LA](
+    clientOperation: L#Definition,
+    supportDefinitions: List[L#Definition]
 )
 
 object ClientGenerator {
-  def fromSwagger[F[_]](context: Context, frameworkImports: List[Import])(
+  def fromSwagger[L <: LA, F[_]](context: Context, frameworkImports: List[L#Import])(
       schemes: List[String],
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[ScalaLanguage, F]): Free[F, Clients] = {
+  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[L, F]): Free[F, Clients[L]] = {
     import C._
     for {
       clientImports      <- getImports(context.tracing)
@@ -33,10 +38,8 @@ object ClientGenerator {
         case (pkg, routes) =>
           for {
             responseDefinitions <- routes.flatTraverse {
-              case rm @ RouteMeta(path, method, operation) =>
-                for {
-                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
-                } yield responseDefinitions
+              case RouteMeta(path, method, operation) =>
+                generateResponseDefinitions(operation, protocolElems)
             }
             clientOperations <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
             clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
@@ -55,16 +58,9 @@ object ClientGenerator {
               context.tracing
             )
           } yield {
-            val stats: List[Stat] = (
-              ((clientImports ++ frameworkImports ++ clientExtraImports) :+
-                companion :+
-                client) ++
-                responseDefinitions
-            )
-
-            Client(pkg, clientName, stats)
+            Client[L](pkg, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), companion, client, responseDefinitions)
           }
       })
-    } yield Clients(clients)
+    } yield Clients[L](clients)
   }
 }

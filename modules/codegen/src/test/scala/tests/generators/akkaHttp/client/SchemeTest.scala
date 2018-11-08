@@ -35,10 +35,8 @@ class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |""".stripMargin
 
   test("Use first scheme") {
-    val (_, Clients(Client(_, _, statements) :: _), _) =
+    val (_, Clients(Client(_, _, _, cmp, cls, _) :: _), _) =
       runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
     object Client {

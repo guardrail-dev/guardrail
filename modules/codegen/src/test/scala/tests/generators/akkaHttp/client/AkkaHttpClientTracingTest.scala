@@ -33,10 +33,8 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |          description: Success
       |""".stripMargin
 
-    val (_, Clients(Client(_, _, statements) :: _), _) =
+    val (_, Clients(Client(_, _, _, _, cls, _) :: _), _) =
       runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
-
-    val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -92,11 +90,9 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
 
     val (
       _,
-      Clients(Client(tags, className, statements) :: _),
+      Clients(Client(tags, className, _, cmp, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

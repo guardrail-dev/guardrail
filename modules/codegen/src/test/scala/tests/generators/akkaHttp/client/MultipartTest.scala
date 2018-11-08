@@ -49,10 +49,9 @@ class MultipartTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Multipart form data") {
     val (
       _,
-      Clients(Client(_, className, statements) :: _),
+      Clients(Client(_, className, _, _, cls, _) :: _),
       _
-    )                = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
-    val List(_, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

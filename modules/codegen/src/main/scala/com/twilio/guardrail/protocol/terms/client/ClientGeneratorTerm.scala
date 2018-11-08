@@ -9,7 +9,7 @@ import _root_.io.swagger.models.Operation
 
 sealed trait ClientTerm[L <: LA, T]
 case class GenerateClientOperation[L <: LA](className: List[String], route: RouteMeta, tracing: Boolean, protocolElems: List[StrictProtocolElems])
-    extends ClientTerm[L, RenderedClientOperation]
+    extends ClientTerm[L, RenderedClientOperation[L]]
 case class GetImports[L <: LA](tracing: Boolean)      extends ClientTerm[L, List[L#Import]]
 case class GetExtraImports[L <: LA](tracing: Boolean) extends ClientTerm[L, List[L#Import]]
 case class ClientClsArgs[L <: LA](tracingName: Option[String], schemes: List[String], host: Option[String], tracing: Boolean)

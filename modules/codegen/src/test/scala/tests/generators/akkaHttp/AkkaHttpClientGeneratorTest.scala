@@ -112,13 +112,11 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: Nil),
+      Clients(Client(tags, className, _, cmp, cls, _) :: Nil),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     tags should equal(Seq("store"))
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
     object StoreClient {
@@ -168,13 +166,11 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
   test("Ensure traced responses are generated") {
     val (
       _,
-      Clients(List(Client(tags, className, statements))),
+      Clients(List(Client(tags, className, _, cmp, cls, _))),
       _
     ) = runSwaggerSpec(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
 
     tags should equal(Seq("store"))
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
     object StoreClient {

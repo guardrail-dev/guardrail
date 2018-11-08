@@ -123,13 +123,11 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _),
+      Clients(Client(tags, className, _, cmp, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     tags should equal(Seq("store"))
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val companion = q"""
       object StoreClient {

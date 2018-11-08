@@ -12,7 +12,7 @@ import _root_.io.swagger.models.Operation
 class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
   def generateClientOperation(className: List[String], tracing: Boolean, protocolElems: List[StrictProtocolElems])(
       route: RouteMeta
-  ): Free[F, RenderedClientOperation] =
+  ): Free[F, RenderedClientOperation[L]] =
     Free.inject[ClientTerm[L, ?], F](GenerateClientOperation[L](className, route, tracing, protocolElems))
   def getImports(tracing: Boolean): Free[F, List[L#Import]] =
     Free.inject[ClientTerm[L, ?], F](GetImports[L](tracing))

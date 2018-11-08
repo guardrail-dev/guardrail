@@ -163,7 +163,7 @@ object Http4sClientGenerator {
                                     formArgs: List[ScalaParameter],
                                     body: Option[ScalaParameter],
                                     headerArgs: List[ScalaParameter],
-                                    extraImplicits: List[Term.Param]): RenderedClientOperation = {
+                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[Header] = List.empty"
           val safeBody: Option[(Term, Type)] =
@@ -245,7 +245,7 @@ object Http4sClientGenerator {
             implicitParams
           ).flatten
 
-          RenderedClientOperation(
+          RenderedClientOperation[ScalaLanguage](
             q"""
               def ${Term
               .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody

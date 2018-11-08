@@ -36,10 +36,9 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _),
+      Clients(Client(tags, className, _, cmp, cls, _) :: _),
       _
-    )                  = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     val companion = q"""
       object Client {

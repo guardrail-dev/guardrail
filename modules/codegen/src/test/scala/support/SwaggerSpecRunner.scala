@@ -15,14 +15,14 @@ trait SwaggerSpecRunner {
 
   def runSwaggerSpec(
       spec: String
-  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients, Servers) =
+  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients[ScalaLanguage], Servers) =
     runSwagger(new SwaggerParser().parse(spec)) _
 
   def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
       implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
       Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
       Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]
-  ): (ProtocolDefinitions, Clients, Servers) = {
+  ): (ProtocolDefinitions, Clients[ScalaLanguage], Servers) = {
     import F._
     import Sw._
 
@@ -48,7 +48,7 @@ trait SwaggerSpecRunner {
       frameworkImports <- getFrameworkImports(context.tracing)
 
       clients <- ClientGenerator
-        .fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
+        .fromSwagger[ScalaLanguage, CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
       servers <- ServerGenerator
         .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)

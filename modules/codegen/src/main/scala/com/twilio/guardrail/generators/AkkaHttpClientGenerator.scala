@@ -310,7 +310,7 @@ object AkkaHttpClientGenerator {
               headerArgs,
               extraImplicits
             )
-          } yield RenderedClientOperation(defn, List.empty)
+          } yield RenderedClientOperation[ScalaLanguage](defn, List.empty)
         }
 
       case GetImports(tracing) => Target.pure(List.empty)
