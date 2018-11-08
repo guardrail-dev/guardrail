@@ -86,7 +86,7 @@ object Http4sServerGenerator {
                     .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
                   "Missing client name"
                 )
-              } yield Some(TracingField(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
+              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
             } else Target.pure(None)
           } yield res
         }
@@ -103,7 +103,7 @@ object Http4sServerGenerator {
           combinedRouteTerms <- combineRouteTerms(routeTerms)
           methodSigs = renderedRoutes.map(_.methodSig)
         } yield {
-          RenderedRoutes(
+          RenderedRoutes[ScalaLanguage](
             combinedRouteTerms,
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
@@ -427,7 +427,7 @@ object Http4sServerGenerator {
     def generateRoute(resourceName: String,
                       basePath: Option[String],
                       route: ServerRoute,
-                      tracingFields: Option[TracingField],
+                      tracingFields: Option[TracingField[ScalaLanguage]],
                       protocolElems: List[StrictProtocolElems]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {

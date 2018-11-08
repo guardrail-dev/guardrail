@@ -9,7 +9,6 @@ import com.twilio.guardrail.extract.ScalaPackage
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import scala.collection.JavaConverters._
-import scala.meta._
 
 object SwaggerGenerator {
   object SwaggerInterp extends (SwaggerTerm[ScalaLanguage, ?] ~> Target) {

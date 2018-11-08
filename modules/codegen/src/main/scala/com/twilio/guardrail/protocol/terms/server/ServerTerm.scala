@@ -9,12 +9,12 @@ sealed trait ServerTerm[L <: LA, T]
 case class ExtractOperations[L <: LA](paths: List[(String, Path)]) extends ServerTerm[L, List[ServerRoute]]
 
 case class GetClassName[L <: LA](operation: Operation)                                                     extends ServerTerm[L, List[String]]
-case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField]]
+case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField[L]]]
 case class GenerateRoutes[L <: LA](resourceName: String,
                                    basePath: Option[String],
-                                   routes: List[(Option[TracingField], ServerRoute)],
+                                   routes: List[(Option[TracingField[L]], ServerRoute)],
                                    protocolElems: List[StrictProtocolElems])
-    extends ServerTerm[L, RenderedRoutes]
+    extends ServerTerm[L, RenderedRoutes[L]]
 case class GetExtraRouteParams[L <: LA](tracing: Boolean)                                                       extends ServerTerm[L, List[L#MethodParameter]]
 case class GenerateResponseDefinitions[L <: LA](operation: Operation, protocolElems: List[StrictProtocolElems]) extends ServerTerm[L, List[L#Definition]]
 case class RenderClass[L <: LA](className: String,

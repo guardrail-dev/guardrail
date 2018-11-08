@@ -171,7 +171,7 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(protocolElems)
+              .fromSwagger[ScalaLanguage, CodegenApplication](context, swagger, frameworkImports)(protocolElems)
             Servers(servers) = serverMeta
           } yield CodegenDefinitions[ScalaLanguage](List.empty, servers)
       }

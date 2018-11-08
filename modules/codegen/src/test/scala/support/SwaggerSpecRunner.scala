@@ -15,14 +15,14 @@ trait SwaggerSpecRunner {
 
   def runSwaggerSpec(
       spec: String
-  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients[ScalaLanguage], Servers) =
+  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients[ScalaLanguage], Servers[ScalaLanguage]) =
     runSwagger(new SwaggerParser().parse(spec)) _
 
   def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
       implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
       Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
       Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]
-  ): (ProtocolDefinitions, Clients[ScalaLanguage], Servers) = {
+  ): (ProtocolDefinitions, Clients[ScalaLanguage], Servers[ScalaLanguage]) = {
     import F._
     import Sw._
 
@@ -50,7 +50,7 @@ trait SwaggerSpecRunner {
       clients <- ClientGenerator
         .fromSwagger[ScalaLanguage, CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
       servers <- ServerGenerator
-        .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(definitions)
+        .fromSwagger[ScalaLanguage, CodegenApplication](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)
 
     Target.unsafeExtract(prog.foldMap(framework), generatorSettings)

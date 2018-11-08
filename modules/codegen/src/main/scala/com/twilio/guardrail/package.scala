@@ -17,7 +17,7 @@ import scala.meta._
 import com.twilio.swagger.core.StructuredLogger
 
 package guardrail {
-  case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server])
+  case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server[L]])
 
   object Target {
     val A                              = Applicative[Target]

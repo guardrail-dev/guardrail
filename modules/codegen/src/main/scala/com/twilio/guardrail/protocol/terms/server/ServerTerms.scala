@@ -12,12 +12,12 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
     Free.inject[ServerTerm[L, ?], F](ExtractOperations(paths))
   def getClassName(operation: Operation): Free[F, List[String]] =
     Free.inject[ServerTerm[L, ?], F](GetClassName(operation))
-  def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField]] =
+  def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField[L]]] =
     Free.inject[ServerTerm[L, ?], F](BuildTracingFields(operation, resourceName, tracing))
   def generateRoutes(resourceName: String,
                      basePath: Option[String],
-                     routes: List[(Option[TracingField], ServerRoute)],
-                     protocolElems: List[StrictProtocolElems]): Free[F, RenderedRoutes] =
+                     routes: List[(Option[TracingField[L]], ServerRoute)],
+                     protocolElems: List[StrictProtocolElems]): Free[F, RenderedRoutes[L]] =
     Free.inject[ServerTerm[L, ?], F](GenerateRoutes(resourceName, basePath, routes, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[L#MethodParameter]] =
     Free.inject[ServerTerm[L, ?], F](GetExtraRouteParams(tracing))
