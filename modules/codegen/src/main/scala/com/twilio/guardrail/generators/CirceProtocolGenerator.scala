@@ -368,22 +368,22 @@ object CirceProtocolGenerator {
         Target.pure(q"""
           val decodeLong = implicitly[Decoder[Long]]
 
-          implicit def decodeInstant: Decoder[Instant] = j8time.decodeInstant.or(decodeLong.map(Instant.ofEpochMilli))
-          implicit def decodeLocalDate: Decoder[LocalDate] = j8time.decodeLocalDateDefault.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDate))
-          implicit def decodeOffsetDateTime: Decoder[OffsetDateTime] = j8time.decodeOffsetDateTimeDefault.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))
+          implicit val decodeInstant: Decoder[Instant] = j8time.decodeInstant.or(decodeLong.map(Instant.ofEpochMilli))
+          implicit val decodeLocalDate: Decoder[LocalDate] = j8time.decodeLocalDate.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDate))
+          implicit val decodeOffsetDateTime: Decoder[OffsetDateTime] = j8time.decodeOffsetDateTime.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))
 
           // Unused
-          //implicit def decodeLocalDateTime: Decoder[Instant] = ???
-          //implicit def decodeLocalTime: Decoder[Instant] = ???
-          // implicit def decodeZonedDateTime: Decoder[Instant] = ???
+          // implicit val decodeLocalDateTime: Decoder[Instant] = ???
+          // implicit val decodeLocalTime: Decoder[Instant]     = ???
+          // implicit val decodeZonedDateTime: Decoder[Instant] = ???
 
           // Mirror
-          implicit val encodeInstant = j8time.encodeInstant
-          implicit val encodeLocalDateDefault = j8time.encodeLocalDateDefault
-          implicit val encodeLocalDateTimeDefault = j8time.encodeLocalDateTimeDefault
-          implicit val encodeLocalTimeDefault = j8time.encodeLocalTimeDefault
-          implicit val encodeOffsetDateTimeDefault = j8time.encodeOffsetDateTimeDefault
-          implicit val encodeZonedDateTimeDefault = j8time.encodeZonedDateTimeDefault
+          implicit val encodeInstant: Encoder[Instant]                = j8time.encodeInstant
+          implicit val encodeLocalDate: Encoder[LocalDate]            = j8time.encodeLocalDate
+          implicit val encodeLocalDateTime: Encoder[LocalDateTime]    = j8time.encodeLocalDateTime
+          implicit val encodeLocalTime: Encoder[LocalTime]            = j8time.encodeLocalTime
+          implicit val encodeZonedDateTime: Encoder[ZonedDateTime]    = j8time.encodeZonedDateTime
+          implicit val encodeOffsetDateTime: Encoder[OffsetDateTime]  = j8time.encodeOffsetDateTime
         """.stats)
 
       case ResolveProtocolElems(elems) =>

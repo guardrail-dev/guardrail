@@ -8,17 +8,17 @@ licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-crossScalaVersions := Seq("2.11.11", "2.12.6")
+crossScalaVersions := Seq("2.11.12", "2.12.7")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 scalafmtOnCompile in ThisBuild := true
 scalafmtFailTest in ThisBuild := false
 
-val akkaVersion       = "10.0.10"
-val catsVersion       = "1.1.0"
-val catsEffectVersion = "0.10"
-val circeVersion      = "0.9.3"
-val http4sVersion     = "0.18.12"
+val akkaVersion       = "10.0.14"
+val catsVersion       = "1.4.0"
+val catsEffectVersion = "1.0.0"
+val circeVersion      = "0.10.1"
+val http4sVersion     = "0.18.21"
 val scalatestVersion  = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
@@ -111,8 +111,8 @@ val testDependencies = Seq(
 val codegenSettings = Seq(
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta"     % "4.0.0",
-    "io.swagger"    % "swagger-parser" % "1.0.34",
-    "org.tpolecat"  %% "atto-core"     % "0.6.1",
+    "io.swagger"    % "swagger-parser" % "1.0.39",
+    "org.tpolecat"  %% "atto-core"     % "0.6.3",
     "org.typelevel" %% "cats-core"     % catsVersion,
     "org.typelevel" %% "cats-kernel"   % catsVersion,
     "org.typelevel" %% "cats-macros"   % catsVersion,
@@ -125,7 +125,8 @@ val codegenSettings = Seq(
     "-language:higherKinds",
     "-Xexperimental",
     "-Ydelambdafy:method",
-    "-Xlint:-unused",
+    // "-Yno-adapted-args",
+    "-Xlint:_,-unused",
     "-feature",
     "-unchecked",
     "-deprecation",
