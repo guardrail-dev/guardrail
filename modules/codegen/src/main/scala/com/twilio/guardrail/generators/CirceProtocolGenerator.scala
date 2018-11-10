@@ -360,31 +360,27 @@ object CirceProtocolGenerator {
         Target.pure(
           List(
             q"import java.time._",
-            q"import io.circe.java8.{ time => j8time }"
+            q"import io.circe.java8.time._"
           )
         )
 
       case PackageObjectContents() =>
-        Target.pure(q"""
-          val decodeLong = implicitly[Decoder[Long]]
-
-          implicit val decodeInstant: Decoder[Instant] = j8time.decodeInstant.or(decodeLong.map(Instant.ofEpochMilli))
-          implicit val decodeLocalDate: Decoder[LocalDate] = j8time.decodeLocalDate.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDate))
-          implicit val decodeOffsetDateTime: Decoder[OffsetDateTime] = j8time.decodeOffsetDateTime.or(decodeInstant.map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))
-
-          // Unused
-          // implicit val decodeLocalDateTime: Decoder[Instant] = ???
-          // implicit val decodeLocalTime: Decoder[Instant]     = ???
-          // implicit val decodeZonedDateTime: Decoder[Instant] = ???
-
-          // Mirror
-          implicit val encodeInstant: Encoder[Instant]                = j8time.encodeInstant
-          implicit val encodeLocalDate: Encoder[LocalDate]            = j8time.encodeLocalDate
-          implicit val encodeLocalDateTime: Encoder[LocalDateTime]    = j8time.encodeLocalDateTime
-          implicit val encodeLocalTime: Encoder[LocalTime]            = j8time.encodeLocalTime
-          implicit val encodeZonedDateTime: Encoder[ZonedDateTime]    = j8time.encodeZonedDateTime
-          implicit val encodeOffsetDateTime: Encoder[OffsetDateTime]  = j8time.encodeOffsetDateTime
-        """.stats)
+        Target.pure(
+          List(
+            q"implicit val guardrailDecodeInstant: Decoder[Instant] = Decoder[Instant].or(Decoder[Long].map(Instant.ofEpochMilli))",
+            q"implicit val guardrailDecodeLocalDate: Decoder[LocalDate] = Decoder[LocalDate].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate))",
+            q"implicit val guardrailDecodeLocalDateTime: Decoder[LocalDateTime] = Decoder[LocalDateTime]",
+            q"implicit val guardrailDecodeLocalTime: Decoder[LocalTime] = Decoder[LocalTime]",
+            q"implicit val guardrailDecodeOffsetDateTime: Decoder[OffsetDateTime] = Decoder[OffsetDateTime].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
+            q"implicit val guardrailDecodeZonedDateTime: Decoder[ZonedDateTime] = Decoder[ZonedDateTime]",
+            q"implicit val guardrailEncodeInstant: Encoder[Instant] = Encoder[Instant]",
+            q"implicit val guardrailEncodeLocalDate: Encoder[LocalDate] = Encoder[LocalDate]",
+            q"implicit val guardrailEncodeLocalDateTime: Encoder[LocalDateTime] = Encoder[LocalDateTime]",
+            q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
+            q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
+            q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]"
+          )
+        )
 
       case ResolveProtocolElems(elems) =>
         ProtocolElems.resolve(elems).fold(Target.error _, Target.pure _)

@@ -21,7 +21,7 @@ import scala.meta._
 case class ProtocolDefinitions(elems: List[StrictProtocolElems],
                                protocolImports: List[Import],
                                packageObjectImports: List[Import],
-                               packageObjectContents: List[Stat])
+                               packageObjectContents: List[Defn.Val])
 
 case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
 
