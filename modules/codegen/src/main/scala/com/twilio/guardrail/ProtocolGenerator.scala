@@ -175,7 +175,7 @@ object ProtocolGenerator {
         } yield
           SuperClass[ScalaLanguage](
             clsName,
-            Type.Name(clsName),
+            scala.meta.Type.Name(clsName),
             interfacesCls,
             params,
             (_extends :: concreteInterfaces).collect {
@@ -206,7 +206,7 @@ object ProtocolGenerator {
       cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
     } yield
       if (parents.isEmpty && props.isEmpty) Left("Entity isn't model")
-      else Right(ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), defn, cmp, parents))
+      else Right(ClassDefinition[ScalaLanguage](clsName, scala.meta.Type.Name(clsName), defn, cmp, parents))
   }
 
   def modelTypeAlias[F[_]](clsName: String, abstractModel: Model)(
