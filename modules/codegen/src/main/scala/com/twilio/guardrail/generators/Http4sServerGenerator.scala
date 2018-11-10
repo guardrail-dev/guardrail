@@ -136,7 +136,7 @@ object Http4sServerGenerator {
           class ${Type.Name(resourceName)}[F[_]](..$extraRouteParams)(implicit E: Effect[F]) extends Http4sDsl[F] {
 
             ..${supportDefinitions};
-            def routes(..${routesParams}): HttpService[F] = HttpService[F] {
+            def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
               ${combinedRouteTerms}
             }
           }

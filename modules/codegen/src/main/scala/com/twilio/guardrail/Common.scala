@@ -112,16 +112,33 @@ object Common {
         .foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
       (protocolDefinitions, extraTypes) = protoOut
 
+      dtoHead :: dtoRest = dtoComponents
+      dtoPkg = dtoRest.init
+        .foldLeft[Term.Ref](Term.Name(dtoHead)) {
+          case (acc, next) => Term.Select(acc, Term.Name(next))
+        }
+      companion = Term.Name(s"${dtoComponents.last}$$")
+
+      (implicits, statements) = packageObjectContents.partition({ case q"implicit val $_: $_ = $_" => true; case _ => false })
+
+      mirroredImplicits = implicits
+        .map({ stat =>
+          val List(Pat.Var(mirror)) = stat.pats
+          stat.copy(rhs = q"${companion}.${mirror}")
+        })
+
       packageObject = WriteTree(
         dtoPackagePath.resolve("package.scala"),
-        source"""package ${dtoComponents.init.tail.foldLeft[Term.Ref](Term.Name(dtoComponents.head)) {
-          case (acc, next) => Term.Select(acc, Term.Name(next))
-        }}
+        source"""package ${dtoPkg}
             ..${customImports ++ packageObjectImports ++ protocolImports}
 
+            object ${companion} {
+              ..${implicits.map(_.copy(mods = List.empty))}
+            }
+
             package object ${Term.Name(dtoComponents.last)} {
-               ..${(packageObjectContents ++ extraTypes).to[List]}
-             }
+              ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
+            }
           """
       )
 

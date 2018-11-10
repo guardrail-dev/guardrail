@@ -12,6 +12,7 @@ import cats.effect.IO._
 import fs2.Stream
 import javax.xml.bind.DatatypeConverter.printHexBinary
 import org.http4s.client.Client
+import org.http4s.implicits._
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{EitherValues, FunSuite, Matchers}
 import support.PositiveLong
@@ -64,7 +65,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
                                                        customOptionalValue: Option[PositiveLong] = None) = ???
     })
 
-    val petClient = PetClient.httpClient(Client.fromHttpService(httpService))
+    val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
 
     petClient
       .addPet(
@@ -121,7 +122,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
                                                        customOptionalValue: Option[PositiveLong] = None) = ???
     })
 
-    val petClient = PetClient.httpClient(Client.fromHttpService(httpService))
+    val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
 
     petClient.findPetsByStatusEnum(cdefs.definitions.PetStatus.Pending).attempt.unsafeRunSync() should be(
       Right(
@@ -163,7 +164,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
                                                        customOptionalValue: Option[PositiveLong] = None) = ???
     })
 
-    val petClient = PetClient.httpClient(Client.fromHttpService(httpService))
+    val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
 
     petClient.findPetsByStatus(Vector("bogus")).attempt.unsafeRunSync() should be(Right(cdefs.pet.FindPetsByStatusResponse.NotFound))
   }
@@ -197,7 +198,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
                                                        customOptionalValue: Option[PositiveLong] = None) = ???
     })
 
-    val petClient = PetClient.httpClient(Client.fromHttpService(httpService))
+    val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
 
     val result = petClient.deletePet(petId, Some(true), Some(cdefs.definitions.PetStatus.Pending), Some(apiKey)).attempt.unsafeRunSync()
     result
@@ -244,7 +245,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
       }
     })
 
-    val petClient = PetClient.httpClient(Client.fromHttpService(httpService))
+    val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
 
     val result = petClient
       .uploadFile(

@@ -192,8 +192,8 @@ object Http4sClientGenerator {
           }
           val req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
           val reqWithBody = formEntity
-            .map(e => q"$req.withBody($e)")
-            .orElse(safeBody.map(_._1).map(e => q"$req.withBody($e)(effect, ${Term.Name(s"${methodName}Encoder")})"))
+            .map(e => q"$req.withEntity($e)")
+            .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
             .getOrElse(req)
           val reqExpr = List(
             q"val req = $reqWithBody"

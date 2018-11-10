@@ -73,7 +73,7 @@
           "201": {
             "description": "Created"
           },
-          "405": {
+          "400": {
             "description": "Invalid input"
           }
         },
@@ -120,7 +120,7 @@
           "404": {
             "description": "Pet not found"
           },
-          "405": {
+          "400": {
             "description": "Validation exception"
           }
         },
@@ -367,7 +367,7 @@
           }
         ],
         "responses": {
-          "405": {
+          "400": {
             "description": "Invalid input"
           }
         },
