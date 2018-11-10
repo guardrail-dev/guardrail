@@ -3,6 +3,7 @@ package generators
 
 import _root_.io.swagger.models.parameters.Parameter
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
+import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
 import java.util.Locale
 
@@ -10,7 +11,7 @@ import scala.meta._
 import cats.syntax.traverse._
 import cats.instances.all._
 
-class GeneratorSettings(val fileType: Type, val jsonType: Type)
+class GeneratorSettings[L <: LA](val fileType: L#Type, val jsonType: L#Type)
 case class RawParameterName private[generators] (value: String) {
   def toLit: Lit.String = Lit.String(value)
 }
@@ -34,11 +35,11 @@ object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
+  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter =
     fromParam(param.name.value)(param)
-  def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
+  def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter =
     fromParam(RawParameterName(argName))(param)
-  def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = param match {
+  def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter = param match {
     case param @ Term.Param(_, name, decltype, _) =>
       val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
         .flatMap({

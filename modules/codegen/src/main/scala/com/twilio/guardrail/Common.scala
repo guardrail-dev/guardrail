@@ -18,7 +18,6 @@ import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
-import com.twilio.guardrail.languages.ScalaLanguage
 
 object Common {
   def writePackage(kind: CodegenTarget,
@@ -230,7 +229,7 @@ object Common {
 
   def processArgs[F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings[ScalaLanguage], ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
     args.traverse(
       arg =>
@@ -242,7 +241,9 @@ object Common {
     )
   }
 
-  def runM[F[_]](args: Array[String])(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]] = {
+  def runM[F[_]](
+      args: Array[String]
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings[ScalaLanguage], ReadSwagger[Target[List[WriteTree]]])]] = {
     import C._
 
     for {

@@ -11,7 +11,7 @@ class FrameworkTerms[L <: LA, F[_]](implicit I: InjectK[FrameworkTerm[L, ?], F])
     Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImports[L](tracing))
   def getFrameworkImplicits(): Free[F, L#ObjectDefinition] =
     Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImplicits[L]())
-  def getGeneratorSettings(): Free[F, GeneratorSettings] =
+  def getGeneratorSettings(): Free[F, GeneratorSettings[L]] =
     Free.inject[FrameworkTerm[L, ?], F](GetGeneratorSettings[L]())
 }
 

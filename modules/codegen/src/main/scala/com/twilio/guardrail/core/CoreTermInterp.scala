@@ -8,6 +8,7 @@ import cats.syntax.either._
 import cats.syntax.traverse._
 import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.generators.{ AkkaHttp, GeneratorSettings, Http4s }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
 import scala.io.AnsiColor
@@ -33,9 +34,9 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
     case ExtractGeneratorSettings(context) =>
       for {
         _ <- CoreTarget.log.debug("core", "extractGeneratorSettings")("Looking up generator settings")
-        generatorSettings <- context.framework.fold(CoreTarget.error[GeneratorSettings](NoFramework))({
-          case "akka-http" => CoreTarget.pure(new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json"))
-          case "http4s"    => CoreTarget.pure(new GeneratorSettings(t"java.io.File", t"io.circe.Json"))
+        generatorSettings <- context.framework.fold(CoreTarget.error[GeneratorSettings[ScalaLanguage]](NoFramework))({
+          case "akka-http" => CoreTarget.pure(new GeneratorSettings[ScalaLanguage](t"BodyPartEntity", t"io.circe.Json"))
+          case "http4s"    => CoreTarget.pure(new GeneratorSettings[ScalaLanguage](t"java.io.File", t"io.circe.Json"))
           case unknown     => CoreTarget.error(UnknownFramework(unknown))
         })
         _ <- CoreTarget.log.debug("core", "extractGeneratorSettings")(s"Using $generatorSettings")

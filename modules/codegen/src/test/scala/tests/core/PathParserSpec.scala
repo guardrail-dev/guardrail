@@ -5,12 +5,13 @@ import com.twilio.guardrail.{ SwaggerUtil, Target }
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.tests._
 import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {
 
-  implicit val gs = new GeneratorSettings(t"io.circe.Json", t"BodyPartEntity")
+  implicit val gs = new GeneratorSettings[ScalaLanguage](t"io.circe.Json", t"BodyPartEntity")
 
   val args: List[ScalaParameter] = List(
     ScalaParameter.fromParam(param"foo: Int = 1"),

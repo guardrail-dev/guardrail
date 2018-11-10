@@ -8,6 +8,7 @@ import cats.{ FlatMap, Foldable }
 import cats.instances.list._
 import com.twilio.guardrail.extract.{ Default, ScalaType }
 import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter }
+import com.twilio.guardrail.languages.ScalaLanguage
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
@@ -149,7 +150,7 @@ object SwaggerUtil {
     }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings): Type = {
+  def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings[ScalaLanguage]): Type = {
     def log(fmt: Option[String], t: Type): Type = {
       fmt.foreach { fmt =>
         println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
