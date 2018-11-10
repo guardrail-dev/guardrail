@@ -5,7 +5,6 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.protocol.{
   AliasProtocolTerms,
@@ -138,21 +137,20 @@ object Common {
 
   def processArgs[F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings[ScalaLanguage], ReadSwagger[Target[List[WriteTree]]])]] = {
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
     args.traverse(
       arg =>
         for {
           targetInterpreter <- extractGenerator(arg.context)
-          generatorSettings <- extractGeneratorSettings(arg.context)
           writeFile         <- processArgSet(targetInterpreter)(arg)
-        } yield (generatorSettings, writeFile)
+        } yield writeFile
     )
   }
 
   def runM[F[_]](
       args: Array[String]
-  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[(GeneratorSettings[ScalaLanguage], ReadSwagger[Target[List[WriteTree]]])]] = {
+  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {

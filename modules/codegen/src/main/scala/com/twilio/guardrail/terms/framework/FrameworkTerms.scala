@@ -3,7 +3,6 @@ package terms.framework
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 
 class FrameworkTerms[L <: LA, F[_]](implicit I: InjectK[FrameworkTerm[L, ?], F]) {

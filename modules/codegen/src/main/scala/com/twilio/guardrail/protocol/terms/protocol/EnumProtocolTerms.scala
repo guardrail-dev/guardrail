@@ -3,7 +3,6 @@ package com.twilio.guardrail.protocol.terms.protocol
 import _root_.io.swagger.models.ModelImpl
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 
 class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?], F]) {

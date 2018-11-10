@@ -3,7 +3,6 @@ package com.twilio
 import cats.{ Applicative, Id, MonadError }
 import cats.data.{ EitherK, EitherT, NonEmptyList, ReaderT, WriterT }
 import cats.implicits._
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -24,24 +23,21 @@ package guardrail {
     def raiseError[T](x: String): Target[T] = EitherT.fromEither(Left(x))
     def fromOption[T](x: Option[T], default: => String): Target[T] =
       EitherT.fromOption(x, default)
-    def unsafeExtract[T](x: Target[T], generatorSettings: GeneratorSettings[ScalaLanguage]): T =
+    def unsafeExtract[T](x: Target[T]): T =
       x.valueOr({ err =>
           throw new Exception(err.toString)
         })
-        .run(generatorSettings)
         .value
-    def getGeneratorSettings: Target[GeneratorSettings[ScalaLanguage]] =
-      EitherT.liftF(ReaderT.ask)
 
     object log {
       def debug(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(ReaderT(_ => WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message))))
+        EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
       def info(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(ReaderT(_ => WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message))))
+        EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
       def warning(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(ReaderT(_ => WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message))))
+        EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
       def error(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(ReaderT(_ => WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message))))
+        EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
     }
   }
 
@@ -91,7 +87,6 @@ package object guardrail {
   type CodegenApplication[T] = EitherK[ScalaTerm[ScalaLanguage, ?], Parser, T]
 
   type Logger[T]     = WriterT[Id, StructuredLogger, T]
-  type Settings[T]   = ReaderT[Logger, GeneratorSettings[ScalaLanguage], T]
-  type Target[A]     = EitherT[Settings, String, A]
+  type Target[A]     = EitherT[Logger, String, A]
   type CoreTarget[A] = EitherT[Logger, Error, A]
 }

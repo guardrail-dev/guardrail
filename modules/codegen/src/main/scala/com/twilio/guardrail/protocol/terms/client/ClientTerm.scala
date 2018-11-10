@@ -4,7 +4,6 @@ import com.twilio.guardrail.{ RenderedClientOperation, StrictProtocolElems }
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.generators.GeneratorSettings
 
 import _root_.io.swagger.models.Operation
 

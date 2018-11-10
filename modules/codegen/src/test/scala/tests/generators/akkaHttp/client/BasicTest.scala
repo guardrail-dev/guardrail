@@ -4,7 +4,6 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail._
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 import scala.meta._
 
 class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -73,7 +72,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     tpe.structure should equal(t"io.circe.Json".structure)
   }
@@ -83,7 +82,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Blix(map: io.circe.Json)
@@ -108,7 +107,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, _, cmp, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

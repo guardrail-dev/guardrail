@@ -2,7 +2,6 @@ package core.issues
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.tests._
 import org.scalatest.{ FunSpec, Matchers }
 import support.SwaggerSpecRunner
 
@@ -93,7 +92,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     it("should generate right name of pets") {
       nameCat shouldBe "Cat"
@@ -244,7 +243,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     it("should generate right name of pets") {
       namePet shouldBe "Pet"
@@ -362,7 +361,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(cls, _, defCls, _, _) :: ADT(_, _, _, _) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     cls shouldBe "Cat"
     defCls.structure shouldBe q"""case class Cat(name: String) extends Pet""".structure
@@ -419,7 +418,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     it("should generate right case class") {
       clsPersianCat.structure shouldBe q"""case class PersianCat(catBreed: String) extends Cat""".structure
@@ -509,7 +508,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     it("should generate right case class") {
       clsCat.structure shouldBe q"""case class Cat(wool: Boolean, catBreed: String) extends Pet with Mammal""".structure

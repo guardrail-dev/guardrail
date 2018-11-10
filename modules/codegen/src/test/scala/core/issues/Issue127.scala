@@ -5,7 +5,6 @@ import cats.instances.all._
 import com.twilio.swagger._
 import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Context, Server, Servers }
-import com.twilio.guardrail.tests._
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
@@ -39,7 +38,7 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler = q"""
       trait Handler {

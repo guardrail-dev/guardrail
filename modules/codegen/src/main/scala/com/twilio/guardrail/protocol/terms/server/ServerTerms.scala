@@ -3,7 +3,6 @@ package com.twilio.guardrail.protocol.terms.server
 import _root_.io.swagger.models.{ Operation, Path }
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.terms.RouteMeta

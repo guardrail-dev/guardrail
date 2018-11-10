@@ -1,7 +1,6 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import _root_.io.swagger.models.{ Operation, Path }
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA

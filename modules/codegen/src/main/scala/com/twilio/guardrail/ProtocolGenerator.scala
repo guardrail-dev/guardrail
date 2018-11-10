@@ -7,8 +7,6 @@ import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
 import java.util.Locale
-
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms

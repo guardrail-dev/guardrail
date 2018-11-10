@@ -4,7 +4,6 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 import scala.meta._
 
 class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -36,7 +35,7 @@ class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Use first scheme") {
     val (_, Clients(Client(_, _, _, cmp, cls, _) :: _), _) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val companion = q"""
     object Client {

@@ -3,7 +3,6 @@ package com.twilio.guardrail.protocol.terms.client
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ RenderedClientOperation, StrictProtocolElems }
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }

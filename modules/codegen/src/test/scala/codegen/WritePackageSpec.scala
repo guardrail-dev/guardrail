@@ -9,7 +9,6 @@ import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import org.scalatest.{ FunSuite, Matchers }
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.meta._
@@ -72,12 +71,11 @@ class WritePackageSpec extends FunSuite with Matchers {
       ),
       List.empty
     )
-    val generatorSettings = new GeneratorSettings[ScalaLanguage](t"BodyPartEntity", t"io.circe.Json")
 
     val result: List[WriteTree] = CoreTarget
       .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
       .toList
-      .flatMap({ case (_, x) => Target.unsafeExtract(injectSwagger(swagger, x), generatorSettings) })
+      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
     val paths = result.map(_.path)
 
@@ -121,12 +119,11 @@ class WritePackageSpec extends FunSuite with Matchers {
       ),
       List.empty
     )
-    val generatorSettings = new GeneratorSettings[ScalaLanguage](t"BodyPartEntity", t"io.circe.Json")
 
     val result: List[WriteTree] = CoreTarget
       .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
       .toList
-      .flatMap({ case (_, x) => Target.unsafeExtract(injectSwagger(swagger, x), generatorSettings) })
+      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
     val paths = result.map(_.path)
 

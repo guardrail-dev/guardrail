@@ -4,7 +4,6 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Clients, Context, Server, Servers }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 
 import scala.meta._
 
@@ -41,7 +40,7 @@ class CustomHeaderTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Should produce static parameter constraints") {
     val (_, Clients(client :: Nil), Servers(Server(_, _, genHandler :: genResource :: Nil) :: Nil)) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler =
       q"""trait Handler { def getFoo(respond: Resource.getFooResponse.type)(customHeader: Bar): scala.concurrent.Future[Resource.getFooResponse] }"""

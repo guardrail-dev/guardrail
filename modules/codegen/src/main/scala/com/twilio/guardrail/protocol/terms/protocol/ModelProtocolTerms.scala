@@ -5,7 +5,6 @@ import _root_.io.swagger.models.properties.Property
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ ProtocolParameter, SuperClass }
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.SwaggerUtil.ResolvedType

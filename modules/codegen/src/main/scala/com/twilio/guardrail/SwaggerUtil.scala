@@ -10,7 +10,7 @@ import cats.implicits._
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.extract.{ Default, ScalaType }
-import com.twilio.guardrail.generators.{ AkkaHttpGenerator, GeneratorSettings, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
+import com.twilio.guardrail.generators.{ AkkaHttpGenerator, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
 import java.util.{ Map => JMap }
@@ -168,7 +168,7 @@ object SwaggerUtil {
     }
   }
 
-  def modelMetaType[T <: Model](model: T, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] =
+  def modelMetaType[T <: Model](model: T): Target[ResolvedType[ScalaLanguage]] =
     new ModelMetaTypePartiallyApplied[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], ?]]()
       .apply(model)
       .value
@@ -313,7 +313,7 @@ object SwaggerUtil {
   }
 
   @deprecated("Use propMetaF", "0.41.2")
-  def propMeta(property: Property, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] = {
+  def propMeta(property: Property): Target[ResolvedType[ScalaLanguage]] = {
     type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], T]
     val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(AkkaHttpGenerator.FrameworkInterp))
     propMetaF[ScalaLanguage, Program](property).value

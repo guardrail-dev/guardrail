@@ -1,7 +1,6 @@
 package com.twilio.guardrail
 package terms.framework
 
-import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 
 sealed trait FrameworkTerm[L <: LA, T]

@@ -4,7 +4,6 @@ import com.twilio.guardrail._
 import com.twilio.guardrail.generators.Http4s
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 import scala.meta._
 
 class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -73,7 +72,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s, defaults.http4sGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     tpe.structure should equal(t"io.circe.Json".structure)
   }
@@ -83,7 +82,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s, defaults.http4sGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val definition = q"""
       case class Blix(map: io.circe.Json)
@@ -108,7 +107,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, _, cls, cmp, statements) :: _),
       _
-    )          = runSwaggerSpec(swagger)(Context.empty, Http4s, defaults.http4sGeneratorSettings)
+    )          = runSwaggerSpec(swagger)(Context.empty, Http4s)
     val actual = cls +: cmp +: statements
 
     val expected = List(
