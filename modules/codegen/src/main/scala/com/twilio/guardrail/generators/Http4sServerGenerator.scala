@@ -213,12 +213,12 @@ object Http4sServerGenerator {
       directivesFromParams(
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some(q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)", p"Some(${Pat.Var(arg.paramName)})"), arg.paramName))
+            Target.pure(Param(None, Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))"),
+                Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))")),
                 arg.paramName
               )
             )
@@ -231,7 +231,7 @@ object Http4sServerGenerator {
             Target.pure(
               Param(
                 None,
-                Some(q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})"),
+                Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})")),
                 arg.paramName
               )
             )
@@ -254,23 +254,29 @@ object Http4sServerGenerator {
     def formToHttp4s: List[ScalaParameter] => Target[List[Param]] =
       directivesFromParams(
         arg => {
-          case t"String" => Target.pure(Param(None, Some(q"urlForm.values.get(${arg.argName.toLit})", p"Some(Seq(${Pat.Var(arg.paramName)}))"), arg.paramName))
+          case t"String" =>
+            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(Seq(${Pat.Var(arg.paramName)}))")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]))", p"Some(Seq(Right(${Pat.Var(arg.paramName)})))"),
+                Some((q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]))", p"Some(Seq(Right(${Pat.Var(arg.paramName)})))")),
                 arg.paramName
               )
             )
         },
         arg => {
-          case t"String" => Target.pure(Param(None, Some(q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})"), arg.paramName))
+          case t"String" => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence)", p"Some(Right(${Pat.Var(arg.paramName)}))"),
+                Some(
+                  (
+                    q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence)",
+                    p"Some(Right(${Pat.Var(arg.paramName)}))"
+                  )
+                ),
                 arg.paramName
               )
             )
@@ -281,21 +287,29 @@ object Http4sServerGenerator {
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence).sequence",
-                     p"Right(${Pat.Var(arg.paramName)})"),
+                Some(
+                  (
+                    q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence).sequence",
+                    p"Right(${Pat.Var(arg.paramName)})"
+                  )
+                ),
                 arg.paramName
               )
             )
         },
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some(q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList)", p"List(${Pat.Var(arg.paramName)})"), arg.paramName))
+            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList)", p"List(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList).map(_.traverse(Json.fromString(_).as[$tpe]))",
-                     p"List(Right(${Pat.Var(arg.paramName)}))"),
+                Some(
+                  (
+                    q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList).map(_.traverse(Json.fromString(_).as[$tpe]))",
+                    p"List(Right(${Pat.Var(arg.paramName)}))"
+                  )
+                ),
                 arg.paramName
               )
             )
@@ -308,7 +322,9 @@ object Http4sServerGenerator {
           elemType =>
             if (arg.isFile) {
               Target.pure(
-                Param(None, Some(q"multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body)", p"Some(${Pat.Var(arg.paramName)})"), arg.paramName)
+                Param(None,
+                      Some((q"multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body)", p"Some(${Pat.Var(arg.paramName)})")),
+                      arg.paramName)
               )
             } else
               elemType match {
@@ -319,8 +335,10 @@ object Http4sServerGenerator {
                         enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
                       ),
                       Some(
-                        Term.Name(s"${arg.argName.value}Option"),
-                        p"Some(${Pat.Var(arg.paramName)})"
+                        (
+                          Term.Name(s"${arg.argName.value}Option"),
+                          p"Some(${Pat.Var(arg.paramName)})"
+                        )
                       ),
                       arg.paramName
                     )
@@ -332,8 +350,10 @@ object Http4sServerGenerator {
                         enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => E.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       Some(
-                        Term.Name(s"${arg.argName.value}Option"),
-                        p"Some(${Pat.Var(arg.paramName)})"
+                        (
+                          Term.Name(s"${arg.argName.value}Option"),
+                          p"Some(${Pat.Var(arg.paramName)})"
+                        )
                       ),
                       arg.paramName
                     )
