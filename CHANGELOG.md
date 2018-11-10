@@ -1,3 +1,9 @@
+v0.41.1
+=======
+
+- #132 Updating http4s to 0.19.0
+- #134 Updating circe to 0.10.1
+
 v0.41.0
 =======
 
