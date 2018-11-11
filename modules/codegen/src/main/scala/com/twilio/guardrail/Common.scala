@@ -128,19 +128,14 @@ object Common {
           stat.copy(rhs = q"${companion}.${mirror}")
         })
 
-      packageObject = WriteTree(
-        dtoPackagePath.resolve("package.scala"),
-        source"""package ${dtoPkg}
-            ..${customImports ++ packageObjectImports ++ protocolImports}
-
-            object ${companion} {
-              ..${implicits.map(_.copy(mods = List.empty))}
-            }
-
-            package object ${Term.Name(dtoComponents.last)} {
-              ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
-            }
-          """
+      packageObject <- writePackageObject(
+        dtoPackagePath,
+        dtoComponents,
+        customImports,
+        packageObjectImports,
+        protocolImports,
+        packageObjectContents,
+        extraTypes
       )
 
       schemes = Option(swagger.getSchemes)
