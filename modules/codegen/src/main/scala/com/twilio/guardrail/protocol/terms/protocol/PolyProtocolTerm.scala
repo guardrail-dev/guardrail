@@ -13,7 +13,7 @@ sealed trait PolyProtocolTerm[L <: LA, T]
 
 case class ExtractSuperClass[L <: LA](swagger: Model, definitions: List[(String, Model)]) extends PolyProtocolTerm[L, List[(String, Model, List[RefModel])]]
 
-case class RenderSealedTrait[L <: LA](className: String, terms: List[L#MethodParameter], discriminator: String, parents: List[SuperClass] = Nil)
+case class RenderSealedTrait[L <: LA](className: String, terms: List[L#MethodParameter], discriminator: String, parents: List[SuperClass[L]] = Nil)
     extends PolyProtocolTerm[L, L#Trait]
 
 case class EncodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, L#Statement]
@@ -30,7 +30,7 @@ class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?
       className: String,
       terms: List[L#MethodParameter],
       discriminator: String,
-      parents: List[SuperClass] = Nil
+      parents: List[SuperClass[L]] = Nil
   ): Free[F, L#Trait] =
     Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, terms, discriminator, parents))
 

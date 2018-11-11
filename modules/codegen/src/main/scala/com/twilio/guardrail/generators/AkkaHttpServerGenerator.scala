@@ -660,7 +660,7 @@ object AkkaHttpServerGenerator {
                       basePath: Option[String],
                       route: ServerRoute,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      protocolElems: List[StrictProtocolElems]): Target[RenderedRoute] =
+                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")

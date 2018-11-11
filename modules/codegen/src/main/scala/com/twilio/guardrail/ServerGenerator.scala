@@ -29,7 +29,7 @@ object ServerGenerator {
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
   def fromSwagger[L <: LA, F[_]](context: Context, swagger: Swagger, frameworkImports: List[L#Import])(
-      protocolElems: List[StrictProtocolElems]
+      protocolElems: List[StrictProtocolElems[L]]
   )(implicit S: ServerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
 

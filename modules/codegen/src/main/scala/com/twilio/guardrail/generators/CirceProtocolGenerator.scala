@@ -164,7 +164,7 @@ object CirceProtocolGenerator {
               )(Function.const((tpe, defaultValue)) _)
             term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
             dep  = rawDep.filterNot(_.value == clsName) // Filter out our own class name
-          } yield ProtocolParameter(term, name, dep, readOnlyKey, emptyToNullKey)
+          } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNullKey)
         }
 
       case RenderDTOClass(clsName, selfTerms, parents) =>

@@ -17,11 +17,11 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
   def generateRoutes(resourceName: String,
                      basePath: Option[String],
                      routes: List[(Option[TracingField[L]], ServerRoute)],
-                     protocolElems: List[StrictProtocolElems]): Free[F, RenderedRoutes[L]] =
+                     protocolElems: List[StrictProtocolElems[L]]): Free[F, RenderedRoutes[L]] =
     Free.inject[ServerTerm[L, ?], F](GenerateRoutes(resourceName, basePath, routes, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[L#MethodParameter]] =
     Free.inject[ServerTerm[L, ?], F](GetExtraRouteParams(tracing))
-  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]): Free[F, List[L#Definition]] =
+  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
     Free.inject[ServerTerm[L, ?], F](GenerateResponseDefinitions(operation, protocolElems))
   def renderClass(resourceName: String,
                   handlerName: String,

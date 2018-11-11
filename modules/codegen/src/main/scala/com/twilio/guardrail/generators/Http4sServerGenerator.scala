@@ -428,7 +428,7 @@ object Http4sServerGenerator {
                       basePath: Option[String],
                       route: ServerRoute,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      protocolElems: List[StrictProtocolElems]): Target[Option[RenderedRoute]] =
+                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
@@ -563,7 +563,7 @@ object Http4sServerGenerator {
         _      <- routes.traverse(route => Target.log.debug("Http4sServerGenerator", "server", "combineRouteTerms")(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList)
 
-    def generateSupportDefinitions(route: ServerRoute, protocolElems: List[StrictProtocolElems]): Target[List[Defn]] =
+    def generateSupportDefinitions(route: ServerRoute, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
       for {
         operation <- Target.pure(route.operation)
         parameters <- Option(operation.getParameters)

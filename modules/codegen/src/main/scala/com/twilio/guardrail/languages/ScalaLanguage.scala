@@ -30,6 +30,7 @@ class ScalaLanguage extends LanguageAbstraction {
   type ValueDefinition = scala.meta.Defn.Val
   type MethodParameter = scala.meta.Term.Param
   type Type            = scala.meta.Type
+  type TypeName        = scala.meta.Type.Name
 
   // Result
   type FileContents = scala.meta.Source

@@ -11,6 +11,7 @@ import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter }
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
+import com.twilio.guardrail.languages.ScalaLanguage
 
 object SwaggerUtil {
   sealed trait ResolvedType
@@ -71,7 +72,7 @@ object SwaggerUtil {
         }
     }
 
-    def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems]): Target[Resolved] =
+    def resolve(value: ResolvedType, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Resolved] =
       value match {
         case x @ Resolved(tpe, _, default) => Target.pure(x)
         case Deferred(name) =>

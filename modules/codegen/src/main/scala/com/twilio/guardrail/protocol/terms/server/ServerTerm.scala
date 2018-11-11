@@ -13,10 +13,10 @@ case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[
 case class GenerateRoutes[L <: LA](resourceName: String,
                                    basePath: Option[String],
                                    routes: List[(Option[TracingField[L]], ServerRoute)],
-                                   protocolElems: List[StrictProtocolElems])
+                                   protocolElems: List[StrictProtocolElems[L]])
     extends ServerTerm[L, RenderedRoutes[L]]
-case class GetExtraRouteParams[L <: LA](tracing: Boolean)                                                       extends ServerTerm[L, List[L#MethodParameter]]
-case class GenerateResponseDefinitions[L <: LA](operation: Operation, protocolElems: List[StrictProtocolElems]) extends ServerTerm[L, List[L#Definition]]
+case class GetExtraRouteParams[L <: LA](tracing: Boolean)                                                          extends ServerTerm[L, List[L#MethodParameter]]
+case class GenerateResponseDefinitions[L <: LA](operation: Operation, protocolElems: List[StrictProtocolElems[L]]) extends ServerTerm[L, List[L#Definition]]
 case class RenderClass[L <: LA](className: String,
                                 handlerName: String,
                                 combinedRouteTerms: L#Term,

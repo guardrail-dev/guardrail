@@ -30,6 +30,7 @@ class LanguageAbstraction {
   type ValueDefinition
   type MethodParameter
   type Type
+  type TypeName
 
   // Result
   type FileContents

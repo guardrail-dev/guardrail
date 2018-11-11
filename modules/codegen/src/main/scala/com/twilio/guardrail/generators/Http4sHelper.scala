@@ -6,6 +6,7 @@ import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.sp
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
 import io.swagger.models.{ Operation, Response }
 
+import com.twilio.guardrail.languages.ScalaLanguage
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -81,7 +82,7 @@ object Http4sHelper {
 
   def getResponses(operationId: String,
                    responses: java.util.Map[String, Response],
-                   protocolElems: List[StrictProtocolElems]): Target[List[(Term.Name, Option[Type])]] =
+                   protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[(Term.Name, Option[Type])]] =
     for {
       responses <- Target
         .fromOption(Option(responses).map(_.asScala), s"No responses defined for ${operationId}")
@@ -107,7 +108,7 @@ object Http4sHelper {
         .sequence
     } yield instances
 
-  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems]): Target[List[Defn]] =
+  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
     for {
       operationId <- Target.fromOption(Option(operation.getOperationId())
                                          .map(splitOperationParts)

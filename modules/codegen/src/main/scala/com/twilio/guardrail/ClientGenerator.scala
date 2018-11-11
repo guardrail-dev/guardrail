@@ -29,7 +29,7 @@ object ClientGenerator {
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems])(implicit C: ClientTerms[L, F]): Free[F, Clients[L]] = {
+  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F]): Free[F, Clients[L]] = {
     import C._
     for {
       clientImports      <- getImports(context.tracing)
