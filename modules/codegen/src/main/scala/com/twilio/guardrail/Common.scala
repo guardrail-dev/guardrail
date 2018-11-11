@@ -14,6 +14,7 @@ import com.twilio.guardrail.protocol.terms.protocol.PolyProtocolTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
 import java.nio.file.{ Path, Paths }
+import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
@@ -55,6 +56,7 @@ object Common {
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
       implicitsImport                                                                                  = q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._"
       imports                                                                                          = customImports ++ protocolImports ++ List(implicitsImport)
+      utf8                                                                                             = java.nio.charset.Charset.availableCharsets.get("UTF-8")
 
       protoOut = protocolElems
         .map({
@@ -67,7 +69,7 @@ object Common {
                 ..${imports}
                 $cls
                 $obj
-              """
+              """.syntax.getBytes(utf8)
                )
              ),
              List.empty[Stat])
@@ -81,7 +83,7 @@ object Common {
                 ..${imports}
                 $cls
                 $obj
-              """
+              """.syntax.getBytes(utf8)
                )
              ),
              List.empty[Stat])
@@ -100,8 +102,7 @@ object Common {
                     $polyImports
                     $trt
                     $obj
-
-                  """
+                  """.syntax.getBytes(utf8)
                 )
               ),
               List.empty[Stat]
@@ -189,7 +190,7 @@ object Common {
                   ${companion};
                   ${client};
                   ..${responseDefinitions}
-                  """
+                  """.syntax.getBytes(utf8)
               )
           })
           .to[List]
@@ -207,7 +208,7 @@ object Common {
                     import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
                     ..${customImports}
                     ..$src
-                    """
+                    """.syntax.getBytes(utf8)
               )
           })
           .to[List]
@@ -221,8 +222,8 @@ object Common {
           List(packageObject) ++
           files ++
           List(
-            WriteTree(pkgPath.resolve("Implicits.scala"), implicits),
-            WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile)
+            WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(utf8)),
+            WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile.syntax.getBytes(utf8))
           )
       ).toList
   }

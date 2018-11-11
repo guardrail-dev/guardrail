@@ -117,6 +117,8 @@ object ScalaGenerator {
         )
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
+        val utf8 = java.nio.charset.Charset.availableCharsets.get("UTF-8")
+
         val dtoHead :: dtoRest = dtoComponents
         val dtoPkg = dtoRest.init
           .foldLeft[Term.Ref](Term.Name(dtoHead)) {
@@ -149,7 +151,7 @@ object ScalaGenerator {
             package object ${Term.Name(dtoComponents.last)} {
               ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
             }
-          """
+            """.syntax.getBytes(utf8)
           )
         )
     }

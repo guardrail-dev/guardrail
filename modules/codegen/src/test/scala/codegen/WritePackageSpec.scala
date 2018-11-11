@@ -56,7 +56,7 @@ class WritePackageSpec extends FunSuite with Matchers {
   def extractPackage(path: Path, results: List[WriteTree]): Term.Ref = {
     val Some(source"""package ${fooPkg }
     ..${stats }
-    """) = results.find(_.path == path).headOption.map(_.contents)
+    """) = results.find(_.path == path).headOption.map(_.contents).map(x => new String(x).parse[Source].get)
     fooPkg
   }
 
