@@ -329,11 +329,11 @@ object CirceProtocolGenerator {
           for {
             entries <- definitions.traverse {
               case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
-                Target.pure((clsName, SwaggerUtil.Resolved(Type.Name(clsName), None, None): SwaggerUtil.ResolvedType))
+                Target.pure((clsName, SwaggerUtil.Resolved[ScalaLanguage](Type.Name(clsName), None, None): SwaggerUtil.ResolvedType[ScalaLanguage]))
               case (clsName, comp: ComposedModel) =>
-                val parentSimpleRef: Option[String]        = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef)
-                val parentTerm                             = parentSimpleRef.map(n => Term.Name(n))
-                val resolvedType: SwaggerUtil.ResolvedType = SwaggerUtil.Resolved(Type.Name(clsName), parentTerm, None)
+                val parentSimpleRef: Option[String]                       = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef)
+                val parentTerm                                            = parentSimpleRef.map(n => Term.Name(n))
+                val resolvedType: SwaggerUtil.ResolvedType[ScalaLanguage] = SwaggerUtil.Resolved[ScalaLanguage](Type.Name(clsName), parentTerm, None)
                 Target.pure((clsName, resolvedType))
               case (clsName, definition) =>
                 SwaggerUtil

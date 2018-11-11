@@ -171,8 +171,7 @@ object AkkaHttpServerGenerator {
                       meta <- SwaggerUtil.propMeta(prop)
                       resolved <- SwaggerUtil.ResolvedType
                         .resolve(meta, protocolElems)
-                      SwaggerUtil
-                        .Resolved(baseType, _, baseDefaultValue) = resolved
+                      SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                     } yield baseType
                   }
                   responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")

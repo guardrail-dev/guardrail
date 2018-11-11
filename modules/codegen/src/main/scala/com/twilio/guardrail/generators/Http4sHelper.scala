@@ -99,8 +99,7 @@ object Http4sHelper {
                   meta <- SwaggerUtil.propMeta(prop)
                   resolved <- SwaggerUtil.ResolvedType
                     .resolve(meta, protocolElems)
-                  SwaggerUtil
-                    .Resolved(baseType, _, baseDefaultValue) = resolved
+                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield baseType
               }
             } yield (statusCodeName, valueType))
