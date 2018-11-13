@@ -598,7 +598,7 @@ object Http4sServerGenerator {
 
     def generatePathParamExtractors(pathArgs: List[ScalaParameter]): List[Defn] =
       pathArgs
-        .map(_.argType.asInstanceOf[Type.Name].value)
+        .map(_.argType.toString)
         .distinct
         .filter(!List("Int", "Long", "String").contains(_))
         .map(tpe => q"""
@@ -650,7 +650,7 @@ object Http4sServerGenerator {
                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
                  argType)
             }
-            if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.asInstanceOf[Type.Name].value)) {
+            if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.toString())) {
               val queryParamDecoder = q"""
                 implicit val ${Pat.Var(Term.Name(s"${argName.value}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
                     Json.fromString(value.value).as[$elemType]
