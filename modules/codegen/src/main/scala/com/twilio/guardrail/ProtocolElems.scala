@@ -28,7 +28,8 @@ case class EnumDefinition[L <: LA](
 ) extends StrictProtocolElems[L]
 
 object ProtocolElems {
-  def resolve[F[_]](elems: List[ProtocolElems[ScalaLanguage]], limit: Int = 10)(implicit M: MonadError[F, String]): F[List[StrictProtocolElems[ScalaLanguage]]] =
+  def resolve[F[_]](elems: List[ProtocolElems[ScalaLanguage]],
+                    limit: Int = 10)(implicit M: MonadError[F, String]): F[List[StrictProtocolElems[ScalaLanguage]]] =
     M.tailRecM[(Int, List[ProtocolElems[ScalaLanguage]]), List[StrictProtocolElems[ScalaLanguage]]]((limit, elems))({
       case (iters, xs) if iters > 0 =>
         val lazyElems: List[LazyProtocolElems[ScalaLanguage]]     = xs.collect { case x: LazyProtocolElems[_]   => x }

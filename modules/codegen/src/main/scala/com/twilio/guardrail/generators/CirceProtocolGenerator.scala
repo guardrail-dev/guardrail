@@ -36,7 +36,7 @@ object CirceProtocolGenerator {
         // Currently, only plain strings are correctly supported anyway, so no big loss.
         val tpeName = Option(swagger.getType()).getOrElse("string")
         Target.getGeneratorSettings.map { implicit gs =>
-          Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger)))
+          Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger), gs))
         }
 
       case RenderMembers(clsName, elems) =>
@@ -110,7 +110,7 @@ object CirceProtocolGenerator {
             _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
 
             argName = if (needCamelSnakeConversion) toCamelCase(name) else name
-            meta <- SwaggerUtil.propMeta(property)
+            meta <- SwaggerUtil.propMeta(property, gs)
 
             defaultValue = property match {
               case _: MapProperty =>
@@ -310,15 +310,18 @@ object CirceProtocolGenerator {
   object ArrayProtocolTermInterp extends (ArrayProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ArrayProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>
-        SwaggerUtil.modelMetaType(arr).flatMap {
-          case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
-          case SwaggerUtil.Deferred(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
-          case SwaggerUtil.DeferredArray(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
-          case SwaggerUtil.DeferredMap(tpeName) =>
-            Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
-        }
+        for {
+          gs <- Target.getGeneratorSettings
+          result <- SwaggerUtil.modelMetaType(arr, gs).flatMap {
+            case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+            case SwaggerUtil.Deferred(tpeName) =>
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
+            case SwaggerUtil.DeferredArray(tpeName) =>
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
+            case SwaggerUtil.DeferredMap(tpeName) =>
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
+          }
+        } yield result
     }
   }
 
@@ -337,7 +340,7 @@ object CirceProtocolGenerator {
                 Target.pure((clsName, resolvedType))
               case (clsName, definition) =>
                 SwaggerUtil
-                  .modelMetaType(definition)
+                  .modelMetaType(definition, gs)
                   .map(x => (clsName, x))
             }
             result <- SwaggerUtil.ResolvedType.resolveReferences(entries)

@@ -169,9 +169,9 @@ object AkkaHttpServerGenerator {
                   statusCode           = q"StatusCodes.${statusCodeName}"
                   valueType <- Option(resp.getSchema).traverse { prop =>
                     for {
-                      meta <- SwaggerUtil.propMeta(prop)
+                      meta <- SwaggerUtil.propMeta(prop, gs)
                       resolved <- SwaggerUtil.ResolvedType
-                        .resolve(meta, protocolElems)
+                        .resolve[Target](meta, protocolElems)
                       SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                     } yield baseType
                   }
@@ -664,6 +664,7 @@ object AkkaHttpServerGenerator {
                       protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
+        gs <- Target.getGeneratorSettings
         _  <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         gs <- Target.getGeneratorSettings
         RouteMeta(path, method, operation) = route

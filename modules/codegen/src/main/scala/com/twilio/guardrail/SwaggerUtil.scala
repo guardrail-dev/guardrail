@@ -3,11 +3,13 @@ package com.twilio.guardrail
 import _root_.io.swagger.models._
 import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
-import cats.syntax.either._
-import cats.{ FlatMap, Foldable }
-import cats.instances.list._
+import cats.{ FlatMap, Foldable, MonadError }
+import cats.data.{ EitherK, EitherT }
+import cats.free.Free
+import cats.implicits._
+import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.extract.{ Default, ScalaType }
-import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter }
+import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaGenerator, ScalaParameter, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
 import java.util.{ Map => JMap }
@@ -26,7 +28,6 @@ object SwaggerUtil {
     implicit class FoldableExtension[F[_]](F: Foldable[F]) {
       import cats.{ Alternative, Monoid }
       def partitionEither[A, B, C](value: F[A])(f: A => Either[B, C])(implicit A: Alternative[F]): (F[B], F[C]) = {
-        import cats.instances.tuple._
 
         implicit val mb: Monoid[F[B]] = A.algebra[B]
         implicit val mc: Monoid[F[C]] = A.algebra[C]
@@ -78,12 +79,12 @@ object SwaggerUtil {
         }
     }
 
-    def resolve(value: ResolvedType[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Resolved[ScalaLanguage]] =
+    def resolve[M[_]](value: ResolvedType[ScalaLanguage],
+                      protocolElems: List[StrictProtocolElems[ScalaLanguage]])(implicit M: MonadError[M, String]): M[Resolved[ScalaLanguage]] =
       value match {
-        case x @ Resolved(tpe, _, default) => Target.pure(x)
+        case x @ Resolved(tpe, _, default) => M.pure(x)
         case Deferred(name) =>
-          Target
-            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+          M.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
             .map {
               case RandomType(name, tpe) => Resolved[ScalaLanguage](tpe, None, None)
               case ClassDefinition(name, tpe, cls, companion, _) =>
@@ -94,8 +95,7 @@ object SwaggerUtil {
                 Resolved[ScalaLanguage](tpe, None, None)
             }
         case DeferredArray(name) =>
-          Target
-            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+          M.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
             .map {
               case RandomType(name, tpe) =>
                 Resolved[ScalaLanguage](t"IndexedSeq[${tpe}]", None, None)
@@ -107,8 +107,7 @@ object SwaggerUtil {
                 Resolved[ScalaLanguage](t"IndexedSeq[$tpe]", None, None)
             }
         case DeferredMap(name) =>
-          Target
-            .fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+          M.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
             .map {
               case RandomType(name, tpe) =>
                 Resolved[ScalaLanguage](t"Map[String, ${tpe}]", None, None)
@@ -122,153 +121,163 @@ object SwaggerUtil {
       }
   }
 
-  def modelMetaType[T <: Model](model: T): Target[ResolvedType[ScalaLanguage]] =
-    Target.getGeneratorSettings.flatMap { implicit gs =>
+  sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
+    def apply[T <: Model](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ResolvedType[L]] = {
+      import Sc._
+      import Sw._
       model match {
         case ref: RefModel =>
           for {
-            ref <- Target.fromOption(Option(ref.getSimpleRef()), "Unspecified $ref")
-          } yield Deferred[ScalaLanguage](ref)
+            ref <- getSimpleRef(ref)
+          } yield Deferred[L](ref)
         case arr: ArrayModel =>
           for {
-            items <- Target.fromOption(Option(arr.getItems()), "items.type unspecified")
-            meta  <- propMeta(items)
+            items <- getItems(arr)
+            meta  <- propMetaF[L, F](items)
             res <- meta match {
               case Resolved(inner, dep, default) =>
-                Target.pure(Resolved[ScalaLanguage](t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
-              case Deferred(tpe) => Target.pure(DeferredArray[ScalaLanguage](tpe))
-              case DeferredArray(_) =>
-                Target.error("FIXME: Got an Array of Arrays, currently not supported")
-              case DeferredMap(_) =>
-                Target.error("FIXME: Got an Array of Maps, currently not supported")
+                (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _))
+              case x: Deferred[L]      => embedArray(x)
+              case x: DeferredArray[L] => embedArray(x)
+              case x: DeferredMap[L]   => embedArray(x)
             }
           } yield res
         case impl: ModelImpl =>
           for {
-            tpeName <- Target.fromOption(
-              Option(impl.getType()),
-              s"Unable to resolve type for ${impl.getDescription()} (${impl
-                .getEnum()} ${impl.getName()} ${impl.getType()} ${impl.getFormat()})"
-            )
-          } yield Resolved[ScalaLanguage](typeName(tpeName, Option(impl.getFormat()), ScalaType(impl)), None, None)
+            tpeName <- getType(impl)
+            tpe     <- typeNameF[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
+          } yield Resolved[L](tpe, None, None)
       }
     }
+  }
+
+  def modelMetaType[T <: Model](model: T, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] =
+    new ModelMetaTypePartiallyApplied[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]]()
+      .apply(model)
+      .value
+      .foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
+  def modelMetaTypeF[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
+    new ModelMetaTypePartiallyApplied[L, F]()
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeName(typeName: String, format: Option[String], customType: Option[String])(implicit gs: GeneratorSettings[ScalaLanguage]): Type = {
-    def log(fmt: Option[String], t: Type): Type = {
+  def typeNameF[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F]): Free[F, L#Type] = {
+    import Sc._
+
+    def log(fmt: Option[String], t: L#Type): L#Type = {
       fmt.foreach { fmt =>
         println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
       }
 
       t
     }
-    def liftCustomType(s: String): Option[Type] = {
+    def liftCustomType(s: String): Free[F, Option[L#Type]] = {
       val tpe = s.trim
       if (tpe.nonEmpty) {
-        tpe
-          .parse[Type]
-          .fold({ err =>
-            println(s"Warning: Unparsable x-scala-type: ${tpe} ${err}")
-            None
-          }, Option.apply _)
-      } else None
+        parseType(tpe)
+      } else Free.pure(Option.empty[L#Type])
     }
 
-    customType.flatMap(liftCustomType _).getOrElse {
-      (typeName, format) match {
-        case ("string", Some("date"))      => t"java.time.LocalDate"
-        case ("string", Some("date-time")) => t"java.time.OffsetDateTime"
-        case ("string", o @ Some(fmt))     => log(o, Type.Name(fmt))
-        case ("string", None)              => log(None, t"String")
-        case ("number", Some("float"))     => t"Float"
-        case ("number", Some("double"))    => t"Double"
-        case ("number", fmt)               => log(fmt, t"BigDecimal")
-        case ("integer", Some("int32"))    => t"Int"
-        case ("integer", Some("int64"))    => t"Long"
-        case ("integer", fmt)              => log(fmt, t"BigInt")
-        case ("boolean", fmt)              => log(fmt, t"Boolean")
-        case ("array", fmt)                => log(fmt, t"Iterable[String]")
-        case ("file", o @ Some(fmt))       => log(o, Type.Name(fmt))
-        case ("file", fmt)                 => log(fmt, gs.fileType)
-        case ("object", fmt)               => log(fmt, gs.jsonType)
-        case (x, fmt) => {
-          println(s"Fallback: ${x} (${fmt})")
-          Type.Name(x)
-        }
-      }
+    customType
+      .flatTraverse(liftCustomType _)
+      .flatMap(
+        _.fold({
+          (typeName, format) match {
+            case ("string", Some("date"))      => dateType()
+            case ("string", Some("date-time")) => dateTimeType()
+            case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
+            case ("number", Some("float"))     => floatType()
+            case ("number", Some("double"))    => doubleType()
+            case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
+            case ("integer", Some("int32"))    => intType()
+            case ("integer", Some("int64"))    => longType()
+            case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
+            case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
+            case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
+            case ("file", fmt)                 => fileType(fmt).map(log(fmt, _))
+            case ("object", fmt)               => objectType(fmt).map(log(fmt, _))
+            case (tpe, fmt)                    => fallbackType(tpe, fmt)
+          }
+        })(Free.pure(_))
+      )
+  }
+
+  def typeName(typeName: String, format: Option[String], customType: Option[String], gs: GeneratorSettings[ScalaLanguage]): Type =
+    Target.unsafeExtract(
+      typeNameF[ScalaLanguage, ScalaTerm[ScalaLanguage, ?]](typeName, format, customType)
+        .foldMap(ScalaGenerator.ScalaInterp),
+      gs
+    )
+
+  def propMetaF[L <: LA, F[_]](property: Property)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ResolvedType[L]] = {
+    import Sc._
+    import Sw._
+    property match {
+      case p: ArrayProperty =>
+        for {
+          items <- getItemsP(p)
+          rec   <- propMetaF[L, F](items)
+          res <- rec match {
+            case Resolved(inner, dep, default) =>
+              (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _): ResolvedType[L])
+            case x: DeferredMap[L]   => embedArray(x)
+            case x: DeferredArray[L] => embedArray(x)
+            case x: Deferred[L]      => embedArray(x)
+          }
+        } yield res
+      case m: MapProperty =>
+        for {
+          rec <- propMetaF[L, F](m.getAdditionalProperties)
+          res <- rec match {
+            case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
+            case x: DeferredMap[L]       => embedMap(x)
+            case x: DeferredArray[L]     => embedMap(x)
+            case x: Deferred[L]          => embedMap(x)
+          }
+        } yield res
+      case o: ObjectProperty =>
+        jsonType().map(Resolved[L](_, None, None)) // TODO: o.getProperties
+      case r: RefProperty =>
+        getSimpleRefP(r).map(Deferred[L](_))
+      case b: BooleanProperty =>
+        (typeNameF[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+      case s: StringProperty =>
+        (typeNameF[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
+          .mapN(Resolved[L](_, None, _))
+
+      case d: DateProperty =>
+        typeNameF[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
+      case d: DateTimeProperty =>
+        typeNameF[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
+
+      case l: LongProperty =>
+        (typeNameF[L, F]("integer", Some("int64"), ScalaType(l)), Default(l).extract[Long].traverse(litLong(_))).mapN(Resolved[L](_, None, _))
+      case i: IntegerProperty =>
+        (typeNameF[L, F]("integer", Some("int32"), ScalaType(i)), Default(i).extract[Int].traverse(litInt(_))).mapN(Resolved[L](_, None, _))
+      case f: FloatProperty =>
+        (typeNameF[L, F]("number", Some("float"), ScalaType(f)), Default(f).extract[Float].traverse(litFloat(_))).mapN(Resolved[L](_, None, _))
+      case d: DoubleProperty =>
+        (typeNameF[L, F]("number", Some("double"), ScalaType(d)), Default(d).extract[Double].traverse(litDouble(_))).mapN(Resolved[L](_, None, _))
+      case d: DecimalProperty =>
+        typeNameF[L, F]("number", None, ScalaType(d)).map(Resolved[L](_, None, None))
+      case u: UntypedProperty =>
+        jsonType().map(Resolved[L](_, None, None))
+      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
+        typeNameF[L, F]("integer", None, ScalaType(p)).map(Resolved[L](_, None, None))
+      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
+        typeNameF[L, F]("number", None, ScalaType(p)).map(Resolved[L](_, None, None))
+      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
+        typeNameF[L, F]("string", None, ScalaType(p)).map(Resolved[L](_, None, None))
+      case x =>
+        fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
     }
   }
 
-  def propMeta[T <: Property](property: T): Target[ResolvedType[ScalaLanguage]] =
-    Target.getGeneratorSettings.flatMap { implicit gs =>
-      property match {
-        case p: ArrayProperty =>
-          val title = Option(p.getTitle()).getOrElse("Unnamed array")
-          for {
-            items <- Target.fromOption(Option(p.getItems()), s"${title} has no items")
-            rec   <- propMeta(items)
-            res <- rec match {
-              case DeferredMap(_) =>
-                Target.error("FIXME: Got an Array of Maps, currently not supported")
-              case DeferredArray(_) =>
-                Target.error("FIXME: Got an Array of Arrays, currently not supported")
-              case Deferred(inner) => Target.pure(DeferredArray[ScalaLanguage](inner))
-              case Resolved(inner, dep, default) =>
-                Target.pure(Resolved[ScalaLanguage](t"IndexedSeq[${inner}]", dep, default.map(x => q"IndexedSeq(${x})")))
-            }
-          } yield res
-        case m: MapProperty =>
-          for {
-            rec <- propMeta(m.getAdditionalProperties)
-            res <- rec match {
-              case DeferredMap(_) =>
-                Target.error("FIXME: Got a map of maps, currently not supported")
-              case DeferredArray(_) =>
-                Target.error("FIXME: Got a map of arrays, currently not supported")
-              case Deferred(inner) => Target.pure(DeferredMap[ScalaLanguage](inner))
-              case Resolved(inner, dep, _) =>
-                Target.pure(Resolved[ScalaLanguage](t"Map[String, ${inner}]", dep, None))
-            }
-          } yield res
-        case o: ObjectProperty =>
-          Target.pure(Resolved[ScalaLanguage](gs.jsonType, None, None)) // TODO: o.getProperties
-        case r: RefProperty =>
-          Target
-            .fromOption(Option(r.getSimpleRef()), "Malformed $ref")
-            .map(Deferred[ScalaLanguage](_))
-        case b: BooleanProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("boolean", None, ScalaType(b)), None, Default(b).extract[Boolean].map(Lit.Boolean(_))))
-        case s: StringProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("string", Option(s.getFormat()), ScalaType(s)), None, Default(s).extract[String].map(Lit.String(_))))
-
-        case d: DateProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("string", Some("date"), ScalaType(d)), None, None))
-        case d: DateTimeProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("string", Some("date-time"), ScalaType(d)), None, None))
-
-        case l: LongProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("integer", Some("int64"), ScalaType(l)), None, Default(l).extract[Long].map(Lit.Long(_))))
-        case i: IntegerProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("integer", Some("int32"), ScalaType(i)), None, Default(i).extract[Int].map(Lit.Int(_))))
-        case f: FloatProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("number", Some("float"), ScalaType(f)), None, Default(f).extract[Float].map(Lit.Float(_))))
-        case d: DoubleProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("number", Some("double"), ScalaType(d)), None, Default(d).extract[Double].map(Lit.Double(_))))
-        case d: DecimalProperty =>
-          Target.pure(Resolved[ScalaLanguage](typeName("number", None, ScalaType(d)), None, None))
-        case u: UntypedProperty =>
-          Target.pure(Resolved[ScalaLanguage](gs.jsonType, None, None))
-        case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
-          Target.pure(Resolved[ScalaLanguage](typeName("integer", None, ScalaType(p)), None, None))
-        case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
-          Target.pure(Resolved[ScalaLanguage](typeName("number", None, ScalaType(p)), None, None))
-        case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
-          Target.pure(Resolved[ScalaLanguage](typeName("string", None, ScalaType(p)), None, None))
-        case x =>
-          Target.error(s"Unsupported swagger class ${x.getClass().getName()} (${x})")
-      }
-    }
+  def propMeta(property: Property, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] = {
+    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
+    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)
+    propMetaF[ScalaLanguage, Program](property).value
+      .foldMap(interp)
+  }
 
   /*
     Required \ Default  || Defined  || Undefined / NULL ||
@@ -288,13 +297,16 @@ object SwaggerUtil {
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
-  def getResponseType(httpMethod: HttpMethod, operation: Operation, ignoredType: Type = t"IgnoredEntity"): Target[ResolvedType[ScalaLanguage]] =
+  def getResponseType(httpMethod: HttpMethod,
+                      operation: Operation,
+                      ignoredType: Type,
+                      gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] =
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>
           getBestSuccessResponse(responses)
             .flatMap(resp => Option(resp.getSchema))
-            .map(propMeta)
+            .map(propMeta(_, gs))
             .orElse(
               if (hasEmptySuccessType(responses))
                 Some(Target.pure(Resolved[ScalaLanguage](ignoredType, None, None): ResolvedType[ScalaLanguage]))

@@ -84,6 +84,7 @@ object Http4sHelper {
                    responses: java.util.Map[String, Response],
                    protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[(Term.Name, Option[Type])]] =
     for {
+      gs <- Target.getGeneratorSettings
       responses <- Target
         .fromOption(Option(responses).map(_.asScala), s"No responses defined for ${operationId}")
 
@@ -96,9 +97,9 @@ object Http4sHelper {
               statusCodeName    = Term.Name(friendlyName)
               valueType <- Option(resp.getSchema).traverse { prop =>
                 for {
-                  meta <- SwaggerUtil.propMeta(prop)
+                  meta <- SwaggerUtil.propMeta(prop, gs)
                   resolved <- SwaggerUtil.ResolvedType
-                    .resolve(meta, protocolElems)
+                    .resolve[Target](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield baseType
               }

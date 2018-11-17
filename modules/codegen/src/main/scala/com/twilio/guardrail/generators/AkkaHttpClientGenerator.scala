@@ -255,9 +255,9 @@ object AkkaHttpClientGenerator {
             formDataNeedsMultipart = consumes.contains("multipart/form-data")
 
             // Get the response type
-            unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation)
+            unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation, t"IgnoredEntity", gs)
             resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
-              .resolve(unresolvedResponseTypeRef, protocolElems)
+              .resolve[Target](unresolvedResponseTypeRef, protocolElems)
             responseTypeRef = resolvedResponseTypeRef.tpe
 
             // Insert the method parameters

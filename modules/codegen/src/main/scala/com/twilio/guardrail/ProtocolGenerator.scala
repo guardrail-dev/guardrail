@@ -40,8 +40,10 @@ case class SuperClass[L <: LA](
 )
 
 object ProtocolGenerator {
-  private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(implicit E: EnumProtocolTerms[ScalaLanguage, F],
-                                                                        F: FrameworkTerms[ScalaLanguage, F]): Free[F, Either[String, ProtocolElems[ScalaLanguage]]] = {
+  private[this] def fromEnum[F[_]](
+      clsName: String,
+      swagger: ModelImpl
+  )(implicit E: EnumProtocolTerms[ScalaLanguage, F], F: FrameworkTerms[ScalaLanguage, F]): Free[F, Either[String, ProtocolElems[ScalaLanguage]]] = {
     import E._
     import F._
 
@@ -111,7 +113,9 @@ object ProtocolGenerator {
       hierarchy: ClassParent,
       concreteTypes: List[PropMeta],
       definitions: List[(String, Model)]
-  )(implicit F: FrameworkTerms[ScalaLanguage, F], P: PolyProtocolTerms[ScalaLanguage, F], M: ModelProtocolTerms[ScalaLanguage, F]): Free[F, ProtocolElems[ScalaLanguage]] = {
+  )(implicit F: FrameworkTerms[ScalaLanguage, F],
+    P: PolyProtocolTerms[ScalaLanguage, F],
+    M: ModelProtocolTerms[ScalaLanguage, F]): Free[F, ProtocolElems[ScalaLanguage]] = {
     import P._
     import M._
 
@@ -227,13 +231,14 @@ object ProtocolGenerator {
       val tpe = model
         .flatMap(model => Option(model.getType))
         .fold[Type](generatorSettings.jsonType)(
-          raw => SwaggerUtil.typeName(raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
+          raw => SwaggerUtil.typeName(raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)), generatorSettings)
         )
       typeAlias(clsName, tpe)
     }
   }
 
-  def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[ScalaLanguage, F], F: FrameworkTerms[ScalaLanguage, F]): Free[F, ProtocolElems[ScalaLanguage]] = {
+  def plainTypeAlias[F[_]](clsName: String)(implicit A: AliasProtocolTerms[ScalaLanguage, F],
+                                            F: FrameworkTerms[ScalaLanguage, F]): Free[F, ProtocolElems[ScalaLanguage]] = {
     import F._
     getGeneratorSettings().flatMap { implicit generatorSettings =>
       typeAlias(clsName, generatorSettings.jsonType)
@@ -245,8 +250,10 @@ object ProtocolGenerator {
     Free.pure(RandomType[ScalaLanguage](clsName, tpe))
   }
 
-  def fromArray[F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(implicit R: ArrayProtocolTerms[ScalaLanguage, F],
-                                                                                                A: AliasProtocolTerms[ScalaLanguage, F]): Free[F, ProtocolElems[ScalaLanguage]] = {
+  def fromArray[F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(
+      implicit R: ArrayProtocolTerms[ScalaLanguage, F],
+      A: AliasProtocolTerms[ScalaLanguage, F]
+  ): Free[F, ProtocolElems[ScalaLanguage]] = {
     import R._
     for {
       tpe <- extractArrayType(arr, concreteTypes)
