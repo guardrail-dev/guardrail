@@ -6,18 +6,18 @@ import cats.implicits._
 import cats.syntax.either._
 import cats.~>
 import com.twilio.guardrail.extract.ScalaPackage
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import scala.collection.JavaConverters._
-import scala.meta._
 
 object SwaggerGenerator {
-  object SwaggerInterp extends (SwaggerTerm ~> Target) {
+  object SwaggerInterp extends (SwaggerTerm[ScalaLanguage, ?] ~> Target) {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
 
-    def apply[T](term: SwaggerTerm[T]): Target[T] = term match {
+    def apply[T](term: SwaggerTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractOperations(paths) =>
         paths
           .map({

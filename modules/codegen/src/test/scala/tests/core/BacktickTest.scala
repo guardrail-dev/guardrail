@@ -68,13 +68,11 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Ensure paths are generated with escapes") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _),
+      Clients(Client(tags, className, imports, cmp, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
 
     tags should equal(Seq("dashy-package"))
-
-    val List(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
     class `Dashy-packageClient`(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

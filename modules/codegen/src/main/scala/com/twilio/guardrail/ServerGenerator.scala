@@ -7,33 +7,30 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
-
 import scala.collection.JavaConverters._
-import scala.meta._
 
-case class Servers(servers: List[Server])
-case class Server(pkg: List[String], extraImports: List[Import], src: List[Stat])
-case class TracingField(param: ScalaParameter, term: Term)
+case class Servers[L <: LA](servers: List[Server[L]])
+case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], src: List[L#Statement])
+case class TracingField[L <: LA](param: ScalaParameter, term: L#Term)
 case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
-case class RenderedRoutes(
-    routes: Term,
-    methodSigs: List[Decl.Def],
-    supportDefinitions: List[Defn],
-    handlerDefinitions: List[Stat]
+case class RenderedRoutes[L <: LA](
+    routes: L#Term,
+    methodSigs: List[L#MethodDeclaration],
+    supportDefinitions: List[L#Definition],
+    handlerDefinitions: List[L#Statement]
 )
 
 object ServerGenerator {
   import NelShim._
 
-  type ServerGenerator[A] = ServerTerm[A]
-
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[F[_]](context: Context, swagger: Swagger, frameworkImports: List[Import])(
-      protocolElems: List[StrictProtocolElems]
-  )(implicit S: ServerTerms[F]): Free[F, Servers] = {
+  def fromSwagger[L <: LA, F[_]](context: Context, swagger: Swagger, frameworkImports: List[L#Import])(
+      protocolElems: List[StrictProtocolElems[L]]
+  )(implicit S: ServerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
 
     val paths: List[(String, Path)] =
@@ -71,6 +68,6 @@ object ServerGenerator {
             Server(className, frameworkImports ++ extraImports, handlerSrc +: classSrc)
           }
       }
-    } yield Servers(servers)
+    } yield Servers[L](servers)
   }
 }

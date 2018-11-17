@@ -6,27 +6,33 @@ import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ ProtocolParameter, SuperClass }
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.languages.ScalaLanguage
 
-import scala.meta._
-
-class ModelProtocolTerms[F[_]](implicit I: InjectK[ModelProtocolTerm, F]) {
+class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]) {
   def extractProperties(swagger: Model): Free[F, List[(String, Property)]] =
-    Free.inject[ModelProtocolTerm, F](ExtractProperties(swagger))
+    Free.inject[ModelProtocolTerm[L, ?], F](ExtractProperties[L](swagger))
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(
       name: String,
       prop: Property
-  ): Free[F, ProtocolParameter] =
-    Free.inject[ModelProtocolTerm, F](TransformProperty(clsName, name, prop, needCamelSnakeConversion, concreteTypes))
-  def renderDTOClass(clsName: String, terms: List[Term.Param], parents: List[SuperClass] = Nil): Free[F, Defn.Class] =
-    Free.inject[ModelProtocolTerm, F](RenderDTOClass(clsName, terms, parents))
-  def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter], parents: List[SuperClass] = Nil): Free[F, Stat] =
-    Free.inject[ModelProtocolTerm, F](EncodeModel(clsName, needCamelSnakeConversion, params, parents))
-  def decodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter], parents: List[SuperClass] = Nil): Free[F, Stat] =
-    Free.inject[ModelProtocolTerm, F](DecodeModel(clsName, needCamelSnakeConversion, params, parents))
-  def renderDTOCompanion(clsName: String, deps: List[Term.Name], encoder: Stat, decoder: Stat): Free[F, Defn.Object] =
-    Free.inject[ModelProtocolTerm, F](RenderDTOCompanion(clsName, deps, encoder, decoder))
+  ): Free[F, ProtocolParameter[L]] =
+    Free.inject[ModelProtocolTerm[L, ?], F](TransformProperty[L](clsName, name, prop, needCamelSnakeConversion, concreteTypes))
+  def renderDTOClass(clsName: String, terms: List[L#MethodParameter], parents: List[SuperClass[L]] = Nil): Free[F, L#ClassDefinition] =
+    Free.inject[ModelProtocolTerm[L, ?], F](RenderDTOClass[L](clsName, terms, parents))
+  def encodeModel(clsName: String,
+                  needCamelSnakeConversion: Boolean,
+                  params: List[ProtocolParameter[L]],
+                  parents: List[SuperClass[L]] = Nil): Free[F, L#Statement] =
+    Free.inject[ModelProtocolTerm[L, ?], F](EncodeModel[L](clsName, needCamelSnakeConversion, params, parents))
+  def decodeModel(clsName: String,
+                  needCamelSnakeConversion: Boolean,
+                  params: List[ProtocolParameter[L]],
+                  parents: List[SuperClass[L]] = Nil): Free[F, L#Statement] =
+    Free.inject[ModelProtocolTerm[L, ?], F](DecodeModel[L](clsName, needCamelSnakeConversion, params, parents))
+  def renderDTOCompanion(clsName: String, deps: List[L#TermName], encoder: L#Statement, decoder: L#Statement): Free[F, L#ObjectDefinition] =
+    Free.inject[ModelProtocolTerm[L, ?], F](RenderDTOCompanion[L](clsName, deps, encoder, decoder))
 }
 object ModelProtocolTerms {
-  implicit def modelProtocolTerm[F[_]](implicit I: InjectK[ModelProtocolTerm, F]): ModelProtocolTerms[F] =
-    new ModelProtocolTerms[F]
+  implicit def modelProtocolTerm[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]): ModelProtocolTerms[L, F] =
+    new ModelProtocolTerms[L, F]
 }

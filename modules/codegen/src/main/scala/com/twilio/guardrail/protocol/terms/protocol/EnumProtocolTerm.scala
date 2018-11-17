@@ -2,15 +2,19 @@ package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.models.ModelImpl
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.LA
 
-import scala.meta._
-
-sealed trait EnumProtocolTerm[T]
-case class ExtractEnum(swagger: ModelImpl)                                        extends EnumProtocolTerm[Either[String, List[String]]]
-case class ExtractType(swagger: ModelImpl)                                        extends EnumProtocolTerm[Either[String, Type]]
-case class RenderMembers(clsName: String, elems: List[(String, Term.Name, Term)]) extends EnumProtocolTerm[Defn.Object]
-case class EncodeEnum(clsName: String)                                            extends EnumProtocolTerm[Defn.Val]
-case class DecodeEnum(clsName: String)                                            extends EnumProtocolTerm[Defn.Val]
-case class RenderClass(clsName: String, tpe: Type)                                extends EnumProtocolTerm[Defn.Class]
-case class RenderCompanion(clsName: String, members: Defn.Object, accessors: List[meta.Defn.Val], values: meta.Defn.Val, encoder: Defn.Val, decoder: Defn.Val)
-    extends EnumProtocolTerm[Defn.Object]
+sealed trait EnumProtocolTerm[L <: LA, T]
+case class ExtractEnum[L <: LA](swagger: ModelImpl)                                           extends EnumProtocolTerm[L, Either[String, List[String]]]
+case class ExtractType[L <: LA](swagger: ModelImpl)                                           extends EnumProtocolTerm[L, Either[String, L#Type]]
+case class RenderMembers[L <: LA](clsName: String, elems: List[(String, L#TermName, L#Term)]) extends EnumProtocolTerm[L, L#ObjectDefinition]
+case class EncodeEnum[L <: LA](clsName: String)                                               extends EnumProtocolTerm[L, L#ValueDefinition]
+case class DecodeEnum[L <: LA](clsName: String)                                               extends EnumProtocolTerm[L, L#ValueDefinition]
+case class RenderClass[L <: LA](clsName: String, tpe: L#Type)                                 extends EnumProtocolTerm[L, L#ClassDefinition]
+case class RenderCompanion[L <: LA](clsName: String,
+                                    members: L#ObjectDefinition,
+                                    accessors: List[L#ValueDefinition],
+                                    values: L#ValueDefinition,
+                                    encoder: L#ValueDefinition,
+                                    decoder: L#ValueDefinition)
+    extends EnumProtocolTerm[L, L#ObjectDefinition]

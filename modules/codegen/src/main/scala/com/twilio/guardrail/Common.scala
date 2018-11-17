@@ -8,15 +8,16 @@ import cats.syntax.either._
 import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import cats.~>
-import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.generators.GeneratorSettings
-import java.nio.file.{ Path, Paths }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol.PolyProtocolTerms
-
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
+import java.nio.file.{ Path, Paths }
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
+import com.twilio.guardrail.languages.ScalaLanguage
 
 object Common {
   def writePackage(kind: CodegenTarget,
@@ -25,10 +26,10 @@ object Common {
                    outputPath: Path,
                    pkgName: List[String],
                    dtoPackage: List[String],
-                   customImports: List[Import])(implicit F: FrameworkTerms[CodegenApplication],
-                                                Sc: ScalaTerms[CodegenApplication],
-                                                Pol: PolyProtocolTerms[CodegenApplication],
-                                                Sw: SwaggerTerms[CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
+                   customImports: List[Import])(implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
+                                                Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
+                                                Pol: PolyProtocolTerms[ScalaLanguage, CodegenApplication],
+                                                Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
     import F._
     import Sc._
     import Sw._
@@ -127,19 +128,14 @@ object Common {
           stat.copy(rhs = q"${companion}.${mirror}")
         })
 
-      packageObject = WriteTree(
-        dtoPackagePath.resolve("package.scala"),
-        source"""package ${dtoPkg}
-            ..${customImports ++ packageObjectImports ++ protocolImports}
-
-            object ${companion} {
-              ..${implicits.map(_.copy(mods = List.empty))}
-            }
-
-            package object ${Term.Name(dtoComponents.last)} {
-              ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
-            }
-          """
+      packageObject <- writePackageObject(
+        dtoPackagePath,
+        dtoComponents,
+        customImports,
+        packageObjectImports,
+        protocolImports,
+        packageObjectContents,
+        extraTypes
       )
 
       schemes = Option(swagger.getSchemes)
@@ -163,16 +159,16 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
+              .fromSwagger[ScalaLanguage, CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
             Clients(clients) = clientMeta
-          } yield CodegenDefinitions(clients, List.empty)
+          } yield CodegenDefinitions[ScalaLanguage](clients, List.empty)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(protocolElems)
+              .fromSwagger[ScalaLanguage, CodegenApplication](context, swagger, frameworkImports)(protocolElems)
             Servers(servers) = serverMeta
-          } yield CodegenDefinitions(List.empty, servers)
+          } yield CodegenDefinitions[ScalaLanguage](List.empty, servers)
       }
 
       CodegenDefinitions(clients, servers) = codegen
@@ -180,7 +176,7 @@ object Common {
       files = (
         clients
           .map({
-            case Client(pkg, clientName, clientSrc) =>
+            case Client(pkg, clientName, imports, companion, client, responseDefinitions) =>
               WriteTree(
                 resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
                 source"""
@@ -188,8 +184,11 @@ object Common {
                   import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
                   import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
                   import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
-                  ..${customImports}
-                  ..${clientSrc}
+                  ..${customImports};
+                  ..${imports};
+                  ${companion};
+                  ${client};
+                  ..${responseDefinitions}
                   """
               )
           })

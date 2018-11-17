@@ -4,15 +4,14 @@ import _root_.io.swagger.models.ArrayModel
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.generators.GeneratorSettings
+import com.twilio.guardrail.languages.LA
 
-import scala.meta._
-
-class ArrayProtocolTerms[F[_]](implicit I: InjectK[ArrayProtocolTerm, F]) {
-  def extractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta]): Free[F, Type] =
-    Free.inject[ArrayProtocolTerm, F](ExtractArrayType(arr, concreteTypes))
+class ArrayProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ArrayProtocolTerm[L, ?], F]) {
+  def extractArrayType(arr: ArrayModel, concreteTypes: List[PropMeta]): Free[F, L#Type] =
+    Free.inject[ArrayProtocolTerm[L, ?], F](ExtractArrayType[L](arr, concreteTypes))
 }
 
 object ArrayProtocolTerms {
-  implicit def arrayProtocolTerms[F[_]](implicit I: InjectK[ArrayProtocolTerm, F]): ArrayProtocolTerms[F] =
-    new ArrayProtocolTerms[F]
+  implicit def arrayProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ArrayProtocolTerm[L, ?], F]): ArrayProtocolTerms[L, F] =
+    new ArrayProtocolTerms[L, F]
 }

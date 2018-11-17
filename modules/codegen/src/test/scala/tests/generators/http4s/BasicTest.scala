@@ -106,10 +106,10 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _),
+      Clients(Client(tags, className, _, cls, cmp, statements) :: _),
       _
     )          = runSwaggerSpec(swagger)(Context.empty, Http4s, defaults.http4sGeneratorSettings)
-    val actual = statements.dropWhile(_.isInstanceOf[Import])
+    val actual = cls +: cmp +: statements
 
     val expected = List(
       q"""object Client {

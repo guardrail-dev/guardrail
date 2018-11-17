@@ -86,11 +86,9 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, statements) :: _),
+      Clients(Client(tags, className, _, cmp, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
-
-    val Seq(cmp, cls) = statements.dropWhile(_.isInstanceOf[Import])
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

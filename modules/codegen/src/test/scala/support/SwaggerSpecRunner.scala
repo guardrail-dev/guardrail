@@ -7,22 +7,25 @@ trait SwaggerSpecRunner {
   import cats.arrow.FunctionK
   import cats.implicits._
   import com.twilio.guardrail._
+  import com.twilio.guardrail.generators.GeneratorSettings
+  import com.twilio.guardrail.languages.ScalaLanguage
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
-  import com.twilio.guardrail.generators.GeneratorSettings
-
   import scala.collection.JavaConverters._
 
   def runSwaggerSpec(
       spec: String
-  ): (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions, Clients, Servers) =
+  )
+    : (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions[ScalaLanguage],
+                                                                              Clients[ScalaLanguage],
+                                                                              Servers[ScalaLanguage]) =
     runSwagger(new SwaggerParser().parse(spec)) _
 
   def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
-      implicit F: FrameworkTerms[CodegenApplication],
-      Sc: ScalaTerms[CodegenApplication],
-      Sw: SwaggerTerms[CodegenApplication]
-  ): (ProtocolDefinitions, Clients, Servers) = {
+      implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
+      Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
+      Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]
+  ): (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) = {
     import F._
     import Sw._
 
@@ -48,9 +51,9 @@ trait SwaggerSpecRunner {
       frameworkImports <- getFrameworkImports(context.tracing)
 
       clients <- ClientGenerator
-        .fromSwagger[CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
+        .fromSwagger[ScalaLanguage, CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
       servers <- ServerGenerator
-        .fromSwagger[CodegenApplication](context, swagger, frameworkImports)(definitions)
+        .fromSwagger[ScalaLanguage, CodegenApplication](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)
 
     Target.unsafeExtract(prog.foldMap(framework), generatorSettings)

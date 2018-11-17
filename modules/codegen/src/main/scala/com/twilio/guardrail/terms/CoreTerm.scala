@@ -3,7 +3,6 @@ package terms
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
-import scala.meta._
 import com.twilio.guardrail.generators.GeneratorSettings
 
 sealed trait CoreTerm[T]

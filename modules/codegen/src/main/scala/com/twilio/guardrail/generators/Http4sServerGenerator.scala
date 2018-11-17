@@ -9,8 +9,8 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
-
 import scala.collection.JavaConverters._
 import scala.meta.{ Term, _ }
 
@@ -25,12 +25,12 @@ object Http4sServerGenerator {
       }
   }
 
-  object ServerTermInterp extends FunctionK[ServerTerm, Target] {
+  object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
-    def apply[T](term: ServerTerm[T]): Target[T] = term match {
+    def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractOperations(paths) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"extractOperations(${paths})")
@@ -86,7 +86,7 @@ object Http4sServerGenerator {
                     .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
                   "Missing client name"
                 )
-              } yield Some(TracingField(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
+              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
             } else Target.pure(None)
           } yield res
         }
@@ -103,7 +103,7 @@ object Http4sServerGenerator {
           combinedRouteTerms <- combineRouteTerms(routeTerms)
           methodSigs = renderedRoutes.map(_.methodSig)
         } yield {
-          RenderedRoutes(
+          RenderedRoutes[ScalaLanguage](
             combinedRouteTerms,
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
@@ -213,12 +213,12 @@ object Http4sServerGenerator {
       directivesFromParams(
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some(q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)", p"Some(${Pat.Var(arg.paramName)})"), arg.paramName))
+            Target.pure(Param(None, Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))"),
+                Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))")),
                 arg.paramName
               )
             )
@@ -231,7 +231,7 @@ object Http4sServerGenerator {
             Target.pure(
               Param(
                 None,
-                Some(q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})"),
+                Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})")),
                 arg.paramName
               )
             )
@@ -254,23 +254,29 @@ object Http4sServerGenerator {
     def formToHttp4s: List[ScalaParameter] => Target[List[Param]] =
       directivesFromParams(
         arg => {
-          case t"String" => Target.pure(Param(None, Some(q"urlForm.values.get(${arg.argName.toLit})", p"Some(Seq(${Pat.Var(arg.paramName)}))"), arg.paramName))
+          case t"String" =>
+            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(Seq(${Pat.Var(arg.paramName)}))")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]))", p"Some(Seq(Right(${Pat.Var(arg.paramName)})))"),
+                Some((q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]))", p"Some(Seq(Right(${Pat.Var(arg.paramName)})))")),
                 arg.paramName
               )
             )
         },
         arg => {
-          case t"String" => Target.pure(Param(None, Some(q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})"), arg.paramName))
+          case t"String" => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence)", p"Some(Right(${Pat.Var(arg.paramName)}))"),
+                Some(
+                  (
+                    q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence)",
+                    p"Some(Right(${Pat.Var(arg.paramName)}))"
+                  )
+                ),
                 arg.paramName
               )
             )
@@ -281,21 +287,29 @@ object Http4sServerGenerator {
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence).sequence",
-                     p"Right(${Pat.Var(arg.paramName)})"),
+                Some(
+                  (
+                    q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence).sequence",
+                    p"Right(${Pat.Var(arg.paramName)})"
+                  )
+                ),
                 arg.paramName
               )
             )
         },
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some(q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList)", p"List(${Pat.Var(arg.paramName)})"), arg.paramName))
+            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList)", p"List(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some(q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList).map(_.traverse(Json.fromString(_).as[$tpe]))",
-                     p"List(Right(${Pat.Var(arg.paramName)}))"),
+                Some(
+                  (
+                    q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList).map(_.traverse(Json.fromString(_).as[$tpe]))",
+                    p"List(Right(${Pat.Var(arg.paramName)}))"
+                  )
+                ),
                 arg.paramName
               )
             )
@@ -308,7 +322,9 @@ object Http4sServerGenerator {
           elemType =>
             if (arg.isFile) {
               Target.pure(
-                Param(None, Some(q"multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body)", p"Some(${Pat.Var(arg.paramName)})"), arg.paramName)
+                Param(None,
+                      Some((q"multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body)", p"Some(${Pat.Var(arg.paramName)})")),
+                      arg.paramName)
               )
             } else
               elemType match {
@@ -319,8 +335,10 @@ object Http4sServerGenerator {
                         enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
                       ),
                       Some(
-                        Term.Name(s"${arg.argName.value}Option"),
-                        p"Some(${Pat.Var(arg.paramName)})"
+                        (
+                          Term.Name(s"${arg.argName.value}Option"),
+                          p"Some(${Pat.Var(arg.paramName)})"
+                        )
                       ),
                       arg.paramName
                     )
@@ -332,8 +350,10 @@ object Http4sServerGenerator {
                         enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => E.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       Some(
-                        Term.Name(s"${arg.argName.value}Option"),
-                        p"Some(${Pat.Var(arg.paramName)})"
+                        (
+                          Term.Name(s"${arg.argName.value}Option"),
+                          p"Some(${Pat.Var(arg.paramName)})"
+                        )
                       ),
                       arg.paramName
                     )
@@ -427,8 +447,8 @@ object Http4sServerGenerator {
     def generateRoute(resourceName: String,
                       basePath: Option[String],
                       route: ServerRoute,
-                      tracingFields: Option[TracingField],
-                      protocolElems: List[StrictProtocolElems]): Target[Option[RenderedRoute]] =
+                      tracingFields: Option[TracingField[ScalaLanguage]],
+                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
@@ -563,7 +583,7 @@ object Http4sServerGenerator {
         _      <- routes.traverse(route => Target.log.debug("Http4sServerGenerator", "server", "combineRouteTerms")(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList)
 
-    def generateSupportDefinitions(route: ServerRoute, protocolElems: List[StrictProtocolElems]): Target[List[Defn]] =
+    def generateSupportDefinitions(route: ServerRoute, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
       for {
         operation <- Target.pure(route.operation)
         parameters <- Option(operation.getParameters)

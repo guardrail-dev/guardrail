@@ -11,8 +11,8 @@ import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
-
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -104,12 +104,12 @@ object AkkaHttpServerGenerator {
       }
   }
 
-  object ServerTermInterp extends FunctionK[ServerTerm, Target] {
+  object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
-    def apply[T](term: ServerTerm[T]): Target[T] = term match {
+    def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractOperations(paths) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
@@ -252,7 +252,7 @@ object AkkaHttpServerGenerator {
                     .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
                   "Missing client name"
                 )
-              } yield Some(TracingField(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
             } else Target.pure(None)
           } yield res
         }
@@ -269,7 +269,7 @@ object AkkaHttpServerGenerator {
           combinedRouteTerms <- combineRouteTerms(routeTerms)
           methodSigs = renderedRoutes.map(_.methodSig)
         } yield {
-          RenderedRoutes(
+          RenderedRoutes[ScalaLanguage](
             combinedRouteTerms,
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
@@ -659,8 +659,8 @@ object AkkaHttpServerGenerator {
     def generateRoute(resourceName: String,
                       basePath: Option[String],
                       route: ServerRoute,
-                      tracingFields: Option[TracingField],
-                      protocolElems: List[StrictProtocolElems]): Target[RenderedRoute] =
+                      tracingFields: Option[TracingField[ScalaLanguage]],
+                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")

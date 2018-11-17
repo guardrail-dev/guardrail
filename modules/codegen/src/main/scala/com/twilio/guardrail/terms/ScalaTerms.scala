@@ -3,18 +3,32 @@ package terms
 
 import cats.InjectK
 import cats.free.Free
+import com.twilio.guardrail.languages.LA
+import java.nio.file.Path
 
-import scala.meta._
-
-class ScalaTerms[F[_]](implicit I: InjectK[ScalaTerm, F]) {
-  def renderImplicits(pkgName: List[String], frameworkImports: List[Import], jsonImports: List[Import], customImports: List[Import]): Free[F, Source] =
-    Free.inject[ScalaTerm, F](RenderImplicits(pkgName, frameworkImports, jsonImports, customImports))
+class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
+  def renderImplicits(pkgName: List[String],
+                      frameworkImports: List[L#Import],
+                      jsonImports: List[L#Import],
+                      customImports: List[L#Import]): Free[F, L#FileContents] =
+    Free.inject[ScalaTerm[L, ?], F](RenderImplicits(pkgName, frameworkImports, jsonImports, customImports))
   def renderFrameworkImplicits(pkgName: List[String],
-                               frameworkImports: List[Import],
-                               jsonImports: List[Import],
-                               frameworkImplicits: Defn.Object): Free[F, Source] =
-    Free.inject[ScalaTerm, F](RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits))
+                               frameworkImports: List[L#Import],
+                               jsonImports: List[L#Import],
+                               frameworkImplicits: L#ObjectDefinition): Free[F, L#FileContents] =
+    Free.inject[ScalaTerm[L, ?], F](RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits))
+
+  def writePackageObject(dtoPackagePath: Path,
+                         dtoComponents: List[String],
+                         customImports: List[L#Import],
+                         packageObjectImports: List[L#Import],
+                         protocolImports: List[L#Import],
+                         packageObjectContents: List[L#Statement],
+                         extraTypes: List[L#Statement]): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](
+      WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
+    )
 }
 object ScalaTerms {
-  implicit def scalaTerm[F[_]](implicit I: InjectK[ScalaTerm, F]): ScalaTerms[F] = new ScalaTerms[F]
+  implicit def scalaTerm[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]): ScalaTerms[L, F] = new ScalaTerms[L, F]
 }

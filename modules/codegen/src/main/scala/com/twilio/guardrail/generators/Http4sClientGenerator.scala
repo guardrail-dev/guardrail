@@ -9,17 +9,16 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.ScalaPackage
+import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import java.util.Locale
-
-import com.twilio.guardrail.protocol.terms.client._
-
 import scala.collection.JavaConverters._
 import scala.meta._
 
 object Http4sClientGenerator {
 
-  object ClientTermInterp extends FunctionK[ClientTerm, Target] {
+  object ClientTermInterp extends FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -47,7 +46,7 @@ object Http4sClientGenerator {
         }
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
-    def apply[T](term: ClientTerm[T]): Target[T] = term match {
+    def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
           for {
@@ -164,7 +163,7 @@ object Http4sClientGenerator {
                                     formArgs: List[ScalaParameter],
                                     body: Option[ScalaParameter],
                                     headerArgs: List[ScalaParameter],
-                                    extraImplicits: List[Term.Param]): RenderedClientOperation = {
+                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[Header] = List.empty"
           val safeBody: Option[(Term, Type)] =
@@ -246,7 +245,7 @@ object Http4sClientGenerator {
             implicitParams
           ).flatten
 
-          RenderedClientOperation(
+          RenderedClientOperation[ScalaLanguage](
             q"""
               def ${Term
               .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody

@@ -9,13 +9,14 @@ import cats.data.NonEmptyList
 import cats.syntax.flatMap._
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.collection.JavaConverters._
 import scala.meta._
 
 object AkkaHttpClientGenerator {
 
-  object ClientTermInterp extends FunctionK[ClientTerm, Target] {
+  object ClientTermInterp extends FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -43,7 +44,7 @@ object AkkaHttpClientGenerator {
         }
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
-    def apply[T](term: ClientTerm[T]): Target[T] = term match {
+    def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
           for {
@@ -309,7 +310,7 @@ object AkkaHttpClientGenerator {
               headerArgs,
               extraImplicits
             )
-          } yield RenderedClientOperation(defn, List.empty)
+          } yield RenderedClientOperation[ScalaLanguage](defn, List.empty)
         }
 
       case GetImports(tracing) => Target.pure(List.empty)

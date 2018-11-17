@@ -3,12 +3,20 @@ package generators
 
 import cats.syntax.either._
 import cats.~>
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import scala.meta._
 
 object ScalaGenerator {
-  object ScalaInterp extends (ScalaTerm ~> Target) {
-    def apply[T](term: ScalaTerm[T]): Target[T] = term match {
+  object ScalaInterp extends (ScalaTerm[ScalaLanguage, ?] ~> Target) {
+    // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
+    // defined inside `apply`. Once 2.11 is dropped, these can be moved back.
+    val matchImplicit: PartialFunction[Stat, Defn.Val] = {
+      case x: Defn.Val if (x match { case q"implicit val $_: $_ = $_" => true; case _ => false }) => x
+    }
+    val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
+
+    def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
       case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
@@ -106,6 +114,43 @@ object ScalaGenerator {
 
             ${frameworkImplicits}
           """
+        )
+
+      case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
+        val dtoHead :: dtoRest = dtoComponents
+        val dtoPkg = dtoRest.init
+          .foldLeft[Term.Ref](Term.Name(dtoHead)) {
+            case (acc, next) => Term.Select(acc, Term.Name(next))
+          }
+        val companion = Term.Name(s"${dtoComponents.last}$$")
+
+        val (_, statements) =
+          packageObjectContents.partition(partitionImplicits)
+        val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
+
+        val mirroredImplicits = implicits
+          .map({ stat =>
+            val List(Pat.Var(mirror)) = stat.pats
+            stat.copy(rhs = q"${companion}.${mirror}")
+          })
+
+        Target.pure(
+          WriteTree(
+            dtoPackagePath.resolve("package.scala"),
+            source"""
+            package ${dtoPkg}
+
+            ..${customImports ++ packageObjectImports ++ protocolImports}
+
+            object ${companion} {
+              ..${implicits.map(_.copy(mods = List.empty))}
+            }
+
+            package object ${Term.Name(dtoComponents.last)} {
+              ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
+            }
+          """
+          )
         )
     }
   }

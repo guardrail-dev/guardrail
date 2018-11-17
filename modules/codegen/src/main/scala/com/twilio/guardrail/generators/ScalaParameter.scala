@@ -3,6 +3,7 @@ package generators
 
 import _root_.io.swagger.models.parameters.Parameter
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
+import com.twilio.guardrail.languages.ScalaLanguage
 import java.util.Locale
 
 import scala.meta._
@@ -51,7 +52,7 @@ object ScalaParameter {
       new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required, None, innerTpe == gs.fileType)
   }
 
-  def fromParameter(protocolElems: List[StrictProtocolElems]): Parameter => Target[ScalaParameter] = { parameter =>
+  def fromParameter(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Parameter => Target[ScalaParameter] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed =
         "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
@@ -189,7 +190,7 @@ object ScalaParameter {
     }
   }
 
-  def fromParameters(protocolElems: List[StrictProtocolElems]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
+  def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
       counts = parameters.groupBy(_.paramName.value).mapValues(_.length)

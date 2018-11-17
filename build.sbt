@@ -8,7 +8,7 @@ licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-crossScalaVersions := Seq("2.11.12", "2.12.7")
+crossScalaVersions := Seq("2.11.12", "2.12.3")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
 scalafmtOnCompile in ThisBuild := true
@@ -102,6 +102,10 @@ addCommandAlias(
   "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
 )
 
+resolvers += Resolver.sonatypeRepo("releases")
+addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.8")
+addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.8" cross CrossVersion.binary)
+
 publishMavenStyle := true
 
 val testDependencies = Seq(
@@ -109,6 +113,8 @@ val testDependencies = Seq(
 )
 
 val codegenSettings = Seq(
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.8"),
+  addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.8" cross CrossVersion.binary),
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta"     % "4.0.0",
     "io.swagger"    % "swagger-parser" % "1.0.39",
