@@ -127,6 +127,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(_) =>
             effect.pure(GetFooResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def putFoo(headers: List[Header] = List.empty): F[PutFooResponse] = {
@@ -135,6 +136,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(_) =>
             effect.pure(PutFooResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def postFoo(headers: List[Header] = List.empty): F[PostFooResponse] = {
@@ -143,6 +145,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(_) =>
             effect.pure(PostFooResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def deleteFoo(headers: List[Header] = List.empty): F[DeleteFooResponse] = {
@@ -151,6 +154,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(_) =>
             effect.pure(DeleteFooResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def patchFoo(headers: List[Header] = List.empty): F[PatchFooResponse] = {
@@ -159,6 +163,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(_) =>
             effect.pure(PatchFooResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def getBar(headers: List[Header] = List.empty): F[GetBarResponse] = {
@@ -167,6 +172,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(_) =>
             effect.pure(GetBarResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def getBaz(headers: List[Header] = List.empty): F[GetBazResponse] = {
@@ -175,6 +181,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         httpClient.fetch(req)({
           case Ok(resp) =>
             getBazOkDecoder.decode(resp, strict = false).fold(throw _, identity).map(GetBazResponse.Ok)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
     }""",

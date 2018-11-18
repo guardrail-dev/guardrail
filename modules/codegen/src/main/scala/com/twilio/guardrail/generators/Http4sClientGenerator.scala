@@ -206,7 +206,7 @@ object Http4sClientGenerator {
               ) { _ =>
                 p"case $statusCodeName(resp) => ${Term.Name(s"$methodName${statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, identity).map($responseCompanionTerm.$responseTerm)"
               }
-          }
+          } :+ p"case resp => effect.raiseError(UnexpectedStatus(resp.status))"
           // Get the response type
           val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
           val executeReqExpr  = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
