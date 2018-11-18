@@ -13,6 +13,7 @@ import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.terms.RouteMeta
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -121,7 +122,7 @@ object AkkaHttpServerGenerator {
               } yield {
                 operationMap.asScala.toList.map {
                   case (httpMethod, operation) =>
-                    ServerRoute(pathStr, httpMethod, operation)
+                    RouteMeta(pathStr, httpMethod, operation)
                 }
               }
           }
@@ -260,7 +261,7 @@ object AkkaHttpServerGenerator {
       case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {
-            case (tracingFields, sr @ ServerRoute(path, method, operation)) =>
+            case (tracingFields, sr @ RouteMeta(path, method, operation)) =>
               for {
                 rendered <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
               } yield rendered
@@ -658,13 +659,13 @@ object AkkaHttpServerGenerator {
 
     def generateRoute(resourceName: String,
                       basePath: Option[String],
-                      route: ServerRoute,
+                      route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
                       protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
-        _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        ServerRoute(path, method, operation) = route
+        _  <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),

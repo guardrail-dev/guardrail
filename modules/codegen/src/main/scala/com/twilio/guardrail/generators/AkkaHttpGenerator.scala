@@ -9,7 +9,6 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.ScalaPackage
-import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.terms.framework._
 import java.util.Locale
 import scala.collection.JavaConverters._

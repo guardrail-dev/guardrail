@@ -9,12 +9,12 @@ import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
+import com.twilio.guardrail.terms.RouteMeta
 import scala.collection.JavaConverters._
 
 case class Servers[L <: LA](servers: List[Server[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], src: List[L#Statement])
 case class TracingField[L <: LA](param: ScalaParameter, term: L#Term)
-case class ServerRoute(path: String, method: HttpMethod, operation: Operation)
 case class RenderedRoutes[L <: LA](
     routes: L#Term,
     methodSigs: List[L#MethodDeclaration],
@@ -54,12 +54,12 @@ object ServerGenerator {
             formatHandlerName(className.lastOption.getOrElse(""))
           for {
             responseDefinitions <- routes.flatTraverse {
-              case sr @ ServerRoute(path, method, operation) =>
+              case sr @ RouteMeta(path, method, operation) =>
                 for {
                   responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
                 } yield responseDefinitions
             }
-            tracingFields    <- routes.traverse { case ServerRoute(_, _, operation) => buildTracingFields(operation, className, context.tracing) }
+            tracingFields    <- routes.traverse { case RouteMeta(_, _, operation) => buildTracingFields(operation, className, context.tracing) }
             renderedRoutes   <- generateRoutes(resourceName, basePath, tracingFields.zip(routes), protocolElems)
             handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)

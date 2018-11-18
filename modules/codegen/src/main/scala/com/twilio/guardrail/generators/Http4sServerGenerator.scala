@@ -11,6 +11,7 @@ import cats.syntax.traverse._
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.terms.RouteMeta
 import scala.collection.JavaConverters._
 import scala.meta.{ Term, _ }
 
@@ -42,7 +43,7 @@ object Http4sServerGenerator {
               } yield {
                 operationMap.asScala.toList.map {
                   case (httpMethod, operation) =>
-                    ServerRoute(pathStr, httpMethod, operation)
+                    RouteMeta(pathStr, httpMethod, operation)
                 }
               }
           }
@@ -95,7 +96,7 @@ object Http4sServerGenerator {
         for {
           renderedRoutes <- routes
             .traverse {
-              case (tracingFields, sr @ ServerRoute(path, method, operation)) =>
+              case (tracingFields, sr @ RouteMeta(path, method, operation)) =>
                 generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
             }
             .map(_.flatten)
@@ -446,13 +447,13 @@ object Http4sServerGenerator {
 
     def generateRoute(resourceName: String,
                       basePath: Option[String],
-                      route: ServerRoute,
+                      route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
                       protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
-        _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        ServerRoute(path, method, operation) = route
+        _  <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
@@ -583,7 +584,7 @@ object Http4sServerGenerator {
         _      <- routes.traverse(route => Target.log.debug("Http4sServerGenerator", "server", "combineRouteTerms")(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList)
 
-    def generateSupportDefinitions(route: ServerRoute, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
+    def generateSupportDefinitions(route: RouteMeta, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
       for {
         operation <- Target.pure(route.operation)
         parameters <- Option(operation.getParameters)
