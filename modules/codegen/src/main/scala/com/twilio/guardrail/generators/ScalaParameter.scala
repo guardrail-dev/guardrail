@@ -15,6 +15,14 @@ class GeneratorSettings[L <: LA](val fileType: L#Type, val jsonType: L#Type)
 case class RawParameterName private[generators] (value: String) {
   def toLit: Lit.String = Lit.String(value)
 }
+class ScalaParameters(val parameters: List[ScalaParameter]) {
+  val filterParamBy     = ScalaParameter.filterParams(parameters)
+  val headerParams      = filterParamBy("header")
+  val pathParams        = filterParamBy("path")
+  val queryStringParams = filterParamBy("query")
+  val bodyParams        = filterParamBy("body").headOption
+  val formParams        = filterParamBy("formData")
+}
 class ScalaParameter private[generators] (
     val in: Option[String],
     val param: Term.Param,
@@ -191,7 +199,8 @@ object ScalaParameter {
     }
   }
 
-  def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
+  def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+                     gs: GeneratorSettings[ScalaLanguage]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
       counts = parameters.groupBy(_.paramName.value).mapValues(_.length)

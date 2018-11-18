@@ -47,7 +47,7 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
+      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
@@ -273,18 +273,13 @@ object Http4sClientGenerator {
 
             _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
-            allParams <- Option(operation.getParameters)
-              .map(_.asScala.toList)
-              .map(ScalaParameter.fromParameters(protocolElems))
-              .getOrElse(Target.pure(List.empty[ScalaParameter]))
-            _ <- Target.log.debug("generateClientOperation")(s"Unfiltered params: ${allParams}")
+            parameters <- route.getParameters(protocolElems, gs)
 
-            filterParamBy = ScalaParameter.filterParams(allParams)
-            headerArgs    = filterParamBy("header")
-            pathArgs      = filterParamBy("path")
-            qsArgs        = filterParamBy("query")
-            bodyArgs      = filterParamBy("body").headOption
-            formArgs      = filterParamBy("formData")
+            headerArgs = parameters.headerParams
+            pathArgs   = parameters.pathParams
+            qsArgs     = parameters.queryStringParams
+            bodyArgs   = parameters.bodyParams
+            formArgs   = parameters.formParams
 
             _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
 

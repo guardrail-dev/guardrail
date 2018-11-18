@@ -149,6 +149,7 @@ object AkkaHttpServerGenerator {
 
       case GenerateResponseDefinitions(operation, protocolElems) =>
         for {
+          gs <- Target.getGeneratorSettings
           operationId <- Target.fromOption(Option(operation.getOperationId())
                                              .map(splitOperationParts)
                                              .map(_._2),
@@ -664,21 +665,16 @@ object AkkaHttpServerGenerator {
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _  <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        gs <- Target.getGeneratorSettings
         RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-        parameters <- Option(operation.getParameters)
-          .map(_.asScala.toList)
-          .map(ScalaParameter.fromParameters(protocolElems))
-          .getOrElse(Target.pure(List.empty[ScalaParameter]))
-        _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
-        _ <- parameters.traverse(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
+        parameters <- route.getParameters(protocolElems, gs)
 
-        filterParamBy = ScalaParameter.filterParams(parameters)
-        bodyArgs      = filterParamBy("body").headOption
-        formArgs = filterParamBy("formData").toList.map({ x =>
+        // special-case file upload stuff
+        formArgs = parameters.formParams.map({ x =>
           x.withType(
             if (x.isFile) {
               val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
@@ -692,9 +688,10 @@ object AkkaHttpServerGenerator {
             }
           )
         })
-        headerArgs = filterParamBy("header").toList
-        pathArgs   = filterParamBy("path").toList
-        qsArgs     = filterParamBy("query").toList
+        headerArgs = parameters.headerParams
+        pathArgs   = parameters.pathParams
+        qsArgs     = parameters.queryStringParams
+        bodyArgs   = parameters.bodyParams
 
         akkaMethod <- httpMethodToAkka(method)
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)

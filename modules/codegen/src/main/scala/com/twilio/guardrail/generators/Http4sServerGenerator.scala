@@ -453,24 +453,20 @@ object Http4sServerGenerator {
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _  <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        gs <- Target.getGeneratorSettings
         RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-        parameters <- Option(operation.getParameters)
-          .map(_.asScala.toList)
-          .map(ScalaParameter.fromParameters(protocolElems))
-          .getOrElse(Target.pure(List.empty[ScalaParameter]))
-        _ <- Target.log.debug("Http4sServerGenerator", "server", "generateRoute")("Parameters:")
-        _ <- parameters.traverse(parameter => Target.log.debug("Http4sServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
 
-        filterParamBy = ScalaParameter.filterParams(parameters)
-        bodyArgs      = filterParamBy("body").headOption
-        formArgs      = filterParamBy("formData")
-        headerArgs    = filterParamBy("header")
-        pathArgs      = filterParamBy("path")
-        qsArgs        = filterParamBy("query")
+        parameters <- route.getParameters(protocolElems, gs)
+
+        formArgs   = parameters.formParams
+        headerArgs = parameters.headerParams
+        pathArgs   = parameters.pathParams
+        qsArgs     = parameters.queryStringParams
+        bodyArgs   = parameters.bodyParams
 
         http4sMethod <- httpMethodToHttp4s(method)
         pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
@@ -586,13 +582,11 @@ object Http4sServerGenerator {
 
     def generateSupportDefinitions(route: RouteMeta, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
       for {
-        operation <- Target.pure(route.operation)
-        parameters <- Option(operation.getParameters)
-          .map(_.asScala.toList)
-          .map(ScalaParameter.fromParameters(protocolElems))
-          .getOrElse(Target.pure(List.empty[ScalaParameter]))
-        filterParamBy = ScalaParameter.filterParams(parameters)
-        pathArgs      = filterParamBy("path")
+        gs         <- Target.getGeneratorSettings
+        operation  <- Target.pure(route.operation)
+        parameters <- route.getParameters(protocolElems, gs)
+
+        pathArgs = parameters.pathParams
       } yield {
         generatePathParamExtractors(pathArgs)
       }
