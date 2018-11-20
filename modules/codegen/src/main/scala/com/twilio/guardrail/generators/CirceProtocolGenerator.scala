@@ -142,9 +142,9 @@ object CirceProtocolGenerator {
             }
             emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
 
-            (tpe, rawDep) = meta match {
-              case SwaggerUtil.Resolved(declType, rawDep, _) =>
-                (declType, rawDep)
+            (tpe, classDep) = meta match {
+              case SwaggerUtil.Resolved(declType, classDep, _) =>
+                (declType, classDep)
               case SwaggerUtil.Deferred(tpeName) =>
                 val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
                   println(s"Unable to find definition for ${tpeName}, just inlining")
@@ -163,7 +163,7 @@ object CirceProtocolGenerator {
                 (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
               )(Function.const((tpe, defaultValue)) _)
             term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
-            dep  = rawDep.filterNot(_.value == clsName) // Filter out our own class name
+            dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
           } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNullKey)
         }
 
