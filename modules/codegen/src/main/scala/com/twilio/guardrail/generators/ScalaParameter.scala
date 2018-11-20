@@ -43,11 +43,7 @@ object ScalaParameter {
   def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter =
-    fromParam(param.name.value)(param)
-  def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter =
-    fromParam(RawParameterName(argName))(param)
-  def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter = param match {
+  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter = param match {
     case param @ Term.Param(_, name, decltype, _) =>
       val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
         .flatMap({
@@ -58,7 +54,7 @@ object ScalaParameter {
           case _                  => None
         })
         .getOrElse((t"Nothing", t"Nothing", true))
-      new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required, None, innerTpe == gs.fileType)
+      new ScalaParameter(None, param, Term.Name(name.value), RawParameterName(param.name.value), tpe, required, None, innerTpe == gs.fileType)
   }
 
   def fromParameter[M[_]](protocolElems: List[StrictProtocolElems[ScalaLanguage]],

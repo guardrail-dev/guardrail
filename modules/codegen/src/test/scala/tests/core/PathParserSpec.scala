@@ -16,8 +16,8 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   val args: List[ScalaParameter] = List(
     ScalaParameter.fromParam(param"foo: Int = 1"),
     ScalaParameter.fromParam(param"bar: Int = 1"),
-    ScalaParameter.fromParam("foo_bar")(param"fooBar: Int = 1"),
-    ScalaParameter.fromParam("bar_baz")(param"barBaz: Int = 1")
+    ScalaParameter.fromParam(param"fooBar: Int = 1").withRawName("foo_bar"),
+    ScalaParameter.fromParam(param"barBaz: Int = 1").withRawName("bar_baz")
   )
 
   List[(String, Term)](
