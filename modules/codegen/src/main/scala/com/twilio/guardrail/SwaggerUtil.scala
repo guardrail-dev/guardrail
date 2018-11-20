@@ -39,7 +39,7 @@ object SwaggerUtil {
       }
     }
 
-    def resolve_(values: List[(String, ResolvedType)]): Target[List[(String, Resolved)]] = {
+    def resolveReferences(values: List[(String, ResolvedType)]): Target[List[(String, Resolved)]] = {
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, x: Resolved)         => Right((clsName, x))
         case (clsName, x: LazyResolvedType) => Left((clsName, x))
