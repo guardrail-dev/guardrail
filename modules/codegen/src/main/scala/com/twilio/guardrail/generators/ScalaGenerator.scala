@@ -17,6 +17,81 @@ object ScalaGenerator {
     val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
 
     def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
+
+      case LitString(value)        => Target.pure(Lit.String(value))
+      case LitFloat(value)         => Target.pure(Lit.Float(value))
+      case LitDouble(value)        => Target.pure(Lit.Double(value))
+      case LitInt(value)           => Target.pure(Lit.Int(value))
+      case LitLong(value)          => Target.pure(Lit.Long(value))
+      case LitBoolean(value)       => Target.pure(Lit.Boolean(value))
+      case LiftOptionalType(value) => Target.pure(t"Option[${value}]")
+      case LiftOptionalTerm(value) => Target.pure(q"Option(${value})")
+      case EmptyOptionalTerm()     => Target.pure(q"Option.empty")
+      case LiftVectorType(value)   => Target.pure(t"IndexedSeq[${value}]")
+      case LiftVectorTerm(value)   => Target.pure(q"IndexedSeq(${value})")
+      case LiftMapType(value)      => Target.pure(t"Map[String, ${value}]")
+      case JsonType()              => Target.getGeneratorSettings.map(_.jsonType)
+      case EmbedArray(tpe) =>
+        tpe match {
+          case SwaggerUtil.Deferred(tpe) =>
+            Target.pure(SwaggerUtil.DeferredArray(tpe))
+          case SwaggerUtil.DeferredArray(_) =>
+            Target.raiseError("FIXME: Got an Array of Arrays, currently not supported")
+          case SwaggerUtil.DeferredMap(_) =>
+            Target.raiseError("FIXME: Got an Array of Maps, currently not supported")
+        }
+      case EmbedMap(tpe) =>
+        (tpe match {
+          case SwaggerUtil.Deferred(inner) => Target.pure(SwaggerUtil.DeferredMap(inner))
+          case SwaggerUtil.DeferredMap(_) =>
+            Target.raiseError("FIXME: Got a map of maps, currently not supported")
+          case SwaggerUtil.DeferredArray(_) =>
+            Target.raiseError("FIXME: Got a map of arrays, currently not supported")
+        })
+      case ParseType(tpe) =>
+        Target.pure(
+          tpe
+            .parse[Type]
+            .fold({ err =>
+              println(s"Warning: Unparsable x-scala-type: ${tpe} ${err}")
+              None
+            }, Option.apply _)
+        )
+      case ParseTypeName(tpe) =>
+        Target.pure(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)))
+
+      case PureTermName(tpe) =>
+        Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Term.Name(_)), "A structure's name is empty")
+
+      case PureTypeName(tpe) =>
+        Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)), "A structure's name is empty")
+
+      case PureMethodParameter(name, tpe, default) =>
+        Target.pure(param"${name}: ${tpe}".copy(default = default))
+
+      case TypeNamesEqual(a, b) =>
+        Target.pure(a.value == b.value)
+
+      case TypesEqual(a, b) =>
+        Target.pure(a.structure == b.structure)
+
+      case DateType()                => Target.pure(t"java.time.LocalDate")
+      case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")
+      case StringType(format)        => Target.pure(format.fold(t"String")(Type.Name(_)))
+      case FloatType()               => Target.pure(t"Float")
+      case DoubleType()              => Target.pure(t"Double")
+      case NumberType(format)        => Target.pure(t"BigDecimal")
+      case IntType()                 => Target.pure(t"Int")
+      case LongType()                => Target.pure(t"Long")
+      case IntegerType(format)       => Target.pure(t"BigInt")
+      case BooleanType(format)       => Target.pure(t"Boolean")
+      case ArrayType(format)         => Target.pure(t"Iterable[String]")
+      case FileType(format)          => Target.getGeneratorSettings.map(gs => format.fold(gs.fileType)(Type.Name(_)))
+      case ObjectType(format)        => Target.getGeneratorSettings.map(_.jsonType)
+      case FallbackType(tpe, format) => Target.pure(Type.Name(tpe))
+
+      case WidenTypeName(tpe) => Target.pure(tpe)
+
       case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
