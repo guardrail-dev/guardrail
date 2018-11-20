@@ -42,7 +42,7 @@ object SwaggerUtil {
       }
     }
 
-    def resolveReferences(values: List[(String, ResolvedType[ScalaLanguage])]): Target[List[(String, Resolved[ScalaLanguage])]] = {
+    def resolveReferences[M[_]](values: List[(String, ResolvedType[ScalaLanguage])])(implicit M: MonadError[M, String]): M[List[(String, Resolved[ScalaLanguage])]] = {
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, x: Resolved[ScalaLanguage])         => Right((clsName, x))
         case (clsName, x: LazyResolvedType[ScalaLanguage]) => Left((clsName, x))
@@ -56,13 +56,13 @@ object SwaggerUtil {
           .map(_._2.tpe)
           .map(x => (clsName, Resolved[ScalaLanguage](f(x), None, None)))
 
-      FlatMap[Target]
+      FlatMap[M]
         .tailRecM[(List[(String, LazyResolvedType[ScalaLanguage])], List[(String, Resolved[ScalaLanguage])]), List[(String, Resolved[ScalaLanguage])]](
           (lazyTypes, resolvedTypes)
         ) {
           case (lazyTypes, resolvedTypes) =>
             if (lazyTypes.isEmpty) {
-              Target.pure(Right(resolvedTypes))
+              M.pure(Right(resolvedTypes))
             } else {
               val (newLazyTypes, newResolvedTypes) =
                 Foldable[List].partitionEither(lazyTypes) {
@@ -74,7 +74,7 @@ object SwaggerUtil {
                     Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, ${tpe}]"), x)
                 }
 
-              Target.pure(Left((newLazyTypes, resolvedTypes ++ newResolvedTypes)))
+              M.pure(Left((newLazyTypes, resolvedTypes ++ newResolvedTypes)))
             }
         }
     }

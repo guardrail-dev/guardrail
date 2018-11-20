@@ -343,7 +343,7 @@ object CirceProtocolGenerator {
                   .modelMetaType(definition, gs)
                   .map(x => (clsName, x))
             }
-            result <- SwaggerUtil.ResolvedType.resolveReferences(entries)
+            result <- SwaggerUtil.ResolvedType.resolveReferences[Target](entries)
           } yield
             result.map {
               case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
