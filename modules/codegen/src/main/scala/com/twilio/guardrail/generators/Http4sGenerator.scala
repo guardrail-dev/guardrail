@@ -30,6 +30,7 @@ object Http4sGenerator {
             q"import org.http4s.circe._",
             q"import org.http4s.client.{Client => Http4sClient}",
             q"import org.http4s.client.blaze._",
+            q"import org.http4s.client.UnexpectedStatus",
             q"import org.http4s.dsl.io.Path",
             q"import org.http4s.multipart._",
             q"import org.http4s.headers._",

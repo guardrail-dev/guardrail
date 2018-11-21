@@ -149,6 +149,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
             effect.pure(GetOrderByIdResponse.BadRequest)
           case NotFound(_) =>
             effect.pure(GetOrderByIdResponse.NotFound)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[DeleteOrderResponse] = {
@@ -159,6 +160,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
             effect.pure(DeleteOrderResponse.BadRequest)
           case NotFound(_) =>
             effect.pure(DeleteOrderResponse.NotFound)
+          case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
     }""",
