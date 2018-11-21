@@ -54,7 +54,7 @@ object ScalaParameter {
           case _                  => None
         })
         .getOrElse((t"Nothing", t"Nothing", true))
-      new ScalaParameter(None, param, Term.Name(name.value), RawParameterName(param.name.value), tpe, required, None, innerTpe == gs.fileType)
+      new ScalaParameter(None, param, Term.Name(name.value), RawParameterName(name.value), tpe, required, None, innerTpe == gs.fileType)
   }
 
   def fromParameter[M[_]](protocolElems: List[StrictProtocolElems[ScalaLanguage]],
