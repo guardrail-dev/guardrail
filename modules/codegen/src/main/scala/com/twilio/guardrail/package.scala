@@ -11,7 +11,6 @@ import com.twilio.guardrail.protocol.terms.server.ServerTerm
 import com.twilio.guardrail.terms.framework.FrameworkTerm
 import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 
-import scala.meta._
 import com.twilio.swagger.core.StructuredLogger
 
 package guardrail {

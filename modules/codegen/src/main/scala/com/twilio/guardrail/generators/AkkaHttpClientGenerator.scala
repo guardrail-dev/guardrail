@@ -7,6 +7,7 @@ import _root_.io.swagger.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.syntax.flatMap._
+import com.twilio.guardrail.generators.syntax.scala._
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.ScalaLanguage

@@ -12,9 +12,7 @@ import cats.MonadError
 import cats.implicits._
 
 class GeneratorSettings[L <: LA](val fileType: L#Type, val jsonType: L#Type)
-case class RawParameterName private[generators] (value: String) {
-  def toLit: Lit.String = Lit.String(value)
-}
+case class RawParameterName private[generators] (value: String)
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[ScalaLanguage]]) {
   val filterParamBy     = ScalaParameter.filterParams(parameters)
   val headerParams      = filterParamBy("header")
