@@ -83,46 +83,58 @@ object SwaggerUtil {
         }
     }
 
-    def resolve[M[_]](value: ResolvedType[ScalaLanguage],
-                      protocolElems: List[StrictProtocolElems[ScalaLanguage]])(implicit M: MonadError[M, String]): M[Resolved[ScalaLanguage]] =
+    def resolveF[L <: LA, F[_]](
+        value: ResolvedType[L],
+        protocolElems: List[StrictProtocolElems[L]]
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Resolved[L]] = {
+      import Sc._
+      import Sw._
       value match {
-        case x @ Resolved(tpe, _, default) => M.pure(x)
+        case x @ Resolved(tpe, _, default) => Free.pure(x)
         case Deferred(name) =>
-          M.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
-            .map {
-              case RandomType(name, tpe) => Resolved[ScalaLanguage](tpe, None, None)
+          resolveType(name, protocolElems)
+            .flatMap {
+              case RandomType(name, tpe) =>
+                Free.pure(Resolved[L](tpe, None, None))
               case ClassDefinition(name, tpe, cls, companion, _) =>
-                Resolved[ScalaLanguage](tpe, None, None)
+                widenTypeName(tpe).map(Resolved[L](_, None, None))
               case EnumDefinition(name, tpe, elems, cls, companion) =>
-                Resolved[ScalaLanguage](tpe, None, None)
+                widenTypeName(tpe).map(Resolved[L](_, None, None))
               case ADT(_, tpe, _, _) =>
-                Resolved[ScalaLanguage](tpe, None, None)
+                widenTypeName(tpe).map(Resolved[L](_, None, None))
             }
         case DeferredArray(name) =>
-          M.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
-            .map {
+          resolveType(name, protocolElems)
+            .flatMap {
               case RandomType(name, tpe) =>
-                Resolved[ScalaLanguage](t"IndexedSeq[${tpe}]", None, None)
+                liftVectorType(tpe).map(Resolved[L](_, None, None))
               case ClassDefinition(name, tpe, cls, companion, _) =>
-                Resolved[ScalaLanguage](t"IndexedSeq[${tpe}]", None, None)
+                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
               case EnumDefinition(name, tpe, elems, cls, companion) =>
-                Resolved[ScalaLanguage](t"IndexedSeq[${tpe}]", None, None)
+                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
               case ADT(_, tpe, _, _) =>
-                Resolved[ScalaLanguage](t"IndexedSeq[$tpe]", None, None)
+                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
             }
         case DeferredMap(name) =>
-          M.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
-            .map {
+          resolveType(name, protocolElems)
+            .flatMap {
               case RandomType(name, tpe) =>
-                Resolved[ScalaLanguage](t"Map[String, ${tpe}]", None, None)
+                liftMapType(tpe).map(Resolved[L](_, None, None))
               case ClassDefinition(_, tpe, _, _, _) =>
-                Resolved[ScalaLanguage](t"Map[String, ${tpe}]", None, None)
+                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
               case EnumDefinition(_, tpe, _, _, _) =>
-                Resolved[ScalaLanguage](t"Map[String, ${tpe}]", None, None)
+                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
               case ADT(_, tpe, _, _) =>
-                Resolved[ScalaLanguage](t"Map[String, $tpe]", None, None)
+                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
             }
       }
+    }
+
+    def resolve(value: ResolvedType[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Resolved[ScalaLanguage]] = {
+      type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
+      val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)
+      resolveF[ScalaLanguage, Program](value, protocolElems).value.foldMap(interp)
+    }
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
@@ -179,6 +191,7 @@ object SwaggerUtil {
         case (clsName, definition) =>
           SwaggerUtil
             .modelMetaTypeF[L, F](definition)
+            .value
             .map(x => (clsName, x))
       }
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)

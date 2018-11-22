@@ -104,7 +104,7 @@ object Http4sHelper {
                 for {
                   meta     <- SwaggerUtil.propMetaF[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]](prop).foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
                   resolved <- SwaggerUtil.ResolvedType
-                    .resolve[Target](meta, protocolElems)
+                    .resolve(meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield (baseType, baseDefaultValue)
               }

@@ -256,7 +256,7 @@ object AkkaHttpClientGenerator {
             // Get the response type
             unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation, t"IgnoredEntity", gs)
             resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
-              .resolve[Target](unresolvedResponseTypeRef, protocolElems)
+              .resolve(unresolvedResponseTypeRef, protocolElems)
             responseTypeRef = resolvedResponseTypeRef.tpe
 
             // Insert the method parameters

@@ -28,7 +28,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 
   def getParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]], gs: GeneratorSettings[ScalaLanguage]): Target[ScalaParameters[ScalaLanguage]] =
     parameters
-      .map(ScalaParameter.fromParameters[Target](protocolElems, gs))
+      .map(ScalaParameter.fromParameters(protocolElems))
       .getOrElse(Target.pure(List.empty[ScalaParameter[ScalaLanguage]]))
       .map(new ScalaParameters[ScalaLanguage](_))
 }

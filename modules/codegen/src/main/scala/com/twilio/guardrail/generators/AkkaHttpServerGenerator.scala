@@ -122,7 +122,7 @@ object AkkaHttpServerGenerator {
                     for {
                       meta <- SwaggerUtil.propMeta(prop, gs)
                       resolved <- SwaggerUtil.ResolvedType
-                        .resolve[Target](meta, protocolElems)
+                        .resolve(meta, protocolElems)
                       SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                     } yield baseType
                   }
