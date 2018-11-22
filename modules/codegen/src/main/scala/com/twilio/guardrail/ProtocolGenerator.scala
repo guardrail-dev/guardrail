@@ -11,8 +11,8 @@ import java.util.Locale
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.ScalaTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
@@ -332,7 +332,8 @@ object ProtocolGenerator {
       S: ProtocolSupportTerms[L, F],
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
-      Sc: ScalaTerms[L, F]
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolDefinitions[L]] = {
     import S._
     import F._
@@ -383,8 +384,8 @@ object ProtocolGenerator {
       pkgImports        <- packageObjectImports
       pkgObjectContents <- packageObjectContents
 
-      polyADTElems <- resolveProtocolElems(polyADTs)
-      strictElems  <- resolveProtocolElems(elems)
+      polyADTElems <- ProtocolElems.resolve[L, F](polyADTs)
+      strictElems  <- ProtocolElems.resolve[L, F](elems)
     } yield ProtocolDefinitions[L](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents)
   }
 }

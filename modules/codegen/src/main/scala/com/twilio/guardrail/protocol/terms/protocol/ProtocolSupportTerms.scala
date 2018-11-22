@@ -15,8 +15,6 @@ class ProtocolSupportTerms[L <: LA, F[_]](implicit I: InjectK[ProtocolSupportTer
     Free.inject[ProtocolSupportTerm[L, ?], F](PackageObjectImports())
   def packageObjectContents(): Free[F, List[L#ValueDefinition]] =
     Free.inject[ProtocolSupportTerm[L, ?], F](PackageObjectContents())
-  def resolveProtocolElems(elems: List[ProtocolElems[L]]): Free[F, List[StrictProtocolElems[L]]] =
-    Free.inject[ProtocolSupportTerm[L, ?], F](ResolveProtocolElems(elems))
 }
 object ProtocolSupportTerms {
   implicit def protocolSupportTerms[L <: LA, F[_]](implicit I: InjectK[ProtocolSupportTerm[L, ?], F]): ProtocolSupportTerms[L, F] =

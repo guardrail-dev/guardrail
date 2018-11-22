@@ -385,9 +385,6 @@ object CirceProtocolGenerator {
             q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]"
           )
         )
-
-      case ResolveProtocolElems(elems) =>
-        ProtocolElems.resolve(elems).fold(Target.error _, Target.pure _)
     }
   }
 

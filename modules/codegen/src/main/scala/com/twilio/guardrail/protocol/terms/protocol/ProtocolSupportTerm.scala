@@ -10,4 +10,3 @@ case class ExtractConcreteTypes[L <: LA](models: List[(String, Model)]) extends 
 case class ProtocolImports[L <: LA]()                                   extends ProtocolSupportTerm[L, List[L#Import]]
 case class PackageObjectImports[L <: LA]()                              extends ProtocolSupportTerm[L, List[L#Import]]
 case class PackageObjectContents[L <: LA]()                             extends ProtocolSupportTerm[L, List[L#ValueDefinition]]
-case class ResolveProtocolElems[L <: LA](elems: List[ProtocolElems[L]]) extends ProtocolSupportTerm[L, List[StrictProtocolElems[L]]]
