@@ -23,22 +23,22 @@ class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[ScalaLanguage
 }
 class ScalaParameter[L <: LA] private[generators] (
     val in: Option[String],
-    val param: Term.Param,
-    val paramName: Term.Name,
+    val param: L#MethodParameter,
+    val paramName: L#TermName,
     val argName: RawParameterName,
-    val argType: Type,
+    val argType: L#Type,
     val required: Boolean,
     val hashAlgorithm: Option[String],
     val isFile: Boolean
 ) {
   override def toString: String =
-    s"ScalaParameter[ScalaLanguage](${in}, ${param}, ${paramName}, ${argName}, ${argType})"
+    s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 
-  def withType(newArgType: Type): ScalaParameter[ScalaLanguage] =
-    new ScalaParameter[ScalaLanguage](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
+  def withType(newArgType: L#Type): ScalaParameter[L] =
+    new ScalaParameter[L](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
-  def unapply(param: ScalaParameter[ScalaLanguage]): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
+  def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter[ScalaLanguage] = param match {
