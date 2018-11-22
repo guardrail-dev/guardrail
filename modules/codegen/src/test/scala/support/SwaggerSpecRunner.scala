@@ -29,7 +29,7 @@ trait SwaggerSpecRunner {
     import Sw._
 
     val prog = for {
-      protocol <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
+      protocol <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication](swagger)
       definitions = protocol.elems
 
       schemes = Option(swagger.getSchemes)

@@ -19,11 +19,10 @@ class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?
     Free.inject[EnumProtocolTerm[L, ?], F](RenderClass[L](clsName, tpe))
   def renderCompanion(clsName: String,
                       members: L#ObjectDefinition,
-                      accessors: List[L#ValueDefinition],
-                      values: L#ValueDefinition,
+                      accessors: List[L#TermName],
                       encoder: L#ValueDefinition,
                       decoder: L#ValueDefinition): Free[F, L#ObjectDefinition] =
-    Free.inject[EnumProtocolTerm[L, ?], F](RenderCompanion[L](clsName, members, accessors, values, encoder, decoder))
+    Free.inject[EnumProtocolTerm[L, ?], F](RenderCompanion[L](clsName, members, accessors, encoder, decoder))
   def buildAccessor(clsName: String, termName: String): Free[F, L#TermSelect] =
     Free.inject[EnumProtocolTerm[L, ?], F](BuildAccessor[L](clsName, termName))
 }

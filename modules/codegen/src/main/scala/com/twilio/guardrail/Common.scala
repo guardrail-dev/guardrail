@@ -51,7 +51,7 @@ object Common {
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
     for {
-      proto <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
+      proto <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
       implicitsImport                                                                                  = q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._"
       imports                                                                                          = customImports ++ protocolImports ++ List(implicitsImport)

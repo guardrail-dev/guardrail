@@ -22,9 +22,9 @@ case class ADT[L <: LA](name: String, tpe: L#TypeName, trt: L#Trait, companion: 
 case class EnumDefinition[L <: LA](
     name: String,
     tpe: L#TypeName,
-    elems: List[(String, L#TermName, Term.Select)],
-    cls: Defn.Class,
-    companion: Defn.Object
+    elems: List[(String, L#TermName, L#TermSelect)],
+    cls: L#ClassDefinition,
+    companion: L#ObjectDefinition
 ) extends StrictProtocolElems[L]
 
 object ProtocolElems {

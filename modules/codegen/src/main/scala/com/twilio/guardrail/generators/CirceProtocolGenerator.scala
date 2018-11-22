@@ -64,11 +64,17 @@ object CirceProtocolGenerator {
           }
         """)
 
-      case RenderCompanion(clsName, members, accessors, values, encoder, decoder) =>
+      case RenderCompanion(clsName, members, accessors, encoder, decoder) =>
+        val terms = accessors
+          .map({ pascalValue =>
+            q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
+          })
+          .to[List]
+        val values = q"val values = Vector(..$accessors)"
         Target.pure(q"""
           object ${Term.Name(clsName)} {
             ..${List(members) ++
-          accessors ++
+          terms ++
           List(values) ++
           List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)") ++
           List(encoder) ++

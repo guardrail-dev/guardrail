@@ -11,8 +11,7 @@ case class DecodeEnum[L <: LA](clsName: String)                                 
 case class RenderClass[L <: LA](clsName: String, tpe: L#Type)                                       extends EnumProtocolTerm[L, L#ClassDefinition]
 case class RenderCompanion[L <: LA](clsName: String,
                                     members: L#ObjectDefinition,
-                                    accessors: List[L#ValueDefinition],
-                                    values: L#ValueDefinition,
+                                    accessors: List[L#TermName],
                                     encoder: L#ValueDefinition,
                                     decoder: L#ValueDefinition)
     extends EnumProtocolTerm[L, L#ObjectDefinition]
