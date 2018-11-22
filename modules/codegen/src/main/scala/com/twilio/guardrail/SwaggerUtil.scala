@@ -42,7 +42,9 @@ object SwaggerUtil {
       }
     }
 
-    def resolveReferences[M[_]](values: List[(String, ResolvedType[ScalaLanguage])])(implicit M: MonadError[M, String]): M[List[(String, Resolved[ScalaLanguage])]] = {
+    def resolveReferences[M[_]](
+        values: List[(String, ResolvedType[ScalaLanguage])]
+    )(implicit M: MonadError[M, String]): M[List[(String, Resolved[ScalaLanguage])]] = {
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, x: Resolved[ScalaLanguage])         => Right((clsName, x))
         case (clsName, x: LazyResolvedType[ScalaLanguage]) => Left((clsName, x))

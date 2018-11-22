@@ -1,7 +1,7 @@
 package com.twilio.guardrail.generators
 
-import cats.instances.all._
-import cats.syntax.traverse._
+import cats.MonadError
+import cats.implicits._
 import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.splitOperationParts
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
 import io.swagger.models.{ Operation, Response }
@@ -82,11 +82,10 @@ object Http4sHelper {
 
   def getResponses(operationId: String,
                    responses: java.util.Map[String, Response],
-                   protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[(Term.Name, Option[Type])]] =
+                   protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+                   gs: GeneratorSettings[ScalaLanguage]): Target[List[(Term.Name, Option[Type])]] =
     for {
-      gs <- Target.getGeneratorSettings
-      responses <- Target
-        .fromOption(Option(responses).map(_.asScala), s"No responses defined for ${operationId}")
+      responses <- Target.fromOption(Option(responses).map(_.asScala), s"No responses defined for ${operationId}")
 
       instances <- responses
         .foldLeft[List[Target[(Term.Name, Option[Type])]]](List.empty)({
@@ -115,7 +114,8 @@ object Http4sHelper {
                                          .map(_._2),
                                        "Missing operationId")
 
-      responses <- Http4sHelper.getResponses(operationId, operation.getResponses, protocolElems)
+      gs        <- Target.getGeneratorSettings
+      responses <- Http4sHelper.getResponses(operationId, operation.getResponses, protocolElems, gs)
       responseSuperType     = Type.Name(s"${operationId.capitalize}Response")
       responseSuperTemplate = template"${Init(responseSuperType, Name(""), List.empty)}"
 
