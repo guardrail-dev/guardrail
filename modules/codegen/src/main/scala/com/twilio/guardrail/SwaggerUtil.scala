@@ -49,6 +49,22 @@ object SwaggerUtil {
             if (lazyTypes.isEmpty) {
               M.pure(Right(resolvedTypes))
             } else {
+              def partitionEitherM[G[_], A, B, C](fa: List[A])(f: A => G[Either[B, C]])(implicit A: cats.Alternative[List],
+                                                                                        M: cats.Monad[G]): G[(List[B], List[C])] = {
+                import cats.instances.tuple._
+
+                implicit val mb: cats.Monoid[List[B]] = A.algebra[B]
+                implicit val mc: cats.Monoid[List[C]] = A.algebra[C]
+
+                Foldable[List].foldMapM[G, A, (List[B], List[C])](fa)(
+                  a =>
+                    f(a).map {
+                      case Right(c) => (A.empty[B], A.pure(c))
+                      case Left(b)  => (A.pure(b), A.empty[C])
+                  }
+                )
+              }
+
               val (newLazyTypes, newResolvedTypes) =
                 Foldable[List].partitionEither(lazyTypes) {
                   case x @ (clsName, Deferred(tpeName)) =>
