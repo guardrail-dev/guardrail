@@ -11,6 +11,7 @@ import java.util.Locale
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.terms.ScalaTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.languages.ScalaLanguage
 
@@ -43,7 +44,7 @@ object ProtocolGenerator {
   private[this] def fromEnum[F[_]](
       clsName: String,
       swagger: ModelImpl
-  )(implicit E: EnumProtocolTerms[ScalaLanguage, F], F: FrameworkTerms[ScalaLanguage, F]): Free[F, Either[String, ProtocolElems[ScalaLanguage]]] = {
+  )(implicit E: EnumProtocolTerms[ScalaLanguage, F], F: FrameworkTerms[ScalaLanguage, F], Sc: ScalaTerms[ScalaLanguage, F]): Free[F, Either[String, ProtocolElems[ScalaLanguage]]] = {
     import E._
     import F._
 
@@ -80,10 +81,14 @@ object ProtocolGenerator {
       } yield EnumDefinition[ScalaLanguage](clsName, Type.Name(clsName), elems, defn, companion)
     }
 
+    // Default to `string` for untyped enums.
+    // Currently, only plain strings are correctly supported anyway, so no big loss.
+    val tpeName = Option(swagger.getType()).getOrElse("string")
+
     for {
       enum <- extractEnum(swagger)
-      tpe  <- extractType(swagger)
-      res  <- (enum, tpe).traverseN(validProg)
+      tpe  <- SwaggerUtil.typeNameF(tpeName, Option(swagger.getFormat()), ScalaType(swagger))
+      res  <- enum.traverse(validProg(_, tpe))
     } yield res
   }
 
@@ -319,7 +324,8 @@ object ProtocolGenerator {
       R: ArrayProtocolTerms[ScalaLanguage, F],
       S: ProtocolSupportTerms[ScalaLanguage, F],
       F: FrameworkTerms[ScalaLanguage, F],
-      P: PolyProtocolTerms[ScalaLanguage, F]
+      P: PolyProtocolTerms[ScalaLanguage, F],
+      Sc: ScalaTerms[ScalaLanguage, F]
   ): Free[F, ProtocolDefinitions[ScalaLanguage]] = {
     import S._
     import F._

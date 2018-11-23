@@ -31,14 +31,6 @@ object CirceProtocolGenerator {
       case ExtractEnum(swagger) =>
         Target.pure(Either.fromOption(Option(swagger.getEnum()).map(_.asScala.to[List]), "Model has no enumerations"))
 
-      case ExtractType(swagger) =>
-        // Default to `string` for untyped enums.
-        // Currently, only plain strings are correctly supported anyway, so no big loss.
-        val tpeName = Option(swagger.getType()).getOrElse("string")
-        Target.getGeneratorSettings.map { implicit gs =>
-          Either.right(SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger), gs))
-        }
-
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
           object members {
