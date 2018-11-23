@@ -327,28 +327,7 @@ object CirceProtocolGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            entries <- definitions.traverse {
-              case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
-                Target.pure((clsName, SwaggerUtil.Resolved[ScalaLanguage](Type.Name(clsName), None, None): SwaggerUtil.ResolvedType[ScalaLanguage]))
-              case (clsName, comp: ComposedModel) =>
-                val parentSimpleRef: Option[String]                       = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef)
-                val parentTerm                                            = parentSimpleRef.map(n => Term.Name(n))
-                val resolvedType: SwaggerUtil.ResolvedType[ScalaLanguage] = SwaggerUtil.Resolved[ScalaLanguage](Type.Name(clsName), parentTerm, None)
-                Target.pure((clsName, resolvedType))
-              case (clsName, definition) =>
-                SwaggerUtil
-                  .modelMetaType(definition)
-                  .map(x => (clsName, x))
-            }
-            result <- SwaggerUtil.ResolvedType.resolveReferences[Target](entries)
-          } yield
-            result.map {
-              case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
-                PropMeta(clsName, tpe)
-            }
-        }
+        definitions.fold[Target[List[PropMeta]]](Target.error _, Target.pure _)
 
       case ProtocolImports() =>
         Target.pure(

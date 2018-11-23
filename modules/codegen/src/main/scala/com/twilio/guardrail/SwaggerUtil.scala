@@ -16,6 +16,8 @@ import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.protocol.terms.protocol.PropMeta
+import scala.collection.JavaConverters._
 
 object SwaggerUtil {
   sealed trait ResolvedType[L <: LA]
@@ -25,29 +27,30 @@ object SwaggerUtil {
   case class DeferredArray[L <: LA](value: String)                                                      extends LazyResolvedType[L]
   case class DeferredMap[L <: LA](value: String)                                                        extends LazyResolvedType[L]
   object ResolvedType {
-    def resolveReferences[M[_]](
-        values: List[(String, ResolvedType[ScalaLanguage])]
-    )(implicit M: MonadError[M, String]): M[List[(String, Resolved[ScalaLanguage])]] = {
+    def resolveReferences[L <: LA, F[_]](
+        values: List[(String, ResolvedType[L])]
+    )(implicit Sc: ScalaTerms[L, F]): Free[F, List[(String, Resolved[L])]] = {
+      import Sc._
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
-        case (clsName, x: Resolved[ScalaLanguage])         => Right((clsName, x))
-        case (clsName, x: LazyResolvedType[ScalaLanguage]) => Left((clsName, x))
+        case (clsName, x: Resolved[L])         => Right((clsName, x))
+        case (clsName, x: LazyResolvedType[L]) => Left((clsName, x))
       }
 
-      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved[ScalaLanguage])])(
-          f: Type => Type
-      ): Option[(String, Resolved[ScalaLanguage])] =
+      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved[L])])(
+          f: L#Type => Free[F, L#Type]
+      ): Free[F, Option[(String, Resolved[L])]] =
         resolvedTypes
           .find(_._1 == tpeName)
           .map(_._2.tpe)
-          .map(x => (clsName, Resolved[ScalaLanguage](f(x), None, None)))
+          .traverse(x => f(x).map(y => (clsName, Resolved[L](y, None, None))))
 
-      FlatMap[M]
-        .tailRecM[(List[(String, LazyResolvedType[ScalaLanguage])], List[(String, Resolved[ScalaLanguage])]), List[(String, Resolved[ScalaLanguage])]](
+      FlatMap[Free[F, ?]]
+        .tailRecM[(List[(String, LazyResolvedType[L])], List[(String, Resolved[L])]), List[(String, Resolved[L])]](
           (lazyTypes, resolvedTypes)
         ) {
           case (lazyTypes, resolvedTypes) =>
             if (lazyTypes.isEmpty) {
-              M.pure(Right(resolvedTypes))
+              Free.pure(Right(resolvedTypes))
             } else {
               def partitionEitherM[G[_], A, B, C](fa: List[A])(f: A => G[Either[B, C]])(implicit A: cats.Alternative[List],
                                                                                         M: cats.Monad[G]): G[(List[B], List[C])] = {
@@ -65,17 +68,17 @@ object SwaggerUtil {
                 )
               }
 
-              val (newLazyTypes, newResolvedTypes) =
-                Foldable[List].partitionEither(lazyTypes) {
-                  case x @ (clsName, Deferred(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(identity), x)
-                  case x @ (clsName, DeferredArray(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"IndexedSeq[${tpe}]"), x)
-                  case x @ (clsName, DeferredMap(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, ${tpe}]"), x)
-                }
-
-              M.pure(Left((newLazyTypes, resolvedTypes ++ newResolvedTypes)))
+              (partitionEitherM(lazyTypes) {
+                case x @ (clsName, Deferred(tpeName)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(Free.pure _).map(Either.fromOption(_, x))
+                case x @ (clsName, DeferredArray(tpeName)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType).map(Either.fromOption(_, x))
+                case x @ (clsName, DeferredMap(tpeName)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType).map(Either.fromOption(_, x))
+              }).map({
+                case (newLazyTypes, newResolvedTypes) =>
+                  Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
+              })
             }
         }
     }
@@ -160,11 +163,31 @@ object SwaggerUtil {
   def modelMetaTypeF[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
     new ModelMetaTypePartiallyApplied[L, F]()
 
-  def modelMetaType[T <: Model](model: T): Target[SwaggerUtil.ResolvedType[ScalaLanguage]] =
-    SwaggerUtil
-      .modelMetaTypeF[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]](model)
-      .value
-      .foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
+  def extractConcreteTypes[L <: LA, F[_]](definitions: List[(String, Model)])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, List[PropMeta]] = {
+    import Sc._
+    for {
+      entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
+        case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
+          pureTypeName(clsName).flatMap(widenTypeName).map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None): SwaggerUtil.ResolvedType[L]))
+        case (clsName, comp: ComposedModel) =>
+          for {
+            x <- pureTypeName(clsName).flatMap(widenTypeName)
+            parentSimpleRef = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef)
+            parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
+            resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None): SwaggerUtil.ResolvedType[L]
+          } yield (clsName, resolvedType)
+        case (clsName, definition) =>
+          SwaggerUtil
+            .modelMetaTypeF[L, F](definition)
+            .map(x => (clsName, x))
+      }
+      result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
+    } yield
+      result.map {
+        case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
+          PropMeta(clsName, tpe.asInstanceOf[Type])
+      }
+  }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeNameF[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F]): Free[F, L#Type] = {

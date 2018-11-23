@@ -358,7 +358,7 @@ object ProtocolGenerator {
     }
 
     for {
-      concreteTypes <- extractConcreteTypes(definitions)
+      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions)
       polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
