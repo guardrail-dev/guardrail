@@ -264,12 +264,17 @@ object ProtocolGenerator {
 
   def fromArray[L <: LA, F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(
       implicit R: ArrayProtocolTerms[L, F],
-      A: AliasProtocolTerms[L, F]
+      A: AliasProtocolTerms[L, F],
+      P: ProtocolSupportTerms[L, F],
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
+    import P._
     import R._
     for {
-      tpe <- extractArrayType(arr, concreteTypes)
-      ret <- typeAlias[L, F](clsName, tpe)
+      deferredTpe <- SwaggerUtil.modelMetaTypeF(arr)
+      tpe         <- extractArrayType(deferredTpe, concreteTypes)
+      ret         <- typeAlias[L, F](clsName, tpe)
     } yield ret
   }
 

@@ -144,6 +144,12 @@ object SwaggerUtil {
   def modelMetaTypeF[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
     new ModelMetaTypePartiallyApplied[L, F]()
 
+  def modelMetaType[T <: Model](model: T): Target[SwaggerUtil.ResolvedType[ScalaLanguage]] =
+    SwaggerUtil
+      .modelMetaTypeF[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]](model)
+      .value
+      .foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
+
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeNameF[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F]): Free[F, L#Type] = {
     import Sc._

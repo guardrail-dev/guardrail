@@ -311,8 +311,7 @@ object CirceProtocolGenerator {
     def apply[T](term: ArrayProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>
         for {
-          gs <- Target.getGeneratorSettings
-          result <- SwaggerUtil.modelMetaType(arr, gs).flatMap {
+          result <- arr match {
             case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
@@ -340,7 +339,7 @@ object CirceProtocolGenerator {
                 Target.pure((clsName, resolvedType))
               case (clsName, definition) =>
                 SwaggerUtil
-                  .modelMetaType(definition, gs)
+                  .modelMetaType(definition)
                   .map(x => (clsName, x))
             }
             result <- SwaggerUtil.ResolvedType.resolveReferences[Target](entries)
