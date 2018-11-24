@@ -25,23 +25,6 @@ object SwaggerUtil {
   case class DeferredArray[L <: LA](value: String)                                                      extends LazyResolvedType[L]
   case class DeferredMap[L <: LA](value: String)                                                        extends LazyResolvedType[L]
   object ResolvedType {
-    implicit class FoldableExtension[F[_]](F: Foldable[F]) {
-      import cats.{ Alternative, Monoid }
-      def partitionEither[A, B, C](value: F[A])(f: A => Either[B, C])(implicit A: Alternative[F]): (F[B], F[C]) = {
-
-        implicit val mb: Monoid[F[B]] = A.algebra[B]
-        implicit val mc: Monoid[F[C]] = A.algebra[C]
-
-        F.foldMap(value)(
-          a =>
-            f(a) match {
-              case Left(b)  => (A.pure(b), A.empty[C])
-              case Right(c) => (A.empty[B], A.pure(c))
-          }
-        )
-      }
-    }
-
     def resolveReferences[M[_]](
         values: List[(String, ResolvedType[ScalaLanguage])]
     )(implicit M: MonadError[M, String]): M[List[(String, Resolved[ScalaLanguage])]] = {
