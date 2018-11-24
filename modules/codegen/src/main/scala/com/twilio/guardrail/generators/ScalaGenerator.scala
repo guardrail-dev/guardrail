@@ -26,7 +26,7 @@ object ScalaGenerator {
       case LitBoolean(value)       => Target.pure(Lit.Boolean(value))
       case LiftOptionalType(value) => Target.pure(t"Option[${value}]")
       case LiftOptionalTerm(value) => Target.pure(q"Option(${value})")
-      case EmptyOptionalTerm()     => Target.pure(q"Option.empty")
+      case EmptyOptionalTerm()     => Target.pure(q"None")
       case LiftVectorType(value)   => Target.pure(t"IndexedSeq[${value}]")
       case LiftVectorTerm(value)   => Target.pure(q"IndexedSeq(${value})")
       case LiftMapType(value)      => Target.pure(t"Map[String, ${value}]")
