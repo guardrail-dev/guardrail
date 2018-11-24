@@ -12,7 +12,7 @@ import com.twilio.guardrail.languages.ScalaLanguage
 class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]) {
   def extractProperties(swagger: Model): Free[F, List[(String, Property)]] =
     Free.inject[ModelProtocolTerm[L, ?], F](ExtractProperties[L](swagger))
-  def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])(
+  def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta[L]])(
       name: String,
       prop: Property
   ): Free[F, ProtocolParameter[L]] =

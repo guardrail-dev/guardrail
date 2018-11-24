@@ -112,7 +112,7 @@ object ProtocolGenerator {
     */
   private[this] def fromPoly[L <: LA, F[_]](
       hierarchy: ClassParent,
-      concreteTypes: List[PropMeta],
+      concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Model)]
   )(implicit F: FrameworkTerms[L, F], P: PolyProtocolTerms[L, F], M: ModelProtocolTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
     import P._
@@ -149,7 +149,7 @@ object ProtocolGenerator {
     }
   }
 
-  def extractParents[L <: LA, F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta])(
+  def extractParents[L <: LA, F[_]](elem: Model, definitions: List[(String, Model)], concreteTypes: List[PropMeta[L]])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
@@ -198,7 +198,7 @@ object ProtocolGenerator {
     } yield supper
   }
 
-  private[this] def fromModel[L <: LA, F[_]](clsName: String, model: Model, parents: List[SuperClass[L]], concreteTypes: List[PropMeta])(
+  private[this] def fromModel[L <: LA, F[_]](clsName: String, model: Model, parents: List[SuperClass[L]], concreteTypes: List[PropMeta[L]])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, F]
@@ -262,7 +262,7 @@ object ProtocolGenerator {
     Free.pure(RandomType[L](clsName, tpe))
   }
 
-  def fromArray[L <: LA, F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta])(
+  def fromArray[L <: LA, F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta[L]])(
       implicit R: ArrayProtocolTerms[L, F],
       A: AliasProtocolTerms[L, F],
       P: ProtocolSupportTerms[L, F],

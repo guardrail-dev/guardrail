@@ -8,7 +8,7 @@ import com.twilio.guardrail.languages.LA
 
 sealed trait ModelProtocolTerm[L <: LA, T]
 case class ExtractProperties[L <: LA](swagger: Model) extends ModelProtocolTerm[L, List[(String, Property)]]
-case class TransformProperty[L <: LA](clsName: String, name: String, prop: Property, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta])
+case class TransformProperty[L <: LA](clsName: String, name: String, prop: Property, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta[L]])
     extends ModelProtocolTerm[L, ProtocolParameter[L]]
 case class RenderDTOClass[L <: LA](clsName: String, terms: List[L#MethodParameter], parents: List[SuperClass[L]] = Nil)
     extends ModelProtocolTerm[L, L#ClassDefinition]

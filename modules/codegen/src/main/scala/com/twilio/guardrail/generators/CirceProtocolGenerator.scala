@@ -20,7 +20,7 @@ object CirceProtocolGenerator {
 
   def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
-  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta])(f: Type => Type): Option[Type] =
+  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[ScalaLanguage]])(f: Type => Type): Option[Type] =
     concreteTypes
       .find(_.clsName == tpeName)
       .map(_.tpe)
@@ -327,7 +327,7 @@ object CirceProtocolGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        definitions.fold[Target[List[PropMeta]]](Target.error _, Target.pure _)
+        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.error _, Target.pure _)
 
       case ProtocolImports() =>
         Target.pure(
