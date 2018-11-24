@@ -13,7 +13,7 @@ import cats.implicits._
 
 class GeneratorSettings[L <: LA](val fileType: L#Type, val jsonType: L#Type)
 case class RawParameterName private[generators] (value: String)
-class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[ScalaLanguage]]) {
+class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
   val filterParamBy     = ScalaParameter.filterParams(parameters)
   val headerParams      = filterParamBy("header")
   val pathParams        = filterParamBy("path")
@@ -222,7 +222,7 @@ object ScalaParameter {
     * @param params
     * @return
     */
-  def filterParams(params: List[ScalaParameter[ScalaLanguage]]): String => List[ScalaParameter[ScalaLanguage]] = { in =>
+  def filterParams[L <: LA](params: List[ScalaParameter[L]]): String => List[ScalaParameter[L]] = { in =>
     params.filter(_.in == Some(in))
   }
 }
