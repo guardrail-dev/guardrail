@@ -300,8 +300,8 @@ object Http4sClientGenerator {
               List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
             else List.empty
             extraImplicits = List.empty
-            produces       = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
-            consumes       = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
+            produces       = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
+            consumes       = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
             renderedClientOperation = build(methodName,
                                             httpMethod,
                                             urlWithParams,
@@ -396,19 +396,19 @@ object Http4sClientGenerator {
                        responses: List[(Term.Name, Option[Type])],
                        produces: Seq[String],
                        consumes: Seq[String]): List[Defn.Val] =
-      generateEncoders(methodName, bodyArgs, produces) ++ generateDecoders(methodName, responses, consumes)
+      generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
 
-    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], produces: Seq[String]): List[Defn.Val] =
+    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[String]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
-          List(q"val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, produces)}")
+          List(q"val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, consumes)}")
       }
 
-    def generateDecoders(methodName: String, responses: List[(Term.Name, Option[Type])], consumes: Seq[String]): List[Defn.Val] =
+    def generateDecoders(methodName: String, responses: List[(Term.Name, Option[Type])], produces: Seq[String]): List[Defn.Val] =
       for {
         (statusCodeName, valueType) <- responses
         tpe                         <- valueType
-      } yield q"val ${Pat.Var(Term.Name(s"$methodName${statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, consumes)}"
+      } yield q"val ${Pat.Var(Term.Name(s"$methodName${statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, produces)}"
   }
 
 }
