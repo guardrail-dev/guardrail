@@ -62,7 +62,7 @@ object ClientGenerator {
 
                 for {
                   responses <- Http4sHelper.getResponsesF[L, F](methodName, operation, protocolElems)
-                  clientOp  <- generateClientOperation(pkg, context.tracing, protocolElems)(route)
+                  clientOp  <- generateClientOperation(pkg, context.tracing, protocolElems)(route, methodName, responses)
                 } yield clientOp
             })
             clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
