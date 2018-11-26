@@ -7,10 +7,11 @@ import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.terms.SwaggerTerms
+import com.twilio.guardrail.generators.Http4sHelper
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
 
 import scala.collection.JavaConverters._
-import com.twilio.guardrail.terms.RouteMeta
 
 case class Clients[L <: LA](clients: List[Client[L]])
 case class Client[L <: LA](pkg: List[String],
@@ -30,7 +31,7 @@ object ClientGenerator {
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Clients[L]] = {
+  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Clients[L]] = {
     import C._
     import Sw._
     for {
@@ -46,7 +47,24 @@ object ClientGenerator {
                   responseDefinitions <- generateResponseDefinitions(operationId, operation, protocolElems)
                 } yield responseDefinitions
             }
-            clientOperations <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
+            clientOperations <- routes.traverse({
+              case route @ RouteMeta(pathStr, httpMethod, operation) =>
+                def splitOperationParts(operationId: String): (List[String], String) = {
+                  val parts = operationId.split('.')
+                  (parts.drop(1).toList, parts.last)
+                }
+
+                val httpMethodStr: String = httpMethod.toString.toLowerCase
+                val methodName = Option(operation.getOperationId())
+                  .map(splitOperationParts)
+                  .map(_._2)
+                  .getOrElse(s"$httpMethodStr $pathStr")
+
+                for {
+                  responses <- Http4sHelper.getResponsesF[L, F](methodName, operation, protocolElems)
+                  clientOp  <- generateClientOperation(pkg, context.tracing, protocolElems)(route)
+                } yield clientOp
+            })
             clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
             tracingName = Option(pkg.mkString("-")).filterNot(_.isEmpty)
             ctorArgs  <- clientClsArgs(tracingName, schemes, host, context.tracing)

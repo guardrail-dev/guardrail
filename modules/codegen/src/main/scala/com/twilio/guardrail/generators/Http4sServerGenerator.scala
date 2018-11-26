@@ -431,7 +431,7 @@ object Http4sServerGenerator {
         asyncFormProcessing = formArgs.exists(_.isFile)
         http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(operationId)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
-        responses          <- Http4sHelper.getResponses(operationId, operation.getResponses, protocolElems, gs)
+        responses          <- Http4sHelper.getResponses(operationId, operation, protocolElems, gs)
         supportDefinitions <- generateSupportDefinitions(route, protocolElems)
       } yield {
         val (responseCompanionTerm, responseCompanionType) =

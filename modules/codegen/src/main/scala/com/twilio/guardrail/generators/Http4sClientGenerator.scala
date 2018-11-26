@@ -271,7 +271,7 @@ object Http4sClientGenerator {
               .map(_._2)
               .getOrElse(s"$httpMethodStr $pathStr")
 
-            responses <- Http4sHelper.getResponses(methodName, operation.getResponses, protocolElems, gs)
+            responses <- Http4sHelper.getResponses(methodName, operation, protocolElems, gs)
 
             _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
 
