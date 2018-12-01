@@ -152,7 +152,6 @@ object Http4sClientGenerator {
                   httpMethod: HttpMethod,
                   urlWithParams: Term,
                   formDataParams: Option[Term],
-                  formDataNeedsMultipart: Boolean,
                   headerParams: Term,
                   responses: List[(Term.Name, Option[Type])],
                   produces: Seq[String],
@@ -170,6 +169,7 @@ object Http4sClientGenerator {
           val safeBody: Option[(Term, Type)] =
             body.map(sp => (sp.paramName, sp.argType))
 
+          val formDataNeedsMultipart = consumes.contains("multipart/form-data")
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {
               q"""_multipart"""
@@ -184,7 +184,9 @@ object Http4sClientGenerator {
             else
               (List(), q"httpClient")
           val multipartExpr =
-            formDataParams.filter(_ => formDataNeedsMultipart).map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
+            formDataParams
+              .filter(_ => formDataNeedsMultipart)
+              .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
           val headersExpr = if (formDataNeedsMultipart) {
             List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers")
           } else {
@@ -260,8 +262,8 @@ object Http4sClientGenerator {
             // Placeholder for when more functions get logging
             _ <- Target.pure(())
 
-            formDataNeedsMultipart = Option(operation.getConsumes)
-              .exists(_.contains("multipart/form-data"))
+            produces = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
+            consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
 
             // Insert the method parameters
             httpMethodStr: String = httpMethod.toString.toLowerCase
@@ -289,7 +291,7 @@ object Http4sClientGenerator {
 
             _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
             // Generate FormData arguments
-            formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
+            formDataParams = generateFormDataParams(formArgs, consumes.contains("multipart/form-data"))
             // Generate header arguments
             headerParams = generateHeaderParams(headerArgs)
 
@@ -300,18 +302,17 @@ object Http4sClientGenerator {
               List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
             else List.empty
             extraImplicits = List.empty
-            produces       = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
-            consumes       = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
-            renderedClientOperation = build(methodName,
-                                            httpMethod,
-                                            urlWithParams,
-                                            formDataParams,
-                                            formDataNeedsMultipart,
-                                            headerParams,
-                                            responses,
-                                            produces,
-                                            consumes,
-                                            tracing)(tracingArgsPre, tracingArgsPost, pathArgs, qsArgs, formArgs, bodyArgs, headerArgs, extraImplicits)
+
+            renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+              tracingArgsPre,
+              tracingArgsPost,
+              pathArgs,
+              qsArgs,
+              formArgs,
+              bodyArgs,
+              headerArgs,
+              extraImplicits
+            )
           } yield renderedClientOperation
         }
 

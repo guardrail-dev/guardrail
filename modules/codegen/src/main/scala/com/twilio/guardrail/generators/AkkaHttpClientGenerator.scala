@@ -157,10 +157,10 @@ object AkkaHttpClientGenerator {
                   httpMethod: HttpMethod,
                   urlWithParams: Term,
                   formDataParams: Option[Term],
-                  textPlain: Boolean,
-                  formDataNeedsMultipart: Boolean,
                   headerParams: Term,
                   responseTypeRef: Type,
+                  produces: Seq[String],
+                  consumes: Seq[String],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
                                     tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
                                     pathArgs: List[ScalaParameter[ScalaLanguage]],
@@ -177,7 +177,7 @@ object AkkaHttpClientGenerator {
               Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))
             else None
           val textPlainBody: Option[Term] =
-            if (textPlain)
+            if (consumes.contains("text/plain"))
               body.map(
                 sp =>
                   q"TextPlain(${if (sp.required) sp.paramName
@@ -188,7 +188,7 @@ object AkkaHttpClientGenerator {
             body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
-            if (formDataNeedsMultipart) {
+            if (consumes.contains("multipart/form-data")) {
               q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
             } else {
               q"""FormData($formDataParams: _*)"""
@@ -250,10 +250,8 @@ object AkkaHttpClientGenerator {
             // Placeholder for when more functions get logging
             _ <- Target.pure(())
 
-            consumes = Option(operation.getConsumes)
-              .fold(List.empty[String])(_.asScala.toList)
-            textPlain              = consumes.contains("text/plain")
-            formDataNeedsMultipart = consumes.contains("multipart/form-data")
+            produces = Option(operation.getProduces).fold(List.empty[String])(_.asScala.toList)
+            consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
 
             // Get the response type
             unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation, t"IgnoredEntity", gs)
@@ -285,7 +283,7 @@ object AkkaHttpClientGenerator {
 
             _ <- Target.log.debug("generateClientOperation")(s"Generated: $urlWithParams")
             // Generate FormData arguments
-            formDataParams = generateFormDataParams(formArgs, formDataNeedsMultipart)
+            formDataParams = generateFormDataParams(formArgs, consumes.contains("multipart/form-data"))
             // Generate header arguments
             headerParams = generateHeaderParams(headerArgs)
 
@@ -296,7 +294,7 @@ object AkkaHttpClientGenerator {
               List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
             else List.empty
             extraImplicits = List.empty
-            defn = build(methodName, httpMethod, urlWithParams, formDataParams, textPlain, formDataNeedsMultipart, headerParams, responseTypeRef, tracing)(
+            defn = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responseTypeRef, produces, consumes, tracing)(
               tracingArgsPre,
               tracingArgsPost,
               pathArgs,
