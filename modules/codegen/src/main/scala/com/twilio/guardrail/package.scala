@@ -20,9 +20,11 @@ package guardrail {
   case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server[L]])
 
   object Target {
-    val A                              = Applicative[Target]
-    def pure[T](x: T): Target[T]       = A.pure(x)
-    def error[T](x: String): Target[T] = EitherT.fromEither(Left(x))
+    val A                        = Applicative[Target]
+    def pure[T](x: T): Target[T] = A.pure(x)
+    @deprecated("Use raiseError instead", "v0.41.2")
+    def error[T](x: String): Target[T]      = raiseError(x)
+    def raiseError[T](x: String): Target[T] = EitherT.fromEither(Left(x))
     def fromOption[T](x: Option[T], default: => String): Target[T] =
       EitherT.fromOption(x, default)
     def unsafeExtract[T](x: Target[T], generatorSettings: GeneratorSettings[ScalaLanguage]): T =
@@ -50,7 +52,9 @@ package guardrail {
     def pure[T](x: T): CoreTarget[T] = x.pure[CoreTarget]
     def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] =
       EitherT.fromOption(x, default)
-    def error[T](x: Error): CoreTarget[T] = EitherT.fromEither(Left(x))
+    @deprecated("Use raiseError instead", "v0.41.2")
+    def error[T](x: Error): CoreTarget[T]      = EitherT.fromEither(Left(x))
+    def raiseError[T](x: Error): CoreTarget[T] = EitherT.fromEither(Left(x))
     def unsafeExtract[T](x: CoreTarget[T]): T =
       x.valueOr({ err =>
           throw new Exception(err.toString)
