@@ -7,6 +7,7 @@ import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.terms.SwaggerTerms
 
 import scala.collection.JavaConverters._
 import com.twilio.guardrail.terms.RouteMeta
@@ -29,8 +30,9 @@ object ClientGenerator {
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F]): Free[F, Clients[L]] = {
+  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Clients[L]] = {
     import C._
+    import Sw._
     for {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
@@ -39,7 +41,10 @@ object ClientGenerator {
           for {
             responseDefinitions <- routes.flatTraverse {
               case RouteMeta(path, method, operation) =>
-                generateResponseDefinitions(operation, protocolElems)
+                for {
+                  operationId         <- getOperationId(operation)
+                  responseDefinitions <- generateResponseDefinitions(operationId, operation, protocolElems)
+                } yield responseDefinitions
             }
             clientOperations <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
             clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"

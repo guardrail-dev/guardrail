@@ -330,8 +330,8 @@ object Http4sClientGenerator {
                List(ief, ihc))
         )
 
-      case GenerateResponseDefinitions(operation, protocolElems) =>
-        Http4sHelper.generateResponseDefinitions(operation, protocolElems)
+      case GenerateResponseDefinitions(operationId, operation, protocolElems) =>
+        Http4sHelper.generateResponseDefinitions(operationId, operation, protocolElems)
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],

@@ -323,7 +323,7 @@ object AkkaHttpClientGenerator {
                List(ihc, iec, imat))
         )
 
-      case GenerateResponseDefinitions(operation, protocolElems) => Target.pure(List.empty)
+      case GenerateResponseDefinitions(operationId, operation, protocolElems) => Target.pure(List.empty)
 
       case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],

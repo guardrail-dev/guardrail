@@ -109,13 +109,8 @@ object Http4sHelper {
         .sequence
     } yield instances
 
-  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
+  def generateResponseDefinitions(operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
     for {
-      operationId <- Target.fromOption(Option(operation.getOperationId())
-                                         .map(splitOperationParts)
-                                         .map(_._2),
-                                       "Missing operationId")
-
       gs        <- Target.getGeneratorSettings
       responses <- Http4sHelper.getResponses(operationId, operation.getResponses, protocolElems, gs)
       responseSuperType     = Type.Name(s"${operationId.capitalize}Response")

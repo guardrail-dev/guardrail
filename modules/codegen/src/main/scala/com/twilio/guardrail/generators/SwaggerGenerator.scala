@@ -19,20 +19,21 @@ object SwaggerGenerator {
 
     def apply[T](term: SwaggerTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractOperations(paths) =>
-        paths
-          .map({
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
+          routes <- paths.traverse {
             case (pathStr, path) =>
-              Target
-                .fromOption(Option(path.getOperationMap), "No operations defined")
-                .map { operationMap =>
-                  operationMap.asScala.map {
-                    case (httpMethod, operation) =>
-                      RouteMeta(pathStr, httpMethod, operation)
-                  }
+              for {
+
+                operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
+              } yield {
+                operationMap.asScala.toList.map {
+                  case (httpMethod, operation) =>
+                    RouteMeta(pathStr, httpMethod, operation)
                 }
-          })
-          .sequence
-          .map(_.flatten)
+              }
+          }
+        } yield routes.flatten
 
       case GetClassName(operation) =>
         for {

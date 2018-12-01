@@ -102,49 +102,9 @@ object AkkaHttpServerGenerator {
       (parts.drop(1).toList, parts.last)
     }
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
-      case ExtractOperations(paths) =>
-        for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
-          routes <- paths.traverse {
-            case (pathStr, path) =>
-              for {
-                _            <- Target.log.info("AkkaHttpServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
-                operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
-              } yield {
-                operationMap.asScala.toList.map {
-                  case (httpMethod, operation) =>
-                    RouteMeta(pathStr, httpMethod, operation)
-                }
-              }
-          }
-        } yield routes.flatten
-
-      case GetClassName(operation) =>
-        for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getClassName(${operation})")
-
-          pkg = ScalaPackage(operation)
-            .map(_.split('.').toVector)
-            .orElse({
-              Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-                tags.asScala
-              }
-            })
-            .map(_.toList)
-          opPkg = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-        } yield className
-
-      case GenerateResponseDefinitions(operation, protocolElems) =>
+      case GenerateResponseDefinitions(operationId, operation, protocolElems) =>
         for {
           gs <- Target.getGeneratorSettings
-          operationId <- Target.fromOption(Option(operation.getOperationId())
-                                             .map(splitOperationParts)
-                                             .map(_._2),
-                                           "Missing operationId")
           responses <- Target
             .fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
           responseSuperType = Type.Name(s"${operationId}Response")

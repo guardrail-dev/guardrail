@@ -9,7 +9,7 @@ import cats.syntax.all._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
-import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.terms.{ RouteMeta, SwaggerTerms }
 import scala.collection.JavaConverters._
 
 case class Servers[L <: LA](servers: List[Server[L]])
@@ -30,8 +30,9 @@ object ServerGenerator {
 
   def fromSwagger[L <: LA, F[_]](context: Context, swagger: Swagger, frameworkImports: List[L#Import])(
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit S: ServerTerms[L, F]): Free[F, Servers[L]] = {
+  )(implicit S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
+    import Sw._
 
     val paths: List[(String, Path)] =
       Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
@@ -56,7 +57,8 @@ object ServerGenerator {
             responseDefinitions <- routes.flatTraverse {
               case sr @ RouteMeta(path, method, operation) =>
                 for {
-                  responseDefinitions <- generateResponseDefinitions(operation, protocolElems)
+                  operationId         <- getOperationId(operation)
+                  responseDefinitions <- generateResponseDefinitions(operationId, operation, protocolElems)
                 } yield responseDefinitions
             }
             tracingFields    <- routes.traverse { case RouteMeta(_, _, operation) => buildTracingFields(operation, className, context.tracing) }

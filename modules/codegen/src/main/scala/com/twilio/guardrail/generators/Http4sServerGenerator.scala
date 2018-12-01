@@ -23,44 +23,8 @@ object Http4sServerGenerator {
       (parts.drop(1).toList, parts.last)
     }
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
-      case ExtractOperations(paths) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"extractOperations(${paths})")
-          routes <- paths.traverse {
-            case (pathStr, path) =>
-              for {
-                _            <- Target.log.info("Http4sServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
-                operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
-              } yield {
-                operationMap.asScala.toList.map {
-                  case (httpMethod, operation) =>
-                    RouteMeta(pathStr, httpMethod, operation)
-                }
-              }
-          }
-        } yield routes.flatten
-
-      case GetClassName(operation) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getClassName(${operation})")
-
-          pkg = ScalaPackage(operation)
-            .map(_.split('.').toVector)
-            .orElse({
-              Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-                tags.asScala
-              }
-            })
-            .map(_.toList)
-          opPkg = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-        } yield className
-
-      case GenerateResponseDefinitions(operation, protocolElems) =>
-        Http4sHelper.generateResponseDefinitions(operation, protocolElems)
+      case GenerateResponseDefinitions(operationId, operation, protocolElems) =>
+        Http4sHelper.generateResponseDefinitions(operationId, operation, protocolElems)
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         Target.getGeneratorSettings.flatMap { implicit gs =>
