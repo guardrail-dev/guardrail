@@ -317,15 +317,16 @@ object SwaggerUtil {
    */
 
   private[this] val successCodesWithEntities =
-    List(200, 201, 202, 203, 206, 226).map(_.toString)
-  private[this] val successCodesWithoutEntities = List(204, 205).map(_.toString)
+    List(200, 201, 202, 203, 206, 226)
+  private[this] val successCodesWithoutEntities = List(204, 205)
 
   private[this] def getBestSuccessResponse(responses: JMap[String, Response]): Option[Response] =
     successCodesWithEntities
+      .map(_.toString)
       .find(responses.containsKey)
       .flatMap(code => Option(responses.get(code)))
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
-    successCodesWithoutEntities.exists(responses.containsKey)
+    successCodesWithoutEntities.map(_.toString).exists(responses.containsKey)
 
   def getResponseTypeF[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
       implicit Sc: ScalaTerms[L, F],
