@@ -5,6 +5,7 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.generators.Responses
 
 sealed trait ServerTerm[L <: LA, T]
 case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField[L]]]
@@ -14,7 +15,7 @@ case class GenerateRoutes[L <: LA](resourceName: String,
                                    protocolElems: List[StrictProtocolElems[L]])
     extends ServerTerm[L, RenderedRoutes[L]]
 case class GetExtraRouteParams[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#MethodParameter]]
-case class GenerateResponseDefinitions[L <: LA](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])
+case class GenerateResponseDefinitions[L <: LA](operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]])
     extends ServerTerm[L, List[L#Definition]]
 case class RenderClass[L <: LA](className: String,
                                 handlerName: String,

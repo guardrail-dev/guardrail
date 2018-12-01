@@ -59,36 +59,35 @@ object Http4sHelper {
       .foldMap(interp)
   }
 
-  def generateResponseDefinitions(operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
-    for {
-      gs        <- Target.getGeneratorSettings
-      responses <- Http4sHelper.getResponses(operationId, operation, protocolElems, gs)
-      responseSuperType     = Type.Name(s"${operationId.capitalize}Response")
-      responseSuperTemplate = template"${Init(responseSuperType, Name(""), List.empty)}"
+  def generateResponseDefinitions(operationId: String,
+                                  responses: Responses[ScalaLanguage],
+                                  protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Defn] = {
+    val responseSuperType     = Type.Name(s"${operationId.capitalize}Response")
+    val responseSuperTemplate = template"${Init(responseSuperType, Name(""), List.empty)}"
 
-      terms = responses.value.map {
-        case Response(statusCodeName, valueType) =>
-          val responseTerm = Term.Name(s"${statusCodeName.value}")
-          val responseName = Type.Name(s"${statusCodeName.value}")
-          valueType.fold[Defn](
-            (q"case object $responseTerm extends $responseSuperTemplate")
-          ) { valueType =>
-            (q"case class  $responseName(value: $valueType) extends $responseSuperTemplate")
-          }
-      }
+    val terms = responses.value.map {
+      case Response(statusCodeName, valueType) =>
+        val responseTerm = Term.Name(s"${statusCodeName.value}")
+        val responseName = Type.Name(s"${statusCodeName.value}")
+        valueType.fold[Defn](
+          (q"case object $responseTerm extends $responseSuperTemplate")
+        ) { valueType =>
+          (q"case class  $responseName(value: $valueType) extends $responseSuperTemplate")
+        }
+    }
 
-      companion = q"""
+    val companion = q"""
             object ${Term.Name(s"${operationId.capitalize}Response")} {
               ..$terms
             }
           """
 
-    } yield
-      List[Defn](
-        q"sealed abstract class ${responseSuperType}"
-      ) ++ List[Defn](
-        companion
-      )
+    List[Defn](
+      q"sealed abstract class ${responseSuperType}"
+    ) ++ List[Defn](
+      companion
+    )
+  }
 
   def generateDecoder(tpe: Type, consumes: Seq[String]): Term =
     if (consumes.contains("application/json"))

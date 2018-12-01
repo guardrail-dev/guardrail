@@ -23,8 +23,8 @@ object Http4sServerGenerator {
       (parts.drop(1).toList, parts.last)
     }
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateResponseDefinitions(operationId, operation, protocolElems) =>
-        Http4sHelper.generateResponseDefinitions(operationId, operation, protocolElems)
+      case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
+        Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         Target.getGeneratorSettings.flatMap { implicit gs =>

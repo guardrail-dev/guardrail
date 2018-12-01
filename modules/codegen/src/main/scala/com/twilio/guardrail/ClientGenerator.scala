@@ -44,7 +44,8 @@ object ClientGenerator {
               case RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responseDefinitions <- generateResponseDefinitions(operationId, operation, protocolElems)
+                  responses           <- Http4sHelper.getResponsesF(operationId, operation, protocolElems)
+                  responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                 } yield responseDefinitions
             }
             clientOperations <- routes.traverse({

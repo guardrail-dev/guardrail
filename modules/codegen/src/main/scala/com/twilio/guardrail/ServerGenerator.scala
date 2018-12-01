@@ -6,10 +6,11 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.{ Http4sHelper, ScalaParameter }
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
-import com.twilio.guardrail.terms.{ RouteMeta, SwaggerTerms }
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 import scala.collection.JavaConverters._
 
 case class Servers[L <: LA](servers: List[Server[L]])
@@ -30,7 +31,7 @@ object ServerGenerator {
 
   def fromSwagger[L <: LA, F[_]](context: Context, swagger: Swagger, frameworkImports: List[L#Import])(
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
     import Sw._
 
@@ -58,7 +59,8 @@ object ServerGenerator {
               case sr @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responseDefinitions <- generateResponseDefinitions(operationId, operation, protocolElems)
+                  responses           <- Http4sHelper.getResponsesF(operationId, operation, protocolElems)
+                  responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                 } yield responseDefinitions
             }
             tracingFields    <- routes.traverse { case RouteMeta(_, _, operation) => buildTracingFields(operation, className, context.tracing) }

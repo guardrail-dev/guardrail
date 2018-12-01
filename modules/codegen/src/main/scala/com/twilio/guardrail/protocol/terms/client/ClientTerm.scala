@@ -20,7 +20,7 @@ case class GetImports[L <: LA](tracing: Boolean)      extends ClientTerm[L, List
 case class GetExtraImports[L <: LA](tracing: Boolean) extends ClientTerm[L, List[L#Import]]
 case class ClientClsArgs[L <: LA](tracingName: Option[String], schemes: List[String], host: Option[String], tracing: Boolean)
     extends ClientTerm[L, List[List[L#MethodParameter]]]
-case class GenerateResponseDefinitions[L <: LA](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])
+case class GenerateResponseDefinitions[L <: LA](operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]])
     extends ClientTerm[L, List[L#Definition]]
 case class BuildCompanion[L <: LA](clientName: String,
                                    tracingName: Option[String],
