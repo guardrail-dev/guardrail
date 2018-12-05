@@ -114,7 +114,7 @@ object Http4sServerGenerator {
       case HttpMethod.PATCH  => Target.pure(Term.Name("PATCH"))
       case HttpMethod.POST   => Target.pure(Term.Name("POST"))
       case HttpMethod.PUT    => Target.pure(Term.Name("PUT"))
-      case other             => Target.error(s"Unknown method: ${other}")
+      case other             => Target.raiseError(s"Unknown method: ${other}")
     }
 
     def pathStrToHttp4s(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
@@ -179,8 +179,8 @@ object Http4sServerGenerator {
               )
             )
         },
-        arg => _ => Target.error(s"Unsupported Iterable[${arg}"),
-        arg => _ => Target.error(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => _ => Target.raiseError(s"Unsupported Iterable[${arg}"),
+        arg => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" => Target.pure(Param(None, None, q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)"))
           case tpe =>

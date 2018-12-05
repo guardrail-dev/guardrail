@@ -191,7 +191,7 @@ object AkkaHttpServerGenerator {
       case HttpMethod.POST    => Target.pure(q"post")
       case HttpMethod.PUT     => Target.pure(q"put")
       case HttpMethod.OPTIONS => Target.pure(q"options")
-      case other              => Target.error(s"Unknown method: ${other}")
+      case other              => Target.raiseError(s"Unknown method: ${other}")
     }
 
     def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
@@ -257,8 +257,8 @@ object AkkaHttpServerGenerator {
           case t"String" => Target.pure(q"headerValueByName(${arg})")
           case tpe       => Target.pure(q"headerValueByName(${arg}).flatMap(str => onSuccess(Unmarshal(str).to[${tpe}]))")
         },
-        arg => tpe => Target.error(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => Target.error(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => Target.raiseError(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" => Target.pure(q"optionalHeaderValueByName(${arg})")
           case tpe =>

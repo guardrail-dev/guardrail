@@ -327,7 +327,7 @@ object CirceProtocolGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.error _, Target.pure _)
+        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseError _, Target.pure _)
 
       case ProtocolImports() =>
         Target.pure(

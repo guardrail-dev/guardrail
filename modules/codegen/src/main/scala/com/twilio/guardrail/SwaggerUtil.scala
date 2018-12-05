@@ -402,7 +402,7 @@ object SwaggerUtil {
         parts <- pattern
           .parseOnly(path)
           .either
-          .fold(Target.error(_), Target.pure(_))
+          .fold(Target.raiseError(_), Target.pure(_))
         result = parts
           .map({
             case Left(part)  => Lit.String(part)
@@ -548,7 +548,7 @@ object SwaggerUtil {
           .parse(path)
           .done
           .either
-          .fold(Target.error(_), Target.pure(_))
+          .fold(Target.raiseError(_), Target.pure(_))
         (parts, (trailingSlash, queryParams)) = partsQS
         (directive, bindings) = parts
           .foldLeft[(Term, List[Term.Name])]((q"pathEnd", List.empty))({
@@ -576,7 +576,7 @@ object SwaggerUtil {
           .parse(path)
           .done
           .either
-          .fold(Target.error(_), Target.pure(_))
+          .fold(Target.raiseError(_), Target.pure(_))
         (parts, (trailingSlash, queryParams)) = partsQS
         (directive, bindings) = parts
           .foldLeft[(Pat, List[Term.Name])]((p"${Term.Name("Root")}", List.empty))({
