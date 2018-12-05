@@ -254,10 +254,7 @@ object AkkaHttpClientGenerator {
             consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
 
             // Get the response type
-            unresolvedResponseTypeRef <- SwaggerUtil.getResponseType(httpMethod, operation, t"IgnoredEntity", gs)
-            resolvedResponseTypeRef <- SwaggerUtil.ResolvedType
-              .resolve(unresolvedResponseTypeRef, protocolElems)
-            responseTypeRef = resolvedResponseTypeRef.tpe
+            responseTypeRef = SwaggerUtil.getResponseType[ScalaLanguage](httpMethod, responses, t"IgnoredEntity").tpe
 
             parameters <- route.getParameters(protocolElems, gs)
 

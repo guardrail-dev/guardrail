@@ -9,7 +9,7 @@ import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.extract.{ Default, ScalaType }
-import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaGenerator, ScalaParameter, SwaggerGenerator }
+import com.twilio.guardrail.generators.{ GeneratorSettings, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
 import java.util.{ Map => JMap }
@@ -364,15 +364,16 @@ object SwaggerUtil {
     }
   }
 
-  def getResponseType(httpMethod: HttpMethod,
-                      operation: Operation,
-                      ignoredType: Type,
-                      gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] = {
-    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
-    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)
-    getResponseTypeF[ScalaLanguage, Program](httpMethod, operation, ignoredType).value
-      .foldMap(interp)
-  }
+  def getResponseType[L <: LA](httpMethod: HttpMethod, responses: Responses[L], ignoredType: L#Type): Resolved[L] =
+    if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
+      successCodesWithEntities
+        .flatMap(code => responses.value.find(_.statusCode == code))
+        .flatMap(_.value.map(_._1))
+        .headOption
+        .fold[Resolved[L]](Resolved[L](ignoredType, None, None))(tpe => Resolved[L](tpe, None, None))
+    } else {
+      Resolved[L](ignoredType, None, None)
+    }
 
   object paths {
     import atto._, Atto._
