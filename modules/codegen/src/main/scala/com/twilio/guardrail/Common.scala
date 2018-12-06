@@ -37,11 +37,6 @@ object Common {
     val resolveFile: Path => List[String] => Path       = root => _.foldLeft(root)(_.resolve(_))
     val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
 
-    val buildPackage: String => Option[Term.Ref] = pkg =>
-      splitComponents(pkg)
-        .map(dtoPackage ++ _)
-        .map(_.map(Term.Name.apply _).reduceLeft(Term.Select.apply _))
-
     val pkgPath        = resolveFile(outputPath)(pkgName)
     val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
 
