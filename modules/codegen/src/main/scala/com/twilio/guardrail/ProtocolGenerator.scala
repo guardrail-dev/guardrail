@@ -114,7 +114,11 @@ object ProtocolGenerator {
       hierarchy: ClassParent,
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Model)]
-  )(implicit F: FrameworkTerms[L, F], P: PolyProtocolTerms[L, F], M: ModelProtocolTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
+  )(implicit F: FrameworkTerms[L, F],
+    P: PolyProtocolTerms[L, F],
+    M: ModelProtocolTerms[L, F],
+    Sc: ScalaTerms[L, F],
+    Sw: SwaggerTerms[L, F]): Free[F, ProtocolElems[L]] = {
     import P._
     import M._
     import Sc._
@@ -132,7 +136,10 @@ object ProtocolGenerator {
       parents <- extractParents(hierarchy.model, definitions, concreteTypes)
       props   <- extractProperties(hierarchy.model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      params <- props.traverse(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes) _ tupled)
+      params <- props.traverse({
+        case (name, prop) =>
+          SwaggerUtil.propMetaF[L, F](prop).flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _))
+      })
       terms = params.map(_.term)
       definition <- renderSealedTrait(hierarchy.name, terms, discriminator, parents)
       encoder    <- encodeADT(hierarchy.name, children)
@@ -153,7 +160,8 @@ object ProtocolGenerator {
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
-      Sc: ScalaTerms[L, F]
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
   ): Free[F, List[SuperClass[L]]] = {
     import M._
     import P._
@@ -176,7 +184,10 @@ object ProtocolGenerator {
           _withProps    <- concreteInterfaces.traverse(extractProperties)
           props                    = _extendsProps ++ _withProps.flatten
           needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-          params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+          params <- props.traverse({
+            case (name, prop) =>
+              SwaggerUtil.propMetaF[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _))
+          })
           interfacesCls = interfaces.map(_.getSimpleRef)
           tpe <- parseTypeName(clsName)
         } yield
@@ -201,7 +212,8 @@ object ProtocolGenerator {
   private[this] def fromModel[L <: LA, F[_]](clsName: String, model: Model, parents: List[SuperClass[L]], concreteTypes: List[PropMeta[L]])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, F]
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
   ): Free[F, Either[String, ProtocolElems[L]]] = {
     import M._
     import F._
@@ -210,7 +222,10 @@ object ProtocolGenerator {
     for {
       props <- extractProperties(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
+      params <- props.traverse({
+        case (name, prop) =>
+          SwaggerUtil.propMetaF[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _))
+      })
       terms = params.map(_.term)
       defn <- renderDTOClass(clsName, terms, parents)
       deps = params.flatMap(_.dep)

@@ -315,6 +315,7 @@ object SwaggerUtil {
     }
   }
 
+  @deprecated("Use propMetaF", "0.41.2")
   def propMeta(property: Property, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] = {
     type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
     val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)

@@ -101,71 +101,68 @@ object CirceProtocolGenerator {
           }).map(_.asScala.toList).toList.flatten
         )
 
-      case TransformProperty(clsName, name, property, needCamelSnakeConversion, concreteTypes) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes) =>
         def toCamelCase(s: String): String =
           "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+        for {
+          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
 
-            argName = if (needCamelSnakeConversion) toCamelCase(name) else name
-            meta <- SwaggerUtil.propMeta(property, gs)
+          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
 
-            defaultValue = property match {
-              case _: MapProperty =>
-                Option(q"Map.empty")
-              case _: ArrayProperty =>
-                Option(q"IndexedSeq.empty")
-              case p: BooleanProperty =>
-                Default(p).extract[Boolean].map(Lit.Boolean(_))
-              case p: DoubleProperty =>
-                Default(p).extract[Double].map(Lit.Double(_))
-              case p: FloatProperty =>
-                Default(p).extract[Float].map(Lit.Float(_))
-              case p: IntegerProperty =>
-                Default(p).extract[Int].map(Lit.Int(_))
-              case p: LongProperty =>
-                Default(p).extract[Long].map(Lit.Long(_))
-              case p: StringProperty =>
-                Default(p).extract[String].map(Lit.String(_))
-              case _ =>
-                None
-            }
+          defaultValue = property match {
+            case _: MapProperty =>
+              Option(q"Map.empty")
+            case _: ArrayProperty =>
+              Option(q"IndexedSeq.empty")
+            case p: BooleanProperty =>
+              Default(p).extract[Boolean].map(Lit.Boolean(_))
+            case p: DoubleProperty =>
+              Default(p).extract[Double].map(Lit.Double(_))
+            case p: FloatProperty =>
+              Default(p).extract[Float].map(Lit.Float(_))
+            case p: IntegerProperty =>
+              Default(p).extract[Int].map(Lit.Int(_))
+            case p: LongProperty =>
+              Default(p).extract[Long].map(Lit.Long(_))
+            case p: StringProperty =>
+              Default(p).extract[String].map(Lit.String(_))
+            case _ =>
+              None
+          }
 
-            readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-            needsEmptyToNull = property match {
-              case d: DateProperty      => ScalaEmptyIsNull(d)
-              case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
-              case s: StringProperty    => ScalaEmptyIsNull(s)
-              case _                    => None
-            }
-            emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
+          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
+          needsEmptyToNull = property match {
+            case d: DateProperty      => ScalaEmptyIsNull(d)
+            case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
+            case s: StringProperty    => ScalaEmptyIsNull(s)
+            case _                    => None
+          }
+          emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
 
-            (tpe, classDep) = meta match {
-              case SwaggerUtil.Resolved(declType, classDep, _) =>
-                (declType, classDep)
-              case SwaggerUtil.Deferred(tpeName) =>
-                val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
-                  println(s"Unable to find definition for ${tpeName}, just inlining")
-                  Type.Name(tpeName)
-                }
-                (tpe, Option.empty)
-              case SwaggerUtil.DeferredArray(tpeName) =>
-                (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
-              case SwaggerUtil.DeferredMap(tpeName) =>
-                (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
-            }
+          (tpe, classDep) = meta match {
+            case SwaggerUtil.Resolved(declType, classDep, _) =>
+              (declType, classDep)
+            case SwaggerUtil.Deferred(tpeName) =>
+              val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
+                println(s"Unable to find definition for ${tpeName}, just inlining")
+                Type.Name(tpeName)
+              }
+              (tpe, Option.empty)
+            case SwaggerUtil.DeferredArray(tpeName) =>
+              (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
+            case SwaggerUtil.DeferredMap(tpeName) =>
+              (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
+          }
 
-            (finalDeclType, finalDefaultValue) = Option(property.getRequired)
-              .filterNot(_ == false)
-              .fold[(Type, Option[Term])](
-                (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-              )(Function.const((tpe, defaultValue)) _)
-            term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
-            dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-          } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNullKey)
-        }
+          (finalDeclType, finalDefaultValue) = Option(property.getRequired)
+            .filterNot(_ == false)
+            .fold[(Type, Option[Term])](
+              (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+            )(Function.const((tpe, defaultValue)) _)
+          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+          dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNullKey)
 
       case RenderDTOClass(clsName, selfTerms, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
