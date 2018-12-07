@@ -51,8 +51,8 @@ object Http4sServerGenerator {
         for {
           renderedRoutes <- routes
             .traverse {
-              case (tracingFields, sr @ RouteMeta(path, method, operation)) =>
-                generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
+              case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
+                generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
             }
             .map(_.flatten)
           routeTerms = renderedRoutes.map(_.route)
@@ -404,7 +404,8 @@ object Http4sServerGenerator {
                       basePath: Option[String],
                       route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Option[RenderedRoute]] =
+                      parameters: ScalaParameters[ScalaLanguage],
+                      responses: Responses[ScalaLanguage]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _  <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
@@ -414,8 +415,6 @@ object Http4sServerGenerator {
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-
-        parameters <- route.getParameters(protocolElems)
 
         formArgs   = parameters.formParams
         headerArgs = parameters.headerParams
@@ -431,8 +430,7 @@ object Http4sServerGenerator {
         asyncFormProcessing = formArgs.exists(_.isFile)
         http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(operationId)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
-        responses          <- Http4sHelper.getResponses(operationId, operation, protocolElems, gs)
-        supportDefinitions <- generateSupportDefinitions(route, protocolElems)
+        supportDefinitions <- generateSupportDefinitions(route, parameters)
       } yield {
         val (responseCompanionTerm, responseCompanionType) =
           (Term.Name(s"${operationId.capitalize}Response"), Type.Name(s"${operationId.capitalize}Response"))
@@ -466,9 +464,9 @@ object Http4sServerGenerator {
               case Response(statusCodeName, valueType) =>
                 val responseTerm = Term.Name(s"${statusCodeName.value}")
                 valueType.fold[Case](
-                  p"case $responseCompanionTerm.$responseTerm => $statusCodeName()"
+                  p"case $responseCompanionTerm.$responseTerm => ${statusCodeName}()"
                 ) { _ =>
-                  p"case $responseCompanionTerm.$responseTerm(value) => $statusCodeName(value)(E, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
+                  p"case $responseCompanionTerm.$responseTerm(value) => ${statusCodeName}(value)(E, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
                 }
             }
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
@@ -521,9 +519,7 @@ object Http4sServerGenerator {
           RenderedRoute(
             fullRoute,
             q"""def ${Term.Name(operationId)}(...${params}): F[${responseType}]""",
-            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ generateCodecs(operationId, bodyArgs, responses.value.map({
-              case Response(a, b) => (a, b)
-            }), consumes, produces) ++ tracingFields
+            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ generateCodecs(operationId, bodyArgs, responses, consumes, produces) ++ tracingFields
               .map(_.term)
               .map(generateTracingExtractor(operationId, _)),
             List.empty //handlerDefinitions
@@ -538,11 +534,10 @@ object Http4sServerGenerator {
         _      <- routes.traverse(route => Target.log.debug("Http4sServerGenerator", "server", "combineRouteTerms")(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList)
 
-    def generateSupportDefinitions(route: RouteMeta, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
+    def generateSupportDefinitions(route: RouteMeta, parameters: ScalaParameters[ScalaLanguage]): Target[List[Defn]] =
       for {
-        gs         <- Target.getGeneratorSettings
-        operation  <- Target.pure(route.operation)
-        parameters <- route.getParameters(protocolElems)
+        gs        <- Target.getGeneratorSettings
+        operation <- Target.pure(route.operation)
 
         pathArgs = parameters.pathParams
       } yield {
@@ -618,7 +613,7 @@ object Http4sServerGenerator {
 
     def generateCodecs(operationId: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
-                       responses: List[(Term.Name, Option[Type])],
+                       responses: Responses[ScalaLanguage],
                        consumes: Seq[String],
                        produces: Seq[String]): List[Defn.Val] =
       generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces)
@@ -631,12 +626,13 @@ object Http4sServerGenerator {
           )
       }
 
-    def generateEncoders(operationId: String, responses: List[(Term.Name, Option[Type])], produces: Seq[String]): List[Defn.Val] =
+    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
       for {
-        (statusCodeName, valueType) <- responses
-        tpe                         <- valueType
+        response        <- responses.value
+        typeDefaultPair <- response.value
+        (tpe, _) = typeDefaultPair
       } yield {
-        q"val ${Pat.Var(Term.Name(s"$operationId${statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
+        q"val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }
 
     def generateTracingExtractor(operationId: String, tracingField: Term) =

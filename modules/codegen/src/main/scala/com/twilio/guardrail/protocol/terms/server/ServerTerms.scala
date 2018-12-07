@@ -5,7 +5,7 @@ import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
-import com.twilio.guardrail.generators.Responses
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 
@@ -14,7 +14,7 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
     Free.inject[ServerTerm[L, ?], F](BuildTracingFields(operation, resourceName, tracing))
   def generateRoutes(resourceName: String,
                      basePath: Option[String],
-                     routes: List[(Option[TracingField[L]], RouteMeta)],
+                     routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
                      protocolElems: List[StrictProtocolElems[L]]): Free[F, RenderedRoutes[L]] =
     Free.inject[ServerTerm[L, ?], F](GenerateRoutes(resourceName, basePath, routes, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[L#MethodParameter]] =

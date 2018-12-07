@@ -122,9 +122,9 @@ object AkkaHttpServerGenerator {
       case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {
-            case (tracingFields, sr @ RouteMeta(path, method, operation)) =>
+            case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
               for {
-                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
+                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters)
               } yield rendered
           }
           routeTerms = renderedRoutes.map(_.route)
@@ -522,7 +522,7 @@ object AkkaHttpServerGenerator {
                       basePath: Option[String],
                       route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[RenderedRoute] =
+                      parameters: ScalaParameters[ScalaLanguage]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         gs <- Target.getGeneratorSettings
@@ -533,7 +533,6 @@ object AkkaHttpServerGenerator {
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-        parameters <- route.getParameters(protocolElems)
 
         // special-case file upload stuff
         formArgs = parameters.formParams.map({ x =>

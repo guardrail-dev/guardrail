@@ -5,13 +5,13 @@ import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.generators.Responses
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 
 sealed trait ServerTerm[L <: LA, T]
 case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField[L]]]
 case class GenerateRoutes[L <: LA](resourceName: String,
                                    basePath: Option[String],
-                                   routes: List[(Option[TracingField[L]], RouteMeta)],
+                                   routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
                                    protocolElems: List[StrictProtocolElems[L]])
     extends ServerTerm[L, RenderedRoutes[L]]
 case class GetExtraRouteParams[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#MethodParameter]]

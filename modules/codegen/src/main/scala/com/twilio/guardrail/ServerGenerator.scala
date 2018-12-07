@@ -63,7 +63,7 @@ object ServerGenerator {
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParametersF[L, F](protocolElems)
                   tracingField        <- buildTracingFields(operation, className, context.tracing)
-                } yield (responseDefinitions, (tracingField, route))
+                } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
             renderedRoutes   <- generateRoutes(resourceName, basePath, serverOperations, protocolElems)
