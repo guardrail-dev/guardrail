@@ -47,7 +47,7 @@ object AkkaHttpGenerator {
         Target.getGeneratorSettings.map { implicit gs =>
           val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
           val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
-          q"""
+          val defn                       = q"""
           object AkkaHttpImplicits {
             private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
@@ -156,6 +156,7 @@ object AkkaHttpGenerator {
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
           }
         """
+          (q"AkkaHttpImplicits", defn)
         }
 
       case GetGeneratorSettings() =>

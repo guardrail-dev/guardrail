@@ -57,16 +57,19 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def widenTypeName(tpe: L#TypeName): Free[F, L#Type]       = Free.inject[ScalaTerm[L, ?], F](WidenTypeName(tpe))
   def widenTermSelect(value: L#TermSelect): Free[F, L#Term] = Free.inject[ScalaTerm[L, ?], F](WidenTermSelect(value))
 
-  def renderImplicits(pkgName: List[String],
+  def renderImplicits(pkgPath: Path,
+                      pkgName: List[String],
                       frameworkImports: List[L#Import],
                       jsonImports: List[L#Import],
-                      customImports: List[L#Import]): Free[F, L#FileContents] =
-    Free.inject[ScalaTerm[L, ?], F](RenderImplicits(pkgName, frameworkImports, jsonImports, customImports))
-  def renderFrameworkImplicits(pkgName: List[String],
+                      customImports: List[L#Import]): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports))
+  def renderFrameworkImplicits(pkgPath: Path,
+                               pkgName: List[String],
                                frameworkImports: List[L#Import],
                                jsonImports: List[L#Import],
-                               frameworkImplicits: L#ObjectDefinition): Free[F, L#FileContents] =
-    Free.inject[ScalaTerm[L, ?], F](RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits))
+                               frameworkImplicits: L#ObjectDefinition,
+                               frameworkImplicitName: L#TermName): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName))
 
   def writePackageObject(dtoPackagePath: Path,
                          dtoComponents: List[String],
@@ -79,11 +82,26 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
       WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
     )
   def writeProtocolDefinition(outputPath: Path,
+                              pkgName: List[String],
                               definitions: List[String],
                               dtoComponents: List[String],
                               imports: List[L#Import],
                               elem: StrictProtocolElems[L]): Free[F, (List[WriteTree], List[L#Statement])] =
-    Free.inject[ScalaTerm[L, ?], F](WriteProtocolDefinition(outputPath, definitions, dtoComponents, imports, elem))
+    Free.inject[ScalaTerm[L, ?], F](WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem))
+  def writeClient(pkgPath: Path,
+                  pkgName: List[String],
+                  customImports: List[L#Import],
+                  frameworkImplicitName: L#TermName,
+                  dtoComponents: List[String],
+                  client: Client[L]): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client))
+  def writeServer(pkgPath: Path,
+                  pkgName: List[String],
+                  customImports: List[L#Import],
+                  frameworkImplicitName: L#TermName,
+                  dtoComponents: List[String],
+                  server: Server[L]): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
 }
 object ScalaTerms {
   implicit def scalaTerm[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]): ScalaTerms[L, F] = new ScalaTerms[L, F]

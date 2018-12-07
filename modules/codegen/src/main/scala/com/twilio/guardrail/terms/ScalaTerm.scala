@@ -54,13 +54,19 @@ case class FallbackType[L <: LA](tpe: String, format: Option[String]) extends Sc
 case class WidenTypeName[L <: LA](tpe: L#TypeName)       extends ScalaTerm[L, L#Type]
 case class WidenTermSelect[L <: LA](value: L#TermSelect) extends ScalaTerm[L, L#Term]
 
-case class RenderImplicits[L <: LA](pkgName: List[String], frameworkImports: List[L#Import], jsonImports: List[L#Import], customImports: List[L#Import])
-    extends ScalaTerm[L, L#FileContents]
-case class RenderFrameworkImplicits[L <: LA](pkgName: List[String],
+case class RenderImplicits[L <: LA](pkgPath: Path,
+                                    pkgName: List[String],
+                                    frameworkImports: List[L#Import],
+                                    jsonImports: List[L#Import],
+                                    customImports: List[L#Import])
+    extends ScalaTerm[L, WriteTree]
+case class RenderFrameworkImplicits[L <: LA](pkgPath: Path,
+                                             pkgName: List[String],
                                              frameworkImports: List[L#Import],
                                              jsonImports: List[L#Import],
-                                             frameworkImplicits: L#ObjectDefinition)
-    extends ScalaTerm[L, L#FileContents]
+                                             frameworkImplicits: L#ObjectDefinition,
+                                             frameworkImplicitName: L#TermName)
+    extends ScalaTerm[L, WriteTree]
 case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        dtoComponents: List[String],
                                        customImports: List[L#Import],
@@ -70,8 +76,23 @@ case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        extraTypes: List[L#Statement])
     extends ScalaTerm[L, WriteTree]
 case class WriteProtocolDefinition[L <: LA](outputPath: Path,
+                                            pkgName: List[String],
                                             definitions: List[String],
                                             dtoComponents: List[String],
                                             imports: List[L#Import],
                                             elem: StrictProtocolElems[L])
     extends ScalaTerm[L, (List[WriteTree], List[L#Statement])]
+case class WriteClient[L <: LA](pkgPath: Path,
+                                pkgName: List[String],
+                                customImports: List[L#Import],
+                                frameworkImplicitName: L#TermName,
+                                dtoComponents: List[String],
+                                client: Client[L])
+    extends ScalaTerm[L, WriteTree]
+case class WriteServer[L <: LA](pkgPath: Path,
+                                pkgName: List[String],
+                                customImports: List[L#Import],
+                                frameworkImplicitName: L#TermName,
+                                dtoComponents: List[String],
+                                server: Server[L])
+    extends ScalaTerm[L, WriteTree]

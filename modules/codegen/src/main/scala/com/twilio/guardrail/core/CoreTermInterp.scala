@@ -137,7 +137,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         ReadSwagger(
           Paths.get(specPath), { swagger =>
             Common
-              .writePackage(kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
+              .writePackage[ScalaLanguage, CodegenApplication](kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
               .foldMap(targetInterpreter)
           }
         )

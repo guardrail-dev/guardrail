@@ -17,8 +17,10 @@ object ScalaGenerator {
     }
     val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
 
-    val utf8 = java.nio.charset.Charset.availableCharsets.get("UTF-8")
-
+    val utf8                                      = java.nio.charset.Charset.availableCharsets.get("UTF-8")
+    val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+    val buildPkgTerm: List[String] => Term.Ref =
+      _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
     def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
 
       case LitString(value)        => Target.pure(Lit.String(value))
@@ -113,11 +115,11 @@ object ScalaGenerator {
       case WidenTypeName(tpe)     => Target.pure(tpe)
       case WidenTermSelect(value) => Target.pure(value)
 
-      case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
+      case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
-        Target.pure(
-          source"""
+
+        val implicits = source"""
             package ${pkg}
 
             ..${jsonImports}
@@ -188,13 +190,12 @@ object ScalaGenerator {
               }
             }
           """
-        )
+        Target.pure(WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(utf8)))
 
-      case RenderFrameworkImplicits(pkgName, frameworkImports, jsonImports, frameworkImplicits) =>
+      case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
-        Target.pure(
-          source"""
+        val frameworkImplicitsFile = source"""
             package ${pkg}
 
             ..${jsonImports}
@@ -210,7 +211,7 @@ object ScalaGenerator {
 
             ${frameworkImplicits}
           """
-        )
+        Target.pure(WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile.syntax.getBytes(utf8)))
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         val dtoHead :: dtoRest = dtoComponents
@@ -248,10 +249,7 @@ object ScalaGenerator {
             """.syntax.getBytes(utf8)
           )
         )
-      case WriteProtocolDefinition(outputPath, definitions, dtoComponents, imports, elem) =>
-        val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
-        val buildPkgTerm: List[String] => Term.Ref =
-          _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
           case EnumDefinition(_, _, _, cls, obj) =>
             (List(
@@ -259,7 +257,9 @@ object ScalaGenerator {
                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
                  source"""
               package ${buildPkgTerm(definitions)}
+                import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._;
                 ..${imports}
+
                 $cls
                 $obj
               """.syntax.getBytes(utf8)
@@ -304,6 +304,43 @@ object ScalaGenerator {
           case RandomType(_, _) =>
             (List.empty, List.empty)
         })
+      case WriteClient(pkgPath,
+                       pkgName,
+                       customImports,
+                       frameworkImplicitName,
+                       dtoComponents,
+                       Client(pkg, clientName, imports, companion, client, responseDefinitions)) =>
+        Target.pure(
+          WriteTree(
+            resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
+            source"""
+            package ${buildPkgTerm(pkgName ++ pkg)}
+            import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+            import ${buildPkgTerm(List("_root_") ++ pkgName)}.${frameworkImplicitName}._
+            import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
+            ..${customImports};
+            ..${imports};
+            ${companion};
+            ${client};
+            ..${responseDefinitions}
+            """.syntax.getBytes(utf8)
+          )
+        )
+      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, src)) =>
+        Target.pure(
+          WriteTree(
+            resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
+            source"""
+              package ${buildPkgTerm((pkgName ++ pkg.toList))}
+              ..${extraImports}
+              import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+              import ${buildPkgTerm(List("_root_") ++ pkgName)}.${frameworkImplicitName}._
+              import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
+              ..${customImports}
+              ..$src
+              """.syntax.getBytes(utf8)
+          )
+        )
     }
   }
 }

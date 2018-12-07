@@ -3,16 +3,22 @@ package com.twilio.guardrail
 import _root_.io.swagger.models.Swagger
 import cats.data.NonEmptyList
 import cats.free.Free
-import cats.instances.all._
-import cats.syntax.either._
-import cats.syntax.semigroup._
-import cats.syntax.traverse._
+import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.protocol.PolyProtocolTerms
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.protocol.terms.protocol.{
+  AliasProtocolTerms,
+  ArrayProtocolTerms,
+  EnumProtocolTerms,
+  ModelProtocolTerms,
+  PolyProtocolTerms,
+  ProtocolSupportTerms
+}
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms, ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
+import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SwaggerTerms }
 import java.nio.file.{ Path, Paths }
 import java.util.Locale
 import scala.collection.JavaConverters._
@@ -20,16 +26,23 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
-  def writePackage(kind: CodegenTarget,
-                   context: Context,
-                   swagger: Swagger,
-                   outputPath: Path,
-                   pkgName: List[String],
-                   dtoPackage: List[String],
-                   customImports: List[Import])(implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
-                                                Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
-                                                Pol: PolyProtocolTerms[ScalaLanguage, CodegenApplication],
-                                                Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]): Free[CodegenApplication, List[WriteTree]] = {
+  def writePackage[L <: LA, F[_]](kind: CodegenTarget,
+                                  context: Context,
+                                  swagger: Swagger,
+                                  outputPath: Path,
+                                  pkgName: List[String],
+                                  dtoPackage: List[String],
+                                  customImports: List[L#Import])(implicit A: AliasProtocolTerms[L, F],
+                                                                 C: ClientTerms[L, F],
+                                                                 R: ArrayProtocolTerms[L, F],
+                                                                 E: EnumProtocolTerms[L, F],
+                                                                 F: FrameworkTerms[L, F],
+                                                                 M: ModelProtocolTerms[L, F],
+                                                                 Pol: PolyProtocolTerms[L, F],
+                                                                 S: ProtocolSupportTerms[L, F],
+                                                                 Sc: ScalaTerms[L, F],
+                                                                 Se: ServerTerms[L, F],
+                                                                 Sw: SwaggerTerms[L, F]): Free[F, List[WriteTree]] = {
     import F._
     import Sc._
     import Sw._
@@ -46,14 +59,13 @@ object Common {
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
     for {
-      proto <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication](swagger)
+      proto <- ProtocolGenerator.fromSwagger[L, F](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-      implicitsImport                                                                                  = q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._"
-      imports                                                                                          = customImports ++ protocolImports ++ List(implicitsImport)
+      imports                                                                                          = customImports ++ protocolImports
       utf8                                                                                             = java.nio.charset.Charset.availableCharsets.get("UTF-8")
 
-      protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, definitions, dtoComponents, imports, _))
-      (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
+      protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, _))
+      (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
 
       dtoHead :: dtoRest = dtoComponents
       dtoPkg = dtoRest.init
@@ -61,14 +73,6 @@ object Common {
           case (acc, next) => Term.Select(acc, Term.Name(next))
         }
       companion = Term.Name(s"${dtoComponents.last}$$")
-
-      (implicits, statements) = packageObjectContents.partition({ case q"implicit val $_: $_ = $_" => true; case _ => false })
-
-      mirroredImplicits = implicits
-        .map({ stat =>
-          val List(Pat.Var(mirror)) = stat.pats
-          stat.copy(rhs = q"${companion}.${mirror}")
-        })
 
       packageObject <- writePackageObject(
         dtoPackagePath,
@@ -93,78 +97,41 @@ object Common {
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
-      frameworkImports   <- getFrameworkImports(context.tracing)
-      frameworkImplicits <- getFrameworkImplicits()
-      frameworkImplicitName = frameworkImplicits.name
+      frameworkImports    <- getFrameworkImports(context.tracing)
+      _frameworkImplicits <- getFrameworkImplicits()
+      (frameworkImplicitName, frameworkImplicits) = _frameworkImplicits
 
       codegen <- kind match {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[ScalaLanguage, CodegenApplication](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
+              .fromSwagger[L, F](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
             Clients(clients) = clientMeta
-          } yield CodegenDefinitions[ScalaLanguage](clients, List.empty)
+          } yield CodegenDefinitions[L](clients, List.empty)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[ScalaLanguage, CodegenApplication](context, swagger, frameworkImports)(protocolElems)
+              .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems)
             Servers(servers) = serverMeta
-          } yield CodegenDefinitions[ScalaLanguage](List.empty, servers)
+          } yield CodegenDefinitions[L](List.empty, servers)
       }
 
       CodegenDefinitions(clients, servers) = codegen
 
-      files = (
-        clients
-          .map({
-            case Client(pkg, clientName, imports, companion, client, responseDefinitions) =>
-              WriteTree(
-                resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
-                source"""
-                  package ${buildPkgTerm(pkgName ++ pkg)}
-                  import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-                  import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
-                  import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
-                  ..${customImports};
-                  ..${imports};
-                  ${companion};
-                  ${client};
-                  ..${responseDefinitions}
-                  """.syntax.getBytes(utf8)
-              )
-          })
-          .to[List]
-        ) ++ (
-        servers
-          .map({
-            case Server(pkg, extraImports, src) =>
-              WriteTree(
-                resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
-                source"""
-                    package ${buildPkgTerm((pkgName ++ pkg.toList))}
-                    ..${extraImports}
-                    import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-                    import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(frameworkImplicitName.value))}._
-                    import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
-                    ..${customImports}
-                    ..$src
-                    """.syntax.getBytes(utf8)
-              )
-          })
-          .to[List]
-        )
+      files <- (clients.traverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
+                servers.traverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
 
-      implicits              <- renderImplicits(pkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- renderFrameworkImplicits(pkgName, frameworkImports, protocolImports, frameworkImplicits)
+      implicits              <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
+      frameworkImplicitsFile <- renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, frameworkImplicits, frameworkImplicitName)
     } yield
       (
         protocolDefinitions ++
           List(packageObject) ++
           files ++
           List(
-            WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(utf8)),
-            WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile.syntax.getBytes(utf8))
+            implicits,
+            frameworkImplicitsFile
           )
       ).toList
   }

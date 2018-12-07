@@ -42,7 +42,8 @@ object Http4sGenerator {
         )
 
       case GetFrameworkImplicits() =>
-        Target.pure(q"""
+        Target.pure({
+          val defn = q"""
           object Http4sImplicits {
             import scala.util.Try
             private[this] def pathEscape(s: String): String = Path(s).toString.drop(1)
@@ -67,7 +68,9 @@ object Http4sGenerator {
               def unapply(value: String): Option[BigInt] = Try(BigInt(value)).toOption
             }
           }
-        """)
+        """
+          (q"Http4sImplicits", defn)
+        })
 
       case GetGeneratorSettings() =>
         Target.getGeneratorSettings
