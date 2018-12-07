@@ -35,6 +35,8 @@ case class PureMethodParameter[L <: LA](name: L#TermName, tpe: L#Type, default: 
 case class TypeNamesEqual[L <: LA](a: L#TypeName, b: L#TypeName)                                extends ScalaTerm[L, Boolean]
 case class TypesEqual[L <: LA](a: L#Type, b: L#Type)                                            extends ScalaTerm[L, Boolean]
 case class ExtractTypeName[L <: LA](tpe: L#Type)                                                extends ScalaTerm[L, Option[L#TypeName]]
+case class ExtractTermName[L <: LA](term: L#TermName)                                           extends ScalaTerm[L, String]
+case class AlterMethodParameterName[L <: LA](param: L#MethodParameter, name: L#TermName)        extends ScalaTerm[L, L#MethodParameter]
 
 case class DateType[L <: LA]()                                        extends ScalaTerm[L, L#Type]
 case class DateTimeType[L <: LA]()                                    extends ScalaTerm[L, L#Type]

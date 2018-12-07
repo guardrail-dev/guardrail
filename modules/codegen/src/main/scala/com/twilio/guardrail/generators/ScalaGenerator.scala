@@ -96,6 +96,12 @@ object ScalaGenerator {
           case x: Type.Name => Option(x)
           case _            => Option.empty
         })
+      case ExtractTermName(term) =>
+        val Term.Name(name) = term
+        Target.pure(name)
+
+      case AlterMethodParameterName(param, name) =>
+        Target.pure(param.copy(name = name))
 
       case DateType()                => Target.pure(t"java.time.LocalDate")
       case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")

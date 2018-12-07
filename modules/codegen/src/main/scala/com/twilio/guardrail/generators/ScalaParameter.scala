@@ -205,27 +205,39 @@ object ScalaParameter {
   }
 
   def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Parameter] => Target[List[ScalaParameter[ScalaLanguage]]] = { params =>
+    type F[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[FrameworkTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?], T]
+    val interp = ScalaGenerator.ScalaInterp.or(AkkaHttpGenerator.FrameworkInterp.or(SwaggerGenerator.SwaggerInterp));
+    fromParametersF[ScalaLanguage, F](protocolElems).apply(params).foldMap(interp)
+  }
+
+  def fromParametersF[L <: LA, F[_]](
+      protocolElems: List[StrictProtocolElems[L]]
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Parameter] => Free[F, List[ScalaParameter[L]]] = { params =>
+    import Sc._
     for {
-      parameters <- params.traverse(fromParameter(protocolElems))
-      counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
-    } yield
-      parameters.map { param =>
-        val Term.Name(name) = param.paramName
-        if (counts.getOrElse(name, 0) > 1) {
-          val escapedName =
-            Term.Name(param.argName.value)
-          new ScalaParameter[ScalaLanguage](
-            param.in,
-            param.param.copy(name = escapedName),
-            escapedName,
-            param.argName,
-            param.argType,
-            param.required,
-            param.hashAlgorithm,
-            param.isFile
-          )
-        } else param
+      parameters <- params.traverse(fromParameterF(protocolElems))
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      result <- parameters.traverse { param =>
+        extractTermName(param.paramName).flatMap { name =>
+          if (counts.getOrElse(name, 0) > 1) {
+            pureTermName(param.argName.value).flatMap { escapedName =>
+              alterMethodParameterName(param.param, escapedName).map { newParam =>
+                new ScalaParameter[L](
+                  param.in,
+                  newParam,
+                  escapedName,
+                  param.argName,
+                  param.argType,
+                  param.required,
+                  param.hashAlgorithm,
+                  param.isFile
+                )
+              }
+            }
+          } else Free.pure[F, ScalaParameter[L]](param)
+        }
       }
+    } yield result
   }
 
   /**
