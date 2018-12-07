@@ -27,25 +27,23 @@ object Http4sServerGenerator {
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
       case BuildTracingFields(operation, resourceName, tracing) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            _ <- Target.log.debug("Http4sServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-            res <- if (tracing) {
-              for {
-                operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                   .map(splitOperationParts)
-                                                   .map(_._2),
-                                                 "Missing operationId")
-                label <- Target.fromOption(
-                  ScalaTracingLabel(operation)
-                    .map(Lit.String(_))
-                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                  "Missing client name"
-                )
-              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
-            } else Target.pure(None)
-          } yield res
-        }
+        for {
+          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          res <- if (tracing) {
+            for {
+              operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                 .map(splitOperationParts)
+                                                 .map(_._2),
+                                               "Missing operationId")
+              label <- Target.fromOption(
+                ScalaTracingLabel(operation)
+                  .map(Lit.String(_))
+                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                "Missing client name"
+              )
+            } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
+          } else Target.pure(None)
+        } yield res
 
       case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
@@ -408,8 +406,7 @@ object Http4sServerGenerator {
                       responses: Responses[ScalaLanguage]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
-        _  <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        gs <- Target.getGeneratorSettings
+        _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
@@ -536,7 +533,6 @@ object Http4sServerGenerator {
 
     def generateSupportDefinitions(route: RouteMeta, parameters: ScalaParameters[ScalaLanguage]): Target[List[Defn]] =
       for {
-        gs        <- Target.getGeneratorSettings
         operation <- Target.pure(route.operation)
 
         pathArgs = parameters.pathParams

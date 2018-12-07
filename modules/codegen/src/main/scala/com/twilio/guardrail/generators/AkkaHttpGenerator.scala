@@ -43,11 +43,11 @@ object AkkaHttpGenerator {
           )
         )
 
-      case GetFrameworkImplicits() =>
-        Target.getGeneratorSettings.map { implicit gs =>
-          val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
-          val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
-          val defn                       = q"""
+      case GetFrameworkImplicits() => {
+        val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
+        val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
+        val jsonType: Type             = t"io.circe.Json"
+        val defn                       = q"""
           object AkkaHttpImplicits {
             private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
@@ -74,7 +74,7 @@ object AkkaHttpGenerator {
 
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
-            ): ToEntityMarshaller[${gs.jsonType}] =
+            ): ToEntityMarshaller[${jsonType}] =
               Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
                 HttpEntity(MediaTypes.`application/json`, printer.pretty(json))
               }
@@ -85,7 +85,7 @@ object AkkaHttpGenerator {
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
-            final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
+            final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`text/plain`)
                 .map({
@@ -95,7 +95,7 @@ object AkkaHttpGenerator {
                     Json.fromString(data.decodeString("utf-8"))
                 })
 
-            implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${gs.jsonType}] =
+            implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`application/json`)
                 .flatMapWithInput { (httpEntity, byteString) =>
@@ -111,7 +111,7 @@ object AkkaHttpGenerator {
                 .flatMap(_ => _ => json => J.decodeJson(json).fold(_ => FastFuture.failed(Unmarshaller.NoContentException), FastFuture.successful))
             }
 
-            final val jsonStringUnmarshaller: FromStringUnmarshaller[${gs.jsonType}] = Unmarshaller.strict {
+            final val jsonStringUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
               case "" =>
                 throw Unmarshaller.NoContentException
               case data =>
@@ -156,8 +156,8 @@ object AkkaHttpGenerator {
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
           }
         """
-          (q"AkkaHttpImplicits", defn)
-        }
+        Target.pure((q"AkkaHttpImplicits", defn))
+      }
 
       case GetGeneratorSettings() =>
         Target.getGeneratorSettings

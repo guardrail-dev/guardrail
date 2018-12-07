@@ -27,7 +27,7 @@ object AkkaHttpServerGenerator {
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         for {
-          gs <- Target.getGeneratorSettings
+          _ <- Target.pure(())
           responseSuperType = Type.Name(s"${operationId}Response")
           responseSuperTerm = Term.Name(s"${operationId}Response")
 
@@ -99,25 +99,23 @@ object AkkaHttpServerGenerator {
           )
 
       case BuildTracingFields(operation, resourceName, tracing) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-            res <- if (tracing) {
-              for {
-                operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                   .map(splitOperationParts)
-                                                   .map(_._2),
-                                                 "Missing operationId")
-                label <- Target.fromOption(
-                  ScalaTracingLabel(operation)
-                    .map(Lit.String(_))
-                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                  "Missing client name"
-                )
-              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
-            } else Target.pure(None)
-          } yield res
-        }
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          res <- if (tracing) {
+            for {
+              operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                 .map(splitOperationParts)
+                                                 .map(_._2),
+                                               "Missing operationId")
+              label <- Target.fromOption(
+                ScalaTracingLabel(operation)
+                  .map(Lit.String(_))
+                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                "Missing client name"
+              )
+            } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+          } else Target.pure(None)
+        } yield res
 
       case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
@@ -525,9 +523,7 @@ object AkkaHttpServerGenerator {
                       parameters: ScalaParameters[ScalaLanguage]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
-        gs <- Target.getGeneratorSettings
-        _  <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        gs <- Target.getGeneratorSettings
+        _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)

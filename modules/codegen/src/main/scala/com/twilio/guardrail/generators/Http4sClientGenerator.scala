@@ -256,51 +256,49 @@ object Http4sClientGenerator {
           )
         }
 
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            // Placeholder for when more functions get logging
-            _ <- Target.pure(())
+        for {
+          // Placeholder for when more functions get logging
+          _ <- Target.pure(())
 
-            produces = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
-            consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
+          produces = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
+          consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
 
-            headerArgs = parameters.headerParams
-            pathArgs   = parameters.pathParams
-            qsArgs     = parameters.queryStringParams
-            bodyArgs   = parameters.bodyParams
-            formArgs   = parameters.formParams
+          headerArgs = parameters.headerParams
+          pathArgs   = parameters.pathParams
+          qsArgs     = parameters.queryStringParams
+          bodyArgs   = parameters.bodyParams
+          formArgs   = parameters.formParams
 
-            _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
+          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: ${pathArgs}")
 
-            // Generate the url with path, query parameters
-            urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
+          // Generate the url with path, query parameters
+          urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
-            _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
-            // Generate FormData arguments
-            formDataParams = generateFormDataParams(formArgs, consumes.contains("multipart/form-data"))
-            // Generate header arguments
-            headerParams = generateHeaderParams(headerArgs)
+          _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
+          // Generate FormData arguments
+          formDataParams = generateFormDataParams(formArgs, consumes.contains("multipart/form-data"))
+          // Generate header arguments
+          headerParams = generateHeaderParams(headerArgs)
 
-            tracingArgsPre = if (tracing)
-              List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
-            else List.empty
-            tracingArgsPost = if (tracing)
-              List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
-            else List.empty
-            extraImplicits = List.empty
+          tracingArgsPre = if (tracing)
+            List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
+          else List.empty
+          tracingArgsPost = if (tracing)
+            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
+          else List.empty
+          extraImplicits = List.empty
 
-            renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
-              tracingArgsPre,
-              tracingArgsPost,
-              pathArgs,
-              qsArgs,
-              formArgs,
-              bodyArgs,
-              headerArgs,
-              extraImplicits
-            )
-          } yield renderedClientOperation
-        }
+          renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+            tracingArgsPre,
+            tracingArgsPost,
+            pathArgs,
+            qsArgs,
+            formArgs,
+            bodyArgs,
+            headerArgs,
+            extraImplicits
+          )
+        } yield renderedClientOperation
 
       case GetImports(tracing) => Target.pure(List(q"import org.http4s.Status._"))
 
