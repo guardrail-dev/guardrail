@@ -47,18 +47,18 @@ object ScalaParameter {
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter[ScalaLanguage] = param match {
+  @deprecated("Use fromParameter instead", "0.41.2")
+  def fromParam(param: Term.Param): ScalaParameter[ScalaLanguage] = param match {
     case param @ Term.Param(_, name, decltype, _) =>
-      val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
+      val (tpe, required): (Type, Boolean) = decltype
         .flatMap({
-          case tpe @ t"Option[$inner]" =>
-            Some((tpe, inner, false))
-          case Type.ByName(tpe)   => Some((tpe, tpe, true))
-          case tpe @ Type.Name(_) => Some((tpe, tpe, true))
-          case _                  => None
+          case tpe @ t"Option[$_]" => Some((tpe, false))
+          case Type.ByName(tpe)    => Some((tpe, true))
+          case tpe @ Type.Name(_)  => Some((tpe, true))
+          case _                   => None
         })
-        .getOrElse((t"Nothing", t"Nothing", true))
-      new ScalaParameter[ScalaLanguage](None, param, Term.Name(name.value), RawParameterName(name.value), tpe, required, None, innerTpe == gs.fileType)
+        .getOrElse((t"Nothing", true))
+      new ScalaParameter[ScalaLanguage](None, param, Term.Name(name.value), RawParameterName(name.value), tpe, required, None, false)
   }
 
   def fromParameter(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Parameter => Target[ScalaParameter[ScalaLanguage]] = {
