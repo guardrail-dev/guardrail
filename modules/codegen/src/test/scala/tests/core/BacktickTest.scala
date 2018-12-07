@@ -95,13 +95,13 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
             Left(Left(e))
         }))
       }
-      def `dashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
-        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-        makeRequest(HttpMethods.GET, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[`dashy-class`](httpClient, req))
-      }
       def `postDashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
         val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
         makeRequest(HttpMethods.POST, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[`dashy-class`](httpClient, req))
+      }
+      def `dashy-op-id`(dashyParameter: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `dashy-class`] = {
+        val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+        makeRequest(HttpMethods.GET, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[`dashy-class`](httpClient, req))
       }
     }
     """

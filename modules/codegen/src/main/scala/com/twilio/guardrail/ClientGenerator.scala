@@ -38,7 +38,8 @@ object ClientGenerator {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       clients <- groupedRoutes.traverse({
-        case (className, routes) =>
+        case (className, unsortedRoutes) =>
+          val routes     = unsortedRoutes.sortBy(r => (r.path, r.method))
           val clientName = s"${className.lastOption.getOrElse("").capitalize}Client"
           def splitOperationParts(operationId: String): (List[String], String) = {
             val parts = operationId.split('.')
