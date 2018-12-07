@@ -52,61 +52,8 @@ object Common {
       imports                                                                                          = customImports ++ protocolImports ++ List(implicitsImport)
       utf8                                                                                             = java.nio.charset.Charset.availableCharsets.get("UTF-8")
 
-      protoOut = protocolElems
-        .map({
-          case EnumDefinition(_, _, _, cls, obj) =>
-            (List(
-               WriteTree(
-                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                 source"""
-              package ${buildPkgTerm(definitions)}
-                ..${imports}
-                $cls
-                $obj
-              """.syntax.getBytes(utf8)
-               )
-             ),
-             List.empty[Stat])
-
-          case ClassDefinition(_, _, cls, obj, _) =>
-            (List(
-               WriteTree(
-                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                 source"""
-              package ${buildPkgTerm(dtoComponents)}
-                ..${imports}
-                $cls
-                $obj
-              """.syntax.getBytes(utf8)
-               )
-             ),
-             List.empty[Stat])
-
-          case ADT(name, tpe, trt, obj) =>
-            val polyImports: Import = q"""import cats.syntax.either._"""
-
-            (
-              List(
-                WriteTree(
-                  resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
-                  source"""
-                    package ${buildPkgTerm(dtoComponents)}
-
-                    ..$imports
-                    $polyImports
-                    $trt
-                    $obj
-                  """.syntax.getBytes(utf8)
-                )
-              ),
-              List.empty[Stat]
-            )
-
-          case RandomType(_, _) =>
-            (List.empty, List.empty)
-        })
-        .foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
-      (protocolDefinitions, extraTypes) = protoOut
+      protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, definitions, dtoComponents, imports, _))
+      (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[Stat]))(_ |+| _)
 
       dtoHead :: dtoRest = dtoComponents
       dtoPkg = dtoRest.init

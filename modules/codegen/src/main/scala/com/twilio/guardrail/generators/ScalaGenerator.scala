@@ -6,6 +6,7 @@ import cats.~>
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import scala.meta._
+import java.nio.file.{ Path, Paths }
 
 object ScalaGenerator {
   object ScalaInterp extends (ScalaTerm[ScalaLanguage, ?] ~> Target) {
@@ -15,6 +16,8 @@ object ScalaGenerator {
       case x: Defn.Val if (x match { case q"implicit val $_: $_ = $_" => true; case _ => false }) => x
     }
     val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
+
+    val utf8 = java.nio.charset.Charset.availableCharsets.get("UTF-8")
 
     def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
 
@@ -210,8 +213,6 @@ object ScalaGenerator {
         )
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        val utf8 = java.nio.charset.Charset.availableCharsets.get("UTF-8")
-
         val dtoHead :: dtoRest = dtoComponents
         val dtoPkg = dtoRest.init
           .foldLeft[Term.Ref](Term.Name(dtoHead)) {
@@ -247,6 +248,62 @@ object ScalaGenerator {
             """.syntax.getBytes(utf8)
           )
         )
+      case WriteProtocolDefinition(outputPath, definitions, dtoComponents, imports, elem) =>
+        val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+        val buildPkgTerm: List[String] => Term.Ref =
+          _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        Target.pure(elem match {
+          case EnumDefinition(_, _, _, cls, obj) =>
+            (List(
+               WriteTree(
+                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                 source"""
+              package ${buildPkgTerm(definitions)}
+                ..${imports}
+                $cls
+                $obj
+              """.syntax.getBytes(utf8)
+               )
+             ),
+             List.empty[Stat])
+
+          case ClassDefinition(_, _, cls, obj, _) =>
+            (List(
+               WriteTree(
+                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                 source"""
+              package ${buildPkgTerm(dtoComponents)}
+                ..${imports}
+                $cls
+                $obj
+              """.syntax.getBytes(utf8)
+               )
+             ),
+             List.empty[Stat])
+
+          case ADT(name, tpe, trt, obj) =>
+            val polyImports: Import = q"""import cats.syntax.either._"""
+
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
+                  source"""
+                    package ${buildPkgTerm(dtoComponents)}
+
+                    ..$imports
+                    $polyImports
+                    $trt
+                    $obj
+                  """.syntax.getBytes(utf8)
+                )
+              ),
+              List.empty[Stat]
+            )
+
+          case RandomType(_, _) =>
+            (List.empty, List.empty)
+        })
     }
   }
 }

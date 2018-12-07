@@ -78,6 +78,12 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
     Free.inject[ScalaTerm[L, ?], F](
       WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
     )
+  def writeProtocolDefinition(outputPath: Path,
+                              definitions: List[String],
+                              dtoComponents: List[String],
+                              imports: List[L#Import],
+                              elem: StrictProtocolElems[L]): Free[F, (List[WriteTree], List[L#Statement])] =
+    Free.inject[ScalaTerm[L, ?], F](WriteProtocolDefinition(outputPath, definitions, dtoComponents, imports, elem))
 }
 object ScalaTerms {
   implicit def scalaTerm[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]): ScalaTerms[L, F] = new ScalaTerms[L, F]
