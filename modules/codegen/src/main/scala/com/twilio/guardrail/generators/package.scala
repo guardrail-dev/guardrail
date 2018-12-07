@@ -1,10 +1,10 @@
 package com.twilio.guardrail.generators.syntax
 import com.twilio.guardrail.generators._
-import _root_.scala.meta._
 import cats.data.NonEmptyList
 
 object scala {
   implicit class RichRawParameterName(parameter: RawParameterName) {
+    import _root_.scala.meta._
     def toLit: Lit.String = Lit.String(parameter.value)
   }
 
