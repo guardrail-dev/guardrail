@@ -1,8 +1,18 @@
 package com.twilio.guardrail
 package terms
 
-import _root_.io.swagger.models.{ ArrayModel, ModelImpl, Operation, Path, RefModel, Response }
-import _root_.io.swagger.models.parameters.Parameter
+import _root_.io.swagger.models.{ ArrayModel, Model, ModelImpl, Operation, Path, RefModel, Response }
+import _root_.io.swagger.models.parameters.{
+  BodyParameter,
+  CookieParameter,
+  FormParameter,
+  HeaderParameter,
+  Parameter,
+  PathParameter,
+  QueryParameter,
+  RefParameter,
+  SerializableParameter
+}
 import _root_.io.swagger.models.properties.{ ArrayProperty, Property, RefProperty }
 import cats.InjectK
 import cats.free.Free
@@ -15,6 +25,21 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
     Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation))
   def getParameterName(parameter: Parameter): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetParameterName(parameter))
+  def getBodyParameterSchema(parameter: BodyParameter): Free[F, Model] =
+    Free.inject[SwaggerTerm[L, ?], F](GetBodyParameterSchema(parameter))
+
+  def getHeaderParameterType(parameter: HeaderParameter): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetHeaderParameterType(parameter))
+  def getPathParameterType(parameter: PathParameter): Free[F, String]     = Free.inject[SwaggerTerm[L, ?], F](GetPathParameterType(parameter))
+  def getQueryParameterType(parameter: QueryParameter): Free[F, String]   = Free.inject[SwaggerTerm[L, ?], F](GetQueryParameterType(parameter))
+  def getCookieParameterType(parameter: CookieParameter): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetCookieParameterType(parameter))
+  def getFormParameterType(parameter: FormParameter): Free[F, String]     = Free.inject[SwaggerTerm[L, ?], F](GetFormParameterType(parameter))
+  def getRefParameterRef(parameter: RefParameter): Free[F, String]        = Free.inject[SwaggerTerm[L, ?], F](GetRefParameterRef(parameter))
+
+  def getSerializableParameterType(parameter: SerializableParameter): Free[F, String] =
+    Free.inject[SwaggerTerm[L, ?], F](GetSerializableParameterType(parameter))
+  def fallbackParameterHandler(parameter: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] =
+    Free.inject[SwaggerTerm[L, ?], F](FallbackParameterHandler(parameter))
+
   def getOperationId(operation: Operation): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetOperationId(operation))
   def getResponses(operationId: String, operation: Operation): Free[F, Map[String, Response]] =

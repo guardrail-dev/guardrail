@@ -1,8 +1,18 @@
 package com.twilio.guardrail
 package terms
 
-import _root_.io.swagger.models.{ ArrayModel, HttpMethod, ModelImpl, Operation, Path, RefModel, Response }
-import _root_.io.swagger.models.parameters.Parameter
+import _root_.io.swagger.models.{ ArrayModel, HttpMethod, Model, ModelImpl, Operation, Path, RefModel, Response }
+import _root_.io.swagger.models.parameters.{
+  BodyParameter,
+  CookieParameter,
+  FormParameter,
+  HeaderParameter,
+  Parameter,
+  PathParameter,
+  QueryParameter,
+  RefParameter,
+  SerializableParameter
+}
 import _root_.io.swagger.models.properties.{ ArrayProperty, Property, RefProperty }
 import cats.MonadError
 import cats.implicits._
@@ -27,6 +37,15 @@ sealed trait SwaggerTerm[L <: LA, T]
 case class ExtractOperations[L <: LA](paths: List[(String, Path)])                         extends SwaggerTerm[L, List[RouteMeta]]
 case class GetClassName[L <: LA](operation: Operation)                                     extends SwaggerTerm[L, List[String]]
 case class GetParameterName[L <: LA](parameter: Parameter)                                 extends SwaggerTerm[L, String]
+case class GetBodyParameterSchema[L <: LA](parameter: BodyParameter)                       extends SwaggerTerm[L, Model]
+case class GetHeaderParameterType[L <: LA](parameter: HeaderParameter)                     extends SwaggerTerm[L, String]
+case class GetPathParameterType[L <: LA](parameter: PathParameter)                         extends SwaggerTerm[L, String]
+case class GetQueryParameterType[L <: LA](parameter: QueryParameter)                       extends SwaggerTerm[L, String]
+case class GetCookieParameterType[L <: LA](parameter: CookieParameter)                     extends SwaggerTerm[L, String]
+case class GetFormParameterType[L <: LA](parameter: FormParameter)                         extends SwaggerTerm[L, String]
+case class GetSerializableParameterType[L <: LA](parameter: SerializableParameter)         extends SwaggerTerm[L, String]
+case class GetRefParameterRef[L <: LA](parameter: RefParameter)                            extends SwaggerTerm[L, String]
+case class FallbackParameterHandler[L <: LA](parameter: Parameter)                         extends SwaggerTerm[L, SwaggerUtil.ResolvedType[L]]
 case class GetOperationId[L <: LA](operation: Operation)                                   extends SwaggerTerm[L, String]
 case class GetResponses[L <: LA](operationId: String, operation: Operation)                extends SwaggerTerm[L, Map[String, Response]]
 case class GetSimpleRef[L <: LA](ref: RefModel)                                            extends SwaggerTerm[L, String]

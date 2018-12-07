@@ -56,6 +56,33 @@ object SwaggerGenerator {
       case GetParameterName(parameter) =>
         Target.fromOption(Option(parameter.getName()), "Parameter missing \"name\"")
 
+      case GetBodyParameterSchema(parameter) =>
+        Target.fromOption(Option(parameter.getSchema()), "Schema not specified")
+
+      case GetHeaderParameterType(parameter) =>
+        Target.fromOption(Option(parameter.getType()), s"Missing type")
+
+      case GetPathParameterType(parameter) =>
+        Target.fromOption(Option(parameter.getType()), s"Missing type")
+
+      case GetQueryParameterType(parameter) =>
+        Target.fromOption(Option(parameter.getType()), s"Missing type")
+
+      case GetCookieParameterType(parameter) =>
+        Target.fromOption(Option(parameter.getType()), s"Missing type")
+
+      case GetFormParameterType(parameter) =>
+        Target.fromOption(Option(parameter.getType()), s"Missing type")
+
+      case GetSerializableParameterType(parameter) =>
+        Target.fromOption(Option(parameter.getType()), s"Missing type")
+
+      case GetRefParameterRef(parameter) =>
+        Target.fromOption(Option(parameter.getSimpleRef()), "$ref not defined")
+
+      case FallbackParameterHandler(parameter) =>
+        Target.raiseError(s"Unsure how to handle ${parameter}")
+
       case GetOperationId(operation) =>
         Target.fromOption(Option(operation.getOperationId())
                             .map(splitOperationParts)
