@@ -38,37 +38,26 @@ object ClientGenerator {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       clients <- groupedRoutes.traverse({
-        case (pkg, routes) =>
+        case (className, routes) =>
+          val clientName = s"${className.lastOption.getOrElse("").capitalize}Client"
+          def splitOperationParts(operationId: String): (List[String], String) = {
+            val parts = operationId.split('.')
+            (parts.drop(1).toList, parts.last)
+          }
+
           for {
-            responseDefinitions <- routes.flatTraverse {
-              case RouteMeta(path, method, operation) =>
+            responseClientPair <- routes.traverse {
+              case route @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responses           <- Http4sHelper.getResponsesF(operationId, operation, protocolElems)
+                  responses           <- Http4sHelper.getResponsesF[L, F](operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
-                } yield responseDefinitions
+                  parameters          <- route.getParametersF[L, F](protocolElems)
+                  clientOp            <- generateClientOperation(className, context.tracing, parameters)(route, operationId, responses)
+                } yield (responseDefinitions, clientOp)
             }
-            clientOperations <- routes.traverse({
-              case route @ RouteMeta(pathStr, httpMethod, operation) =>
-                def splitOperationParts(operationId: String): (List[String], String) = {
-                  val parts = operationId.split('.')
-                  (parts.drop(1).toList, parts.last)
-                }
-
-                val httpMethodStr: String = httpMethod.toString.toLowerCase
-                val methodName = Option(operation.getOperationId())
-                  .map(splitOperationParts)
-                  .map(_._2)
-                  .getOrElse(s"$httpMethodStr $pathStr")
-
-                for {
-                  responses  <- Http4sHelper.getResponsesF[L, F](methodName, operation, protocolElems)
-                  parameters <- route.getParametersF[L, F](protocolElems)
-                  clientOp   <- generateClientOperation(pkg, context.tracing, parameters)(route, methodName, responses)
-                } yield clientOp
-            })
-            clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
-            tracingName = Option(pkg.mkString("-")).filterNot(_.isEmpty)
+            (responseDefinitions, clientOperations) = responseClientPair.unzip
+            tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
             ctorArgs  <- clientClsArgs(tracingName, schemes, host, context.tracing)
             companion <- buildCompanion(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
             client <- buildClient(
@@ -83,7 +72,7 @@ object ClientGenerator {
               context.tracing
             )
           } yield {
-            Client[L](pkg, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), companion, client, responseDefinitions)
+            Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), companion, client, responseDefinitions.flatten)
           }
       })
     } yield Clients[L](clients)

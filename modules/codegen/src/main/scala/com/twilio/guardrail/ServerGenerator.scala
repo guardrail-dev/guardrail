@@ -55,19 +55,26 @@ object ServerGenerator {
           val handlerName =
             formatHandlerName(className.lastOption.getOrElse(""))
           for {
-            responseDefinitions <- routes.flatTraverse {
-              case sr @ RouteMeta(path, method, operation) =>
+            responseServerPair <- routes.traverse {
+              case route @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
                   responses           <- Http4sHelper.getResponsesF(operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
-                } yield responseDefinitions
+                  parameters          <- route.getParametersF[L, F](protocolElems)
+                  tracingField        <- buildTracingFields(operation, className, context.tracing)
+                } yield (responseDefinitions, (tracingField, route))
             }
-            tracingFields    <- routes.traverse { case RouteMeta(_, _, operation) => buildTracingFields(operation, className, context.tracing) }
-            renderedRoutes   <- generateRoutes(resourceName, basePath, tracingFields.zip(routes), protocolElems)
+            (responseDefinitions, serverOperations) = responseServerPair.unzip
+            renderedRoutes   <- generateRoutes(resourceName, basePath, serverOperations, protocolElems)
             handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
-            classSrc         <- renderClass(resourceName, handlerName, renderedRoutes.routes, extraRouteParams, responseDefinitions, renderedRoutes.supportDefinitions)
+            classSrc <- renderClass(resourceName,
+                                    handlerName,
+                                    renderedRoutes.routes,
+                                    extraRouteParams,
+                                    responseDefinitions.flatten,
+                                    renderedRoutes.supportDefinitions)
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc +: classSrc)
           }
