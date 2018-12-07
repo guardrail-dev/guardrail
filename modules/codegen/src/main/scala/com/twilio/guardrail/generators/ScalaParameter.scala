@@ -39,7 +39,7 @@ object ScalaParameter {
   def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
     fromParam(RawParameterName(argName))(param)
   def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = param match {
-    case param @ Term.Param(mods, name, decltype, default) =>
+    case param @ Term.Param(_, name, decltype, _) =>
       val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
         .flatMap({
           case tpe @ t"Option[$inner]" =>
