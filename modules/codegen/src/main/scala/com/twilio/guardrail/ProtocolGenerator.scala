@@ -249,11 +249,14 @@ object ProtocolGenerator {
     } yield res
   }
 
-  def plainTypeAlias[L <: LA, F[_]](clsName: String)(implicit A: AliasProtocolTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ProtocolElems[L]] = {
+  def plainTypeAlias[L <: LA, F[_]](
+      clsName: String
+  )(implicit A: AliasProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
     import F._
+    import Sc._
     for {
-      gs  <- getGeneratorSettings()
-      res <- typeAlias[L, F](clsName, gs.jsonType)
+      tpe <- jsonType()
+      res <- typeAlias[L, F](clsName, tpe)
     } yield res
   }
 
