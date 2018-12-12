@@ -298,12 +298,6 @@ object CirceProtocolGenerator {
     }
   }
 
-  object AliasProtocolTermInterp extends (AliasProtocolTerm[ScalaLanguage, ?] ~> Target) {
-    def apply[T](term: AliasProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
-      case _ => ???
-    }
-  }
-
   object ArrayProtocolTermInterp extends (ArrayProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ArrayProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>

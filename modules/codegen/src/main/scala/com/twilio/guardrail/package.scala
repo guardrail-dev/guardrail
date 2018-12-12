@@ -68,13 +68,12 @@ package guardrail {
 }
 
 package object guardrail {
-  type DefinitionPM[T]     = EitherK[ProtocolSupportTerm[ScalaLanguage, ?], ModelProtocolTerm[ScalaLanguage, ?], T]
-  type DefinitionPME[T]    = EitherK[EnumProtocolTerm[ScalaLanguage, ?], DefinitionPM, T]
-  type DefinitionPMEA[T]   = EitherK[AliasProtocolTerm[ScalaLanguage, ?], DefinitionPME, T]
-  type DefinitionPMEAA[T]  = EitherK[ArrayProtocolTerm[ScalaLanguage, ?], DefinitionPMEA, T]
-  type DefinitionPMEAAP[T] = EitherK[PolyProtocolTerm[ScalaLanguage, ?], DefinitionPMEAA, T]
+  type DefinitionPM[T]    = EitherK[ProtocolSupportTerm[ScalaLanguage, ?], ModelProtocolTerm[ScalaLanguage, ?], T]
+  type DefinitionPME[T]   = EitherK[EnumProtocolTerm[ScalaLanguage, ?], DefinitionPM, T]
+  type DefinitionPMEA[T]  = EitherK[ArrayProtocolTerm[ScalaLanguage, ?], DefinitionPME, T]
+  type DefinitionPMEAP[T] = EitherK[PolyProtocolTerm[ScalaLanguage, ?], DefinitionPMEA, T]
 
-  type ModelInterpreters[T] = DefinitionPMEAAP[T]
+  type ModelInterpreters[T] = DefinitionPMEAP[T]
 
   type FrameworkC[T]   = EitherK[ClientTerm[ScalaLanguage, ?], ModelInterpreters, T]
   type FrameworkCS[T]  = EitherK[ServerTerm[ScalaLanguage, ?], FrameworkC, T]

@@ -6,14 +6,7 @@ import cats.free.Free
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
-import com.twilio.guardrail.protocol.terms.protocol.{
-  AliasProtocolTerms,
-  ArrayProtocolTerms,
-  EnumProtocolTerms,
-  ModelProtocolTerms,
-  PolyProtocolTerms,
-  ProtocolSupportTerms
-}
+import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
@@ -31,7 +24,7 @@ object Common {
                                   outputPath: Path,
                                   pkgName: List[String],
                                   dtoPackage: List[String],
-                                  customImports: List[L#Import])(implicit A: AliasProtocolTerms[L, F],
+                                  customImports: List[L#Import])(implicit
                                                                  C: ClientTerms[L, F],
                                                                  R: ArrayProtocolTerms[L, F],
                                                                  E: EnumProtocolTerms[L, F],

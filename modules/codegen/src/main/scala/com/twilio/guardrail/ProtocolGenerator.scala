@@ -237,7 +237,7 @@ object ProtocolGenerator {
   }
 
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Model)(
-      implicit A: AliasProtocolTerms[L, F],
+      implicit
       F: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
@@ -264,7 +264,7 @@ object ProtocolGenerator {
 
   def plainTypeAlias[L <: LA, F[_]](
       clsName: String
-  )(implicit A: AliasProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
+  )(implicit F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
     import F._
     import Sc._
     for {
@@ -273,14 +273,11 @@ object ProtocolGenerator {
     } yield res
   }
 
-  def typeAlias[L <: LA, F[_]](clsName: String, tpe: L#Type)(implicit A: AliasProtocolTerms[L, F]): Free[F, ProtocolElems[L]] = {
-    import A._
+  def typeAlias[L <: LA, F[_]](clsName: String, tpe: L#Type): Free[F, ProtocolElems[L]] =
     Free.pure(RandomType[L](clsName, tpe))
-  }
 
   def fromArray[L <: LA, F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta[L]])(
       implicit R: ArrayProtocolTerms[L, F],
-      A: AliasProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, F],
@@ -349,7 +346,6 @@ object ProtocolGenerator {
   def fromSwagger[L <: LA, F[_]](swagger: Swagger)(
       implicit E: EnumProtocolTerms[L, F],
       M: ModelProtocolTerms[L, F],
-      A: AliasProtocolTerms[L, F],
       R: ArrayProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
       F: FrameworkTerms[L, F],

@@ -12,13 +12,12 @@ import SwaggerGenerator._
 import AkkaHttpGenerator._
 
 object AkkaHttp extends FunctionK[CodegenApplication, Target] {
-  val interpDefinitionPM: DefinitionPM ~> Target         = ProtocolSupportTermInterp or ModelProtocolTermInterp
-  val interpDefinitionPME: DefinitionPME ~> Target       = EnumProtocolTermInterp or interpDefinitionPM
-  val interpDefinitionPMEA: DefinitionPMEA ~> Target     = AliasProtocolTermInterp or interpDefinitionPME
-  val interpDefinitionPMEAA: DefinitionPMEAA ~> Target   = ArrayProtocolTermInterp or interpDefinitionPMEA
-  val interpDefinitionPMEAAP: DefinitionPMEAAP ~> Target = PolyProtocolTermInterp or interpDefinitionPMEAA
+  val interpDefinitionPM: DefinitionPM ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
+  val interpDefinitionPME: DefinitionPME ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
+  val interpDefinitionPMEA: DefinitionPMEA ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME
+  val interpDefinitionPMEAP: DefinitionPMEAP ~> Target = PolyProtocolTermInterp or interpDefinitionPMEA
 
-  val interpModel: ModelInterpreters ~> Target = interpDefinitionPMEAAP
+  val interpModel: ModelInterpreters ~> Target = interpDefinitionPMEAP
 
   val interpFrameworkC: FrameworkC ~> Target     = ClientTermInterp or interpModel
   val interpFrameworkCS: FrameworkCS ~> Target   = ServerTermInterp or interpFrameworkC
