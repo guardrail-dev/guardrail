@@ -159,9 +159,6 @@ object AkkaHttpGenerator {
         Target.pure((q"AkkaHttpImplicits", defn))
       }
 
-      case GetGeneratorSettings() =>
-        Target.getGeneratorSettings
-
       case LookupStatusCode(key) =>
         key match {
           case "100" => Target.pure((100, q"Continue"))

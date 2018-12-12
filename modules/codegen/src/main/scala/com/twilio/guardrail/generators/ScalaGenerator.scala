@@ -46,7 +46,7 @@ object ScalaGenerator {
             Target.raiseError[Term.Select](s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
-      case JsonType() => Target.getGeneratorSettings.map(_.jsonType)
+      case JsonType() => Target.pure(t"io.circe.Json")
       case EmbedArray(tpe) =>
         tpe match {
           case SwaggerUtil.Deferred(tpe) =>

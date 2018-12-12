@@ -72,9 +72,6 @@ object Http4sGenerator {
           (q"Http4sImplicits", defn)
         })
 
-      case GetGeneratorSettings() =>
-        Target.getGeneratorSettings
-
       case LookupStatusCode(key) =>
         key match {
           case "100" => Target.pure((100, q"Continue"))
