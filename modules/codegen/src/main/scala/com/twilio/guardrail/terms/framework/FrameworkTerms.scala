@@ -13,6 +13,10 @@ class FrameworkTerms[L <: LA, F[_]](implicit I: InjectK[FrameworkTerm[L, ?], F])
     Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImplicits[L]())
   def lookupStatusCode(key: String): Free[F, (Int, L#TermName)] =
     Free.inject[FrameworkTerm[L, ?], F](LookupStatusCode(key))
+  def fileType(format: Option[String]): Free[F, L#Type] =
+    Free.inject[FrameworkTerm[L, ?], F](FileType(format))
+  def objectType(format: Option[String]): Free[F, L#Type] =
+    Free.inject[FrameworkTerm[L, ?], F](ObjectType(format))
 }
 
 object FrameworkTerms {

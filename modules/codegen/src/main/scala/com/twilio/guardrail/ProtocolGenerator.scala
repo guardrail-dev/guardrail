@@ -257,7 +257,7 @@ object ProtocolGenerator {
     for {
       tpe <- model
         .flatMap(model => Option(model.getType))
-        .fold[Free[F, L#Type]](jsonType())(
+        .fold[Free[F, L#Type]](objectType(None))(
           raw => SwaggerUtil.typeNameF[L, F](raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
         )
       res <- typeAlias[L, F](clsName, tpe)
@@ -270,7 +270,7 @@ object ProtocolGenerator {
     import F._
     import Sc._
     for {
-      tpe <- jsonType()
+      tpe <- objectType(None)
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
   }
@@ -283,6 +283,7 @@ object ProtocolGenerator {
   def fromArray[L <: LA, F[_]](clsName: String, arr: ArrayModel, concreteTypes: List[PropMeta[L]])(
       implicit R: ArrayProtocolTerms[L, F],
       A: AliasProtocolTerms[L, F],
+      F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]

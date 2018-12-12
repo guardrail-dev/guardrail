@@ -8,8 +8,9 @@ import cats.data.{ EitherK, EitherT }
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.extract.{ Default, ScalaType }
-import com.twilio.guardrail.generators.{ GeneratorSettings, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
+import com.twilio.guardrail.generators.{ AkkaHttpGenerator, GeneratorSettings, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
 import java.util.{ Map => JMap }
@@ -138,7 +139,7 @@ object SwaggerUtil {
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Model](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ResolvedType[L]] = {
+    def apply[T <: Model](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
       import Sc._
       import Sw._
       model match {
@@ -168,14 +169,14 @@ object SwaggerUtil {
   }
 
   def modelMetaType[T <: Model](model: T, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] =
-    new ModelMetaTypePartiallyApplied[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]]()
+    new ModelMetaTypePartiallyApplied[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], ?]]()
       .apply(model)
       .value
-      .foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
+      .foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(AkkaHttpGenerator.FrameworkInterp)))
   def modelMetaTypeF[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
     new ModelMetaTypePartiallyApplied[L, F]()
 
-  def extractConcreteTypes[L <: LA, F[_]](definitions: List[(String, Model)])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, List[PropMeta[L]]] = {
+  def extractConcreteTypes[L <: LA, F[_]](definitions: List[(String, Model)])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
@@ -203,8 +204,10 @@ object SwaggerUtil {
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeNameF[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F]): Free[F, L#Type] = {
+  def typeNameF[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F],
+                                                                                                     F: FrameworkTerms[L, F]): Free[F, L#Type] = {
     import Sc._
+    import F._
 
     def log(fmt: Option[String], t: L#Type): L#Type = {
       fmt.foreach { fmt =>
@@ -244,14 +247,8 @@ object SwaggerUtil {
       )
   }
 
-  def typeName(typeName: String, format: Option[String], customType: Option[String], gs: GeneratorSettings[ScalaLanguage]): Type =
-    Target.unsafeExtract(
-      typeNameF[ScalaLanguage, ScalaTerm[ScalaLanguage, ?]](typeName, format, customType)
-        .foldMap(ScalaGenerator.ScalaInterp),
-      gs
-    )
-
-  def propMetaF[L <: LA, F[_]](property: Property)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ResolvedType[L]] = {
+  def propMetaF[L <: LA, F[_]](property: Property)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
+    import F._
     import Sc._
     import Sw._
     property match {
@@ -278,7 +275,7 @@ object SwaggerUtil {
           }
         } yield res
       case o: ObjectProperty =>
-        jsonType().map(Resolved[L](_, None, None)) // TODO: o.getProperties
+        objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
       case r: RefProperty =>
         getSimpleRefP(r).map(Deferred[L](_))
       case b: BooleanProperty =>
@@ -303,7 +300,7 @@ object SwaggerUtil {
       case d: DecimalProperty =>
         typeNameF[L, F]("number", None, ScalaType(d)).map(Resolved[L](_, None, None))
       case u: UntypedProperty =>
-        jsonType().map(Resolved[L](_, None, None))
+        objectType(None).map(Resolved[L](_, None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
         typeNameF[L, F]("integer", None, ScalaType(p)).map(Resolved[L](_, None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
@@ -317,8 +314,8 @@ object SwaggerUtil {
 
   @deprecated("Use propMetaF", "0.41.2")
   def propMeta(property: Property, gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] = {
-    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
-    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)
+    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], T]
+    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(AkkaHttpGenerator.FrameworkInterp))
     propMetaF[ScalaLanguage, Program](property).value
       .foldMap(interp)
   }
@@ -344,7 +341,8 @@ object SwaggerUtil {
 
   def getResponseTypeF[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
       implicit Sc: ScalaTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: SwaggerTerms[L, F],
+      F: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
     import Sc._
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {

@@ -18,6 +18,9 @@ import scala.meta._
 object Http4sGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
+      case FileType(format)   => Target.pure(format.fold[Type](t"java.io.File")(Type.Name(_)))
+      case ObjectType(format) => Target.pure(t"io.circe.Json")
+
       case GetFrameworkImports(tracing) =>
         Target.pure(
           List(
