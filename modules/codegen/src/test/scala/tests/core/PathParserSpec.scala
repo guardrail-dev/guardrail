@@ -59,7 +59,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     case (str, expected) =>
       test(s"Server ${str}") {
         val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args), defaults.akkaGeneratorSettings)
-        gen.toString shouldBe (expected.toString)
+        gen.toString shouldBe ((expected.toString))
       }
   }
 
@@ -85,12 +85,12 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     }
     qsValueOnly.parseOnly("").either.isLeft shouldBe true
     qsValueOnly.parseOnly("a=b").either.isLeft shouldBe true
-    qsValueOnly.parseOnly("=").either.right.value shouldBe ("", "")
-    qsValueOnly.parseOnly("=b").either.right.value shouldBe ("", "b")
+    qsValueOnly.parseOnly("=").either.right.value shouldBe (("", ""))
+    qsValueOnly.parseOnly("=b").either.right.value shouldBe (("", "b"))
     staticQSArg.parseOnly("=b").either.isLeft shouldBe true
-    staticQSArg.parseOnly("a").either.right.value shouldBe ("a", "")
-    staticQSArg.parseOnly("a=").either.right.value shouldBe ("a", "")
-    staticQSArg.parseOnly("a=b").either.right.value shouldBe ("a", "b")
+    staticQSArg.parseOnly("a").either.right.value shouldBe (("a", ""))
+    staticQSArg.parseOnly("a=").either.right.value shouldBe (("a", ""))
+    staticQSArg.parseOnly("a=b").either.right.value shouldBe (("a", "b"))
     staticQSTerm.parseOnly("a").either.right.value should matchStructure(q""" parameter("a").require(_ == "") """)
     staticQSTerm.parseOnly("a=b").either.right.value should matchStructure(q""" parameter("a").require(_ == "b") """)
     staticQSTerm.parseOnly("=b").either.right.value should matchStructure(q""" parameter("").require(_ == "b") """)
