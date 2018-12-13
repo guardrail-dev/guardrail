@@ -46,7 +46,7 @@ object ScalaParameter {
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParameterF[L <: LA, F[_]](
+  def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Parameter => Free[F, ScalaParameter[L]] = { parameter =>
     import Fw._
@@ -63,7 +63,7 @@ object ScalaParameter {
     def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
       import _root_.io.swagger.models.parameters._
 
-      def getDefaultF[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
+      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
         Option(p.getType)
           .flatTraverse[Free[F, ?], L#Term]({ _type =>
             val fmt = Option(p.getFormat)
@@ -86,35 +86,35 @@ object ScalaParameter {
 
       param match {
         case x: BodyParameter =>
-          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaTypeF[L, F](x))
+          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
 
         case x: HeaderParameter =>
           getHeaderParameterType(x).flatMap(
-            tpeName => (SwaggerUtil.typeNameF[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefaultF(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+            tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
           )
 
         case x: PathParameter =>
           getPathParameterType(x)
             .flatMap(
-              tpeName => (SwaggerUtil.typeNameF[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefaultF(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
             )
 
         case x: QueryParameter =>
           getQueryParameterType(x)
             .flatMap(
-              tpeName => (SwaggerUtil.typeNameF[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefaultF(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
             )
 
         case x: CookieParameter =>
           getCookieParameterType(x)
             .flatMap(
-              tpeName => (SwaggerUtil.typeNameF[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefaultF(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
             )
 
         case x: FormParameter =>
           getFormParameterType(x)
             .flatMap(
-              tpeName => (SwaggerUtil.typeNameF[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefaultF(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
             )
 
         case r: RefParameter =>
@@ -123,7 +123,7 @@ object ScalaParameter {
 
         case x: SerializableParameter =>
           getSerializableParameterType(x)
-            .flatMap(tpeName => SwaggerUtil.typeNameF[L, F](tpeName, Option(x.getFormat()), ScalaType(x)).map(SwaggerUtil.Resolved[L](_, None, None)))
+            .flatMap(tpeName => SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)).map(SwaggerUtil.Resolved[L](_, None, None)))
 
         case x =>
           fallbackParameterHandler(x)
@@ -132,7 +132,7 @@ object ScalaParameter {
 
     for {
       meta     <- paramMeta(parameter)
-      resolved <- SwaggerUtil.ResolvedType.resolveF[L, F](meta, protocolElems)
+      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
 
       required = parameter.getRequired()
@@ -181,12 +181,12 @@ object ScalaParameter {
     }
   }
 
-  def fromParametersF[L <: LA, F[_]](
+  def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Parameter] => Free[F, List[ScalaParameter[L]]] = { params =>
     import Sc._
     for {
-      parameters <- params.traverse(fromParameterF(protocolElems))
+      parameters <- params.traverse(fromParameter(protocolElems))
       counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
       result <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>

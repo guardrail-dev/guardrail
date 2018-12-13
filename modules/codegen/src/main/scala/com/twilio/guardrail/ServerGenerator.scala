@@ -59,9 +59,9 @@ object ServerGenerator {
               case route @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responses           <- Http4sHelper.getResponsesF(operationId, operation, protocolElems)
+                  responses           <- Http4sHelper.getResponses(operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
-                  parameters          <- route.getParametersF[L, F](protocolElems)
+                  parameters          <- route.getParameters[L, F](protocolElems)
                   tracingField        <- buildTracingFields(operation, className, context.tracing)
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }

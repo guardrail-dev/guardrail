@@ -28,11 +28,11 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       .map(_.asScala.toList)
   }
 
-  def getParametersF[L <: LA, F[_]](
+  def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
     parameters
-      .fold(Free.pure[F, List[ScalaParameter[L]]](List.empty))(ScalaParameter.fromParametersF(protocolElems))
+      .fold(Free.pure[F, List[ScalaParameter[L]]](List.empty))(ScalaParameter.fromParameters(protocolElems))
       .map(new ScalaParameters[L](_))
 }
 

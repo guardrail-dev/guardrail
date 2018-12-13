@@ -20,7 +20,7 @@ object Response {
 }
 class Responses[L <: LA](val value: List[Response[L]])
 object Http4sHelper {
-  def getResponsesF[L <: LA, F[_]](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])(
+  def getResponses[L <: LA, F[_]](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
@@ -38,8 +38,8 @@ object Http4sHelper {
               (statusCode, statusCodeName) = httpCode
               valueType <- Option(resp.getSchema).traverse { prop =>
                 for {
-                  meta     <- SwaggerUtil.propMetaF[L, F](prop)
-                  resolved <- SwaggerUtil.ResolvedType.resolveF[L, F](meta, protocolElems)
+                  meta     <- SwaggerUtil.propMeta[L, F](prop)
+                  resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield (baseType, baseDefaultValue)
               }
@@ -52,7 +52,7 @@ object Http4sHelper {
   def getResponses(operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Responses[ScalaLanguage]] = {
     type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], T]
     val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(Http4sGenerator.FrameworkInterp))
-    getResponsesF[ScalaLanguage, Program](operationId, operation, protocolElems)
+    getResponses[ScalaLanguage, Program](operationId, operation, protocolElems)
       .foldMap(interp)
   }
 

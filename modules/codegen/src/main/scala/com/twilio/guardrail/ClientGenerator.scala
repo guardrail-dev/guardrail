@@ -50,9 +50,9 @@ object ClientGenerator {
               case route @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responses           <- Http4sHelper.getResponsesF[L, F](operationId, operation, protocolElems)
+                  responses           <- Http4sHelper.getResponses[L, F](operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
-                  parameters          <- route.getParametersF[L, F](protocolElems)
+                  parameters          <- route.getParameters[L, F](protocolElems)
                   clientOp            <- generateClientOperation(className, context.tracing, parameters)(route, operationId, responses)
                 } yield (responseDefinitions, clientOp)
             }

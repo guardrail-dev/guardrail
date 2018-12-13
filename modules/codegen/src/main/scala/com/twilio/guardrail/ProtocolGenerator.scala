@@ -81,7 +81,7 @@ object ProtocolGenerator {
 
     for {
       enum <- extractEnum(swagger)
-      tpe  <- SwaggerUtil.typeNameF(tpeName, Option(swagger.getFormat()), ScalaType(swagger))
+      tpe  <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger))
       res  <- enum.traverse(validProg(_, tpe))
     } yield res
   }
@@ -136,7 +136,7 @@ object ProtocolGenerator {
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
-          SwaggerUtil.propMetaF[L, F](prop).flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _))
+          SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _))
       })
       terms = params.map(_.term)
       definition <- renderSealedTrait(hierarchy.name, terms, discriminator, parents)
@@ -184,7 +184,7 @@ object ProtocolGenerator {
           needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
           params <- props.traverse({
             case (name, prop) =>
-              SwaggerUtil.propMetaF[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _))
+              SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _))
           })
           interfacesCls = interfaces.map(_.getSimpleRef)
           tpe <- parseTypeName(clsName)
@@ -222,7 +222,7 @@ object ProtocolGenerator {
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
-          SwaggerUtil.propMetaF[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _))
+          SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _))
       })
       terms = params.map(_.term)
       defn <- renderDTOClass(clsName, terms, parents)
@@ -256,7 +256,7 @@ object ProtocolGenerator {
       tpe <- model
         .flatMap(model => Option(model.getType))
         .fold[Free[F, L#Type]](objectType(None))(
-          raw => SwaggerUtil.typeNameF[L, F](raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
+          raw => SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
         )
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
@@ -286,7 +286,7 @@ object ProtocolGenerator {
     import P._
     import R._
     for {
-      deferredTpe <- SwaggerUtil.modelMetaTypeF(arr)
+      deferredTpe <- SwaggerUtil.modelMetaType(arr)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
       ret         <- typeAlias[L, F](clsName, tpe)
     } yield ret

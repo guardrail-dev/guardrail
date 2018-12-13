@@ -83,7 +83,7 @@ object SwaggerUtil {
         }
     }
 
-    def resolveF[L <: LA, F[_]](
+    def resolve[L <: LA, F[_]](
         value: ResolvedType[L],
         protocolElems: List[StrictProtocolElems[L]]
     )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Resolved[L]] = {
@@ -143,7 +143,7 @@ object SwaggerUtil {
         case arr: ArrayModel =>
           for {
             items <- getItems(arr)
-            meta  <- propMetaF[L, F](items)
+            meta  <- propMeta[L, F](items)
             res <- meta match {
               case Resolved(inner, dep, default) =>
                 (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _))
@@ -155,18 +155,13 @@ object SwaggerUtil {
         case impl: ModelImpl =>
           for {
             tpeName <- getType(impl)
-            tpe     <- typeNameF[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
+            tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
           } yield Resolved[L](tpe, None, None)
       }
     }
   }
 
-  def modelMetaType[T <: Model](model: T): Target[ResolvedType[ScalaLanguage]] =
-    new ModelMetaTypePartiallyApplied[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], ?]]()
-      .apply(model)
-      .value
-      .foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(AkkaHttpGenerator.FrameworkInterp)))
-  def modelMetaTypeF[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
+  def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
     new ModelMetaTypePartiallyApplied[L, F]()
 
   def extractConcreteTypes[L <: LA, F[_]](definitions: List[(String, Model)])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
@@ -184,7 +179,7 @@ object SwaggerUtil {
           } yield (clsName, resolvedType)
         case (clsName, definition) =>
           SwaggerUtil
-            .modelMetaTypeF[L, F](definition)
+            .modelMetaType[L, F](definition)
             .value
             .map(x => (clsName, x))
       }
@@ -197,8 +192,8 @@ object SwaggerUtil {
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeNameF[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F],
-                                                                                                     F: FrameworkTerms[L, F]): Free[F, L#Type] = {
+  def typeName[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F],
+                                                                                                    F: FrameworkTerms[L, F]): Free[F, L#Type] = {
     import Sc._
     import F._
 
@@ -240,7 +235,7 @@ object SwaggerUtil {
       )
   }
 
-  def propMetaF[L <: LA, F[_]](property: Property)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
+  def propMeta[L <: LA, F[_]](property: Property)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
     import F._
     import Sc._
     import Sw._
@@ -248,7 +243,7 @@ object SwaggerUtil {
       case p: ArrayProperty =>
         for {
           items <- getItemsP(p)
-          rec   <- propMetaF[L, F](items)
+          rec   <- propMeta[L, F](items)
           res <- rec match {
             case Resolved(inner, dep, default) =>
               (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _): ResolvedType[L])
@@ -259,7 +254,7 @@ object SwaggerUtil {
         } yield res
       case m: MapProperty =>
         for {
-          rec <- propMetaF[L, F](m.getAdditionalProperties)
+          rec <- propMeta[L, F](m.getAdditionalProperties)
           res <- rec match {
             case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
             case x: DeferredMap[L]       => embedMap(x)
@@ -272,34 +267,34 @@ object SwaggerUtil {
       case r: RefProperty =>
         getSimpleRefP(r).map(Deferred[L](_))
       case b: BooleanProperty =>
-        (typeNameF[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+        (typeName[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
       case s: StringProperty =>
-        (typeNameF[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
+        (typeName[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
           .mapN(Resolved[L](_, None, _))
 
       case d: DateProperty =>
-        typeNameF[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
+        typeName[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
       case d: DateTimeProperty =>
-        typeNameF[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
+        typeName[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
 
       case l: LongProperty =>
-        (typeNameF[L, F]("integer", Some("int64"), ScalaType(l)), Default(l).extract[Long].traverse(litLong(_))).mapN(Resolved[L](_, None, _))
+        (typeName[L, F]("integer", Some("int64"), ScalaType(l)), Default(l).extract[Long].traverse(litLong(_))).mapN(Resolved[L](_, None, _))
       case i: IntegerProperty =>
-        (typeNameF[L, F]("integer", Some("int32"), ScalaType(i)), Default(i).extract[Int].traverse(litInt(_))).mapN(Resolved[L](_, None, _))
+        (typeName[L, F]("integer", Some("int32"), ScalaType(i)), Default(i).extract[Int].traverse(litInt(_))).mapN(Resolved[L](_, None, _))
       case f: FloatProperty =>
-        (typeNameF[L, F]("number", Some("float"), ScalaType(f)), Default(f).extract[Float].traverse(litFloat(_))).mapN(Resolved[L](_, None, _))
+        (typeName[L, F]("number", Some("float"), ScalaType(f)), Default(f).extract[Float].traverse(litFloat(_))).mapN(Resolved[L](_, None, _))
       case d: DoubleProperty =>
-        (typeNameF[L, F]("number", Some("double"), ScalaType(d)), Default(d).extract[Double].traverse(litDouble(_))).mapN(Resolved[L](_, None, _))
+        (typeName[L, F]("number", Some("double"), ScalaType(d)), Default(d).extract[Double].traverse(litDouble(_))).mapN(Resolved[L](_, None, _))
       case d: DecimalProperty =>
-        typeNameF[L, F]("number", None, ScalaType(d)).map(Resolved[L](_, None, None))
+        typeName[L, F]("number", None, ScalaType(d)).map(Resolved[L](_, None, None))
       case u: UntypedProperty =>
         objectType(None).map(Resolved[L](_, None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
-        typeNameF[L, F]("integer", None, ScalaType(p)).map(Resolved[L](_, None, None))
+        typeName[L, F]("integer", None, ScalaType(p)).map(Resolved[L](_, None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
-        typeNameF[L, F]("number", None, ScalaType(p)).map(Resolved[L](_, None, None))
+        typeName[L, F]("number", None, ScalaType(p)).map(Resolved[L](_, None, None))
       case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
-        typeNameF[L, F]("string", None, ScalaType(p)).map(Resolved[L](_, None, None))
+        typeName[L, F]("string", None, ScalaType(p)).map(Resolved[L](_, None, None))
       case x =>
         fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
     }
@@ -324,7 +319,7 @@ object SwaggerUtil {
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.map(_.toString).exists(responses.containsKey)
 
-  def getResponseTypeF[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
+  def getResponseType[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],
       F: FrameworkTerms[L, F]
@@ -335,7 +330,7 @@ object SwaggerUtil {
         .flatMap { responses =>
           getBestSuccessResponse(responses)
             .flatMap(resp => Option(resp.getSchema))
-            .map(propMetaF[L, F](_))
+            .map(propMeta[L, F](_))
             .orElse(
               if (hasEmptySuccessType(responses))
                 Some(Free.pure[F, ResolvedType[L]](Resolved[L](ignoredType, None, None)))
