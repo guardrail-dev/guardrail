@@ -49,13 +49,6 @@ object Http4sHelper {
     } yield new Responses[L](instances)
   }
 
-  def getResponses(operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Responses[ScalaLanguage]] = {
-    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], T]
-    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(Http4sGenerator.FrameworkInterp))
-    getResponses[ScalaLanguage, Program](operationId, operation, protocolElems)
-      .foldMap(interp)
-  }
-
   def generateResponseDefinitions(operationId: String,
                                   responses: Responses[ScalaLanguage],
                                   protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Defn] = {
