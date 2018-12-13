@@ -6,7 +6,6 @@ import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ ProtocolParameter, SuperClass }
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]) {

@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.models.Model
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.{ ProtocolElems, StrictProtocolElems }
 
 case class PropMeta[L <: LA](clsName: String, tpe: L#Type)

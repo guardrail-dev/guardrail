@@ -5,7 +5,6 @@ import cats.InjectK
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.languages.ScalaLanguage
 
 class CoreTerms[F[_]](implicit I: InjectK[CoreTerm, F]) {
   def getDefaultFramework: Free[F, String] =

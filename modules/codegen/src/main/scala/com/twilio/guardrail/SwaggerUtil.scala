@@ -11,7 +11,6 @@ import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerT
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.extract.{ Default, ScalaType }
 import com.twilio.guardrail.generators.{ AkkaHttpGenerator, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls

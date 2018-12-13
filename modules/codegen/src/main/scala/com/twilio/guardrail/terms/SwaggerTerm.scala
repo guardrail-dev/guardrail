@@ -18,7 +18,7 @@ import cats.MonadError
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.LA
 import scala.collection.JavaConverters._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 

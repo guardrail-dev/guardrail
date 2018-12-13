@@ -9,7 +9,6 @@ import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels }
-import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.io.AnsiColor
 

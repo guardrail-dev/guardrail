@@ -3,7 +3,6 @@ package terms
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
-import com.twilio.guardrail.languages.ScalaLanguage
 
 sealed trait CoreTerm[T]
 case object GetDefaultFramework                                                               extends CoreTerm[String]

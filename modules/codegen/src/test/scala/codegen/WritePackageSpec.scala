@@ -9,7 +9,6 @@ import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import org.scalatest.{ FunSuite, Matchers }
-import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.meta._
 

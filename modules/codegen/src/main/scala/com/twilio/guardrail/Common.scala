@@ -5,7 +5,7 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms

@@ -5,7 +5,6 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.generators.Http4sHelper
 import com.twilio.guardrail.terms.framework.FrameworkTerms
