@@ -46,28 +46,6 @@ object ScalaParameter {
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  @deprecated("Use fromParameter instead", "0.41.2")
-  def fromParam(param: Term.Param): ScalaParameter[ScalaLanguage] = param match {
-    case param @ Term.Param(_, name, decltype, _) =>
-      val (tpe, required): (Type, Boolean) = decltype
-        .flatMap({
-          case tpe @ t"Option[$_]" => Some((tpe, false))
-          case Type.ByName(tpe)    => Some((tpe, true))
-          case tpe @ Type.Name(_)  => Some((tpe, true))
-          case _                   => None
-        })
-        .getOrElse((t"Nothing", true))
-      new ScalaParameter[ScalaLanguage](None, param, Term.Name(name.value), RawParameterName(name.value), tpe, required, None, false)
-  }
-
-  def fromParameter(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Parameter => Target[ScalaParameter[ScalaLanguage]] = {
-    type F[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[FrameworkTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?], T]
-    val interp = ScalaGenerator.ScalaInterp.or(AkkaHttpGenerator.FrameworkInterp.or(SwaggerGenerator.SwaggerInterp));
-    { parameter =>
-      fromParameterF[ScalaLanguage, F](protocolElems).apply(parameter).foldMap(interp)
-    }
-  }
-
   def fromParameterF[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Parameter => Free[F, ScalaParameter[L]] = { parameter =>
@@ -201,12 +179,6 @@ object ScalaParameter {
                             ScalaFileHashAlgorithm(parameter),
                             isFileType)
     }
-  }
-
-  def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Parameter] => Target[List[ScalaParameter[ScalaLanguage]]] = { params =>
-    type F[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[FrameworkTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?], T]
-    val interp = ScalaGenerator.ScalaInterp.or(AkkaHttpGenerator.FrameworkInterp.or(SwaggerGenerator.SwaggerInterp));
-    fromParametersF[ScalaLanguage, F](protocolElems).apply(params).foldMap(interp)
   }
 
   def fromParametersF[L <: LA, F[_]](

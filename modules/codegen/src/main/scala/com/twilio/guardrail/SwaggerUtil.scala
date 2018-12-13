@@ -130,12 +130,6 @@ object SwaggerUtil {
             }
       }
     }
-
-    def resolve(value: ResolvedType[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Resolved[ScalaLanguage]] = {
-      type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
-      val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)
-      resolveF[ScalaLanguage, Program](value, protocolElems).value.foldMap(interp)
-    }
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
@@ -310,14 +304,6 @@ object SwaggerUtil {
       case x =>
         fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
     }
-  }
-
-  @deprecated("Use propMetaF", "0.41.2")
-  def propMeta(property: Property): Target[ResolvedType[ScalaLanguage]] = {
-    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], EitherK[SwaggerTerm[ScalaLanguage, ?], FrameworkTerm[ScalaLanguage, ?], ?], T]
-    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp.or(AkkaHttpGenerator.FrameworkInterp))
-    propMetaF[ScalaLanguage, Program](property).value
-      .foldMap(interp)
   }
 
   /*

@@ -8,6 +8,23 @@ object scala {
     def toLit: Lit.String = Lit.String(parameter.value)
   }
 
+  implicit class RichScalaParameter(value: ScalaParameter.type) {
+    import _root_.scala.meta._
+    import com.twilio.guardrail.languages.ScalaLanguage
+    def fromParam(param: Term.Param): ScalaParameter[ScalaLanguage] = param match {
+      case param @ Term.Param(_, name, decltype, _) =>
+        val tpe: Type = decltype
+          .flatMap({
+            case tpe @ t"Option[$_]" => Some(tpe)
+            case Type.ByName(tpe)    => Some(tpe)
+            case tpe @ Type.Name(_)  => Some(tpe)
+            case _                   => None
+          })
+          .getOrElse(t"Nothing")
+        new ScalaParameter[ScalaLanguage](None, param, Term.Name(name.value), RawParameterName(name.value), tpe, true, None, false)
+    }
+  }
+
   implicit class ExtendedUnzip[T1, T2, T3, T4, T5, T6, T7](xs: NonEmptyList[(T1, T2, T3, T4, T5, T6, T7)]) {
     def unzip7: (List[T1], List[T2], List[T3], List[T4], List[T5], List[T6], List[T7]) =
       xs.foldLeft(

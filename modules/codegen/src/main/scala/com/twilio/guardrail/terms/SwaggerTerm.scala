@@ -34,12 +34,6 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
     parameters
       .fold(Free.pure[F, List[ScalaParameter[L]]](List.empty))(ScalaParameter.fromParametersF(protocolElems))
       .map(new ScalaParameters[L](_))
-
-  def getParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[ScalaParameters[ScalaLanguage]] =
-    parameters
-      .map(ScalaParameter.fromParameters(protocolElems))
-      .getOrElse(Target.pure(List.empty[ScalaParameter[ScalaLanguage]]))
-      .map(new ScalaParameters[ScalaLanguage](_))
 }
 
 sealed trait SwaggerTerm[L <: LA, T]
