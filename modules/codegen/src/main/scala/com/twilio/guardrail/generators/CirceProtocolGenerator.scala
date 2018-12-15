@@ -85,6 +85,8 @@ object CirceProtocolGenerator {
           List(q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)")}
           }
         """)
+      case BuildAccessor(clsName, termName) =>
+        Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
     }
   }
 

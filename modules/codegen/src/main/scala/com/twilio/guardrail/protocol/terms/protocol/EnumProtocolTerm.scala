@@ -17,3 +17,4 @@ case class RenderCompanion[L <: LA](clsName: String,
                                     encoder: L#ValueDefinition,
                                     decoder: L#ValueDefinition)
     extends EnumProtocolTerm[L, L#ObjectDefinition]
+case class BuildAccessor[L <: LA](clsName: String, termName: String) extends EnumProtocolTerm[L, L#TermSelect]
