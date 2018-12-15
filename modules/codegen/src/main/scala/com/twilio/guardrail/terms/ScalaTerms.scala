@@ -23,7 +23,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                          customImports: List[L#Import],
                          packageObjectImports: List[L#Import],
                          protocolImports: List[L#Import],
-                         packageObjectContents: List[L#Statement],
+                         packageObjectContents: List[L#ValueDefinition],
                          extraTypes: List[L#Statement]): Free[F, WriteTree] =
     Free.inject[ScalaTerm[L, ?], F](
       WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)

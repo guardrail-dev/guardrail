@@ -17,6 +17,6 @@ case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        customImports: List[L#Import],
                                        packageObjectImports: List[L#Import],
                                        protocolImports: List[L#Import],
-                                       packageObjectContents: List[L#Statement],
+                                       packageObjectContents: List[L#ValueDefinition],
                                        extraTypes: List[L#Statement])
     extends ScalaTerm[L, WriteTree]
