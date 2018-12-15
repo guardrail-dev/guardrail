@@ -8,8 +8,9 @@ class ScalaLanguage extends LanguageAbstraction {
 
   // Terms
 
-  type Term     = scala.meta.Term
-  type TermName = scala.meta.Term.Name
+  type Term       = scala.meta.Term
+  type TermName   = scala.meta.Term.Name
+  type TermSelect = scala.meta.Term.Select
 
   // Declarations
   type MethodDeclaration = scala.meta.Decl.Def
