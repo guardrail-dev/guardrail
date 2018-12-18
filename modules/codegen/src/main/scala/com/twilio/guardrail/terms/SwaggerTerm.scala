@@ -16,11 +16,11 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       .map(_.asScala.toList)
   }
 
-  def getParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]], gs: GeneratorSettings[ScalaLanguage]): Target[ScalaParameters] =
+  def getParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]], gs: GeneratorSettings[ScalaLanguage]): Target[ScalaParameters[ScalaLanguage]] =
     parameters
-      .map(ScalaParameter.fromParameters(protocolElems, gs))
-      .getOrElse(Target.pure(List.empty[ScalaParameter]))
-      .map(new ScalaParameters(_))
+      .map(ScalaParameter.fromParameters[Target](protocolElems, gs))
+      .getOrElse(Target.pure(List.empty[ScalaParameter[ScalaLanguage]]))
+      .map(new ScalaParameters[ScalaLanguage](_))
 }
 
 sealed trait SwaggerTerm[L <: LA, T]

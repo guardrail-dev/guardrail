@@ -46,7 +46,7 @@ object AkkaHttpClientGenerator {
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
-        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
+        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
             base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
@@ -72,7 +72,7 @@ object AkkaHttpClientGenerator {
               })
           } yield result
 
-        def generateFormDataParams(parameters: List[ScalaParameter], needsMultipart: Boolean): Option[Term] =
+        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
@@ -133,7 +133,7 @@ object AkkaHttpClientGenerator {
             Some(q"List(..$args).flatten")
           }
 
-        def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
+        def generateHeaderParams(parameters: List[ScalaParameter[ScalaLanguage]]): Term = {
           def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
             q"$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
 
@@ -160,13 +160,13 @@ object AkkaHttpClientGenerator {
                   formDataNeedsMultipart: Boolean,
                   headerParams: Term,
                   responseTypeRef: Type,
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter],
-                                    tracingArgsPost: List[ScalaParameter],
-                                    pathArgs: List[ScalaParameter],
-                                    qsArgs: List[ScalaParameter],
-                                    formArgs: List[ScalaParameter],
-                                    body: Option[ScalaParameter],
-                                    headerArgs: List[ScalaParameter],
+                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
+                                    tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
+                                    pathArgs: List[ScalaParameter[ScalaLanguage]],
+                                    qsArgs: List[ScalaParameter[ScalaLanguage]],
+                                    formArgs: List[ScalaParameter[ScalaLanguage]],
+                                    body: Option[ScalaParameter[ScalaLanguage]],
+                                    headerArgs: List[ScalaParameter[ScalaLanguage]],
                                     extraImplicits: List[Term.Param]): Defn = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders =

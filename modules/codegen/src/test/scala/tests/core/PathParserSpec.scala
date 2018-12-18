@@ -13,7 +13,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
 
   implicit val gs = new GeneratorSettings[ScalaLanguage](t"io.circe.Json", t"BodyPartEntity")
 
-  val args: List[ScalaParameter] = List(
+  val args: List[ScalaParameter[ScalaLanguage]] = List(
     ScalaParameter.fromParam(param"foo: Int = 1"),
     ScalaParameter.fromParam(param"bar: Int = 1"),
     ScalaParameter.fromParam(param"fooBar: Int = 1").withRawName("foo_bar"),
@@ -68,7 +68,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     import Atto._
     import SwaggerUtil.paths.akkaExtractor._
 
-    implicit val params: List[ScalaParameter] = List.empty
+    implicit val params: List[ScalaParameter[ScalaLanguage]] = List.empty
 
     plainString.parseOnly("foo/").either.right.value shouldBe "foo"
     plainNEString.parseOnly("foo/").either.right.value shouldBe "foo"

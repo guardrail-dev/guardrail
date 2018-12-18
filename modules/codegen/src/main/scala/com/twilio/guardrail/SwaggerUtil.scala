@@ -335,7 +335,8 @@ object SwaggerUtil {
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[T](bindingName: String, pathArgs: List[ScalaParameter])(f: ScalaParameter => Parser[T]): Parser[T] =
+    private[this] def lookupName[T](bindingName: String,
+                                    pathArgs: List[ScalaParameter[ScalaLanguage]])(f: ScalaParameter[ScalaLanguage] => Parser[T]): Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[Parser[T]](
@@ -345,7 +346,7 @@ object SwaggerUtil {
     private[this] val variable: Parser[String] = char('{') ~> many(notChar('}'))
       .map(_.mkString("")) <~ char('}')
 
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
       val term: Parser[Term.Apply] = variable.flatMap { binding =>
         lookupName(binding, pathArgs) { param =>
           ok(q"Formatter.addPath(${param.paramName})")
@@ -369,7 +370,7 @@ object SwaggerUtil {
     }
 
     class Extractors[T, TN <: T](
-        pathSegmentConverter: (ScalaParameter, Option[T]) => Either[String, T],
+        pathSegmentConverter: (ScalaParameter[ScalaLanguage], Option[T]) => Either[String, T],
         buildParamConstraint: ((String, String)) => T,
         joinParams: (T, T) => T,
         stringPath: String => T,
@@ -383,7 +384,7 @@ object SwaggerUtil {
       val plainString      = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString    = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P = plainNEString.map(s => (None, stringPath(s)))
-      def regexSegment(implicit pathArgs: List[ScalaParameter]): P =
+      def regexSegment(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
             lookupName(binding, pathArgs) {
@@ -398,7 +399,7 @@ object SwaggerUtil {
             }
         }
 
-      def segments(implicit pathArgs: List[ScalaParameter]): LP =
+      def segments(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): LP =
         sepBy1(choice(regexSegment(pathArgs), stringSegment), char('/'))
           .map(_.toList)
 
@@ -418,7 +419,7 @@ object SwaggerUtil {
       })
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = endOfInput ~> ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
-      def pattern(implicit pathArgs: List[ScalaParameter]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+      def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
     }
 
@@ -497,7 +498,7 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
-    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
       import akkaExtractor._
       for {
         partsQS <- pattern(pathArgs)
@@ -525,7 +526,7 @@ object SwaggerUtil {
       } yield result
     }
 
-    def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter]): Target[(Pat, Option[Pat])] = {
+    def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
         partsQS <- pattern(pathArgs)

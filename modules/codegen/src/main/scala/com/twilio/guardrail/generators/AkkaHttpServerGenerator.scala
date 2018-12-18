@@ -333,7 +333,7 @@ object AkkaHttpServerGenerator {
       case other              => Target.error(s"Unknown method: ${other}")
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash)
@@ -355,7 +355,7 @@ object AkkaHttpServerGenerator {
         multi: Term => Type => Target[Term.Apply],
         multiOpt: Term => Type => Target[Term.Apply],
         optional: Term => Type => Target[Term.Apply]
-    )(params: List[ScalaParameter]): Target[Option[Term]] =
+    )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       for {
         directives <- params.traverse {
           case ScalaParameter(_, param, _, argName, argType) =>
@@ -382,7 +382,7 @@ object AkkaHttpServerGenerator {
             Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" })
         }
 
-    def bodyToAkka(body: Option[ScalaParameter]): Target[Option[Term]] =
+    def bodyToAkka(body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       Target.pure(
         body.map {
           case ScalaParameter(_, _, _, _, argType) =>
@@ -390,7 +390,7 @@ object AkkaHttpServerGenerator {
         }
       )
 
-    def headersToAkka: List[ScalaParameter] => Target[Option[Term]] =
+    def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => {
           case t"String" => Target.pure(q"headerValueByName(${arg})")
@@ -407,7 +407,7 @@ object AkkaHttpServerGenerator {
         }
       ) _
 
-    def qsToAkka: List[ScalaParameter] => Target[Option[Term]] =
+    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*)"),
@@ -415,7 +415,7 @@ object AkkaHttpServerGenerator {
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
-    def formToAkka: List[ScalaParameter] => Target[Option[Term]] =
+    def formToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
@@ -423,7 +423,7 @@ object AkkaHttpServerGenerator {
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
-    def asyncFormToAkka(operationId: String): List[ScalaParameter] => Target[(Option[Term], List[Stat])] = { params =>
+    def asyncFormToAkka(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[(Option[Term], List[Stat])] = { params =>
       class Binding(value: String) {
         def toPat: Pat        = if (value.nonEmpty && ('A'.to('Z').contains(value(0)))) toTerm else toVar
         def toVar: Pat.Var    = Pat.Var(toTerm)
@@ -708,7 +708,8 @@ object AkkaHttpServerGenerator {
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
-        val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
+        val orderedParameters
+          : List[List[ScalaParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
           .map(_.param)
           .map(List(_))
 

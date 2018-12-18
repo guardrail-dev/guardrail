@@ -14,7 +14,7 @@ import scala.collection.JavaConverters._
 
 case class Servers[L <: LA](servers: List[Server[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], src: List[L#Statement])
-case class TracingField[L <: LA](param: ScalaParameter, term: L#Term)
+case class TracingField[L <: LA](param: ScalaParameter[ScalaLanguage], term: L#Term)
 case class RenderedRoutes[L <: LA](
     routes: L#Term,
     methodSigs: List[L#MethodDeclaration],

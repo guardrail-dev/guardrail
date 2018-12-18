@@ -15,7 +15,7 @@ class GeneratorSettings[L <: LA](val fileType: L#Type, val jsonType: L#Type)
 case class RawParameterName private[generators] (value: String) {
   def toLit: Lit.String = Lit.String(value)
 }
-class ScalaParameters(val parameters: List[ScalaParameter]) {
+class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[ScalaLanguage]]) {
   val filterParamBy     = ScalaParameter.filterParams(parameters)
   val headerParams      = filterParamBy("header")
   val pathParams        = filterParamBy("path")
@@ -23,7 +23,7 @@ class ScalaParameters(val parameters: List[ScalaParameter]) {
   val bodyParams        = filterParamBy("body").headOption
   val formParams        = filterParamBy("formData")
 }
-class ScalaParameter private[generators] (
+class ScalaParameter[L <: LA] private[generators] (
     val in: Option[String],
     val param: Term.Param,
     val paramName: Term.Name,
@@ -34,16 +34,16 @@ class ScalaParameter private[generators] (
     val isFile: Boolean
 ) {
   override def toString: String =
-    s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
+    s"ScalaParameter[ScalaLanguage](${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 
-  def withType(newArgType: Type): ScalaParameter =
-    new ScalaParameter(in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
+  def withType(newArgType: Type): ScalaParameter[ScalaLanguage] =
+    new ScalaParameter[ScalaLanguage](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
-  def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
+  def unapply(param: ScalaParameter[ScalaLanguage]): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter = param match {
+  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings[ScalaLanguage]): ScalaParameter[ScalaLanguage] = param match {
     case param @ Term.Param(_, name, decltype, _) =>
       val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
         .flatMap({
@@ -54,11 +54,12 @@ object ScalaParameter {
           case _                  => None
         })
         .getOrElse((t"Nothing", t"Nothing", true))
-      new ScalaParameter(None, param, Term.Name(name.value), RawParameterName(name.value), tpe, required, None, innerTpe == gs.fileType)
+      new ScalaParameter[ScalaLanguage](None, param, Term.Name(name.value), RawParameterName(name.value), tpe, required, None, innerTpe == gs.fileType)
   }
 
-  def fromParameter[M[_]](protocolElems: List[StrictProtocolElems[ScalaLanguage]],
-                          gs: GeneratorSettings[ScalaLanguage])(implicit M: MonadError[M, String]): Parameter => M[ScalaParameter] = { parameter =>
+  def fromParameter[M[_]](protocolElems: List[StrictProtocolElems[ScalaLanguage]], gs: GeneratorSettings[ScalaLanguage])(
+      implicit M: MonadError[M, String]
+  ): Parameter => M[ScalaParameter[ScalaLanguage]] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed =
         "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
@@ -181,40 +182,41 @@ object ScalaParameter {
     } yield {
       val paramName = Term.Name(toCamelCase(name))
       val param     = param"${paramName}: ${declType}".copy(default = defaultValue)
-      new ScalaParameter(Option(parameter.getIn),
-                         param,
-                         paramName,
-                         RawParameterName(name),
-                         declType,
-                         required,
-                         ScalaFileHashAlgorithm(parameter),
-                         paramType == gs.fileType)
+      new ScalaParameter[ScalaLanguage](Option(parameter.getIn),
+                                        param,
+                                        paramName,
+                                        RawParameterName(name),
+                                        declType,
+                                        required,
+                                        ScalaFileHashAlgorithm(parameter),
+                                        paramType == gs.fileType)
     }
   }
 
-  def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]],
-                     gs: GeneratorSettings[ScalaLanguage]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
-    for {
-      parameters <- params.traverse(fromParameter[Target](protocolElems, gs))
-      counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
-    } yield
-      parameters.map { param =>
-        val Term.Name(name) = param.paramName
-        if (counts.getOrElse(name, 0) > 1) {
-          val escapedName =
-            Term.Name(param.argName.value)
-          new ScalaParameter(
-            param.in,
-            param.param.copy(name = escapedName),
-            escapedName,
-            param.argName,
-            param.argType,
-            param.required,
-            param.hashAlgorithm,
-            param.isFile
-          )
-        } else param
-      }
+  def fromParameters[M[_]: MonadError[?[_], String]](protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+                                                     gs: GeneratorSettings[ScalaLanguage]): List[Parameter] => M[List[ScalaParameter[ScalaLanguage]]] = {
+    params =>
+      for {
+        parameters <- params.traverse(fromParameter[M](protocolElems, gs))
+        counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
+      } yield
+        parameters.map { param =>
+          val Term.Name(name) = param.paramName
+          if (counts.getOrElse(name, 0) > 1) {
+            val escapedName =
+              Term.Name(param.argName.value)
+            new ScalaParameter[ScalaLanguage](
+              param.in,
+              param.param.copy(name = escapedName),
+              escapedName,
+              param.argName,
+              param.argType,
+              param.required,
+              param.hashAlgorithm,
+              param.isFile
+            )
+          } else param
+        }
   }
 
   /**
@@ -222,7 +224,7 @@ object ScalaParameter {
     * @param params
     * @return
     */
-  def filterParams(params: List[ScalaParameter]): String => List[ScalaParameter] = { in =>
+  def filterParams(params: List[ScalaParameter[ScalaLanguage]]): String => List[ScalaParameter[ScalaLanguage]] = { in =>
     params.filter(_.in == Some(in))
   }
 }

@@ -48,7 +48,7 @@ object Http4sClientGenerator {
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), tracing, protocolElems) =>
-        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter], qsArgs: List[ScalaParameter]): Target[Term] =
+        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
             base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
@@ -74,7 +74,7 @@ object Http4sClientGenerator {
               })
           } yield q"Uri.unsafeFromString(${result})"
 
-        def generateFormDataParams(parameters: List[ScalaParameter], needsMultipart: Boolean): Option[Term] =
+        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
@@ -128,7 +128,7 @@ object Http4sClientGenerator {
             Some(q"List(..$args)")
           }
 
-        def generateHeaderParams(parameters: List[ScalaParameter]): Term = {
+        def generateHeaderParams(parameters: List[ScalaParameter[ScalaLanguage]]): Term = {
           def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
             q"$tParamName.map(v => Header(${tName.toLit}, Formatter.show(v)))"
 
@@ -156,13 +156,13 @@ object Http4sClientGenerator {
                   responses: List[(Term.Name, Option[Type])],
                   produces: Seq[String],
                   consumes: Seq[String],
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter],
-                                    tracingArgsPost: List[ScalaParameter],
-                                    pathArgs: List[ScalaParameter],
-                                    qsArgs: List[ScalaParameter],
-                                    formArgs: List[ScalaParameter],
-                                    body: Option[ScalaParameter],
-                                    headerArgs: List[ScalaParameter],
+                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
+                                    tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
+                                    pathArgs: List[ScalaParameter[ScalaLanguage]],
+                                    qsArgs: List[ScalaParameter[ScalaLanguage]],
+                                    formArgs: List[ScalaParameter[ScalaLanguage]],
+                                    body: Option[ScalaParameter[ScalaLanguage]],
+                                    headerArgs: List[ScalaParameter[ScalaLanguage]],
                                     extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[Header] = List.empty"
@@ -391,13 +391,13 @@ object Http4sClientGenerator {
     }
 
     def generateCodecs(methodName: String,
-                       bodyArgs: Option[ScalaParameter],
+                       bodyArgs: Option[ScalaParameter[ScalaLanguage]],
                        responses: List[(Term.Name, Option[Type])],
                        produces: Seq[String],
                        consumes: Seq[String]): List[Defn.Val] =
       generateEncoders(methodName, bodyArgs, produces) ++ generateDecoders(methodName, responses, consumes)
 
-    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter], produces: Seq[String]): List[Defn.Val] =
+    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], produces: Seq[String]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(q"val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, produces)}")
