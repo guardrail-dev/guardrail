@@ -297,26 +297,38 @@ object SwaggerUtil {
   private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
     successCodesWithoutEntities.exists(responses.containsKey)
 
-  def getResponseType(httpMethod: HttpMethod,
-                      operation: Operation,
-                      ignoredType: Type,
-                      gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] =
+  def getResponseTypeF[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
+      implicit Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
+  ): Free[F, ResolvedType[L]] = {
+    import Sc._
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>
           getBestSuccessResponse(responses)
             .flatMap(resp => Option(resp.getSchema))
-            .map(propMeta(_, gs))
+            .map(propMetaF[L, F](_))
             .orElse(
               if (hasEmptySuccessType(responses))
-                Some(Target.pure(Resolved[ScalaLanguage](ignoredType, None, None): ResolvedType[ScalaLanguage]))
+                Some(Free.pure[F, ResolvedType[L]](Resolved[L](ignoredType, None, None)))
               else None
             )
         }
-        .getOrElse(Target.pure(Resolved[ScalaLanguage](ignoredType, None, None)))
+        .getOrElse(Free.pure(Resolved[L](ignoredType, None, None): ResolvedType[L]))
     } else {
-      Target.pure(Resolved[ScalaLanguage](ignoredType, None, None))
+      Free.pure(Resolved[L](ignoredType, None, None): ResolvedType[L])
     }
+  }
+
+  def getResponseType(httpMethod: HttpMethod,
+                      operation: Operation,
+                      ignoredType: Type,
+                      gs: GeneratorSettings[ScalaLanguage]): Target[ResolvedType[ScalaLanguage]] = {
+    type Program[T] = EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], T]
+    val interp = ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp)
+    getResponseTypeF[ScalaLanguage, Program](httpMethod, operation, ignoredType).value
+      .foldMap(interp)
+  }
 
   object paths {
     import atto._, Atto._
