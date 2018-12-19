@@ -264,17 +264,6 @@ object Http4sClientGenerator {
             produces = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
             consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
 
-            // Insert the method parameters
-            httpMethodStr: String = httpMethod.toString.toLowerCase
-            methodName = Option(operation.getOperationId())
-              .map(splitOperationParts)
-              .map(_._2)
-              .getOrElse(s"$httpMethodStr $pathStr")
-
-            responses <- Http4sHelper.getResponses(methodName, operation, protocolElems, gs)
-
-            _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
-
             parameters <- route.getParameters(protocolElems, gs)
 
             headerArgs = parameters.headerParams

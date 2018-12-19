@@ -259,15 +259,6 @@ object AkkaHttpClientGenerator {
               .resolve(unresolvedResponseTypeRef, protocolElems)
             responseTypeRef = resolvedResponseTypeRef.tpe
 
-            // Insert the method parameters
-            httpMethodStr: String = httpMethod.toString.toLowerCase
-            methodName = Option(operation.getOperationId())
-              .map(splitOperationParts)
-              .map(_._2)
-              .getOrElse(s"$httpMethodStr $pathStr")
-
-            _ <- Target.log.debug("generateClientOperation")(s"Parsing: ${httpMethodStr} ${methodName}")
-
             parameters <- route.getParameters(protocolElems, gs)
 
             headerArgs = parameters.headerParams
