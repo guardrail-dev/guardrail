@@ -2,10 +2,12 @@ package com.twilio.guardrail.generators
 
 import cats.MonadError
 import cats.implicits._
+import cats.data.EitherK
 import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.splitOperationParts
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
 import io.swagger.models.{ Operation, Response }
 
+import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.collection.JavaConverters._
 import scala.meta._
@@ -96,7 +98,7 @@ object Http4sHelper {
               statusCodeName    = Term.Name(friendlyName)
               valueType <- Option(resp.getSchema).traverse { prop =>
                 for {
-                  meta <- SwaggerUtil.propMeta(prop, gs)
+                  meta     <- SwaggerUtil.propMetaF[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]](prop).foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
                   resolved <- SwaggerUtil.ResolvedType
                     .resolve[Target](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
