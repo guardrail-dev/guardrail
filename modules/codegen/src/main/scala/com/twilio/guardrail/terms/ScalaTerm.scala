@@ -19,6 +19,8 @@ case class LiftVectorType[L <: LA](value: L#Type)   extends ScalaTerm[L, L#Type]
 case class LiftVectorTerm[L <: LA](value: L#Term)   extends ScalaTerm[L, L#Term]
 case class LiftMapType[L <: LA](value: L#Type)      extends ScalaTerm[L, L#Type]
 
+case class LookupEnumDefaultValue[L <: LA](tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)])
+    extends ScalaTerm[L, L#TermSelect]
 case class JsonType[L <: LA]() extends ScalaTerm[L, L#Type]
 
 case class EmbedArray[L <: LA](tpe: LazyResolvedType[L]) extends ScalaTerm[L, LazyResolvedType[L]]
@@ -48,7 +50,8 @@ case class FileType[L <: LA](format: Option[String])                  extends Sc
 case class ObjectType[L <: LA](format: Option[String])                extends ScalaTerm[L, L#Type]
 case class FallbackType[L <: LA](tpe: String, format: Option[String]) extends ScalaTerm[L, L#Type]
 
-case class WidenTypeName[L <: LA](tpe: L#TypeName) extends ScalaTerm[L, L#Type]
+case class WidenTypeName[L <: LA](tpe: L#TypeName)       extends ScalaTerm[L, L#Type]
+case class WidenTermSelect[L <: LA](value: L#TermSelect) extends ScalaTerm[L, L#Term]
 
 case class RenderImplicits[L <: LA](pkgName: List[String], frameworkImports: List[L#Import], jsonImports: List[L#Import], customImports: List[L#Import])
     extends ScalaTerm[L, L#FileContents]

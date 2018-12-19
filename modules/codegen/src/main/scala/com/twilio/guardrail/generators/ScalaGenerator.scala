@@ -30,7 +30,18 @@ object ScalaGenerator {
       case LiftVectorType(value)   => Target.pure(t"IndexedSeq[${value}]")
       case LiftVectorTerm(value)   => Target.pure(q"IndexedSeq(${value})")
       case LiftMapType(value)      => Target.pure(t"Map[String, ${value}]")
-      case JsonType()              => Target.getGeneratorSettings.map(_.jsonType)
+      case LookupEnumDefaultValue(tpe, defaultValue, values) => {
+        // FIXME: Is there a better way to do this? There's a gap of coverage here
+        defaultValue match {
+          case Lit.String(name) =>
+            values
+              .find(_._1 == name)
+              .fold(Target.raiseError[Term.Select](s"Enumeration ${tpe} is not defined for default value ${name}"))(value => Target.pure(value._3))
+          case _ =>
+            Target.raiseError[Term.Select](s"Enumeration ${tpe} somehow has a default value that isn't a string")
+        }
+      }
+      case JsonType() => Target.getGeneratorSettings.map(_.jsonType)
       case EmbedArray(tpe) =>
         tpe match {
           case SwaggerUtil.Deferred(tpe) =>
@@ -90,7 +101,8 @@ object ScalaGenerator {
       case ObjectType(format)        => Target.getGeneratorSettings.map(_.jsonType)
       case FallbackType(tpe, format) => Target.pure(Type.Name(tpe))
 
-      case WidenTypeName(tpe) => Target.pure(tpe)
+      case WidenTypeName(tpe)     => Target.pure(tpe)
+      case WidenTermSelect(value) => Target.pure(value)
 
       case RenderImplicits(pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =

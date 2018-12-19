@@ -21,6 +21,8 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def liftVectorTerm(value: L#Term): Free[F, L#Term]   = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
   def liftMapType(value: L#Type): Free[F, L#Type]      = Free.inject[ScalaTerm[L, ?], F](LiftMapType(value))
 
+  def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): Free[F, L#TermSelect] =
+    Free.inject[ScalaTerm[L, ?], F](LookupEnumDefaultValue(tpe, defaultValue, values))
   def jsonType(): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](JsonType())
 
   def embedArray(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedArray(tpe))
@@ -51,7 +53,8 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def objectType(format: Option[String]): Free[F, L#Type]                = Free.inject[ScalaTerm[L, ?], F](ObjectType(format))
   def fallbackType(tpe: String, format: Option[String]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](FallbackType(tpe, format))
 
-  def widenTypeName(tpe: L#TypeName): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](WidenTypeName(tpe))
+  def widenTypeName(tpe: L#TypeName): Free[F, L#Type]       = Free.inject[ScalaTerm[L, ?], F](WidenTypeName(tpe))
+  def widenTermSelect(value: L#TermSelect): Free[F, L#Term] = Free.inject[ScalaTerm[L, ?], F](WidenTermSelect(value))
 
   def renderImplicits(pkgName: List[String],
                       frameworkImports: List[L#Import],
