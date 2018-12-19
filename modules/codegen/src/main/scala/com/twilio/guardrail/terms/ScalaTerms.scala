@@ -32,11 +32,12 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def parseTypeName(value: String): Free[F, Option[L#TypeName]] = Free.inject[ScalaTerm[L, ?], F](ParseTypeName(value))
   def pureTermName(value: String): Free[F, L#TermName]          = Free.inject[ScalaTerm[L, ?], F](PureTermName(value))
   def pureTypeName(value: String): Free[F, L#TypeName]          = Free.inject[ScalaTerm[L, ?], F](PureTypeName(value))
+
   def pureMethodParameter(name: L#TermName, tpe: L#Type, default: Option[L#Term]): Free[F, L#MethodParameter] =
     Free.inject[ScalaTerm[L, ?], F](PureMethodParameter(name, tpe, default))
-
-  def typesEqual(a: L#Type, b: L#Type): Free[F, Boolean]             = Free.inject[ScalaTerm[L, ?], F](TypesEqual(a, b))
   def typeNamesEqual(a: L#TypeName, b: L#TypeName): Free[F, Boolean] = Free.inject[ScalaTerm[L, ?], F](TypeNamesEqual(a, b))
+  def typesEqual(a: L#Type, b: L#Type): Free[F, Boolean]             = Free.inject[ScalaTerm[L, ?], F](TypesEqual(a, b))
+  def extractTypeName(tpe: L#Type): Free[F, Option[L#TypeName]]      = Free.inject[ScalaTerm[L, ?], F](ExtractTypeName(tpe))
 
   def dateType(): Free[F, L#Type]                                        = Free.inject[ScalaTerm[L, ?], F](DateType())
   def dateTimeType(): Free[F, L#Type]                                    = Free.inject[ScalaTerm[L, ?], F](DateTimeType())

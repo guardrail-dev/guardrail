@@ -86,6 +86,12 @@ object ScalaGenerator {
       case TypesEqual(a, b) =>
         Target.pure(a.structure == b.structure)
 
+      case ExtractTypeName(tpe) =>
+        Target.pure(tpe match {
+          case x: Type.Name => Option(x)
+          case _            => Option.empty
+        })
+
       case DateType()                => Target.pure(t"java.time.LocalDate")
       case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")
       case StringType(format)        => Target.pure(format.fold(t"String")(Type.Name(_)))
