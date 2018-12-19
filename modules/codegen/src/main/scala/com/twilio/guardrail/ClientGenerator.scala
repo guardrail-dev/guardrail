@@ -5,11 +5,12 @@ import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.generators.Http4sHelper
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
 
 import scala.collection.JavaConverters._
-import com.twilio.guardrail.terms.RouteMeta
 
 case class Clients[L <: LA](clients: List[Client[L]])
 case class Client[L <: LA](pkg: List[String],
@@ -29,21 +30,34 @@ object ClientGenerator {
       host: Option[String],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
-  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F]): Free[F, Clients[L]] = {
+  )(protocolElems: List[StrictProtocolElems[L]])(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Clients[L]] = {
     import C._
+    import Sw._
     for {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       clients <- groupedRoutes.traverse({
-        case (pkg, routes) =>
+        case (className, unsortedRoutes) =>
+          val routes     = unsortedRoutes.sortBy(r => (r.path, r.method))
+          val clientName = s"${className.lastOption.getOrElse("").capitalize}Client"
+          def splitOperationParts(operationId: String): (List[String], String) = {
+            val parts = operationId.split('.')
+            (parts.drop(1).toList, parts.last)
+          }
+
           for {
-            responseDefinitions <- routes.flatTraverse {
-              case RouteMeta(path, method, operation) =>
-                generateResponseDefinitions(operation, protocolElems)
+            responseClientPair <- routes.traverse {
+              case route @ RouteMeta(path, method, operation) =>
+                for {
+                  operationId         <- getOperationId(operation)
+                  responses           <- Http4sHelper.getResponses[L, F](operationId, operation, protocolElems)
+                  responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
+                  parameters          <- route.getParameters[L, F](protocolElems)
+                  clientOp            <- generateClientOperation(className, context.tracing, parameters)(route, operationId, responses)
+                } yield (responseDefinitions, clientOp)
             }
-            clientOperations <- routes.traverse(generateClientOperation(pkg, context.tracing, protocolElems) _)
-            clientName  = s"${pkg.lastOption.getOrElse("").capitalize}Client"
-            tracingName = Option(pkg.mkString("-")).filterNot(_.isEmpty)
+            (responseDefinitions, clientOperations) = responseClientPair.unzip
+            tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
             ctorArgs  <- clientClsArgs(tracingName, schemes, host, context.tracing)
             companion <- buildCompanion(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
             client <- buildClient(
@@ -58,7 +72,7 @@ object ClientGenerator {
               context.tracing
             )
           } yield {
-            Client[L](pkg, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), companion, client, responseDefinitions)
+            Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), companion, client, responseDefinitions.flatten)
           }
       })
     } yield Clients[L](clients)

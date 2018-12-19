@@ -9,7 +9,6 @@ import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels }
-import com.twilio.guardrail.generators.GeneratorSettings
 
 import scala.io.AnsiColor
 
@@ -22,11 +21,11 @@ object CLICommon {
       args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
-    val fallback = List.empty[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]
+    val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
     val result = Common
       .runM[CoreTerm](newArgs)
       .foldMap(interpreter)
-      .fold[List[(GeneratorSettings, ReadSwagger[Target[List[WriteTree]]])]](
+      .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
         {
           case MissingArg(args, Error.ArgName(arg)) =>
             println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
@@ -66,22 +65,20 @@ object CLICommon {
     print(coreLogger.show)
 
     val (logger, paths) = deferred
-      .traverse({
-        case (generatorSettings, rs) =>
-          ReadSwagger
-            .readSwagger(rs)
-            .fold(
-              { err =>
-                println(s"${AnsiColor.RED}${err}${AnsiColor.RESET}")
-                Applicative[Settings].pure(List.empty[Path])
-              },
-              _.fold({ err =>
-                println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
-                unsafePrintHelp()
-                List.empty[Path]
-              }, _.map(WriteTree.unsafeWriteTree))
-            )
-            .run(generatorSettings)
+      .traverse({ rs =>
+        ReadSwagger
+          .readSwagger(rs)
+          .fold(
+            { err =>
+              println(s"${AnsiColor.RED}${err}${AnsiColor.RESET}")
+              Applicative[Logger].pure(List.empty[Path])
+            },
+            _.fold({ err =>
+              println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
+              unsafePrintHelp()
+              List.empty[Path]
+            }, _.map(WriteTree.unsafeWriteTree))
+          )
       })
       .map(_.flatten)
       .run

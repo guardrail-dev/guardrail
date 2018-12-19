@@ -16,7 +16,6 @@ import com.twilio.guardrail.{
   RandomType,
   Target
 }
-import com.twilio.guardrail.tests._
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
@@ -63,7 +62,7 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, imports, cmp, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val client = q"""
       class UsersClient(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

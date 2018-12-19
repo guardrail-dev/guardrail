@@ -16,7 +16,6 @@ import com.twilio.guardrail.{
   RandomType,
   Target
 }
-import com.twilio.guardrail.tests._
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
@@ -50,7 +49,7 @@ class Issue105 extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Foo(nonEmptyString: Option[String Refined NonEmpty] = None, positiveLong: Option[Long Refined Positive] = None)

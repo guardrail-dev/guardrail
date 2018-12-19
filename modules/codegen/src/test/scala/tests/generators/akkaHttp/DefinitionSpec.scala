@@ -4,7 +4,6 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ ClassDefinition, Context, EnumDefinition, ProtocolDefinitions }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 import scala.meta._
 
 class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -72,7 +71,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class First(a: Option[Int] = None)
@@ -96,7 +95,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: EnumDefinition(_, _, _, cls, cmp) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
     sealed abstract class Third(val value: String) {
@@ -132,7 +131,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Fifth(aBCD: Option[Int] = None, bCDE: Option[Int] = None)
@@ -156,7 +155,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))

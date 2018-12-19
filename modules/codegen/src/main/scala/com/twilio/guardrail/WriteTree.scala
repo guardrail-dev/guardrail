@@ -7,12 +7,10 @@ import java.nio.file.{ Files, Path, StandardOpenOption }
 import scala.io.AnsiColor
 import scala.meta._
 
-case class WriteTree(path: Path, contents: Tree)
+case class WriteTree(path: Path, contents: Array[Byte])
 object WriteTree {
   val unsafeWriteTreeLogged: WriteTree => Writer[List[String], Path] = {
-    case WriteTree(path, tree) =>
-      val UTF8 = java.nio.charset.Charset.availableCharsets.get("UTF-8")
-      val data = tree.syntax.getBytes(UTF8)
+    case WriteTree(path, data) =>
       Files.createDirectories(path.getParent)
       for {
         _ <- if (Files.exists(path)) {

@@ -1,22 +1,20 @@
 package tests.core
 
 import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.syntax.scala._
 import com.twilio.guardrail.{ SwaggerUtil, Target }
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
-import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.tests._
+import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {
 
-  implicit val gs = new GeneratorSettings(t"io.circe.Json", t"BodyPartEntity")
-
-  val args: List[ScalaParameter] = List(
+  val args: List[ScalaParameter[ScalaLanguage]] = List(
     ScalaParameter.fromParam(param"foo: Int = 1"),
     ScalaParameter.fromParam(param"bar: Int = 1"),
-    ScalaParameter.fromParam("foo_bar")(param"fooBar: Int = 1"),
-    ScalaParameter.fromParam("bar_baz")(param"barBaz: Int = 1")
+    ScalaParameter.fromParam(param"fooBar: Int = 1").withRawName("foo_bar"),
+    ScalaParameter.fromParam(param"barBaz: Int = 1").withRawName("bar_baz")
   )
 
   List[(String, Term)](
@@ -31,7 +29,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Client $str") {
-        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathParams(str, args), defaults.akkaGeneratorSettings)
+        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathParams(str, args))
         gen.toString shouldBe expected.toString
       }
   }
@@ -57,8 +55,8 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Server ${str}") {
-        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args), defaults.akkaGeneratorSettings)
-        gen.toString shouldBe (expected.toString)
+        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args))
+        gen.toString shouldBe ((expected.toString))
       }
   }
 
@@ -67,7 +65,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     import Atto._
     import SwaggerUtil.paths.akkaExtractor._
 
-    implicit val params: List[ScalaParameter] = List.empty
+    implicit val params: List[ScalaParameter[ScalaLanguage]] = List.empty
 
     plainString.parseOnly("foo/").either.right.value shouldBe "foo"
     plainNEString.parseOnly("foo/").either.right.value shouldBe "foo"
@@ -84,12 +82,12 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     }
     qsValueOnly.parseOnly("").either.isLeft shouldBe true
     qsValueOnly.parseOnly("a=b").either.isLeft shouldBe true
-    qsValueOnly.parseOnly("=").either.right.value shouldBe ("", "")
-    qsValueOnly.parseOnly("=b").either.right.value shouldBe ("", "b")
+    qsValueOnly.parseOnly("=").either.right.value shouldBe (("", ""))
+    qsValueOnly.parseOnly("=b").either.right.value shouldBe (("", "b"))
     staticQSArg.parseOnly("=b").either.isLeft shouldBe true
-    staticQSArg.parseOnly("a").either.right.value shouldBe ("a", "")
-    staticQSArg.parseOnly("a=").either.right.value shouldBe ("a", "")
-    staticQSArg.parseOnly("a=b").either.right.value shouldBe ("a", "b")
+    staticQSArg.parseOnly("a").either.right.value shouldBe (("a", ""))
+    staticQSArg.parseOnly("a=").either.right.value shouldBe (("a", ""))
+    staticQSArg.parseOnly("a=b").either.right.value shouldBe (("a", "b"))
     staticQSTerm.parseOnly("a").either.right.value should matchStructure(q""" parameter("a").require(_ == "") """)
     staticQSTerm.parseOnly("a=b").either.right.value should matchStructure(q""" parameter("a").require(_ == "b") """)
     staticQSTerm.parseOnly("=b").either.right.value should matchStructure(q""" parameter("").require(_ == "b") """)

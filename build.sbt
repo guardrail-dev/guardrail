@@ -74,8 +74,8 @@ fullRunTask(
 )
 
 artifact in (Compile, assembly) := {
-  val art = (artifact in (Compile, assembly)).value
-  art.copy(`classifier` = Some("assembly"))
+  (artifact in (Compile, assembly)).value
+    .withClassifier(Option("assembly"))
 }
 
 addArtifact(artifact in (Compile, assembly), assembly)
@@ -88,7 +88,10 @@ addCommandAlias(
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
-resetSample := { "git clean -fdx modules/sample/src modules/sample/target" ! }
+resetSample := {
+  import scala.sys.process._
+  "git clean -fdx modules/sample/src modules/sample/target" !
+}
 
 addCommandAlias("example", "; resetSample ; runExample ; sample/test")
 addCommandAlias("testSuite", "; codegen/test ; resetSample; runExample ; sample/test")
@@ -141,8 +144,7 @@ val codegenSettings = Seq(
     "utf8"
   ),
   parallelExecution in Test := true,
-  fork := true,
-  offline := true
+  fork := true
 )
 
 lazy val root = (project in file("."))

@@ -3,26 +3,23 @@ package com.twilio.guardrail.protocol.terms.server
 import _root_.io.swagger.models.{ Operation, Path }
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.generators.GeneratorSettings
-import com.twilio.guardrail.{ RenderedRoutes, ServerRoute, StrictProtocolElems, TracingField }
+import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
+import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 
 class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
-  def extractOperations(paths: List[(String, Path)]): Free[F, List[ServerRoute]] =
-    Free.inject[ServerTerm[L, ?], F](ExtractOperations(paths))
-  def getClassName(operation: Operation): Free[F, List[String]] =
-    Free.inject[ServerTerm[L, ?], F](GetClassName(operation))
   def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField[L]]] =
     Free.inject[ServerTerm[L, ?], F](BuildTracingFields(operation, resourceName, tracing))
   def generateRoutes(resourceName: String,
                      basePath: Option[String],
-                     routes: List[(Option[TracingField[L]], ServerRoute)],
+                     routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
                      protocolElems: List[StrictProtocolElems[L]]): Free[F, RenderedRoutes[L]] =
     Free.inject[ServerTerm[L, ?], F](GenerateRoutes(resourceName, basePath, routes, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[L#MethodParameter]] =
     Free.inject[ServerTerm[L, ?], F](GetExtraRouteParams(tracing))
-  def generateResponseDefinitions(operation: Operation, protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
-    Free.inject[ServerTerm[L, ?], F](GenerateResponseDefinitions(operation, protocolElems))
+  def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
+    Free.inject[ServerTerm[L, ?], F](GenerateResponseDefinitions(operationId, responses, protocolElems))
   def renderClass(resourceName: String,
                   handlerName: String,
                   combinedRouteTerms: L#Term,

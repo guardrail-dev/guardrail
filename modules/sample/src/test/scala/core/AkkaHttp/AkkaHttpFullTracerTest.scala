@@ -89,6 +89,6 @@ class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues wi
     // Make a request against the mock servers using a hard-coded user ID
     val retrieved: cdefs.User = usersClient.getUser(testTrace, "1234").value.futureValue.right.value
 
-    retrieved shouldBe (cdefs.User("1234", cdefs.UserAddress(Some("line1"), Some("line2"), Some("line3"))))
+    retrieved shouldBe(cdefs.User("1234", cdefs.UserAddress(Some("line1"), Some("line2"), Some("line3"))))
   }
 }

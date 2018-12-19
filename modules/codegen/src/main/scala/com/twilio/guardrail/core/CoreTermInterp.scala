@@ -7,7 +7,8 @@ import cats.syntax.flatMap._
 import cats.syntax.either._
 import cats.syntax.traverse._
 import cats.{ FlatMap, ~> }
-import com.twilio.guardrail.generators.{ AkkaHttp, GeneratorSettings, Http4s }
+import com.twilio.guardrail.generators.{ AkkaHttp, Http4s }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
 import scala.io.AnsiColor
@@ -22,31 +23,20 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
     case ExtractGenerator(context) =>
       for {
         _ <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
-        framework <- context.framework.fold(CoreTarget.error[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
+        framework <- context.framework.fold(CoreTarget.raiseError[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
           case "akka-http" => CoreTarget.pure(AkkaHttp)
           case "http4s"    => CoreTarget.pure(Http4s)
-          case unknown     => CoreTarget.error(UnknownFramework(unknown))
+          case unknown     => CoreTarget.raiseError(UnknownFramework(unknown))
         })
         _ <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: $framework")
       } yield framework
-
-    case ExtractGeneratorSettings(context) =>
-      for {
-        _ <- CoreTarget.log.debug("core", "extractGeneratorSettings")("Looking up generator settings")
-        generatorSettings <- context.framework.fold(CoreTarget.error[GeneratorSettings](NoFramework))({
-          case "akka-http" => CoreTarget.pure(new GeneratorSettings(t"BodyPartEntity", t"io.circe.Json"))
-          case "http4s"    => CoreTarget.pure(new GeneratorSettings(t"java.io.File", t"io.circe.Json"))
-          case unknown     => CoreTarget.error(UnknownFramework(unknown))
-        })
-        _ <- CoreTarget.log.debug("core", "extractGeneratorSettings")(s"Using $generatorSettings")
-      } yield generatorSettings
 
     case ValidateArgs(parsed) =>
       for {
         args <- CoreTarget.pure(parsed.filterNot(_.defaults))
         args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
         args <- if (args.exists(_.printHelp))
-          CoreTarget.error[NonEmptyList[Args]](PrintHelp)
+          CoreTarget.raiseError[NonEmptyList[Args]](PrintHelp)
         else CoreTarget.pure(args)
       } yield args
 
@@ -70,7 +60,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
             .copy(defaults = false)
           def Continue(x: From): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.left(x))
           def Return(x: To): CoreTarget[Either[From, To]]     = CoreTarget.pure(Either.right(x))
-          def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.error(x)
+          def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.raiseError(x)
           for {
             _ <- debug("core", "parseArgs")(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
             step <- pair match {
@@ -127,7 +117,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
                 _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse $x as an import directive")
                 importer <- x
                   .parse[Importer]
-                  .fold[CoreTarget[Importer]](err => CoreTarget.error(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
+                  .fold[CoreTarget[Importer]](err => CoreTarget.raiseError(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
               } yield Import(List(importer))
           )
           .sequence[CoreTarget, Import]
@@ -136,7 +126,7 @@ object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
         ReadSwagger(
           Paths.get(specPath), { swagger =>
             Common
-              .writePackage(kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
+              .writePackage[ScalaLanguage, CodegenApplication](kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
               .foldMap(targetInterpreter)
           }
         )

@@ -7,7 +7,6 @@ trait SwaggerSpecRunner {
   import cats.arrow.FunctionK
   import cats.implicits._
   import com.twilio.guardrail._
-  import com.twilio.guardrail.generators.GeneratorSettings
   import com.twilio.guardrail.languages.ScalaLanguage
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
@@ -15,13 +14,10 @@ trait SwaggerSpecRunner {
 
   def runSwaggerSpec(
       spec: String
-  )
-    : (Context, FunctionK[CodegenApplication, Target], GeneratorSettings) => (ProtocolDefinitions[ScalaLanguage],
-                                                                              Clients[ScalaLanguage],
-                                                                              Servers[ScalaLanguage]) =
+  ): (Context, FunctionK[CodegenApplication, Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) =
     runSwagger(new SwaggerParser().parse(spec)) _
 
-  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target], generatorSettings: GeneratorSettings)(
+  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication, Target])(
       implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication],
       Sc: ScalaTerms[ScalaLanguage, CodegenApplication],
       Sw: SwaggerTerms[ScalaLanguage, CodegenApplication]
@@ -30,7 +26,7 @@ trait SwaggerSpecRunner {
     import Sw._
 
     val prog = for {
-      protocol <- ProtocolGenerator.fromSwagger[CodegenApplication](swagger)
+      protocol <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication](swagger)
       definitions = protocol.elems
 
       schemes = Option(swagger.getSchemes)
@@ -56,7 +52,7 @@ trait SwaggerSpecRunner {
         .fromSwagger[ScalaLanguage, CodegenApplication](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)
 
-    Target.unsafeExtract(prog.foldMap(framework), generatorSettings)
+    Target.unsafeExtract(prog.foldMap(framework))
   }
 
 }

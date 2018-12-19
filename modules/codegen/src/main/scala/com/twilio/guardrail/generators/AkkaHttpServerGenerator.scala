@@ -11,172 +11,35 @@ import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.generators.syntax.scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.terms.RouteMeta
 import scala.collection.JavaConverters._
 import scala.meta._
 
 object AkkaHttpServerGenerator {
-  implicit class ExtendedUnzip[T1, T2, T3, T4, T5, T6, T7](xs: NonEmptyList[(T1, T2, T3, T4, T5, T6, T7)]) {
-    def unzip7: (List[T1], List[T2], List[T3], List[T4], List[T5], List[T6], List[T7]) =
-      xs.foldLeft(
-        (List.empty[T1], List.empty[T2], List.empty[T3], List.empty[T4], List.empty[T5], List.empty[T6], List.empty[T7])
-      ) {
-        case ((v1a, v2a, v3a, v4a, v5a, v6a, v7a), (v1, v2, v3, v4, v5, v6, v7)) =>
-          (v1a :+ v1, v2a :+ v2, v3a :+ v3, v4a :+ v4, v5a :+ v5, v6a :+ v6, v7a :+ v7)
-      }
-  }
-
-  object HttpHelper {
-    def apply(code: String): Option[(Int, String)] =
-      code match {
-        case "100" => Option((100, "Continue"))
-        case "101" => Option((101, "SwitchingProtocols"))
-        case "102" => Option((102, "Processing"))
-
-        case "200" => Option((200, "OK"))
-        case "201" => Option((201, "Created"))
-        case "202" => Option((202, "Accepted"))
-        case "203" => Option((203, "NonAuthoritativeInformation"))
-        case "204" => Option((204, "NoContent"))
-        case "205" => Option((205, "ResetContent"))
-        case "206" => Option((206, "PartialContent"))
-        case "207" => Option((207, "MultiStatus"))
-        case "208" => Option((208, "AlreadyReported"))
-        case "226" => Option((226, "IMUsed"))
-
-        case "300" => Option((300, "MultipleChoices"))
-        case "301" => Option((301, "MovedPermanently"))
-        case "302" => Option((302, "Found"))
-        case "303" => Option((303, "SeeOther"))
-        case "304" => Option((304, "NotModified"))
-        case "305" => Option((305, "UseProxy"))
-        case "307" => Option((307, "TemporaryRedirect"))
-        case "308" => Option((308, "PermanentRedirect"))
-
-        case "400" => Option((400, "BadRequest"))
-        case "401" => Option((401, "Unauthorized"))
-        case "402" => Option((402, "PaymentRequired"))
-        case "403" => Option((403, "Forbidden"))
-        case "404" => Option((404, "NotFound"))
-        case "405" => Option((405, "MethodNotAllowed"))
-        case "406" => Option((406, "NotAcceptable"))
-        case "407" => Option((407, "ProxyAuthenticationRequired"))
-        case "408" => Option((408, "RequestTimeout"))
-        case "409" => Option((409, "Conflict"))
-        case "410" => Option((410, "Gone"))
-        case "411" => Option((411, "LengthRequired"))
-        case "412" => Option((412, "PreconditionFailed"))
-        case "413" => Option((413, "RequestEntityTooLarge"))
-        case "414" => Option((414, "RequestUriTooLong"))
-        case "415" => Option((415, "UnsupportedMediaType"))
-        case "416" => Option((416, "RequestedRangeNotSatisfiable"))
-        case "417" => Option((417, "ExpectationFailed"))
-        case "418" => Option((418, "ImATeapot"))
-        case "420" => Option((420, "EnhanceYourCalm"))
-        case "422" => Option((422, "UnprocessableEntity"))
-        case "423" => Option((423, "Locked"))
-        case "424" => Option((424, "FailedDependency"))
-        case "425" => Option((425, "UnorderedCollection"))
-        case "426" => Option((426, "UpgradeRequired"))
-        case "428" => Option((428, "PreconditionRequired"))
-        case "429" => Option((429, "TooManyRequests"))
-        case "431" => Option((431, "RequestHeaderFieldsTooLarge"))
-        case "449" => Option((449, "RetryWith"))
-        case "450" => Option((450, "BlockedByParentalControls"))
-        case "451" => Option((451, "UnavailableForLegalReasons"))
-
-        case "500" => Option((500, "InternalServerError"))
-        case "501" => Option((501, "NotImplemented"))
-        case "502" => Option((502, "BadGateway"))
-        case "503" => Option((503, "ServiceUnavailable"))
-        case "504" => Option((504, "GatewayTimeout"))
-        case "505" => Option((505, "HTTPVersionNotSupported"))
-        case "506" => Option((506, "VariantAlsoNegotiates"))
-        case "507" => Option((507, "InsufficientStorage"))
-        case "508" => Option((508, "LoopDetected"))
-        case "509" => Option((509, "BandwidthLimitExceeded"))
-        case "510" => Option((510, "NotExtended"))
-        case "511" => Option((511, "NetworkAuthenticationRequired"))
-        case "598" => Option((598, "NetworkReadTimeout"))
-        case "599" => Option((599, "NetworkConnectTimeout"))
-        case _     => None
-      }
-  }
-
   object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
-      case ExtractOperations(paths) =>
+      case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
-          routes <- paths.traverse {
-            case (pathStr, path) =>
-              for {
-                _            <- Target.log.info("AkkaHttpServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
-                operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
-              } yield {
-                operationMap.asScala.toList.map {
-                  case (httpMethod, operation) =>
-                    ServerRoute(pathStr, httpMethod, operation)
-                }
-              }
-          }
-        } yield routes.flatten
-
-      case GetClassName(operation) =>
-        for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getClassName(${operation})")
-
-          pkg = ScalaPackage(operation)
-            .map(_.split('.').toVector)
-            .orElse({
-              Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-                tags.asScala
-              }
-            })
-            .map(_.toList)
-          opPkg = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-        } yield className
-
-      case GenerateResponseDefinitions(operation, protocolElems) =>
-        for {
-          operationId <- Target.fromOption(Option(operation.getOperationId())
-                                             .map(splitOperationParts)
-                                             .map(_._2),
-                                           "Missing operationId")
-          responses <- Target
-            .fromOption(Option(operation.getResponses).map(_.asScala), s"No responses defined for ${operationId}")
+          _ <- Target.pure(())
           responseSuperType = Type.Name(s"${operationId}Response")
           responseSuperTerm = Term.Name(s"${operationId}Response")
 
-          instances <- responses
-            .foldLeft[List[Target[(Defn, Defn, Case)]]](List.empty)({
-              case (acc, (key, resp)) =>
-                acc :+ (for {
-                  httpCode <- Target.fromOption(HttpHelper(key), s"Unknown HTTP type: ${key}")
-                  (code, friendlyName) = httpCode
-                  statusCodeName       = Term.Name(friendlyName)
-                  statusCode           = q"StatusCodes.${statusCodeName}"
-                  valueType <- Option(resp.getSchema).traverse { prop =>
-                    for {
-                      meta <- SwaggerUtil.propMeta(prop)
-                      resolved <- SwaggerUtil.ResolvedType
-                        .resolve(meta, protocolElems)
-                      SwaggerUtil
-                        .Resolved(baseType, _, baseDefaultValue) = resolved
-                    } yield baseType
-                  }
-                  responseTerm = Term.Name(s"${operationId}Response${statusCodeName.value}")
-                  responseName = Type.Name(s"${operationId}Response${statusCodeName.value}")
-                } yield {
+          instances = responses.value
+            .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
+              case (acc, resp) =>
+                acc :+ ({
+                  val statusCodeName = resp.statusCodeName
+                  val statusCode     = q"StatusCodes.${statusCodeName}"
+                  val valueType      = resp.value.map(_._1)
+                  val responseTerm   = Term.Name(s"${operationId}Response${statusCodeName.value}")
+                  val responseName   = Type.Name(s"${operationId}Response${statusCodeName.value}")
                   valueType.fold[(Defn, Defn, Case)](
                     (q"case object $responseTerm                      extends $responseSuperType($statusCode)",
                      q"def $statusCodeName: $responseSuperType = $responseTerm",
@@ -188,7 +51,6 @@ object AkkaHttpServerGenerator {
                   }
                 })
             })
-            .sequence
 
           (terms, aliases, marshallers) = instances.unzip3
 
@@ -237,32 +99,30 @@ object AkkaHttpServerGenerator {
           )
 
       case BuildTracingFields(operation, resourceName, tracing) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-            res <- if (tracing) {
-              for {
-                operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                   .map(splitOperationParts)
-                                                   .map(_._2),
-                                                 "Missing operationId")
-                label <- Target.fromOption(
-                  ScalaTracingLabel(operation)
-                    .map(Lit.String(_))
-                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                  "Missing client name"
-                )
-              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
-            } else Target.pure(None)
-          } yield res
-        }
+        for {
+          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          res <- if (tracing) {
+            for {
+              operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                 .map(splitOperationParts)
+                                                 .map(_._2),
+                                               "Missing operationId")
+              label <- Target.fromOption(
+                ScalaTracingLabel(operation)
+                  .map(Lit.String(_))
+                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                "Missing client name"
+              )
+            } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+          } else Target.pure(None)
+        } yield res
 
       case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {
-            case (tracingFields, sr @ ServerRoute(path, method, operation)) =>
+            case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
               for {
-                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
+                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters)
               } yield rendered
           }
           routeTerms = renderedRoutes.map(_.route)
@@ -329,10 +189,10 @@ object AkkaHttpServerGenerator {
       case HttpMethod.POST    => Target.pure(q"post")
       case HttpMethod.PUT     => Target.pure(q"put")
       case HttpMethod.OPTIONS => Target.pure(q"options")
-      case other              => Target.error(s"Unknown method: ${other}")
+      case other              => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter]): Target[Term] = {
+    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash)
@@ -354,7 +214,7 @@ object AkkaHttpServerGenerator {
         multi: Term => Type => Target[Term.Apply],
         multiOpt: Term => Type => Target[Term.Apply],
         optional: Term => Type => Target[Term.Apply]
-    )(params: List[ScalaParameter]): Target[Option[Term]] =
+    )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       for {
         directives <- params.traverse {
           case ScalaParameter(_, param, _, argName, argType) =>
@@ -381,7 +241,7 @@ object AkkaHttpServerGenerator {
             Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" })
         }
 
-    def bodyToAkka(body: Option[ScalaParameter]): Target[Option[Term]] =
+    def bodyToAkka(body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       Target.pure(
         body.map {
           case ScalaParameter(_, _, _, _, argType) =>
@@ -389,14 +249,14 @@ object AkkaHttpServerGenerator {
         }
       )
 
-    def headersToAkka: List[ScalaParameter] => Target[Option[Term]] =
+    def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => {
           case t"String" => Target.pure(q"headerValueByName(${arg})")
           case tpe       => Target.pure(q"headerValueByName(${arg}).flatMap(str => onSuccess(Unmarshal(str).to[${tpe}]))")
         },
-        arg => tpe => Target.error(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => Target.error(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => Target.raiseError(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" => Target.pure(q"optionalHeaderValueByName(${arg})")
           case tpe =>
@@ -406,7 +266,7 @@ object AkkaHttpServerGenerator {
         }
       ) _
 
-    def qsToAkka: List[ScalaParameter] => Target[Option[Term]] =
+    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*)"),
@@ -414,7 +274,7 @@ object AkkaHttpServerGenerator {
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
-    def formToAkka: List[ScalaParameter] => Target[Option[Term]] =
+    def formToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
@@ -422,7 +282,7 @@ object AkkaHttpServerGenerator {
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
-    def asyncFormToAkka(operationId: String): List[ScalaParameter] => Target[(Option[Term], List[Stat])] = { params =>
+    def asyncFormToAkka(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[(Option[Term], List[Stat])] = { params =>
       class Binding(value: String) {
         def toPat: Pat        = if (value.nonEmpty && ('A'.to('Z').contains(value(0)))) toTerm else toVar
         def toVar: Pat.Var    = Pat.Var(toTerm)
@@ -658,27 +518,20 @@ object AkkaHttpServerGenerator {
 
     def generateRoute(resourceName: String,
                       basePath: Option[String],
-                      route: ServerRoute,
+                      route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[RenderedRoute] =
+                      parameters: ScalaParameters[ScalaLanguage]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        ServerRoute(path, method, operation) = route
+        RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-        parameters <- Option(operation.getParameters)
-          .map(_.asScala.toList)
-          .map(ScalaParameter.fromParameters(protocolElems))
-          .getOrElse(Target.pure(List.empty[ScalaParameter]))
-        _ <- Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute")("Parameters:")
-        _ <- parameters.traverse(parameter => Target.log.debug("AkkaHttpServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
 
-        filterParamBy = ScalaParameter.filterParams(parameters)
-        bodyArgs      = filterParamBy("body").headOption
-        formArgs = filterParamBy("formData").toList.map({ x =>
+        // special-case file upload stuff
+        formArgs = parameters.formParams.map({ x =>
           x.withType(
             if (x.isFile) {
               val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
@@ -692,9 +545,10 @@ object AkkaHttpServerGenerator {
             }
           )
         })
-        headerArgs = filterParamBy("header").toList
-        pathArgs   = filterParamBy("path").toList
-        qsArgs     = filterParamBy("query").toList
+        headerArgs = parameters.headerParams
+        pathArgs   = parameters.pathParams
+        qsArgs     = parameters.queryStringParams
+        bodyArgs   = parameters.bodyParams
 
         akkaMethod <- httpMethodToAkka(method)
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
@@ -710,7 +564,8 @@ object AkkaHttpServerGenerator {
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
-        val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
+        val orderedParameters
+          : List[List[ScalaParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
           .map(_.param)
           .map(List(_))
 

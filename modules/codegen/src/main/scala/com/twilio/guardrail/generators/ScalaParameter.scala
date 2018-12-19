@@ -1,25 +1,37 @@
 package com.twilio.guardrail
 package generators
 
+import _root_.io.swagger.models.Model
 import _root_.io.swagger.models.parameters.Parameter
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
+import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import java.util.Locale
 
 import scala.meta._
-import cats.syntax.traverse._
-import cats.instances.all._
+import cats.MonadError
+import cats.implicits._
+import cats.arrow.FunctionK
+import cats.free.Free
+import cats.data.{ EitherK, EitherT }
 
-class GeneratorSettings(val fileType: Type, val jsonType: Type)
-case class RawParameterName private[generators] (value: String) {
-  def toLit: Lit.String = Lit.String(value)
+case class RawParameterName private[generators] (value: String)
+class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
+  val filterParamBy     = ScalaParameter.filterParams(parameters)
+  val headerParams      = filterParamBy("header")
+  val pathParams        = filterParamBy("path")
+  val queryStringParams = filterParamBy("query")
+  val bodyParams        = filterParamBy("body").headOption
+  val formParams        = filterParamBy("formData")
 }
-class ScalaParameter private[generators] (
+class ScalaParameter[L <: LA] private[generators] (
     val in: Option[String],
-    val param: Term.Param,
-    val paramName: Term.Name,
+    val param: L#MethodParameter,
+    val paramName: L#TermName,
     val argName: RawParameterName,
-    val argType: Type,
+    val argType: L#Type,
     val required: Boolean,
     val hashAlgorithm: Option[String],
     val isFile: Boolean
@@ -27,32 +39,20 @@ class ScalaParameter private[generators] (
   override def toString: String =
     s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
 
-  def withType(newArgType: Type): ScalaParameter =
-    new ScalaParameter(in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
+  def withType(newArgType: L#Type): ScalaParameter[L] =
+    new ScalaParameter[L](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
-  def unapply(param: ScalaParameter): Option[(Option[String], Term.Param, Term.Name, RawParameterName, Type)] =
+  def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParam(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
-    fromParam(param.name.value)(param)
-  def fromParam(argName: String)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter =
-    fromParam(RawParameterName(argName))(param)
-  def fromParam(argName: RawParameterName)(param: Term.Param)(implicit gs: GeneratorSettings): ScalaParameter = param match {
-    case param @ Term.Param(mods, name, decltype, default) =>
-      val (tpe, innerTpe, required): (Type, Type, Boolean) = decltype
-        .flatMap({
-          case tpe @ t"Option[$inner]" =>
-            Some((tpe, inner, false))
-          case Type.ByName(tpe)   => Some((tpe, tpe, true))
-          case tpe @ Type.Name(_) => Some((tpe, tpe, true))
-          case _                  => None
-        })
-        .getOrElse((t"Nothing", t"Nothing", true))
-      new ScalaParameter(None, param, Term.Name(name.value), argName, tpe, required, None, innerTpe == gs.fileType)
-  }
+  def fromParameter[L <: LA, F[_]](
+      protocolElems: List[StrictProtocolElems[L]]
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Parameter => Free[F, ScalaParameter[L]] = { parameter =>
+    import Fw._
+    import Sc._
+    import Sw._
 
-  def fromParameter(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Parameter => Target[ScalaParameter] = { parameter =>
     def toCamelCase(s: String): String = {
       val fromSnakeOrDashed =
         "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
@@ -60,158 +60,155 @@ object ScalaParameter {
         .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
 
-    def paramMeta[T <: Parameter](param: T): Target[SwaggerUtil.ResolvedType] = {
+    def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
       import _root_.io.swagger.models.parameters._
-      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Option[Term] = (
+
+      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
         Option(p.getType)
-          .flatMap { _type =>
+          .flatTraverse[Free[F, ?], L#Term]({ _type =>
             val fmt = Option(p.getFormat)
             (_type, fmt) match {
               case ("string", None) =>
-                Default(p).extract[String].map(Lit.String(_))
+                Default(p).extract[String].traverse(litString(_))
               case ("number", Some("float")) =>
-                Default(p).extract[Float].map(Lit.Float(_))
+                Default(p).extract[Float].traverse(litFloat(_))
               case ("number", Some("double")) =>
-                Default(p).extract[Double].map(Lit.Double(_))
+                Default(p).extract[Double].traverse(litDouble(_))
               case ("integer", Some("int32")) =>
-                Default(p).extract[Int].map(Lit.Int(_))
+                Default(p).extract[Int].traverse(litInt(_))
               case ("integer", Some("int64")) =>
-                Default(p).extract[Long].map(Lit.Long(_))
+                Default(p).extract[Long].traverse(litLong(_))
               case ("boolean", None) =>
-                Default(p).extract[Boolean].map(Lit.Boolean(_))
-              case x => None
+                Default(p).extract[Boolean].traverse(litBoolean(_))
+              case x => Free.pure(Option.empty[L#Term])
             }
-          }
-      )
+          })
 
-      Target.getGeneratorSettings.flatMap { implicit gs =>
-        param match {
-          case x: BodyParameter =>
-            for {
-              schema <- Target.fromOption(Option(x.getSchema()), "Schema not specified")
-              rtpe   <- SwaggerUtil.modelMetaType(schema)
-            } yield rtpe
-          case x: HeaderParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-            } yield
-              SwaggerUtil
-                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
-          case x: PathParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-            } yield
-              SwaggerUtil
-                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
-          case x: QueryParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-            } yield
-              SwaggerUtil
-                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
-          case x: CookieParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-            } yield
-              SwaggerUtil
-                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
-          case x: FormParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-            } yield
-              SwaggerUtil
-                .Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, getDefault(x))
-          case r: RefParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(r.getSimpleRef()), "$ref not defined")
-            } yield SwaggerUtil.Deferred(tpeName)
-          case x: SerializableParameter =>
-            for {
-              tpeName <- Target.fromOption(Option(x.getType()), s"Missing type")
-            } yield SwaggerUtil.Resolved(SwaggerUtil.typeName(tpeName, Option(x.getFormat()), ScalaType(x)), None, None)
-          case x =>
-            Target.error(s"Unsure how to handle ${x}")
-        }
+      param match {
+        case x: BodyParameter =>
+          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+
+        case x: HeaderParameter =>
+          getHeaderParameterType(x).flatMap(
+            tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+          )
+
+        case x: PathParameter =>
+          getPathParameterType(x)
+            .flatMap(
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case x: QueryParameter =>
+          getQueryParameterType(x)
+            .flatMap(
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case x: CookieParameter =>
+          getCookieParameterType(x)
+            .flatMap(
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case x: FormParameter =>
+          getFormParameterType(x)
+            .flatMap(
+              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case r: RefParameter =>
+          getRefParameterRef(r)
+            .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
+
+        case x: SerializableParameter =>
+          getSerializableParameterType(x)
+            .flatMap(tpeName => SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)).map(SwaggerUtil.Resolved[L](_, None, None)))
+
+        case x =>
+          fallbackParameterHandler(x)
       }
     }
 
-    Target.getGeneratorSettings.flatMap { implicit gs =>
-      for {
-        meta     <- paramMeta(parameter)
-        resolved <- SwaggerUtil.ResolvedType.resolve(meta, protocolElems)
-        SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
+    for {
+      meta     <- paramMeta(parameter)
+      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
 
-        required = parameter.getRequired()
-        declType: Type = if (!required) {
-          t"Option[$paramType]"
-        } else {
-          paramType
-        }
-
-        enumDefaultValue <- (paramType match {
-          case tpe @ Type.Name(tpeName) =>
-            protocolElems
-              .collect({
-                case x @ EnumDefinition(_, Type.Name(`tpeName`), _, _, _) => x
-              })
-              .headOption
-              .fold(baseDefaultValue.map(Target.pure _)) {
-                case EnumDefinition(_, _, elems, _, _) => // FIXME: Is there a better way to do this? There's a gap of coverage here
-                  baseDefaultValue.map {
-                    case Lit.String(name) =>
-                      elems
-                        .find(_._1 == name)
-                        .fold(Target.error[Term](s"Enumeration ${tpeName} is not defined for default value ${name}"))(value => Target.pure(value._3))
-                    case _ =>
-                      Target.error[Term](s"Enumeration ${tpeName} somehow has a default value that isn't a string")
-                  }
-              }
-          case _ => baseDefaultValue.map(Target.pure _)
-        }).sequence
-
-        defaultValue = if (!required) {
-          enumDefaultValue.map(x => q"Option(${x})").orElse(Some(q"None"))
-        } else {
-          enumDefaultValue
-        }
-        name <- Target.fromOption(Option(parameter.getName), "Parameter missing \"name\"")
-      } yield {
-        val paramName = Term.Name(toCamelCase(name))
-        val param     = param"${paramName}: ${declType}".copy(default = defaultValue)
-        new ScalaParameter(Option(parameter.getIn),
-                           param,
-                           paramName,
-                           RawParameterName(name),
-                           declType,
-                           required,
-                           ScalaFileHashAlgorithm(parameter),
-                           paramType == gs.fileType)
+      required = parameter.getRequired()
+      declType <- if (!required) {
+        liftOptionalType(paramType)
+      } else {
+        Free.pure[F, L#Type](paramType)
       }
+
+      enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(Free.pure[F, L#Term] _)) { tpe =>
+        protocolElems
+          .flatTraverse({
+            case x @ EnumDefinition(_, _tpeName, _, _, _) =>
+              for {
+                areEqual <- typeNamesEqual(tpe, _tpeName)
+              } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
+            case _ => Free.pure[F, List[EnumDefinition[L]]](List.empty)
+          })
+          .flatMap(_.headOption.fold[Free[F, Option[L#Term]]](baseDefaultValue.traverse(Free.pure _)) { x =>
+            baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
+          })
+        })
+
+      defaultValue <- if (!required) {
+        (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
+      } else {
+        Free.pure[F, Option[L#Term]](enumDefaultValue)
+      }
+
+      name <- getParameterName(parameter)
+
+      paramName <- pureTermName(toCamelCase(name))
+      param     <- pureMethodParameter(paramName, declType, defaultValue)
+
+      ftpe       <- fileType(None)
+      isFileType <- typesEqual(paramType, ftpe)
+    } yield {
+      new ScalaParameter[L](Option(parameter.getIn),
+                            param,
+                            paramName,
+                            RawParameterName(name),
+                            declType,
+                            required,
+                            ScalaFileHashAlgorithm(parameter),
+                            isFileType)
     }
   }
 
-  def fromParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Parameter] => Target[List[ScalaParameter]] = { params =>
+  def fromParameters[L <: LA, F[_]](
+      protocolElems: List[StrictProtocolElems[L]]
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Parameter] => Free[F, List[ScalaParameter[L]]] = { params =>
+    import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
-      counts = parameters.groupBy(_.paramName.value).mapValues(_.length)
-    } yield
-      parameters.map { param =>
-        val Term.Name(name) = param.paramName
-        if (counts.getOrElse(name, 0) > 1) {
-          val escapedName =
-            Term.Name(param.argName.value)
-          new ScalaParameter(
-            param.in,
-            param.param.copy(name = escapedName),
-            escapedName,
-            param.argName,
-            param.argType,
-            param.required,
-            param.hashAlgorithm,
-            param.isFile
-          )
-        } else param
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      result <- parameters.traverse { param =>
+        extractTermName(param.paramName).flatMap { name =>
+          if (counts.getOrElse(name, 0) > 1) {
+            pureTermName(param.argName.value).flatMap { escapedName =>
+              alterMethodParameterName(param.param, escapedName).map { newParam =>
+                new ScalaParameter[L](
+                  param.in,
+                  newParam,
+                  escapedName,
+                  param.argName,
+                  param.argType,
+                  param.required,
+                  param.hashAlgorithm,
+                  param.isFile
+                )
+              }
+            }
+          } else Free.pure[F, ScalaParameter[L]](param)
+        }
       }
+    } yield result
   }
 
   /**
@@ -219,7 +216,7 @@ object ScalaParameter {
     * @param params
     * @return
     */
-  def filterParams(params: List[ScalaParameter]): String => List[ScalaParameter] = { in =>
+  def filterParams[L <: LA](params: List[ScalaParameter[L]]): String => List[ScalaParameter[L]] = { in =>
     params.filter(_.in == Some(in))
   }
 }

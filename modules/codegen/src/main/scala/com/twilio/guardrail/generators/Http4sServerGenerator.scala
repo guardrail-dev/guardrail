@@ -9,94 +9,48 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.generators.syntax.scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.terms.RouteMeta
 import scala.collection.JavaConverters._
 import scala.meta.{ Term, _ }
 
 object Http4sServerGenerator {
-  implicit class ExtendedUnzip[T1, T2, T3, T4, T5, T6, T7](xs: NonEmptyList[(T1, T2, T3, T4, T5, T6, T7)]) {
-    def unzip7: (List[T1], List[T2], List[T3], List[T4], List[T5], List[T6], List[T7]) =
-      xs.foldLeft(
-        (List.empty[T1], List.empty[T2], List.empty[T3], List.empty[T4], List.empty[T5], List.empty[T6], List.empty[T7])
-      ) {
-        case ((v1a, v2a, v3a, v4a, v5a, v6a, v7a), (v1, v2, v3, v4, v5, v6, v7)) =>
-          (v1a :+ v1, v2a :+ v2, v3a :+ v3, v4a :+ v4, v5a :+ v5, v6a :+ v6, v7a :+ v7)
-      }
-  }
-
   object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
-      case ExtractOperations(paths) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"extractOperations(${paths})")
-          routes <- paths.traverse {
-            case (pathStr, path) =>
-              for {
-                _            <- Target.log.info("Http4sServerGenerator", "server", "extractOperations")(s"(${pathStr}, ${path})")
-                operationMap <- Target.fromOption(Option(path.getOperationMap), "No operations defined")
-              } yield {
-                operationMap.asScala.toList.map {
-                  case (httpMethod, operation) =>
-                    ServerRoute(pathStr, httpMethod, operation)
-                }
-              }
-          }
-        } yield routes.flatten
-
-      case GetClassName(operation) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getClassName(${operation})")
-
-          pkg = ScalaPackage(operation)
-            .map(_.split('.').toVector)
-            .orElse({
-              Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-scala-package` vendor extension")
-                tags.asScala
-              }
-            })
-            .map(_.toList)
-          opPkg = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-        } yield className
-
-      case GenerateResponseDefinitions(operation, protocolElems) =>
-        Http4sHelper.generateResponseDefinitions(operation, protocolElems)
+      case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
+        Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
       case BuildTracingFields(operation, resourceName, tracing) =>
-        Target.getGeneratorSettings.flatMap { implicit gs =>
-          for {
-            _ <- Target.log.debug("Http4sServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
-            res <- if (tracing) {
-              for {
-                operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                   .map(splitOperationParts)
-                                                   .map(_._2),
-                                                 "Missing operationId")
-                label <- Target.fromOption(
-                  ScalaTracingLabel(operation)
-                    .map(Lit.String(_))
-                    .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                  "Missing client name"
-                )
-              } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
-            } else Target.pure(None)
-          } yield res
-        }
+        for {
+          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          res <- if (tracing) {
+            for {
+              operationId <- Target.fromOption(Option(operation.getOperationId())
+                                                 .map(splitOperationParts)
+                                                 .map(_._2),
+                                               "Missing operationId")
+              label <- Target.fromOption(
+                ScalaTracingLabel(operation)
+                  .map(Lit.String(_))
+                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
+                "Missing client name"
+              )
+            } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
+          } else Target.pure(None)
+        } yield res
 
       case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes
             .traverse {
-              case (tracingFields, sr @ ServerRoute(path, method, operation)) =>
-                generateRoute(resourceName, basePath, sr, tracingFields, protocolElems)
+              case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
+                generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
             }
             .map(_.flatten)
           routeTerms = renderedRoutes.map(_.route)
@@ -158,10 +112,10 @@ object Http4sServerGenerator {
       case HttpMethod.PATCH  => Target.pure(Term.Name("PATCH"))
       case HttpMethod.POST   => Target.pure(Term.Name("POST"))
       case HttpMethod.PUT    => Target.pure(Term.Name("PUT"))
-      case other             => Target.error(s"Unknown method: ${other}")
+      case other             => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToHttp4s(basePath: Option[String], path: String, pathArgs: List[ScalaParameter]): Target[(Pat, Option[Pat])] =
+    def pathStrToHttp4s(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
       (basePath.getOrElse("") + path).stripPrefix("/") match {
         case "" => Target.pure((p"${Term.Name("Root")} / ${Lit.String("")}", None))
         case path =>
@@ -172,11 +126,11 @@ object Http4sServerGenerator {
       }
 
     def directivesFromParams[T](
-        required: ScalaParameter => Type => Target[T],
-        multi: ScalaParameter => Type => Target[T],
-        multiOpt: ScalaParameter => Type => Target[T],
-        optional: ScalaParameter => Type => Target[T]
-    )(params: List[ScalaParameter]): Target[List[T]] =
+        required: ScalaParameter[ScalaLanguage] => Type => Target[T],
+        multi: ScalaParameter[ScalaLanguage] => Type => Target[T],
+        multiOpt: ScalaParameter[ScalaLanguage] => Type => Target[T],
+        optional: ScalaParameter[ScalaLanguage] => Type => Target[T]
+    )(params: List[ScalaParameter[ScalaLanguage]]): Target[List[T]] =
       for {
         directives <- params.traverse[Target, T] {
           case scalaParam @ ScalaParameter(_, param, _, _, argType) =>
@@ -198,7 +152,7 @@ object Http4sServerGenerator {
         }
       } yield directives
 
-    def bodyToHttp4s(operationId: String, body: Option[ScalaParameter]): Target[Option[Term => Term]] =
+    def bodyToHttp4s(operationId: String, body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
       Target.pure(
         body.map {
           case ScalaParameter(_, _, paramName, _, _) =>
@@ -209,7 +163,7 @@ object Http4sServerGenerator {
 
     case class Param(generator: Option[Enumerator.Generator], matcher: Option[(Term, Pat)], handlerCallArg: Term)
 
-    def headersToHttp4s: List[ScalaParameter] => Target[List[Param]] =
+    def headersToHttp4s: List[ScalaParameter[ScalaLanguage]] => Target[List[Param]] =
       directivesFromParams(
         arg => {
           case t"String" =>
@@ -223,8 +177,8 @@ object Http4sServerGenerator {
               )
             )
         },
-        arg => _ => Target.error(s"Unsupported Iterable[${arg}"),
-        arg => _ => Target.error(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => _ => Target.raiseError(s"Unsupported Iterable[${arg}"),
+        arg => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" => Target.pure(Param(None, None, q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)"))
           case tpe =>
@@ -238,7 +192,7 @@ object Http4sServerGenerator {
         }
       )
 
-    def qsToHttp4s(operationId: String): List[ScalaParameter] => Target[Option[Pat]] =
+    def qsToHttp4s(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[Option[Pat]] =
       params =>
         directivesFromParams(
           arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.paramName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
@@ -251,7 +205,7 @@ object Http4sServerGenerator {
             Some(xs.foldLeft[Pat](x) { case (a, n) => p"${a} +& ${n}" })
       }
 
-    def formToHttp4s: List[ScalaParameter] => Target[List[Param]] =
+    def formToHttp4s: List[ScalaParameter[ScalaLanguage]] => Target[List[Param]] =
       directivesFromParams(
         arg => {
           case t"String" =>
@@ -316,7 +270,7 @@ object Http4sServerGenerator {
         }
       )
 
-    def asyncFormToHttp4s(operationId: String): List[ScalaParameter] => Target[List[Param]] =
+    def asyncFormToHttp4s(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[List[Param]] =
       directivesFromParams(
         arg =>
           elemType =>
@@ -446,30 +400,24 @@ object Http4sServerGenerator {
 
     def generateRoute(resourceName: String,
                       basePath: Option[String],
-                      route: ServerRoute,
+                      route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[Option[RenderedRoute]] =
+                      parameters: ScalaParameters[ScalaLanguage],
+                      responses: Responses[ScalaLanguage]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        ServerRoute(path, method, operation) = route
+        RouteMeta(path, method, operation) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-        parameters <- Option(operation.getParameters)
-          .map(_.asScala.toList)
-          .map(ScalaParameter.fromParameters(protocolElems))
-          .getOrElse(Target.pure(List.empty[ScalaParameter]))
-        _ <- Target.log.debug("Http4sServerGenerator", "server", "generateRoute")("Parameters:")
-        _ <- parameters.traverse(parameter => Target.log.debug("Http4sServerGenerator", "server", "generateRoute", "parameter")(s"${parameter}"))
 
-        filterParamBy = ScalaParameter.filterParams(parameters)
-        bodyArgs      = filterParamBy("body").headOption
-        formArgs      = filterParamBy("formData")
-        headerArgs    = filterParamBy("header")
-        pathArgs      = filterParamBy("path")
-        qsArgs        = filterParamBy("query")
+        formArgs   = parameters.formParams
+        headerArgs = parameters.headerParams
+        pathArgs   = parameters.pathParams
+        qsArgs     = parameters.queryStringParams
+        bodyArgs   = parameters.bodyParams
 
         http4sMethod <- httpMethodToHttp4s(method)
         pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
@@ -479,15 +427,15 @@ object Http4sServerGenerator {
         asyncFormProcessing = formArgs.exists(_.isFile)
         http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(operationId)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
-        responses          <- Http4sHelper.getResponses(operationId, operation.getResponses, protocolElems)
-        supportDefinitions <- generateSupportDefinitions(route, protocolElems)
+        supportDefinitions <- generateSupportDefinitions(route, parameters)
       } yield {
         val (responseCompanionTerm, responseCompanionType) =
           (Term.Name(s"${operationId.capitalize}Response"), Type.Name(s"${operationId.capitalize}Response"))
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Type](t"$responseCompanionType")(Function.const(t"Response[F]"))
-        val orderedParameters: List[List[ScalaParameter]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
+        val orderedParameters
+          : List[List[ScalaParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
           .map(_.param)
           .map(List(_))
 
@@ -509,13 +457,13 @@ object Http4sServerGenerator {
         val responseExpr = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Term] {
-            val marshallers = responses.map {
-              case (statusCodeName, valueType) =>
+            val marshallers = responses.value.map {
+              case Response(statusCodeName, valueType) =>
                 val responseTerm = Term.Name(s"${statusCodeName.value}")
                 valueType.fold[Case](
-                  p"case $responseCompanionTerm.$responseTerm => $statusCodeName()"
+                  p"case $responseCompanionTerm.$responseTerm => ${statusCodeName}()"
                 ) { _ =>
-                  p"case $responseCompanionTerm.$responseTerm(value) => $statusCodeName(value)(E, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
+                  p"case $responseCompanionTerm.$responseTerm(value) => ${statusCodeName}(value)(E, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
                 }
             }
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
@@ -583,22 +531,18 @@ object Http4sServerGenerator {
         _      <- routes.traverse(route => Target.log.debug("Http4sServerGenerator", "server", "combineRouteTerms")(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList)
 
-    def generateSupportDefinitions(route: ServerRoute, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
+    def generateSupportDefinitions(route: RouteMeta, parameters: ScalaParameters[ScalaLanguage]): Target[List[Defn]] =
       for {
         operation <- Target.pure(route.operation)
-        parameters <- Option(operation.getParameters)
-          .map(_.asScala.toList)
-          .map(ScalaParameter.fromParameters(protocolElems))
-          .getOrElse(Target.pure(List.empty[ScalaParameter]))
-        filterParamBy = ScalaParameter.filterParams(parameters)
-        pathArgs      = filterParamBy("path")
+
+        pathArgs = parameters.pathParams
       } yield {
         generatePathParamExtractors(pathArgs)
       }
 
-    def generatePathParamExtractors(pathArgs: List[ScalaParameter]): List[Defn] =
+    def generatePathParamExtractors(pathArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
       pathArgs
-        .map(_.argType.asInstanceOf[Type.Name].value)
+        .map(_.argType.toString)
         .distinct
         .filter(!List("Int", "Long", "String").contains(_))
         .map(tpe => q"""
@@ -612,7 +556,7 @@ object Http4sServerGenerator {
           }
         """)
 
-    def generateQueryParamMatchers(operationId: String, qsArgs: List[ScalaParameter]): List[Defn] =
+    def generateQueryParamMatchers(operationId: String, qsArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
       qsArgs
         .flatMap {
           case ScalaParameter(_, param, _, argName, argType) =>
@@ -650,7 +594,7 @@ object Http4sServerGenerator {
                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
                  argType)
             }
-            if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.asInstanceOf[Type.Name].value)) {
+            if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.toString())) {
               val queryParamDecoder = q"""
                 implicit val ${Pat.Var(Term.Name(s"${argName.value}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
                     Json.fromString(value.value).as[$elemType]
@@ -664,13 +608,13 @@ object Http4sServerGenerator {
         }
 
     def generateCodecs(operationId: String,
-                       bodyArgs: Option[ScalaParameter],
-                       responses: List[(Term.Name, Option[Type])],
+                       bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+                       responses: Responses[ScalaLanguage],
                        consumes: Seq[String],
                        produces: Seq[String]): List[Defn.Val] =
       generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces)
 
-    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter], consumes: Seq[String]): List[Defn.Val] =
+    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[String]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(
@@ -678,12 +622,13 @@ object Http4sServerGenerator {
           )
       }
 
-    def generateEncoders(operationId: String, responses: List[(Term.Name, Option[Type])], produces: Seq[String]): List[Defn.Val] =
+    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
       for {
-        (statusCodeName, valueType) <- responses
-        tpe                         <- valueType
+        response        <- responses.value
+        typeDefaultPair <- response.value
+        (tpe, _) = typeDefaultPair
       } yield {
-        q"val ${Pat.Var(Term.Name(s"$operationId${statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
+        q"val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }
 
     def generateTracingExtractor(operationId: String, tracingField: Term) =

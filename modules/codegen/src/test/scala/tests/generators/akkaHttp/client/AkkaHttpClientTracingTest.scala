@@ -4,7 +4,6 @@ import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 import scala.meta._
 
 class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -34,7 +33,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |""".stripMargin
 
     val (_, Clients(Client(_, _, _, _, cls, _) :: _), _) =
-      runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
+      runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -92,7 +91,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       _,
       Clients(Client(tags, className, _, cmp, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

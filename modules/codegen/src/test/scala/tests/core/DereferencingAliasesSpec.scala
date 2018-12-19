@@ -4,7 +4,6 @@ import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
-import com.twilio.guardrail.tests._
 
 import scala.meta._
 
@@ -66,7 +65,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
       Clients(Client(_, _, _, clientCmp, clientCls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp, defaults.akkaGeneratorSettings)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val definition = q"""
       case class propRef(param: Option[Long] = None, array: Option[IndexedSeq[Long]] = None, arrayArray: Option[IndexedSeq[IndexedSeq[Long]]] = None)
