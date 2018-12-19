@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms.client
 
 import com.twilio.guardrail.{ RenderedClientOperation, StrictProtocolElems }
-import com.twilio.guardrail.generators.Responses
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.generators.GeneratorSettings
@@ -13,7 +13,7 @@ case class GenerateClientOperation[L <: LA](className: List[String],
                                             route: RouteMeta,
                                             methodName: String,
                                             tracing: Boolean,
-                                            protocolElems: List[StrictProtocolElems[L]],
+                                            parameters: ScalaParameters[L],
                                             responses: Responses[L])
     extends ClientTerm[L, RenderedClientOperation[L]]
 case class GetImports[L <: LA](tracing: Boolean)      extends ClientTerm[L, List[L#Import]]

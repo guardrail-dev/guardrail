@@ -48,7 +48,7 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, protocolElems, responses) =>
+      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
@@ -263,8 +263,6 @@ object Http4sClientGenerator {
 
             produces = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
             consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
-
-            parameters <- route.getParameters(protocolElems, gs)
 
             headerArgs = parameters.headerParams
             pathArgs   = parameters.pathParams

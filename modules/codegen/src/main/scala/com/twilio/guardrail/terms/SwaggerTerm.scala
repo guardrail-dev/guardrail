@@ -15,10 +15,12 @@ import _root_.io.swagger.models.parameters.{
 }
 import _root_.io.swagger.models.properties.{ ArrayProperty, Property, RefProperty }
 import cats.MonadError
+import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.generators.{ GeneratorSettings, ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import scala.collection.JavaConverters._
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
   private val parameters = {
@@ -26,7 +28,14 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       .map(_.asScala.toList)
   }
 
-  def getParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]], gs: GeneratorSettings[ScalaLanguage]): Target[ScalaParameters[ScalaLanguage]] =
+  def getParametersF[L <: LA, F[_]](
+      protocolElems: List[StrictProtocolElems[L]]
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
+    parameters
+      .fold(Free.pure[F, List[ScalaParameter[L]]](List.empty))(ScalaParameter.fromParametersF(protocolElems))
+      .map(new ScalaParameters[L](_))
+
+  def getParameters(protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[ScalaParameters[ScalaLanguage]] =
     parameters
       .map(ScalaParameter.fromParameters(protocolElems))
       .getOrElse(Target.pure(List.empty[ScalaParameter[ScalaLanguage]]))

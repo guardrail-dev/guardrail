@@ -415,7 +415,7 @@ object Http4sServerGenerator {
                                            .map(_._2),
                                          "Missing operationId")
 
-        parameters <- route.getParameters(protocolElems, gs)
+        parameters <- route.getParameters(protocolElems)
 
         formArgs   = parameters.formParams
         headerArgs = parameters.headerParams
@@ -542,7 +542,7 @@ object Http4sServerGenerator {
       for {
         gs         <- Target.getGeneratorSettings
         operation  <- Target.pure(route.operation)
-        parameters <- route.getParameters(protocolElems, gs)
+        parameters <- route.getParameters(protocolElems)
 
         pathArgs = parameters.pathParams
       } yield {

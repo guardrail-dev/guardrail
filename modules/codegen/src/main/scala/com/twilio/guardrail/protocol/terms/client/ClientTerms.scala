@@ -6,17 +6,17 @@ import com.twilio.guardrail.{ RenderedClientOperation, StrictProtocolElems }
 import com.twilio.guardrail.generators.GeneratorSettings
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.generators.Responses
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 
 import _root_.io.swagger.models.Operation
 
 class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
-  def generateClientOperation(className: List[String], tracing: Boolean, protocolElems: List[StrictProtocolElems[L]])(
+  def generateClientOperation(className: List[String], tracing: Boolean, parameters: ScalaParameters[L])(
       route: RouteMeta,
       methodName: String,
       responses: Responses[L]
   ): Free[F, RenderedClientOperation[L]] =
-    Free.inject[ClientTerm[L, ?], F](GenerateClientOperation[L](className, route, methodName, tracing, protocolElems, responses))
+    Free.inject[ClientTerm[L, ?], F](GenerateClientOperation[L](className, route, methodName, tracing, parameters, responses))
   def getImports(tracing: Boolean): Free[F, List[L#Import]] =
     Free.inject[ClientTerm[L, ?], F](GetImports[L](tracing))
   def getExtraImports(tracing: Boolean): Free[F, List[L#Import]] =

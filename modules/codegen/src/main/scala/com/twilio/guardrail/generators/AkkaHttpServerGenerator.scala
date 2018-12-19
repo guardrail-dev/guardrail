@@ -533,7 +533,7 @@ object AkkaHttpServerGenerator {
                                            .map(splitOperationParts)
                                            .map(_._2),
                                          "Missing operationId")
-        parameters <- route.getParameters(protocolElems, gs)
+        parameters <- route.getParameters(protocolElems)
 
         // special-case file upload stuff
         formArgs = parameters.formParams.map({ x =>
