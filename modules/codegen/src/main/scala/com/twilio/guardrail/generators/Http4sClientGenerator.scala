@@ -153,7 +153,7 @@ object Http4sClientGenerator {
                   urlWithParams: Term,
                   formDataParams: Option[Term],
                   headerParams: Term,
-                  responses: List[(Term.Name, Option[Type])],
+                  responses: Responses[ScalaLanguage],
                   produces: Seq[String],
                   consumes: Seq[String],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
@@ -201,14 +201,13 @@ object Http4sClientGenerator {
             q"val req = $reqWithBody"
           )
           val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
-          val cases = responses.map {
-            case (statusCodeName, valueType) =>
-              val responseTerm = Term.Name(s"${statusCodeName.value}")
-              valueType.fold[Case](
-                p"case $statusCodeName(_) => effect.pure($responseCompanionTerm.$responseTerm)"
-              ) { _ =>
-                p"case $statusCodeName(resp) => ${Term.Name(s"$methodName${statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, identity).map($responseCompanionTerm.$responseTerm)"
-              }
+          val cases = responses.value.map { resp =>
+            val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+            resp.value.fold[Case](
+              p"case ${resp.statusCodeName}(_) => effect.pure($responseCompanionTerm.$responseTerm)"
+            ) { _ =>
+              p"case ${resp.statusCodeName}(resp) => ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, identity).map($responseCompanionTerm.$responseTerm)"
+            }
           } :+ p"case resp => effect.raiseError(UnexpectedStatus(resp.status))"
           // Get the response type
           val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
@@ -394,7 +393,7 @@ object Http4sClientGenerator {
 
     def generateCodecs(methodName: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
-                       responses: List[(Term.Name, Option[Type])],
+                       responses: Responses[ScalaLanguage],
                        produces: Seq[String],
                        consumes: Seq[String]): List[Defn.Val] =
       generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
@@ -405,11 +404,11 @@ object Http4sClientGenerator {
           List(q"val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, consumes)}")
       }
 
-    def generateDecoders(methodName: String, responses: List[(Term.Name, Option[Type])], produces: Seq[String]): List[Defn.Val] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
       for {
-        (statusCodeName, valueType) <- responses
-        tpe                         <- valueType
-      } yield q"val ${Pat.Var(Term.Name(s"$methodName${statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, produces)}"
+        resp <- responses.value
+        tpe  <- resp.value.map(_._1)
+      } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, produces)}"
   }
 
 }

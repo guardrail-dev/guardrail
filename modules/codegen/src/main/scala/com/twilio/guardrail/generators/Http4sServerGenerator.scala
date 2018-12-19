@@ -462,8 +462,8 @@ object Http4sServerGenerator {
         val responseExpr = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Term] {
-            val marshallers = responses.map {
-              case (statusCodeName, valueType) =>
+            val marshallers = responses.value.map {
+              case Response(statusCodeName, valueType) =>
                 val responseTerm = Term.Name(s"${statusCodeName.value}")
                 valueType.fold[Case](
                   p"case $responseCompanionTerm.$responseTerm => $statusCodeName()"
@@ -521,7 +521,9 @@ object Http4sServerGenerator {
           RenderedRoute(
             fullRoute,
             q"""def ${Term.Name(operationId)}(...${params}): F[${responseType}]""",
-            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ generateCodecs(operationId, bodyArgs, responses, consumes, produces) ++ tracingFields
+            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ generateCodecs(operationId, bodyArgs, responses.value.map({
+              case Response(a, b) => (a, b)
+            }), consumes, produces) ++ tracingFields
               .map(_.term)
               .map(generateTracingExtractor(operationId, _)),
             List.empty //handlerDefinitions

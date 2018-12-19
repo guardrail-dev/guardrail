@@ -5,13 +5,17 @@ import cats.implicits._
 import cats.data.EitherK
 import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.splitOperationParts
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
-import io.swagger.models.{ Operation, Response }
-
+import io.swagger.models.{ Operation, Response => SwaggerResponse }
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
-import com.twilio.guardrail.languages.ScalaLanguage
 import scala.collection.JavaConverters._
 import scala.meta._
 
+class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])])
+object Response {
+  def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type])] = Some((value.statusCodeName, value.value.map(_._1)))
+}
+class Responses[L <: LA](val value: List[Response[L]])
 object Http4sHelper {
   object HttpHelper {
     def apply(code: String): Option[(Int, String)] =
@@ -83,31 +87,31 @@ object Http4sHelper {
   }
 
   def getResponses(operationId: String,
-                   responses: java.util.Map[String, Response],
+                   responses: java.util.Map[String, SwaggerResponse],
                    protocolElems: List[StrictProtocolElems[ScalaLanguage]],
-                   gs: GeneratorSettings[ScalaLanguage]): Target[List[(Term.Name, Option[Type])]] =
+                   gs: GeneratorSettings[ScalaLanguage]): Target[Responses[ScalaLanguage]] =
     for {
       responses <- Target.fromOption(Option(responses).map(_.asScala), s"No responses defined for ${operationId}")
 
       instances <- responses
-        .foldLeft[List[Target[(Term.Name, Option[Type])]]](List.empty)({
+        .foldLeft[List[Target[Response[ScalaLanguage]]]](List.empty)({
           case (acc, (key, resp)) =>
             acc :+ (for {
               httpCode <- Target.fromOption(HttpHelper(key), s"Unknown HTTP type: ${key}")
-              (_, friendlyName) = httpCode
-              statusCodeName    = Term.Name(friendlyName)
+              (statusCode, friendlyName) = httpCode
+              statusCodeName             = Term.Name(friendlyName)
               valueType <- Option(resp.getSchema).traverse { prop =>
                 for {
                   meta     <- SwaggerUtil.propMetaF[ScalaLanguage, EitherK[ScalaTerm[ScalaLanguage, ?], SwaggerTerm[ScalaLanguage, ?], ?]](prop).foldMap(ScalaGenerator.ScalaInterp.or(SwaggerGenerator.SwaggerInterp))
                   resolved <- SwaggerUtil.ResolvedType
                     .resolve[Target](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
-                } yield baseType
+                } yield (baseType, baseDefaultValue)
               }
-            } yield (statusCodeName, valueType))
+            } yield new Response[ScalaLanguage](statusCodeName, statusCode, valueType))
         })
         .sequence
-    } yield instances
+    } yield new Responses[ScalaLanguage](instances)
 
   def generateResponseDefinitions(operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[ScalaLanguage]]): Target[List[Defn]] =
     for {
@@ -116,8 +120,8 @@ object Http4sHelper {
       responseSuperType     = Type.Name(s"${operationId.capitalize}Response")
       responseSuperTemplate = template"${Init(responseSuperType, Name(""), List.empty)}"
 
-      terms = responses.map {
-        case (statusCodeName, valueType) =>
+      terms = responses.value.map {
+        case Response(statusCodeName, valueType) =>
           val responseTerm = Term.Name(s"${statusCodeName.value}")
           val responseName = Type.Name(s"${statusCodeName.value}")
           valueType.fold[Defn](
