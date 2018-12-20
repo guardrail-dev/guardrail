@@ -1,0 +1,67 @@
+package core.issues
+
+import com.twilio.guardrail._
+import com.twilio.guardrail.generators.AkkaHttp
+import org.scalatest.{ FunSpec, Matchers }
+import support.SwaggerSpecRunner
+
+import scala.meta._
+
+class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
+
+  describe("Generate hierarchical classes") {
+
+    val swagger: String = """
+      | swagger: '2.0'
+      | info:
+      |   title: Parsing Error Sample
+      |   version: 1.0.0
+      | definitions:
+      |   Pet:
+      |     type: object
+      |     properties:
+      |       name:
+      |         type: string
+      |         x-scala-empty-is-null: true
+      |         x-scala-type: CustomThing
+      |       underscore_name:
+      |         type: string
+      |         x-scala-empty-is-null: true
+      |         x-scala-type: CustomThing
+      |       dash-name:
+      |         type: string
+      |         x-scala-empty-is-null: true
+      |         x-scala-type: CustomThing
+      |""".stripMargin
+
+    val (
+      ProtocolDefinitions(
+        ClassDefinition(namePet, tpePet, clsPet, companionPet, catParents) :: Nil,
+        _,
+        _,
+        _
+      ),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
+    it("should generate right companion object") {
+      companionPet.toString() shouldBe q"""
+        object Pet {
+          implicit val encodePet = {
+            val readOnlyKeys = Set[String]()
+            Encoder.forProduct3("name", "underscore_name", "dash-name")((o: Pet) => (o.name, o.underscoreName, o.`dash-name`)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          }
+          implicit val decodePet = new Decoder[Pet] {
+            final def apply(c: HCursor): Decoder.Result[Pet] =
+              for (
+                name <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];
+                underscoreName <- c.downField("underscore_name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];
+                `dash-name` <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]
+              ) yield Pet(name, underscoreName, `dash-name`)
+          }
+        }""".toString()
+    }
+
+  }
+}
