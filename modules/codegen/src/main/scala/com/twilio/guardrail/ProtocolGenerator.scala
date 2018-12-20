@@ -29,7 +29,7 @@ case class ProtocolParameter[L <: LA](term: L#MethodParameter,
                                       name: String,
                                       dep: Option[L#TermName],
                                       readOnlyKey: Option[String],
-                                      emptyToNullKey: Option[String])
+                                      emptyToNull: EmptyToNullBehaviour)
 
 case class SuperClass[L <: LA](
     clsName: String,
