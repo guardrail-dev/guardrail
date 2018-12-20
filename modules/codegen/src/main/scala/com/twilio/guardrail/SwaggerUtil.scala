@@ -164,7 +164,9 @@ object SwaggerUtil {
   def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
     new ModelMetaTypePartiallyApplied[L, F]()
 
-  def extractConcreteTypes[L <: LA, F[_]](definitions: List[(String, Model)])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
+  def extractConcreteTypes[L <: LA, F[_]](
+      definitions: List[(String, Model)]
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {

@@ -31,7 +31,7 @@ object Extractable {
   })
   implicit val defaultExtractableEmptyToNullBehaviour: Extractable[EmptyToNullBehaviour] =
     build[EmptyToNullBehaviour]({
-      case x: Boolean if x => EmptyIsNull
-      case x: Boolean if ! x => EmptyIsEmpty
+      case x: Boolean if x  => EmptyIsNull
+      case x: Boolean if !x => EmptyIsEmpty
     })
 }

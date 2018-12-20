@@ -238,7 +238,7 @@ object CirceProtocolGenerator {
           param => discriminators.contains(param.name)
         )
         val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
-        val paramCount                    = params.length
+        val paramCount                = params.length
         val decVal = if (paramCount <= 22 && !needsEmptyToNull) {
           val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
           q"""
