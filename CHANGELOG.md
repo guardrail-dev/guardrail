@@ -1,3 +1,16 @@
+v0.41.3
+=======
+
+- #139 Bumping to scalameta 4.1.0
+- #142 Moving more framework-specific logic into Free
+- #145 Fixing bug in x-scala-empty-is-null for snake-cased parameters
+
+v0.41.2
+=======
+
+- #136 Starting to abstract language out of Free structures
+- #137 http4s: Raising unexpected status codes as an error
+
 v0.41.1
 =======
 
