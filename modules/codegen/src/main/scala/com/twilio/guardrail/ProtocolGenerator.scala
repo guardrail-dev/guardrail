@@ -21,6 +21,9 @@ case class ProtocolDefinitions[L <: LA](elems: List[StrictProtocolElems[L]],
                                         protocolImports: List[L#Import],
                                         packageObjectImports: List[L#Import],
                                         packageObjectContents: List[L#ValueDefinition])
+sealed trait EmptyToNullBehaviour
+case object EmptyIsNull extends EmptyToNullBehaviour
+case object EmptyIsEmpty extends EmptyToNullBehaviour
 
 case class ProtocolParameter[L <: LA](term: L#MethodParameter,
                                       name: String,

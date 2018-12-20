@@ -1,4 +1,5 @@
 package com.twilio.guardrail.extract
+import com.twilio.guardrail.{ EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour }
 
 import scala.util.Try
 
@@ -28,4 +29,9 @@ object Extractable {
   implicit val defaultExtractableString: Extractable[String] = build[String]({
     case x: String => x
   })
+  implicit val defaultExtractableEmptyToNullBehaviour: Extractable[EmptyToNullBehaviour] =
+    build[EmptyToNullBehaviour]({
+      case x: Boolean if x => EmptyIsNull
+      case x: Boolean if ! x => EmptyIsEmpty
+    })
 }

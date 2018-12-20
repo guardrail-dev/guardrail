@@ -132,13 +132,12 @@ object CirceProtocolGenerator {
           }
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-          needsEmptyToNull = property match {
+          emptyToNullKey = (property match {
             case d: DateProperty      => ScalaEmptyIsNull(d)
             case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
             case s: StringProperty    => ScalaEmptyIsNull(s)
             case _                    => None
-          }
-          emptyToNullKey = needsEmptyToNull.filter(_ == true).map(_ => argName)
+          }).flatMap({ case EmptyIsNull => Some(argName); case EmptyIsEmpty => None })
 
           (tpe, classDep) = meta match {
             case SwaggerUtil.Resolved(declType, classDep, _) =>
