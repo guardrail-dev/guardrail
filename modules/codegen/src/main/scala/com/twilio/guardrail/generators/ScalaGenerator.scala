@@ -3,10 +3,10 @@ package generators
 
 import cats.syntax.either._
 import cats.~>
+import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import scala.meta._
-import java.nio.file.{ Path, Paths }
 
 object ScalaGenerator {
   object ScalaInterp extends (ScalaTerm[ScalaLanguage, ?] ~> Target) {
@@ -17,8 +17,6 @@ object ScalaGenerator {
     }
     val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
 
-    val utf8                                      = java.nio.charset.Charset.availableCharsets.get("UTF-8")
-    val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
     val buildPkgTerm: List[String] => Term.Ref =
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
     def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
