@@ -2,6 +2,7 @@ package core.issues
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSpec, Matchers }
 import support.SwaggerSpecRunner
 
@@ -36,7 +37,7 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(namePet, tpePet, clsPet, companionPet, catParents) :: Nil,
+        ClassDefinition(namePet, tpePet, clsPet, staticDefnsPet, catParents) :: Nil,
         _,
         _,
         _
@@ -46,6 +47,7 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     it("should generate right companion object") {
+      val companionPet = companionForStaticDefns(staticDefnsPet)
       companionPet.toString() shouldBe q"""
         object Pet {
           implicit val encodePet = {

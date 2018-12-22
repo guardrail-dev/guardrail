@@ -1,6 +1,7 @@
 package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
@@ -34,8 +35,9 @@ class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |""".stripMargin
 
   test("Use first scheme") {
-    val (_, Clients(Client(_, _, _, cmp, cls, _) :: _), _) =
+    val (_, Clients(Client(_, clientName, _, staticDefns, cls, _) :: _), _) =
       runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val companion = q"""
     object Client {

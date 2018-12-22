@@ -1,6 +1,7 @@
 package tests.generators.akkaHttp.client.contentType
 
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
@@ -35,9 +36,10 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, _, cmp, cls, _) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val companion = q"""
       object Client {

@@ -1,5 +1,5 @@
 package com.twilio.guardrail
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.{ Charset, StandardCharsets }
 import java.nio.file.Path
 
 package object generators {

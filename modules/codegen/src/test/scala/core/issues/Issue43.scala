@@ -2,6 +2,7 @@ package core.issues
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSpec, Matchers }
 import support.SwaggerSpecRunner
 
@@ -80,11 +81,11 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(nameCat, tpeCat, clsCat, companionCat, catParents) :: ClassDefinition(nameDog, tpeDog, _, _, _) :: ADT(
+        ClassDefinition(nameCat, tpeCat, clsCat, staticDefnsCat, catParents) :: ClassDefinition(nameDog, tpeDog, _, _, _) :: ADT(
           namePet,
           tpePet,
           trtPet,
-          companion
+          staticDefns
         ) :: Nil,
         _,
         _,
@@ -92,7 +93,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val companion    = companionForStaticDefns(staticDefns)
+    val companionCat = companionForStaticDefns(staticDefnsCat)
 
     it("should generate right name of pets") {
       nameCat shouldBe "Cat"
@@ -241,16 +244,20 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(namePersianCat, tpePersianCat, clsPersianCat, companionPersianCat, persianCatParents)
-          :: ClassDefinition(nameDog, tpeDog, clsDog, companionDog, dogParents)
-          :: ADT(namePet, tpePet, trtPet, companionPet) :: ADT(nameCat, tpeCat, trtCat, companionCat) :: Nil,
+        ClassDefinition(namePersianCat, tpePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
+          :: ClassDefinition(nameDog, tpeDog, clsDog, staticDefnsDog, dogParents)
+          :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
         _
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
+    val companionDog        = companionForStaticDefns(staticDefnsDog)
+    val companionPet        = companionForStaticDefns(staticDefnsPet)
+    val companionCat        = companionForStaticDefns(staticDefnsCat)
 
     it("should generate right name of pets") {
       namePet shouldBe "Pet"
@@ -430,16 +437,18 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(nameDog, tpeDog, clsDog, companionDog, dogParents)
-          :: ClassDefinition(namePersianCat, tpePersianCat, clsPersianCat, companionPersianCat, persianCatParents)
-          :: ADT(namePet, tpePet, trtPet, companionPet) :: ADT(nameCat, tpeCat, trtCat, companionCat) :: Nil,
+        ClassDefinition(nameDog, tpeDog, clsDog, staticDefnsDog, dogParents)
+          :: ClassDefinition(namePersianCat, tpePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
+          :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
         _
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
+    val companionCat        = companionForStaticDefns(staticDefnsCat)
 
     it("should generate right case class") {
       clsPersianCat.structure shouldBe q"""case class PersianCat(catBreed: String) extends Cat""".structure
@@ -528,15 +537,18 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(nameCat, tpeCat, clsCat, companionCat, catParents)
-          :: ADT(namePet, tpePet, trtPet, companionPet) :: ADT(nameMammal, tpeMammal, trtMammal, companionMammal) :: Nil,
+        ClassDefinition(nameCat, tpeCat, clsCat, staticDefnsCat, catParents)
+          :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameMammal, tpeMammal, trtMammal, staticDefnsMammal) :: Nil,
         _,
         _,
         _
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )                   = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val companionCat    = companionForStaticDefns(staticDefnsCat)
+    val companionPet    = companionForStaticDefns(staticDefnsPet)
+    val companionMammal = companionForStaticDefns(staticDefnsMammal)
 
     it("should generate right case class") {
       clsCat.structure shouldBe q"""case class Cat(wool: Boolean, catBreed: String) extends Pet with Mammal""".structure

@@ -252,7 +252,7 @@ object ScalaGenerator {
         )
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
-          case EnumDefinition(_, _, _, cls, obj) =>
+          case EnumDefinition(_, _, _, cls, staticDefns) =>
             (List(
                WriteTree(
                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
@@ -262,13 +262,13 @@ object ScalaGenerator {
                 ..${imports}
 
                 $cls
-                $obj
+                ${companionForStaticDefns(staticDefns)}
               """.syntax.getBytes(utf8)
                )
              ),
              List.empty[Stat])
 
-          case ClassDefinition(_, _, cls, obj, _) =>
+          case ClassDefinition(_, _, cls, staticDefns, _) =>
             (List(
                WriteTree(
                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
@@ -276,13 +276,13 @@ object ScalaGenerator {
               package ${buildPkgTerm(dtoComponents)}
                 ..${imports}
                 $cls
-                $obj
+                ${companionForStaticDefns(staticDefns)}
               """.syntax.getBytes(utf8)
                )
              ),
              List.empty[Stat])
 
-          case ADT(name, tpe, trt, obj) =>
+          case ADT(name, tpe, trt, staticDefns) =>
             val polyImports: Import = q"""import cats.syntax.either._"""
 
             (
@@ -295,7 +295,7 @@ object ScalaGenerator {
                     ..$imports
                     $polyImports
                     $trt
-                    $obj
+                    ${companionForStaticDefns(staticDefns)}
                   """.syntax.getBytes(utf8)
                 )
               ),
@@ -310,7 +310,7 @@ object ScalaGenerator {
                        customImports,
                        frameworkImplicitName,
                        dtoComponents,
-                       Client(pkg, clientName, imports, companion, client, responseDefinitions)) =>
+                       Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
         Target.pure(
           WriteTree(
             resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
@@ -321,7 +321,7 @@ object ScalaGenerator {
             import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
             ..${customImports};
             ..${imports};
-            ${companion};
+            ${companionForStaticDefns(staticDefns)};
             ${client};
             ..${responseDefinitions}
             """.syntax.getBytes(utf8)

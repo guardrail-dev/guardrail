@@ -89,7 +89,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
 
     val (
       _,
-      Clients(Client(tags, className, _, cmp, cls, _) :: _),
+      Clients(Client(tags, className, _, _, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 

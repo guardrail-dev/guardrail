@@ -1,10 +1,11 @@
 package tests.generators.akkaHttp.client
 
-import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail._
+import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
-import support.SwaggerSpecRunner
 import scala.meta._
+import support.SwaggerSpecRunner
 
 class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""
@@ -79,10 +80,11 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Handle json subvalues") {
     val (
-      ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Blix(map: io.circe.Json)
@@ -105,7 +107,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, _, cmp, cls, _) :: _),
+      Clients(Client(tags, className, _, _, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

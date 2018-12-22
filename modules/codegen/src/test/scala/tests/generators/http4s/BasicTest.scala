@@ -2,6 +2,7 @@ package tests.generators.http4s
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 import scala.meta._
@@ -79,10 +80,11 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Handle json subvalues") {
     val (
-      ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    )       = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Blix(map: io.circe.Json)
@@ -105,10 +107,11 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, _, cls, cmp, statements) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, statements) :: _),
       _
     )          = runSwaggerSpec(swagger)(Context.empty, Http4s)
-    val actual = cls +: cmp +: statements
+    val cmp    = companionForStaticDefns(staticDefns)
+    val actual = cmp +: cls +: statements
 
     val expected = List(
       q"""object Client {

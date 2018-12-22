@@ -1,22 +1,19 @@
 package com.twilio.guardrail
 
-import _root_.io.swagger.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.protocol.terms.client.ClientTerms
-import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.generators.Http4sHelper
+import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
-
-import scala.collection.JavaConverters._
 
 case class Clients[L <: LA](clients: List[Client[L]])
 case class Client[L <: LA](pkg: List[String],
                            clientName: String,
                            imports: List[L#Import],
-                           companion: L#ObjectDefinition,
+                           staticDefns: StaticDefns[L],
                            client: L#ClassDefinition,
                            responseDefinitions: List[L#Definition])
 case class RenderedClientOperation[L <: LA](
@@ -60,8 +57,8 @@ object ClientGenerator {
             }
             (responseDefinitions, clientOperations) = responseClientPair.unzip
             tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
-            ctorArgs  <- clientClsArgs(tracingName, schemes, host, context.tracing)
-            companion <- buildCompanion(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
+            ctorArgs    <- clientClsArgs(tracingName, schemes, host, context.tracing)
+            staticDefns <- buildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
             client <- buildClient(
               clientName,
               tracingName,
@@ -74,7 +71,7 @@ object ClientGenerator {
               context.tracing
             )
           } yield {
-            Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), companion, client, responseDefinitions.flatten)
+            Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), staticDefns, client, responseDefinitions.flatten)
           }
       })
     } yield Clients[L](clients)

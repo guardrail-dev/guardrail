@@ -317,7 +317,7 @@ object Http4sClientGenerator {
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
-      case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
+      case BuildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
                               schemes: List[String],
                               host: Option[String],
@@ -353,15 +353,18 @@ object Http4sClientGenerator {
           """
         }
 
-        val companion: Defn.Object =
-          q"""
-            object ${Term.Name(clientName)} {
-              def apply[F[_]](...${ctorArgs}): ${Type
-            .Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}
-              ..${extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)}
-            }
-          """
-        Target.pure(companion)
+        val decls: List[Defn] =
+          q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}""" +:
+            extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)
+        Target.pure(
+          StaticDefns[ScalaLanguage](
+            className = clientName,
+            extraImports = List.empty,
+            members = List.empty,
+            definitions = decls,
+            values = List.empty
+          )
+        )
 
       case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val client =

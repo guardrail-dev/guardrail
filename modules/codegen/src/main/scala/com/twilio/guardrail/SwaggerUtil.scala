@@ -96,9 +96,9 @@ object SwaggerUtil {
             .flatMap {
               case RandomType(name, tpe) =>
                 Free.pure(Resolved[L](tpe, None, None))
-              case ClassDefinition(name, tpe, cls, companion, _) =>
+              case ClassDefinition(name, tpe, cls, _, _) =>
                 widenTypeName(tpe).map(Resolved[L](_, None, None))
-              case EnumDefinition(name, tpe, elems, cls, companion) =>
+              case EnumDefinition(name, tpe, elems, cls, _) =>
                 widenTypeName(tpe).map(Resolved[L](_, None, None))
               case ADT(_, tpe, _, _) =>
                 widenTypeName(tpe).map(Resolved[L](_, None, None))
@@ -108,9 +108,9 @@ object SwaggerUtil {
             .flatMap {
               case RandomType(name, tpe) =>
                 liftVectorType(tpe).map(Resolved[L](_, None, None))
-              case ClassDefinition(name, tpe, cls, companion, _) =>
+              case ClassDefinition(name, tpe, cls, _, _) =>
                 widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
-              case EnumDefinition(name, tpe, elems, cls, companion) =>
+              case EnumDefinition(name, tpe, elems, cls, _) =>
                 widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
               case ADT(_, tpe, _, _) =>
                 widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
