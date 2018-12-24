@@ -3,10 +3,11 @@ package terms
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
+import com.twilio.guardrail.languages.LA
 
-sealed trait CoreTerm[T]
-case object GetDefaultFramework                                                               extends CoreTerm[String]
-case class ExtractGenerator(context: Context)                                                 extends CoreTerm[FunctionK[CodegenApplication, Target]]
-case class ParseArgs(args: Array[String], defaultFramework: String)                           extends CoreTerm[List[Args]]
-case class ValidateArgs(parsed: List[Args])                                                   extends CoreTerm[NonEmptyList[Args]]
-case class ProcessArgSet(targetInterpreter: FunctionK[CodegenApplication, Target], arg: Args) extends CoreTerm[ReadSwagger[Target[List[WriteTree]]]]
+sealed trait CoreTerm[L <: LA, T]
+case class GetDefaultFramework[L <: LA]()                                                              extends CoreTerm[L, String]
+case class ExtractGenerator[L <: LA](context: Context)                                                 extends CoreTerm[L, FunctionK[CodegenApplication, Target]]
+case class ParseArgs[L <: LA](args: Array[String], defaultFramework: String)                           extends CoreTerm[L, List[Args]]
+case class ValidateArgs[L <: LA](parsed: List[Args])                                                   extends CoreTerm[L, NonEmptyList[Args]]
+case class ProcessArgSet[L <: LA](targetInterpreter: FunctionK[CodegenApplication, Target], arg: Args) extends CoreTerm[L, ReadSwagger[Target[List[WriteTree]]]]

@@ -8,6 +8,7 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
+import com.twilio.guardrail.languages.ScalaLanguage
 import org.scalatest.{ FunSuite, Matchers }
 
 import scala.meta._
@@ -72,7 +73,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     )
 
     val result: List[WriteTree] = CoreTarget
-      .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
+      .unsafeExtract(Common.processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args).foldMap(CoreTermInterp))
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
@@ -120,7 +121,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     )
 
     val result: List[WriteTree] = CoreTarget
-      .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
+      .unsafeExtract(Common.processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args).foldMap(CoreTermInterp))
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 

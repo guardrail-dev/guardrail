@@ -14,9 +14,9 @@ import java.nio.file.Paths
 import scala.io.AnsiColor
 import scala.meta._
 
-object CoreTermInterp extends (CoreTerm ~> CoreTarget) {
-  def apply[T](x: CoreTerm[T]): CoreTarget[T] = x match {
-    case GetDefaultFramework =>
+object CoreTermInterp extends (CoreTerm[ScalaLanguage, ?] ~> CoreTarget) {
+  def apply[T](x: CoreTerm[ScalaLanguage, T]): CoreTarget[T] = x match {
+    case GetDefaultFramework() =>
       CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget
         .pure("akka-http")
 

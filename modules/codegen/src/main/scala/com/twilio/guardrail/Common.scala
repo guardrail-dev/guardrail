@@ -128,9 +128,9 @@ object Common {
       ).toList
   }
 
-  def processArgs[F[_]](
+  def processArgs[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
     args.traverse(
       arg =>
@@ -141,9 +141,9 @@ object Common {
     )
   }
 
-  def runM[F[_]](
+  def runM[L <: LA, F[_]](
       args: Array[String]
-  )(implicit C: CoreTerms[F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {

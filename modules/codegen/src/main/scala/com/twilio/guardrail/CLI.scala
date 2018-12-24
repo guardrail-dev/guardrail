@@ -9,11 +9,12 @@ import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels }
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 
 import scala.io.AnsiColor
 
 object CLICommon {
-  def run(args: Array[String])(interpreter: CoreTerm ~> CoreTarget): Unit = {
+  def run[L <: LA](args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
     // language themselves.
@@ -23,7 +24,7 @@ object CLICommon {
 
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
     val result = Common
-      .runM[CoreTerm](newArgs)
+      .runM[L, CoreTerm[L, ?]](newArgs)
       .foldMap(interpreter)
       .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
         {
@@ -123,7 +124,7 @@ object CLICommon {
 }
 
 trait CLICommon {
-  val interpreter: CoreTerm ~> CoreTarget
+  val interpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
 
   def main(args: Array[String]): Unit =
     CLICommon.run(args)(interpreter)
