@@ -137,5 +137,9 @@ trait CLICommon {
 }
 
 object CLI extends CLICommon {
-  val scalaInterpreter = CoreTermInterp
+  import com.twilio.guardrail.generators.{ AkkaHttp, Http4s }
+  val scalaInterpreter = CoreTermInterp[ScalaLanguage]({
+    case "akka-http" => AkkaHttp
+    case "http4s"    => Http4s
+  })
 }

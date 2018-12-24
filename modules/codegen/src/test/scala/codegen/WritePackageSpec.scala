@@ -72,8 +72,15 @@ class WritePackageSpec extends FunSuite with Matchers {
       List.empty
     )
 
+    import com.twilio.guardrail.generators.AkkaHttp
     val result: List[WriteTree] = CoreTarget
-      .unsafeExtract(Common.processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args).foldMap(CoreTermInterp))
+      .unsafeExtract(
+        Common
+          .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+          .foldMap(CoreTermInterp[ScalaLanguage]({
+            case "akka-http" => AkkaHttp
+          }))
+      )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
@@ -120,8 +127,15 @@ class WritePackageSpec extends FunSuite with Matchers {
       List.empty
     )
 
+    import com.twilio.guardrail.generators.AkkaHttp
     val result: List[WriteTree] = CoreTarget
-      .unsafeExtract(Common.processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args).foldMap(CoreTermInterp))
+      .unsafeExtract(
+        Common
+          .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+          .foldMap(CoreTermInterp[ScalaLanguage]({
+            case "akka-http" => AkkaHttp
+          }))
+      )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
