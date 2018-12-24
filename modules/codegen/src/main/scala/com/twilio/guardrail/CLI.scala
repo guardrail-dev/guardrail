@@ -2,9 +2,7 @@ package com.twilio.guardrail
 
 import java.nio.file.Path
 import cats.Applicative
-import cats.instances.all._
-import cats.syntax.show._
-import cats.syntax.traverse._
+import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
@@ -138,8 +136,13 @@ trait CLICommon {
 
 object CLI extends CLICommon {
   import com.twilio.guardrail.generators.{ AkkaHttp, Http4s }
-  val scalaInterpreter = CoreTermInterp[ScalaLanguage]({
-    case "akka-http" => AkkaHttp
-    case "http4s"    => Http4s
-  })
+  import scala.meta._
+  val scalaInterpreter = CoreTermInterp[ScalaLanguage](
+    {
+      case "akka-http" => AkkaHttp
+      case "http4s"    => Http4s
+    }, {
+      _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+    }
+  )
 }

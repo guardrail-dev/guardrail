@@ -7,16 +7,16 @@ import cats.syntax.flatMap._
 import cats.syntax.either._
 import cats.syntax.traverse._
 import cats.{ FlatMap, ~> }
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
 import scala.io.AnsiColor
 import scala.meta._
 
 object CoreTermInterp {
-  def apply[L <: LA](frameworkMapping: PartialFunction[String, CodegenApplication[ScalaLanguage, ?] ~> Target]) =
-    new (CoreTerm[ScalaLanguage, ?] ~> CoreTarget) {
-      def apply[T](x: CoreTerm[ScalaLanguage, T]): CoreTarget[T] = x match {
+  def apply[L <: LA](frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target], handleImport: String => Either[Error, L#Import]) =
+    new (CoreTerm[L, ?] ~> CoreTarget) {
+      def apply[T](x: CoreTerm[L, T]): CoreTarget[T] = x match {
         case GetDefaultFramework() =>
           CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget
             .pure("akka-http")
@@ -113,23 +113,16 @@ object CoreTermInterp {
                 x =>
                   for {
                     _ <- CoreTarget.log.debug("core", "processArgSet")(s"Attempting to parse $x as an import directive")
-                    importer <- x
-                      .parse[Importer]
-                      .fold[CoreTarget[Importer]](err => CoreTarget.raiseError(UnparseableArgument("import", err.toString)), CoreTarget.pure(_))
-                  } yield Import(List(importer))
+                    customImport <- handleImport(x)
+                      .fold[CoreTarget[L#Import]](err => CoreTarget.raiseError(UnparseableArgument("import", err.toString)), CoreTarget.pure _)
+                  } yield customImport
               )
             _ <- CoreTarget.log.debug("core", "processArgSet")("Finished processing arguments")
           } yield {
             ReadSwagger(
               Paths.get(specPath), { swagger =>
                 Common
-                  .writePackage[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](kind,
-                                                                                     context,
-                                                                                     swagger,
-                                                                                     Paths.get(outputPath),
-                                                                                     pkgName,
-                                                                                     dtoPackage,
-                                                                                     customImports)
+                  .writePackage[L, CodegenApplication[L, ?]](kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
                   .foldMap(targetInterpreter)
               }
             )
