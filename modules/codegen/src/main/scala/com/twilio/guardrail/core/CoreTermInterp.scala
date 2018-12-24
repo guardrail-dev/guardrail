@@ -23,7 +23,7 @@ object CoreTermInterp extends (CoreTerm[ScalaLanguage, ?] ~> CoreTarget) {
     case ExtractGenerator(context) =>
       for {
         _ <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
-        framework <- context.framework.fold(CoreTarget.raiseError[cats.arrow.FunctionK[CodegenApplication, Target]](NoFramework))({
+        framework <- context.framework.fold(CoreTarget.raiseError[cats.arrow.FunctionK[CodegenApplication[ScalaLanguage, ?], Target]](NoFramework))({
           case "akka-http" => CoreTarget.pure(AkkaHttp)
           case "http4s"    => CoreTarget.pure(Http4s)
           case unknown     => CoreTarget.raiseError(UnknownFramework(unknown))
@@ -126,7 +126,7 @@ object CoreTermInterp extends (CoreTerm[ScalaLanguage, ?] ~> CoreTarget) {
         ReadSwagger(
           Paths.get(specPath), { swagger =>
             Common
-              .writePackage[ScalaLanguage, CodegenApplication](kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
+              .writePackage[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
               .foldMap(targetInterpreter)
           }
         )
