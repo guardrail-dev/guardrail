@@ -124,12 +124,18 @@ object CLICommon {
 }
 
 trait CLICommon {
-  val interpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
+  val scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
 
-  def main(args: Array[String]): Unit =
-    CLICommon.run(args)(interpreter)
+  val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
+    case "scala" => CLICommon.run(_)(scalaInterpreter)
+  }
+
+  def main(args: Array[String]): Unit = {
+    val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
+    handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
+  }
 }
 
 object CLI extends CLICommon {
-  val interpreter = CoreTermInterp
+  val scalaInterpreter = CoreTermInterp
 }
