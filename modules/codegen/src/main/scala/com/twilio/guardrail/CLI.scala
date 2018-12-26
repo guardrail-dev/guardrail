@@ -138,7 +138,7 @@ object CLI extends CLICommon {
   import com.twilio.guardrail.generators.{ AkkaHttp, Http4s }
   import scala.meta._
   val scalaInterpreter = CoreTermInterp[ScalaLanguage](
-    {
+    "akka-http", {
       case "akka-http" => AkkaHttp
       case "http4s"    => Http4s
     }, {

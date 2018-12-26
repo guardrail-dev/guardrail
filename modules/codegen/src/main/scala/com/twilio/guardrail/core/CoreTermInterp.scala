@@ -14,12 +14,13 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object CoreTermInterp {
-  def apply[L <: LA](frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target], handleImport: String => Either[Error, L#Import]) =
+  def apply[L <: LA](defaultFramework: String,
+                     frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
+                     handleImport: String => Either[Error, L#Import]) =
     new (CoreTerm[L, ?] ~> CoreTarget) {
       def apply[T](x: CoreTerm[L, T]): CoreTarget[T] = x match {
         case GetDefaultFramework() =>
-          CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget
-            .pure("akka-http")
+          CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget.pure(defaultFramework)
 
         case ExtractGenerator(context) =>
           for {
