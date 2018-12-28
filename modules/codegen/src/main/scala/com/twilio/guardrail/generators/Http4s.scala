@@ -1,8 +1,8 @@
 package com.twilio.guardrail
 package generators
 
+import com.twilio.guardrail.languages.ScalaLanguage
 import cats.~>
-import cats.arrow.FunctionK
 
 import Http4sClientGenerator._
 import Http4sServerGenerator._
@@ -11,23 +11,23 @@ import CirceProtocolGenerator._
 import ScalaGenerator._
 import SwaggerGenerator._
 
-object Http4s extends FunctionK[CodegenApplication, Target] {
-  val interpDefinitionPM: DefinitionPM ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
-  val interpDefinitionPME: DefinitionPME ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
-  val interpDefinitionPMEA: DefinitionPMEA ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME
-  val interpDefinitionPMEAP: DefinitionPMEAP ~> Target = PolyProtocolTermInterp or interpDefinitionPMEA
+object Http4s extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
+  val interpDefinitionPM: DefinitionPM[ScalaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
+  val interpDefinitionPME: DefinitionPME[ScalaLanguage, ?] ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
+  val interpDefinitionPMEA: DefinitionPMEA[ScalaLanguage, ?] ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME
+  val interpDefinitionPMEAP: DefinitionPMEAP[ScalaLanguage, ?] ~> Target = PolyProtocolTermInterp or interpDefinitionPMEA
 
-  val interpModel: ModelInterpreters ~> Target = interpDefinitionPMEAP
+  val interpModel: ModelInterpreters[ScalaLanguage, ?] ~> Target = interpDefinitionPMEAP
 
-  val interpFrameworkC: FrameworkC ~> Target     = ClientTermInterp or interpModel
-  val interpFrameworkCS: FrameworkCS ~> Target   = ServerTermInterp or interpFrameworkC
-  val interpFrameworkCSF: FrameworkCSF ~> Target = FrameworkInterp or interpFrameworkCS
+  val interpFrameworkC: FrameworkC[ScalaLanguage, ?] ~> Target     = ClientTermInterp or interpModel
+  val interpFrameworkCS: FrameworkCS[ScalaLanguage, ?] ~> Target   = ServerTermInterp or interpFrameworkC
+  val interpFrameworkCSF: FrameworkCSF[ScalaLanguage, ?] ~> Target = FrameworkInterp or interpFrameworkCS
 
-  val interpFramework: ClientServerTerms ~> Target = interpFrameworkCSF
+  val interpFramework: ClientServerTerms[ScalaLanguage, ?] ~> Target = interpFrameworkCSF
 
-  val parser: Parser ~> Target = SwaggerInterp or interpFramework
+  val parser: Parser[ScalaLanguage, ?] ~> Target = SwaggerInterp or interpFramework
 
-  val codegenApplication: CodegenApplication ~> Target = ScalaInterp or parser
+  val codegenApplication: CodegenApplication[ScalaLanguage, ?] ~> Target = ScalaInterp or parser
 
-  def apply[T](x: CodegenApplication[T]): Target[T] = codegenApplication.apply(x)
+  def apply[T](x: CodegenApplication[ScalaLanguage, T]): Target[T] = codegenApplication.apply(x)
 }

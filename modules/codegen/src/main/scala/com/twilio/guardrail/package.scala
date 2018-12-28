@@ -68,22 +68,22 @@ package guardrail {
 }
 
 package object guardrail {
-  type DefinitionPM[T]    = EitherK[ProtocolSupportTerm[ScalaLanguage, ?], ModelProtocolTerm[ScalaLanguage, ?], T]
-  type DefinitionPME[T]   = EitherK[EnumProtocolTerm[ScalaLanguage, ?], DefinitionPM, T]
-  type DefinitionPMEA[T]  = EitherK[ArrayProtocolTerm[ScalaLanguage, ?], DefinitionPME, T]
-  type DefinitionPMEAP[T] = EitherK[PolyProtocolTerm[ScalaLanguage, ?], DefinitionPMEA, T]
+  type DefinitionPM[L <: LA, T]    = EitherK[ProtocolSupportTerm[L, ?], ModelProtocolTerm[L, ?], T]
+  type DefinitionPME[L <: LA, T]   = EitherK[EnumProtocolTerm[L, ?], DefinitionPM[L, ?], T]
+  type DefinitionPMEA[L <: LA, T]  = EitherK[ArrayProtocolTerm[L, ?], DefinitionPME[L, ?], T]
+  type DefinitionPMEAP[L <: LA, T] = EitherK[PolyProtocolTerm[L, ?], DefinitionPMEA[L, ?], T]
 
-  type ModelInterpreters[T] = DefinitionPMEAP[T]
+  type ModelInterpreters[L <: LA, T] = DefinitionPMEAP[L, T]
 
-  type FrameworkC[T]   = EitherK[ClientTerm[ScalaLanguage, ?], ModelInterpreters, T]
-  type FrameworkCS[T]  = EitherK[ServerTerm[ScalaLanguage, ?], FrameworkC, T]
-  type FrameworkCSF[T] = EitherK[FrameworkTerm[ScalaLanguage, ?], FrameworkCS, T]
+  type FrameworkC[L <: LA, T]   = EitherK[ClientTerm[L, ?], ModelInterpreters[L, ?], T]
+  type FrameworkCS[L <: LA, T]  = EitherK[ServerTerm[L, ?], FrameworkC[L, ?], T]
+  type FrameworkCSF[L <: LA, T] = EitherK[FrameworkTerm[L, ?], FrameworkCS[L, ?], T]
 
-  type ClientServerTerms[T] = FrameworkCSF[T]
+  type ClientServerTerms[L <: LA, T] = FrameworkCSF[L, T]
 
-  type Parser[T] = EitherK[SwaggerTerm[ScalaLanguage, ?], ClientServerTerms, T]
+  type Parser[L <: LA, T] = EitherK[SwaggerTerm[L, ?], ClientServerTerms[L, ?], T]
 
-  type CodegenApplication[T] = EitherK[ScalaTerm[ScalaLanguage, ?], Parser, T]
+  type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
   type Logger[T]     = WriterT[Id, StructuredLogger, T]
   type Target[A]     = EitherT[Logger, String, A]

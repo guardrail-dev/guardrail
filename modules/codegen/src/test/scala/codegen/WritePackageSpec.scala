@@ -5,9 +5,11 @@ import java.nio.file.{ Path, Paths }
 import _root_.io.swagger.models.Swagger
 import _root_.io.swagger.parser.SwaggerParser
 import cats.data.NonEmptyList
+import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
+import com.twilio.guardrail.languages.ScalaLanguage
 import org.scalatest.{ FunSuite, Matchers }
 
 import scala.meta._
@@ -71,8 +73,17 @@ class WritePackageSpec extends FunSuite with Matchers {
       List.empty
     )
 
+    import com.twilio.guardrail.generators.AkkaHttp
     val result: List[WriteTree] = CoreTarget
-      .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
+      .unsafeExtract(
+        Common
+          .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+          .foldMap(CoreTermInterp[ScalaLanguage]("akka-http", {
+            case "akka-http" => AkkaHttp
+          }, {
+            _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+          }))
+      )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
@@ -119,8 +130,17 @@ class WritePackageSpec extends FunSuite with Matchers {
       List.empty
     )
 
+    import com.twilio.guardrail.generators.AkkaHttp
     val result: List[WriteTree] = CoreTarget
-      .unsafeExtract(Common.processArgs[CoreTerm](args).foldMap(CoreTermInterp))
+      .unsafeExtract(
+        Common
+          .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+          .foldMap(CoreTermInterp[ScalaLanguage]("akka-http", {
+            case "akka-http" => AkkaHttp
+          }, {
+            _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+          }))
+      )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
 
