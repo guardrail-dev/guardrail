@@ -387,11 +387,14 @@ object CirceProtocolGenerator {
           child => p"case ${Lit.String(child)} => c.as[${Type.Name(child)}]"
         )
         val code =
-          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance(c =>
-                 c.downField(discriminator).as[String].flatMap {
-                   ..case $childrenCases
+          q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance({ c =>
+                 val discriminatorCursor = c.downField(discriminator)
+                 discriminatorCursor.as[String].flatMap {
+                   ..case $childrenCases;
+                   case tpe =>
+                     Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit.String(s" (valid: ${children.mkString(", ")})")}, discriminatorCursor.history))
                  }
-            )"""
+            })"""
         Target.pure(code)
 
       case EncodeADT(clsName, children) =>
