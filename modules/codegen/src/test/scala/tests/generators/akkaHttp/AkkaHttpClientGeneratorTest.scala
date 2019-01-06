@@ -148,9 +148,9 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
             case StatusCodes.OK =>
               Unmarshal(resp.entity).to[Order](getOrderByIdOKDecoder, implicitly, implicitly).map(x => Right(GetOrderByIdResponse.OK(x)))
             case StatusCodes.BadRequest =>
-              FastFuture.successful(Right(GetOrderByIdResponse.BadRequest))
+              resp.discardEntityBytes().future.map(_ => Right(GetOrderByIdResponse.BadRequest))
             case StatusCodes.NotFound =>
-              FastFuture.successful(Right(GetOrderByIdResponse.NotFound))
+              resp.discardEntityBytes().future.map(_ => Right(GetOrderByIdResponse.NotFound))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -162,9 +162,9 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.DELETE, host + basePath + "/store/order/" + Formatter.addPath(orderId), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.BadRequest =>
-              FastFuture.successful(Right(DeleteOrderResponse.BadRequest))
+              resp.discardEntityBytes().future.map(_ => Right(DeleteOrderResponse.BadRequest))
             case StatusCodes.NotFound =>
-              FastFuture.successful(Right(DeleteOrderResponse.NotFound))
+              resp.discardEntityBytes().future.map(_ => Right(DeleteOrderResponse.NotFound))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -219,9 +219,9 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
             case StatusCodes.OK =>
               Unmarshal(resp.entity).to[Order](getOrderByIdOKDecoder, implicitly, implicitly).map(x => Right(GetOrderByIdResponse.OK(x)))
             case StatusCodes.BadRequest =>
-              FastFuture.successful(Right(GetOrderByIdResponse.BadRequest))
+              resp.discardEntityBytes().future.map(_ => Right(GetOrderByIdResponse.BadRequest))
             case StatusCodes.NotFound =>
-              FastFuture.successful(Right(GetOrderByIdResponse.NotFound))
+              resp.discardEntityBytes().future.map(_ => Right(GetOrderByIdResponse.NotFound))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -234,9 +234,9 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.DELETE, host + basePath + "/store/order/" + Formatter.addPath(orderId), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(tracingHttpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.BadRequest =>
-              FastFuture.successful(Right(DeleteOrderResponse.BadRequest))
+              resp.discardEntityBytes().future.map(_ => Right(DeleteOrderResponse.BadRequest))
             case StatusCodes.NotFound =>
-              FastFuture.successful(Right(DeleteOrderResponse.NotFound))
+              resp.discardEntityBytes().future.map(_ => Right(DeleteOrderResponse.NotFound))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({

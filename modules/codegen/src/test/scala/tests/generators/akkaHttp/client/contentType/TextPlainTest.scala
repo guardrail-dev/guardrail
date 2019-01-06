@@ -62,7 +62,7 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, TextPlain(body), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(PutFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(PutFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({

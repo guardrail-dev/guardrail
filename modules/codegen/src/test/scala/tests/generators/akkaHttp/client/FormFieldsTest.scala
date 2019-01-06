@@ -64,7 +64,7 @@ class FormFieldsTest extends FunSuite with Matchers with SwaggerSpecRunner {
             () => List(Some(Multipart.FormData.BodyPart("foo", Formatter.show(foo))), Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("baz", baz))).flatten.iterator
           }), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(PutFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(PutFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({

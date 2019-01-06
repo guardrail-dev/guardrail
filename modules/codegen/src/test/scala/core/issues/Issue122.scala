@@ -68,7 +68,7 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
             x => x.toList.map(("optionalIterable", _))
           }, List(("requiredIterable", Formatter.show(requiredIterable)))).flatten: _*), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(GetUserResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(GetUserResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({

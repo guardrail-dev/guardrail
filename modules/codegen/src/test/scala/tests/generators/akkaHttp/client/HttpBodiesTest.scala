@@ -104,7 +104,7 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.POST, host + basePath + "/foo", allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(PostFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(PostFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -116,7 +116,7 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(GetFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(GetFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -128,7 +128,7 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(PutFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(PutFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -140,7 +140,7 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.PATCH, host + basePath + "/foo", allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(PatchFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(PatchFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -152,7 +152,7 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.DELETE, host + basePath + "/foo", allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(DeleteFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(DeleteFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({

@@ -211,7 +211,7 @@ object AkkaHttpClientGenerator {
           val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             resp.value.fold[Case](
-              p"case StatusCodes.${resp.statusCodeName} => FastFuture.successful(Right($responseCompanionTerm.$responseTerm))"
+              p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
             ) {
               case (tpe, _) =>
                 p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term

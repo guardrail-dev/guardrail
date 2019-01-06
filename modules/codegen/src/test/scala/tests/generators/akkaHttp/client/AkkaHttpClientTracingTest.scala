@@ -51,7 +51,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/foo" + "?" + Formatter.addArg("bleep", bleep), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(tracingHttpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(GetFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(GetFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -107,7 +107,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(tracingHttpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(GetFooResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(GetFooResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({

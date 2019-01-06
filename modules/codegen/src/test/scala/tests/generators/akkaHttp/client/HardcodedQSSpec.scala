@@ -66,7 +66,7 @@ class HardcodedQSSpec extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/hardcodedQs?foo=bar" + "&" + Formatter.addArg("bar", bar), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(GetHardcodedQsResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(GetHardcodedQsResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -78,7 +78,7 @@ class HardcodedQSSpec extends FunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/specViolation?isThisSupported=" + Formatter.addPath(value) + "&" + Formatter.addArg("bar", bar), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              FastFuture.successful(Right(GetHardcodedQsResponse.OK))
+              resp.discardEntityBytes().future.map(_ => Right(GetHardcodedQsResponse.OK))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
