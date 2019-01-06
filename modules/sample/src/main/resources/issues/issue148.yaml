@@ -1,0 +1,69 @@
+swagger: '2.0'
+info:
+  title: https://github.com/twilio/guardrail/issues/148
+  version: 1.0.0
+paths:
+  /test:
+    post:
+      operationId: createFoo
+      consumes:
+        - application/json
+      parameters:
+        - in: header
+          name: x-header
+          type: boolean
+          required: true
+        - in: header
+          name: x-optional-header
+          type: boolean
+          required: false
+        - in: body
+          name: body
+          required: true
+          type: object
+          schema:
+            $ref: '#/definitions/Foo'
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Foo'
+    put:
+      operationId: updateFoo
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: foo
+          type: boolean
+          required: true
+        - in: formData
+          name: bar
+          type: boolean
+      responses:
+        202:
+          schema:
+            $ref: '#/definitions/Foo'
+    get:
+      operationId: getFoo
+      produces:
+        - application/json
+      responses:
+        200:
+          schema:
+            $ref: '#/definitions/Foo'
+definitions:
+  Foo:
+    type: object
+    discriminator: type
+    required:
+    - name
+    properties:
+      name:
+        type: string
+  Bar:
+    allOf:
+    - $ref: '#/definitions/Foo'
+    - type: object
+      properties:
+        bar:
+          type: string
