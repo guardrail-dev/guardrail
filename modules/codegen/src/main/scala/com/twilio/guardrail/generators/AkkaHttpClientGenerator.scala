@@ -168,7 +168,7 @@ object AkkaHttpClientGenerator {
                                     formArgs: List[ScalaParameter[ScalaLanguage]],
                                     body: Option[ScalaParameter[ScalaLanguage]],
                                     headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): Defn = {
+                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders =
             param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
@@ -240,9 +240,12 @@ object AkkaHttpClientGenerator {
             implicitParams
           ).flatten
 
-          q"""
-          def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
-          """
+          RenderedClientOperation[ScalaLanguage](
+            q"""
+              def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
+            """,
+            List.empty
+          )
         }
 
         for {
@@ -279,7 +282,7 @@ object AkkaHttpClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
           else List.empty
           extraImplicits = List.empty
-          defn = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responseTypeRef, produces, consumes, tracing)(
+          renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responseTypeRef, produces, consumes, tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
@@ -289,7 +292,7 @@ object AkkaHttpClientGenerator {
             headerArgs,
             extraImplicits
           )
-        } yield RenderedClientOperation[ScalaLanguage](defn, List.empty)
+        } yield renderedClientOperation
 
       case GetImports(tracing) => Target.pure(List.empty)
 
@@ -404,7 +407,8 @@ object AkkaHttpClientGenerator {
                 )
               }
 
-              ..$clientCalls
+              ..$supportDefinitions;
+              ..$clientCalls;
             }
           """
         Target.pure(client)
