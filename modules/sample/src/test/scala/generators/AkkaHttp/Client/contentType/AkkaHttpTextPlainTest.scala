@@ -1,7 +1,7 @@
 package generators.AkkaHttp.Client.contentType
 
 import _root_.tests.contentTypes.textPlain.client.akkaHttp.AkkaHttpImplicits.IgnoredEntity
-import _root_.tests.contentTypes.textPlain.client.akkaHttp.foo.FooClient
+import _root_.tests.contentTypes.textPlain.client.akkaHttp.foo.{ FooClient, DoFooResponse, DoBarResponse }
 import _root_.tests.contentTypes.textPlain.server.akkaHttp.foo.{ FooHandler, FooResource }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
@@ -29,7 +29,7 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe IgnoredEntity.empty
+    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe DoFooResponse.Created
   }
 
   test("Plain text should be emitted for optional parameters (raw)") {
@@ -44,7 +44,7 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe IgnoredEntity.empty
+    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe DoBarResponse.Created
   }
 
   test("Plain text should be emitted for required parameters") {
@@ -64,7 +64,7 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe IgnoredEntity.empty
+    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe DoFooResponse.Created
   }
 
   test("Plain text should be emitted for present optional parameters") {
@@ -84,7 +84,7 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe IgnoredEntity.empty
+    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe DoBarResponse.Created
   }
 
   test("Plain text should be emitted for missing optional parameters") {
@@ -104,6 +104,6 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(None)).rightValue.futureValue shouldBe IgnoredEntity.empty
+    new EitherTValuable(fooClient.doBar(None)).rightValue.futureValue shouldBe DoBarResponse.Created
   }
 }

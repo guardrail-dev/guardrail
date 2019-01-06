@@ -57,19 +57,20 @@ class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
+        val getFooOKDecoder = {
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[Bar].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+        }
+        def getFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetFooResponse] = {
+          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              Unmarshal(resp.entity).to[Bar](getFooOKDecoder, implicitly, implicitly).map(x => Right(GetFooResponse.OK(x)))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
           }).recover({
             case e: Throwable =>
               Left(Left(e))
-          }))
-        }
-        def getFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Bar] = {
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[Bar](httpClient, req))
+          })))
         }
       }
     """

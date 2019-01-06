@@ -1,7 +1,7 @@
 package core.AkkaHttp
 
 import _root_.clients.akkaHttp.AkkaHttpImplicits.IgnoredEntity
-import _root_.clients.akkaHttp.pet.PetClient
+import _root_.clients.akkaHttp.pet.{ PetClient, DeletePetResponse, UploadFileResponse, AddPetResponse, FindPetsByStatusResponse, FindPetsByStatusEnumResponse }
 import _root_.clients.akkaHttp.{ definitions => cdefs }
 import _root_.servers.akkaHttp.pet.{ PetHandler, PetResource }
 import _root_.servers.akkaHttp.{ definitions => sdefs }
@@ -84,7 +84,7 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
         )
       )
       .value
-      .futureValue should be(Right(IgnoredEntity.empty))
+      .futureValue should be(Right(AddPetResponse.Created))
   }
 
   test("round-trip: enum query, Vector of definition response") {
@@ -135,14 +135,16 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
 
     petClient.findPetsByStatusEnum(cdefs.PetStatus.Pending).value.futureValue should be(
       Right(
-        Vector(
-          cdefs.Pet(
-            id = id,
-            category = Some(cdefs.Category(categoryId, categoryName)),
-            name = name,
-            photoUrls = photoUrls,
-            tags = None,
-            status = Some(cdefs.PetStatus.Pending)
+        FindPetsByStatusEnumResponse.OK(
+          Vector(
+            cdefs.Pet(
+              id = id,
+              category = Some(cdefs.Category(categoryId, categoryName)),
+              name = name,
+              photoUrls = photoUrls,
+              tags = None,
+              status = Some(cdefs.PetStatus.Pending)
+            )
           )
         )
       )
@@ -178,8 +180,11 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
 
     val petClient = PetClient.httpClient(httpClient)
 
-    val result = petClient.findPetsByStatus(Vector("bogus")).value.futureValue
-    assert(result.left.value.right.value.status.intValue == 404)
+    petClient.findPetsByStatus(Vector("bogus")).value.futureValue should be(
+      Right(
+        FindPetsByStatusResponse.NotFound
+      )
+    )
   }
 
   test("round-trip: Raw type parameters") {
@@ -219,7 +224,11 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
     result
       .fold({ err =>
         failTest(err.toString)
-      }, { _ == IgnoredEntity.empty })
+      }, {
+        case DeletePetResponse.OK => ()
+        case DeletePetResponse.BadRequest => ()
+        case DeletePetResponse.NotFound => ()
+      })
   }
 
   test("round-trip: File uploads") {
@@ -277,8 +286,8 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
     result
       .fold({ err =>
         failTest(err.toString)
-      }, { resp =>
-        assert(resp.code.exists(_ == 2), "Unexpected number of file uploads!")
+      }, {
+        case UploadFileResponse.OK(resp) => assert(resp.code.exists(_ == 2), "Unexpected number of file uploads!")
       })
   }
 }
