@@ -122,7 +122,7 @@ object AkkaHttpServerGenerator {
           renderedRoutes <- routes.traverse {
             case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
               for {
-                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters)
+                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
               } yield rendered
           }
           routeTerms = renderedRoutes.map(_.route)
@@ -241,11 +241,11 @@ object AkkaHttpServerGenerator {
             Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" })
         }
 
-    def bodyToAkka(body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
+    def bodyToAkka(operationId: String, body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       Target.pure(
         body.map {
           case ScalaParameter(_, _, _, _, argType) =>
-            q"entity(as[${argType}])"
+            q"entity(as[${argType}](${Term.Name(s"${operationId}Decoder")}))"
         }
       )
 
@@ -551,7 +551,8 @@ object AkkaHttpServerGenerator {
                       basePath: Option[String],
                       route: RouteMeta,
                       tracingFields: Option[TracingField[ScalaLanguage]],
-                      parameters: ScalaParameters[ScalaLanguage]): Target[RenderedRoute] =
+                      parameters: ScalaParameters[ScalaLanguage],
+                      responses: Responses[ScalaLanguage]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
@@ -584,7 +585,7 @@ object AkkaHttpServerGenerator {
         akkaMethod <- httpMethodToAkka(method)
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
         akkaQs     <- qsToAkka(qsArgs)
-        akkaBody   <- bodyToAkka(bodyArgs)
+        akkaBody   <- bodyToAkka(operationId, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile)
         akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
         (akkaForm, handlerDefinitions) = akkaForm_
@@ -646,13 +647,14 @@ object AkkaHttpServerGenerator {
             )
           )
         )
+        val consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
         RenderedRoute(
           fullRoute,
           q"""
               def ${Term
             .Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
             """,
-          List.empty,
+          generateCodecs(operationId, bodyArgs, responses, consumes),
           handlerDefinitions
         )
       }
@@ -663,5 +665,26 @@ object AkkaHttpServerGenerator {
         routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
         _      <- routes.traverse(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString))
       } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
+
+    def generateCodecs(operationId: String,
+                       bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+                       responses: Responses[ScalaLanguage],
+                       consumes: Seq[String]): List[Defn.Val] =
+      generateDecoders(operationId, bodyArgs, consumes)
+
+    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[String]): List[Defn.Val] =
+      bodyArgs.toList.flatMap {
+        case ScalaParameter(_, _, _, _, argType) =>
+          val (decoder, baseType) = AkkaHttpHelper.generateDecoder(argType, consumes)
+          List(
+            q"""
+              val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId}Decoder")), t"FromRequestUnmarshaller[$baseType]")} = {
+                val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
+                val unmarshalEntity = ${decoder}
+                extractEntity.andThen(unmarshalEntity)
+              }
+            """
+          )
+      }
   }
 }
