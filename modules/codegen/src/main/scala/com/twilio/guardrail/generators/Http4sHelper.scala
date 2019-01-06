@@ -53,18 +53,29 @@ object Http4sHelper {
                                   responses: Responses[ScalaLanguage],
                                   protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Defn] = {
     val responseSuperType     = Type.Name(s"${operationId.capitalize}Response")
+    val responseSuperTerm     = Term.Name(s"${operationId.capitalize}Response")
     val responseSuperTemplate = template"${Init(responseSuperType, Name(""), List.empty)}"
 
-    val terms = responses.value.map {
-      case Response(statusCodeName, valueType) =>
-        val responseTerm = Term.Name(s"${statusCodeName.value}")
-        val responseName = Type.Name(s"${statusCodeName.value}")
-        valueType.fold[Defn](
-          (q"case object $responseTerm extends $responseSuperTemplate")
-        ) { valueType =>
-          (q"case class  $responseName(value: $valueType) extends $responseSuperTemplate")
-        }
-    }
+    val (terms, foldPair) = responses.value
+      .map({
+        case Response(statusCodeName, valueType) =>
+          val responseTerm   = Term.Name(s"${statusCodeName.value}")
+          val responseName   = Type.Name(s"${statusCodeName.value}")
+          val foldHandleName = Term.Name(s"handle${statusCodeName.value}")
+
+          valueType.fold[(Defn, (Term.Param, Case))]({
+            val foldParameter = param"${foldHandleName}: => A"
+            val foldCase      = p"case ${responseSuperTerm}.${responseTerm} => ${foldHandleName}"
+            (q"case object $responseTerm extends $responseSuperTemplate", (foldParameter, foldCase))
+          }) { valueType =>
+            val foldParameter = param"${foldHandleName}: ${valueType} => A"
+            val foldCase      = p"case x: ${responseSuperTerm}.${responseName} => ${foldHandleName}(x.value)"
+            (q"case class  $responseName(value: $valueType) extends $responseSuperTemplate", (foldParameter, foldCase))
+          }
+      })
+      .unzip
+
+    val (foldParams, foldCases) = foldPair.unzip
 
     val companion = q"""
             object ${Term.Name(s"${operationId.capitalize}Response")} {
@@ -73,7 +84,11 @@ object Http4sHelper {
           """
 
     List[Defn](
-      q"sealed abstract class ${responseSuperType}"
+      q"""
+        sealed abstract class ${responseSuperType} {
+          def fold[A](..${foldParams}): A = ${Term.Match(Term.This(Name("")), foldCases)}
+        }
+      """
     ) ++ List[Defn](
       companion
     )
