@@ -127,7 +127,7 @@ object AkkaHttpGenerator {
 
             implicit def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
               jsonStringUnmarshaller
-                .flatMap(_ => _ => json => J.decodeJson(json).fold(_ => FastFuture.failed(Unmarshaller.NoContentException), FastFuture.successful))
+                .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
             }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
