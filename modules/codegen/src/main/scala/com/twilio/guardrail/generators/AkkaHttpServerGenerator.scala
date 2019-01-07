@@ -253,7 +253,18 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => {
           case t"String" => Target.pure(q"headerValueByName(${arg})")
-          case tpe       => Target.pure(q"headerValueByName(${arg}).flatMap(str => onSuccess(Unmarshal(str).to[${tpe}]))")
+          case tpe =>
+            Target.pure(
+              q"""
+                headerValueByName(${arg})
+                  .flatMap(str =>
+                    onComplete(Unmarshal(str).to[${tpe}])
+                      .flatMap[Tuple1[${tpe}]]({
+                        case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
+                        case Success(x) => provide(x)
+                      }))
+              """
+            )
         },
         arg => tpe => Target.raiseError(s"Unsupported Iterable[${arg}]"),
         arg => tpe => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
@@ -261,7 +272,15 @@ object AkkaHttpServerGenerator {
           case t"String" => Target.pure(q"optionalHeaderValueByName(${arg})")
           case tpe =>
             Target.pure(
-              q"optionalHeaderValueByName(${arg}).flatMap(_.fold[Directive1[Option[${tpe}]]](provide(Option.empty[${tpe}]))(str => onSuccess(Unmarshal(str).to[${tpe}]).map(Option.apply _)))"
+              q"""
+                optionalHeaderValueByName(${arg})
+                  .flatMap(
+                    _.fold[Directive1[Option[${tpe}]]](provide(Option.empty[${tpe}]))(str =>
+                      onComplete(Unmarshal(str).to[${tpe}]).flatMap[Tuple1[Option[${tpe}]]]({
+                        case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
+                        case Success(x) => provide(Option(x))
+                      })))
+              """
             )
         }
       ) _

@@ -29,7 +29,7 @@ object AkkaHttpGenerator {
             q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller, FromStringUnmarshaller}",
             q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
             q"import akka.http.scaladsl.server.Directives._",
-            q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MissingFormFieldRejection, Rejection, Route}",
+            q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MalformedHeaderRejection, MissingFormFieldRejection, Rejection, Route}",
             q"import akka.http.scaladsl.util.FastFuture",
             q"import akka.stream.{IOResult, Materializer}",
             q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
