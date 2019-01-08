@@ -52,7 +52,10 @@ class CustomHeaderTest extends FunSuite with Matchers with SwaggerSpecRunner {
           Directive.Empty
         }
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & path("foo") & discardEntity & headerValueByName("CustomHeader").flatMap(str => onSuccess(Unmarshal(str).to[Bar]))) {
+          (get & path("foo") & discardEntity & headerValueByName("CustomHeader").flatMap(str => onComplete(Unmarshal(str).to[Bar]).flatMap[Tuple1[Bar]]({
+            case Failure(e) => reject(MalformedHeaderRejection("CustomHeader", e.getMessage, Some(e)))
+            case Success(x) => provide(x)
+          }))) {
             customHeader => complete(handler.getFoo(getFooResponse)(customHeader))
           }
         }

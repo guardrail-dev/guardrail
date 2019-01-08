@@ -78,11 +78,15 @@ class WritePackageSpec extends FunSuite with Matchers {
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
-          .foldMap(CoreTermInterp[ScalaLanguage]("akka-http", {
-            case "akka-http" => AkkaHttp
-          }, {
-            _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-          }))
+          .foldMap(
+            CoreTermInterp[ScalaLanguage](
+              "akka-http", {
+                case "akka-http" => AkkaHttp
+              }, {
+                _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+              }
+            )
+          )
       )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
@@ -135,11 +139,15 @@ class WritePackageSpec extends FunSuite with Matchers {
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
-          .foldMap(CoreTermInterp[ScalaLanguage]("akka-http", {
-            case "akka-http" => AkkaHttp
-          }, {
-            _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-          }))
+          .foldMap(
+            CoreTermInterp[ScalaLanguage](
+              "akka-http", {
+                case "akka-http" => AkkaHttp
+              }, {
+                _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+              }
+            )
+          )
       )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))

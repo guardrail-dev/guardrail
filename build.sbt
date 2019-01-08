@@ -30,10 +30,10 @@ fullRunTask(
   "com.twilio.guardrail.CLI",
   """
   --defaults --import support.PositiveLong
-  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue43.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue43.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue43.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue43.server.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.client.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.server.akkaHttp --framework akka-http
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers.http4s --framework http4s
@@ -69,6 +69,10 @@ fullRunTask(
   --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.http4s --framework http4s
   --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/issues/issue127.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue127
+  --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.akkaHttp --framework akka-http
+  --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.http4s --framework http4s
+  --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.akkaHttp --framework akka-http
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
 
