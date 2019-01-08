@@ -72,11 +72,11 @@ class HardcodedQSSpec extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(e))
           }))
         }
-        def getHardcodedQs(bar: Option[Int] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def getHardcodedQs(bar: Option[Int] = None, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/hardcodedQs?foo=bar" + "&" + Formatter.addArg("bar", bar), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
         }
-        def getHardcodedQs(value: Int, bar: Option[Int] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def getHardcodedQs(value: Int, bar: Option[Int] = None, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/specViolation?isThisSupported=" + Formatter.addPath(value) + "&" + Formatter.addArg("bar", bar), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
         }

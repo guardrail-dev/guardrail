@@ -72,7 +72,7 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(e))
           }))
         }
-        def getUser(optionalIterable: Option[Iterable[String]] = None, requiredIterable: Iterable[String], headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def getUser(optionalIterable: Option[Iterable[String]] = None, requiredIterable: Iterable[String], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/user/", allHeaders, FormData(List(optionalIterable.toList.flatMap {
             x => x.toList.map(("optionalIterable", _))

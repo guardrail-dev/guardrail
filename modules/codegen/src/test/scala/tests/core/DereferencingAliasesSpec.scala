@@ -113,7 +113,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
               Left(Left(e))
           }))
         }
-        def doFoo(long: Option[Long] = None, body: Option[propRef] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IndexedSeq[IndexedSeq[Long]]] = {
+        def doFoo(long: Option[Long] = None, body: Option[propRef] = None, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IndexedSeq[IndexedSeq[Long]]] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.POST, host + basePath + "/foo" + "?" + Formatter.addArg("long", long), allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IndexedSeq[IndexedSeq[Long]]](httpClient, req))
         }

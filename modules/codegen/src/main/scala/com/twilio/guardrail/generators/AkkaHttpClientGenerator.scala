@@ -170,8 +170,7 @@ object AkkaHttpClientGenerator {
                                     headerArgs: List[ScalaParameter[ScalaLanguage]],
                                     extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-          val defaultHeaders =
-            param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
+          val defaultHeaders = param"headers: List[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] =
             if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod)
               Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))

@@ -120,7 +120,7 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(e))
           }))
         }
-        def getFoo(pathparam: Bar, bar: Bar, defaultparam: Bar = Bar.ILikeSpaces, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Bar] = {
+        def getFoo(pathparam: Bar, bar: Bar, defaultparam: Bar = Bar.ILikeSpaces, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Bar] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/foo/" + Formatter.addPath(pathparam) + "?" + Formatter.addArg("bar", bar) + Formatter.addArg("defaultparam", defaultparam), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[Bar](httpClient, req))
         }
