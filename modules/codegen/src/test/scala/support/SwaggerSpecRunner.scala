@@ -1,9 +1,14 @@
 package support
+import java.util
+
+import com.twilio.guardrail.Common._
+import com.twilio.guardrail.shims._
+import io.swagger.parser.OpenAPIParser
+import io.swagger.v3.parser.core.models.ParseOptions
 
 trait SwaggerSpecRunner {
 
-  import _root_.io.swagger.models._
-  import _root_.io.swagger.parser.SwaggerParser
+  import _root_.io.swagger.v3.oas.models._
   import cats.arrow.FunctionK
   import cats.implicits._
   import com.twilio.guardrail._
@@ -15,9 +20,9 @@ trait SwaggerSpecRunner {
   def runSwaggerSpec(
       spec: String
   ): (Context, FunctionK[CodegenApplication[ScalaLanguage, ?], Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) =
-    runSwagger(new SwaggerParser().parse(spec)) _
+    runSwagger(new OpenAPIParser().readContents(spec, new util.LinkedList(), new ParseOptions).getOpenAPI) _
 
-  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication[ScalaLanguage, ?], Target])(
+  def runSwagger(swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[ScalaLanguage, ?], Target])(
       implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
       Sc: ScalaTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
       Sw: SwaggerTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]]
@@ -29,13 +34,11 @@ trait SwaggerSpecRunner {
       protocol <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](swagger)
       definitions = protocol.elems
 
-      schemes = Option(swagger.getSchemes)
-        .fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
-      host     = Option(swagger.getHost)
-      basePath = Option(swagger.getBasePath)
-      paths = Option(swagger.getPaths)
-        .map(_.asScala.toList)
-        .getOrElse(List.empty)
+      schemes  = swagger.schemes()
+      host     = swagger.host()
+      basePath = swagger.basePath()
+      paths    = swagger.getPathsOpt()
+
       routes <- extractOperations(paths)
       classNamedRoutes <- routes
         .map(route => getClassName(route.operation).map(_ -> route))

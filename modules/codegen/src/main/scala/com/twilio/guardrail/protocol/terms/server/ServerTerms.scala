@@ -1,12 +1,12 @@
 package com.twilio.guardrail.protocol.terms.server
 
-import _root_.io.swagger.models.{ Operation, Path }
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
+import io.swagger.v3.oas.models.Operation
 
 class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
   def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField[L]]] =

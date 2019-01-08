@@ -1,11 +1,11 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import _root_.io.swagger.models.ModelImpl
+import _root_.io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
 
 sealed trait EnumProtocolTerm[L <: LA, T]
-case class ExtractEnum[L <: LA](swagger: ModelImpl)                                                 extends EnumProtocolTerm[L, Either[String, List[String]]]
+case class ExtractEnum[L <: LA](swagger: Schema[String])                                            extends EnumProtocolTerm[L, Either[String, List[String]]]
 case class RenderMembers[L <: LA](clsName: String, elems: List[(String, L#TermName, L#TermSelect)]) extends EnumProtocolTerm[L, L#ObjectDefinition]
 case class EncodeEnum[L <: LA](clsName: String)                                                     extends EnumProtocolTerm[L, L#ValueDefinition]
 case class DecodeEnum[L <: LA](clsName: String)                                                     extends EnumProtocolTerm[L, L#ValueDefinition]

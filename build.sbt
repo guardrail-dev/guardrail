@@ -119,13 +119,13 @@ val codegenSettings = Seq(
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
   libraryDependencies ++= testDependencies ++ Seq(
-    "org.scalameta" %% "scalameta"     % "4.1.0",
-    "io.swagger"    % "swagger-parser" % "1.0.39",
-    "org.tpolecat"  %% "atto-core"     % "0.6.3",
-    "org.typelevel" %% "cats-core"     % catsVersion,
-    "org.typelevel" %% "cats-kernel"   % catsVersion,
-    "org.typelevel" %% "cats-macros"   % catsVersion,
-    "org.typelevel" %% "cats-free"     % catsVersion
+    "org.scalameta"           %% "scalameta"     % "4.1.0",
+    "io.swagger.parser.v3"    % "swagger-parser" % "2.0.7",
+    "org.tpolecat"            %% "atto-core"     % "0.6.3",
+    "org.typelevel"           %% "cats-core"     % catsVersion,
+    "org.typelevel"           %% "cats-kernel"   % catsVersion,
+    "org.typelevel"           %% "cats-macros"   % catsVersion,
+    "org.typelevel"           %% "cats-free"     % catsVersion
   ),
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",

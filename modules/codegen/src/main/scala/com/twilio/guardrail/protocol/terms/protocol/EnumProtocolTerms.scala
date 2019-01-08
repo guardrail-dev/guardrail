@@ -1,13 +1,13 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import _root_.io.swagger.models.ModelImpl
+import _root_.io.swagger.v3.oas.models.media.Schema
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
 
 class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?], F]) {
-  def extractEnum(swagger: ModelImpl): Free[F, Either[String, List[String]]] =
+  def extractEnum(swagger: Schema[String]): Free[F, Either[String, List[String]]] =
     Free.inject[EnumProtocolTerm[L, ?], F](ExtractEnum[L](swagger))
   def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)]): Free[F, L#ObjectDefinition] =
     Free.inject[EnumProtocolTerm[L, ?], F](RenderMembers[L](clsName, elems))

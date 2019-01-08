@@ -1,8 +1,10 @@
 package com.twilio.guardrail
 
-import _root_.io.swagger.models._
-import _root_.io.swagger.models.parameters._
-import _root_.io.swagger.models.properties._
+import io.swagger.v3.oas.models._
+import io.swagger.v3.oas.models.PathItem._
+import io.swagger.v3.oas.models.media._
+import io.swagger.v3.oas.models.parameters._
+import io.swagger.v3.oas.models.responses._
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
@@ -11,6 +13,7 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ Default, ScalaType }
 import com.twilio.guardrail.generators.{ Responses, ScalaParameter }
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.shims._
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
@@ -131,15 +134,15 @@ object SwaggerUtil {
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Model](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
+    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
       import Sc._
       import Sw._
       model match {
-        case ref: RefModel =>
+        case ref: Schema[_] if ref.getSimpleRef.isDefined =>
           for {
             ref <- getSimpleRef(ref)
           } yield Deferred[L](ref)
-        case arr: ArrayModel =>
+        case arr: ArraySchema =>
           for {
             items <- getItems(arr)
             meta  <- propMeta[L, F](items)
@@ -151,7 +154,7 @@ object SwaggerUtil {
               case x: DeferredMap[L]   => embedArray(x)
             }
           } yield res
-        case impl: ModelImpl =>
+        case impl: Schema[_] =>
           for {
             tpeName <- getType(impl)
             tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
@@ -160,21 +163,20 @@ object SwaggerUtil {
     }
   }
 
-  def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] =
-    new ModelMetaTypePartiallyApplied[L, F]()
+  def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] = new ModelMetaTypePartiallyApplied[L, F]()
 
   def extractConcreteTypes[L <: LA, F[_]](
-      definitions: List[(String, Model)]
+      definitions: List[(String, Schema[_])]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
-        case (clsName, impl: ModelImpl) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
+        case (clsName, impl: Schema[_]) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
           pureTypeName(clsName).flatMap(widenTypeName).map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None): SwaggerUtil.ResolvedType[L]))
-        case (clsName, comp: ComposedModel) =>
+        case (clsName, comp: ComposedSchema) =>
           for {
             x <- pureTypeName(clsName).flatMap(widenTypeName)
-            parentSimpleRef = comp.getInterfaces.asScala.headOption.map(_.getSimpleRef)
+            parentSimpleRef = comp.getAllOf.asScala.headOption.flatMap(_.getSimpleRef)
             parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
             resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None): SwaggerUtil.ResolvedType[L]
           } yield (clsName, resolvedType)
@@ -228,20 +230,24 @@ object SwaggerUtil {
             case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
             case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
             case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
-            case ("file", fmt)                 => fileType(fmt).map(log(fmt, _))
-            case ("object", fmt)               => objectType(fmt).map(log(fmt, _))
-            case (tpe, fmt)                    => fallbackType(tpe, fmt)
+            case ("file", fmt) =>
+              fileType(fmt).map(log(fmt, _))
+            case ("binary", _) =>
+              fileType(None).map(log(None, _))
+            case ("object", fmt) => objectType(fmt).map(log(fmt, _))
+            case (tpe, fmt) =>
+              fallbackType(tpe, fmt)
           }
         })(Free.pure(_))
       )
   }
 
-  def propMeta[L <: LA, F[_]](property: Property)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
+  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
     import F._
     import Sc._
     import Sw._
     property match {
-      case p: ArrayProperty =>
+      case p: ArraySchema =>
         for {
           items <- getItemsP(p)
           rec   <- propMeta[L, F](items)
@@ -253,9 +259,9 @@ object SwaggerUtil {
             case x: Deferred[L]      => embedArray(x)
           }
         } yield res
-      case m: MapProperty =>
+      case m: MapSchema =>
         for {
-          rec <- propMeta[L, F](m.getAdditionalProperties)
+          rec <- propMeta[L, F](m.getAdditionalProperties.asInstanceOf[Schema[_]]) //fixme: the definition says it could be boolean
           res <- rec match {
             case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
             case x: DeferredMap[L]       => embedMap(x)
@@ -263,39 +269,31 @@ object SwaggerUtil {
             case x: Deferred[L]          => embedMap(x)
           }
         } yield res
-      case o: ObjectProperty =>
+      case o: ObjectSchema =>
         objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
-      case r: RefProperty =>
-        getSimpleRefP(r).map(Deferred[L](_))
-      case b: BooleanProperty =>
+
+      case ref: Schema[_] if ref.getSimpleRef.isDefined =>
+        getSimpleRef(ref).map(Deferred[L])
+
+      case b: BooleanSchema =>
         (typeName[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
-      case s: StringProperty =>
+
+      case s: StringSchema =>
         (typeName[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
           .mapN(Resolved[L](_, None, _))
 
-      case d: DateProperty =>
+      case d: DateSchema =>
         typeName[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
-      case d: DateTimeProperty =>
+
+      case d: DateTimeSchema =>
         typeName[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
 
-      case l: LongProperty =>
-        (typeName[L, F]("integer", Some("int64"), ScalaType(l)), Default(l).extract[Long].traverse(litLong(_))).mapN(Resolved[L](_, None, _))
-      case i: IntegerProperty =>
-        (typeName[L, F]("integer", Some("int32"), ScalaType(i)), Default(i).extract[Int].traverse(litInt(_))).mapN(Resolved[L](_, None, _))
-      case f: FloatProperty =>
-        (typeName[L, F]("number", Some("float"), ScalaType(f)), Default(f).extract[Float].traverse(litFloat(_))).mapN(Resolved[L](_, None, _))
-      case d: DoubleProperty =>
-        (typeName[L, F]("number", Some("double"), ScalaType(d)), Default(d).extract[Double].traverse(litDouble(_))).mapN(Resolved[L](_, None, _))
-      case d: DecimalProperty =>
-        typeName[L, F]("number", None, ScalaType(d)).map(Resolved[L](_, None, None))
-      case u: UntypedProperty =>
-        objectType(None).map(Resolved[L](_, None, None))
-      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "integer") =>
-        typeName[L, F]("integer", None, ScalaType(p)).map(Resolved[L](_, None, None))
-      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "number") =>
-        typeName[L, F]("number", None, ScalaType(p)).map(Resolved[L](_, None, None))
-      case p: AbstractProperty if Option(p.getType).exists(_.toLowerCase == "string") =>
-        typeName[L, F]("string", None, ScalaType(p)).map(Resolved[L](_, None, None))
+      case i: IntegerSchema =>
+        typeName[L, F]("integer", Option(i.getFormat), ScalaType(i)).map(Resolved[L](_, None, None))
+
+      case d: NumberSchema =>
+        typeName[L, F]("number", Option(d.getFormat), ScalaType(d)).map(Resolved[L](_, None, None))
+
       case x =>
         fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
     }
@@ -312,12 +310,12 @@ object SwaggerUtil {
     List(200, 201, 202, 203, 206, 226)
   private[this] val successCodesWithoutEntities = List(204, 205)
 
-  private[this] def getBestSuccessResponse(responses: JMap[String, Response]): Option[Response] =
+  private[this] def getBestSuccessResponse(responses: JMap[String, ApiResponse]): Option[ApiResponse] =
     successCodesWithEntities
       .map(_.toString)
       .find(responses.containsKey)
       .flatMap(code => Option(responses.get(code)))
-  private[this] def hasEmptySuccessType(responses: JMap[String, Response]): Boolean =
+  private[this] def hasEmptySuccessType(responses: JMap[String, ApiResponse]): Boolean =
     successCodesWithoutEntities.map(_.toString).exists(responses.containsKey)
 
   def getResponseType[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
@@ -330,7 +328,7 @@ object SwaggerUtil {
       Option(operation.getResponses)
         .flatMap { responses =>
           getBestSuccessResponse(responses)
-            .flatMap(resp => Option(resp.getSchema))
+            .flatMap[Schema[_]](resp => Option(resp.getContent.values().asScala.head.getSchema)) //fixme: use of head
             .map(propMeta[L, F](_))
             .orElse(
               if (hasEmptySuccessType(responses))

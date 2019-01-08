@@ -1,6 +1,5 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import _root_.io.swagger.models.ArrayModel
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.languages.LA

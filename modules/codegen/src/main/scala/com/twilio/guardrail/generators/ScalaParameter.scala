@@ -1,11 +1,12 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.Model
-import _root_.io.swagger.models.parameters.Parameter
+import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.parameters._
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import java.util.Locale
@@ -37,7 +38,7 @@ class ScalaParameter[L <: LA] private[generators] (
     val isFile: Boolean
 ) {
   override def toString: String =
-    s"ScalaParameter(${in}, ${param}, ${paramName}, ${argName}, ${argType})"
+    s"ScalaParameter($in, $param, $paramName, $argName, $argType)"
 
   def withType(newArgType: L#Type): ScalaParameter[L] =
     new ScalaParameter[L](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
@@ -61,12 +62,10 @@ object ScalaParameter {
     }
 
     def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
-      import _root_.io.swagger.models.parameters._
-
-      def getDefault[U <: AbstractSerializableParameter[U]: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
-        Option(p.getType)
+      def getDefault[U <: Parameter: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
+        Option(p.getSchema.getType)
           .flatTraverse[Free[F, ?], L#Term]({ _type =>
-            val fmt = Option(p.getFormat)
+            val fmt = Option(p.getSchema.getFormat)
             (_type, fmt) match {
               case ("string", None) =>
                 Default(p).extract[String].traverse(litString(_))
@@ -85,45 +84,51 @@ object ScalaParameter {
           })
 
       param match {
-        case x: BodyParameter =>
-          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
-
-        case x: HeaderParameter =>
-          getHeaderParameterType(x).flatMap(
-            tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
-          )
-
-        case x: PathParameter =>
-          getPathParameterType(x)
-            .flatMap(
-              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
-
-        case x: QueryParameter =>
-          getQueryParameterType(x)
-            .flatMap(
-              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
-
-        case x: CookieParameter =>
-          getCookieParameterType(x)
-            .flatMap(
-              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
-
-        case x: FormParameter =>
-          getFormParameterType(x)
-            .flatMap(
-              tpeName => (SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)), getDefault(x)).mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
-
-        case r: RefParameter =>
+        case r: Parameter if r.isRef =>
           getRefParameterRef(r)
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
 
-        case x: SerializableParameter =>
-          getSerializableParameterType(x)
-            .flatMap(tpeName => SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x)).map(SwaggerUtil.Resolved[L](_, None, None)))
+        case x: Parameter if x.isInBody =>
+          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+
+        case x: Parameter if x.isInHeader =>
+          getHeaderParameterType(x).flatMap(
+            tpeName =>
+              (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
+                .mapN(SwaggerUtil.Resolved[L](_, None, _))
+          )
+
+        case x: Parameter if x.isInPath =>
+          getPathParameterType(x)
+            .flatMap(
+              tpeName =>
+                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
+                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case x: Parameter if x.isInQuery =>
+          getQueryParameterType(x)
+            .flatMap(
+              tpeName =>
+                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
+                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case x: Parameter if x.isInCookies =>
+          getCookieParameterType(x)
+            .flatMap(
+              tpeName =>
+                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
+                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
+
+        case x: Parameter if x.isInFormData =>
+          getFormParameterType(x)
+            .flatMap(
+              tpeName =>
+                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
+                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
+            )
 
         case x =>
           fallbackParameterHandler(x)

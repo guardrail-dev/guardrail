@@ -1,7 +1,6 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.{ HttpMethod, Operation }
 import cats.arrow.FunctionK
 import cats.data.{ NonEmptyList, OptionT }
 import cats.instances.all._
@@ -15,8 +14,10 @@ import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.RouteMeta
+
 import scala.collection.JavaConverters._
 import scala.meta._
+import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 
 object AkkaHttpServerGenerator {
   object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
@@ -647,7 +648,8 @@ object AkkaHttpServerGenerator {
             )
           )
         )
-        val consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
+
+        val consumes = Option(operation.getRequestBody).flatMap(x => Option(x.getContent)).fold(List.empty[String])(_.asScala.keys.toList)
         RenderedRoute(
           fullRoute,
           q"""

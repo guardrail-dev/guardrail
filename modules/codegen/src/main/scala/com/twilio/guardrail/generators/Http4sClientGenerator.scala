@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models._
+import _root_.io.swagger.v3.oas.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
@@ -12,10 +12,12 @@ import com.twilio.guardrail.extract.ScalaPackage
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
 import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.meta._
+import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 
 object Http4sClientGenerator {
 
@@ -260,8 +262,8 @@ object Http4sClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          produces = Option(operation.getProduces).fold(Seq.empty[String])(_.asScala)
-          consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
+          consumes = operation.consumes
+          produces = operation.produces
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams

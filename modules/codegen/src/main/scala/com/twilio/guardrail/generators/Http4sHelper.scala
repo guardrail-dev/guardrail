@@ -10,9 +10,10 @@ import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
-import io.swagger.models.{ Operation, Response => SwaggerResponse }
+
 import scala.collection.JavaConverters._
 import scala.meta._
+import _root_.io.swagger.v3.oas.models.Operation
 
 class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])])
 object Response {
@@ -36,7 +37,7 @@ object Http4sHelper {
             acc :+ (for {
               httpCode <- lookupStatusCode(key)
               (statusCode, statusCodeName) = httpCode
-              valueType <- Option(resp.getSchema).traverse { prop =>
+              valueType <- resp.getContent.values().asScala.headOption.map(_.getSchema).traverse { prop => //fixme: use of headOption
                 for {
                   meta     <- SwaggerUtil.propMeta[L, F](prop)
                   resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)

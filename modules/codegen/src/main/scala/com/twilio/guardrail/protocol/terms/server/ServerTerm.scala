@@ -1,10 +1,10 @@
 package com.twilio.guardrail.protocol.terms.server
 
-import _root_.io.swagger.models.{ Operation, Path }
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
+import io.swagger.v3.oas.models.Operation
 
 sealed trait ServerTerm[L <: LA, T]
 case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField[L]]]

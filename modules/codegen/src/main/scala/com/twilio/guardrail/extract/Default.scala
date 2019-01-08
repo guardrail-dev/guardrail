@@ -1,7 +1,7 @@
 package com.twilio.guardrail.extract
 
-import io.swagger.models.parameters._
-import io.swagger.models.properties._
+import io.swagger.v3.oas.models.media.{ BooleanSchema, IntegerSchema, NumberSchema, StringSchema }
+import io.swagger.v3.oas.models.parameters.Parameter
 
 object Default {
   trait GetDefault[F] {
@@ -15,29 +15,20 @@ object Default {
           T.extract(f(from)).toOption
       }
 
-    implicit val getDefaultBooleanProperty: GetDefault[BooleanProperty] =
-      build[BooleanProperty](_.getDefault)
-    implicit val getDefaultDoubleProperty: GetDefault[DoubleProperty] =
-      build[DoubleProperty](_.getDefault)
-    implicit val getDefaultFloatProperty: GetDefault[FloatProperty] =
-      build[FloatProperty](_.getDefault)
-    implicit val getDefaultIntegerProperty: GetDefault[IntegerProperty] =
-      build[IntegerProperty](_.getDefault)
-    implicit val getDefaultLongProperty: GetDefault[LongProperty] =
-      build[LongProperty](_.getDefault)
-    implicit val getDefaultStringProperty: GetDefault[StringProperty] =
-      build[StringProperty](_.getDefault)
+    implicit val getDefaultBooleanProperty: GetDefault[BooleanSchema] =
+      build[BooleanSchema](_.getDefault)
 
-    implicit val getDefaultCookieParameterParameter: GetDefault[CookieParameter] =
-      build[CookieParameter](_.getDefault)
-    implicit val getDefaultFormParameterParameter: GetDefault[FormParameter] =
-      build[FormParameter](_.getDefault)
-    implicit val getDefaultHeaderParameterParameter: GetDefault[HeaderParameter] =
-      build[HeaderParameter](_.getDefault)
-    implicit val getDefaultPathParameterParameter: GetDefault[PathParameter] =
-      build[PathParameter](_.getDefault)
-    implicit val getDefaultQueryParameterParameter: GetDefault[QueryParameter] =
-      build[QueryParameter](_.getDefault)
+    implicit val getDefaultFloatProperty: GetDefault[NumberSchema] =
+      build[NumberSchema](_.getDefault)
+
+    implicit val getDefaultIntegerProperty: GetDefault[IntegerSchema] =
+      build[IntegerSchema](_.getDefault)
+
+    implicit val getDefaultStringProperty: GetDefault[StringSchema] =
+      build[StringSchema](_.getDefault)
+
+    implicit val getDefaultQueryParameterParameter: GetDefault[Parameter] =
+      build[Parameter](_.getSchema.getDefault)
   }
 
   case class DefaultAdapter[F](from: F) extends AnyVal {

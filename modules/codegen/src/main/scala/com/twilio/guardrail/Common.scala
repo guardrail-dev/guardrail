@@ -1,6 +1,6 @@
 package com.twilio.guardrail
 
-import _root_.io.swagger.models.Swagger
+import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
@@ -10,6 +10,7 @@ import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumPr
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SwaggerTerms }
 import java.nio.file.{ Path, Paths }
 import java.util.Locale
@@ -20,7 +21,7 @@ import scala.meta._
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
-  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Swagger)(
+  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: OpenAPI)(
       implicit
       C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
@@ -31,8 +32,7 @@ object Common {
       S: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, F],
       Se: ServerTerms[L, F],
-      Sw: SwaggerTerms[L, F]
-  ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
+      Sw: SwaggerTerms[L, F]): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import F._
     import Sw._
 
@@ -40,13 +40,11 @@ object Common {
       proto <- ProtocolGenerator.fromSwagger[L, F](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
 
-      schemes = Option(swagger.getSchemes)
-        .fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
-      host     = Option(swagger.getHost)
-      basePath = Option(swagger.getBasePath)
-      paths = Option(swagger.getPaths)
-        .map(_.asScala.toList)
-        .getOrElse(List.empty)
+      schemes  = swagger.schemes()
+      host     = swagger.host()
+      basePath = swagger.basePath()
+
+      paths = swagger.getPathsOpt()
       routes           <- extractOperations(paths)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
       groupedRoutes = classNamedRoutes

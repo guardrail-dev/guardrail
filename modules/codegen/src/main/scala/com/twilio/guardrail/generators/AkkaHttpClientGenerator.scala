@@ -3,17 +3,19 @@ package generators
 
 import java.util.Locale
 
-import _root_.io.swagger.models._
+import _root_.io.swagger.v3.oas.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.syntax.flatMap._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.collection.JavaConverters._
 import scala.meta._
+import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 
 object AkkaHttpClientGenerator {
 
@@ -46,7 +48,7 @@ object AkkaHttpClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
+      case GenerateClientOperation(_, _ @RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
@@ -263,8 +265,8 @@ object AkkaHttpClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          produces = Option(operation.getProduces).fold(List.empty[String])(_.asScala.toList)
-          consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
+          produces = operation.produces
+          consumes = operation.consumes
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams

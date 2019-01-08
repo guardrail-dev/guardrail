@@ -4,14 +4,15 @@ import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ StaticDefns, SuperClass }
 import com.twilio.guardrail.languages.LA
-import io.swagger.models.{ Model, RefModel }
+import io.swagger.v3.oas.models.media.Schema
 
 /**
   * Protocol for Polymorphic models
   */
 sealed trait PolyProtocolTerm[L <: LA, T]
 
-case class ExtractSuperClass[L <: LA](swagger: Model, definitions: List[(String, Model)]) extends PolyProtocolTerm[L, List[(String, Model, List[RefModel])]]
+case class ExtractSuperClass[L <: LA](swagger: Schema[_], definitions: List[(String, Schema[_])])
+    extends PolyProtocolTerm[L, List[(String, Schema[_], List[Schema[_]])]]
 
 case class RenderSealedTrait[L <: LA](className: String, terms: List[L#MethodParameter], discriminator: String, parents: List[SuperClass[L]] = Nil)
     extends PolyProtocolTerm[L, L#Trait]
@@ -24,7 +25,7 @@ case class RenderADTStaticDefns[L <: LA](clsName: String, discriminator: String,
     extends PolyProtocolTerm[L, StaticDefns[L]]
 
 class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?], F]) {
-  def extractSuperClass(swagger: Model, definitions: List[(String, Model)]): Free[F, List[(String, Model, List[RefModel])]] =
+  def extractSuperClass(swagger: Schema[_], definitions: List[(String, Schema[_])]): Free[F, List[(String, Schema[_], List[Schema[_]])]] =
     Free.inject[PolyProtocolTerm[L, ?], F](ExtractSuperClass(swagger, definitions))
   def renderSealedTrait(
       className: String,
