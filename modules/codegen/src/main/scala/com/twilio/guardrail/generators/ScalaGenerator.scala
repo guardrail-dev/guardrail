@@ -1,11 +1,13 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators
 
 import cats.syntax.either._
 import cats.~>
+import com.twilio.guardrail._
+import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
+import java.nio.charset.StandardCharsets
 import scala.meta._
 
 object ScalaGenerator {
@@ -191,7 +193,7 @@ object ScalaGenerator {
               }
             }
           """
-        Target.pure(WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(utf8)))
+        Target.pure(WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(StandardCharsets.UTF_8)))
 
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         val pkg: Term.Ref =
@@ -212,7 +214,7 @@ object ScalaGenerator {
 
             ${frameworkImplicits}
           """
-        Target.pure(WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile.syntax.getBytes(utf8)))
+        Target.pure(WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile.syntax.getBytes(StandardCharsets.UTF_8)))
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         val dtoHead :: dtoRest = dtoComponents
@@ -247,7 +249,7 @@ object ScalaGenerator {
             package object ${Term.Name(dtoComponents.last)} {
               ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
             }
-            """.syntax.getBytes(utf8)
+            """.syntax.getBytes(StandardCharsets.UTF_8)
           )
         )
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
@@ -263,7 +265,7 @@ object ScalaGenerator {
 
                 $cls
                 ${companionForStaticDefns(staticDefns)}
-              """.syntax.getBytes(utf8)
+              """.syntax.getBytes(StandardCharsets.UTF_8)
                )
              ),
              List.empty[Stat])
@@ -277,7 +279,7 @@ object ScalaGenerator {
                 ..${imports}
                 $cls
                 ${companionForStaticDefns(staticDefns)}
-              """.syntax.getBytes(utf8)
+              """.syntax.getBytes(StandardCharsets.UTF_8)
                )
              ),
              List.empty[Stat])
@@ -296,7 +298,7 @@ object ScalaGenerator {
                     $polyImports
                     $trt
                     ${companionForStaticDefns(staticDefns)}
-                  """.syntax.getBytes(utf8)
+                  """.syntax.getBytes(StandardCharsets.UTF_8)
                 )
               ),
               List.empty[Stat]
@@ -324,7 +326,7 @@ object ScalaGenerator {
             ${companionForStaticDefns(staticDefns)};
             ${client};
             ..${responseDefinitions}
-            """.syntax.getBytes(utf8)
+            """.syntax.getBytes(StandardCharsets.UTF_8)
           )
         )
       case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, src)) =>
@@ -339,7 +341,7 @@ object ScalaGenerator {
               import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
               ..${customImports}
               ..$src
-              """.syntax.getBytes(utf8)
+              """.syntax.getBytes(StandardCharsets.UTF_8)
           )
         )
     }
