@@ -443,6 +443,7 @@ object AkkaHttpServerGenerator {
                     val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
                     (dest, part.filename, part.entity.contentType, hash)
                   case IOResult(_, Failure(t)) =>
+                    dest.delete()
                     throw t
                 }, { case t =>
                   dest.delete()
