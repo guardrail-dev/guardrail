@@ -1,0 +1,19 @@
+swagger: '2.0'
+host: localhost:1234
+schemes:
+- http
+paths:
+  /file:
+    post:
+      operationId: uploadFile
+      parameters:
+      - name: file
+        description: File to upload
+        in: formData
+        type: file
+        required: true
+      consumes:
+      - multipart/form-data
+      responses:
+        '201':
+          description: Success
