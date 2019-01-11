@@ -57,6 +57,7 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
                 val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
                 (dest, part.filename, part.entity.contentType, hash)
               case IOResult(_, Failure(t)) =>
+                dest.delete()
                 throw t
             }, {
               case t =>
@@ -87,8 +88,18 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
             })
             extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
-                entity(as[Multipart.FormData]).flatMap { formData =>
-                  val fileReferences = new AtomicReference(List.empty[File])
+                val fileReferences = new AtomicReference(List.empty[File])
+                (handleExceptions(ExceptionHandler({
+                  case e: Throwable =>
+                    fileReferences.get().foreach(_.delete())
+                    throw e
+                })) & handleRejections { (rejections: scala.collection.immutable.Seq[Rejection]) =>
+                  fileReferences.get().foreach(_.delete())
+                  None
+                } & mapResponse { resp =>
+                  fileReferences.get().foreach(_.delete())
+                  resp
+                } & entity(as[Multipart.FormData])).flatMap { formData =>
                   val collectedPartsF: Future[Either[Throwable, Tuple1[Option[(File, Option[String], ContentType)]]]] = for (results <- formData.parts.mapConcat {
                     part => if (Set[String]("file").contains(part.name)) part :: Nil else {
                       part.entity.discardBytes()
@@ -112,17 +123,7 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
                       Tuple1(fileO)
                     }
                   }
-                  handleExceptions(ExceptionHandler({
-                    case e: Throwable =>
-                      fileReferences.get().foreach(_.delete())
-                      throw e
-                  })) & handleRejections { (rejections: scala.collection.immutable.Seq[Rejection]) =>
-                    fileReferences.get().foreach(_.delete())
-                    None
-                  } & mapResponse { resp =>
-                    fileReferences.get().foreach(_.delete())
-                    resp
-                  } & onSuccess(collectedPartsF)
+                  onSuccess(collectedPartsF)
                 }
               }
             }.flatMap(_.fold(t => throw t, {

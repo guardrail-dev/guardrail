@@ -467,8 +467,20 @@ object AkkaHttpServerGenerator {
 
             (extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
-                entity(as[Multipart.FormData]).flatMap { formData =>
-                  val fileReferences = new AtomicReference(List.empty[File])
+                val fileReferences = new AtomicReference(List.empty[File])
+                (
+                  handleExceptions(ExceptionHandler {
+                    case e: Throwable =>
+                      fileReferences.get().foreach(_.delete())
+                      throw e
+                  }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
+                    fileReferences.get().foreach(_.delete())
+                    None
+                  }) & mapResponse({ resp =>
+                    fileReferences.get().foreach(_.delete())
+                    resp
+                  }) & entity(as[Multipart.FormData])
+                ).flatMap { formData =>
                   val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
                     results <- formData.parts
                       .mapConcat({ part =>
@@ -491,20 +503,7 @@ object AkkaHttpServerGenerator {
                       })
                     }
 
-                    (
-                      handleExceptions(ExceptionHandler {
-                        case e: Throwable =>
-                          fileReferences.get().foreach(_.delete())
-                          throw e
-                      }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
-                        fileReferences.get().foreach(_.delete())
-                        None
-                      }) & mapResponse({ resp =>
-                        fileReferences.get().foreach(_.delete())
-                        resp
-                      })
-                  ) & onSuccess(collectedPartsF)
-
+                  onSuccess(collectedPartsF)
                 }
               }
             }).flatMap(_.fold(t => throw t, ${Term.PartialFunction(
