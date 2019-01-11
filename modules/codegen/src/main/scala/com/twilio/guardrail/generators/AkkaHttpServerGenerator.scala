@@ -469,10 +469,22 @@ object AkkaHttpServerGenerator {
               extractMaterializer.flatMap { implicit mat =>
                 val fileReferences = new AtomicReference(List.empty[File])
                 (
-                  handleExceptions(ExceptionHandler {
-                    case e: Throwable =>
-                      fileReferences.get().foreach(_.delete())
-                      throw e
+                  extractSettings.flatMap({ settings =>
+                    handleExceptions(ExceptionHandler {
+                      case EntityStreamSizeException(limit, contentLength) ⇒
+                        fileReferences.get().foreach(_.delete())
+                        val summary = contentLength match {
+                          case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
+                          case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
+                        }
+                        val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
+                        val status = StatusCodes.RequestEntityTooLarge
+                        val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
+                        complete(HttpResponse(status, entity = msg))
+                      case e: Throwable =>
+                        fileReferences.get().foreach(_.delete())
+                        throw e
+                    })
                   }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
                     fileReferences.get().foreach(_.delete())
                     None
