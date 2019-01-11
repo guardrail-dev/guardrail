@@ -1,6 +1,7 @@
 package tests.core
 
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
@@ -26,10 +27,11 @@ class ScalaTypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate no definitions") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, staticDefns, _) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Baz(foo: Option[com.twilio.foo.bar.Baz] = None)

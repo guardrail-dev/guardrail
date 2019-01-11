@@ -1,8 +1,12 @@
 package com.twilio.guardrail.generators.syntax
-import com.twilio.guardrail.generators._
-import cats.data.NonEmptyList
 
-object scala {
+import cats.data.NonEmptyList
+import com.twilio.guardrail.StaticDefns
+import com.twilio.guardrail.generators._
+import com.twilio.guardrail.languages.ScalaLanguage
+import scala.meta._
+
+object Scala {
   implicit class RichRawParameterName(parameter: RawParameterName) {
     import _root_.scala.meta._
     def toLit: Lit.String = Lit.String(parameter.value)
@@ -34,4 +38,14 @@ object scala {
           (v1a :+ v1, v2a :+ v2, v3a :+ v3, v4a :+ v4, v5a :+ v5, v6a :+ v6, v7a :+ v7)
       }
   }
+
+  def companionForStaticDefns(staticDefns: StaticDefns[ScalaLanguage]): Defn.Object =
+    q"""
+    object ${Term.Name(staticDefns.className)} {
+      ..${staticDefns.extraImports}
+      ..${staticDefns.members}
+      ..${staticDefns.values}
+      ..${staticDefns.definitions}
+    }
+    """
 }

@@ -1,6 +1,7 @@
 package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
@@ -122,9 +123,10 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, _, cmp, cls, _) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))
 

@@ -1,25 +1,11 @@
 package tests.core.issues
 
-import _root_.io.swagger.parser.SwaggerParser
-import cats.instances.all._
-import com.twilio.swagger._
 import com.twilio.guardrail.generators.AkkaHttp
-import com.twilio.guardrail.{
-  ClassDefinition,
-  Client,
-  ClientGenerator,
-  Clients,
-  CodegenApplication,
-  Context,
-  ProtocolDefinitions,
-  ProtocolGenerator,
-  RandomType,
-  Target
-}
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
+import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
-import support.SwaggerSpecRunner
-
 import scala.meta._
+import support.SwaggerSpecRunner
 
 class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""
@@ -60,9 +46,10 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Ensure clients are able to pass sequences of values for array form parameters") {
     val (
       _,
-      Clients(Client(tags, className, imports, cmp, cls, _) :: _),
+      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val client = q"""
       class UsersClient(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

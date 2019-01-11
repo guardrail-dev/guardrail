@@ -7,7 +7,7 @@ import _root_.io.swagger.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.syntax.flatMap._
-import com.twilio.guardrail.generators.syntax.scala._
+import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -309,7 +309,7 @@ object AkkaHttpClientGenerator {
 
       case GenerateResponseDefinitions(operationId, operation, protocolElems) => Target.pure(List.empty)
 
-      case BuildCompanion(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
+      case BuildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
                               schemes: List[String],
                               host: Option[String],
@@ -346,14 +346,18 @@ object AkkaHttpClientGenerator {
           """
         }
 
-        val companion: Defn.Object =
-          q"""
-            object ${Term.Name(clientName)} {
-              def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall
-              ..${extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)}
-            }
-          """
-        Target.pure(companion)
+        val decls: List[Defn] =
+          q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +:
+            extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)
+        Target.pure(
+          StaticDefns[ScalaLanguage](
+            className = clientName,
+            extraImports = List.empty,
+            members = List.empty,
+            definitions = decls,
+            values = List.empty
+          )
+        )
 
       case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val client =

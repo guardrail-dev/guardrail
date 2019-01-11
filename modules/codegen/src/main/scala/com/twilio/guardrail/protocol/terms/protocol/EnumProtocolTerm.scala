@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.models.ModelImpl
+import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
 
 sealed trait EnumProtocolTerm[L <: LA, T]
@@ -9,10 +10,10 @@ case class RenderMembers[L <: LA](clsName: String, elems: List[(String, L#TermNa
 case class EncodeEnum[L <: LA](clsName: String)                                                     extends EnumProtocolTerm[L, L#ValueDefinition]
 case class DecodeEnum[L <: LA](clsName: String)                                                     extends EnumProtocolTerm[L, L#ValueDefinition]
 case class RenderClass[L <: LA](clsName: String, tpe: L#Type)                                       extends EnumProtocolTerm[L, L#ClassDefinition]
-case class RenderCompanion[L <: LA](clsName: String,
-                                    members: L#ObjectDefinition,
-                                    accessors: List[L#TermName],
-                                    encoder: L#ValueDefinition,
-                                    decoder: L#ValueDefinition)
-    extends EnumProtocolTerm[L, L#ObjectDefinition]
+case class RenderStaticDefns[L <: LA](clsName: String,
+                                      members: L#ObjectDefinition,
+                                      accessors: List[L#TermName],
+                                      encoder: L#ValueDefinition,
+                                      decoder: L#ValueDefinition)
+    extends EnumProtocolTerm[L, StaticDefns[L]]
 case class BuildAccessor[L <: LA](clsName: String, termName: String) extends EnumProtocolTerm[L, L#TermSelect]

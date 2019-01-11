@@ -2,6 +2,7 @@ package tests.core
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
@@ -67,9 +68,10 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Ensure paths are generated with escapes") {
     val (
       _,
-      Clients(Client(tags, className, imports, cmp, cls, _) :: _),
+      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("dashy-package"))
 
@@ -125,10 +127,11 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Ensure dtos are generated with escapes") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
     case class `dashy-class`(`dashy-param`: Option[Long] = None)
@@ -160,10 +163,11 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Ensure enums are generated with escapes") {
     val (
-      ProtocolDefinitions(_ :: EnumDefinition(_, _, _, cls, cmp) :: _, _, _, _),
+      ProtocolDefinitions(_ :: EnumDefinition(_, _, _, cls, staticDefns) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
     sealed abstract class `dashy-enum`(val value: String) {
@@ -181,11 +185,11 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
       val DashyValueB: `dashy-enum` = members.DashyValueB
       val DashyValueC: `dashy-enum` = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
-      def parse(value: String): Option[`dashy-enum`] = values.find(_.value == value)
       implicit val `encodedashy-enum`: Encoder[`dashy-enum`] = Encoder[String].contramap(_.value)
       implicit val `decodedashy-enum`: Decoder[`dashy-enum`] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
       implicit val `addPathdashy-enum`: AddPath[`dashy-enum`] = AddPath.build(_.value)
       implicit val `showdashy-enum`: Show[`dashy-enum`] = Show.build(_.value)
+      def parse(value: String): Option[`dashy-enum`] = values.find(_.value == value)
     }
     """
 

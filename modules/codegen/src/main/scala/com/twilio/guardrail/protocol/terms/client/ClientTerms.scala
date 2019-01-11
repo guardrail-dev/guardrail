@@ -2,12 +2,10 @@ package com.twilio.guardrail.protocol.terms.client
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ RenderedClientOperation, StrictProtocolElems }
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
-
-import _root_.io.swagger.models.Operation
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems }
 
 class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
   def generateClientOperation(className: List[String], tracing: Boolean, parameters: ScalaParameters[L])(
@@ -24,13 +22,13 @@ class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
     Free.inject[ClientTerm[L, ?], F](ClientClsArgs[L](tracingName, schemes, host, tracing))
   def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
     Free.inject[ClientTerm[L, ?], F](GenerateResponseDefinitions[L](operationId, responses, protocolElems))
-  def buildCompanion(clientName: String,
-                     tracingName: Option[String],
-                     schemes: List[String],
-                     host: Option[String],
-                     ctorArgs: List[List[L#MethodParameter]],
-                     tracing: Boolean): Free[F, L#ObjectDefinition] =
-    Free.inject[ClientTerm[L, ?], F](BuildCompanion[L](clientName, tracingName, schemes, host, ctorArgs, tracing))
+  def buildStaticDefns(clientName: String,
+                       tracingName: Option[String],
+                       schemes: List[String],
+                       host: Option[String],
+                       ctorArgs: List[List[L#MethodParameter]],
+                       tracing: Boolean): Free[F, StaticDefns[L]] =
+    Free.inject[ClientTerm[L, ?], F](BuildStaticDefns[L](clientName, tracingName, schemes, host, ctorArgs, tracing))
   def buildClient(clientName: String,
                   tracingName: Option[String],
                   schemes: List[String],

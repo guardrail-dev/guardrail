@@ -8,10 +8,8 @@ import cats.~>
 import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
 import com.twilio.guardrail.terms
 import java.util.Locale
-import com.twilio.guardrail.languages.ScalaLanguage
-
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.protocol._
-
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -64,25 +62,28 @@ object CirceProtocolGenerator {
           }
         """)
 
-      case RenderCompanion(clsName, members, accessors, encoder, decoder) =>
-        val terms = accessors
+      case RenderStaticDefns(clsName, members, accessors, encoder, decoder) =>
+        val terms: List[Defn.Val] = accessors
           .map({ pascalValue =>
             q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
           })
           .to[List]
-        val values = q"val values = Vector(..$accessors)"
-        Target.pure(q"""
-          object ${Term.Name(clsName)} {
-            ..${List(members) ++
-          terms ++
-          List(values) ++
-          List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)") ++
-          List(encoder) ++
-          List(decoder) ++
-          List(q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)") ++
-          List(q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)")}
-          }
-        """)
+        val values: Defn.Val = q"val values = Vector(..$accessors)"
+        val implicits: List[Defn.Val] = List(
+          q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)",
+          q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)"
+        )
+        Target.pure(
+          StaticDefns[ScalaLanguage](
+            className = clsName,
+            extraImports = List.empty[Import],
+            members = List(members),
+            definitions = List(
+              q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)"
+            ),
+            values = terms ++ List(values) ++ List(encoder, decoder) ++ implicits
+          )
+        )
       case BuildAccessor(clsName, termName) =>
         Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
     }
@@ -284,16 +285,19 @@ object CirceProtocolGenerator {
           implicit val ${suffixClsName("decode", clsName)} = $decVal
         """)
 
-      case RenderDTOCompanion(clsName, deps, encoder, decoder) =>
+      case RenderDTOStaticDefns(clsName, deps, encoder, decoder) =>
         val extraImports: List[Import] = deps.map { term =>
           q"import ${term}._"
         }
-        Target.pure(q"""object ${Term.Name(clsName)} {
-            ..${extraImports :+
-          encoder :+
-          decoder}
-          }
-          """)
+        Target.pure(
+          StaticDefns[ScalaLanguage](
+            className = clsName,
+            extraImports = extraImports,
+            members = List.empty,
+            definitions = List.empty,
+            values = List(encoder, decoder)
+          )
+        )
     }
   }
 
@@ -374,13 +378,20 @@ object CirceProtocolGenerator {
 
         Target.pure(allParents(swagger))
 
-      case RenderADTCompanion(clsName, discriminator, encoder, decoder) =>
-        val code = q"""object ${Term.Name(clsName)} {
-             val discriminator:String = ${Lit.String(discriminator)}
-            ..${List(encoder, decoder)}
-          }
-          """
-        Target.pure(code)
+      case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
+        Target.pure(
+          StaticDefns(
+            className = clsName,
+            extraImports = List.empty,
+            members = List.empty,
+            definitions = List.empty,
+            values = List(
+              q"val discriminator: String = ${Lit.String(discriminator)}",
+              encoder,
+              decoder
+            )
+          )
+        )
 
       case DecodeADT(clsName, children) =>
         val childrenCases = children.map(

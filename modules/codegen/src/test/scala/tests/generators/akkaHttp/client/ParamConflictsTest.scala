@@ -2,6 +2,7 @@ package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 import scala.meta._
@@ -43,7 +44,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Generate non-conflicting names in clients") {
     val (
       _,
-      Clients(Client(tags, className, _, cmp, cls, _) :: _),
+      Clients(Client(tags, className, _, _, cls, _) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
@@ -80,10 +81,11 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate non-conflicting names in definitions") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)

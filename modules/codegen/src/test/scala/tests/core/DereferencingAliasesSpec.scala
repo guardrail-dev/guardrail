@@ -2,10 +2,10 @@ package tests.core
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
-import support.SwaggerSpecRunner
-
 import scala.meta._
+import support.SwaggerSpecRunner
 
 class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
@@ -62,10 +62,12 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
 
   test("All types should be dereferenced") {
     val (
-      ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
-      Clients(Client(_, _, _, clientCmp, clientCls, _) :: _),
+      ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
+      Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )             = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp       = companionForStaticDefns(staticDefns)
+    val clientCmp = companionForStaticDefns(clientStaticDefns)
 
     val definition = q"""
       case class propRef(param: Option[Long] = None, array: Option[IndexedSeq[Long]] = None, arrayArray: Option[IndexedSeq[IndexedSeq[Long]]] = None)

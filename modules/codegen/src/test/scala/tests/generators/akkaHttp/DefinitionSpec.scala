@@ -1,6 +1,7 @@
 package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ ClassDefinition, Context, EnumDefinition, ProtocolDefinitions }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
@@ -68,10 +69,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Plain objects should be generated") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class First(a: Option[Int] = None)
@@ -92,10 +94,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Enumerations should be generated") {
     val (
-      ProtocolDefinitions(_ :: _ :: EnumDefinition(_, _, _, cls, cmp) :: _, _, _, _),
+      ProtocolDefinitions(_ :: _ :: EnumDefinition(_, _, _, cls, staticDefns) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
     sealed abstract class Third(val value: String) {
@@ -113,12 +116,13 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       val V2: Third = members.V2
       val ILikeSpaces: Third = members.ILikeSpaces
       val values = Vector(V1, V2, ILikeSpaces)
-      def parse(value: String): Option[Third] = values.find(_.value == value)
 
       implicit val encodeThird: Encoder[Third] = Encoder[String].contramap(_.value)
       implicit val decodeThird: Decoder[Third] = Decoder[String].emap(value => parse(value).toRight(s"$${value} not a member of Third"))
       implicit val addPathThird: AddPath[Third] = AddPath.build(_.value)
       implicit val showThird: Show[Third] = Show.build(_.value)
+
+      def parse(value: String): Option[Third] = values.find(_.value == value)
     }
     """
 
@@ -128,10 +132,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Camel case conversion should happen") {
     val (
-      ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Fifth(aBCD: Option[Int] = None, bCDE: Option[Int] = None)
@@ -152,10 +157,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Defaults should work") {
     val (
-      ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, cmp, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))

@@ -1,6 +1,7 @@
 package tests.generators.http4s.client
 
 import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
@@ -122,13 +123,13 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, _, cls, cmp, statements) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, statements) :: _),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     tags should equal(Seq("store"))
-
-    val actual = cls +: cmp +: statements
+    val cmp    = companionForStaticDefns(staticDefns)
+    val actual = cmp +: cls +: statements
 
     val expected = List(
       q"""object StoreClient {

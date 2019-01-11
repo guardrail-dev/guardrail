@@ -1,21 +1,16 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.models._
-import _root_.io.swagger.models.properties.Property
-import cats.data.EitherK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
-import java.util.Locale
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
-
+import java.util.Locale
 import scala.collection.JavaConverters._
-import scala.language.higherKinds
-import scala.language.postfixOps
-import scala.language.reflectiveCalls
+import scala.language.{ higherKinds, postfixOps, reflectiveCalls }
 
 case class ProtocolDefinitions[L <: LA](elems: List[StrictProtocolElems[L]],
                                         protocolImports: List[L#Import],
@@ -45,7 +40,6 @@ object ProtocolGenerator {
       swagger: ModelImpl
   )(implicit E: EnumProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, Either[String, ProtocolElems[L]]] = {
     import E._
-    import F._
     import Sc._
 
     val toPascalRegexes = List(
@@ -73,10 +67,10 @@ object ProtocolGenerator {
         encoder <- encodeEnum(clsName)
         decoder <- decodeEnum(clsName)
 
-        defn      <- renderClass(clsName, tpe)
-        companion <- renderCompanion(clsName, members, pascalValues, encoder, decoder)
-        classType <- pureTypeName(clsName)
-      } yield EnumDefinition[L](clsName, classType, elems, defn, companion)
+        defn        <- renderClass(clsName, tpe)
+        staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
+        classType   <- pureTypeName(clsName)
+      } yield EnumDefinition[L](clsName, classType, elems, defn, staticDefns)
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
@@ -120,8 +114,8 @@ object ProtocolGenerator {
     M: ModelProtocolTerms[L, F],
     Sc: ScalaTerms[L, F],
     Sw: SwaggerTerms[L, F]): Free[F, ProtocolElems[L]] = {
-    import P._
     import M._
+    import P._
     import Sc._
 
     def child(hierarchy: ClassHierarchy): List[String] =
@@ -142,17 +136,17 @@ object ProtocolGenerator {
           SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _))
       })
       terms = params.map(_.term)
-      definition <- renderSealedTrait(hierarchy.name, terms, discriminator, parents)
-      encoder    <- encodeADT(hierarchy.name, children)
-      decoder    <- decodeADT(hierarchy.name, children)
-      cmp        <- renderADTCompanion(hierarchy.name, discriminator, encoder, decoder)
-      tpe        <- pureTypeName(hierarchy.name)
+      definition  <- renderSealedTrait(hierarchy.name, terms, discriminator, parents)
+      encoder     <- encodeADT(hierarchy.name, children)
+      decoder     <- decodeADT(hierarchy.name, children)
+      staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)
+      tpe         <- pureTypeName(hierarchy.name)
     } yield {
       ADT[L](
         name = hierarchy.name,
         tpe = tpe,
         trt = definition,
-        companion = cmp
+        staticDefns = staticDefns
       )
     }
   }
@@ -217,7 +211,6 @@ object ProtocolGenerator {
       Sw: SwaggerTerms[L, F]
   ): Free[F, Either[String, ProtocolElems[L]]] = {
     import M._
-    import F._
     import Sc._
 
     for {
@@ -230,13 +223,13 @@ object ProtocolGenerator {
       terms = params.map(_.term)
       defn <- renderDTOClass(clsName, terms, parents)
       deps = params.flatMap(_.dep)
-      encoder <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
-      decoder <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
-      cmp     <- renderDTOCompanion(clsName, List.empty, encoder, decoder)
-      tpe     <- parseTypeName(clsName)
+      encoder     <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
+      decoder     <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
+      staticDefns <- renderDTOStaticDefns(clsName, List.empty, encoder, decoder)
+      tpe         <- parseTypeName(clsName)
     } yield
       if (parents.isEmpty && props.isEmpty) Left("Entity isn't model")
-      else tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName, _, defn, cmp, parents))
+      else tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName, _, defn, staticDefns, parents))
   }
 
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Model)(
@@ -245,7 +238,6 @@ object ProtocolGenerator {
       Sc: ScalaTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
     import F._
-    import Sc._
     val model = abstractModel match {
       case m: ModelImpl => Some(m)
       case m: ComposedModel =>
@@ -269,7 +261,6 @@ object ProtocolGenerator {
       clsName: String
   )(implicit F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
     import F._
-    import Sc._
     for {
       tpe <- objectType(None)
       res <- typeAlias[L, F](clsName, tpe)
@@ -286,7 +277,6 @@ object ProtocolGenerator {
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
-    import P._
     import R._
     for {
       deferredTpe <- SwaggerUtil.modelMetaType(arr)
@@ -357,8 +347,6 @@ object ProtocolGenerator {
       Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolDefinitions[L]] = {
     import S._
-    import F._
-    import P._
 
     val definitions = Option(swagger.getDefinitions).toList.flatMap(_.asScala)
     val hierarchies = groupHierarchies(definitions)

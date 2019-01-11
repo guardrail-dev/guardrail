@@ -3,6 +3,7 @@ package com.twilio.guardrail.protocol.terms.protocol
 import _root_.io.swagger.models.ModelImpl
 import cats.InjectK
 import cats.free.Free
+import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
 
 class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?], F]) {
@@ -16,12 +17,12 @@ class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?
     Free.inject[EnumProtocolTerm[L, ?], F](DecodeEnum[L](clsName))
   def renderClass(clsName: String, tpe: L#Type): Free[F, L#ClassDefinition] =
     Free.inject[EnumProtocolTerm[L, ?], F](RenderClass[L](clsName, tpe))
-  def renderCompanion(clsName: String,
-                      members: L#ObjectDefinition,
-                      accessors: List[L#TermName],
-                      encoder: L#ValueDefinition,
-                      decoder: L#ValueDefinition): Free[F, L#ObjectDefinition] =
-    Free.inject[EnumProtocolTerm[L, ?], F](RenderCompanion[L](clsName, members, accessors, encoder, decoder))
+  def renderStaticDefns(clsName: String,
+                        members: L#ObjectDefinition,
+                        accessors: List[L#TermName],
+                        encoder: L#ValueDefinition,
+                        decoder: L#ValueDefinition): Free[F, StaticDefns[L]] =
+    Free.inject[EnumProtocolTerm[L, ?], F](RenderStaticDefns[L](clsName, members, accessors, encoder, decoder))
   def buildAccessor(clsName: String, termName: String): Free[F, L#TermSelect] =
     Free.inject[EnumProtocolTerm[L, ?], F](BuildAccessor[L](clsName, termName))
 }

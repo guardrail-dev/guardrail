@@ -2,6 +2,7 @@ package tests.generators.akkaHttp
 
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 import scala.meta._
@@ -54,10 +55,11 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate enums") {
     val (
-      ProtocolDefinitions(EnumDefinition(_, _, _, cls, cmp) :: Nil, _, _, _),
+      ProtocolDefinitions(EnumDefinition(_, _, _, cls, staticDefns) :: Nil, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
     sealed abstract class Bar(val value: String) {
@@ -75,12 +77,13 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
       val V2: Bar = members.V2
       val ILikeSpaces: Bar = members.ILikeSpaces
       val values = Vector(V1, V2, ILikeSpaces)
-      def parse(value: String): Option[Bar] = values.find(_.value == value)
 
       implicit val encodeBar: Encoder[Bar] = Encoder[String].contramap(_.value)
       implicit val decodeBar: Decoder[Bar] = Decoder[String].emap(value => parse(value).toRight(s"$${value} not a member of Bar"))
       implicit val addPathBar: AddPath[Bar] = AddPath.build(_.value)
       implicit val showBar: Show[Bar] = Show.build(_.value)
+
+      def parse(value: String): Option[Bar] = values.find(_.value == value)
     }
     """
 
@@ -91,9 +94,10 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Use enums") {
     val (
       _,
-      Clients(Client(tags, className, _, cmp, cls, _) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, _) :: _),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    val cmp = companionForStaticDefns(staticDefns)
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

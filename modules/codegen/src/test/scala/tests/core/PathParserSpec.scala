@@ -1,7 +1,7 @@
 package tests.core
 
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.generators.syntax.scala._
+import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.{ SwaggerUtil, Target }
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._

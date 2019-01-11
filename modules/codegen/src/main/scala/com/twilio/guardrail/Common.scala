@@ -18,6 +18,8 @@ import scala.io.AnsiColor
 import scala.meta._
 
 object Common {
+  val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+
   def writePackage[L <: LA, F[_]](kind: CodegenTarget,
                                   context: Context,
                                   swagger: Swagger,
@@ -39,7 +41,6 @@ object Common {
     import Sc._
     import Sw._
 
-    val resolveFile: Path => List[String] => Path       = root => _.foldLeft(root)(_.resolve(_))
     val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
 
     val pkgPath        = resolveFile(outputPath)(pkgName)
