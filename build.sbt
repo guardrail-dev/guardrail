@@ -69,6 +69,7 @@ fullRunTask(
   --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.http4s --framework http4s
   --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/issues/issue127.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue127
+  --server --specPath modules/sample/src/main/resources/issues/issue143.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue143
   --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.http4s --framework http4s

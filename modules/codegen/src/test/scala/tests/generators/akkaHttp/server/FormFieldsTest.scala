@@ -66,6 +66,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                 val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
                 (dest, part.filename, part.entity.contentType, hash)
               case IOResult(_, Failure(t)) =>
+                dest.delete()
                 throw t
             }, {
               case t =>
@@ -111,8 +112,32 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
             })
             extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
-                entity(as[Multipart.FormData]).flatMap { formData =>
-                  val fileReferences = new AtomicReference(List.empty[File])
+                val fileReferences = new AtomicReference(List.empty[File])
+                (extractSettings.flatMap {
+                  settings => handleExceptions(ExceptionHandler({
+                    case EntityStreamSizeException(limit, contentLength) =>
+                      fileReferences.get().foreach(_.delete())
+                      val summary = contentLength match {
+                        case Some(cl) =>
+                          s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
+                        case None =>
+                          s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
+                      }
+                      val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
+                      val status = StatusCodes.RequestEntityTooLarge
+                      val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
+                      complete(HttpResponse(status, entity = msg))
+                    case e: Throwable =>
+                      fileReferences.get().foreach(_.delete())
+                      throw e
+                  }))
+                } & handleRejections { (rejections: scala.collection.immutable.Seq[Rejection]) =>
+                  fileReferences.get().foreach(_.delete())
+                  None
+                } & mapResponse { resp =>
+                  fileReferences.get().foreach(_.delete())
+                  resp
+                } & entity(as[Multipart.FormData])).flatMap { formData =>
                   val collectedPartsF: Future[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, String)])]] = for (results <- formData.parts.mapConcat {
                     part => if (Set[String]("foo", "bar", "baz").contains(part.name)) part :: Nil else {
                       part.entity.discardBytes()
@@ -146,17 +171,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                       (fooO, barO, bazO)
                     }
                   }
-                  handleExceptions(ExceptionHandler({
-                    case e: Throwable =>
-                      fileReferences.get().foreach(_.delete())
-                      throw e
-                  })) & handleRejections { (rejections: scala.collection.immutable.Seq[Rejection]) =>
-                    fileReferences.get().foreach(_.delete())
-                    None
-                  } & mapResponse { resp =>
-                    fileReferences.get().foreach(_.delete())
-                    resp
-                  } & onSuccess(collectedPartsF)
+                  onSuccess(collectedPartsF)
                 }
               }
             }.flatMap(_.fold(t => throw t, {
