@@ -419,7 +419,7 @@ object EndpointsClientGenerator {
           q"def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}"
         )
 
-        Target.pure(StaticDefns[ScalaLanguage](clientName, List.empty, List.empty, definitions, List.empty))
+        Target.pure(StaticDefns[ScalaLanguage](clientName, List.empty, definitions))
       case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val (endpointDefs, rest0) = supportDefinitions.partition {
           case q"val $name = endpoint(...$_)" => true

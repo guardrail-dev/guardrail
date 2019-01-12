@@ -84,11 +84,11 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = List.empty[Import],
-            members = List(members),
-            definitions = List(
-              q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)"
-            ),
-            values = terms ++ List(values) ++ List(encoder, decoder) ++ implicits
+            definitions = List(members) ++
+              terms ++
+              List(values, encoder, decoder) ++
+              implicits ++
+              List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)")
           )
         )
       case BuildAccessor(clsName, termName) =>
@@ -299,9 +299,7 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = extraImports,
-            members = List.empty,
-            definitions = List.empty,
-            values = List(encoder, decoder)
+            definitions = List(encoder, decoder)
           )
         )
     }
@@ -389,12 +387,10 @@ object CirceProtocolGenerator {
 
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
         Target.pure(
-          StaticDefns(
+          StaticDefns[ScalaLanguage](
             className = clsName,
-            extraImports = List.empty,
-            members = List.empty,
-            definitions = List.empty,
-            values = List(
+            extraImports = List.empty[Import],
+            definitions = List[Defn](
               q"val discriminator: String = ${Lit.String(discriminator)}",
               encoder,
               decoder

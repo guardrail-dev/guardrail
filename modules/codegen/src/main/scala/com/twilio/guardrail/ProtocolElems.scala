@@ -8,11 +8,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.protocol.terms.protocol.ProtocolSupportTerms
 
-case class StaticDefns[L <: LA](className: String,
-                                extraImports: List[L#Import],
-                                members: List[L#ObjectDefinition],
-                                definitions: List[L#Definition],
-                                values: List[L#ValueDefinition])
+case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
 
 sealed trait ProtocolElems[L <: LA]
 

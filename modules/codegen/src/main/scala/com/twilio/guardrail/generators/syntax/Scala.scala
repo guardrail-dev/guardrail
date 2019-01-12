@@ -43,8 +43,6 @@ object Scala {
     q"""
     object ${Term.Name(staticDefns.className)} {
       ..${staticDefns.extraImports}
-      ..${staticDefns.members}
-      ..${staticDefns.values}
       ..${staticDefns.definitions}
     }
     """
