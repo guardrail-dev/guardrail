@@ -13,6 +13,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class Issue143 extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+  override implicit val patienceConfig = PatienceConfig(10.seconds, 1.second)
+
   override def testConfigSource =
     s"""
       |akka.loglevel = OFF
@@ -40,9 +42,19 @@ class Issue143 extends FunSuite with Matchers with EitherValues with ScalaFuture
         )
       ).toEntity.withSizeLimit(1001))
 
-    req ~> route ~> check {
-      status should equal(StatusCodes.RequestEntityTooLarge)
-      tempDest.exists() should equal(false)
-    }
+    // Working around https://github.com/akka/akka-http/issues/2381
+    // The following test fails under some 2.11.12 configurations
+    // (fails in TravisCI, passes in OSX; may be related to filesystem or
+    //  other system particulars)
+    // req ~> route ~> check {
+    //   status should equal(StatusCodes.RequestEntityTooLarge)
+    //   tempDest.exists() should equal(false)
+    // }
+
+    // The following workaround seems to work:
+
+    val resp = Route.asyncHandler(route).apply(req).futureValue
+    resp.status should equal(StatusCodes.RequestEntityTooLarge)
+    tempDest.exists() should equal(false)
   }
 }
