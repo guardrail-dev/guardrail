@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators
 import cats.~>
 import cats.instances.option._
 import cats.syntax.traverse._
-import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, PackageDeclaration }
+import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, PackageDeclaration }
 import com.github.javaparser.ast.`type`.{ PrimitiveType, Type }
 import com.github.javaparser.ast.body.{ BodyDeclaration, ClassOrInterfaceDeclaration, Parameter }
 import com.github.javaparser.ast.expr._
@@ -27,10 +27,10 @@ object JavaGenerator {
       case LitLong(value)          => Target.pure(new LongLiteralExpr(value))
       case LitBoolean(value)       => Target.pure(new BooleanLiteralExpr(value))
       case LiftOptionalType(value) => safeParseType(s"java.util.Optional<${value}>")
-      case LiftOptionalTerm(value) => safeParseExpression[MethodCallExpr](s"java.util.Optional.ofNullable(${value}")
-      case EmptyOptionalTerm()     => safeParseExpression[MethodCallExpr]("java.util.Optional.empty()")
+      case LiftOptionalTerm(value) => safeParseExpression[MethodCallExpr](s"java.util.Optional.ofNullable(${value}").map(identity)
+      case EmptyOptionalTerm()     => safeParseExpression[MethodCallExpr]("java.util.Optional.empty()").map(identity)
       case LiftVectorType(value)   => safeParseType(s"java.util.List<${value}>")
-      case LiftVectorTerm(value)   => safeParseExpression[MethodCallExpr](s"java.util.Collections.singletonList(${value})")
+      case LiftVectorTerm(value)   => safeParseExpression[MethodCallExpr](s"java.util.Collections.singletonList(${value})").map(identity)
       case LiftMapType(value)      => safeParseType(s"java.util.Map<String, ${value}>")
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
@@ -38,9 +38,9 @@ object JavaGenerator {
           case s: StringLiteralExpr =>
             values
               .find(_._1 == s.getValue)
-              .fold(Target.raiseError[Expression](s"Enumeration ${tpe} is not defined for default value ${s.getValue}"))(value => Target.pure(value._3))
+              .fold(Target.raiseError[Name](s"Enumeration ${tpe} is not defined for default value ${s.getValue}"))(value => Target.pure(value._3))
           case _ =>
-            Target.raiseError[Expression](s"Enumeration ${tpe} somehow has a default value that isn't a string")
+            Target.raiseError(s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
       case EmbedArray(tpe) =>
@@ -62,12 +62,14 @@ object JavaGenerator {
         }
       case ParseType(tpe) =>
         safeParseType(tpe)
-          .fold({ err =>
-            println(s"Warning: Unparsable x-java-type: ${tpe} ${err}")
-            None
-          }, Option.apply)
+          .map(Option.apply)
+          .recover {
+            case err =>
+              println(s"Warning: Unparsable x-java-type: ${tpe} ${err}")
+              None
+          }
       case ParseTypeName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseType).sequence
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).sequence
 
       case PureTermName(tpe) =>
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
@@ -86,10 +88,8 @@ object JavaGenerator {
         Target.pure(a.equals(b))
 
       case ExtractTypeName(tpe) =>
-        Target.pure(tpe match {
-          case x: Name => Option(x)
-          case _       => Option.empty
-        })
+        safeParseName(tpe.asString).map(Option.apply)
+
       case ExtractTermName(term) =>
         Target.pure(term.getIdentifier)
 
@@ -110,7 +110,7 @@ object JavaGenerator {
       case FallbackType(tpe, format) => safeParseType(tpe)
 
       case WidenTypeName(tpe)     => safeParseType(tpe.asString)
-      case WidenTermSelect(value) => Target.pure(value) // FIXME: what is a TermSelect???
+      case WidenTermSelect(value) => Target.pure(value)
 
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         // FIXME
@@ -126,14 +126,15 @@ object JavaGenerator {
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         elem match {
-          case EnumDefinition(_, _, _, cls, staticDecls) =>
+          case EnumDefinition(_, _, _, cls, staticDefns) =>
             val clsCopy = cls.clone()
             buildPkgDecl(pkgName).map { pkgDecl =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
-              imports.map(cu.addImport)
+              imports.foreach(cu.addImport)
+              staticDefns.extraImports.foreach(cu.addImport)
               val clsCopy = cls.clone()
-              staticDecls.foreach(clsCopy.addMember)
+              staticDefns.definitions.foreach(clsCopy.addMember)
               cu.addType(clsCopy)
               (
                 List(
@@ -146,13 +147,14 @@ object JavaGenerator {
               )
             }
 
-          case ClassDefinition(_, _, cls, staticDecls, _) =>
+          case ClassDefinition(_, _, cls, staticDefns, _) =>
             buildPkgDecl(pkgName).map { pkgDecl =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
-              imports.map(cu.addImport)
+              imports.foreach(cu.addImport)
+              staticDefns.extraImports.foreach(cu.addImport)
               val clsCopy = cls.clone()
-              staticDecls.foreach(clsCopy.addMember)
+              staticDefns.definitions.foreach(clsCopy.addMember)
               cu.addType(clsCopy)
               (
                 List(
@@ -165,13 +167,14 @@ object JavaGenerator {
               )
             }
 
-          case ADT(name, tpe, trt, staticDecls) =>
+          case ADT(name, tpe, trt, staticDefns) =>
             buildPkgDecl(pkgName).map { pkgDecl =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
-              imports.map(cu.addImport)
+              imports.foreach(cu.addImport)
+              staticDefns.extraImports.foreach(cu.addImport)
               val trtCopy = trt.clone()
-              staticDecls.foreach(trtCopy.addMember)
+              staticDefns.definitions.foreach(trtCopy.addMember)
               cu.addType(trtCopy)
               (
                 List(
@@ -185,14 +188,14 @@ object JavaGenerator {
             }
 
           case RandomType(_, _) =>
-            (List.empty, List.empty)
+            Target.pure((List.empty, List.empty))
         }
       case WriteClient(pkgPath,
                        pkgName,
                        customImports,
                        frameworkImplicitName,
                        dtoComponents,
-                       Client(pkg, clientName, imports, staticDecls, client, responseDefinitions)) =>
+                       Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
         for {
           pkgDecl         <- buildPkgDecl(pkgName ++ pkg)
           implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
@@ -208,17 +211,12 @@ object JavaGenerator {
           cu.addImport(frameworkImplicitsImport)
           cu.addImport(dtoComponentsImport)
           val clientCopy = client.head.merge.clone() // FIXME: WriteClient needs to be altered to return `NonEmptyList[WriteTree]` to accommodate Java not being able to put multiple classes in the same file. Scala just jams them all together, but this could be improved over there as well.
-          staticDecls.foreach(clientCopy.addMember)
+          staticDefns.definitions.foreach(clientCopy.addMember)
           responseDefinitions.foreach(clientCopy.addMember)
           cu.addType(clientCopy)
-          (
-            List(
-              WriteTree(
-                resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
-                cu.toString(printer).getBytes(StandardCharsets.UTF_8)
-              )
-            ),
-            List.empty[Statement]
+          WriteTree(
+            resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
+            cu.toString(printer).getBytes(StandardCharsets.UTF_8)
           )
         }
       case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, src)) =>
