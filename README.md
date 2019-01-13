@@ -8,6 +8,8 @@ New to guardrail?
 
 Check out the [book](docs/book.md)!
 
+Compatible library versions are listed in [COMPATIBILITY.md](COMPATIBILITY.md)
+
 Interested in contributing?
 ---
 
