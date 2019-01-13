@@ -39,6 +39,7 @@ object AkkaHttpGenerator {
             q"import cats.data.EitherT",
             q"import cats.implicits._",
             q"import scala.concurrent.{ExecutionContext, Future}",
+            q"import scala.language.higherKinds",
             q"import scala.language.implicitConversions",
             q"import java.io.File",
             q"import java.security.MessageDigest",

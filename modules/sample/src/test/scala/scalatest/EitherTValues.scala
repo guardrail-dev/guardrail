@@ -5,6 +5,7 @@ import cats.data.EitherT
 import org.scalactic.source
 import org.scalatest._
 import org.scalatest.exceptions.{ StackDepthException, TestFailedException }
+import scala.language.higherKinds
 import scala.language.implicitConversions
 
 trait EitherTValues {

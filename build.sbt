@@ -137,23 +137,20 @@ val codegenSettings = Seq(
     "org.typelevel" %% "cats-kernel"   % catsVersion,
     "org.typelevel" %% "cats-macros"   % catsVersion,
     "org.typelevel" %% "cats-free"     % catsVersion
-  )
-  // Dev
-  ,
+  ),
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
-    "-language:higherKinds",
-    "-Xexperimental",
     "-Ydelambdafy:method",
-    // "-Yno-adapted-args",
-    "-Xlint:_,-unused",
     "-feature",
     "-unchecked",
     "-deprecation",
-    "-target:jvm-1.8",
     "-encoding",
     "utf8"
-  ),
+  ) ++ (if (scalaVersion.value.startsWith("2.11.")) {
+          List("-Xexperimental", "-Xlint:_")
+        } else {
+          List("-Xlint:-unused,_")
+        }),
   parallelExecution in Test := true,
   fork := true
 )
@@ -169,6 +166,7 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(
     (name := "guardrail") +:
       codegenSettings,
+    scalacOptions += "-language:higherKinds",
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
       else "releases"
