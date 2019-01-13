@@ -1,0 +1,19 @@
+swagger: '2.0'
+host: localhost:1234
+schemes:
+- http
+paths:
+  /entity:
+    delete:
+      operationId: deleteFoo
+      parameters:
+      - name: id
+        in: formData
+        type: integer
+        format: int64
+        required: true
+      consumes:
+      - application/x-www-form-urlencoded
+      responses:
+        '204':
+          description: No content
