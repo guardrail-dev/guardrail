@@ -121,7 +121,7 @@ val codegenSettings = Seq(
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta"     % "4.1.0",
     "io.swagger"    % "swagger-parser" % "1.0.39",
-    "org.tpolecat"  %% "atto-core"     % "0.6.3",
+    "org.tpolecat"  %% "atto-core"     % "0.6.4",
     "org.typelevel" %% "cats-core"     % catsVersion,
     "org.typelevel" %% "cats-kernel"   % catsVersion,
     "org.typelevel" %% "cats-macros"   % catsVersion,
