@@ -122,43 +122,92 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
+        val getBazOKDecoder = {
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[io.circe.Json].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+        }
+        def getBar(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetBarResponse] = {
+          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+          makeRequest(HttpMethods.GET, host + basePath + "/bar", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(GetBarResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
           }).recover({
             case e: Throwable =>
               Left(Left(e))
-          }))
+          })))
         }
-        def getBar(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def getBaz(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetBazResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/bar", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.GET, host + basePath + "/baz", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              Unmarshal(resp.entity).to[io.circe.Json](getBazOKDecoder, implicitly, implicitly).map(x => Right(GetBazResponse.OK(x)))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
-        def getBaz(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], io.circe.Json] = {
+        def postFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PostFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/baz", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[io.circe.Json](httpClient, req))
+          makeRequest(HttpMethods.POST, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(PostFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
-        def postFoo(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def getFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.POST, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(GetFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
-        def getFoo(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def putFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PutFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(PutFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
-        def putFoo(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def patchFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PatchFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.PATCH, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(PatchFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
-        def patchFoo(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def deleteFoo(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], DeleteFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.PATCH, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
-        }
-        def deleteFoo(headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.DELETE, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.DELETE, host + basePath + "/foo", allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(DeleteFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
       }
     """

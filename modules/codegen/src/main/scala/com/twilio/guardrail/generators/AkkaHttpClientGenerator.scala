@@ -158,7 +158,7 @@ object AkkaHttpClientGenerator {
                   urlWithParams: Term,
                   formDataParams: Option[Term],
                   headerParams: Term,
-                  responseTypeRef: Type,
+                  responses: Responses[ScalaLanguage],
                   produces: Seq[String],
                   consumes: Seq[String],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
@@ -168,10 +168,9 @@ object AkkaHttpClientGenerator {
                                     formArgs: List[ScalaParameter[ScalaLanguage]],
                                     body: Option[ScalaParameter[ScalaLanguage]],
                                     headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): Defn = {
+                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-          val defaultHeaders =
-            param"headers: scala.collection.immutable.Seq[HttpHeader] = Nil"
+          val defaultHeaders = param"headers: List[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] =
             if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod)
               Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))
@@ -195,40 +194,52 @@ object AkkaHttpClientGenerator {
             }
           }
 
+          val (tracingExpr, httpClientName) =
+            if (tracing)
+              (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
+            else
+              (List.empty, q"httpClient")
+
+          val headersExpr = List(q"val allHeaders = headers ++ $headerParams")
+
           val entity: Term = formEntity
             .orElse(textPlainBody)
             .orElse(safeBody.map(_._1))
             .getOrElse(q"HttpEntity.Empty")
 
-          val methodBody: Term = if (tracing) {
-            val tracingLabel = q"""s"$${clientName}:$${methodName}""""
-            q"""
+          val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+          val cases = responses.value.map { resp =>
+            val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+            resp.value.fold[Case](
+              p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
+            ) {
+              case (tpe, _) =>
+                p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
+                  .Name(s"$methodName${resp.statusCodeName}Decoder")}, implicitly, implicitly).map(x => Right($responseCompanionTerm.$responseTerm(x)))"
+            }
+          } :+ p"case _ => FastFuture.successful(Left(Right(resp)))"
+          val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
+
+          val methodBody = q"""
             {
-              val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)
-              val allHeaders = headers ++ $headerParams
+              ..${tracingExpr};
+              ..${headersExpr};
               makeRequest(
                 HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)},
                 ${urlWithParams},
                 allHeaders,
                 ${entity},
                 HttpProtocols.`HTTP/1.1`
-              ).flatMap(req => wrap[${responseTypeRef}](tracingHttpClient, req))
+              ).flatMap(req =>
+                EitherT(${httpClientName}(req).flatMap(resp =>
+                  ${Term.Match(q"resp.status", cases)}
+                ).recover({
+                  case e: Throwable =>
+                    Left(Left(e))
+                }))
+              )
             }
             """
-          } else {
-            q"""
-            {
-              val allHeaders = headers ++ $headerParams
-              makeRequest(
-                HttpMethods.${Term.Name(httpMethod.toString.toUpperCase)},
-                ${urlWithParams},
-                allHeaders,
-                ${entity},
-                HttpProtocols.`HTTP/1.1`
-              ).flatMap(req => wrap[${responseTypeRef}](httpClient, req))
-            }
-            """
-          }
 
           val arglists: List[List[Term.Param]] = List(
             Some(
@@ -240,9 +251,12 @@ object AkkaHttpClientGenerator {
             implicitParams
           ).flatten
 
-          q"""
-          def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
-          """
+          RenderedClientOperation[ScalaLanguage](
+            q"""
+              def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
+            """,
+            generateCodecs(methodName, responses, produces)
+          )
         }
 
         for {
@@ -251,9 +265,6 @@ object AkkaHttpClientGenerator {
 
           produces = Option(operation.getProduces).fold(List.empty[String])(_.asScala.toList)
           consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
-
-          // Get the response type
-          responseTypeRef = SwaggerUtil.getResponseType[ScalaLanguage](httpMethod, responses, t"IgnoredEntity").tpe
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams
@@ -279,7 +290,7 @@ object AkkaHttpClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
           else List.empty
           extraImplicits = List.empty
-          defn = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responseTypeRef, produces, consumes, tracing)(
+          renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
@@ -289,7 +300,7 @@ object AkkaHttpClientGenerator {
             headerArgs,
             extraImplicits
           )
-        } yield RenderedClientOperation[ScalaLanguage](defn, List.empty)
+        } yield renderedClientOperation
 
       case GetImports(tracing) => Target.pure(List.empty)
 
@@ -307,7 +318,8 @@ object AkkaHttpClientGenerator {
                List(ihc, iec, imat))
         )
 
-      case GenerateResponseDefinitions(operationId, operation, protocolElems) => Target.pure(List.empty)
+      case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
+        Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
       case BuildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
@@ -390,25 +402,22 @@ object AkkaHttpClientGenerator {
                 )
               }
 
-              private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-                EitherT(
-                  client(request).flatMap(resp =>
-                    if (resp.status.isSuccess) {
-                      Unmarshal(resp.entity).to[T].map(Right.apply _)
-                    } else {
-                      FastFuture.successful(Left(Right(resp)))
-                    }
-                  ).recover {
-                    case e: Throwable => Left(Left(e))
-                  }
-                )
-              }
-
-              ..$clientCalls
+              ..$supportDefinitions;
+              ..$clientCalls;
             }
           """
         Target.pure(client)
     }
+
+    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
+      generateDecoders(methodName, responses, produces)
+
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
+      for {
+        resp <- responses.value
+        tpe  <- resp.value.map(_._1).toList
+        (decoder, baseType) = AkkaHttpHelper.generateDecoder(tpe, produces)
+      } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
   }
 
 }

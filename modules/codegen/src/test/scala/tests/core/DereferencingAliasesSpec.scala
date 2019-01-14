@@ -103,19 +103,20 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
+        val doFooOKDecoder = {
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[IndexedSeq[IndexedSeq[Long]]].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+        }
+        def doFoo(long: Option[Long] = None, body: Option[propRef] = None, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], DoFooResponse] = {
+          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+          makeRequest(HttpMethods.POST, host + basePath + "/foo" + "?" + Formatter.addArg("long", long), allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              Unmarshal(resp.entity).to[IndexedSeq[IndexedSeq[Long]]](doFooOKDecoder, implicitly, implicitly).map(x => Right(DoFooResponse.OK(x)))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
           }).recover({
             case e: Throwable =>
               Left(Left(e))
-          }))
-        }
-        def doFoo(long: Option[Long] = None, body: Option[propRef] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IndexedSeq[IndexedSeq[Long]]] = {
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.POST, host + basePath + "/foo" + "?" + Formatter.addArg("long", long), allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IndexedSeq[IndexedSeq[Long]]](httpClient, req))
+          })))
         }
       }
     """

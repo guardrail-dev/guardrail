@@ -4,8 +4,8 @@ import _root_.tracer.clients.akkaHttp.{ definitions => cdefs }
 import _root_.tracer.servers.akkaHttp.addresses.{ AddressesHandler, AddressesResource }
 import _root_.tracer.servers.akkaHttp.users.{ UsersHandler, UsersResource }
 import _root_.tracer.servers.akkaHttp.{ definitions => sdefs }
-import _root_.tracer.clients.akkaHttp.users.UsersClient
-import _root_.tracer.clients.akkaHttp.addresses.AddressesClient
+import _root_.tracer.clients.akkaHttp.users.{ UsersClient, GetUserResponse }
+import _root_.tracer.clients.akkaHttp.addresses.{ AddressesClient, GetAddressResponse }
 import _root_.tracer.servers.akkaHttp.AkkaHttpImplicits.TraceBuilder
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
@@ -72,8 +72,9 @@ class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues wi
           def getUser(respond: UsersResource.getUserResponse.type)(id: String)(traceBuilder: TraceBuilder) =
             addressesClient
               .getAddress(traceBuilder, "addressId")
-              .fold(_ => respond.NotFound, { address =>
-                respond.OK(sdefs.User("1234", sdefs.UserAddress(address.line1, address.line2, address.line3)))
+              .fold(_ => respond.NotFound, {
+                case GetAddressResponse.OK(address) => respond.OK(sdefs.User("1234", sdefs.UserAddress(address.line1, address.line2, address.line3)))
+                case GetAddressResponse.NotFound => respond.NotFound
               })
         },
         trace
@@ -87,8 +88,8 @@ class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues wi
     val testTrace = traceBuilder("top-level-request")
 
     // Make a request against the mock servers using a hard-coded user ID
-    val retrieved: cdefs.User = usersClient.getUser(testTrace, "1234").value.futureValue.right.value
+    val retrieved: GetUserResponse = usersClient.getUser(testTrace, "1234").value.futureValue.right.value
 
-    retrieved shouldBe(cdefs.User("1234", cdefs.UserAddress(Some("line1"), Some("line2"), Some("line3"))))
+    retrieved shouldBe(GetUserResponse.OK(cdefs.User("1234", cdefs.UserAddress(Some("line1"), Some("line2"), Some("line3")))))
   }
 }

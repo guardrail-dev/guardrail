@@ -6,4 +6,9 @@ if ! hash sbt ; then
 fi
 
 args="$@"
-sbt "cli ${args}"
+if hash sbt-client 2>&1 >/dev/null; then
+    # Use https://github.com/cb372/sbt-client/ if available
+    sbt-client "cli ${args}"
+else
+    sbt "cli ${args}"
+fi

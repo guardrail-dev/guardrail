@@ -63,21 +63,22 @@ class MultipartTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
-          }).recover({
-            case e: Throwable =>
-              Left(Left(e))
-          }))
+        val createFooOKDecoder = {
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[String].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
         }
-        def createFoo(bar: String, quux: BodyPartEntity, baz: Option[String] = None, oortCloud: Option[BodyPartEntity] = None, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], String] = {
+        def createFoo(bar: String, quux: BodyPartEntity, baz: Option[String] = None, oortCloud: Option[BodyPartEntity] = None, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], CreateFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.POST, host + basePath + "/foo", allHeaders, Multipart.FormData(Source.fromIterator {
             () => List(Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("Quux", quux)), baz.map(v => Multipart.FormData.BodyPart("Baz", Formatter.show(v))), oortCloud.map(v => Multipart.FormData.BodyPart("oort_cloud", v))).flatten.iterator
-          }), HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[String](httpClient, req))
+          }), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              Unmarshal(resp.entity).to[String](createFooOKDecoder, implicitly, implicitly).map(x => Right(CreateFooResponse.OK(x)))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
       }
     """

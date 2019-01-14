@@ -128,15 +128,14 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     tags should equal(Seq("store"))
-    val cmp    = companionForStaticDefns(staticDefns)
-    val actual = cmp +: cls +: statements
+    val cmp = companionForStaticDefns(staticDefns)
 
-    val expected = List(
-      q"""object StoreClient {
+    val clientCompanion = q"""object StoreClient {
       def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://petstore.swagger.io")(implicit effect: Effect[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
-    }""",
-      q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
+    }"""
+
+    val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
       val getOrderByIdOkDecoder = jsonOf[F, Order]
       def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[GetOrderByIdResponse] = {
@@ -163,20 +162,43 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
           case resp => effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
-    }""",
-      q"""sealed abstract class GetOrderByIdResponse""",
+    }"""
+
+    val expected = List(
+      q"""
+        sealed abstract class GetOrderByIdResponse {
+          def fold[A](handleOk: Order => A, handleBadRequest: => A, handleNotFound: => A): A = this match {
+            case x: GetOrderByIdResponse.Ok =>
+              handleOk(x.value)
+            case GetOrderByIdResponse.BadRequest =>
+              handleBadRequest
+            case GetOrderByIdResponse.NotFound =>
+              handleNotFound
+          }
+        }
+      """,
       q"""object GetOrderByIdResponse {
       case class Ok(value: Order) extends GetOrderByIdResponse
       case object BadRequest extends GetOrderByIdResponse
       case object NotFound extends GetOrderByIdResponse
     }""",
-      q"""sealed abstract class DeleteOrderResponse""",
+      q"""
+        sealed abstract class DeleteOrderResponse {
+          def fold[A](handleBadRequest: => A, handleNotFound: => A): A = this match {
+            case DeleteOrderResponse.BadRequest => handleBadRequest
+            case DeleteOrderResponse.NotFound => handleNotFound
+          }
+        }
+      """,
       q"""object DeleteOrderResponse {
       case object BadRequest extends DeleteOrderResponse
       case object NotFound extends DeleteOrderResponse
     }"""
     )
 
-    actual.map(_.structure) should equal(expected.map(_.structure))
+    cls.structure should equal(clientClass.structure)
+    cmp.structure should equal(clientCompanion.structure)
+
+    statements.zip(expected).foreach({ case (a, b) => a.structure should equal(b.structure) })
   }
 }

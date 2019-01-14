@@ -194,22 +194,65 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
     }""",
-      q"""sealed abstract class GetBarResponse""",
+      q"""
+        sealed abstract class GetBarResponse {
+          def fold[A](handleOk: => A): A = this match {
+            case GetBarResponse.Ok => handleOk
+          }
+        }
+      """,
       q"""object GetBarResponse { case object Ok extends GetBarResponse }""",
-      q"""sealed abstract class GetBazResponse""",
+      q"""
+        sealed abstract class GetBazResponse {
+          def fold[A](handleOk: io.circe.Json => A): A = this match {
+            case x: GetBazResponse.Ok =>
+              handleOk(x.value)
+          }
+        }
+      """,
       q"""object GetBazResponse { case class Ok(value: io.circe.Json) extends GetBazResponse }""",
-      q"""sealed abstract class PostFooResponse""",
+      q"""
+        sealed abstract class PostFooResponse {
+          def fold[A](handleOk: => A): A = this match {
+            case PostFooResponse.Ok => handleOk
+          }
+        }
+      """,
       q"""object PostFooResponse { case object Ok extends PostFooResponse }""",
-      q"""sealed abstract class GetFooResponse""",
+      q"""
+        sealed abstract class GetFooResponse {
+          def fold[A](handleOk: => A): A = this match {
+            case GetFooResponse.Ok => handleOk
+          }
+        }
+      """,
       q"""object GetFooResponse { case object Ok extends GetFooResponse }""",
-      q"""sealed abstract class PutFooResponse""",
+      q"""
+        sealed abstract class PutFooResponse {
+          def fold[A](handleOk: => A): A = this match {
+            case PutFooResponse.Ok => handleOk
+          }
+        }
+      """,
       q"""object PutFooResponse { case object Ok extends PutFooResponse }""",
-      q"""sealed abstract class PatchFooResponse""",
+      q"""
+        sealed abstract class PatchFooResponse {
+          def fold[A](handleOk: => A): A = this match {
+            case PatchFooResponse.Ok => handleOk
+          }
+        }
+      """,
       q"""object PatchFooResponse { case object Ok extends PatchFooResponse }""",
-      q"""sealed abstract class DeleteFooResponse""",
+      q"""
+        sealed abstract class DeleteFooResponse {
+          def fold[A](handleOk: => A): A = this match {
+            case DeleteFooResponse.Ok => handleOk
+          }
+        }
+      """,
       q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
     )
 
-    expected.map(_.structure) should equal(actual.map(_.structure))
+    expected.zip(actual).foreach({ case (a, b) => a.structure should equal(b.structure) })
   }
 }

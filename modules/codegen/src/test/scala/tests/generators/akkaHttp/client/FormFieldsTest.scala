@@ -58,21 +58,19 @@ class FormFieldsTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
-          }).recover({
-            case e: Throwable =>
-              Left(Left(e))
-          }))
-        }
-        def putFoo(foo: String, bar: Long, baz: BodyPartEntity, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def putFoo(foo: String, bar: Long, baz: BodyPartEntity, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PutFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, Multipart.FormData(Source.fromIterator {
             () => List(Some(Multipart.FormData.BodyPart("foo", Formatter.show(foo))), Some(Multipart.FormData.BodyPart("bar", Formatter.show(bar))), Some(Multipart.FormData.BodyPart("baz", baz))).flatten.iterator
-          }), HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          }), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(PutFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
       }
     """

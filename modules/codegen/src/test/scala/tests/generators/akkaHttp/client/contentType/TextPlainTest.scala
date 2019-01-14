@@ -58,19 +58,17 @@ class TextPlainTest extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
+        def putFoo(body: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PutFooResponse] = {
+          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
+          makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, TextPlain(body), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              resp.discardEntityBytes().future.map(_ => Right(PutFooResponse.OK))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
           }).recover({
             case e: Throwable =>
               Left(Left(e))
-          }))
-        }
-        def putFoo(body: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.PUT, host + basePath + "/foo", allHeaders, TextPlain(body), HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          })))
         }
       }
     """

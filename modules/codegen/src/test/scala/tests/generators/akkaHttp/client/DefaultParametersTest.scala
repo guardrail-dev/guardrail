@@ -150,23 +150,38 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
               Left(Left(t))
           }))
         }
-        private[this] def wrap[T: FromEntityUnmarshaller](client: HttpClient, request: HttpRequest): EitherT[Future, Either[Throwable, HttpResponse], T] = {
-          EitherT(client(request).flatMap(resp => if (resp.status.isSuccess) {
-            Unmarshal(resp.entity).to[T].map(Right.apply _)
-          } else {
-            FastFuture.successful(Left(Right(resp)))
+        val getOrderByIdOKDecoder = {
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[Order].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+        }
+        def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetOrderByIdResponse] = {
+          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
+          makeRequest(HttpMethods.GET, host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.OK =>
+              Unmarshal(resp.entity).to[Order](getOrderByIdOKDecoder, implicitly, implicitly).map(x => Right(GetOrderByIdResponse.OK(x)))
+            case StatusCodes.BadRequest =>
+              resp.discardEntityBytes().future.map(_ => Right(GetOrderByIdResponse.BadRequest))
+            case StatusCodes.NotFound =>
+              resp.discardEntityBytes().future.map(_ => Right(GetOrderByIdResponse.NotFound))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
           }).recover({
             case e: Throwable =>
               Left(Left(e))
-          }))
+          })))
         }
-        def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], Order] = {
-          val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]](Some(RawHeader("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[Order](httpClient, req))
-        }
-        def deleteOrder(orderId: Long, headers: scala.collection.immutable.Seq[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
+        def deleteOrder(orderId: Long, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], DeleteOrderResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.DELETE, host + basePath + "/store/order/" + Formatter.addPath(orderId), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
+          makeRequest(HttpMethods.DELETE, host + basePath + "/store/order/" + Formatter.addPath(orderId), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
+            case StatusCodes.BadRequest =>
+              resp.discardEntityBytes().future.map(_ => Right(DeleteOrderResponse.BadRequest))
+            case StatusCodes.NotFound =>
+              resp.discardEntityBytes().future.map(_ => Right(DeleteOrderResponse.NotFound))
+            case _ =>
+              FastFuture.successful(Left(Right(resp)))
+          }).recover({
+            case e: Throwable =>
+              Left(Left(e))
+          })))
         }
       }
     """
