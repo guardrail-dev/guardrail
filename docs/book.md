@@ -69,6 +69,12 @@ If compiling with Scala < 2.13.x, you'll need to enable `-Ypartial-unification`:
 scalacOptions += "-Ypartial-unification"
 ```
 
+If compiling with Scala < 2.12.x, you'll additionally need the `-Xexperimental` flag:
+
+```scala
+scalacOptions += "-Xexperimental"
+```
+
 Sample API specification
 ========================
 
