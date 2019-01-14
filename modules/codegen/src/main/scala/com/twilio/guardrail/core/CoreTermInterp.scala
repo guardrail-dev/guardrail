@@ -1,17 +1,15 @@
 package com.twilio.guardrail
 package core
 
-import cats.data.NonEmptyList
-import cats.instances.all._
-import cats.syntax.flatMap._
-import cats.syntax.either._
-import cats.syntax.traverse._
+import cats.data.{ NonEmptyList, State }
+import cats.implicits._
 import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
 import scala.io.AnsiColor
 import scala.meta._
+import scala.util.control.NonFatal
 
 object CoreTermInterp {
   def apply[L <: LA](defaultFramework: String,
@@ -122,11 +120,41 @@ object CoreTermInterp {
           } yield {
             ReadSwagger(
               Paths.get(specPath), { swagger =>
-                (for {
-                  defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, swagger)
-                  (proto, codegen) = defs
-                  result <- Common.writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
-                } yield result).foldMap(targetInterpreter)
+                try {
+                  (for {
+                    defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, swagger)
+                    (proto, codegen) = defs
+                    result <- Common.writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
+                  } yield result).foldMap(targetInterpreter)
+                } catch {
+                  case NonFatal(ex) =>
+                    val stackTrace =
+                      ex.getStackTrace()
+                        .toList
+                        .foldLeftM[State[Option[String], ?], List[String]](List.empty)({
+                          case (acc, next) =>
+                            for {
+                              lastClassName <- State.get
+                              _             <- State.set(Option(next.getClassName()))
+                            } yield {
+                              if (next.getClassName().startsWith("com.twilio")) {
+                                acc :+ s"        at ${next.toString()}"
+                              } else {
+                                if (lastClassName.exists(_.startsWith("com.twilio"))) {
+                                  acc :+ "          ..."
+                                } else acc
+                              }
+                            }
+                        })
+                        .runA(Option.empty)
+                        .value
+                    Target.raiseError(s"""
+                      |Error attempting to process ${specPath}:
+                      |
+                      |${ex.toString()}
+                      |${stackTrace.mkString("\n")}
+                      |""".stripMargin.trim)
+                }
               }
             )
           }
