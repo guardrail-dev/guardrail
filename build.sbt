@@ -46,14 +46,14 @@ fullRunTask(
   --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.server.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server.http4s --framework http4s
   --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
-  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
-  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
-  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
-  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
-  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
-  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
-  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
+  --server --specPath modules/sample/src/main/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
+  --server --specPath modules/sample/src/main/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
+  --client --specPath modules/sample/src/main/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
+  --client --specPath modules/sample/src/main/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
+  --server --specPath modules/sample/src/main/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
+  --server --specPath modules/sample/src/main/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
+  --client --specPath modules/sample/src/main/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
+  --client --specPath modules/sample/src/main/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
   --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client.http4s --framework http4s
   --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server.http4s --framework http4s
