@@ -512,8 +512,8 @@ object Http4sServerGenerator {
           )
         )
 
-        val consumes = operation.consumes
-        val produces = operation.produces
+        val consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
         Some(
           RenderedRoute(
             fullRoute,
@@ -612,11 +612,11 @@ object Http4sServerGenerator {
     def generateCodecs(operationId: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
                        responses: Responses[ScalaLanguage],
-                       consumes: Seq[String],
-                       produces: Seq[String]): List[Defn.Val] =
+                       consumes: Seq[RouteMeta.ContentType],
+                       produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces)
 
-    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[String]): List[Defn.Val] =
+    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(
@@ -624,7 +624,7 @@ object Http4sServerGenerator {
           )
       }
 
-    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
+    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       for {
         response        <- responses.value
         typeDefaultPair <- response.value

@@ -1,16 +1,17 @@
 package com.twilio.guardrail.generators
 
+import com.twilio.guardrail.terms.RouteMeta
 import scala.meta._
 
 object AkkaHttpHelper {
-  def generateDecoder(tpe: Type, consumes: Seq[String]): (Term, Type) = {
+  def generateDecoder(tpe: Type, consumes: Seq[RouteMeta.ContentType]): (Term, Type) = {
     val baseType = tpe match {
       case t"Option[$x]" => x
       case x             => x
     }
     val jsonUnmarshaller =
-      if (consumes.contains("application/json") || consumes.isEmpty) { List(q"structuredJsonEntityUnmarshaller") } else { List.empty }
-    val textUnmarshaller = if (consumes.contains("text/plain")) { List(q"stringyJsonEntityUnmarshaller") } else { List.empty }
+      if (consumes.contains(RouteMeta.ApplicationJson) || consumes.isEmpty) { List(q"structuredJsonEntityUnmarshaller") } else { List.empty }
+    val textUnmarshaller = if (consumes.contains(RouteMeta.TextPlain)) { List(q"stringyJsonEntityUnmarshaller") } else { List.empty }
 
     val unmarshaller = (jsonUnmarshaller ++ textUnmarshaller) match {
       case x :: Nil => x

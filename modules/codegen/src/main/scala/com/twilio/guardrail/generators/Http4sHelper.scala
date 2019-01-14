@@ -8,7 +8,7 @@ import cats.data.EitherK
 import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.splitOperationParts
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
-import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
 
 import scala.collection.JavaConverters._
@@ -104,8 +104,8 @@ object Http4sHelper {
     )
   }
 
-  def generateDecoder(tpe: Type, consumes: Seq[String]): Term =
-    if (consumes.contains("application/json"))
+  def generateDecoder(tpe: Type, consumes: Seq[RouteMeta.ContentType]): Term =
+    if (consumes.contains(RouteMeta.ApplicationJson))
       q"jsonOf[F, $tpe]"
     else
       tpe match {
@@ -134,8 +134,8 @@ object Http4sHelper {
                 """
       }
 
-  def generateEncoder(tpe: Type, produces: Seq[String]): Term =
-    if (produces.contains("application/json"))
+  def generateEncoder(tpe: Type, produces: Seq[RouteMeta.ContentType]): Term =
+    if (produces.contains(RouteMeta.ApplicationJson))
       q"jsonEncoderOf[F, $tpe]"
     else
       tpe match {
