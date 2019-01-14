@@ -1,12 +1,12 @@
 package core.Http4s
 
-import _root_.tracer.clients.{ http4s => cdefs }
-import _root_.tracer.servers.http4s.addresses.{ AddressesHandler, AddressesResource, GetAddressResponse, GetAddressesResponse }
-import _root_.tracer.servers.http4s.users.{ GetUserResponse, UsersHandler, UsersResource }
-import _root_.tracer.servers.{ http4s => sdefs }
-import _root_.tracer.clients.http4s.users.UsersClient
-import _root_.tracer.clients.http4s.addresses.AddressesClient
-import _root_.tracer.servers.http4s.Http4sImplicits.TraceBuilder
+import _root_.tracer.client.{ http4s => cdefs }
+import _root_.tracer.server.http4s.addresses.{ AddressesHandler, AddressesResource, GetAddressResponse, GetAddressesResponse }
+import _root_.tracer.server.http4s.users.{ GetUserResponse, UsersHandler, UsersResource }
+import _root_.tracer.server.{ http4s => sdefs }
+import _root_.tracer.client.http4s.users.UsersClient
+import _root_.tracer.client.http4s.addresses.AddressesClient
+import _root_.tracer.server.http4s.Http4sImplicits.TraceBuilder
 import cats.effect.IO
 import org.http4s.{Header, HttpRoutes, Request}
 import org.http4s.client.Client

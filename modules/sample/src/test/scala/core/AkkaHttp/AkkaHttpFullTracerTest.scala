@@ -1,12 +1,12 @@
 package core.AkkaHttp
 
-import _root_.tracer.clients.akkaHttp.{ definitions => cdefs }
-import _root_.tracer.servers.akkaHttp.addresses.{ AddressesHandler, AddressesResource }
-import _root_.tracer.servers.akkaHttp.users.{ UsersHandler, UsersResource }
-import _root_.tracer.servers.akkaHttp.{ definitions => sdefs }
-import _root_.tracer.clients.akkaHttp.users.{ UsersClient, GetUserResponse }
-import _root_.tracer.clients.akkaHttp.addresses.{ AddressesClient, GetAddressResponse }
-import _root_.tracer.servers.akkaHttp.AkkaHttpImplicits.TraceBuilder
+import _root_.tracer.client.akkaHttp.{ definitions => cdefs }
+import _root_.tracer.server.akkaHttp.addresses.{ AddressesHandler, AddressesResource }
+import _root_.tracer.server.akkaHttp.users.{ UsersHandler, UsersResource }
+import _root_.tracer.server.akkaHttp.{ definitions => sdefs }
+import _root_.tracer.client.akkaHttp.users.{ UsersClient, GetUserResponse }
+import _root_.tracer.client.akkaHttp.addresses.{ AddressesClient, GetAddressResponse }
+import _root_.tracer.server.akkaHttp.AkkaHttpImplicits.TraceBuilder
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._

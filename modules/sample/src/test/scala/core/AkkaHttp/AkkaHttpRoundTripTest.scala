@@ -1,10 +1,10 @@
 package core.AkkaHttp
 
-import _root_.clients.akkaHttp.AkkaHttpImplicits.IgnoredEntity
-import _root_.clients.akkaHttp.pet.{ PetClient, DeletePetResponse, UploadFileResponse, AddPetResponse, FindPetsByStatusResponse, FindPetsByStatusEnumResponse }
-import _root_.clients.akkaHttp.{ definitions => cdefs }
-import _root_.servers.akkaHttp.pet.{ PetHandler, PetResource }
-import _root_.servers.akkaHttp.{ definitions => sdefs }
+import _root_.examples.client.akkaHttp.AkkaHttpImplicits.IgnoredEntity
+import _root_.examples.client.akkaHttp.pet.{ PetClient, DeletePetResponse, UploadFileResponse, AddPetResponse, FindPetsByStatusResponse, FindPetsByStatusEnumResponse }
+import _root_.examples.client.akkaHttp.{ definitions => cdefs }
+import _root_.examples.server.akkaHttp.pet.{ PetHandler, PetResource }
+import _root_.examples.server.akkaHttp.{ definitions => sdefs }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._

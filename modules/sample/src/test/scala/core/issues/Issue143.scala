@@ -1,6 +1,6 @@
 package core.issues
 
-import _root_.issues.issue143.{ Handler, Resource }
+import _root_.issues.issue143.server.akkaHttp.{ Handler, Resource }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
