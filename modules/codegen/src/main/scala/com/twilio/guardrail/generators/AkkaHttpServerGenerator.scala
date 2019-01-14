@@ -647,7 +647,7 @@ object AkkaHttpServerGenerator {
             )
           )
         )
-        val consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala)
+        val consumes = Option(operation.getConsumes).fold(Seq.empty[String])(_.asScala).flatMap(RouteMeta.ContentType.unapply(_))
         RenderedRoute(
           fullRoute,
           q"""
@@ -669,10 +669,10 @@ object AkkaHttpServerGenerator {
     def generateCodecs(operationId: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
                        responses: Responses[ScalaLanguage],
-                       consumes: Seq[String]): List[Defn.Val] =
+                       consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       generateDecoders(operationId, bodyArgs, consumes)
 
-    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[String]): List[Defn.Val] =
+    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           val (decoder, baseType) = AkkaHttpHelper.generateDecoder(argType, consumes)
