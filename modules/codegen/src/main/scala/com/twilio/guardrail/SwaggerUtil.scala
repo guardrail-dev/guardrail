@@ -3,14 +3,13 @@ package com.twilio.guardrail
 import _root_.io.swagger.models._
 import _root_.io.swagger.models.parameters._
 import _root_.io.swagger.models.properties._
-import cats.{ FlatMap, Foldable, MonadError }
-import cats.data.{ EitherK, EitherT }
+import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ Default, ScalaType }
-import com.twilio.guardrail.generators.{ AkkaHttpGenerator, Responses, ScalaGenerator, ScalaParameter, SwaggerGenerator }
+import com.twilio.guardrail.generators.{ Responses, ScalaParameter }
 import com.twilio.guardrail.languages.LA
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls

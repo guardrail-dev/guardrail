@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.syntax
 
 import cats.data.NonEmptyList
 import com.twilio.guardrail.StaticDefns
-import com.twilio.guardrail.generators._
+import com.twilio.guardrail.generators.{ RawParameterName, ScalaParameter }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 
