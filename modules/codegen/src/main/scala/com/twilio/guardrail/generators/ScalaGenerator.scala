@@ -130,8 +130,6 @@ object ScalaGenerator {
             import cats.implicits._
             import cats.data.EitherT
 
-            import scala.concurrent.Future
-
             object Implicits {
               abstract class AddArg[T] {
                 def addArg(key: String, v: T): String
@@ -208,8 +206,6 @@ object ScalaGenerator {
 
             import cats.implicits._
             import cats.data.EitherT
-
-            import scala.concurrent.Future
 
             import ${pkg}.Implicits._
 
