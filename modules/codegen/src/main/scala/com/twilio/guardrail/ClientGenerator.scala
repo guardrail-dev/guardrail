@@ -1,8 +1,8 @@
 package com.twilio.guardrail
 
+import cats.data.NonEmptyList
 import cats.free.Free
-import cats.instances.all._
-import cats.syntax.all._
+import cats.implicits._
 import com.twilio.guardrail.generators.Http4sHelper
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
@@ -14,7 +14,7 @@ case class Client[L <: LA](pkg: List[String],
                            clientName: String,
                            imports: List[L#Import],
                            staticDefns: StaticDefns[L],
-                           client: L#ClassDefinition,
+                           client: NonEmptyList[Either[L#Trait, L#ClassDefinition]],
                            responseDefinitions: List[L#Definition])
 case class RenderedClientOperation[L <: LA](
     clientOperation: L#Definition,

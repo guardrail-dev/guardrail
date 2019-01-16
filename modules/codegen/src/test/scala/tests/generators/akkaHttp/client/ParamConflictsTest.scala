@@ -74,7 +74,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.structure should equal(client.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 
   test("Generate non-conflicting names in definitions") {

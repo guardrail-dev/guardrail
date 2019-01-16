@@ -1,5 +1,6 @@
 package com.twilio.guardrail.protocol.terms.client
 
+import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
@@ -35,4 +36,4 @@ case class BuildClient[L <: LA](clientName: String,
                                 clientCalls: List[L#Definition],
                                 supportDefinitions: List[L#Definition],
                                 tracing: Boolean)
-    extends ClientTerm[L, L#ClassDefinition]
+    extends ClientTerm[L, NonEmptyList[Either[L#Trait, L#ClassDefinition]]]

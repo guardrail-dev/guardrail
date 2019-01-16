@@ -109,16 +109,14 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, _, staticDefns, cls, statements) :: _),
       _
-    )          = runSwaggerSpec(swagger)(Context.empty, Http4s)
-    val cmp    = companionForStaticDefns(staticDefns)
-    val actual = cmp +: cls +: statements
+    )       = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    val cmp = companionForStaticDefns(staticDefns)
 
-    val expected = List(
-      q"""object Client {
+    val companion = q"""object Client {
       def apply[F[_]](host: String = "http://localhost:1234")(implicit effect: Effect[F], httpClient: Http4sClient[F]): Client[F] = new Client[F](host = host)(effect = effect, httpClient = httpClient)
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://localhost:1234")(implicit effect: Effect[F]): Client[F] = new Client[F](host = host)(effect = effect, httpClient = httpClient)
-    }""",
-      q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
+    }"""
+    val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
       val getBazOkDecoder = EntityDecoder[F, String].flatMapR[io.circe.Json] {
         str => Json.fromString(str).as[io.circe.Json].fold(failure => DecodeResult.failure(InvalidMessageBodyFailure(s"Could not decode response: $$str", Some(failure))), DecodeResult.success(_))
@@ -193,7 +191,8 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
             effect.raiseError(UnexpectedStatus(resp.status))
         })
       }
-    }""",
+    }"""
+    val expected = List(
       q"""
         sealed abstract class GetBarResponse {
           def fold[A](handleOk: => A): A = this match {
@@ -253,6 +252,8 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
     )
 
-    expected.zip(actual).foreach({ case (a, b) => a.structure should equal(b.structure) })
+    expected.zip(statements).foreach({ case (a, b) => a.structure should equal(b.structure) })
+    cmp.structure should equal(companion.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 }

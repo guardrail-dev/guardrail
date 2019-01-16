@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.client
 
 import cats.InjectK
+import cats.data.NonEmptyList
 import cats.free.Free
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.languages.LA
@@ -37,7 +38,7 @@ class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
                   ctorArgs: List[List[L#MethodParameter]],
                   clientCalls: List[L#Definition],
                   supportDefinitions: List[L#Definition],
-                  tracing: Boolean): Free[F, L#ClassDefinition] =
+                  tracing: Boolean): Free[F, NonEmptyList[Either[L#Trait, L#ClassDefinition]]] =
     Free.inject[ClientTerm[L, ?], F](
       BuildClient[L](clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     )

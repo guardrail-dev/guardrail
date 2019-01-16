@@ -376,7 +376,7 @@ object Http4sClientGenerator {
               ..$clientCalls
             }
           """
-        Target.pure(client)
+        Target.pure(NonEmptyList(Right(client), Nil))
     }
 
     def generateCodecs(methodName: String,

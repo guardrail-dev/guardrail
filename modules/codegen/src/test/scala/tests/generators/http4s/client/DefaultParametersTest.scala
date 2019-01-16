@@ -196,7 +196,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
     }"""
     )
 
-    cls.structure should equal(clientClass.structure)
+    cls.head.right.get.structure should equal(clientClass.structure)
     cmp.structure should equal(clientCompanion.structure)
 
     statements.zip(expected).foreach({ case (a, b) => a.structure should equal(b.structure) })
