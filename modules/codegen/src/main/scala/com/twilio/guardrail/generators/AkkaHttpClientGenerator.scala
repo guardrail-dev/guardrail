@@ -402,7 +402,7 @@ object AkkaHttpClientGenerator {
               ..$clientCalls;
             }
           """
-        Target.pure(client)
+        Target.pure(NonEmptyList(Right(client), Nil))
     }
 
     def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =

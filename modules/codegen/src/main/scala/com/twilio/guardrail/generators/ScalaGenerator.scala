@@ -323,7 +323,7 @@ object ScalaGenerator {
             ..${customImports};
             ..${imports};
             ${companionForStaticDefns(staticDefns)};
-            ${client};
+            ..${client.toList.map(_.merge)};
             ..${responseDefinitions}
             """.syntax.getBytes(StandardCharsets.UTF_8)
           )

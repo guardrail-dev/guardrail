@@ -37,7 +37,7 @@ class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
                   ctorArgs: List[List[L#MethodParameter]],
                   clientCalls: List[L#Definition],
                   supportDefinitions: List[L#Definition],
-                  tracing: Boolean): Free[F, L#ClassDefinition] =
+                  tracing: Boolean): Free[F, NonEmptyList[Either[L#Trait, L#ClassDefinition]]] =
     Free.inject[ClientTerm[L, ?], F](
       BuildClient[L](clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     )

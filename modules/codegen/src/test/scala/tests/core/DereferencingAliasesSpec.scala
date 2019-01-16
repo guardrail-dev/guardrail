@@ -124,6 +124,6 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
     cls.structure should equal(definition.structure)
     cmp.structure should equal(companion.structure)
     clientCmp.structure should equal(clientCompanion.structure)
-    clientCls.structure should equal(client.structure)
+    clientCls.head.right.get.structure should equal(client.structure)
   }
 }
