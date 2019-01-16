@@ -108,6 +108,7 @@ object Common {
               .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems)
             Servers(servers) = serverMeta
           } yield CodegenDefinitions[L](List.empty, servers)
+        case CodegenTarget.Models => Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty))
       }
 
       CodegenDefinitions(clients, servers) = codegen
