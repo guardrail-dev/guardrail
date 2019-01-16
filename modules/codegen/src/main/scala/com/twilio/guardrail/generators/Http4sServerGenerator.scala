@@ -117,7 +117,7 @@ object Http4sServerGenerator {
 
     def pathStrToHttp4s(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
       (basePath.getOrElse("") + path).stripPrefix("/") match {
-        case "" => Target.pure((p"${Term.Name("Root")} / ${Lit.String("")}", None))
+        case "" => Target.pure((p"${Term.Name("Root")}", None))
         case path =>
           for {
             pathDirective <- SwaggerUtil.paths
