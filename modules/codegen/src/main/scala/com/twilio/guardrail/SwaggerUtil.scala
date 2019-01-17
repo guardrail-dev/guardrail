@@ -446,6 +446,14 @@ object SwaggerUtil {
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
       def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         opt(leadingSlash) ~> ((segments ~ (trailingSlash ~ staticQS)) | emptyPathQS | emptyPath) <~ endOfInput
+      def runParse(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+        pattern(pathArgs)
+          .parse(path)
+          .done match {
+          case ParseResult.Done(input, result)         => Target.pure(result)
+          case ParseResult.Fail(input, stack, message) => Target.raiseError(s"Failed to parse URL: ${message} (unparsed: ${input})")
+          case ParseResult.Partial(k)                  => Target.raiseError(s"Unexpected parser state attempting to parse ${path}")
+        }
     }
 
     object akkaExtractor
@@ -526,11 +534,7 @@ object SwaggerUtil {
     def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
       import akkaExtractor._
       for {
-        partsQS <- pattern(pathArgs)
-          .parse(path)
-          .done
-          .either
-          .fold(Target.raiseError(_), Target.pure(_))
+        partsQS <- runParse(path, pathArgs)
         (parts, (trailingSlash, queryParams)) = partsQS
         (directive, bindings) = parts
           .foldLeft[(Term, List[Term.Name])]((q"pathEnd", List.empty))({
@@ -554,11 +558,7 @@ object SwaggerUtil {
     def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
-        partsQS <- pattern(pathArgs)
-          .parse(path)
-          .done
-          .either
-          .fold(Target.raiseError(_), Target.pure(_))
+        partsQS <- runParse(path, pathArgs)
         (parts, (trailingSlash, queryParams)) = partsQS
         (directive, bindings) = parts
           .foldLeft[(Pat, List[Term.Name])]((p"${Term.Name("Root")}", List.empty))({
