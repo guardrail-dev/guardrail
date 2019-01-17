@@ -434,14 +434,10 @@ object SwaggerUtil {
         .map(_.fold("")(_.mkString))
       val staticQSTerm: Parser[T] =
         choice(staticQSArg, qsValueOnly).map(buildParamConstraint)
-      val leadingSlash: Parser[Option[Char]] = opt(char('/'))
-      val trailingSlash: Parser[Boolean]     = opt(char('/')).map(_.nonEmpty)
-      val staticQS: Parser[Option[T]] = (opt(
-        char('?') ~> sepBy1(staticQSTerm, char('&'))
-          .map(_.reduceLeft(joinParams))
-      ) | opt(char('?')).map { _ =>
-        None
-      })
+      val queryPart: Parser[T]                                               = sepBy1(staticQSTerm, char('&')).map(_.reduceLeft(joinParams))
+      val leadingSlash: Parser[Option[Char]]                                 = opt(char('/'))
+      val trailingSlash: Parser[Boolean]                                     = opt(char('/')).map(_.nonEmpty)
+      val staticQS: Parser[Option[T]]                                        = (char('?') ~> queryPart.map(Option.apply _)) | char('?').map(_ => Option.empty[T]) | ok(Option.empty[T])
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
       def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
