@@ -24,6 +24,9 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
     |      produces:
     |        - application/json
     |      parameters:
+    |      - name: id
+    |        in: path
+    |        type: string
     |      - name: optionalIterable
     |        in: formData
     |        description: Media Urls
@@ -62,9 +65,9 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        def getUser(optionalIterable: Option[Iterable[String]] = None, requiredIterable: Iterable[String], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetUserResponse] = {
+        def getUser(id: String, optionalIterable: Option[Iterable[String]] = None, requiredIterable: Iterable[String], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetUserResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-          makeRequest(HttpMethods.GET, host + basePath + "/user/", allHeaders, FormData(List(optionalIterable.toList.flatMap {
+          makeRequest(HttpMethods.GET, host + basePath + "/user/" + Formatter.addPath(id), allHeaders, FormData(List(optionalIterable.toList.flatMap {
             x => x.toList.map(("optionalIterable", _))
           }, List(("requiredIterable", Formatter.show(requiredIterable)))).flatten: _*), HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
