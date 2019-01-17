@@ -1,3 +1,9 @@
+v0.42.0
+=======
+
+- #165 http4s server generator handle root path
+- #152 Make akka-http clients handle all status codes and described entities (Breaking change, please see MIGRATING.md)
+
 v0.41.3
 =======
 

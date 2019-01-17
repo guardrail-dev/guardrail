@@ -273,7 +273,7 @@ val userRoutes: Route = UserResource.routes(new UserHandler {
 })
 val userHttpClient: HttpRequest => Future[HttpResponse] = Route.asyncHandler(userRoutes)
 val userClient: UserClient = UserClient.httpCLient(userHttpClient)
-val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
+val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo").map(_.fold(user => user))
 val user: User = getUserResponse.value.futureValue.right.value // Unwraps `User(id=Some(1234L), username=Some("foo"))` using scalatest's `ScalaFutures` and `EitherValues` unwrappers.
 ```
 
@@ -312,7 +312,7 @@ This passes all `TestFailedExceptions` through to the underlying infrastructure.
 ```scala
 val userClient: UserClient = UserClient.httpCLient(userHttpClient)
 val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo")
-val user: User = getUserResponse.value.futureValue.right.value
+val user: User = getUserResponse.map(_.fold(user => user)).value.futureValue.right.value
 ```
 
 `futureValue` will raise the `TestFailedException` with the relevant stack trace.
