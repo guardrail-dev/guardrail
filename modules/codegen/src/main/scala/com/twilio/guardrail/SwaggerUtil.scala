@@ -434,7 +434,8 @@ object SwaggerUtil {
         .map(_.fold("")(_.mkString))
       val staticQSTerm: Parser[T] =
         choice(staticQSArg, qsValueOnly).map(buildParamConstraint)
-      val trailingSlash: Parser[Boolean] = opt(char('/')).map(_.nonEmpty)
+      val leadingSlash: Parser[Option[Char]] = opt(char('/'))
+      val trailingSlash: Parser[Boolean]     = opt(char('/')).map(_.nonEmpty)
       val staticQS: Parser[Option[T]] = (opt(
         char('?') ~> sepBy1(staticQSTerm, char('&'))
           .map(_.reduceLeft(joinParams))
@@ -444,7 +445,7 @@ object SwaggerUtil {
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = endOfInput ~> ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
       def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
-        (segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath
+        opt(leadingSlash) ~> ((segments ~ (trailingSlash ~ staticQS) <~ endOfInput) | emptyPathQS | emptyPath)
     }
 
     object akkaExtractor
