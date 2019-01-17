@@ -1,11 +1,11 @@
-package tests.generators.http4s
+package tests.core.issues
 
 import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.{ Context, Server, Servers }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
-class Http4sServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   import scala.meta._
 
