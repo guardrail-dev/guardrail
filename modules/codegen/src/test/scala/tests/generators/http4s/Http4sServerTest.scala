@@ -21,10 +21,17 @@ class Http4sServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
        |      responses:
        |        200:
        |         description: description
-       |  "/foo/":
+       |  "/foo":
        |    get:
        |      x-scala-package: store
        |      operationId: getFoo
+       |      responses:
+       |        200:
+       |         description: description
+       |  "/foo/":
+       |    get:
+       |      x-scala-package: store
+       |      operationId: getFooDir
        |      responses:
        |        200:
        |         description: description
@@ -37,6 +44,7 @@ class Http4sServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
       trait StoreHandler[F[_]] {
         def getRoot(respond: GetRootResponse.type)(): F[GetRootResponse]
         def getFoo(respond: GetFooResponse.type)(): F[GetFooResponse]
+        def getFooDir(respond: GetFooDirResponse.type)(): F[GetFooDirResponse]
       }
     """
     val resource = q"""
@@ -48,9 +56,14 @@ class Http4sServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
                 case GetRootResponse.Ok =>
                   Ok()
               }
-            case req @ GET -> Root / "foo" / "" =>
+            case req @ GET -> Root / "foo" =>
               handler.getFoo(GetFooResponse)() flatMap {
                 case GetFooResponse.Ok =>
+                  Ok()
+              }
+            case req @ GET -> Root / "foo" / "" =>
+              handler.getFooDir(GetFooDirResponse)() flatMap {
+                case GetFooDirResponse.Ok =>
                   Ok()
               }
           }
