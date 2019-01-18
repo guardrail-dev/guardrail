@@ -20,62 +20,25 @@ import scala.meta._
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
-  def writePackage[L <: LA, F[_]](kind: CodegenTarget,
-                                  context: Context,
-                                  swagger: Swagger,
-                                  outputPath: Path,
-                                  pkgName: List[String],
-                                  dtoPackage: List[String],
-                                  customImports: List[L#Import])(implicit
-                                                                 C: ClientTerms[L, F],
-                                                                 R: ArrayProtocolTerms[L, F],
-                                                                 E: EnumProtocolTerms[L, F],
-                                                                 F: FrameworkTerms[L, F],
-                                                                 M: ModelProtocolTerms[L, F],
-                                                                 Pol: PolyProtocolTerms[L, F],
-                                                                 S: ProtocolSupportTerms[L, F],
-                                                                 Sc: ScalaTerms[L, F],
-                                                                 Se: ServerTerms[L, F],
-                                                                 Sw: SwaggerTerms[L, F]): Free[F, List[WriteTree]] = {
+  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Swagger)(
+      implicit
+      C: ClientTerms[L, F],
+      R: ArrayProtocolTerms[L, F],
+      E: EnumProtocolTerms[L, F],
+      F: FrameworkTerms[L, F],
+      M: ModelProtocolTerms[L, F],
+      Pol: PolyProtocolTerms[L, F],
+      S: ProtocolSupportTerms[L, F],
+      Sc: ScalaTerms[L, F],
+      Se: ServerTerms[L, F],
+      Sw: SwaggerTerms[L, F]
+  ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import F._
-    import Sc._
     import Sw._
-
-    val splitComponents: String => Option[List[String]] = x => Some(x.split('.').toList).filterNot(_.isEmpty)
-
-    val pkgPath        = resolveFile(outputPath)(pkgName)
-    val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
-
-    val definitions: List[String]   = pkgName :+ "definitions"
-    val dtoComponents: List[String] = definitions ++ dtoPackage
-    val buildPkgTerm: List[String] => Term.Ref =
-      _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
     for {
       proto <- ProtocolGenerator.fromSwagger[L, F](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-      imports                                                                                          = customImports ++ protocolImports
-      utf8                                                                                             = java.nio.charset.Charset.availableCharsets.get("UTF-8")
-
-      protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, _))
-      (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
-
-      dtoHead :: dtoRest = dtoComponents
-      dtoPkg = dtoRest.init
-        .foldLeft[Term.Ref](Term.Name(dtoHead)) {
-          case (acc, next) => Term.Select(acc, Term.Name(next))
-        }
-      companion = Term.Name(s"${dtoComponents.last}$$")
-
-      packageObject <- writePackageObject(
-        dtoPackagePath,
-        dtoComponents,
-        customImports,
-        packageObjectImports,
-        protocolImports,
-        packageObjectContents,
-        extraTypes
-      )
 
       schemes = Option(swagger.getSchemes)
         .fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
@@ -90,9 +53,7 @@ object Common {
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
-      frameworkImports    <- getFrameworkImports(context.tracing)
-      _frameworkImplicits <- getFrameworkImplicits()
-      (frameworkImplicitName, frameworkImplicits) = _frameworkImplicits
+      frameworkImports <- getFrameworkImports(context.tracing)
 
       codegen <- kind match {
         case CodegenTarget.Client =>
@@ -108,9 +69,45 @@ object Common {
               .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems)
             Servers(servers) = serverMeta
           } yield CodegenDefinitions[L](List.empty, servers)
+        case CodegenTarget.Models => Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty))
       }
+    } yield (proto, codegen)
+  }
 
-      CodegenDefinitions(clients, servers) = codegen
+  def writePackage[L <: LA, F[_]](proto: ProtocolDefinitions[L], codegen: CodegenDefinitions[L], context: Context)(
+      outputPath: Path,
+      pkgName: List[String],
+      dtoPackage: List[String],
+      customImports: List[L#Import]
+  )(implicit Sc: ScalaTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+    import F._
+    import Sc._
+
+    val pkgPath        = resolveFile(outputPath)(pkgName)
+    val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
+
+    val definitions: List[String]   = pkgName :+ "definitions"
+    val dtoComponents: List[String] = definitions ++ dtoPackage
+
+    val ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
+    val CodegenDefinitions(clients, servers)                                                             = codegen
+
+    for {
+      protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
+      (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
+      packageObject <- writePackageObject(
+        dtoPackagePath,
+        dtoComponents,
+        customImports,
+        packageObjectImports,
+        protocolImports,
+        packageObjectContents,
+        extraTypes
+      )
+
+      frameworkImports    <- getFrameworkImports(context.tracing)
+      _frameworkImplicits <- getFrameworkImplicits()
+      (frameworkImplicitName, frameworkImplicits) = _frameworkImplicits
 
       files <- (clients.traverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
                 servers.traverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)

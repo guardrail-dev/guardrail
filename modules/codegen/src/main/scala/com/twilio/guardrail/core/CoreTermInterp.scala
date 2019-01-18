@@ -122,9 +122,11 @@ object CoreTermInterp {
           } yield {
             ReadSwagger(
               Paths.get(specPath), { swagger =>
-                Common
-                  .writePackage[L, CodegenApplication[L, ?]](kind, context, swagger, Paths.get(outputPath), pkgName, dtoPackage, customImports)
-                  .foldMap(targetInterpreter)
+                (for {
+                  defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, swagger)
+                  (proto, codegen) = defs
+                  result <- Common.writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
+                } yield result).foldMap(targetInterpreter)
               }
             )
           }
