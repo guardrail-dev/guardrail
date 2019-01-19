@@ -37,4 +37,4 @@ addressesClient
   ))
 ```
 
-Unspecified status codes (3xx, 5xx) will still be passed through to the error result.
+Unspecified status codes will still be passed through to the error result, so you can still use your existing 3xx or 5xx handlers.
