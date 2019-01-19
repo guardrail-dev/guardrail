@@ -1,0 +1,22 @@
+swagger: '2.0'
+info:
+  title: https://github.com/twilio/guardrail/issues/164
+host: localhost:1234
+schemes:
+- http
+paths:
+  /entity:
+    delete:
+      operationId: deleteFoo
+      parameters:
+      - name: bar
+        in: query
+        description: A local date parameter
+        type: string
+        format: date
+        required: true
+      consumes:
+      - application/x-www-form-urlencoded
+      responses:
+        '204':
+          description: No content

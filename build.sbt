@@ -78,6 +78,8 @@ fullRunTask(
   --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.akkaHttp --framework akka-http
   --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.http4s --framework http4s
   --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.akkaHttp --framework akka-http
+  --client --specPath modules/sample/src/main/resources/issues/issue164.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue164.client.http4s --framework http4s
+  --client --specPath modules/sample/src/main/resources/issues/issue164.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue164.client.akkaHttp --framework akka-http
 """.replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
 )
 
