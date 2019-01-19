@@ -28,7 +28,7 @@ addressesClient
 
 ... or by using the `fold` convenience method:
 
-``scala
+```scala
 addressesClient
   .getAddress(traceBuilder, "addressId")
   .fold(_ => respond.NotFound, _.fold(
