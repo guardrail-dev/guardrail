@@ -11,9 +11,6 @@ git.useGitDescribe := true
 crossScalaVersions := Seq("2.11.12", "2.12.3")
 scalaVersion in ThisBuild := crossScalaVersions.value.last
 
-scalafmtOnCompile in ThisBuild := true
-scalafmtFailTest in ThisBuild := false
-
 val akkaVersion       = "10.0.14"
 val catsVersion       = "1.4.0"
 val catsEffectVersion = "1.0.0"
@@ -80,12 +77,6 @@ artifact in (Compile, assembly) := {
 
 addArtifact(artifact in (Compile, assembly), assembly)
 
-addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias(
-  "format",
-  "; codegen/scalafmt ; codegen/test:scalafmt ; scalafmt ; codegen/test:scalafmt ; sample/scalafmt ; sample/test:scalafmt"
-)
-
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 
 resetSample := {
@@ -93,8 +84,14 @@ resetSample := {
   "git clean -fdx modules/sample/src modules/sample/target" !
 }
 
-addCommandAlias("example", "; resetSample ; runScalaExample ; sample/test")
-addCommandAlias("scalaTestSuite", "; codegen/test ; resetSample; runScalaExample ; sample/test")
+// Deprecated command
+addCommandAlias("example", "runtimeSuite")
+
+addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
+addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; sample/test")
+addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
+addCommandAlias("format", "; codegen/test:scalafmt ; sample/test:scalafmt")
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; sample/scalafmtCheck")
 addCommandAlias("testSuite", "; scalaTestSuite")
 
 addCommandAlias(
