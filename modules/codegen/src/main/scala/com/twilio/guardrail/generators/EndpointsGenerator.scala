@@ -18,7 +18,7 @@ import com.twilio.guardrail.languages.ScalaLanguage
 object EndpointsGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
-      case FileType(format)   => Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
+      case FileType(format)   => Target.pure(format.fold[Type](t"String")(Type.Name(_)))
       case ObjectType(format) => Target.pure(t"io.circe.Json")
       case GetFrameworkImports(tracing) =>
         Target.pure(
@@ -45,12 +45,27 @@ object EndpointsGenerator {
             }
           }
           trait AddPathSegments extends algebra.Urls {
-            implicit def SegmentFromAddPath[A](implicit ev: AddPath[A]): Segment[A]
+            implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T]
+            implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T]
+            def showQs[A](name: String, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[A]
+            def showSegment[A](name: String, docs: Documentation)(implicit ev: AddPath[A]): Path[A]
           }
+          trait FormDataEncoder[T] { def apply: T => String }
+          object FormDataEncoder { def apply[T](implicit ev: FormDataEncoder[T]): FormDataEncoder[T] = ev }
           trait FormData extends algebra.Endpoints {
-            sealed trait FormDataEncoder[T] { def apply: T => String }
-            object FormDataEncoder { def apply[T](implicit ev: FormDataEncoder[T]): FormDataEncoder[T] = ev }
-            implicit object StringPairEncoder extends FormDataEncoder[List[Tuple2[String, String]]] {
+            implicit def stringPairEncoder: FormDataEncoder[List[(String, String)]]
+            def formDataRequest[A: FormDataEncoder](): RequestEntity[A]
+          }
+          trait XhrAddPathSegments extends AddPathSegments with xhr.Urls {
+            import scala.scalajs.js.URIUtils
+            private[this] def argEscape(k: String, v: String): String = URIUtils.encodeURIComponent(k) ++ "=" ++ URIUtils.encodeURIComponent(v)
+            implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = AddArg.build[T](key => v => argEscape(key, ev.show(v)))
+            implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => URIUtils.encodeURIComponent(ev.show(v)))
+            def showQs[A](name: String, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[A] = a => ev.addArg(name, a)
+            def showSegment[A](name: String, docs: Documentation)(implicit ev: AddPath[A]): Path[A] = a => ev.addPath(a)
+          }
+          trait XhrFormData extends FormData with xhr.Endpoints {
+            implicit val stringPairEncoder: FormDataEncoder[List[(String, String)]] = new FormDataEncoder[List[(String, String)]] {
               def apply = {
                 case (k, v) :: xs =>
                   xs.foldLeft(k + "=" + v)({
@@ -61,14 +76,6 @@ object EndpointsGenerator {
                   ""
               }
             }
-            implicit object StringMapEncoder extends FormDataEncoder[Map[String, String]] { def apply = xs => FormDataEncoder[List[Tuple2[String, String]]].apply(xs.toList) }
-            def formDataRequest[A: FormDataEncoder](): RequestEntity[A]
-          }
-          trait XhrAddPathSegments extends AddPathSegments with xhr.Urls {
-            implicit def SegmentFromAddPath[A](implicit ev: AddPath[A]): Segment[A]
-              = new Segment[A] { def encode(value: A): String = ev.addPath(value) }
-          }
-          trait XhrFormData extends FormData with xhr.Endpoints {
             def formDataRequest[A: FormDataEncoder](): RequestEntity[A] = (a: A, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
               FormDataEncoder[A].apply(a)

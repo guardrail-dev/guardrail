@@ -526,6 +526,32 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
+    object endpointsExtractor
+        extends Extractors[Term, Term.Name](
+          pathSegmentConverter = {
+            case (ScalaParameter(_, param, paramName, argName, argType), base) =>
+              base.fold[Either[String, Term]] {
+                import com.twilio.guardrail.generators.syntax.Scala._
+                Right(q"showSegment[$argType](${argName.toLit}, None)")
+              } { _ =>
+                //todo add support for regex segment
+                Left("Unsupported feature")
+              }
+          },
+          buildParamConstraint = {
+            case (k, v) =>
+              q"${Term.Name(s"${k.capitalize}Matcher")}(${Lit.String(v)})"
+          },
+          joinParams = { (l, r) =>
+            q"${l} +& ${r}"
+          },
+          stringPath = Lit.String(_),
+          liftBinding = identity,
+          litRegex = (before, _, after) =>
+            //todo add support for regex segment
+            throw new UnsupportedOperationException
+        )
+
     def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
       import akkaExtractor._
       for {
@@ -562,6 +588,26 @@ object SwaggerUtil {
           })
         trailingSlashed = if (trailingSlash) {
           p"$directive / ${Lit.String("")}"
+        } else directive
+      } yield (trailingSlashed, queryParams)
+    }
+
+    def generateUrlEndpointsPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
+      import endpointsExtractor._
+      for {
+        partsQS <- pattern(pathArgs)
+          .parse(path)
+          .done
+          .either
+          .fold(Target.raiseError(_), Target.pure(_))
+        (parts, (trailingSlash, queryParams)) = partsQS
+        (directive, bindings) = parts
+          .foldLeft[(Term, List[Term.Name])]((q"path", List.empty))({
+            case ((acc, bindings), (termName, c)) =>
+              (q"$acc / ${c}", bindings ++ termName)
+          })
+        trailingSlashed = if (trailingSlash) {
+          q"$directive / path"
         } else directive
       } yield (trailingSlashed, queryParams)
     }
