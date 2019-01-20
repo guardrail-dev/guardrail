@@ -49,6 +49,7 @@ object EndpointsGenerator {
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T]
             def showQs[A](name: String, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[A]
             def showSegment[A](name: String, docs: Documentation)(implicit ev: AddPath[A]): Path[A]
+            def pathRoot: Path[(String, Option[String])]
           }
           trait FormDataEncoder[T] { def apply: T => String }
           object FormDataEncoder { def apply[T](implicit ev: FormDataEncoder[T]): FormDataEncoder[T] = ev }
@@ -68,6 +69,9 @@ object EndpointsGenerator {
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => URIUtils.encodeURIComponent(ev.show(v)))
             def showQs[A](name: String, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[A] = a => ev.addArg(name, a)
             def showSegment[A](name: String, docs: Documentation)(implicit ev: AddPath[A]): Path[A] = a => ev.addPath(a)
+            def pathRoot: Path[(String, Option[String])] = { case (host, basePath) =>
+              basePath.fold(host) { bp => host ++ bp }
+            }
           }
           trait XhrFormData extends FormData with xhr.Endpoints {
             implicit val stringPairEncoder: FormDataEncoder[List[(String, String)]] = new FormDataEncoder[List[(String, String)]] {

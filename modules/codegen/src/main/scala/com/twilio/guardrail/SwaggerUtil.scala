@@ -603,7 +603,7 @@ object SwaggerUtil {
           .fold(Target.raiseError(_), Target.pure(_))
         (parts, (trailingSlash, queryParams)) = partsQS
         (directive, bindings) = parts
-          .foldLeft[(Term, List[Term.Name])]((q"path", List.empty))({
+          .foldLeft[(Term, List[Term.Name])]((q"pathRoot", List.empty))({
             case ((acc, bindings), (termName, c)) =>
               (q"$acc / ${c}", bindings ++ termName)
           })

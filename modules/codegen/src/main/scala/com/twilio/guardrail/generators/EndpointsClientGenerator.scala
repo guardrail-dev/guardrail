@@ -12,6 +12,7 @@ import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.shims._
+import java.net.URI
 
 import scala.collection.JavaConverters._
 import scala.meta._
@@ -25,6 +26,15 @@ object EndpointsClientGenerator {
       "([A-Z])".r
         .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
     }
+
+    private[this] def formatClientName(clientName: Option[String]): Term.Param =
+      clientName.fold(
+        param"clientName: String"
+      )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
+
+    private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
+      serverUrls
+        .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
@@ -319,10 +329,31 @@ object EndpointsClientGenerator {
         } yield renderedClientOperation
       case GetImports(tracing)                             => Target.pure(List.empty)
       case GetExtraImports(tracing)                        => Target.pure(List.empty)
-      case ClientClsArgs(tracingName, serverUrls, tracing) => Target.raiseError("Client generation impossible, as constructor has not been defined")
+      case ClientClsArgs(tracingName, serverUrls, tracing) =>
+        Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
-      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => Target.raiseError("Client generation impossible, as constructor has not been defined")
+      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
+        def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
+          params
+            .map({
+              _.map(_.name.value)
+                .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
+                .to[List]
+            })
+            .to[List]
+
+        val ctorCall: Term.New = {
+          q"""
+            new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})
+          """
+        }
+
+        val definitions: List[Defn] = List(
+          q"def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}"
+        )
+
+        Target.pure(StaticDefns[ScalaLanguage](clientName, List.empty, List.empty, definitions, List.empty))
       case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val (endpointDefs, rest0) = supportDefinitions.partition {
           case q"val $name = endpoint(...$_)" => true
@@ -345,6 +376,8 @@ object EndpointsClientGenerator {
           q"""
             class ${Type
             .Name(clientName)}(...$ctorArgs) extends ${Init(Type.Name(s"${clientName}Algebra"), Name(""), Nil)} with xhr.JsonEntitiesFromCodec with xhr.faithful.Endpoints with XhrAddPathSegments with XhrFormData {
+              val basePath: Option[String] = ${basePath.fold[Term](q"Option.empty[String]")(bp => q"Option(${Lit.String(bp)})")}
+
               ..$responseDefs;
               ..$rest1;
               private[this] def makeRequest[A](value: Future[A]): EitherT[Future, Either[Throwable, XMLHttpRequest], A] =
