@@ -197,6 +197,8 @@ object ScalaGenerator {
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        val implicitsRef: Term.Ref =
+          (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
         val frameworkImplicitsFile = source"""
             package ${pkg}
 
@@ -207,7 +209,7 @@ object ScalaGenerator {
             import cats.implicits._
             import cats.data.EitherT
 
-            import ${pkg}.Implicits._
+            import ${implicitsRef}._
 
             ${frameworkImplicits}
           """
