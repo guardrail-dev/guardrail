@@ -53,8 +53,13 @@ object EndpointsGenerator {
           trait FormDataEncoder[T] { def apply: T => String }
           object FormDataEncoder { def apply[T](implicit ev: FormDataEncoder[T]): FormDataEncoder[T] = ev }
           trait FormData extends algebra.Endpoints {
+            type TraceBuilder = String => RequestHeaders[String]
             implicit def stringPairEncoder: FormDataEncoder[List[(String, String)]]
             def formDataRequest[A: FormDataEncoder](): RequestEntity[A]
+            def textPlainRequest: RequestEntity[String]
+            def showHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[A]
+            def showOptHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[Option[A]]
+            def tracerHeader: RequestHeaders[Map[String, String]]
           }
           trait XhrAddPathSegments extends AddPathSegments with xhr.Urls {
             import scala.scalajs.js.URIUtils
@@ -79,6 +84,15 @@ object EndpointsGenerator {
             def formDataRequest[A: FormDataEncoder](): RequestEntity[A] = (a: A, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
               FormDataEncoder[A].apply(a)
+            }
+            def textPlainRequest: RequestEntity[String] = (a: String, xhr: XMLHttpRequest) => {
+              xhr.setRequestHeader("Content-type", "text/plain")
+              a
+            }
+            def showHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[A] = (value, xhr) => xhr.setRequestHeader(name, ev.show(value))
+            def showOptHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[Option[A]] = (value, xhr) => value.foreach(showHeader(name, docs).apply(_, xhr))
+            def tracerHeader: RequestHeaders[Map[String, String]] = { (value, xhr) =>
+              value.foreach({ case (k, v) => xhr.setRequestHeader(k, v) })
             }
           }
         }
