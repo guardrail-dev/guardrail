@@ -56,7 +56,7 @@ val exampleArgs: List[List[String]] = exampleCases
         (
           List(s"--${kind}") ++
             List("--specPath", path.toString()) ++
-            List("--outputPath", "modules/sample/src/main/scala") ++
+            List("--outputPath", s"modules/sample/src/main/scala/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
         ) ++ tracingFlag ++ extra)
