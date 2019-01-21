@@ -45,18 +45,18 @@ val exampleArgs: List[List[String]] = exampleCases
   .foldLeft(List.empty[List[String]])({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
-        kind <- List("client", "server")
-        frameworkPair <- List(
-          ("akka-http", "akkaHttp"),
-          ("http4s", "http4s")
+        frameworkSuite <- List(
+          ("akka-http", "akkaHttp", List("client", "server")),
+          ("http4s", "http4s", List("client", "server"))
         )
-        (frameworkName, frameworkPackage) = frameworkPair
-        tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
+        (frameworkName, frameworkPackage, kinds) = frameworkSuite
+        kind <- kinds
+        tracingFlag = if (tracing) Option("--tracing") else Option.empty[String]
       } yield
         (
           List(s"--${kind}") ++
             List("--specPath", path.toString()) ++
-            List("--outputPath", s"modules/sample/src/main/scala/generated") ++
+            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/scala/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
         ) ++ tracingFlag ++ extra)
@@ -88,10 +88,10 @@ resetSample := {
 addCommandAlias("example", "runtimeSuite")
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; sample/test")
+addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; akkaHttpSample/test ; http4sSample/test")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; sample/scalafmtCheck ; sample/test:scalafmtCheck")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; akkaHttpSample/scalafmt ; http4sSample/scalafmt ; akkaHttpSample/test:scalafmt ; http4sSample/test:scalafmt")
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; akkaHttpSample/scalafmtCheck ; http4sSample/scalafmtCheck ; akkaHttpSample/test:scalafmtCheck ; http4sSample/test:scalafmtCheck")
 addCommandAlias("testSuite", "; scalaTestSuite")
 
 addCommandAlias(
@@ -183,40 +183,38 @@ lazy val codegen = (project in file("modules/codegen"))
     )
   )
 
-lazy val sample = (project in file("modules/sample"))
+lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
   .settings(
     codegenSettings,
-    initialCommands in console := """
-      |import cats._
-      |import cats.data.EitherT
-      |import cats.implicits._
-      |import cats.effect.IO
-      |import io.circe._
-      |import java.time._
-      |import org.http4s._
-      |import org.http4s.client._
-      |import org.http4s.client.blaze._
-      |import org.http4s.dsl._
-      |import org.http4s.multipart._
-      |import scala.concurrent.Await
-      |import scala.concurrent.ExecutionContext.Implicits.global
-      |import scala.concurrent.duration._
-      |import scala.meta._
-      |""".stripMargin,
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http"           % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-testkit"   % akkaVersion,
-      "io.circe"          %% "circe-core"          % circeVersion,
-      "io.circe"          %% "circe-generic"       % circeVersion,
-      "io.circe"          %% "circe-java8"         % circeVersion,
-      "io.circe"          %% "circe-parser"        % circeVersion,
-      "org.http4s"        %% "http4s-blaze-client" % http4sVersion,
-      "org.http4s"        %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s"        %% "http4s-circe"        % http4sVersion,
-      "org.http4s"        %% "http4s-dsl"          % http4sVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % catsVersion,
-      "org.typelevel"     %% "cats-effect"         % catsEffectVersion
+      "com.typesafe.akka" %% "akka-http"         % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
+      "io.circe"          %% "circe-core"        % circeVersion,
+      "io.circe"          %% "circe-generic"     % circeVersion,
+      "io.circe"          %% "circe-java8"       % circeVersion,
+      "io.circe"          %% "circe-parser"      % circeVersion,
+      "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"         % catsVersion
+    ),
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
+lazy val http4sSample = (project in file("modules/sample-http4s"))
+  .settings(
+    codegenSettings,
+    libraryDependencies ++= Seq(
+      "io.circe"      %% "circe-core"          % circeVersion,
+      "io.circe"      %% "circe-generic"       % circeVersion,
+      "io.circe"      %% "circe-java8"         % circeVersion,
+      "io.circe"      %% "circe-parser"        % circeVersion,
+      "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
+      "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
+      "org.http4s"    %% "http4s-circe"        % http4sVersion,
+      "org.http4s"    %% "http4s-dsl"          % http4sVersion,
+      "org.scalatest" %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel" %% "cats-core"           % catsVersion,
+      "org.typelevel" %% "cats-effect"         % catsEffectVersion
     ),
     skip in publish := true,
     scalafmtOnCompile := false
