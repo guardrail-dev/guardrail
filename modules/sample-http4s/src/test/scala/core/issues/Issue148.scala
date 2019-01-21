@@ -15,7 +15,6 @@ import _root_.jawn.IncompleteParseException
   *   - No content vs Partial content vs Invalid content
   * - Polymorphic discriminator error messages
   */
-
 class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaFutures {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
