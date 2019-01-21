@@ -5,7 +5,7 @@ import java.util.Locale
 
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.arrow.FunctionK
-import cats.data.NonEmptyList
+import cats.data.{ Ior, NonEmptyList }
 import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.protocol.terms.client._
@@ -127,10 +127,16 @@ object EndpointsClientGenerator {
             else
               (List.empty, q"httpClient")
 
-          val urlWithParams = NonEmptyList.fromList(qsArgs).fold(pathPattern) { xs =>
-            val (addArgs, components) =
-              xs.traverse(x => (List(x.argType), q"showQs[${x.argType}](${x.argName.toLit})")).map(_.reduceLeft[Term]((a, b) => q"$a & $b"))
-            q" $pathPattern /? $components "
+          val urlWithParams = Ior.fromOptions(NonEmptyList.fromList(qsArgs), staticQueryParams).fold(pathPattern) {
+            _.leftMap({ nel =>
+              val (_, components) =
+                nel.traverse(x => (List(x.argType), q"showQs[${x.argType}](${x.argName.toLit})")).map(_.reduceLeft[Term]((a, b) => q"$a & $b"))
+              components
+            }).fold(
+              components => q"$pathPattern /? $components",
+              staticArgs => q"$pathPattern /? $staticArgs",
+              (components, staticArgs) => q"$pathPattern /? ($components & $staticArgs)"
+            )
           }
 
           val bodyAlgebra: Option[Term] = formAlgebra
