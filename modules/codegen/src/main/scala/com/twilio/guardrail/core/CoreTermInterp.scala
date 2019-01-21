@@ -124,7 +124,8 @@ object CoreTermInterp {
                   (for {
                     defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, swagger)
                     (proto, codegen) = defs
-                    result <- Common.writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
+                    result <- Common
+                      .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
                   } yield result).foldMap(targetInterpreter)
                 } catch {
                   case NonFatal(ex) =>

@@ -78,8 +78,10 @@ Useful commands inside sbt console
 ==================================
 
 - `testSuite`: Compile, test codegen, run sample codegen, compile sample, run tests inside sample
-- `example`: Run guardrail, then run all tests against the generated code
+- `runtimeSuite`: Run guardrail, then run all tests against the generated code
 - `cli`: Useful for scripting: `sbt 'cli --client ...'`
+- `format`: Runs scalafmt against codebase
+- `checkFormatting`: Verifies formatting, run as part of CI against PRs
 
 Resources
 =========
