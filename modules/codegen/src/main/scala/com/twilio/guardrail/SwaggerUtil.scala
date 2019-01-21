@@ -540,10 +540,10 @@ object SwaggerUtil {
           },
           buildParamConstraint = {
             case (k, v) =>
-              q"${Term.Name(s"${k.capitalize}Matcher")}(${Lit.String(v)})"
+              q"showStaticQs[String](${Lit.String(k)}, ${Lit.String(v)})"
           },
           joinParams = { (l, r) =>
-            q"${l} +& ${r}"
+            q"${l} & ${r}"
           },
           stringPath = Lit.String(_),
           liftBinding = identity,

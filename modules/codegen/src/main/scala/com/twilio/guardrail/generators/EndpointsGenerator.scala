@@ -48,6 +48,7 @@ object EndpointsGenerator {
             implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T]
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T]
             def showQs[A](name: String, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[A]
+            def showStaticQs[A](name: String, value: A, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[Unit]
             def showSegment[A](name: String, docs: Documentation)(implicit ev: AddPath[A]): Path[A]
             def pathRoot: Path[(String, Option[String])]
           }
@@ -68,6 +69,7 @@ object EndpointsGenerator {
             implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = AddArg.build[T](key => v => argEscape(key, ev.show(v)))
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => URIUtils.encodeURIComponent(ev.show(v)))
             def showQs[A](name: String, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[A] = a => ev.addArg(name, a)
+            def showStaticQs[A](name: String, value: A, docs: Documentation = None)(implicit ev: AddArg[A]): QueryString[Unit] = new QueryString[Unit] { def encode(unit: Unit): String = ev.addArg(name, value) }
             def showSegment[A](name: String, docs: Documentation)(implicit ev: AddPath[A]): Path[A] = a => ev.addPath(a)
             def pathRoot: Path[(String, Option[String])] = { case (host, basePath) =>
               basePath.fold(host) { bp => host ++ bp }
