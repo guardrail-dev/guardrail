@@ -50,7 +50,7 @@ object Http4sGenerator {
           val defn = q"""
           object Http4sImplicits {
             import scala.util.Try
-            private[this] def pathEscape(s: String): String = Path(s).toString.drop(1)
+            private[this] def pathEscape(s: String): String = Path(s, "").toString.init.tail
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
 
             private[this] def argEscape(k: String, v: String): String = Query.apply((k, Some(v))).toString
