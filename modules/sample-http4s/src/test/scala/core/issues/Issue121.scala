@@ -19,27 +19,28 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
   test("http4s server can respond with 204") {
     import issues.issue121.server.http4s.definitions._
-    import issues.issue121.server.http4s.{ Handler, Resource, DeleteFooResponse }
+    import issues.issue121.server.http4s.{ DeleteFooResponse, Handler, Resource }
 
     val route = new Resource[IO]().routes(new Handler[IO] {
-      override def deleteFoo(respond: DeleteFooResponse.type)(id: Long): IO[DeleteFooResponse] = {
+      override def deleteFoo(respond: DeleteFooResponse.type)(id: Long): IO[DeleteFooResponse] =
         IO.pure(respond.NoContent)
-      }
     })
 
     val client = Http4sClient.fromHttpApp[IO](route.orNotFound)
 
     val req = Request[IO](method = Method.DELETE, uri = Uri.unsafeFromString("/entity")).withEntity(UrlForm("id" -> "1234"))
 
-    client.fetch(req)({
-      case Status.NoContent(resp) =>
-        IO.pure({
-          resp.status should equal(Status.NoContent)
-          resp.contentType should equal(None)
-          resp.contentLength should equal(None)
-          ()
-        })
-    }).unsafeRunSync()
+    client
+      .fetch(req)({
+        case Status.NoContent(resp) =>
+          IO.pure({
+            resp.status should equal(Status.NoContent)
+            resp.contentType should equal(None)
+            resp.contentLength should equal(None)
+            ()
+          })
+      })
+      .unsafeRunSync()
   }
 
   test("http4s client can respond with 204") {
@@ -47,15 +48,16 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue121.client.http4s.definitions._
 
     def noContentResponse: Http4sClient[IO] =
-      Http4sClient.fromHttpApp[IO](Kleisli.pure(
-        Response[IO](Status.NoContent)))
+      Http4sClient.fromHttpApp[IO](Kleisli.pure(Response[IO](Status.NoContent)))
 
     /* Correct mime type
      * Missing content
      */
-    Client.httpClient(noContentResponse, "http://localhost:80")
+    Client
+      .httpClient(noContentResponse, "http://localhost:80")
       .deleteFoo(1234)
-      .attempt.unsafeRunSync()
+      .attempt
+      .unsafeRunSync()
       .fold(
         _ => fail("Error"),
         _.fold(

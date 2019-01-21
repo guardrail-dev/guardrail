@@ -20,7 +20,6 @@ import _root_.jawn.IncompleteParseException
   *   - No content vs Partial content vs Invalid content
   * - Polymorphic discriminator error messages
   */
-
 class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
@@ -28,7 +27,9 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue148.server.akkaHttp.{ Handler, Resource }
     import issues.issue148.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
-      override def createFoo(respond: Resource.createFooResponse.type)(body: Foo, xHeader: Boolean, xOptionalHeader: Option[Boolean]): Future[Resource.createFooResponse] =
+      override def createFoo(respond: Resource.createFooResponse.type)(body: Foo,
+                                                                       xHeader: Boolean,
+                                                                       xOptionalHeader: Option[Boolean]): Future[Resource.createFooResponse] =
         Future.successful(respond.OK(body))
       override def getFoo(respond: Resource.getFooResponse.type)(): Future[Resource.getFooResponse] =
         Future.successful(respond.OK(Bar("bar")))
@@ -120,9 +121,13 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid mime type for "foo" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", "blep")
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", "blep")
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("foo", message, _) => message shouldBe "Boolean"
       }
@@ -133,9 +138,13 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid content for "foo" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "blep"))
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "blep"))
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("foo", message, _) =>
           message shouldBe "expected json value got b (line 1, column 1)"
@@ -148,10 +157,14 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid mime type for "bar" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
-        Multipart.FormData.BodyPart.Strict("bar", "blep")
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
+            Multipart.FormData.BodyPart.Strict("bar", "blep")
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("bar", message, _) => message shouldBe "Boolean"
       }
@@ -164,10 +177,14 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid content for "bar" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
-        Multipart.FormData.BodyPart.Strict("bar", HttpEntity(ContentTypes.`application/json`, "blep"))
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
+            Multipart.FormData.BodyPart.Strict("bar", HttpEntity(ContentTypes.`application/json`, "blep"))
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("bar", message, _) => message shouldBe "expected json value got b (line 1, column 1)"
       }
@@ -178,14 +195,15 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue148.client.akkaHttp.Client
     import issues.issue148.client.akkaHttp.definitions._
 
-    def jsonResponse(str: String): HttpRequest => Future[HttpResponse] = _ => Future.successful(HttpResponse(200).withEntity(ContentTypes.`application/json`, str))
+    def jsonResponse(str: String): HttpRequest => Future[HttpResponse] =
+      _ => Future.successful(HttpResponse(200).withEntity(ContentTypes.`application/json`, str))
 
     /* Correct mime type
      * Missing content
      */
     Client.httpClient(jsonResponse(""), "http://localhost:80").getFoo().value.futureValue match {
       case Left(Left(Unmarshaller.NoContentException)) => ()
-      case ex => failTest(s"Unknown: ${ex}")
+      case ex                                          => failTest(s"Unknown: ${ex}")
     }
 
     /* Correct mime type

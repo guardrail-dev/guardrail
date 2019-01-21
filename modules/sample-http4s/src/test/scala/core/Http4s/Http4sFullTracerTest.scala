@@ -8,11 +8,11 @@ import _root_.tracer.client.http4s.users.UsersClient
 import _root_.tracer.client.http4s.addresses.AddressesClient
 import _root_.tracer.server.http4s.Http4sImplicits.TraceBuilder
 import cats.effect.IO
-import org.http4s.{Header, HttpRoutes, Request}
+import org.http4s.{ Header, HttpRoutes, Request }
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.syntax.StringSyntax
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 
 class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with StringSyntax {
 
@@ -56,8 +56,9 @@ class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with
             addressesClient
               .getAddress(traceBuilder, "addressId")
               .map {
-                case cdefs.addresses.GetAddressResponse.Ok(address) => respond.Ok(sdefs.definitions.User("1234", sdefs.definitions.UserAddress(address.line1, address.line2, address.line3)))
-                case cdefs.addresses.GetAddressResponse.NotFound    => respond.NotFound
+                case cdefs.addresses.GetAddressResponse.Ok(address) =>
+                  respond.Ok(sdefs.definitions.User("1234", sdefs.definitions.UserAddress(address.line1, address.line2, address.line3)))
+                case cdefs.addresses.GetAddressResponse.NotFound => respond.NotFound
               }
         }
       )
@@ -71,6 +72,7 @@ class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with
     // Make a request against the mock servers using a hard-coded user ID
     val retrieved: cdefs.users.GetUserResponse = usersClient.getUser(testTrace, "1234").attempt.unsafeRunSync().right.value
 
-    retrieved shouldBe cdefs.users.GetUserResponse.Ok(cdefs.definitions.User("1234", cdefs.definitions.UserAddress(Some("line1"), Some("line2"), Some("line3"))))
+    retrieved shouldBe cdefs.users.GetUserResponse
+      .Ok(cdefs.definitions.User("1234", cdefs.definitions.UserAddress(Some("line1"), Some("line2"), Some("line3"))))
   }
 }

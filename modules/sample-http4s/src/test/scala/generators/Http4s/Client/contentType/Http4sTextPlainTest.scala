@@ -4,24 +4,25 @@ import _root_.tests.contentTypes.textPlain.client.http4s.foo.FooClient
 import _root_.tests.contentTypes.textPlain.client.{ http4s => cdefs }
 import _root_.tests.contentTypes.textPlain.server.http4s.foo.{ DoBarResponse, DoFooResponse, FooHandler, FooResource }
 import _root_.tests.contentTypes.textPlain.server.{ http4s => sdefs }
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import org.http4s.dsl.io._
 import org.http4s.headers._
 
 import cats.effect.IO
 import org.http4s.client.Client
-import org.http4s.{Charset, HttpRoutes, MediaType}
+import org.http4s.{ Charset, HttpRoutes, MediaType }
 
 class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
   import org.http4s.implicits._
   test("Plain text should be emitted for required parameters (raw)") {
-    val route: HttpRoutes[IO] = HttpRoutes.of { case req @ POST -> Root / "foo" =>
-      if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
-        for {
-          value <- req.as[String]
-          resp <- if (value == "sample") Created() else NotAcceptable()
-        } yield resp
-      } else NotAcceptable()
+    val route: HttpRoutes[IO] = HttpRoutes.of {
+      case req @ POST -> Root / "foo" =>
+        if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
+          for {
+            value <- req.as[String]
+            resp  <- if (value == "sample") Created() else NotAcceptable()
+          } yield resp
+        } else NotAcceptable()
     }
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
@@ -29,13 +30,14 @@ class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
   }
 
   test("Plain text should be emitted for optional parameters (raw)") {
-    val route: HttpRoutes[IO] = HttpRoutes.of { case req @ POST -> Root / "bar" =>
-      if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
-        for {
-          value <- req.as[String]
-          resp <- if (value == "sample") Created() else NotAcceptable()
-        } yield resp
-      } else NotAcceptable()
+    val route: HttpRoutes[IO] = HttpRoutes.of {
+      case req @ POST -> Root / "bar" =>
+        if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
+          for {
+            value <- req.as[String]
+            resp  <- if (value == "sample") Created() else NotAcceptable()
+          } yield resp
+        } else NotAcceptable()
     }
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
@@ -90,4 +92,3 @@ class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
     fooClient.doBar(None).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created
   }
 }
-

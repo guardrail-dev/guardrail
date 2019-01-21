@@ -20,9 +20,8 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue121.server.akkaHttp.{ Handler, Resource }
     import issues.issue121.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
-      override def deleteFoo(respond: Resource.deleteFooResponse.type)(id: Long): Future[Resource.deleteFooResponse] = {
+      override def deleteFoo(respond: Resource.deleteFooResponse.type)(id: Long): Future[Resource.deleteFooResponse] =
         Future.successful(respond.NoContent)
-      }
     })
 
     Delete("/entity").withEntity(FormData("id" -> "1234").toEntity) ~> route ~> check {
@@ -41,13 +40,15 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     /* Correct mime type
      * Missing content
      */
-    Client.httpClient(noContentResponse, "http://localhost:80")
+    Client
+      .httpClient(noContentResponse, "http://localhost:80")
       .deleteFoo(1234)
       .fold(
         _ => failTest("Error"),
         _.fold(
           handleNoContent = ()
         )
-      ).futureValue
+      )
+      .futureValue
   }
 }
