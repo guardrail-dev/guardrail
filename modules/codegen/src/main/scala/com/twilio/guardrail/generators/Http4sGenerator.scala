@@ -40,6 +40,7 @@ object Http4sGenerator {
             q"import org.http4s.EntityDecoder._",
             q"import fs2.Stream",
             q"import io.circe.Json",
+            q"import scala.language.higherKinds",
             q"import scala.language.implicitConversions"
           )
         )

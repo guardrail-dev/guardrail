@@ -1,7 +1,7 @@
 package support
 
-import clients.akkaHttp.{ Implicits => AkkaImplicits }
-import clients.http4s.{ Implicits => Http4sImplicits }
+import examples.client.akkaHttp.{ Implicits => AkkaImplicits }
+import examples.client.http4s.{ Implicits => Http4sImplicits }
 import io.circe.Decoder
 
 class PositiveLong private (val value: Long) extends AnyVal

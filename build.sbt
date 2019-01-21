@@ -23,64 +23,54 @@ val scalatestVersion  = "3.0.5"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
+// (filename, prefix, tracing)
+def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
+val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
+  (sampleResource("alias.yaml"), "alias", false, List.empty),
+  (sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain", false, List.empty),
+  (sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader", false, List.empty),
+  (sampleResource("edgecases/defaults.yaml"), "edgecases.defaults", false, List.empty),
+  (sampleResource("formData.yaml"), "form", false, List.empty),
+  (sampleResource("issues/issue121.yaml"), "issues.issue121", false, List.empty),
+  (sampleResource("issues/issue127.yaml"), "issues.issue127", false, List.empty),
+  (sampleResource("issues/issue143.yaml"), "issues.issue143", false, List.empty),
+  (sampleResource("issues/issue148.yaml"), "issues.issue148", false, List.empty),
+  (sampleResource("issues/issue164.yaml"), "issues.issue148", false, List.empty),
+  (sampleResource("petstore.json"), "examples", false, List("--import", "support.PositiveLong")),
+  (sampleResource("plain.json"), "tests.dtos", false, List.empty),
+  (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
+  (sampleResource("raw-response.yaml"), "raw", false, List.empty),
+  (sampleResource("server1.yaml"), "tracer", true, List.empty),
+  (sampleResource("server2.yaml"), "tracer", true, List.empty)
+)
+
+val exampleArgs: List[List[String]] = exampleCases
+  .foldLeft(List.empty[List[String]])({
+    case (acc, (path, prefix, tracing, extra)) =>
+      acc ++ (for {
+        kind <- List("client", "server")
+        frameworkPair <- List(
+          ("akka-http", "akkaHttp"),
+          ("http4s", "http4s")
+        )
+        (frameworkName, frameworkPackage) = frameworkPair
+        tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
+      } yield
+        (
+          List(s"--${kind}") ++
+            List("--specPath", path.toString()) ++
+            List("--outputPath", "modules/sample/src/main/scala") ++
+            List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
+            List("--framework", frameworkName)
+        ) ++ tracingFlag ++ extra)
+  })
+
 lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
 fullRunTask(
   runScalaExample,
   Test,
   "com.twilio.guardrail.CLI",
-  """
-  --defaults --import support.PositiveLong
-  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/polymorphism.yaml --outputPath modules/sample/src/main/scala --packageName polymorphism.server.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName servers.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/plain.json --outputPath modules/sample/src/main/scala --packageName tests.dtos.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/contentType-textPlain.yaml --outputPath modules/sample/src/main/scala --packageName tests.contentTypes.textPlain.server.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/raw-response.yaml --outputPath modules/sample/src/main/scala --packageName raw.server.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
-  --server --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
-  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
-  --client --specPath modules/sample/src/test/resources/server1.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
-  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.http4s --tracing --framework http4s
-  --server --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.servers.akkaHttp --tracing --framework akka-http
-  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.http4s --tracing --framework http4s
-  --client --specPath modules/sample/src/test/resources/server2.yaml --outputPath modules/sample/src/main/scala --packageName tracer.clients.akkaHttp --tracing --framework akka-http
-  --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/alias.yaml --outputPath modules/sample/src/main/scala --packageName alias.server.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader.server.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/formData.yaml --outputPath modules/sample/src/main/scala --packageName form.server.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/issues/issue121.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue121.server.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/issues/issue121.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue121.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/issues/issue121.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue121.server.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/issues/issue121.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue121.client.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/issues/issue127.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue127
-  --server --specPath modules/sample/src/main/resources/issues/issue143.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue143
-  --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.client.akkaHttp --framework akka-http
-  --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.http4s --framework http4s
-  --server --specPath modules/sample/src/main/resources/issues/issue148.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue148.server.akkaHttp --framework akka-http
-  --client --specPath modules/sample/src/main/resources/issues/issue164.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue164.client.http4s --framework http4s
-  --client --specPath modules/sample/src/main/resources/issues/issue164.yaml --outputPath modules/sample/src/main/scala --packageName issues.issue164.client.akkaHttp --framework akka-http
-""".replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
+  exampleArgs.flatten.filter(_.nonEmpty): _*
 )
 
 artifact in (Compile, assembly) := {
@@ -126,9 +116,11 @@ val testDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalatestVersion % Test
 )
 
+val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable)
 val codegenSettings = Seq(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
-  addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.9" cross CrossVersion.binary),
+  wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
+  wartremoverWarnings in Test := List.empty,
   libraryDependencies ++= testDependencies ++ Seq(
     "org.scalameta" %% "scalameta"     % "4.1.0",
     "io.swagger"    % "swagger-parser" % "1.0.39",
@@ -137,23 +129,20 @@ val codegenSettings = Seq(
     "org.typelevel" %% "cats-kernel"   % catsVersion,
     "org.typelevel" %% "cats-macros"   % catsVersion,
     "org.typelevel" %% "cats-free"     % catsVersion
-  )
-  // Dev
-  ,
+  ),
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
-    "-language:higherKinds",
-    "-Xexperimental",
     "-Ydelambdafy:method",
-    // "-Yno-adapted-args",
-    "-Xlint:_,-unused",
     "-feature",
     "-unchecked",
     "-deprecation",
-    "-target:jvm-1.8",
     "-encoding",
     "utf8"
-  ),
+  ) ++ (if (scalaVersion.value.startsWith("2.11.")) {
+          List("-Xexperimental", "-Xlint:_")
+        } else {
+          List("-Xlint:-unused,_")
+        }),
   parallelExecution in Test := true,
   fork := true
 )
@@ -169,6 +158,7 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(
     (name := "guardrail") +:
       codegenSettings,
+    scalacOptions += "-language:higherKinds",
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
       else "releases"

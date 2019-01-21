@@ -1,8 +1,8 @@
 package swagger
 
 import org.scalatest.{ FunSuite, Matchers }
-import clients.akkaHttp.Implicits
-import clients.akkaHttp.AkkaHttpImplicits._
+import examples.client.akkaHttp.Implicits
+import examples.client.akkaHttp.AkkaHttpImplicits._
 
 class EscapingTest extends FunSuite with Matchers {
   test("Properly escape parameters") {

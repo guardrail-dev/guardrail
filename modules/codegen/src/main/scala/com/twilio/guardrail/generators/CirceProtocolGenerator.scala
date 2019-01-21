@@ -5,6 +5,7 @@ import _root_.io.swagger.models.{ ArrayModel, ComposedModel, Model, ModelImpl, R
 import _root_.io.swagger.models.properties._
 import cats.implicits._
 import cats.~>
+import cats.data.NonEmptyList
 import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
 import com.twilio.guardrail.terms
 import java.util.Locale
@@ -366,10 +367,15 @@ object CirceProtocolGenerator {
         def allParents(model: Model): List[(String, Model, List[RefModel])] =
           (model match {
             case elem: ComposedModel =>
-              definitions.collectFirst {
-                case (clsName, e) if elem.getInterfaces.asScala.headOption.exists(_.getSimpleRef == clsName) =>
-                  (clsName, e, elem.getInterfaces.asScala.tail.toList)
-              }
+              NonEmptyList
+                .fromList(elem.getInterfaces.asScala.toList)
+                .flatMap({
+                  case NonEmptyList(head, tail) =>
+                    definitions.collectFirst {
+                      case (clsName, e) if head.getSimpleRef == clsName =>
+                        (clsName, e, tail.toList)
+                    }
+                })
             case _ => None
           }) match {
             case Some(x @ (_, el, _)) => x :: allParents(el)

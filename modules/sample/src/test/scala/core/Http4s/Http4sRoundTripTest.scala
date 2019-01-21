@@ -3,10 +3,10 @@ package core.Http4s
 import java.security.MessageDigest
 import java.util.Locale.US
 
-import _root_.clients.http4s.pet.PetClient
-import _root_.clients.{ http4s => cdefs }
-import _root_.servers.http4s.pet._
-import _root_.servers.{ http4s => sdefs }
+import _root_.examples.client.http4s.pet.PetClient
+import _root_.examples.client.{ http4s => cdefs }
+import _root_.examples.server.http4s.pet._
+import _root_.examples.server.{ http4s => sdefs }
 import cats.effect.IO
 import cats.effect.IO._
 import fs2.Stream

@@ -4,6 +4,19 @@ v0.42.0
 - #165 http4s server generator handle root path
 - #152 Make akka-http clients handle all status codes and described entities (Breaking change, please see MIGRATING.md)
 
+v0.41.5
+=======
+
+- #159 Making akka-http FormData return 413 instead of 500, delete failed files
+- #158 Abstracting companion objects in preparation for java support
+
+v0.41.4
+=======
+
+- #150 Exposing helpful error messages
+- #156 Bumping sbt-pgp
+- #157 Bumping kind-projector
+
 v0.41.3
 =======
 
