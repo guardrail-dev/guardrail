@@ -97,7 +97,6 @@ object EndpointsClientGenerator {
                                     extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
 
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-          val defaultHeaders = param"headers: List[String] = Nil"
 
           val (fallbackBodyAlgebra, fallbackBodyArgument) =
             if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod)
@@ -122,7 +121,6 @@ object EndpointsClientGenerator {
               xs.traverse(x => (List(x.argType), q"showQs[${x.argType}](${x.argName.toLit})")).map(_.reduceLeft[Term]((a, b) => q"$a & $b"))
             q" $pathPattern /? $components "
           }
-          val headersExpr = List(q"val allHeaders = headers ++ $headerParams")
 
           val bodyAlgebra: Option[Term] = formAlgebra
             .orElse(textPlainAlgebra)
@@ -133,6 +131,9 @@ object EndpointsClientGenerator {
             .orElse(textPlainArgument)
             .orElse(bodyArgs.map(x => x.paramName))
             .orElse(fallbackBodyArgument)
+
+          val (tracingAlgebra, tracingArgument): (Option[Term], Option[Term]) =
+            if (tracing) { (Some(q"tracerHeader"), Some(q"Map.empty")) } else { (None, None) }
 
           val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
           val responseCompanionType = Type.Name(s"${methodName.capitalize}Response")
@@ -153,10 +154,10 @@ object EndpointsClientGenerator {
 
           val methodParameters: List[List[Term.Param]] = List(
             Some(
-              (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
+              tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
                 .map(_.param) ++ formArgs.map(_.param) ++ bodyArgs
                 .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)) :+ defaultHeaders
+                .map(_.param)
             ),
             implicitParams
           ).flatten
@@ -209,13 +210,14 @@ object EndpointsClientGenerator {
             val qsPart: List[Term] = qsArgs.map(_.paramName)
             val bodyPart: List[Term] = bodyArgument.toList
             val headerPart: List[Term] = headerArgs.map(_.paramName)
+            val tracingPart: List[Term] = tracingArgument.toList
 
             val res0: Option[NonEmptyList[NonEmptyList[Term]]] =
               NonEmptyList.fromList(List[List[Term]](
                 pathPart,
                 qsPart,
                 bodyPart,
-                headerPart
+                headerPart ++ tracingPart
               ).flatMap(NonEmptyList.fromList(_)))
 
             res0.fold[Term](q"()")({ nel =>
@@ -234,7 +236,11 @@ object EndpointsClientGenerator {
                   case t"Option[$tpe]" => q"""showOptHeader[${tpe}](${arg.argName.toLit}, None)"""
                   case tpe             => q"""showHeader[${tpe}](${arg.argName.toLit}, None)"""
                 }
-              }).reduceLeft((a, b) => q"$a ++ $b"))
+              }))
+              .fold[Option[NonEmptyList[Term]]](tracingAlgebra.map(NonEmptyList(_, Nil)))({ xs =>
+                Some(xs ++ tracingAlgebra.toList)
+              })
+              .map(_.reduceLeft((a, b) => q"$a ++ $b"))
           ).flatten
 
           val endpointDefinition = q"""
