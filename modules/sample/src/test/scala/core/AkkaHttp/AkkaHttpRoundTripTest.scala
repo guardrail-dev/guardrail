@@ -1,7 +1,14 @@
 package core.AkkaHttp
 
 import _root_.examples.client.akkaHttp.AkkaHttpImplicits.IgnoredEntity
-import _root_.examples.client.akkaHttp.pet.{ PetClient, DeletePetResponse, UploadFileResponse, AddPetResponse, FindPetsByStatusResponse, FindPetsByStatusEnumResponse }
+import _root_.examples.client.akkaHttp.pet.{
+  AddPetResponse,
+  DeletePetResponse,
+  FindPetsByStatusEnumResponse,
+  FindPetsByStatusResponse,
+  PetClient,
+  UploadFileResponse
+}
 import _root_.examples.client.akkaHttp.{ definitions => cdefs }
 import _root_.examples.server.akkaHttp.pet.{ PetHandler, PetResource }
 import _root_.examples.server.akkaHttp.{ definitions => sdefs }
@@ -225,9 +232,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       .fold({ err =>
         failTest(err.toString)
       }, {
-        case DeletePetResponse.OK => ()
+        case DeletePetResponse.OK         => ()
         case DeletePetResponse.BadRequest => ()
-        case DeletePetResponse.NotFound => ()
+        case DeletePetResponse.NotFound   => ()
       })
   }
 

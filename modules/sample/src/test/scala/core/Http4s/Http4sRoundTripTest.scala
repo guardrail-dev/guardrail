@@ -14,7 +14,7 @@ import javax.xml.bind.DatatypeConverter.printHexBinary
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import support.PositiveLong
 
 class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
@@ -48,13 +48,16 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
             IO.pure(respond.Created)
           case _ => throw new TestFailedException("Parameters didn't match", 11)
         }
-      def deletePet(respond: DeletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                                                              = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)                                                           = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                                                    = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                                                       = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                                                         = ???
-      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None)                             = ???
+      def deletePet(respond: DeletePetResponse.type)(_petId: Long,
+                                                     includeChildren: Option[Boolean],
+                                                     status: Option[sdefs.definitions.PetStatus],
+                                                     apiKey: Option[String])                                                                  = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)                               = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                             = ???
+      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFile(respond: UploadFileResponse.type)(petId: PositiveLong,
                                                        additionalMetadata: Option[String] = None,
                                                        file: Option[fs2.Stream[IO, Byte]] = None,
@@ -105,13 +108,16 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
           }))
           .map(respond.Ok)
 
-      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet)                                                                                               = ???
-      def deletePet(respond: DeletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                                                              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                                                    = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                                                       = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                                                         = ???
-      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None)                             = ???
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
+      def deletePet(respond: DeletePetResponse.type)(_petId: Long,
+                                                     includeChildren: Option[Boolean],
+                                                     status: Option[sdefs.definitions.PetStatus],
+                                                     apiKey: Option[String])                                                                  = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                             = ???
+      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFile(respond: UploadFileResponse.type)(petId: PositiveLong,
                                                        additionalMetadata: Option[String] = None,
                                                        file: Option[fs2.Stream[IO, Byte]] = None,
@@ -147,13 +153,16 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
       def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String]): IO[sdefs.pet.FindPetsByStatusResponse] =
         IO.pure(respond.NotFound)
 
-      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet)                                                                                               = ???
-      def deletePet(respond: DeletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)                                                           = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                                                    = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                                                       = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                                                         = ???
-      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None)                             = ???
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
+      def deletePet(respond: DeletePetResponse.type)(_petId: Long,
+                                                     includeChildren: Option[Boolean],
+                                                     status: Option[sdefs.definitions.PetStatus],
+                                                     apiKey: Option[String])                                                                  = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)                               = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                             = ???
+      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFile(respond: UploadFileResponse.type)(petId: PositiveLong,
                                                        additionalMetadata: Option[String] = None,
                                                        file: Option[fs2.Stream[IO, Byte]] = None,
@@ -174,9 +183,9 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
     val apiKey: String = "foobar"
     val httpService = new PetResource().routes(new PetHandler[IO] {
       def deletePet(respond: DeletePetResponse.type)(_petId: Long,
-                                                   includeChildren: Option[Boolean],
-                                                   status: Option[sdefs.definitions.PetStatus],
-                                                   _apiKey: Option[String] = None): IO[sdefs.pet.DeletePetResponse] =
+                                                     includeChildren: Option[Boolean],
+                                                     status: Option[sdefs.definitions.PetStatus],
+                                                     _apiKey: Option[String] = None): IO[sdefs.pet.DeletePetResponse] =
         if (_petId == petId && _apiKey.contains(apiKey) && status.contains(sdefs.definitions.PetStatus.Pending))
           IO.pure(respond.Ok)
         else IO.pure(respond.NotFound)
@@ -201,8 +210,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
     val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
 
     val result = petClient.deletePet(petId, Some(true), Some(cdefs.definitions.PetStatus.Pending), Some(apiKey)).attempt.unsafeRunSync()
-    result
-      .left
+    result.left
       .foreach({ err =>
         throw new TestFailedException(err.toString, 11)
       })
@@ -213,13 +221,16 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
     val apiKey: String = "foobar"
     val httpService = new PetResource().routes(new PetHandler[IO] {
       def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
-      def deletePet(respond: DeletePetResponse.type)(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                                                              = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)                                                           = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                                                    = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                                                       = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                                                         = ???
-      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None)                             = ???
+      def deletePet(respond: DeletePetResponse.type)(_petId: Long,
+                                                     includeChildren: Option[Boolean],
+                                                     status: Option[sdefs.definitions.PetStatus],
+                                                     apiKey: Option[String])                                                                  = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)                               = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                                             = ???
+      def updatePetWithForm(respond: UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFile(respond: UploadFileResponse.type)(petId: PositiveLong,
                                                        additionalMetadata: Option[String] = None,
                                                        file: Option[fs2.Stream[IO, Byte]] = None,
@@ -227,7 +238,7 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
                                                        file3: fs2.Stream[IO, Byte],
                                                        longValue: Long,
                                                        customValue: PositiveLong,
-                                                       customOptionalValue: Option[PositiveLong] = None) = {
+                                                       customOptionalValue: Option[PositiveLong] = None) =
         for {
           f1Content <- file.fold(IO.pure(Vector.empty[Byte]))(_.compile.toVector)
           f1Length = if (f1Content.nonEmpty) Some(f1Content.length) else None
@@ -237,12 +248,11 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
           f3Length = if (f3Content.nonEmpty) { Some(f3Content.length) } else None
 
           hash = printHexBinary(MessageDigest.getInstance("SHA-256").digest(f3Content.toArray)).toLowerCase(US)
-          _ = assert(hash == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "Empty file hash does not match")
+          _    = assert(hash == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "Empty file hash does not match")
 
           code = f1Length.count(_ > 0) + (if (f2Content.nonEmpty) 1 else 0) + (if (f3Content.nonEmpty) 1 else 0)
 
         } yield respond.Ok(sdefs.definitions.ApiResponse(code = Some(code), message = Some(s"${f1Length} ${f2Length} ${f3Length}")))
-      }
     })
 
     val petClient = PetClient.httpClient(Client.fromHttpApp(httpService.orNotFound))
@@ -261,10 +271,12 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
       .attempt
       .unsafeRunSync
     result
-      .fold({ err =>
-        throw new TestFailedException(err.toString, 11)
-      }, {
-        case cdefs.pet.UploadFileResponse.Ok(value) => assert(value.code.contains(0), "Unexpected number of file uploads!")
-      })
+      .fold(
+        { err =>
+          throw new TestFailedException(err.toString, 11)
+        }, {
+          case cdefs.pet.UploadFileResponse.Ok(value) => assert(value.code.contains(0), "Unexpected number of file uploads!")
+        }
+      )
   }
 }

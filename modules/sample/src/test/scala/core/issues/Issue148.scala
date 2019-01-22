@@ -20,7 +20,6 @@ import _root_.jawn.IncompleteParseException
   *   - No content vs Partial content vs Invalid content
   * - Polymorphic discriminator error messages
   */
-
 class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
@@ -28,7 +27,9 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue148.server.akkaHttp.{ Handler, Resource }
     import issues.issue148.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
-      override def createFoo(respond: Resource.createFooResponse.type)(body: Foo, xHeader: Boolean, xOptionalHeader: Option[Boolean]): Future[Resource.createFooResponse] =
+      override def createFoo(respond: Resource.createFooResponse.type)(body: Foo,
+                                                                       xHeader: Boolean,
+                                                                       xOptionalHeader: Option[Boolean]): Future[Resource.createFooResponse] =
         Future.successful(respond.OK(body))
       override def getFoo(respond: Resource.getFooResponse.type)(): Future[Resource.getFooResponse] =
         Future.successful(respond.OK(Bar("bar")))
@@ -120,9 +121,13 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid mime type for "foo" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", "blep")
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", "blep")
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("foo", message, _) => message shouldBe "Boolean"
       }
@@ -133,9 +138,13 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid content for "foo" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "blep"))
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "blep"))
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("foo", message, _) =>
           message shouldBe "expected json value got b (line 1, column 1)"
@@ -148,10 +157,14 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid mime type for "bar" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
-        Multipart.FormData.BodyPart.Strict("bar", "blep")
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
+            Multipart.FormData.BodyPart.Strict("bar", "blep")
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("bar", message, _) => message shouldBe "Boolean"
       }
@@ -164,10 +177,14 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid content for "bar" body part
      */
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
-        Multipart.FormData.BodyPart.Strict("bar", HttpEntity(ContentTypes.`application/json`, "blep"))
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo", HttpEntity(ContentTypes.`application/json`, "false")),
+            Multipart.FormData.BodyPart.Strict("bar", HttpEntity(ContentTypes.`application/json`, "blep"))
+          )
+          .toEntity
+      ) ~> route ~> check {
       rejection match {
         case MalformedFormFieldRejection("bar", message, _) => message shouldBe "expected json value got b (line 1, column 1)"
       }
@@ -178,14 +195,15 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue148.client.akkaHttp.Client
     import issues.issue148.client.akkaHttp.definitions._
 
-    def jsonResponse(str: String): HttpRequest => Future[HttpResponse] = _ => Future.successful(HttpResponse(200).withEntity(ContentTypes.`application/json`, str))
+    def jsonResponse(str: String): HttpRequest => Future[HttpResponse] =
+      _ => Future.successful(HttpResponse(200).withEntity(ContentTypes.`application/json`, str))
 
     /* Correct mime type
      * Missing content
      */
     Client.httpClient(jsonResponse(""), "http://localhost:80").getFoo().value.futureValue match {
       case Left(Left(Unmarshaller.NoContentException)) => ()
-      case ex => failTest(s"Unknown: ${ex}")
+      case ex                                          => failTest(s"Unknown: ${ex}")
     }
 
     /* Correct mime type
@@ -236,7 +254,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
   test("http4s server request body validation") {
     import cats.effect.IO
     import issues.issue148.server.http4s.definitions._
-    import issues.issue148.server.http4s.{ Handler, Resource, CreateFooResponse, GetFooResponse, UpdateFooResponse }
+    import issues.issue148.server.http4s.{ CreateFooResponse, GetFooResponse, Handler, Resource, UpdateFooResponse }
     import org.http4s._
     import org.http4s.client.Client
     import org.http4s.client.UnexpectedStatus
@@ -256,14 +274,16 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
     val client = Client.fromHttpApp[IO](route.orNotFound)
     def failedResponseBody(req: Request[IO]): String =
-      client.fetch(req)({
-        case Status.BadRequest(resp) =>
-          resp.as[String]
-        case Status.UnprocessableEntity(resp) =>
-          resp.as[String]
-      }).unsafeRunSync()
+      client
+        .fetch(req)({
+          case Status.BadRequest(resp) =>
+            resp.as[String]
+          case Status.UnprocessableEntity(resp) =>
+            resp.as[String]
+        })
+        .unsafeRunSync()
 
-    def makeJsonRequest(body: String): Request[IO] = 
+    def makeJsonRequest(body: String): Request[IO] =
       Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/test"))
         .withEntity(body)(
           EntityEncoder[IO, String]
@@ -311,9 +331,13 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Valid "name" field
      * Invalid "x-header" value
      */
-    failedResponseBody(makeJsonRequest(validEntity).withHeaders(Headers(
-      Header("x-header", "foo")
-    ))) should equal("Invalid data")
+    failedResponseBody(
+      makeJsonRequest(validEntity).withHeaders(
+        Headers(
+          Header("x-header", "foo")
+        )
+      )
+    ) should equal("Invalid data")
 
     /* Correct mime type
      * Valid JSON
@@ -326,27 +350,43 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     // `x-header` is currently never parsed correctly due to #155
     // Once this is fixed, this test will still fail due to `x-optional-header`,
     // but this is intentional for this test case.
-    failedResponseBody(makeJsonRequest(validEntity).withHeaders(Headers(
-      Header("x-header", "false"),
-      Header("x-optional-header", "foo")
-    ))) should equal("Invalid data")
+    failedResponseBody(
+      makeJsonRequest(validEntity).withHeaders(
+        Headers(
+          Header("x-header", "false"),
+          Header("x-optional-header", "foo")
+        )
+      )
+    ) should equal("Invalid data")
 
     /* Correct entity mime type
      * Invalid mime type for "foo" body part
      */
     // TODO: https://github.com/twilio/guardrail/issues/155
-    failedResponseBody(makeFormRequest(Multipart(Vector(
-      Part.formData[IO]("foo", "blep")
-    )))) should equal("The request body was malformed.")
+    failedResponseBody(
+      makeFormRequest(
+        Multipart(
+          Vector(
+            Part.formData[IO]("foo", "blep")
+          )
+        )
+      )
+    ) should equal("The request body was malformed.")
 
     /* Correct entity mime type
      * Valid mime type for "foo" body part
      * Invalid content for "foo" body part
      */
     // TODO: https://github.com/twilio/guardrail/issues/155
-    failedResponseBody(makeFormRequest(Multipart(Vector(
-      Part.formData[IO]("foo", "blep", Header("Content-Type", "application/json"))
-    )))) should equal("The request body was malformed.")
+    failedResponseBody(
+      makeFormRequest(
+        Multipart(
+          Vector(
+            Part.formData[IO]("foo", "blep", Header("Content-Type", "application/json"))
+          )
+        )
+      )
+    ) should equal("The request body was malformed.")
 
     /* Correct entity mime type
      * Valid mime type for "foo" body part
@@ -354,10 +394,16 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid mime type for "bar" body part
      */
     // TODO: https://github.com/twilio/guardrail/issues/155
-    failedResponseBody(makeFormRequest(Multipart(Vector(
-      Part.formData[IO]("foo", "false", Header("Content-Type", "application/json")),
-      Part.formData[IO]("bar", "blep")
-    )))) should equal("The request body was malformed.")
+    failedResponseBody(
+      makeFormRequest(
+        Multipart(
+          Vector(
+            Part.formData[IO]("foo", "false", Header("Content-Type", "application/json")),
+            Part.formData[IO]("bar", "blep")
+          )
+        )
+      )
+    ) should equal("The request body was malformed.")
 
     /* Correct entity mime type
      * Valid mime type for "foo" body part
@@ -366,10 +412,16 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      * Invalid content for "bar" body part
      */
     // TODO: https://github.com/twilio/guardrail/issues/155
-    failedResponseBody(makeFormRequest(Multipart(Vector(
-      Part.formData[IO]("foo", "false", Header("Content-Type", "application/json")),
-      Part.formData[IO]("bar", "blep", Header("Content-Type", "application/json"))
-    )))) should equal("The request body was malformed.")
+    failedResponseBody(
+      makeFormRequest(
+        Multipart(
+          Vector(
+            Part.formData[IO]("foo", "false", Header("Content-Type", "application/json")),
+            Part.formData[IO]("bar", "blep", Header("Content-Type", "application/json"))
+          )
+        )
+      )
+    ) should equal("The request body was malformed.")
   }
 
   test("http4s client response body validation") {
@@ -386,19 +438,22 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import org.http4s.multipart._
 
     def jsonResponse(str: String): Http4sClient[IO] =
-      Http4sClient.fromHttpApp[IO](Kleisli.pure(
-        Response[IO](Status.Ok)
-          .withEntity(str)(
-            EntityEncoder[IO, String]
-              .withContentType(`Content-Type`(MediaType.application.json).withCharset(DefaultCharset))
-          )))
+      Http4sClient.fromHttpApp[IO](
+        Kleisli.pure(
+          Response[IO](Status.Ok)
+            .withEntity(str)(
+              EntityEncoder[IO, String]
+                .withContentType(`Content-Type`(MediaType.application.json).withCharset(DefaultCharset))
+            )
+        )
+      )
 
     /* Correct mime type
      * Missing content
      */
     Client.httpClient(jsonResponse(""), "http://localhost:80").getFoo().attempt.unsafeRunSync() match {
       case Left(MalformedMessageBodyFailure(details, cause)) => details should equal("Invalid JSON: empty body")
-      case ex => failTest(s"Unknown: ${ex}")
+      case ex                                                => failTest(s"Unknown: ${ex}")
     }
 
     /* Correct mime type
@@ -406,7 +461,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
      */
     Client.httpClient(jsonResponse("{"), "http://localhost:80").getFoo().attempt.unsafeRunSync() match {
       case Left(MalformedMessageBodyFailure(details, cause)) => details should equal("Invalid JSON")
-      case ex => failTest(s"Unknown: ${ex}")
+      case ex                                                => failTest(s"Unknown: ${ex}")
     }
 
     /* Correct mime type

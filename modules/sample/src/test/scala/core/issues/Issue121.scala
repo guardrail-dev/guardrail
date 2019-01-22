@@ -20,9 +20,8 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue121.server.akkaHttp.{ Handler, Resource }
     import issues.issue121.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
-      override def deleteFoo(respond: Resource.deleteFooResponse.type)(id: Long): Future[Resource.deleteFooResponse] = {
+      override def deleteFoo(respond: Resource.deleteFooResponse.type)(id: Long): Future[Resource.deleteFooResponse] =
         Future.successful(respond.NoContent)
-      }
     })
 
     Delete("/entity").withEntity(FormData("id" -> "1234").toEntity) ~> route ~> check {
@@ -41,20 +40,22 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     /* Correct mime type
      * Missing content
      */
-    Client.httpClient(noContentResponse, "http://localhost:80")
+    Client
+      .httpClient(noContentResponse, "http://localhost:80")
       .deleteFoo(1234)
       .fold(
         _ => failTest("Error"),
         _.fold(
           handleNoContent = ()
         )
-      ).futureValue
+      )
+      .futureValue
   }
 
   test("http4s server can respond with 204") {
     import cats.effect.IO
     import issues.issue121.server.http4s.definitions._
-    import issues.issue121.server.http4s.{ Handler, Resource, DeleteFooResponse }
+    import issues.issue121.server.http4s.{ DeleteFooResponse, Handler, Resource }
     import org.http4s._
     import org.http4s.client.Client
     import org.http4s.client.UnexpectedStatus
@@ -64,24 +65,25 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import org.http4s.multipart._
 
     val route = new Resource[IO]().routes(new Handler[IO] {
-      override def deleteFoo(respond: DeleteFooResponse.type)(id: Long): IO[DeleteFooResponse] = {
+      override def deleteFoo(respond: DeleteFooResponse.type)(id: Long): IO[DeleteFooResponse] =
         IO.pure(respond.NoContent)
-      }
     })
 
     val client = Client.fromHttpApp[IO](route.orNotFound)
 
     val req = Request[IO](method = Method.DELETE, uri = Uri.unsafeFromString("/entity")).withEntity(UrlForm("id" -> "1234"))
 
-    client.fetch(req)({
-      case Status.NoContent(resp) =>
-        IO.pure({
-          resp.status should equal(Status.NoContent)
-          resp.contentType should equal(None)
-          resp.contentLength should equal(None)
-          ()
-        })
-    }).unsafeRunSync()
+    client
+      .fetch(req)({
+        case Status.NoContent(resp) =>
+          IO.pure({
+            resp.status should equal(Status.NoContent)
+            resp.contentType should equal(None)
+            resp.contentLength should equal(None)
+            ()
+          })
+      })
+      .unsafeRunSync()
   }
 
   test("http4s client can respond with 204") {
@@ -98,15 +100,16 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import org.http4s.multipart._
 
     def noContentResponse: Http4sClient[IO] =
-      Http4sClient.fromHttpApp[IO](Kleisli.pure(
-        Response[IO](Status.NoContent)))
+      Http4sClient.fromHttpApp[IO](Kleisli.pure(Response[IO](Status.NoContent)))
 
     /* Correct mime type
      * Missing content
      */
-    Client.httpClient(noContentResponse, "http://localhost:80")
+    Client
+      .httpClient(noContentResponse, "http://localhost:80")
       .deleteFoo(1234)
-      .attempt.unsafeRunSync()
+      .attempt
+      .unsafeRunSync()
       .fold(
         _ => failTest("Error"),
         _.fold(

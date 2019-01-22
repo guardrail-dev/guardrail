@@ -33,7 +33,7 @@ class AkkaHttpCustomHeadersTest extends FlatSpec with Matchers with ScalaFutures
                                                         missingCustomOptionHeader: Option[sdefs.Bar]): Future[Resource.getFooResponse] =
         (header, longHeader, customHeader, customOptionHeader, missingCustomOptionHeader) match {
           case ("foo", 5L, sdefs.Bar.V1, Some(sdefs.Bar.V2), None) => Future.successful(respond.OK)
-          case _                                       => Future.successful(respond.BadRequest)
+          case _                                                   => Future.successful(respond.BadRequest)
         }
     })))
 

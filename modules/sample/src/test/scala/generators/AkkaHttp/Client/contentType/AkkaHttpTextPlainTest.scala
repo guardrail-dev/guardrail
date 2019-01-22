@@ -1,7 +1,7 @@
 package generators.AkkaHttp.Client.contentType
 
 import _root_.tests.contentTypes.textPlain.client.akkaHttp.AkkaHttpImplicits.IgnoredEntity
-import _root_.tests.contentTypes.textPlain.client.akkaHttp.foo.{ FooClient, DoFooResponse, DoBarResponse }
+import _root_.tests.contentTypes.textPlain.client.akkaHttp.foo.{ DoBarResponse, DoFooResponse, FooClient }
 import _root_.tests.contentTypes.textPlain.server.akkaHttp.foo.{ FooHandler, FooResource }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._

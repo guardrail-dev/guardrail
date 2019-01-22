@@ -23,24 +23,32 @@ class Issue143 extends FunSuite with Matchers with EitherValues with ScalaFuture
   test("Ensure that failed uploads are cleaned up afterwards") {
     val tempDest = File.createTempFile("guardrail.", ".dat")
     val route = Resource.routes(new Handler {
-      def uploadFile(respond: Resource.uploadFileResponse.type)(file: (File, Option[String], akka.http.scaladsl.model.ContentType)): Future[Resource.uploadFileResponse] =
+      def uploadFile(
+          respond: Resource.uploadFileResponse.type
+      )(file: (File, Option[String], akka.http.scaladsl.model.ContentType)): Future[Resource.uploadFileResponse] =
         Future.successful(respond.Created)
-      def uploadFileMapFileField(fieldName: String,fileName: Option[String],contentType: akka.http.scaladsl.model.ContentType): java.io.File =
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: akka.http.scaladsl.model.ContentType): java.io.File =
         tempDest
     })
 
-    val chunks = 1000
-    val data = "foo"
+    val chunks        = 1000
+    val data          = "foo"
     val contentLength = chunks * data.length
-    val req = Post("/file").withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart("file",
-          HttpEntity(
-            ContentTypes.`text/plain(UTF-8)`,
-            contentLength,
-            Source.fromIterator(() => List.fill(chunks)(akka.util.ByteString.fromString(data)).toIterator)
+    val req = Post("/file").withEntity(
+      Multipart
+        .FormData(
+          Multipart.FormData.BodyPart(
+            "file",
+            HttpEntity(
+              ContentTypes.`text/plain(UTF-8)`,
+              contentLength,
+              Source.fromIterator(() => List.fill(chunks)(akka.util.ByteString.fromString(data)).toIterator)
+            )
           )
         )
-      ).toEntity.withSizeLimit(1001))
+        .toEntity
+        .withSizeLimit(1001)
+    )
 
     // Working around https://github.com/akka/akka-http/issues/2381
     // The following test fails under some 2.11.12 configurations
