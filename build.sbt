@@ -90,8 +90,8 @@ addCommandAlias("example", "runtimeSuite")
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
 addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; sample/test")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/test:scalafmt ; sample/test:scalafmt")
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; sample/scalafmtCheck")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; sample/scalafmtCheck ; sample/test:scalafmtCheck")
 addCommandAlias("testSuite", "; scalaTestSuite")
 
 addCommandAlias(
