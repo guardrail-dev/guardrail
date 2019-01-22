@@ -72,11 +72,15 @@ object CLICommon {
               println(s"${AnsiColor.RED}${err}${AnsiColor.RESET}")
               Applicative[Logger].pure(List.empty[Path])
             },
-            _.fold({ case (err, errorKind) =>
-              println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
-              if (errorKind == UserError) unsafePrintHelp()
-              List.empty[Path]
-            }, _.map(WriteTree.unsafeWriteTree))
+            _.fold(
+              {
+                case (err, errorKind) =>
+                  println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
+                  if (errorKind == UserError) unsafePrintHelp()
+                  List.empty[Path]
+              },
+              _.map(WriteTree.unsafeWriteTree)
+            )
           )
       })
       .map(_.flatten)

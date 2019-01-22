@@ -16,15 +16,15 @@ package guardrail {
   case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server[L]])
 
   sealed trait ErrorKind
-  case object UserError extends ErrorKind
+  case object UserError     extends ErrorKind
   case object InternalError extends ErrorKind
 
   object Target {
     val A                        = Applicative[Target]
     def pure[T](x: T): Target[T] = A.pure(x)
     @deprecated("Use raiseError instead", "v0.41.2")
-    def error[T](x: String): Target[T]      = raiseError(x)
-    def raiseError[T](x: String): Target[T] = EitherT.fromEither(Left((x, UserError)))
+    def error[T](x: String): Target[T]          = raiseError(x)
+    def raiseError[T](x: String): Target[T]     = EitherT.fromEither(Left((x, UserError)))
     def raiseException[T](x: String): Target[T] = EitherT.fromEither(Left((x, InternalError)))
     def fromOption[T](x: Option[T], default: => String): Target[T] =
       EitherT.fromOption(x, (default, UserError))
