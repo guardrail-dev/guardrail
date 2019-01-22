@@ -57,7 +57,7 @@ object EndpointsGenerator {
           trait FormData extends algebra.Endpoints {
             type TraceBuilder = String => RequestHeaders[String]
             implicit def stringPairEncoder: FormDataEncoder[List[(String, String)]]
-            def formDataRequest[A: FormDataEncoder](): RequestEntity[A]
+            def formDataRequest[A]()(implicit ev: FormDataEncoder[A]): RequestEntity[A]
             def textPlainRequest: RequestEntity[String]
             def showHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[A]
             def showOptHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[Option[A]]
@@ -76,20 +76,23 @@ object EndpointsGenerator {
             }
           }
           trait XhrFormData extends FormData with xhr.Endpoints {
+            import scala.scalajs.js.URIUtils
+            private[this] def argEscape(k: String, v: String): String = URIUtils.encodeURIComponent(k) ++ "=" ++ URIUtils.encodeURIComponent(v)
             implicit val stringPairEncoder: FormDataEncoder[List[(String, String)]] = new FormDataEncoder[List[(String, String)]] {
+              private[this] def encode(k: String, v: String): String = URIUtils.encodeURIComponent(k) + "=" + URIUtils.encodeURIComponent(v)
               def apply = {
                 case (k, v) :: xs =>
-                  xs.foldLeft(k + "=" + v)({
+                  xs.foldLeft(encode(k, v))({
                     case (acc, (k, v)) =>
-                      acc + "&" + k + "=" + v
+                      acc + "&" + encode(k, v)
                   })
                 case Nil =>
                   ""
               }
             }
-            def formDataRequest[A: FormDataEncoder](): RequestEntity[A] = (a: A, xhr: XMLHttpRequest) => {
+            def formDataRequest[A]()(implicit ev: FormDataEncoder[A]): RequestEntity[A] = (a: A, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
-              FormDataEncoder[A].apply(a)
+              ev.apply(a)
             }
             def textPlainRequest: RequestEntity[String] = (a: String, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "text/plain")
