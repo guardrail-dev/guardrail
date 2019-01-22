@@ -46,7 +46,33 @@ object EndpointsClientGenerator {
           if (parameters.isEmpty) {
             Target.pure(None)
           } else if (needsMultipart) {
-            Target.raiseError("Multipart forms are currently not supported in the endpoints generator")
+            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+              q"$tParamName.map(v => (${tName.toLit}, Right(v)))"
+
+            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+              q"Some((${tName.toLit}, Right($tParamName)))"
+
+            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
+              q"$tParamName.map(v => (${tName.toLit}, Left(Formatter.show(v))))"
+
+            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
+              q"Some((${tName.toLit}, Left(Formatter.show($tParamName))))"
+
+            val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
+              case param"$_: Option[org.scalajs.dom.raw.File]" => liftOptionFileTerm _
+              case param"$_: Option[org.scalajs.dom.raw.File] = $_" => liftOptionFileTerm _
+              case param"$_: org.scalajs.dom.raw.File"      => liftFileTerm _
+              case param"$_: org.scalajs.dom.raw.File = $_" => liftFileTerm _
+              case param"$_: Option[$_]"          => liftOptionTerm _
+              case param"$_: Option[$_] = $_"     => liftOptionTerm _
+              case _                              => liftTerm _
+            }
+
+            val args: List[Term] = parameters.map {
+              case ScalaParameter(_, param, paramName, argName, _) =>
+                lifter(param)(paramName, argName)
+            }
+            Target.pure(Some(q"List[Option[(String, Either[String, org.scalajs.dom.raw.File])]](..${args}).flatten"))
           } else {
             def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"List((${tName.toLit}, Formatter.show($tParamName)))"
@@ -97,6 +123,7 @@ object EndpointsClientGenerator {
         def build(methodName: String,
                   httpMethod: HttpMethod,
                   pathPattern: Term,
+                  formDataParams: Option[Term],
                   staticQueryParams: Option[Term],
                   headerParams: Term,
                   responses: Responses[ScalaLanguage],
@@ -121,12 +148,11 @@ object EndpointsClientGenerator {
             else (None, None)
 
           val (formAlgebra, formArgument): (Option[Term], Option[Term]) = {
-            NonEmptyList.fromList(formArgs)
-              .fold((Option.empty[Term], Option.empty[Term])) { formDataParams =>
-                if (consumes.contains(RouteMeta.MultipartFormData)) {
-                  // TODO: Consume formDataParams
-                  (None, None)
-                } else {
+            if (consumes.contains(RouteMeta.MultipartFormData)) {
+              (formDataParams.map(_ => q"multipartFormDataRequest"), formDataParams)
+            } else {
+              NonEmptyList.fromList(formArgs)
+                .fold((Option.empty[Term], Option.empty[Term])) { formDataParams =>
                   val algebra = q"""formDataRequest[List[(String, String)]]()"""
                   NonEmptyList.fromList(formArgs)
                     .fold[(Option[Term], Option[Term])]((Some(algebra), Some(q"List.empty"))) { formDataParams =>
@@ -346,7 +372,7 @@ object EndpointsClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
           else List.empty
           extraImplicits = List.empty
-          renderedClientOperation = build(methodName, httpMethod, pathPattern, staticQueryParams, headerParams, responses, produces, consumes, tracing)(
+          renderedClientOperation = build(methodName, httpMethod, pathPattern, formDataParams, staticQueryParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
