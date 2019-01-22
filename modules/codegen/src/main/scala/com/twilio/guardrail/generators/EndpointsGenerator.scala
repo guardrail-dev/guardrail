@@ -18,7 +18,7 @@ import com.twilio.guardrail.languages.ScalaLanguage
 object EndpointsGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
-      case FileType(format)   => Target.pure(format.fold[Type](t"String")(Type.Name(_)))
+      case FileType(format)   => Target.pure(format.fold[Type](t"org.scalajs.dom.raw.File")(Type.Name(_)))
       case ObjectType(format) => Target.pure(t"io.circe.Json")
       case GetFrameworkImports(tracing) =>
         Target.pure(
@@ -56,8 +56,10 @@ object EndpointsGenerator {
           object FormDataEncoder { def apply[T](implicit ev: FormDataEncoder[T]): FormDataEncoder[T] = ev }
           trait FormData extends algebra.Endpoints {
             type TraceBuilder = String => RequestHeaders[String]
+            type FileType
             implicit def stringPairEncoder: FormDataEncoder[List[(String, String)]]
             def formDataRequest[A]()(implicit ev: FormDataEncoder[A]): RequestEntity[A]
+            def multipartFormDataRequest[A](): RequestEntity[List[(String, Either[String, FileType])]]
             def textPlainRequest: RequestEntity[String]
             def showHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[A]
             def showOptHeader[A](name: String, docs: Documentation)(implicit ev: Show[A]): RequestHeaders[Option[A]]
@@ -77,6 +79,7 @@ object EndpointsGenerator {
           }
           trait XhrFormData extends FormData with xhr.Endpoints {
             import scala.scalajs.js.URIUtils
+            type FileType = org.scalajs.dom.raw.File
             private[this] def argEscape(k: String, v: String): String = URIUtils.encodeURIComponent(k) ++ "=" ++ URIUtils.encodeURIComponent(v)
             implicit val stringPairEncoder: FormDataEncoder[List[(String, String)]] = new FormDataEncoder[List[(String, String)]] {
               private[this] def encode(k: String, v: String): String = URIUtils.encodeURIComponent(k) + "=" + URIUtils.encodeURIComponent(v)
@@ -93,6 +96,13 @@ object EndpointsGenerator {
             def formDataRequest[A]()(implicit ev: FormDataEncoder[A]): RequestEntity[A] = (a: A, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
               ev.apply(a)
+            }
+            def multipartFormDataRequest[A](): RequestEntity[List[(String, Either[String, FileType])]] = { (a, xhr) =>
+              val formDataAppender = new org.scalajs.dom.raw.FormData()
+              a.foreach({ case (k, v) =>
+                v.fold(formDataAppender.append(k, _), formDataAppender.append(k, _))
+              })
+              formDataAppender
             }
             def textPlainRequest: RequestEntity[String] = (a: String, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "text/plain")
