@@ -55,13 +55,13 @@ object EndpointsClientGenerator {
               q"Some((${tName.toLit}, Left(Formatter.show($tParamName))))"
 
             val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
-              case param"$_: Option[org.scalajs.dom.raw.File]" => liftOptionFileTerm _
+              case param"$_: Option[org.scalajs.dom.raw.File]"      => liftOptionFileTerm _
               case param"$_: Option[org.scalajs.dom.raw.File] = $_" => liftOptionFileTerm _
-              case param"$_: org.scalajs.dom.raw.File"      => liftFileTerm _
-              case param"$_: org.scalajs.dom.raw.File = $_" => liftFileTerm _
-              case param"$_: Option[$_]"          => liftOptionTerm _
-              case param"$_: Option[$_] = $_"     => liftOptionTerm _
-              case _                              => liftTerm _
+              case param"$_: org.scalajs.dom.raw.File"              => liftFileTerm _
+              case param"$_: org.scalajs.dom.raw.File = $_"         => liftFileTerm _
+              case param"$_: Option[$_]"                            => liftOptionTerm _
+              case param"$_: Option[$_] = $_"                       => liftOptionTerm _
+              case _                                                => liftTerm _
             }
 
             val args: List[Term] = parameters.map {
@@ -147,10 +147,12 @@ object EndpointsClientGenerator {
             if (consumes.contains(RouteMeta.MultipartFormData)) {
               (formDataParams.map(_ => q"multipartFormDataRequest"), formDataParams)
             } else {
-              NonEmptyList.fromList(formArgs)
+              NonEmptyList
+                .fromList(formArgs)
                 .fold((Option.empty[Term], Option.empty[Term])) { formDataParams =>
                   val algebra = q"""formDataRequest[List[(String, String)]]()"""
-                  NonEmptyList.fromList(formArgs)
+                  NonEmptyList
+                    .fromList(formArgs)
                     .fold[(Option[Term], Option[Term])]((Some(algebra), Some(q"List.empty"))) { formDataParams =>
                       val pairs = formDataParams.map { x =>
                         val k = x.argName.toLit
@@ -164,7 +166,7 @@ object EndpointsClientGenerator {
                       (Some(algebra), Some(q"List(..${pairs.toList}).flatten"))
                     }
                 }
-              }
+            }
           }
 
           val (tracingExpr, httpClientName) =
@@ -227,7 +229,7 @@ object EndpointsClientGenerator {
 
           val endpointCallArgs = {
             def adaptNel: NonEmptyList[Term] => Term = {
-              case NonEmptyList(a, Nil) => a
+              case NonEmptyList(a, Nil)     => a
               case NonEmptyList(a, x :: xs) => emulateTupler(a, NonEmptyList(x, xs))
             }
             @scala.annotation.tailrec
@@ -235,56 +237,59 @@ object EndpointsClientGenerator {
               case NonEmptyList(x, Nil) =>
                 base match {
                   case q"($a, $b)" => q"($a, $b, $x)"
-                  case as => q"($as, $x)"
+                  case as          => q"($as, $x)"
                 }
               case NonEmptyList(x, y :: Nil) =>
                 base match {
                   case q"($a, $b)" => q"($a, $b, $x, $y)"
-                  case as => q"($as, $x, $y)"
+                  case as          => q"($as, $x, $y)"
                 }
               case NonEmptyList(x, y :: rest) =>
                 emulateTupler(base match {
                   case q"($a, $b)" => q"($a, $b, $x)"
-                  case as => q"($as, $x)"
+                  case as          => q"($as, $x)"
                 }, NonEmptyList(y, rest))
             }
 
-            def hackyFoldLimitedTupleTree: NonEmptyList[Term] => NonEmptyList[Term] = { case NonEmptyList(x, xs) =>
-              // FIXME: There's a hard limit in endpoints for a maximum Tupler size of 3 elements.
-              // This results in ((((1, 2, 3), 4, 5), 6, 7)...)
-              // As a result, we've got a rather complex structure to replicate this,
-              // bounded by ${limit}. If this limit is ever raised, it'll be a breaking change, unless
-              // this value becomes customizable.
-              val limit = 2
-              val h     = xs.grouped(limit).take(1)
-              val t     = xs.grouped(limit).drop(1)
-              t.foldLeft[NonEmptyList[Term]](
-                h.foldLeft[NonEmptyList[Term]](NonEmptyList(x, Nil)) {
+            def hackyFoldLimitedTupleTree: NonEmptyList[Term] => NonEmptyList[Term] = {
+              case NonEmptyList(x, xs) =>
+                // FIXME: There's a hard limit in endpoints for a maximum Tupler size of 3 elements.
+                // This results in ((((1, 2, 3), 4, 5), 6, 7)...)
+                // As a result, we've got a rather complex structure to replicate this,
+                // bounded by ${limit}. If this limit is ever raised, it'll be a breaking change, unless
+                // this value becomes customizable.
+                val limit = 2
+                val h     = xs.grouped(limit).take(1)
+                val t     = xs.grouped(limit).drop(1)
+                t.foldLeft[NonEmptyList[Term]](
+                  h.foldLeft[NonEmptyList[Term]](NonEmptyList(x, Nil)) {
+                    case (a, x :: Nil) => a ++ List(x)
+                    case (a, xs)       => NonEmptyList(q"(..${a.toList ++ xs.toList})", Nil)
+                  }
+                ) {
                   case (a, x :: Nil) => a ++ List(x)
                   case (a, xs)       => NonEmptyList(q"(..${a.toList ++ xs.toList})", Nil)
                 }
-              ) {
-                case (a, x :: Nil) => a ++ List(x)
-                case (a, xs)       => NonEmptyList(q"(..${a.toList ++ xs.toList})", Nil)
-              }
             }
-            val hostPart: List[Term] = List(q"host", q"basePath")
-            val pathPart: List[Term] = hostPart ++ pathArgs.map(_.paramName)
-            val qsPart: List[Term] = qsArgs.map(_.paramName)
-            val bodyPart: List[Term] = bodyArgument.toList
-            val headerPart: List[Term] = headerArgs.map(_.paramName)
+            val hostPart: List[Term]    = List(q"host", q"basePath")
+            val pathPart: List[Term]    = hostPart ++ pathArgs.map(_.paramName)
+            val qsPart: List[Term]      = qsArgs.map(_.paramName)
+            val bodyPart: List[Term]    = bodyArgument.toList
+            val headerPart: List[Term]  = headerArgs.map(_.paramName)
             val tracingPart: List[Term] = tracingArgument.toList
 
             val res0: Option[NonEmptyList[NonEmptyList[Term]]] =
-              NonEmptyList.fromList(List[List[Term]](
-                pathPart,
-                qsPart,
-                bodyPart,
-                headerPart ++ tracingPart
-              ).flatMap(NonEmptyList.fromList(_)))
+              NonEmptyList.fromList(
+                List[List[Term]](
+                  pathPart,
+                  qsPart,
+                  bodyPart,
+                  headerPart ++ tracingPart
+                ).flatMap(NonEmptyList.fromList(_))
+              )
 
             res0.fold[Term](q"()")({ nel =>
-              val res@NonEmptyList(h, t) = nel.map(hackyFoldLimitedTupleTree)
+              val res @ NonEmptyList(h, t) = nel.map(hackyFoldLimitedTupleTree)
               t.foldLeft(adaptNel(h))(emulateTupler(_, _))
             })
           }
@@ -368,7 +373,16 @@ object EndpointsClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
           else List.empty
           extraImplicits = List.empty
-          renderedClientOperation = build(methodName, httpMethod, pathPattern, formDataParams, staticQueryParams, headerParams, responses, produces, consumes, tracing)(
+          renderedClientOperation = build(methodName,
+                                          httpMethod,
+                                          pathPattern,
+                                          formDataParams,
+                                          staticQueryParams,
+                                          headerParams,
+                                          responses,
+                                          produces,
+                                          consumes,
+                                          tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
@@ -379,8 +393,8 @@ object EndpointsClientGenerator {
             extraImplicits
           )
         } yield renderedClientOperation
-      case GetImports(tracing)                             => Target.pure(List.empty)
-      case GetExtraImports(tracing)                        => Target.pure(List.empty)
+      case GetImports(tracing)      => Target.pure(List.empty)
+      case GetExtraImports(tracing) => Target.pure(List.empty)
       case ClientClsArgs(tracingName, serverUrls, tracing) =>
         Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>

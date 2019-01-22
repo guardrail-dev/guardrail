@@ -6,7 +6,12 @@ import examples.client.endpoints.EndpointsImplicits._
 import endpoints.{ algebra, xhr }
 
 class EscapingTest extends FunSuite with Matchers {
-  object Instances extends algebra.circe.JsonEntitiesFromCodec with xhr.JsonEntitiesFromCodec with xhr.faithful.Endpoints with XhrAddPathSegments with XhrFormData
+  object Instances
+      extends algebra.circe.JsonEntitiesFromCodec
+      with xhr.JsonEntitiesFromCodec
+      with xhr.faithful.Endpoints
+      with XhrAddPathSegments
+      with XhrFormData
   import Instances._
   test("Properly escape parameters") {
     Implicits.Formatter.addPath("foo bar baz") shouldEqual "foo%20bar%20baz"
