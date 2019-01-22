@@ -109,17 +109,37 @@ object EndpointsClientGenerator {
 
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
 
-          val (fallbackBodyAlgebra, fallbackBodyArgument) =
-            if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod)
-              (Some(q"emptyRequest"), None)
-            else (None, None)
+          val (fallbackBodyAlgebra, fallbackBodyArgument) = (Some(q"emptyRequest"), None)
 
           val (textPlainAlgebra, textPlainArgument): (Option[Term], Option[Term]) =
             if (consumes.contains(RouteMeta.TextPlain))
               (bodyArgs.map(_ => q"textPlainRequest"), bodyArgs.map(sp => if (sp.required) sp.paramName else q"""${sp.paramName}.getOrElse("")"""))
             else (None, None)
 
-          val (formAlgebra, formArgument): (Option[Term], Option[Term]) = (None, None)
+          val (formAlgebra, formArgument): (Option[Term], Option[Term]) = {
+            NonEmptyList.fromList(formArgs)
+              .fold((Option.empty[Term], Option.empty[Term])) { formDataParams =>
+                if (consumes.contains(RouteMeta.MultipartFormData)) {
+                  // TODO: Consume formDataParams
+                  (None, None)
+                } else {
+                  val algebra = q"""formDataRequest[List[(String, String)]]()"""
+                  NonEmptyList.fromList(formArgs)
+                    .fold[(Option[Term], Option[Term])]((Some(algebra), Some(q"List.empty"))) { formDataParams =>
+                      val pairs = formDataParams.map { x =>
+                        val k = x.argName.toLit
+                        val v = x.paramName
+                        if (x.required) {
+                          q"Some((${k}, Formatter.show(${v})))"
+                        } else {
+                          q"${v}.map { v => (${k}, Formatter.show(v)) }"
+                        }
+                      }
+                      (Some(algebra), Some(q"List(..${pairs.toList}).flatten"))
+                    }
+                }
+              }
+          }
 
           val (tracingExpr, httpClientName) =
             if (tracing)
@@ -261,7 +281,7 @@ object EndpointsClientGenerator {
           ).flatten
 
           val endpointDefinition = q"""
-              endpoint(${Term.Name(httpMethod.toString.toLowerCase)}(..${algebraParams}), ${Term.Name(s"${methodName}ResponseMapper")})
+              endpoint(request(..${Term.Name(httpMethod.toString.toLowerCase.capitalize) :: algebraParams}), ${Term.Name(s"${methodName}ResponseMapper")})
             """
 
           val methodBody = q"""
