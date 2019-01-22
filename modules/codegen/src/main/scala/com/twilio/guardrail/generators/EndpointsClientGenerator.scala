@@ -42,9 +42,9 @@ object EndpointsClientGenerator {
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
-        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Target[Option[Term]] =
+        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
-            Target.pure(None)
+            None
           } else if (needsMultipart) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"$tParamName.map(v => (${tName.toLit}, Right(v)))"
@@ -72,7 +72,7 @@ object EndpointsClientGenerator {
               case ScalaParameter(_, param, paramName, argName, _) =>
                 lifter(param)(paramName, argName)
             }
-            Target.pure(Some(q"List[Option[(String, Either[String, org.scalajs.dom.raw.File])]](..${args}).flatten"))
+            Some(q"List[Option[(String, Either[String, org.scalajs.dom.raw.File])]](..${args}).flatten")
           } else {
             def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"List((${tName.toLit}, Formatter.show($tParamName)))"
@@ -98,7 +98,7 @@ object EndpointsClientGenerator {
                   }
                 a :+ lifter(paramName, argName)
             }
-            Target.pure(Some(q"List(..$args).flatten"))
+            Some(q"List(..$args).flatten")
           }
 
         def generateHeaderParams(parameters: List[ScalaParameter[ScalaLanguage]]): Term = {
@@ -361,7 +361,7 @@ object EndpointsClientGenerator {
 
           // _ <- Target.log.debug("generateClientOperation")(s"Generated: $urlWithParams")
           // Generate FormData arguments
-          formDataParams <- generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
+          formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
