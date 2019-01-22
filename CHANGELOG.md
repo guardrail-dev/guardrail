@@ -1,3 +1,10 @@
+v0.43.0
+=======
+
+- #167 Adding `Models` kind
+- #168 Adding an implicit `Show[LocalDate]`
+- #170 Fixing encoding bug for http4s path segments
+
 v0.42.0
 =======
 
