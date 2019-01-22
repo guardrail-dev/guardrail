@@ -81,10 +81,11 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
+val frameworks = List("akkaHttp", "endpoints", "http4s")
 
 resetSample := {
   import scala.sys.process._
-  List("sample", "sample-akkaHttp", "sample-endpoints", "sample-http4s")
+  (List("sample") ++ frameworks.map(x => s"sample-${x}"))
     .foreach(sampleName => s"git clean -fdx modules/${sampleName}/src modules/${sampleName}/target" !)
 }
 
@@ -92,10 +93,10 @@ resetSample := {
 addCommandAlias("example", "runtimeSuite")
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; akkaHttpSample/test ; endpointsSample/test ; http4sSample/test")
+addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; " + frameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; akkaHttpSample/scalafmt ; http4sSample/scalafmt ; akkaHttpSample/test:scalafmt ; http4sSample/test:scalafmt")
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; akkaHttpSample/scalafmtCheck ; http4sSample/scalafmtCheck ; akkaHttpSample/test:scalafmtCheck ; http4sSample/test:scalafmtCheck")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + frameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + frameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite")
 
 addCommandAlias(
