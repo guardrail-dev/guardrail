@@ -164,8 +164,14 @@ object CLI extends CLICommon {
   val javaInterpreter = CoreTermInterp[JavaLanguage](
     "akka-http", {
       case "akka-http" => Java.AkkaHttp
-    }, {
-      _ => Left(UnparseableArgument("import", "FIXME: Java imports are not supported at this time"))
+    }, { str =>
+      import com.github.javaparser.JavaParser
+      import scala.collection.JavaConverters._
+      import scala.util.Try
+      (for {
+        imports <- Try(JavaParser.parse(s"import ${str};")).toOption.toRight(s"Unable to parse ${str} as an import")
+        stat <- imports.getImports().asScala.headOption.toRight(s"${str} was not an import")
+      } yield stat).leftMap(UnparseableArgument("import", _))
     }
   )
 }
