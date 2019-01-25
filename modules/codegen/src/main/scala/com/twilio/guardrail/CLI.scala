@@ -7,7 +7,7 @@ import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.{ LA, JavaLanguage, ScalaLanguage }
 
 import scala.io.AnsiColor
 
@@ -134,8 +134,10 @@ object CLICommon {
 
 trait CLICommon {
   val scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
+  val javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
 
   val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
+    case "java" => CLICommon.run(_)(javaInterpreter)
     case "scala" => CLICommon.run(_)(scalaInterpreter)
   }
 
@@ -147,6 +149,7 @@ trait CLICommon {
 
 object CLI extends CLICommon {
   import com.twilio.guardrail.generators.{ AkkaHttp, Endpoints, Http4s }
+  import com.twilio.guardrail.generators.Java
   import scala.meta._
   val scalaInterpreter = CoreTermInterp[ScalaLanguage](
     "akka-http", {
@@ -155,6 +158,14 @@ object CLI extends CLICommon {
       case "http4s"    => Http4s
     }, {
       _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+    }
+  )
+
+  val javaInterpreter = CoreTermInterp[JavaLanguage](
+    "akka-http", {
+      case "akka-http" => Java.AkkaHttp
+    }, {
+      _ => Left(UnparseableArgument("import", "FIXME: Java imports are not supported at this time"))
     }
   )
 }
