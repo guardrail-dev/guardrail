@@ -44,8 +44,28 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("pathological-parameters.yaml"), "pathological", false, List.empty)
 )
 
-val exampleArgs: List[List[String]] = exampleCases
-  .foldLeft(List.empty[List[String]])({
+val exampleJavaArgs: List[List[String]] = exampleCases
+  .foldLeft(List[List[String]](List("java")))({
+    case (acc, (path, prefix, tracing, extra)) =>
+      acc ++ (for {
+        kind <- List("client", "server")
+        frameworkPair <- List(
+          ("akka-http", "akkaHttp"),
+        )
+        (frameworkName, frameworkPackage) = frameworkPair
+        tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
+      } yield
+        (
+          List(s"--${kind}") ++
+            List("--specPath", path.toString()) ++
+            List("--outputPath", s"modules/sample/src/main/java/generated") ++
+            List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
+            List("--framework", frameworkName)
+        ) ++ tracingFlag ++ extra)
+  })
+
+val exampleScalaArgs: List[List[String]] = exampleCases
+  .foldLeft(List[List[String]](List("scala")))({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
         frameworkSuite <- List(
@@ -66,12 +86,20 @@ val exampleArgs: List[List[String]] = exampleCases
         ) ++ tracingFlag ++ extra)
   })
 
+lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
+fullRunTask(
+  runJavaExample,
+  Test,
+  "com.twilio.guardrail.CLI",
+  exampleJavaArgs.flatten.filter(_.nonEmpty): _*
+)
+
 lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
 fullRunTask(
   runScalaExample,
   Test,
   "com.twilio.guardrail.CLI",
-  exampleArgs.flatten.filter(_.nonEmpty): _*
+  exampleScalaArgs.flatten.filter(_.nonEmpty): _*
 )
 
 artifact in (Compile, assembly) := {
