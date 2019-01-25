@@ -8,7 +8,6 @@ import EndpointsClientGenerator._
 import EndpointsServerGenerator._
 import CirceProtocolGenerator._
 import ScalaGenerator._
-import SwaggerGenerator._
 import EndpointsGenerator._
 
 object Endpoints extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
@@ -25,7 +24,7 @@ object Endpoints extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
 
   val interpFramework: ClientServerTerms[ScalaLanguage, ?] ~> Target = interpFrameworkCSF
 
-  val parser: Parser[ScalaLanguage, ?] ~> Target = SwaggerInterp or interpFramework
+  val parser: Parser[ScalaLanguage, ?] ~> Target = SwaggerGenerator[ScalaLanguage] or interpFramework
 
   val codegenApplication: CodegenApplication[ScalaLanguage, ?] ~> Target = ScalaInterp or parser
 

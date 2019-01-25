@@ -9,7 +9,6 @@ import Http4sServerGenerator._
 import Http4sGenerator._
 import CirceProtocolGenerator._
 import ScalaGenerator._
-import SwaggerGenerator._
 
 object Http4s extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
   val interpDefinitionPM: DefinitionPM[ScalaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
@@ -25,7 +24,7 @@ object Http4s extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
 
   val interpFramework: ClientServerTerms[ScalaLanguage, ?] ~> Target = interpFrameworkCSF
 
-  val parser: Parser[ScalaLanguage, ?] ~> Target = SwaggerInterp or interpFramework
+  val parser: Parser[ScalaLanguage, ?] ~> Target = SwaggerGenerator[ScalaLanguage] or interpFramework
 
   val codegenApplication: CodegenApplication[ScalaLanguage, ?] ~> Target = ScalaInterp or parser
 
