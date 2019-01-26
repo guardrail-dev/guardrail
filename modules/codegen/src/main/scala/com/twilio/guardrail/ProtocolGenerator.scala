@@ -404,8 +404,10 @@ object ProtocolGenerator {
               fromArray(clsName, arr, concreteTypes)
 
             case x =>
-              println(s"Warning: ${x} being treated as Json")
-              plainTypeAlias[L, F](clsName)
+              for {
+                model <- fromModel(clsName, x, List.empty, concreteTypes)
+                alias <- modelTypeAlias(clsName, x)
+              } yield model.getOrElse(alias)
           }
       }
       protoImports      <- protocolImports
