@@ -18,6 +18,7 @@ import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+import java.net.URI
 
 object Http4sClientGenerator {
 
@@ -39,15 +40,9 @@ object Http4sClientGenerator {
         param"clientName: String"
       )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
 
-    private[this] def formatHost(schemes: List[String], host: Option[String]): Term.Param =
-      host
-        .map {
-          case v if !v.startsWith("http") =>
-            val scheme = schemes.headOption.getOrElse("http")
-            s"${scheme}://${v}"
-          case v => v
-        }
-        .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
+    private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
+      serverUrls
+        .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
@@ -306,11 +301,11 @@ object Http4sClientGenerator {
 
       case GetExtraImports(tracing) => Target.pure(List.empty)
 
-      case ClientClsArgs(tracingName, schemes, host, tracing) =>
+      case ClientClsArgs(tracingName, serverUrls, tracing) =>
         val ihc = param"implicit httpClient: Http4sClient[F]"
         val ief = param"implicit effect: Effect[F]"
         Target.pure(
-          List(List(formatHost(schemes, host)) ++ (if (tracing)
+          List(List(formatHost(serverUrls)) ++ (if (tracing)
                                                      Some(formatClientName(tracingName))
                                                    else None),
                List(ief, ihc))
@@ -319,10 +314,9 @@ object Http4sClientGenerator {
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
-      case BuildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
+      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
-                              schemes: List[String],
-                              host: Option[String],
+                              serverUrls: Option[NonEmptyList[URI]],
                               tpe: Type.Name,
                               ctorCall: Term.New,
                               tracing: Boolean): List[Defn] = {
@@ -334,7 +328,7 @@ object Http4sClientGenerator {
 
           List(
             q"""
-              def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(schemes, host)}, ..${tracingParams})(implicit effect: Effect[F]): ${tpe}[F] = ${ctorCall}
+              def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(serverUrls)}, ..${tracingParams})(implicit effect: Effect[F]): ${tpe}[F] = ${ctorCall}
             """
           )
         }
@@ -357,7 +351,7 @@ object Http4sClientGenerator {
 
         val decls: List[Defn] =
           q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}""" +:
-            extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)
+            extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
         Target.pure(
           StaticDefns[ScalaLanguage](
             className = clientName,
@@ -368,7 +362,7 @@ object Http4sClientGenerator {
           )
         )
 
-      case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
+      case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val client =
           q"""
             class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {

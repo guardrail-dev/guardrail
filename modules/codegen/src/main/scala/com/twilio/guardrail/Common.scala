@@ -17,6 +17,7 @@ import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
 import scala.meta._
+import java.net.URI
 
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
@@ -40,8 +41,10 @@ object Common {
       proto <- ProtocolGenerator.fromSwagger[L, F](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
 
-      schemes  = swagger.schemes()
-      host     = swagger.host()
+      serverUrls = Option(swagger.getServers)
+        .map(_.asScala.toList)
+        .flatMap(NonEmptyList.fromList(_))
+        .map(_.map( x => new URI(x.getUrl().stripSuffix("/"))))
       basePath = swagger.basePath()
 
       paths = swagger.getPathsOpt()
@@ -57,7 +60,7 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[L, F](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(protocolElems)
+              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems)
             Clients(clients) = clientMeta
           } yield CodegenDefinitions[L](clients, List.empty)
 

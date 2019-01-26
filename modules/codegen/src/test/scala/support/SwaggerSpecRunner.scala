@@ -10,12 +10,14 @@ trait SwaggerSpecRunner {
 
   import _root_.io.swagger.v3.oas.models._
   import cats.arrow.FunctionK
+  import cats.data.NonEmptyList
   import cats.implicits._
   import com.twilio.guardrail._
   import com.twilio.guardrail.languages.ScalaLanguage
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
   import scala.collection.JavaConverters._
+  import java.net.URI
 
   def runSwaggerSpec(
       spec: String
@@ -34,8 +36,10 @@ trait SwaggerSpecRunner {
       protocol <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](swagger)
       definitions = protocol.elems
 
-      schemes  = swagger.schemes()
-      host     = swagger.host()
+      serverUrls = Option(swagger.getServers)
+        .map(_.asScala.toList)
+        .flatMap(NonEmptyList.fromList(_))
+        .map(_.map(x => new URI(x.getUrl().stripSuffix("/"))))
       basePath = swagger.basePath()
       paths    = swagger.getPathsOpt()
 
@@ -50,7 +54,7 @@ trait SwaggerSpecRunner {
       frameworkImports <- getFrameworkImports(context.tracing)
 
       clients <- ClientGenerator
-        .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
+        .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(definitions)
       servers <- ServerGenerator
         .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, swagger, frameworkImports)(definitions)
     } yield (protocol, clients, servers)

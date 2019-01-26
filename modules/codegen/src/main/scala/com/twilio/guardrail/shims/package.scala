@@ -12,17 +12,6 @@ package object shims {
   implicit class OpenApiExt(swagger: OpenAPI) {
     val serverUrls: List[String] = swagger.getServers.asScala.toList.map(_.getUrl)
 
-    def schemes(): List[String] =
-      serverUrls.filter(_ != "/").map(s => new URI(s)).map(uri => Option(uri.getScheme)).collect { case Some(x) => x }
-
-    def host(): Option[String] =
-      for {
-        list <- Option(serverUrls.filter(_ != "/")).filter(_.nonEmpty)
-        head <- list.headOption
-      } yield {
-        new URI(head).getAuthority
-      }
-
     def basePath(): Option[String] = {
       val pathOpt = for {
         list <- Option(serverUrls.filter(_ != "/")).filter(_.nonEmpty)
