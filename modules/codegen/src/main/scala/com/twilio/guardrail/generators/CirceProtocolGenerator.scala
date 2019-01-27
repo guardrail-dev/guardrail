@@ -93,15 +93,13 @@ object CirceProtocolGenerator {
   object ModelProtocolTermInterp extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
-        Target.pure(
-          (swagger match {
-            case m: ObjectSchema      => Option(m.getProperties)
-            case comp: ComposedSchema => comp.getAllOf().asScala.toList.lastOption.flatMap(prop => Option(prop.getProperties))
-            case comp: Schema[_] if comp.getSimpleRef.isDefined =>
-              Option(comp.getProperties)
-            case _ => None
-          }).map(_.asScala.toList).toList.flatten
-        )
+        (swagger match {
+          case m: ObjectSchema      => Target.pure(Option(m.getProperties))
+          case comp: ComposedSchema => Target.pure(comp.getAllOf().asScala.toList.lastOption.flatMap(prop => Option(prop.getProperties)))
+          case comp: Schema[_] if Option(comp.get$ref).isDefined =>
+            Target.error(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
+          case _ => Target.pure(None)
+        }).map(_.map(_.asScala.toList).toList.flatten)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
         def toCamelCase(s: String): String =

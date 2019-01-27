@@ -72,8 +72,5 @@ package object shims {
     def extractEnum(): Option[List[String]] =
       Option(schema.getEnum())
         .map(_.asScala.map(_.asInstanceOf[String]).to[List])
-
-    def getSimpleRef: Option[String] =
-      Option(schema.get$ref()).flatMap(_.split('/').lastOption)
   }
 }

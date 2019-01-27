@@ -172,14 +172,13 @@ object ProtocolGenerator {
 
     for {
       a <- extractSuperClass(elem, definitions)
-      supper <- a.flatTraverse { structure =>
-        val (clsName, _extends, interfaces) = structure
+      supper <- a.flatTraverse { case (clsName, _extends, interfaces) =>
         val concreteInterfaces = interfaces
           .flatMap(
             x =>
               definitions.collectFirst[Schema[_]] {
-                case (cls, y: ComposedSchema) if x.getSimpleRef.contains(cls) => y
-                case (cls, y: Schema[_]) if x.getSimpleRef.contains(cls) => y
+                case (cls, y: ComposedSchema) if Option(x.get$ref).exists(_.endsWith(s"/${cls}")) => y
+                case (cls, y: Schema[_]) if Option(x.get$ref).exists(_.endsWith(s"/${cls}")) => y
             }
           )
         for {
@@ -193,7 +192,7 @@ object ProtocolGenerator {
                 .propMeta[L, F](prop)
                 .flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired = false))
           })
-          interfacesCls = interfaces.map(_.getSimpleRef.getOrElse(""))
+          interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
           tpe <- parseTypeName(clsName)
         } yield
           tpe
@@ -314,7 +313,7 @@ object ProtocolGenerator {
       (model match {
         case elem: ComposedSchema =>
           definitions.collectFirst {
-            case (clsName, element) if elem.getAllOf.asScala.exists(r => r.getSimpleRef.contains(clsName)) => element
+            case (clsName, element) if elem.getAllOf.asScala.exists(r => Option(r.get$ref).exists(_.endsWith(s"/$clsName"))) => element
           }
         case _ => None
       }) match {
@@ -328,7 +327,7 @@ object ProtocolGenerator {
           if Option(comp.getAllOf)
             .map(_.asScala)
             .getOrElse(List.empty)
-            .exists(_.getSimpleRef.contains(cls)) =>
+            .exists(x => Option(x.get$ref).exists(_.endsWith(s"/$cls"))) =>
         ClassChild(clsName, comp, children(clsName, comp))
     }
 
@@ -368,8 +367,8 @@ object ProtocolGenerator {
               Option(m.getAllOf)
                 .map(_.asScala.toList)
                 .map(_.headOption)
-                .collect { case Some(x) => x }
-                .exists(s => s.getSimpleRef.contains(clsName))
+                .flatten
+                .exists(x => Option(x.get$ref).exists(_.endsWith(s"/$clsName")))
             case _ => false
           } =>
         false

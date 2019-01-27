@@ -80,7 +80,7 @@ object SwaggerGenerator {
         Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
 
       case GetRefParameterRef(parameter) =>
-        Target.fromOption(Option(parameter.getSimpleRef), "$ref not defined")
+        Target.fromOption(Option(parameter.get$ref).flatMap(_.split("/").lastOption), "$ref not defined")
 
       case FallbackParameterHandler(parameter) =>
         Target.raiseError(s"Unsure how to handle ${parameter}")
@@ -95,15 +95,9 @@ object SwaggerGenerator {
         Target.fromOption(Option(operation.getResponses).map(_.asScala.toMap), s"No responses defined for ${operationId}")
 
       case GetSimpleRef(ref) =>
-        Target.fromOption(ref.getSimpleRef, s"Unspecified $ref")
-
-      case GetSimpleRefP(ref) =>
-        Target.fromOption(ref.getSimpleRef, s"Unspecified $ref")
+        Target.fromOption(Option(ref.get$ref).flatMap(_.split("/").lastOption), s"Unspecified $ref")
 
       case GetItems(arr) =>
-        Target.fromOption(Option(arr.getItems()), "items.type unspecified")
-
-      case GetItemsP(arr) =>
         Target.fromOption(Option(arr.getItems()), "items.type unspecified")
 
       case GetType(model) =>

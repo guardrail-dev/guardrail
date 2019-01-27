@@ -40,14 +40,8 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def getSimpleRef(ref: Schema[_]): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetSimpleRef(ref))
 
-  def getSimpleRefP(ref: Schema[_]): Free[F, String] =
-    Free.inject[SwaggerTerm[L, ?], F](GetSimpleRefP(ref))
-
   def getItems(arr: ArraySchema): Free[F, Schema[_]] =
     Free.inject[SwaggerTerm[L, ?], F](GetItems(arr))
-
-  def getItemsP(arr: ArraySchema): Free[F, Schema[_]] =
-    Free.inject[SwaggerTerm[L, ?], F](GetItemsP(arr))
 
   def getType(model: Schema[_]): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetType(model))

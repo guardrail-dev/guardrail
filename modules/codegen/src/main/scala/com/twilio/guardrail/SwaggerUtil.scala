@@ -138,7 +138,7 @@ object SwaggerUtil {
       import Sc._
       import Sw._
       model match {
-        case ref: Schema[_] if ref.getSimpleRef.isDefined =>
+        case ref: Schema[_] if Option(ref.get$ref).isDefined =>
           for {
             ref <- getSimpleRef(ref)
           } yield Deferred[L](ref)
@@ -176,7 +176,7 @@ object SwaggerUtil {
         case (clsName, comp: ComposedSchema) =>
           for {
             x <- pureTypeName(clsName).flatMap(widenTypeName)
-            parentSimpleRef = comp.getAllOf.asScala.headOption.flatMap(_.getSimpleRef)
+            parentSimpleRef = comp.getAllOf.asScala.headOption.flatMap(i => Option(i.get$ref).map(_.split("/").last))
             parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
             resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None): SwaggerUtil.ResolvedType[L]
           } yield (clsName, resolvedType)
@@ -249,7 +249,7 @@ object SwaggerUtil {
     property match {
       case p: ArraySchema =>
         for {
-          items <- getItemsP(p)
+          items <- getItems(p)
           rec   <- propMeta[L, F](items)
           res <- rec match {
             case Resolved(inner, dep, default) =>
@@ -272,7 +272,7 @@ object SwaggerUtil {
       case o: ObjectSchema =>
         objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
 
-      case ref: Schema[_] if ref.getSimpleRef.isDefined =>
+      case ref: Schema[_] if Option(ref.get$ref).isDefined =>
         getSimpleRef(ref).map(Deferred[L])
 
       case b: BooleanSchema =>
