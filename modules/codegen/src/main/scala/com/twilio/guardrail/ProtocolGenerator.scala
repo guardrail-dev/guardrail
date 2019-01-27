@@ -131,7 +131,10 @@ object ProtocolGenerator {
     val discriminator = hierarchy.discriminator
 
     for {
-      parents <- extractParents(hierarchy.model, definitions, concreteTypes)
+      parents <- hierarchy.model match {
+        case c: ComposedSchema => extractParents(c, definitions, concreteTypes)
+        case _ => Free.pure[F, List[SuperClass[L]]](Nil)
+      }
       props   <- extractProperties(hierarchy.model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
@@ -156,7 +159,7 @@ object ProtocolGenerator {
     }
   }
 
-  def extractParents[L <: LA, F[_]](elem: Schema[_], definitions: List[(String, Schema[_])], concreteTypes: List[PropMeta[L]])(
+  def extractParents[L <: LA, F[_]](elem: ComposedSchema, definitions: List[(String, Schema[_])], concreteTypes: List[PropMeta[L]])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
@@ -329,19 +332,13 @@ object ProtocolGenerator {
         ClassChild(clsName, comp, children(clsName, comp))
     }
 
-    def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] =
+    def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] = {
       (model match {
-        case m: ObjectSchema if Option(m.getDiscriminator).isDefined   => Option(m.getDiscriminator.getPropertyName)
-        case c: ComposedSchema if Option(c.getDiscriminator).isDefined => firstInHierarchy(c).map(_.getDiscriminator.getPropertyName)
-        case _                                                         => None
-      }).map(
-        ClassParent(
-          cls,
-          model,
-          children(cls, model),
-          _
-        )
-      )
+        case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName))
+        case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName))
+        case _                 => None
+      }).map(ClassParent(cls, model, children(cls, model), _))
+    }
 
     definitions.map(classHierarchy _ tupled).collect {
       case Some(x) if x.children.nonEmpty => x
@@ -388,8 +385,7 @@ object ProtocolGenerator {
             case m: StringSchema =>
               for {
                 enum    <- fromEnum(clsName, m)
-                parents <- extractParents(m, definitions, concreteTypes)
-                model   <- fromModel(clsName, m, parents, concreteTypes)
+                model   <- fromModel(clsName, m, List.empty, concreteTypes)
                 alias   <- modelTypeAlias(clsName, m)
               } yield enum.orElse(model).getOrElse(alias)
 
