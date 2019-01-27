@@ -12,60 +12,59 @@ object VendorExtension {
 
   object VendorExtensible {
 
-    def build[F](f: F => String => Any): VendorExtensible[F] =
+    def build[F](f: F => String => Option[Any]): VendorExtensible[F] =
       new VendorExtensible[F] {
         def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T] =
-          T.extract(f(from)(key)).toOption
+          f(from)(key).flatMap(T.extract(_).toOption)
       }
 
     implicit val defaultVendorExtensibleOperation: VendorExtensible[Operation] =
-      build[Operation](m => key => m.getExtensions.get(key))
+      build[Operation](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleParameter: VendorExtensible[Parameter] =
-      build[Parameter](m => key => m.getExtensions.get(key))
+      build[Parameter](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensiblePath: VendorExtensible[PathItem] =
-      build[PathItem](m => key => m.getExtensions.get(key))
+      build[PathItem](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleResponse: VendorExtensible[ApiResponse] =
-      build[ApiResponse](m => key => m.getExtensions.get(key))
+      build[ApiResponse](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleSwagger: VendorExtensible[OpenAPI] =
-      build[OpenAPI](m => key => m.getExtensions.get(key))
+      build[OpenAPI](m => key => Option(m.getExtensions).map(_.get(key)))
 
-    implicit val defaultVendorExtensibleSchemaProperty: VendorExtensible[Schema[_]] = {
-      build[Schema[_]](m => key => m.getExtensions.get(key))
-    }
+    implicit val defaultVendorExtensibleSchemaProperty: VendorExtensible[Schema[_]] =
+      build[Schema[_]](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleArrayProperty: VendorExtensible[ArraySchema] =
-      build[ArraySchema](m => key => m.getExtensions.get(key))
+      build[ArraySchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleBooleanProperty: VendorExtensible[BooleanSchema] =
-      build[BooleanSchema](m => key => m.getExtensions.get(key))
+      build[BooleanSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleDateProperty: VendorExtensible[DateSchema] =
-      build[DateSchema](m => key => m.getExtensions.get(key))
+      build[DateSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleDateTimeProperty: VendorExtensible[DateTimeSchema] =
-      build[DateTimeSchema](m => key => m.getExtensions.get(key))
+      build[DateTimeSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleFloatProperty: VendorExtensible[NumberSchema] =
-      build[NumberSchema](m => key => m.getExtensions.get(key))
+      build[NumberSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleIntegerProperty: VendorExtensible[IntegerSchema] =
-      build[IntegerSchema](m => key => m.getExtensions.get(key))
+      build[IntegerSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleMapProperty: VendorExtensible[MapSchema] =
-      build[MapSchema](m => key => m.getExtensions.get(key))
+      build[MapSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleObjectProperty: VendorExtensible[ObjectSchema] =
-      build[ObjectSchema](m => key => m.getExtensions.get(key))
+      build[ObjectSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleStringProperty: VendorExtensible[StringSchema] =
-      build[StringSchema](m => key => m.getExtensions.get(key))
+      build[StringSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleCookieParameter: VendorExtensible[CookieParameter] =
-      build[CookieParameter](m => key => m.getExtensions.get(key))
+      build[CookieParameter](m => key => Option(m.getExtensions).map(_.get(key)))
 
   }
 
