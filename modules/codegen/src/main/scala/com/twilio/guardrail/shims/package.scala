@@ -27,13 +27,19 @@ package object shims {
   }
 
   implicit class OperationExt(operation: Operation) {
-    def produces: Seq[String] =
-      Try(operation.getResponses.values().asScala.toList.flatMap(apiResponse => apiResponse.getContent.keySet().asScala.toList)).toOption
-        .getOrElse(Seq.empty)
-
     def consumes: Seq[String] =
-      Try(operation.getRequestBody.getContent.keySet()).toOption.fold(List.empty[String])(_.asScala.toList)
+      (for {
+        body <- Option(operation.getRequestBody())
+        content <- Option(body.getContent())
+      } yield content.keySet().asScala.toList)
+        .getOrElse(List.empty[String])
 
+    def produces: Seq[String] =
+      for {
+        responses <- Option(operation.getResponses()).toList
+        response <- responses.asScala.values
+        responseContentType <- response.getContent().asScala.keys
+      } yield responseContentType
   }
 
   implicit class MediaTypeExt(mt: MediaType) {
