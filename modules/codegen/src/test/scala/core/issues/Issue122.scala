@@ -23,6 +23,8 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
     |    get:
     |      operationId: getUser
     |      x-scala-package: users
+    |      consumes:
+    |        - application/x-www-form-urlencoded
     |      produces:
     |        - application/json
     |      parameters:

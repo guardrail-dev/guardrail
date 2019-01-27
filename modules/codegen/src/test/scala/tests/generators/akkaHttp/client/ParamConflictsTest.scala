@@ -19,6 +19,8 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |  /foo:
     |    get:
     |      operationId: getFoo
+    |      consumes:
+    |        - application/x-www-form-urlencoded
     |      parameters:
     |        - in: formData
     |          name: conflicting_name
