@@ -28,18 +28,21 @@ package object shims {
 
   implicit class OperationExt(operation: Operation) {
     def consumes: Seq[String] =
-      (for {
-        body <- Option(operation.getRequestBody())
-        content <- Option(body.getContent())
-      } yield content.keySet().asScala.toList)
-        .getOrElse(List.empty[String])
+      for {
+        body <- Option(operation.getRequestBody()).toList
+        content <- Option(body.getContent()).toList
+        contentType <- content.asScala.keys
+        if contentType != "*/*"
+      } yield contentType
 
     def produces: Seq[String] =
       for {
         responses <- Option(operation.getResponses()).toList
         response <- responses.asScala.values
-        responseContentType <- response.getContent().asScala.keys
-      } yield responseContentType
+        content <- Option(response.getContent()).toList
+        contentType <- content.asScala.keys
+        if contentType != "*/*"
+      } yield contentType
   }
 
   implicit class MediaTypeExt(mt: MediaType) {
