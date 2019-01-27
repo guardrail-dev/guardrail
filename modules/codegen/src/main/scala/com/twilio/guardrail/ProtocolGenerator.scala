@@ -357,6 +357,7 @@ object ProtocolGenerator {
       Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolDefinitions[L]] = {
     import S._
+    import Sw._
 
     val definitions = Option(swagger.getComponents.getSchemas).toList.flatMap(_.asScala)
     val hierarchies = groupHierarchies(definitions)
@@ -399,11 +400,19 @@ object ProtocolGenerator {
             case arr: ArraySchema =>
               fromArray(clsName, arr, concreteTypes)
 
+            case m: ObjectSchema =>
+              for {
+                model   <- fromModel(clsName, m, List.empty, concreteTypes)
+                alias   <- modelTypeAlias(clsName, m)
+              } yield model.getOrElse(alias)
+
             case x =>
               for {
-                model <- fromModel(clsName, x, List.empty, concreteTypes)
-                alias <- modelTypeAlias(clsName, x)
-              } yield model.getOrElse(alias)
+                tpeName <- getType(x)
+
+                tpe     <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x))
+                res     <- typeAlias(clsName, tpe)
+              } yield res
           }
       }
       protoImports      <- protocolImports
