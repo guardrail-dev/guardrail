@@ -307,7 +307,7 @@ object ProtocolGenerator {
   /**
     * returns objects grouped into hierarchies
     */
-  def groupHierarchies(definitions: List[(String, Schema[_])]): List[ClassParent] = {
+  def groupHierarchies(definitions: List[(String, Schema[_])]): (List[ClassParent], List[(String, Schema[_])]) = {
 
     def firstInHierarchy(model: Schema[_]): Option[ObjectSchema] =
       (model match {
@@ -339,10 +339,9 @@ object ProtocolGenerator {
       }).map(ClassParent(cls, model, children(cls, model), _))
     }
 
-    definitions.map(classHierarchy _ tupled).collect {
-      case Some(x) if x.children.nonEmpty => x
-    }
-
+    definitions.partitionEither({ case (cls, model) =>
+      classHierarchy(cls, model).filterNot(_.children.isEmpty).toLeft((cls, model))
+    })
   }
 
   def fromSwagger[L <: LA, F[_]](swagger: OpenAPI)(
@@ -359,22 +358,7 @@ object ProtocolGenerator {
     import Sw._
 
     val definitions = Option(swagger.getComponents.getSchemas).toList.flatMap(_.asScala)
-    val hierarchies = groupHierarchies(definitions)
-
-    val definitionsWithoutPoly: List[(String, Schema[_])] = definitions.filter { // filter out polymorphic definitions
-      case (clsName, _: ComposedSchema) if definitions.exists {
-            case (_, m: ComposedSchema) =>
-              Option(m.getAllOf)
-                .map(_.asScala.toList)
-                .map(_.headOption)
-                .flatten
-                .exists(x => Option(x.get$ref).exists(_.endsWith(s"/$clsName")))
-            case _ => false
-          } =>
-        false
-      case (_, m: Schema[_]) if Option(m.getDiscriminator).isDefined => false
-      case _                                                         => true
-    }
+    val (hierarchies, definitionsWithoutPoly) = groupHierarchies(definitions)
 
     for {
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions)
