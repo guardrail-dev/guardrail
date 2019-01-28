@@ -36,6 +36,7 @@ object Http4sGenerator {
             q"import org.http4s.dsl.io.Path",
             q"import org.http4s.multipart._",
             q"import org.http4s.headers._",
+            q"import org.http4s.implicits._",
             q"import org.http4s.EntityEncoder._",
             q"import org.http4s.EntityDecoder._",
             q"import fs2.Stream",
