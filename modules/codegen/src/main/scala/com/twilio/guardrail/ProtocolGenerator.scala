@@ -37,6 +37,16 @@ case class SuperClass[L <: LA](
 )
 
 object ProtocolGenerator {
+  private[this] def getRequiredFieldsRec(value: Schema[_]): List[String] = {
+    val required = Option(value.getRequired()).fold(List.empty[String])(_.asScala.toList)
+    val recursed = value match {
+      case x: ComposedSchema => Option(x.getAllOf()).fold(List.empty[Schema[_]])(_.asScala.toList).flatMap(getRequiredFieldsRec(_))
+      case _ => Nil
+    }
+
+    required ++ recursed
+  }
+
   private[this] def fromEnum[L <: LA, F[_]](
       clsName: String,
       swagger: Schema[String]
@@ -136,12 +146,14 @@ object ProtocolGenerator {
         case _ => Free.pure[F, List[SuperClass[L]]](Nil)
       }
       props   <- extractProperties(hierarchy.model)
+      requiredFields = getRequiredFieldsRec(hierarchy.model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
+          val isRequired = requiredFields.contains(name)
           SwaggerUtil
             .propMeta[L, F](prop)
-            .flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired = false))
+            .flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
       terms = params.map(_.term)
       definition  <- renderSealedTrait(hierarchy.name, terms, discriminator, parents)
@@ -183,14 +195,16 @@ object ProtocolGenerator {
           )
         for {
           _extendsProps <- extractProperties(_extends)
+          requiredFields           = getRequiredFieldsRec(_extends)
           _withProps    <- concreteInterfaces.traverse(extractProperties)
           props                    = _extendsProps ++ _withProps.flatten
           needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
           params <- props.traverse({
             case (name, prop) =>
+              val isRequired = requiredFields.contains(name)
               SwaggerUtil
                 .propMeta[L, F](prop)
-                .flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired = false))
+                .flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
           })
           interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
           tpe <- parseTypeName(clsName)
@@ -224,7 +238,7 @@ object ProtocolGenerator {
 
     for {
       props <- extractProperties(model)
-      requiredFields           = Option(model.getRequired).map(_.asScala.toList).getOrElse(List.empty)
+      requiredFields           = getRequiredFieldsRec(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
