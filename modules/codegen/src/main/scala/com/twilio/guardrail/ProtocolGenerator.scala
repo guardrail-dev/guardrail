@@ -415,9 +415,9 @@ object ProtocolGenerator {
               } yield res
           }
       }
-      protoImports      <- protocolImports
-      pkgImports        <- packageObjectImports
-      pkgObjectContents <- packageObjectContents
+      protoImports      <- protocolImports()
+      pkgImports        <- packageObjectImports()
+      pkgObjectContents <- packageObjectContents()
 
       polyADTElems <- ProtocolElems.resolve[L, F](polyADTs)
       strictElems  <- ProtocolElems.resolve[L, F](elems)
