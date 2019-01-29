@@ -48,7 +48,9 @@ class VendorExtensionTest extends FunSuite with Matchers {
     |""".stripMargin
 
   test("Able to extract strings") {
-    val swagger = new OpenAPIParser().readContents(spec, new util.LinkedList(), new ParseOptions).getOpenAPI
+    val parseOpts = new ParseOptions
+    parseOpts.setResolve(true)
+    val swagger = new OpenAPIParser().readContents(spec, new util.LinkedList(), parseOpts).getOpenAPI
     // VendorExtension(swagger).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Swagger"))
     for {
       (k, v) <- swagger.getPaths.asScala

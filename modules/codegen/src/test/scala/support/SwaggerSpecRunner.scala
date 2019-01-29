@@ -21,8 +21,11 @@ trait SwaggerSpecRunner {
 
   def runSwaggerSpec(
       spec: String
-  ): (Context, FunctionK[CodegenApplication[ScalaLanguage, ?], Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) =
-    runSwagger(new OpenAPIParser().readContents(spec, new util.LinkedList(), new ParseOptions).getOpenAPI) _
+  ): (Context, FunctionK[CodegenApplication[ScalaLanguage, ?], Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) = {
+    val parseOpts = new ParseOptions
+    parseOpts.setResolve(true)
+    runSwagger(new OpenAPIParser().readContents(spec, new util.LinkedList(), parseOpts).getOpenAPI) _
+  }
 
   def runSwagger(swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[ScalaLanguage, ?], Target])(
       implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
