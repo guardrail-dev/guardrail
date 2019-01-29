@@ -16,12 +16,11 @@ import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 
 import scala.meta._
-import _root_.io.swagger.v3.parser.OpenAPIV3Parser
 
 class WritePackageSpec extends FunSuite with Matchers {
   val parseOpts = new ParseOptions
   parseOpts.setResolve(true)
-  val swagger: OpenAPI = new OpenAPIV3Parser()
+  val swagger: OpenAPI = new OpenAPIParser()
     .readContents(
       s"""
     |swagger: "2.0"
