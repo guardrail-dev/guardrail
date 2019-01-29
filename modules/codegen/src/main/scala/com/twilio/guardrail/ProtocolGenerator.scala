@@ -330,7 +330,7 @@ object ProtocolGenerator {
       (model match {
         case elem: ComposedSchema =>
           definitions.collectFirst {
-            case (clsName, element) if elem.getAllOf.asScala.exists(r => Option(r.get$ref).exists(_.endsWith(s"/$clsName"))) => element
+            case (clsName, element) if Option(elem.getAllOf).toList.flatMap(_.asScala).exists(r => Option(r.get$ref).exists(_.endsWith(s"/$clsName"))) => element
           }
         case _ => None
       }) match {
@@ -374,7 +374,7 @@ object ProtocolGenerator {
     import S._
     import Sw._
 
-    val definitions = Option(swagger.getComponents.getSchemas).toList.flatMap(_.asScala)
+    val definitions = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
     val (hierarchies, definitionsWithoutPoly) = groupHierarchies(definitions)
 
     for {

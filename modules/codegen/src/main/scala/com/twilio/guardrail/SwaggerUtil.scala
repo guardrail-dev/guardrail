@@ -176,7 +176,7 @@ object SwaggerUtil {
         case (clsName, comp: ComposedSchema) =>
           for {
             x <- pureTypeName(clsName).flatMap(widenTypeName)
-            parentSimpleRef = comp.getAllOf.asScala.headOption.flatMap(i => Option(i.get$ref).map(_.split("/").last))
+            parentSimpleRef = Option(comp.getAllOf).toList.flatMap(_.asScala).headOption.flatMap(i => Option(i.get$ref).map(_.split("/").last))
             parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
             resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None): SwaggerUtil.ResolvedType[L]
           } yield (clsName, resolvedType)
@@ -261,7 +261,7 @@ object SwaggerUtil {
         } yield res
       case m: MapSchema =>
         for {
-          rec <- propMeta[L, F](m.getAdditionalProperties.asInstanceOf[Schema[_]]) //fixme: the definition says it could be boolean
+          rec <- propMeta[L, F](Option(m.getAdditionalProperties).getOrElse(throw new Exception("MapSchema issue")).asInstanceOf[Schema[_]])
           res <- rec match {
             case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
             case x: DeferredMap[L]       => embedMap(x)
@@ -328,7 +328,7 @@ object SwaggerUtil {
       Option(operation.getResponses)
         .flatMap { responses =>
           getBestSuccessResponse(responses)
-            .flatMap[Schema[_]](resp => Option(resp.getContent.values().asScala.head.getSchema)) //fixme: use of head
+            .flatMap[Schema[_]](resp => Option(resp.getContent).flatMap(_.values().asScala.toList.headOption).map(_.getSchema))
             .map(propMeta[L, F](_))
             .orElse(
               if (hasEmptySuccessType(responses))

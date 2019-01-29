@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 
 package object shims {
   implicit class OpenApiExt(swagger: OpenAPI) {
-    val serverUrls: List[String] = swagger.getServers.asScala.toList.map(_.getUrl)
+    val serverUrls: List[String] = Option(swagger.getServers).toList.flatMap(_.asScala.toList).map(_.getUrl)
 
     def basePath(): Option[String] = {
       val pathOpt = for {
