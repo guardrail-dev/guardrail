@@ -40,7 +40,9 @@ object ProtocolGenerator {
   private[this] def getRequiredFieldsRec(value: Schema[_]): List[String] = {
     val required = Option(value.getRequired()).fold(List.empty[String])(_.asScala.toList)
     val recursed = value match {
-      case x: ComposedSchema => Option(x.getAllOf()).fold(List.empty[Schema[_]])(_.asScala.toList).flatMap(getRequiredFieldsRec(_))
+      case x: ComposedSchema =>
+        Option(x.getAllOf()).fold(List.empty[Schema[_]])(_.asScala.toList)
+          .flatMap(getRequiredFieldsRec(_))
       case _ => Nil
     }
 
@@ -146,7 +148,7 @@ object ProtocolGenerator {
         case _ => Free.pure[F, List[SuperClass[L]]](Nil)
       }
       props   <- extractProperties(hierarchy.model)
-      requiredFields = getRequiredFieldsRec(hierarchy.model)
+      requiredFields = hierarchy.required ::: hierarchy.children.flatMap(_.required)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
@@ -195,7 +197,7 @@ object ProtocolGenerator {
           )
         for {
           _extendsProps <- extractProperties(_extends)
-          requiredFields           = getRequiredFieldsRec(_extends)
+          requiredFields           = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
           _withProps    <- concreteInterfaces.traverse(extractProperties)
           props                    = _extendsProps ++ _withProps.flatten
           needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
@@ -314,9 +316,10 @@ object ProtocolGenerator {
     def name: String
     def model: Schema[_]
     def children: List[ClassChild]
+    def required: List[String]
   }
-  case class ClassChild(name: String, model: Schema[_], children: List[ClassChild])                         extends ClassHierarchy
-  case class ClassParent(name: String, model: Schema[_], children: List[ClassChild], discriminator: String) extends ClassHierarchy
+  case class ClassChild(name: String, model: Schema[_], children: List[ClassChild], required: List[String])                         extends ClassHierarchy
+  case class ClassParent(name: String, model: Schema[_], children: List[ClassChild], discriminator: String, required: List[String]) extends ClassHierarchy
 
   /**
     * returns objects grouped into hierarchies
@@ -342,15 +345,15 @@ object ProtocolGenerator {
             .map(_.asScala)
             .getOrElse(List.empty)
             .exists(x => Option(x.get$ref).exists(_.endsWith(s"/$cls"))) =>
-        ClassChild(clsName, comp, children(clsName, comp))
+        ClassChild(clsName, comp, children(clsName, comp), Option(comp.getRequired()).fold(List.empty[String])(_.asScala.toList))
     }
 
     def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] = {
       (model match {
-        case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName))
-        case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName))
+        case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, Option(c.getRequired()).fold(List.empty[String])(_.asScala.toList))))
+        case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, Option(m.getRequired()).fold(List.empty[String])(_.asScala.toList))))
         case _                 => None
-      }).map(ClassParent(cls, model, children(cls, model), _))
+      }).map({ case (a, b) => ClassParent(cls, model, children(cls, model), a, b) })
     }
 
     definitions.partitionEither({ case (cls, model) =>
