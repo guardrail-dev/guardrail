@@ -391,8 +391,10 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    cls shouldBe "Cat"
-    defCls.structure shouldBe q"""case class Cat(name: String) extends Pet""".structure
+    it("Direct extension should be supported") {
+      cls shouldBe "Cat"
+      defCls.structure shouldBe q"""case class Cat(name: String) extends Pet""".structure
+    }
   }
 
   describe("Only first discriminator should be used. Other should be ignored.") {
