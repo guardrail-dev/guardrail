@@ -113,7 +113,7 @@ val testDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalatestVersion % Test
 )
 
-val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable)
+val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
