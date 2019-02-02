@@ -72,15 +72,16 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 
   /** Temporary hack method to adapt to open-api v3 spec */
   private def extractParamsFromRequestBody(requestBody: RequestBody): List[Parameter] =
-    Try {
-      Option(requestBody.getContent()).fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala)).flatMap { mt =>
+    Option(requestBody.getContent())
+      .fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala))
+      .flatMap { mt =>
         val requiredFields = Option(mt.getSchema).flatMap(x => Option(x.getRequired)).fold(Set.empty[String])(_.asScala.toSet)
 
         Option(mt.getSchema.getProperties).map(_.asScala.toList).getOrElse(List.empty).map {
           case (name, schema) =>
             val p = new Parameter
 
-            if (schema.getFormat == "binary") {
+            if (Option(schema.getFormat).contains("binary")) {
               schema.setType("file")
               schema.setFormat(null)
             }
@@ -92,17 +93,14 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
             val isRequired: Boolean = if (requiredFields.nonEmpty) {
               requiredFields.contains(name)
             } else {
-              val x: Option[Boolean] = Option(requestBody.getRequired)
-              x.getOrElse(false)
+              Option[Boolean](requestBody.getRequired).getOrElse(false)
             }
 
             p.setRequired(isRequired)
             p.setExtensions(Option(schema.getExtensions).getOrElse(new util.HashMap[String, Object]()))
             p
         }
-
       }
-    }.toOption.getOrElse(List.empty)
 
   private val parameters: List[Parameter] = { //option of list is a bad signature
     val p = Option(operation.getParameters)
