@@ -37,16 +37,25 @@ case class SuperClass[L <: LA](
 )
 
 object ProtocolGenerator {
-  private[this] def getRequiredFieldsRec(value: Schema[_]): List[String] = {
-    val required = Option(value.getRequired()).fold(List.empty[String])(_.asScala.toList)
-    val recursed = value match {
-      case x: ComposedSchema =>
-        Option(x.getAllOf()).fold(List.empty[Schema[_]])(_.asScala.toList)
-          .flatMap(getRequiredFieldsRec(_))
-      case _ => Nil
-    }
+  private[this] def getRequiredFieldsRec(root: Schema[_]): List[String] = {
+    @scala.annotation.tailrec
+    def work(values: List[Schema[_]], acc: List[String]): List[String] = {
+      val required = values.flatMap(value => Option(value.getRequired()).fold(List.empty[String])(_.asScala.toList))
+      val next: List[Schema[_]] = values.flatMap({
+        case x: ComposedSchema =>
+          Option(x.getAllOf())
+            .fold(List.empty[Schema[_]])(_.asScala.toList)
+        case _ => Nil
+      })
 
-    required ++ recursed
+      val newRequired = acc ++ required
+
+      next match {
+        case next@(_ :: _) => work(next, newRequired)
+        case Nil => newRequired
+      }
+    }
+    work(List(root), Nil)
   }
 
   private[this] def fromEnum[L <: LA, F[_]](
