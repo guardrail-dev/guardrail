@@ -43,8 +43,12 @@ object Common {
 
       serverUrls = Option(swagger.getServers)
         .map(_.asScala.toList)
+        .map(_.flatMap({ x => Option(x.getUrl().stripSuffix("/")).filter(_.nonEmpty) }))
         .flatMap(NonEmptyList.fromList(_))
-        .map(_.map( x => new URI(x.getUrl().stripSuffix("/"))))
+        .map(_.map({ x =>
+          val uri = new URI(x)
+          new URI(Option(uri.getScheme).getOrElse("http"), uri.getUserInfo, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+        }))
       basePath = swagger.basePath()
 
       paths = swagger.getPathsOpt()
