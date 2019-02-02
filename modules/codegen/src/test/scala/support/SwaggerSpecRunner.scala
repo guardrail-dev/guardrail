@@ -35,34 +35,27 @@ trait SwaggerSpecRunner {
     import F._
     import Sw._
 
-    val prog = for {
-      protocol <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](swagger)
-      definitions = protocol.elems
+    val (proto, CodegenDefinitions(clients, Nil)) = Target.unsafeExtract(
+      Common
+        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+          CodegenTarget.Client,
+          context,
+          swagger
+        )
+        .foldMap(framework)
+    )
 
-      serverUrls = Option(swagger.getServers)
-        .map(_.asScala.toList)
-        .flatMap(NonEmptyList.fromList(_))
-        .map(_.map(x => new URI(x.getUrl().stripSuffix("/"))))
-      basePath = swagger.basePath()
-      paths    = swagger.getPathsOpt()
+    val (_, CodegenDefinitions(Nil, servers)) = Target.unsafeExtract(
+      Common
+        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+          CodegenTarget.Server,
+          context,
+          swagger
+        )
+        .foldMap(framework)
+    )
 
-      routes <- extractOperations(paths)
-      classNamedRoutes <- routes
-        .map(route => getClassName(route.operation).map(_ -> route))
-        .sequence
-      groupedRoutes = classNamedRoutes
-        .groupBy(_._1)
-        .mapValues(_.map(_._2))
-        .toList
-      frameworkImports <- getFrameworkImports(context.tracing)
-
-      clients <- ClientGenerator
-        .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(definitions)
-      servers <- ServerGenerator
-        .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, swagger, frameworkImports)(definitions)
-    } yield (protocol, clients, servers)
-
-    Target.unsafeExtract(prog.foldMap(framework))
+    (proto, Clients(clients), Servers(servers))
   }
 
 }
