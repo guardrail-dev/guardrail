@@ -45,10 +45,6 @@ package object shims {
       } yield contentType
   }
 
-  implicit class MediaTypeExt(mt: MediaType) {
-    def requiredFields(): Set[String] = Option(mt.getSchema.getRequired).map(_.asScala.toSet).getOrElse(Set.empty)
-  }
-
   implicit class ParameterExt(parameter: Parameter) {
     def format(): String = parameter.getSchema.getFormat()
 
@@ -59,18 +55,5 @@ package object shims {
     def isInBody: Boolean     = parameter.getIn == "body"
     def isInFormData: Boolean = parameter.getIn == "formData"
     def isRef: Boolean        = Option(parameter.get$ref()).isDefined
-
-    def getSimpleRef: String =
-      if (isRef) {
-        parameter.get$ref().split('/').last
-      } else {
-        throw new IllegalStateException("not a ref")
-      }
-  }
-
-  implicit class SchemaExt(schema: Schema[_]) {
-    def extractEnum(): Option[List[String]] =
-      Option(schema.getEnum())
-        .map(_.asScala.map(_.asInstanceOf[String]).to[List])
   }
 }

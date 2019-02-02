@@ -14,7 +14,7 @@ import scala.collection.JavaConverters._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
-import io.swagger.v3.oas.models.media.{ ArraySchema, ObjectSchema, Schema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, ObjectSchema, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 
@@ -73,8 +73,8 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
   /** Temporary hack method to adapt to open-api v3 spec */
   private def extractParamsFromRequestBody(requestBody: RequestBody): List[Parameter] =
     Try {
-      requestBody.getContent.values().asScala.toList.flatMap { mt =>
-        val requiredFields = mt.requiredFields()
+      Option(requestBody.getContent()).fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala)).flatMap { mt =>
+        val requiredFields = Option(mt.getSchema).flatMap(x => Option(x.getRequired)).fold(Set.empty[String])(_.asScala.toSet)
 
         Option(mt.getSchema.getProperties).map(_.asScala.toList).getOrElse(List.empty).map {
           case (name, schema) =>
@@ -88,8 +88,6 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
             p.setName(name)
             p.setIn("formData")
             p.setSchema(schema)
-
-//            assert(operation.getRequestBody.getRequired == requiredFields.contains(name))
 
             val isRequired: Boolean = if (requiredFields.nonEmpty) {
               requiredFields.contains(name)
