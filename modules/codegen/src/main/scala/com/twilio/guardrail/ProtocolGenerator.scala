@@ -354,13 +354,13 @@ object ProtocolGenerator {
             .map(_.asScala)
             .getOrElse(List.empty)
             .exists(x => Option(x.get$ref).exists(_.endsWith(s"/$cls"))) =>
-        ClassChild(clsName, comp, children(clsName, comp), Option(comp.getRequired()).fold(List.empty[String])(_.asScala.toList))
+        ClassChild(clsName, comp, children(clsName, comp), getRequiredFieldsRec(comp))
     }
 
     def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] = {
       (model match {
-        case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, Option(c.getRequired()).fold(List.empty[String])(_.asScala.toList))))
-        case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, Option(m.getRequired()).fold(List.empty[String])(_.asScala.toList))))
+        case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(c))))
+        case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(m))))
         case _                 => None
       }).map({ case (a, b) => ClassParent(cls, model, children(cls, model), a, b) })
     }
