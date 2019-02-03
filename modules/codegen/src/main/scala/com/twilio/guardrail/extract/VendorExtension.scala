@@ -6,7 +6,7 @@ import io.swagger.v3.oas.models.parameters.{ CookieParameter, Parameter }
 import io.swagger.v3.oas.models.responses.ApiResponse
 
 object VendorExtension {
-  trait VendorExtensible[-F] { //fixme: had to make F contravariant because the compiler was complaining about Schema[_] type
+  trait VendorExtensible[-F] {
     def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T]
   }
 

@@ -98,7 +98,6 @@ object ProtocolGenerator {
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
     val tpeName = Option(swagger.getType).getOrElse("string")
-    //fixme why is it objectSchema and not StringSchema
 
     for {
       enum <- extractEnum(swagger)

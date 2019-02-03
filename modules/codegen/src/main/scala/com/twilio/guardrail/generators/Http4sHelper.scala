@@ -14,6 +14,7 @@ import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
 import scala.collection.JavaConverters._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.Operation
+import _root_.io.swagger.v3.oas.models.media.Schema
 
 class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])]) {
   override def toString() = s"Response($statusCodeName, $statusCode, $value)"
@@ -41,14 +42,18 @@ object Http4sHelper {
             acc :+ (for {
               httpCode <- lookupStatusCode(key)
               (statusCode, statusCodeName) = httpCode
-              valueType <- resp.getContent.values().asScala.headOption.map(_.getSchema).traverse { prop => //fixme: use of headOption
+              valueTypes <- (for {
+                content       <- Option(resp.getContent).toList
+                contentValues <- Option(content.values()).toList.flatMap(_.asScala) // FIXME: values() ignores Content-Types in the keys
+                schema        <- Option[Schema[_]](contentValues.getSchema()).toList
+              } yield schema).traverse { prop =>
                 for {
                   meta     <- SwaggerUtil.propMeta[L, F](prop)
                   resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield (baseType, baseDefaultValue)
               }
-            } yield new Response[L](statusCodeName, statusCode, valueType))
+            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption)) // FIXME: headOption
         })
         .sequence
     } yield new Responses[L](instances)
