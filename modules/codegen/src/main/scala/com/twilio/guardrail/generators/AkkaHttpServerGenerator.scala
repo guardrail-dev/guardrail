@@ -14,6 +14,7 @@ import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.shims._
 
 import scala.collection.JavaConverters._
 import scala.meta._
@@ -649,7 +650,7 @@ object AkkaHttpServerGenerator {
           )
         )
 
-        val consumes = Option(operation.getRequestBody).flatMap(x => Option(x.getContent)).fold(List.empty[String])(_.asScala.keys.toList)
+        val consumes = operation.consumes
         RenderedRoute(
           fullRoute,
           q"""
