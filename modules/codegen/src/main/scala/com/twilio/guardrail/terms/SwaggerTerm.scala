@@ -93,7 +93,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
             val isRequired: Boolean = if (requiredFields.nonEmpty) {
               requiredFields.contains(name)
             } else {
-              Option[Boolean](requestBody.getRequired).getOrElse(false)
+              Option[java.lang.Boolean](requestBody.getRequired).fold(false)(identity)
             }
 
             p.setRequired(isRequired)
