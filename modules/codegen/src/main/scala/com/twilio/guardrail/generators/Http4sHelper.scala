@@ -15,11 +15,15 @@ import scala.collection.JavaConverters._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.Operation
 
-class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])])
+class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])]) {
+  override def toString() = s"Response($statusCodeName, $statusCode, $value)"
+}
 object Response {
   def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type])] = Some((value.statusCodeName, value.value.map(_._1)))
 }
-class Responses[L <: LA](val value: List[Response[L]])
+class Responses[L <: LA](val value: List[Response[L]]) {
+  override def toString() = s"Responses($value)"
+}
 object Http4sHelper {
   def getResponses[L <: LA, F[_]](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
