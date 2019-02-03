@@ -214,32 +214,31 @@ object SwaggerUtil {
       } else Free.pure(Option.empty[L#Type])
     }
 
-    customType
-      .flatTraverse(liftCustomType _)
-      .flatMap(
-        _.fold({
-          (typeName, format) match {
-            case ("string", Some("date"))      => dateType()
-            case ("string", Some("date-time")) => dateTimeType()
-            case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
-            case ("number", Some("float"))     => floatType()
-            case ("number", Some("double"))    => doubleType()
-            case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
-            case ("integer", Some("int32"))    => intType()
-            case ("integer", Some("int64"))    => longType()
-            case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
-            case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
-            case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
-            case ("file", fmt) =>
-              fileType(fmt).map(log(fmt, _))
-            case ("binary", _) =>
-              fileType(None).map(log(None, _))
-            case ("object", fmt) => objectType(fmt).map(log(fmt, _))
-            case (tpe, fmt) =>
-              fallbackType(tpe, fmt)
-          }
-        })(Free.pure(_))
-      )
+    for {
+      customTpe <- customType.flatTraverse(liftCustomType _)
+      result <- customTpe.fold({
+        (typeName, format) match {
+          case ("string", Some("date"))      => dateType()
+          case ("string", Some("date-time")) => dateTimeType()
+          case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
+          case ("number", Some("float"))     => floatType()
+          case ("number", Some("double"))    => doubleType()
+          case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
+          case ("integer", Some("int32"))    => intType()
+          case ("integer", Some("int64"))    => longType()
+          case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
+          case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
+          case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
+          case ("file", fmt) =>
+            fileType(fmt).map(log(fmt, _))
+          case ("binary", _) =>
+            fileType(None).map(log(None, _))
+          case ("object", fmt) => objectType(fmt).map(log(fmt, _))
+          case (tpe, fmt) =>
+            fallbackType(tpe, fmt)
+        }
+      })(Free.pure(_))
+    } yield result
   }
 
   def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
