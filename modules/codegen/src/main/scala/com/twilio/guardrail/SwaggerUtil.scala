@@ -260,7 +260,11 @@ object SwaggerUtil {
         } yield res
       case m: MapSchema =>
         for {
-          rec <- propMeta[L, F](Option(m.getAdditionalProperties).getOrElse(throw new Exception("MapSchema issue")).asInstanceOf[Schema[_]])
+          rec <- Option(m.getAdditionalProperties)
+            .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None)))({
+              case b: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None))
+              case s: Schema[_]         => propMeta[L, F](s)
+            })
           res <- rec match {
             case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
             case x: DeferredMap[L]       => embedMap(x)
