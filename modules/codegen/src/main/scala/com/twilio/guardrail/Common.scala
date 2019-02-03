@@ -47,7 +47,7 @@ object Common {
         .flatMap(NonEmptyList.fromList(_))
         .map(_.map({ x =>
           val uri = new URI(x)
-          new URI(Option(uri.getScheme).getOrElse("http"), uri.getUserInfo, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+          new URI(Option(uri.getScheme).getOrElse("http"), uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
         }))
       basePath = swagger.basePath()
 
