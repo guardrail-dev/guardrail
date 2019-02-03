@@ -310,8 +310,8 @@ object AkkaHttpClientGenerator {
         val imat = param"implicit mat: Materializer"
         Target.pure(
           List(List(formatHost(serverUrls)) ++ (if (tracing)
-                                                     Some(formatClientName(tracingName))
-                                                   else None),
+                                                  Some(formatClientName(tracingName))
+                                                else None),
                List(ihc, iec, imat))
         )
 

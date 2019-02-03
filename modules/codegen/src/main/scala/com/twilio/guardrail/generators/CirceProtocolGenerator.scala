@@ -94,8 +94,9 @@ object CirceProtocolGenerator {
     def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         (swagger match {
-          case m: ObjectSchema      => Target.pure(Option(m.getProperties))
-          case comp: ComposedSchema => Target.pure(Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).lastOption.flatMap(prop => Option(prop.getProperties)))
+          case m: ObjectSchema => Target.pure(Option(m.getProperties))
+          case comp: ComposedSchema =>
+            Target.pure(Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).lastOption.flatMap(prop => Option(prop.getProperties)))
           case comp: Schema[_] if Option(comp.get$ref).isDefined =>
             Target.error(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
           case _ => Target.pure(None)
@@ -119,13 +120,13 @@ object CirceProtocolGenerator {
               Default(p).extract[Boolean].map(Lit.Boolean(_))
             case p: NumberSchema if p.getFormat == "double" =>
               Default(p).extract[Double].map(Lit.Double(_))
-            case p: NumberSchema if p.getFormat == "float"  =>
+            case p: NumberSchema if p.getFormat == "float" =>
               Default(p).extract[Float].map(Lit.Float(_))
             case p: IntegerSchema if p.getFormat == "int32" =>
               Default(p).extract[Int].map(Lit.Int(_))
             case p: IntegerSchema if p.getFormat == "int64" =>
               Default(p).extract[Long].map(Lit.Long(_))
-            case p: StringSchema                            =>
+            case p: StringSchema =>
               Default(p).extract[String].map(Lit.String(_))
             case _ =>
               None
@@ -367,10 +368,12 @@ object CirceProtocolGenerator {
             case elem: ComposedSchema =>
               Option(elem.getAllOf).map(_.asScala.toList).getOrElse(List.empty) match {
                 case head :: tail =>
-                  definitions.collectFirst({
-                    case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
-                      (clsName, e, tail.toList) :: allParents(e)
-                  }).getOrElse(List.empty)
+                  definitions
+                    .collectFirst({
+                      case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
+                        (clsName, e, tail.toList) :: allParents(e)
+                    })
+                    .getOrElse(List.empty)
                 case _ => List.empty
               }
             case _ => List.empty

@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
-import _root_.io.swagger.v3.oas.models.media.{ ArraySchema, ComposedSchema, ObjectSchema, Schema, StringSchema, IntegerSchema }
+import _root_.io.swagger.v3.oas.models.media.{ ArraySchema, ComposedSchema, IntegerSchema, ObjectSchema, Schema, StringSchema }
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
@@ -51,8 +51,8 @@ object ProtocolGenerator {
       val newRequired = acc ++ required
 
       next match {
-        case next@(_ :: _) => work(next, newRequired)
-        case Nil => newRequired
+        case next @ (_ :: _) => work(next, newRequired)
+        case Nil             => newRequired
       }
     }
     work(List(root), Nil)
@@ -153,10 +153,10 @@ object ProtocolGenerator {
     for {
       parents <- hierarchy.model match {
         case c: ComposedSchema => extractParents(c, definitions, concreteTypes)
-        case _ => Free.pure[F, List[SuperClass[L]]](Nil)
+        case _                 => Free.pure[F, List[SuperClass[L]]](Nil)
       }
-      props   <- extractProperties(hierarchy.model)
-      requiredFields = hierarchy.required ::: hierarchy.children.flatMap(_.required)
+      props <- extractProperties(hierarchy.model)
+      requiredFields           = hierarchy.required ::: hierarchy.children.flatMap(_.required)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
@@ -194,44 +194,45 @@ object ProtocolGenerator {
 
     for {
       a <- extractSuperClass(elem, definitions)
-      supper <- a.flatTraverse { case (clsName, _extends, interfaces) =>
-        val concreteInterfaces = interfaces
-          .flatMap(
-            x =>
-              definitions.collectFirst[Schema[_]] {
-                case (cls, y: ComposedSchema) if Option(x.get$ref).exists(_.endsWith(s"/${cls}")) => y
-                case (cls, y: Schema[_]) if Option(x.get$ref).exists(_.endsWith(s"/${cls}")) => y
-            }
-          )
-        for {
-          _extendsProps <- extractProperties(_extends)
-          requiredFields           = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
-          _withProps    <- concreteInterfaces.traverse(extractProperties)
-          props                    = _extendsProps ++ _withProps.flatten
-          needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-          params <- props.traverse({
-            case (name, prop) =>
-              val isRequired = requiredFields.contains(name)
-              SwaggerUtil
-                .propMeta[L, F](prop)
-                .flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
-          })
-          interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
-          tpe <- parseTypeName(clsName)
-        } yield
-          tpe
-            .map(
-              SuperClass[L](
-                clsName,
-                _,
-                interfacesCls,
-                params,
-                (_extends :: concreteInterfaces).collect {
-                  case m: ObjectSchema if Option(m.getDiscriminator).isDefined => m.getDiscriminator.getPropertyName
-                }
-              )
+      supper <- a.flatTraverse {
+        case (clsName, _extends, interfaces) =>
+          val concreteInterfaces = interfaces
+            .flatMap(
+              x =>
+                definitions.collectFirst[Schema[_]] {
+                  case (cls, y: ComposedSchema) if Option(x.get$ref).exists(_.endsWith(s"/${cls}")) => y
+                  case (cls, y: Schema[_]) if Option(x.get$ref).exists(_.endsWith(s"/${cls}"))      => y
+              }
             )
-            .toList
+          for {
+            _extendsProps <- extractProperties(_extends)
+            requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
+            _withProps <- concreteInterfaces.traverse(extractProperties)
+            props                    = _extendsProps ++ _withProps.flatten
+            needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+            params <- props.traverse({
+              case (name, prop) =>
+                val isRequired = requiredFields.contains(name)
+                SwaggerUtil
+                  .propMeta[L, F](prop)
+                  .flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
+            })
+            interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
+            tpe <- parseTypeName(clsName)
+          } yield
+            tpe
+              .map(
+                SuperClass[L](
+                  clsName,
+                  _,
+                  interfacesCls,
+                  params,
+                  (_extends :: concreteInterfaces).collect {
+                    case m: ObjectSchema if Option(m.getDiscriminator).isDefined => m.getDiscriminator.getPropertyName
+                  }
+                )
+              )
+              .toList
       }
 
     } yield supper
@@ -338,7 +339,8 @@ object ProtocolGenerator {
       (model match {
         case elem: ComposedSchema =>
           definitions.collectFirst {
-            case (clsName, element) if Option(elem.getAllOf).toList.flatMap(_.asScala).exists(r => Option(r.get$ref).exists(_.endsWith(s"/$clsName"))) => element
+            case (clsName, element) if Option(elem.getAllOf).toList.flatMap(_.asScala).exists(r => Option(r.get$ref).exists(_.endsWith(s"/$clsName"))) =>
+              element
           }
         case _ => None
       }) match {
@@ -356,16 +358,17 @@ object ProtocolGenerator {
         ClassChild(clsName, comp, children(clsName), getRequiredFieldsRec(comp))
     }
 
-    def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] = {
+    def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] =
       (model match {
-        case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(c))))
-        case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(m))))
-        case _                 => None
+        case c: ComposedSchema =>
+          firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(c))))
+        case m: Schema[_] => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(m))))
+        case _            => None
       }).map({ case (a, b) => ClassParent(cls, model, children(cls), a, b) })
-    }
 
-    definitions.partitionEither({ case (cls, model) =>
-      classHierarchy(cls, model).filterNot(_.children.isEmpty).toLeft((cls, model))
+    definitions.partitionEither({
+      case (cls, model) =>
+        classHierarchy(cls, model).filterNot(_.children.isEmpty).toLeft((cls, model))
     })
   }
 
@@ -382,7 +385,7 @@ object ProtocolGenerator {
     import S._
     import Sw._
 
-    val definitions = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
+    val definitions                           = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
     val (hierarchies, definitionsWithoutPoly) = groupHierarchies(definitions)
 
     for {
@@ -393,9 +396,9 @@ object ProtocolGenerator {
           model match {
             case m: StringSchema =>
               for {
-                enum    <- fromEnum(clsName, m)
-                model   <- fromModel(clsName, m, List.empty, concreteTypes)
-                alias   <- modelTypeAlias(clsName, m)
+                enum  <- fromEnum(clsName, m)
+                model <- fromModel(clsName, m, List.empty, concreteTypes)
+                alias <- modelTypeAlias(clsName, m)
               } yield enum.orElse(model).getOrElse(alias)
 
             case comp: ComposedSchema =>
@@ -410,16 +413,16 @@ object ProtocolGenerator {
 
             case m: ObjectSchema =>
               for {
-                model   <- fromModel(clsName, m, List.empty, concreteTypes)
-                alias   <- modelTypeAlias(clsName, m)
+                model <- fromModel(clsName, m, List.empty, concreteTypes)
+                alias <- modelTypeAlias(clsName, m)
               } yield model.getOrElse(alias)
 
             case x =>
               for {
                 tpeName <- getType(x)
 
-                tpe     <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x))
-                res     <- typeAlias(clsName, tpe)
+                tpe <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x))
+                res <- typeAlias(clsName, tpe)
               } yield res
           }
       }

@@ -29,17 +29,17 @@ package object shims {
   implicit class OperationExt(operation: Operation) {
     def consumes: Seq[String] =
       for {
-        body <- Option(operation.getRequestBody()).toList
-        content <- Option(body.getContent()).toList
+        body        <- Option(operation.getRequestBody()).toList
+        content     <- Option(body.getContent()).toList
         contentType <- content.asScala.keys
         if contentType != "*/*"
       } yield contentType
 
     def produces: Seq[String] =
       for {
-        responses <- Option(operation.getResponses()).toList
-        response <- responses.asScala.values
-        content <- Option(response.getContent()).toList
+        responses   <- Option(operation.getResponses()).toList
+        response    <- responses.asScala.values
+        content     <- Option(response.getContent()).toList
         contentType <- content.asScala.keys
         if contentType != "*/*"
       } yield contentType

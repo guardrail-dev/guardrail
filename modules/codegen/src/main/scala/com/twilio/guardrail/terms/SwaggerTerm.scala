@@ -23,8 +23,8 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
   private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] =
     for {
       content <- Option(requestBody.getContent())
-      mt <- content.values().asScala.headOption
-      tpe <- Option(mt.getSchema.getType())
+      mt      <- content.values().asScala.headOption
+      tpe     <- Option(mt.getSchema.getType())
     } yield {
       val p = new Parameter
 
@@ -47,8 +47,8 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
   private def extractRefParamFromRequestBody(requestBody: RequestBody): Option[Parameter] =
     for {
       content <- Option(requestBody.getContent)
-      mt <- content.values().asScala.headOption
-      ref <- Option(mt.getSchema.get$ref())
+      mt      <- content.values().asScala.headOption
+      ref     <- Option(mt.getSchema.get$ref())
     } yield {
       val p = new Parameter
 
@@ -111,19 +111,19 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       (Option(operation.getRequestBody).flatMap(extractRefParamFromRequestBody) ++
         p ++
         Option(operation.getRequestBody).toList.flatMap(extractParamsFromRequestBody) ++
-        Option(operation.getRequestBody).flatMap(extractPrimitiveFromRequestBody)
-      ).toList
+        Option(operation.getRequestBody).flatMap(extractPrimitiveFromRequestBody)).toList
     params
   }
 
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] = {
-    ScalaParameter.fromParameters(protocolElems).apply(parameters)
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
+    ScalaParameter
+      .fromParameters(protocolElems)
+      .apply(parameters)
       .map({ a =>
         new ScalaParameters[L](a)
       })
-  }
 }
 
 sealed trait SwaggerTerm[L <: LA, T]

@@ -33,7 +33,8 @@ object Common {
       S: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, F],
       Se: ServerTerms[L, F],
-      Sw: SwaggerTerms[L, F]): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
+      Sw: SwaggerTerms[L, F]
+  ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import F._
     import Sw._
 
@@ -43,7 +44,9 @@ object Common {
 
       serverUrls = Option(swagger.getServers)
         .map(_.asScala.toList)
-        .map(_.flatMap({ x => Option(x.getUrl().stripSuffix("/")).filter(_.nonEmpty) }))
+        .map(_.flatMap({ x =>
+          Option(x.getUrl().stripSuffix("/")).filter(_.nonEmpty)
+        }))
         .flatMap(NonEmptyList.fromList(_))
         .map(_.map({ x =>
           val uri = new URI(x)

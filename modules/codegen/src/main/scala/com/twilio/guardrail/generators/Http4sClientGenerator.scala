@@ -306,8 +306,8 @@ object Http4sClientGenerator {
         val ief = param"implicit effect: Effect[F]"
         Target.pure(
           List(List(formatHost(serverUrls)) ++ (if (tracing)
-                                                     Some(formatClientName(tracingName))
-                                                   else None),
+                                                  Some(formatClientName(tracingName))
+                                                else None),
                List(ief, ihc))
         )
 
