@@ -347,13 +347,13 @@ object ProtocolGenerator {
         case _                       => None
       }
 
-    def children(cls: String, model: Schema[_]): List[ClassChild] = definitions.collect {
+    def children(cls: String): List[ClassChild] = definitions.collect {
       case (clsName, comp: ComposedSchema)
           if Option(comp.getAllOf)
             .map(_.asScala)
             .getOrElse(List.empty)
             .exists(x => Option(x.get$ref).exists(_.endsWith(s"/$cls"))) =>
-        ClassChild(clsName, comp, children(clsName, comp), getRequiredFieldsRec(comp))
+        ClassChild(clsName, comp, children(clsName), getRequiredFieldsRec(comp))
     }
 
     def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] = {
@@ -361,7 +361,7 @@ object ProtocolGenerator {
         case c: ComposedSchema => firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(c))))
         case m: Schema[_]      => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(m))))
         case _                 => None
-      }).map({ case (a, b) => ClassParent(cls, model, children(cls, model), a, b) })
+      }).map({ case (a, b) => ClassParent(cls, model, children(cls), a, b) })
     }
 
     definitions.partitionEither({ case (cls, model) =>
