@@ -101,14 +101,22 @@ object SwaggerGenerator {
         Target.fromOption(Option(arr.getItems()), "items.type unspecified")
 
       case GetType(model) =>
-        Target.fromOption(
-          Option(model.getType()),
-          s"Unable to resolve type for ${model.getDescription()} (${model
-            .getEnum()} ${model.getName()} ${model.getType()} ${model.getFormat()})"
+        val determinedType = Option(model.getType()).fold("No type definition")(s => s"type: $s")
+        val className      = model.getClass.getName
+        Target.fromOption(Option(model.getType()),
+          s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
+              |  ${model.toString().lines.filterNot(_.contains(": null")).mkString("\n  ")}
+              |""".stripMargin
         )
 
       case FallbackPropertyTypeHandler(prop) =>
-        Target.raiseError(s"Unsupported swagger class ${prop.getClass.getName} (${prop})")
+        val determinedType = Option(prop.getType()).fold("No type definition")(s => s"type: $s")
+        val className      = prop.getClass.getName
+        Target.raiseError(
+          s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
+              |  ${prop.toString().lines.filterNot(_.contains(": null")).mkString("\n  ")}
+              |""".stripMargin
+        )
 
       case ResolveType(name, protocolElems) =>
         Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
