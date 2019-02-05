@@ -148,7 +148,7 @@ object AkkaHttpGenerator {
 
             def AccumulatingUnmarshaller[T, U, V](accumulator: AtomicReference[List[V]], ev: Unmarshaller[T, U])(acc: U => V)(implicit mat: Materializer): Unmarshaller[T, U] = {
               ev.map { value =>
-                accumulator.updateAndGet(acc(value) :: _)
+                accumulator.updateAndGet(x => (acc(value) :: x))
                 value
               }
             }
