@@ -44,8 +44,11 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       p
     }
 
-  private def extractRefParamFromRequestBody(requestBody: RequestBody): Option[Parameter] =
-    for {
+  // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#fixed-fields-8
+  // RequestBody can represent either a RequestBody object or $ref.
+  // (these are both represented in the same RequestBody class)
+  private def extractRefParamFromRequestBody(requestBody: RequestBody): Option[Parameter] = {
+    val content = for {
       content <- Option(requestBody.getContent)
       mt      <- content.values().asScala.headOption
       ref     <- Option(mt.getSchema.get$ref())
@@ -69,6 +72,23 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       p.setExtensions(Option(schema.getExtensions).getOrElse(new util.HashMap[String, Object]()))
       p
     }
+
+    val ref = Option(requestBody.get$ref()).map { x =>
+      val p = new Parameter
+
+      p.setIn("body")
+      p.setName("body")
+      p.set$ref(x)
+
+      p.setRequired(requestBody.getRequired)
+
+      p.setExtensions(Option(requestBody.getExtensions).getOrElse(new util.HashMap[String, Object]()))
+
+      p
+    }
+
+    content.orElse(ref)
+  }
 
   /** Temporary hack method to adapt to open-api v3 spec */
   private def extractParamsFromRequestBody(requestBody: RequestBody): List[Parameter] =
@@ -102,7 +122,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
         }
       }
 
-  private val parameters: List[Parameter] = { //option of list is a bad signature
+  private val parameters: List[Parameter] = {
     val p = Option(operation.getParameters)
       .map(_.asScala.toList)
       .getOrElse(List.empty)
