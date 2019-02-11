@@ -103,7 +103,8 @@ object SwaggerGenerator {
       case GetType(model) =>
         val determinedType = Option(model.getType()).fold("No type definition")(s => s"type: $s")
         val className      = model.getClass.getName
-        Target.fromOption(Option(model.getType()),
+        Target.fromOption(
+          Option(model.getType()),
           s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
               |  ${model.toString().lines.filterNot(_.contains(": null")).mkString("\n  ")}
               |""".stripMargin
