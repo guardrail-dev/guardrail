@@ -3,17 +3,20 @@ package generators
 
 import java.util.Locale
 
-import _root_.io.swagger.models._
+import _root_.io.swagger.v3.oas.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.syntax.flatMap._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.ScalaLanguage
 
 import scala.collection.JavaConverters._
 import scala.meta._
+import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+import java.net.URI
 
 object AkkaHttpClientGenerator {
 
@@ -35,18 +38,12 @@ object AkkaHttpClientGenerator {
         param"clientName: String"
       )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
 
-    private[this] def formatHost(schemes: List[String], host: Option[String]): Term.Param =
-      host
-        .map {
-          case v if !v.startsWith("http") =>
-            val scheme = schemes.headOption.getOrElse("http")
-            s"$scheme://$v"
-          case v => v
-        }
-        .fold(param"host: String")(v => param"host: String = ${Lit.String(v)}")
+    private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
+      serverUrls
+        .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
+      case GenerateClientOperation(_, _ @RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
@@ -263,8 +260,8 @@ object AkkaHttpClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          produces = Option(operation.getProduces).fold(List.empty[String])(_.asScala.toList)
-          consumes = Option(operation.getConsumes).fold(List.empty[String])(_.asScala.toList)
+          produces = operation.produces
+          consumes = operation.consumes
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams
@@ -306,25 +303,24 @@ object AkkaHttpClientGenerator {
 
       case GetExtraImports(tracing) => Target.pure(List.empty)
 
-      case ClientClsArgs(tracingName, schemes, host, tracing) =>
+      case ClientClsArgs(tracingName, serverUrls, tracing) =>
         val ihc =
           param"implicit httpClient: HttpRequest => Future[HttpResponse]"
         val iec  = param"implicit ec: ExecutionContext"
         val imat = param"implicit mat: Materializer"
         Target.pure(
-          List(List(formatHost(schemes, host)) ++ (if (tracing)
-                                                     Some(formatClientName(tracingName))
-                                                   else None),
+          List(List(formatHost(serverUrls)) ++ (if (tracing)
+                                                  Some(formatClientName(tracingName))
+                                                else None),
                List(ihc, iec, imat))
         )
 
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
-      case BuildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, tracing) =>
+      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
-                              schemes: List[String],
-                              host: Option[String],
+                              serverUrls: Option[NonEmptyList[URI]],
                               tpe: Type.Name,
                               ctorCall: Term.New,
                               tracing: Boolean): List[Defn] = {
@@ -338,7 +334,7 @@ object AkkaHttpClientGenerator {
 
           List(
             q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(schemes, host)}, ..$tracingParams)($iec, $imat): $tpe = $ctorCall
+              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)($iec, $imat): $tpe = $ctorCall
             """
           )
         }
@@ -360,7 +356,7 @@ object AkkaHttpClientGenerator {
 
         val decls: List[Defn] =
           q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +:
-            extraConstructors(tracingName, schemes, host, Type.Name(clientName), ctorCall, tracing)
+            extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
         Target.pure(
           StaticDefns[ScalaLanguage](
             className = clientName,
@@ -371,7 +367,7 @@ object AkkaHttpClientGenerator {
           )
         )
 
-      case BuildClient(clientName, tracingName, schemes, host, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
+      case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val client =
           q"""
             class ${Type.Name(clientName)}(...$ctorArgs) {

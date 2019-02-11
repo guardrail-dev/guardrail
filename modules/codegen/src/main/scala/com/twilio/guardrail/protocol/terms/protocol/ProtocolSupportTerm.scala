@@ -1,6 +1,6 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import _root_.io.swagger.models.Model
+import io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.{ ProtocolElems, StrictProtocolElems }
 

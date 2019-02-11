@@ -10,15 +10,21 @@ import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
-import io.swagger.models.{ Operation, Response => SwaggerResponse }
+
 import scala.collection.JavaConverters._
 import scala.meta._
+import _root_.io.swagger.v3.oas.models.Operation
+import _root_.io.swagger.v3.oas.models.media.Schema
 
-class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])])
+class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])]) {
+  override def toString() = s"Response($statusCodeName, $statusCode, $value)"
+}
 object Response {
   def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type])] = Some((value.statusCodeName, value.value.map(_._1)))
 }
-class Responses[L <: LA](val value: List[Response[L]])
+class Responses[L <: LA](val value: List[Response[L]]) {
+  override def toString() = s"Responses($value)"
+}
 object Http4sHelper {
   def getResponses[L <: LA, F[_]](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
@@ -36,14 +42,18 @@ object Http4sHelper {
             acc :+ (for {
               httpCode <- lookupStatusCode(key)
               (statusCode, statusCodeName) = httpCode
-              valueType <- Option(resp.getSchema).traverse { prop =>
+              valueTypes <- (for {
+                content       <- Option(resp.getContent).toList
+                contentValues <- Option(content.values()).toList.flatMap(_.asScala) // FIXME: values() ignores Content-Types in the keys
+                schema        <- Option[Schema[_]](contentValues.getSchema()).toList
+              } yield schema).traverse { prop =>
                 for {
                   meta     <- SwaggerUtil.propMeta[L, F](prop)
                   resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
                 } yield (baseType, baseDefaultValue)
               }
-            } yield new Response[L](statusCodeName, statusCode, valueType))
+            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption)) // FIXME: headOption
         })
         .sequence
     } yield new Responses[L](instances)

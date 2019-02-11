@@ -1,19 +1,19 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import _root_.io.swagger.models.Model
-import _root_.io.swagger.models.properties.Property
+import _root_.io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
 
 sealed trait ModelProtocolTerm[L <: LA, T]
-case class ExtractProperties[L <: LA](swagger: Model) extends ModelProtocolTerm[L, List[(String, Property)]]
+case class ExtractProperties[L <: LA](swagger: Schema[_]) extends ModelProtocolTerm[L, List[(String, Schema[_])]]
 case class TransformProperty[L <: LA](clsName: String,
                                       name: String,
-                                      prop: Property,
+                                      prop: Schema[_],
                                       meta: ResolvedType[L],
                                       needCamelSnakeConversion: Boolean,
-                                      concreteTypes: List[PropMeta[L]])
+                                      concreteTypes: List[PropMeta[L]],
+                                      isRequired: Boolean)
     extends ModelProtocolTerm[L, ProtocolParameter[L]]
 case class RenderDTOClass[L <: LA](clsName: String, terms: List[L#MethodParameter], parents: List[SuperClass[L]] = Nil)
     extends ModelProtocolTerm[L, L#ClassDefinition]

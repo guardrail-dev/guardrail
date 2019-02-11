@@ -1,13 +1,14 @@
 package com.twilio.guardrail
 
+import cats.data.NonEmptyList
 import cats.free.Free
-import cats.instances.all._
-import cats.syntax.all._
+import cats.implicits._
 import com.twilio.guardrail.generators.Http4sHelper
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
+import java.net.URI
 
 case class Clients[L <: LA](clients: List[Client[L]])
 case class Client[L <: LA](pkg: List[String],
@@ -23,8 +24,7 @@ case class RenderedClientOperation[L <: LA](
 
 object ClientGenerator {
   def fromSwagger[L <: LA, F[_]](context: Context, frameworkImports: List[L#Import])(
-      schemes: List[String],
-      host: Option[String],
+      serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
@@ -57,13 +57,12 @@ object ClientGenerator {
             }
             (responseDefinitions, clientOperations) = responseClientPair.unzip
             tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
-            ctorArgs    <- clientClsArgs(tracingName, schemes, host, context.tracing)
-            staticDefns <- buildStaticDefns(clientName, tracingName, schemes, host, ctorArgs, context.tracing)
+            ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
+            staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
             client <- buildClient(
               clientName,
               tracingName,
-              schemes,
-              host,
+              serverUrls,
               basePath,
               ctorArgs,
               clientOperations.map(_.clientOperation),

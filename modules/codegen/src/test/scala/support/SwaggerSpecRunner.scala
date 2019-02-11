@@ -1,23 +1,33 @@
 package support
+import java.util
+
+import com.twilio.guardrail.Common._
+import com.twilio.guardrail.shims._
+import io.swagger.parser.OpenAPIParser
+import io.swagger.v3.parser.core.models.ParseOptions
 
 trait SwaggerSpecRunner {
 
-  import _root_.io.swagger.models._
-  import _root_.io.swagger.parser.SwaggerParser
+  import _root_.io.swagger.v3.oas.models._
   import cats.arrow.FunctionK
+  import cats.data.NonEmptyList
   import cats.implicits._
   import com.twilio.guardrail._
   import com.twilio.guardrail.languages.ScalaLanguage
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
   import scala.collection.JavaConverters._
+  import java.net.URI
 
   def runSwaggerSpec(
       spec: String
-  ): (Context, FunctionK[CodegenApplication[ScalaLanguage, ?], Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) =
-    runSwagger(new SwaggerParser().parse(spec)) _
+  ): (Context, FunctionK[CodegenApplication[ScalaLanguage, ?], Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) = {
+    val parseOpts = new ParseOptions
+    parseOpts.setResolve(true)
+    runSwagger(new OpenAPIParser().readContents(spec, new util.LinkedList(), parseOpts).getOpenAPI) _
+  }
 
-  def runSwagger(swagger: Swagger)(context: Context, framework: FunctionK[CodegenApplication[ScalaLanguage, ?], Target])(
+  def runSwagger(swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[ScalaLanguage, ?], Target])(
       implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
       Sc: ScalaTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
       Sw: SwaggerTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]]
@@ -25,34 +35,27 @@ trait SwaggerSpecRunner {
     import F._
     import Sw._
 
-    val prog = for {
-      protocol <- ProtocolGenerator.fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](swagger)
-      definitions = protocol.elems
+    val (proto, CodegenDefinitions(clients, Nil)) = Target.unsafeExtract(
+      Common
+        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+          CodegenTarget.Client,
+          context,
+          swagger
+        )
+        .foldMap(framework)
+    )
 
-      schemes = Option(swagger.getSchemes)
-        .fold(List.empty[String])(_.asScala.to[List].map(_.toValue))
-      host     = Option(swagger.getHost)
-      basePath = Option(swagger.getBasePath)
-      paths = Option(swagger.getPaths)
-        .map(_.asScala.toList)
-        .getOrElse(List.empty)
-      routes <- extractOperations(paths)
-      classNamedRoutes <- routes
-        .map(route => getClassName(route.operation).map(_ -> route))
-        .sequence
-      groupedRoutes = classNamedRoutes
-        .groupBy(_._1)
-        .mapValues(_.map(_._2))
-        .toList
-      frameworkImports <- getFrameworkImports(context.tracing)
+    val (_, CodegenDefinitions(Nil, servers)) = Target.unsafeExtract(
+      Common
+        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+          CodegenTarget.Server,
+          context,
+          swagger
+        )
+        .foldMap(framework)
+    )
 
-      clients <- ClientGenerator
-        .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, frameworkImports)(schemes, host, basePath, groupedRoutes)(definitions)
-      servers <- ServerGenerator
-        .fromSwagger[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](context, swagger, frameworkImports)(definitions)
-    } yield (protocol, clients, servers)
-
-    Target.unsafeExtract(prog.foldMap(framework))
+    (proto, Clients(clients), Servers(servers))
   }
 
 }

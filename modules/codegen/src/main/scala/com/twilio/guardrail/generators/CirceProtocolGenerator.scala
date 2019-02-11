@@ -1,12 +1,12 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models.{ ArrayModel, ComposedModel, Model, ModelImpl, RefModel }
-import _root_.io.swagger.models.properties._
+import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
 import cats.~>
 import cats.data.NonEmptyList
 import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms
 import java.util.Locale
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
@@ -28,7 +28,13 @@ object CirceProtocolGenerator {
   object EnumProtocolTermInterp extends (EnumProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: EnumProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
-        Target.pure(Either.fromOption(Option(swagger.getEnum()).map(_.asScala.to[List]), "Model has no enumerations"))
+        val enumEntries: Option[List[String]] = swagger match {
+          case x: StringSchema =>
+            Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
+          case x =>
+            Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
+        }
+        Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
 
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
@@ -93,17 +99,16 @@ object CirceProtocolGenerator {
   object ModelProtocolTermInterp extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
-        Target.pure(
-          (swagger match {
-            case m: ModelImpl        => Option(m.getProperties)
-            case comp: ComposedModel => comp.getAllOf().asScala.toList.lastOption.flatMap(prop => Option(prop.getProperties))
-            case comp: RefModel =>
-              Option(comp.getProperties)
-            case _ => None
-          }).map(_.asScala.toList).toList.flatten
-        )
+        (swagger match {
+          case m: ObjectSchema => Target.pure(Option(m.getProperties))
+          case comp: ComposedSchema =>
+            Target.pure(Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).lastOption.flatMap(prop => Option(prop.getProperties)))
+          case comp: Schema[_] if Option(comp.get$ref).isDefined =>
+            Target.error(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
+          case _ => Target.pure(None)
+        }).map(_.map(_.asScala.toList).toList.flatten)
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
         def toCamelCase(s: String): String =
           "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
 
@@ -113,21 +118,21 @@ object CirceProtocolGenerator {
           argName = if (needCamelSnakeConversion) toCamelCase(name) else name
 
           defaultValue = property match {
-            case _: MapProperty =>
+            case _: MapSchema =>
               Option(q"Map.empty")
-            case _: ArrayProperty =>
+            case _: ArraySchema =>
               Option(q"IndexedSeq.empty")
-            case p: BooleanProperty =>
+            case p: BooleanSchema =>
               Default(p).extract[Boolean].map(Lit.Boolean(_))
-            case p: DoubleProperty =>
+            case p: NumberSchema if p.getFormat == "double" =>
               Default(p).extract[Double].map(Lit.Double(_))
-            case p: FloatProperty =>
+            case p: NumberSchema if p.getFormat == "float" =>
               Default(p).extract[Float].map(Lit.Float(_))
-            case p: IntegerProperty =>
+            case p: IntegerSchema if p.getFormat == "int32" =>
               Default(p).extract[Int].map(Lit.Int(_))
-            case p: LongProperty =>
+            case p: IntegerSchema if p.getFormat == "int64" =>
               Default(p).extract[Long].map(Lit.Long(_))
-            case p: StringProperty =>
+            case p: StringSchema =>
               Default(p).extract[String].map(Lit.String(_))
             case _ =>
               None
@@ -135,10 +140,10 @@ object CirceProtocolGenerator {
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
           emptyToNull = (property match {
-            case d: DateProperty      => ScalaEmptyIsNull(d)
-            case dt: DateTimeProperty => ScalaEmptyIsNull(dt)
-            case s: StringProperty    => ScalaEmptyIsNull(s)
-            case _                    => None
+            case d: DateSchema      => ScalaEmptyIsNull(d)
+            case dt: DateTimeSchema => ScalaEmptyIsNull(dt)
+            case s: StringSchema    => ScalaEmptyIsNull(s)
+            case _                  => None
           }).getOrElse(EmptyIsEmpty)
 
           (tpe, classDep) = meta match {
@@ -156,7 +161,7 @@ object CirceProtocolGenerator {
               (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
           }
 
-          (finalDeclType, finalDefaultValue) = Option(property.getRequired)
+          (finalDeclType, finalDefaultValue) = Option(isRequired)
             .filterNot(_ == false)
             .fold[(Type, Option[Term])](
               (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
@@ -364,22 +369,20 @@ object CirceProtocolGenerator {
   object PolyProtocolTermInterp extends (PolyProtocolTerm[ScalaLanguage, ?] ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[ScalaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
-        def allParents(model: Model): List[(String, Model, List[RefModel])] =
-          (model match {
-            case elem: ComposedModel =>
-              NonEmptyList
-                .fromList(elem.getInterfaces.asScala.toList)
-                .flatMap({
-                  case NonEmptyList(head, tail) =>
-                    definitions.collectFirst {
-                      case (clsName, e) if head.getSimpleRef == clsName =>
-                        (clsName, e, tail.toList)
-                    }
-                })
-            case _ => None
-          }) match {
-            case Some(x @ (_, el, _)) => x :: allParents(el)
-            case _                    => Nil
+        def allParents(model: Schema[_]): List[(String, Schema[_], List[Schema[_]])] =
+          model match {
+            case elem: ComposedSchema =>
+              Option(elem.getAllOf).map(_.asScala.toList).getOrElse(List.empty) match {
+                case head :: tail =>
+                  definitions
+                    .collectFirst({
+                      case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
+                        (clsName, e, tail.toList) :: allParents(e)
+                    })
+                    .getOrElse(List.empty)
+                case _ => List.empty
+              }
+            case _ => List.empty
           }
 
         Target.pure(allParents(swagger))

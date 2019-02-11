@@ -1,5 +1,7 @@
 package tests.core.issues
 
+import cats.instances.all._
+import com.twilio.swagger._
 import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ Client, Clients, Context }
@@ -21,6 +23,8 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
     |    get:
     |      operationId: getUser
     |      x-scala-package: users
+    |      consumes:
+    |        - application/x-www-form-urlencoded
     |      produces:
     |        - application/json
     |      parameters:

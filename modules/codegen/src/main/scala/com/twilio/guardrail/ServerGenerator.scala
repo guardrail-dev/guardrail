@@ -1,6 +1,6 @@
 package com.twilio.guardrail
 
-import _root_.io.swagger.models._
+import _root_.io.swagger.v3.oas.models._
 import cats.Id
 import cats.data.NonEmptyList
 import cats.free.Free
@@ -11,6 +11,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.shims._
 import scala.collection.JavaConverters._
 
 case class Servers[L <: LA](servers: List[Server[L]])
@@ -29,15 +30,14 @@ object ServerGenerator {
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[L <: LA, F[_]](context: Context, swagger: Swagger, frameworkImports: List[L#Import])(
+  def fromSwagger[L <: LA, F[_]](context: Context, swagger: OpenAPI, frameworkImports: List[L#Import])(
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
     import Sw._
 
-    val paths: List[(String, Path)] =
-      Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
-    val basePath: Option[String] = Option(swagger.getBasePath)
+    val paths: List[(String, PathItem)] = swagger.getPathsOpt()
+    val basePath: Option[String]        = swagger.basePath()
 
     for {
       routes <- extractOperations(paths)

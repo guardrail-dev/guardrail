@@ -1,6 +1,5 @@
 package tests.core.issues
 
-import _root_.io.swagger.parser.SwaggerParser
 import cats.instances.all._
 import com.twilio.swagger._
 import com.twilio.guardrail.generators.AkkaHttp

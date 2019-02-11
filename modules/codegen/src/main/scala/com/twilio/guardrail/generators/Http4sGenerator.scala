@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.models._
+import _root_.io.swagger.v3.oas.models._
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.instances.all._
@@ -18,7 +18,9 @@ import scala.meta._
 object Http4sGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
-      case FileType(format)   => Target.pure(format.fold[Type](t"java.io.File")(Type.Name(_)))
+      case FileType(format) =>
+        Target.pure(format.fold[Type](t"java.io.File")(Type.Name(_)))
+
       case ObjectType(format) => Target.pure(t"io.circe.Json")
 
       case GetFrameworkImports(tracing) =>
