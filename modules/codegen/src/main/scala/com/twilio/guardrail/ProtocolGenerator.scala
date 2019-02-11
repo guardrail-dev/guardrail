@@ -60,7 +60,7 @@ object ProtocolGenerator {
 
   private[this] def fromEnum[L <: LA, F[_]](
       clsName: String,
-      swagger: Schema[String]
+      swagger: Schema[_]
   )(implicit E: EnumProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, Either[String, ProtocolElems[L]]] = {
     import E._
     import Sc._
@@ -97,7 +97,7 @@ object ProtocolGenerator {
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
-    val tpeName = Option(swagger.getType).getOrElse("string")
+    val tpeName = Option(swagger.getType).filterNot(_ == "object").getOrElse("string")
 
     for {
       enum <- extractEnum(swagger)
@@ -413,9 +413,10 @@ object ProtocolGenerator {
 
             case m: ObjectSchema =>
               for {
+                enum  <- fromEnum(clsName, m)
                 model <- fromModel(clsName, m, List.empty, concreteTypes)
                 alias <- modelTypeAlias(clsName, m)
-              } yield model.getOrElse(alias)
+              } yield enum.orElse(model).getOrElse(alias)
 
             case x =>
               for {

@@ -28,7 +28,13 @@ object CirceProtocolGenerator {
   object EnumProtocolTermInterp extends (EnumProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: EnumProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
-        Target.pure(Either.fromOption(Option[java.util.List[String]](swagger.getEnum()).map(_.asScala.toList), "Model has no enumerations"))
+        val enumEntries: Option[List[String]] = swagger match {
+          case x: StringSchema =>
+            Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
+          case x =>
+            Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
+        }
+        Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
 
       case RenderMembers(clsName, elems) =>
         Target.pure(q"""
