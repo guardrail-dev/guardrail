@@ -1,3 +1,10 @@
+v0.44.0
+=======
+
+- #181 Adding missing import for "ci" strings
+- #185 Fixing compilation for file uploads in 2.11
+- #177 Initial OpenAPI v3 support (Models and parser only, no new features)
+
 v0.43.0
 =======
 
