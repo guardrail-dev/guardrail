@@ -125,17 +125,23 @@ object SwaggerGenerator {
       case FallbackResolveElems(lazyElems) =>
         Target.raiseError(s"Unable to resolve: ${lazyElems.map(_.name)}")
 
-      case LogDebug(name, names, message) =>
-        Target.log.debug(name, names: _*)(message)
+      case LogPush(name) =>
+        Target.log.push(name)
 
-      case LogInfo(name, names, message) =>
-        Target.log.info(name, names: _*)(message)
+      case LogPop() =>
+        Target.log.pop
 
-      case LogWarning(name, names, message) =>
-        Target.log.warning(name, names: _*)(message)
+      case LogDebug(message) =>
+        Target.log.debug(message).apply
 
-      case LogError(name, names, message) =>
-        Target.log.error(name, names: _*)(message)
+      case LogInfo(message) =>
+        Target.log.info(message).apply
+
+      case LogWarning(message) =>
+        Target.log.warning(message).apply
+
+      case LogError(message) =>
+        Target.log.error(message).apply
     }
   }
 }

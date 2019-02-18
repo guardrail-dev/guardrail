@@ -59,7 +59,7 @@ object CLICommon {
       .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
       .getOrElse(LogLevels.Warning)
 
-    val (coreLogger, deferred) = result.run
+    val (coreLogger, deferred) = result.runEmpty
 
     print(coreLogger.show)
 
@@ -84,7 +84,7 @@ object CLICommon {
           )
       })
       .map(_.flatten)
-      .run
+      .runEmpty
 
     print(logger.show)
   }
