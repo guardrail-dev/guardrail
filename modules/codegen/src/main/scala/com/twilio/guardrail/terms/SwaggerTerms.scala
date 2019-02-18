@@ -53,6 +53,16 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
     Free.inject[SwaggerTerm[L, ?], F](ResolveType(name, protocolElems))
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): Free[F, List[StrictProtocolElems[L]]] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackResolveElems(lazyElems))
+  object log {
+    def debug(name: String, names: String*)(message: String) =
+      Free.inject[SwaggerTerm[L, ?], F](LogDebug[L](name, names, message))
+    def info(name: String, names: String*)(message: String) =
+      Free.inject[SwaggerTerm[L, ?], F](LogInfo[L](name, names, message))
+    def warning(name: String, names: String*)(message: String) =
+      Free.inject[SwaggerTerm[L, ?], F](LogWarning[L](name, names, message))
+    def error(name: String, names: String*)(message: String) =
+      Free.inject[SwaggerTerm[L, ?], F](LogError[L](name, names, message))
+  }
 }
 object SwaggerTerms {
   implicit def swaggerTerm[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]): SwaggerTerms[L, F] =

@@ -181,3 +181,7 @@ case class GetType[L <: LA](model: Schema[_])                                   
 case class FallbackPropertyTypeHandler[L <: LA](prop: Schema[_])                           extends SwaggerTerm[L, L#Type]
 case class ResolveType[L <: LA](name: String, protocolElems: List[StrictProtocolElems[L]]) extends SwaggerTerm[L, StrictProtocolElems[L]]
 case class FallbackResolveElems[L <: LA](lazyElems: List[LazyProtocolElems[L]])            extends SwaggerTerm[L, List[StrictProtocolElems[L]]]
+case class LogDebug[L <: LA](name: String, names: Seq[String], message: String)            extends SwaggerTerm[L, Unit]
+case class LogInfo[L <: LA](name: String, names: Seq[String], message: String)             extends SwaggerTerm[L, Unit]
+case class LogWarning[L <: LA](name: String, names: Seq[String], message: String)          extends SwaggerTerm[L, Unit]
+case class LogError[L <: LA](name: String, names: Seq[String], message: String)            extends SwaggerTerm[L, Unit]
