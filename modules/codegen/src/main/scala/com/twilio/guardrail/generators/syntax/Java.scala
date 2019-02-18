@@ -1,5 +1,6 @@
 package com.twilio.guardrail.generators.syntax
 
+import cats.implicits._
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.`type`.Type
@@ -12,15 +13,18 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object Java {
-  private[this] def safeParse[T](parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] =
-    Try(parser(s)).toEither.fold(t => Target.raiseError(s"Unable to parse '${t}' to a ${cls.getClass.getSimpleName}: ${t.getMessage}"), Target.pure)
+  private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] = {
+    Target.log.debug(log)(s) >> (
+      Try(parser(s)).toEither.fold(t => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}"), Target.pure)
+    )
+  }
 
-  def safeParseCode(s: String): Target[CompilationUnit]                                     = safeParse(JavaParser.parse, s)
-  def safeParseSimpleName(s: String): Target[SimpleName]                                    = safeParse(JavaParser.parseSimpleName, s)
-  def safeParseName(s: String): Target[Name]                                                = safeParse(JavaParser.parseName, s)
-  def safeParseType(s: String): Target[Type]                                                = safeParse(JavaParser.parseType, s)
-  def safeParseExpression[T <: Expression](s: String)(implicit cls: ClassTag[T]): Target[T] = safeParse[T](JavaParser.parseExpression, s)
-  def safeParseParameter(s: String): Target[Parameter]                                      = safeParse(JavaParser.parseParameter, s)
+  def safeParseCode(s: String): Target[CompilationUnit]                                     = safeParse("safeParseCode")(JavaParser.parse, s)
+  def safeParseSimpleName(s: String): Target[SimpleName]                                    = safeParse("safeParseSimpleName")(JavaParser.parseSimpleName, s)
+  def safeParseName(s: String): Target[Name]                                                = safeParse("safeParseName")(JavaParser.parseName, s)
+  def safeParseType(s: String): Target[Type]                                                = safeParse("safeParseType")(JavaParser.parseType, s)
+  def safeParseExpression[T <: Expression](s: String)(implicit cls: ClassTag[T]): Target[T] = safeParse[T]("safeParseExpression")(JavaParser.parseExpression, s)
+  def safeParseParameter(s: String): Target[Parameter]                                      = safeParse("safeParseParameter")(JavaParser.parseParameter, s)
 
   val printer: PrettyPrinterConfiguration = new PrettyPrinterConfiguration()
     .setColumnAlignFirstMethodChain(true)
