@@ -65,9 +65,9 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
           case ((acc, newHistory), StructuredLogBlock(name, lines)) =>
             val newAcc = acc ++ lines
               .filter(_._1 >= desiredLevel)
-              .flatMap({
+              .map({
                 case (level, message) =>
-                  NonEmptyList.fromList((name.reverse ++ newHistory.reverse).reverse).map((level, _, message))
+                  (level, NonEmptyList.fromList((name.reverse ++ newHistory.reverse).reverse).getOrElse(NonEmptyList("<root>", Nil)), message)
               })
             (newAcc, newHistory)
         })

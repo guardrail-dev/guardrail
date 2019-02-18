@@ -6,7 +6,7 @@ import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
-import com.twilio.swagger.core.{ LogLevel, LogLevels }
+import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 
 import scala.io.AnsiColor
@@ -65,25 +65,25 @@ object CLICommon {
 
     val (logger, paths) = deferred
       .traverse({ rs =>
+        def put(value: StructuredLogger): Logger[List[Path]] = {
+          import cats.Id
+          import cats.data.IndexedStateT
+          IndexedStateT.modify[Id, StructuredLogger, StructuredLogger](_ |+| value)
+            .map(_ => List.empty[Path])
+        }
+        def logRawError(err: String): Logger[List[Path]] = put(StructuredLogger.error(Nil, s"${AnsiColor.RED}${err}${AnsiColor.RESET}"))
         ReadSwagger
           .readSwagger(rs)
-          .fold(
-            { err =>
-              println(s"${AnsiColor.RED}${err}${AnsiColor.RESET}")
-              Applicative[Logger].pure(List.empty[Path])
-            },
-            _.fold(
-              {
-                case (err, errorKind) =>
-                  println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
-                  if (errorKind == UserError) unsafePrintHelp()
-                  List.empty[Path]
-              },
-              _.map(WriteTree.unsafeWriteTree)
-            )
-          )
+          .fold[Logger[List[Path]]](
+            { err => logRawError(s"Error in ${rs}") >> logRawError(err) },
+            _.fold({ case (err, errorKind) =>
+              logRawError(s"Error in ${rs}") >> logRawError(err).map({ x =>
+                if (errorKind == UserError) unsafePrintHelp()
+                x
+              })
+            }, xs => Applicative[Logger].pure(xs.map(WriteTree.unsafeWriteTree))).flatten
+          ) <* put(StructuredLogger.reset)
       })
-      .map(_.flatten)
       .runEmpty
 
     print(logger.show)
