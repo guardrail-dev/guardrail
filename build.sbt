@@ -109,7 +109,6 @@ addCommandAlias(
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
-addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
 addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.9" cross CrossVersion.binary)
 
 publishMavenStyle := true
