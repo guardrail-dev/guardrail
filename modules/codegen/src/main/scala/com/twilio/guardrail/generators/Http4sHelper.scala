@@ -30,7 +30,7 @@ object Http4sHelper {
       implicit Fw: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, Responses[L]] = {
+  ): Free[F, Responses[L]] = Sw.log.function("getResponses") {
     import Fw._
     import Sc._
     for {

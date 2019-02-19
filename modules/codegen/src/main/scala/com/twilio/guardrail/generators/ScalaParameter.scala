@@ -135,7 +135,7 @@ object ScalaParameter {
       }
     }
 
-    for {
+    log.function(s"fromParameter(${parameter})") (for {
       meta     <- paramMeta(parameter)
       resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
@@ -183,7 +183,7 @@ object ScalaParameter {
                             required,
                             ScalaFileHashAlgorithm(parameter),
                             isFileType)
-    }
+    })
   }
 
   def fromParameters[L <: LA, F[_]](

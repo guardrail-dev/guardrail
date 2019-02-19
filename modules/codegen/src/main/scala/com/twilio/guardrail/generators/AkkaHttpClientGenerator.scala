@@ -44,7 +44,7 @@ object AkkaHttpClientGenerator {
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(_, _ @RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
-        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = Target.log.function("generateUrlWithParams") {
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
             base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
@@ -69,6 +69,7 @@ object AkkaHttpClientGenerator {
                 }
               })
           } yield result
+        }
 
         def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
@@ -256,7 +257,7 @@ object AkkaHttpClientGenerator {
           )
         }
 
-        for {
+        Target.log.function("generateClientOperation") (for {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
@@ -297,7 +298,7 @@ object AkkaHttpClientGenerator {
             headerArgs,
             extraImplicits
           )
-        } yield renderedClientOperation
+        } yield renderedClientOperation)
 
       case GetImports(tracing) => Target.pure(List.empty)
 

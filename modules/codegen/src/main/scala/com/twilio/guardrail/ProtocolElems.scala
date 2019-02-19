@@ -43,12 +43,12 @@ object ProtocolElems {
     import Sc._
     import Sw._
     import P._
-    FlatMap[Free[F, ?]]
+    log.function(s"resolve(${elems.length} references)") (FlatMap[Free[F, ?]]
       .tailRecM[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]((limit, elems))({
         case (iters, xs) if iters > 0 =>
           val lazyElems: List[LazyProtocolElems[L]]     = xs.collect { case x: LazyProtocolElems[_]   => x }
           val strictElems: List[StrictProtocolElems[L]] = xs.collect { case x: StrictProtocolElems[_] => x }
-          if (lazyElems.nonEmpty) {
+          log.debug(s"$iters left") >> (if (lazyElems.nonEmpty) {
             val newElems = lazyElems
               .traverse[Free[F, ?], ProtocolElems[L]]({
                 case d @ Deferred(name) =>
@@ -95,10 +95,10 @@ object ProtocolElems {
             newElems.map { x =>
               Left((iters - 1, x))
             }
-          } else Free.pure(Right(strictElems))
+          } else Free.pure(Right(strictElems)))
         case (_, xs) =>
           val lazyElems = xs.collect { case x: LazyProtocolElems[_] => x }
           fallbackResolveElems(lazyElems).map(Right(_))
-      })
+      }))
   }
 }

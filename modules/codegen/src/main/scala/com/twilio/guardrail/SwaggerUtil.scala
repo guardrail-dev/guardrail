@@ -31,8 +31,9 @@ object SwaggerUtil {
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
-    )(implicit Sc: ScalaTerms[L, F]): Free[F, List[(String, Resolved[L])]] = {
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
       import Sc._
+      import Sw._
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, x: Resolved[L])         => Right((clsName, x))
         case (clsName, x: LazyResolvedType[L]) => Left((clsName, x))
@@ -46,7 +47,7 @@ object SwaggerUtil {
           .map(_._2.tpe)
           .traverse(x => f(x).map(y => (clsName, Resolved[L](y, None, None))))
 
-      FlatMap[Free[F, ?]]
+      log.debug(s"resolve ${values.length} references") >> FlatMap[Free[F, ?]]
         .tailRecM[(List[(String, LazyResolvedType[L])], List[(String, Resolved[L])]), List[(String, Resolved[L])]](
           (lazyTypes, resolvedTypes)
         ) {
@@ -91,7 +92,7 @@ object SwaggerUtil {
     )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Resolved[L]] = {
       import Sc._
       import Sw._
-      value match {
+      log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
         case x @ Resolved(tpe, _, default) => Free.pure(x)
         case Deferred(name) =>
           resolveType(name, protocolElems)
@@ -129,15 +130,15 @@ object SwaggerUtil {
               case ADT(_, tpe, _, _) =>
                 widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
             }
-      }
+      })
     }
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
+    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = Sw.log.function("modelMetaType") {
       import Sc._
       import Sw._
-      model match {
+      log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
         case ref: Schema[_] if Option(ref.get$ref).isDefined =>
           for {
             ref <- getSimpleRef(ref)
@@ -145,7 +146,9 @@ object SwaggerUtil {
         case arr: ArraySchema =>
           for {
             items <- getItems(arr)
+            _ <- log.debug(s"items:\n${log.schemaToString(items)}")
             meta  <- propMeta[L, F](items)
+            _ <- log.debug(s"meta: ${meta}")
             res <- meta match {
               case Resolved(inner, dep, default) =>
                 (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _))
@@ -159,7 +162,7 @@ object SwaggerUtil {
             tpeName <- getType(impl)
             tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
           } yield Resolved[L](tpe, None, None)
-      }
+      })
     }
   }
 
@@ -195,8 +198,10 @@ object SwaggerUtil {
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeName[L <: LA, F[_]](typeName: String, format: Option[String], customType: Option[String])(implicit Sc: ScalaTerms[L, F],
-                                                                                                    F: FrameworkTerms[L, F]): Free[F, L#Type] = {
+  def typeName[L <: LA, F[_]](
+      typeName: String, format: Option[String], customType: Option[String]
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]
+    ): Free[F, L#Type] = Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
     import Sc._
     import F._
 
@@ -238,14 +243,15 @@ object SwaggerUtil {
             fallbackType(tpe, fmt)
         }
       })(Free.pure(_))
+      _ <- Sw.log.debug(s"Returning ${result}")
     } yield result
   }
 
-  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = {
+  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = Sw.log.function("propMeta") {
     import F._
     import Sc._
     import Sw._
-    property match {
+    log.debug(s"property:\n${log.schemaToString(property)}") >> (property match {
       case p: ArraySchema =>
         for {
           items <- getItems(p)
@@ -299,7 +305,7 @@ object SwaggerUtil {
 
       case x =>
         fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
-    }
+    })
   }
 
   /*

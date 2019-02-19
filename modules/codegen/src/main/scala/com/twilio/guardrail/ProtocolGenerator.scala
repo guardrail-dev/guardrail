@@ -61,7 +61,7 @@ object ProtocolGenerator {
   private[this] def fromEnum[L <: LA, F[_]](
       clsName: String,
       swagger: Schema[_]
-  )(implicit E: EnumProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, Either[String, ProtocolElems[L]]] = {
+  )(implicit E: EnumProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Either[String, ProtocolElems[L]]] = {
     import E._
     import Sc._
 
@@ -271,7 +271,8 @@ object ProtocolGenerator {
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Schema[_])(
       implicit
       F: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, F]
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
     import F._
     val model = abstractModel match {
