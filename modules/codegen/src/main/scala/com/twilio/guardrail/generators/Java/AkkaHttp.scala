@@ -5,6 +5,8 @@ package Java
 import com.twilio.guardrail.languages.JavaLanguage
 import cats.~>
 
+import JavaGenerator.JavaInterp
+
 object AkkaHttp extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
   /*
   val interpDefinitionPM: DefinitionPM[JavaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
@@ -19,11 +21,15 @@ object AkkaHttp extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
   val interpFrameworkCSF: FrameworkCSF[JavaLanguage, ?] ~> Target = FrameworkInterp or interpFrameworkCS
 
   val interpFramework: ClientServerTerms[JavaLanguage, ?] ~> Target = interpFrameworkCSF
-
-  val parser: Parser[JavaLanguage, ?] ~> Target = SwaggerInterp or interpFramework
-
-  val codegenApplication: CodegenApplication[JavaLanguage, ?] ~> Target = ScalaInterp or parser
   */
 
-  def apply[T](x: CodegenApplication[JavaLanguage, T]): Target[T] = Target.raiseError(x.toString())
+  val interpFramework = new (ClientServerTerms[JavaLanguage, ?] ~> Target) {
+    def apply[T](term: ClientServerTerms[JavaLanguage, T]): Target[T] = Target.raiseError(s"interpFramework: ${term.toString()}")
+  }
+
+  val parser: Parser[JavaLanguage, ?] ~> Target = SwaggerGenerator[JavaLanguage] or interpFramework
+
+  val codegenApplication: CodegenApplication[JavaLanguage, ?] ~> Target = JavaInterp or parser
+
+  def apply[T](x: CodegenApplication[JavaLanguage, T]): Target[T] = codegenApplication.apply(x)
 }
