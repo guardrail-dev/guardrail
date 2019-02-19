@@ -84,7 +84,8 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
             val histories = if (! showFullHistory) {
               (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(history.toList.take(i))}")
             } else Nil
-            val formatted = s"${level.show} ${makePrefix(history.toList)}: ${message}"
+            val prefix = s"${level.show} ${makePrefix(history.toList)}: "
+            val formatted = (message.lines.take(1).map(prefix + _) ++ message.lines.drop(1).map((" " * prefix.length) + _)).mkString("\n")
             (history.toList, (messages ++ histories) ++ List(formatted))
         })
         ._2
