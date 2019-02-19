@@ -135,7 +135,7 @@ object ScalaParameter {
       }
     }
 
-    log.function(s"fromParameter(${parameter})") (for {
+    log.function(s"fromParameter(${parameter})")(for {
       meta     <- paramMeta(parameter)
       resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved

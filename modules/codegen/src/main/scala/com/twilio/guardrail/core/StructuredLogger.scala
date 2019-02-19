@@ -36,20 +36,20 @@ object LogLevels {
 
 sealed trait StructuredLogEntry
 sealed case class StructuredLogBlock(history: List[String], lines: NonEmptyList[(LogLevel, String)]) extends StructuredLogEntry
-sealed case class StructuredLoggerPush(next: String) extends StructuredLogEntry
-case object StructuredLoggerPop extends StructuredLogEntry
-case object StructuredLoggerReset extends StructuredLogEntry
+sealed case class StructuredLoggerPush(next: String)                                                 extends StructuredLogEntry
+case object StructuredLoggerPop                                                                      extends StructuredLogEntry
+case object StructuredLoggerReset                                                                    extends StructuredLogEntry
 
 case class StructuredLogger(entries: List[StructuredLogEntry])
 
 object StructuredLogger extends StructuredLoggerInstances {
   def push(next: String): StructuredLogger = StructuredLogger(StructuredLoggerPush(next).pure[List])
-  def pop: StructuredLogger = StructuredLogger(StructuredLoggerPop.pure[List])
-  def reset: StructuredLogger = StructuredLogger(StructuredLoggerReset.pure[List])
+  def pop: StructuredLogger                = StructuredLogger(StructuredLoggerPop.pure[List])
+  def reset: StructuredLogger              = StructuredLogger(StructuredLoggerReset.pure[List])
 }
 sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {
-    def empty = StructuredLogger(Nil)
+    def empty                                             = StructuredLogger(Nil)
     def combine(x: StructuredLogger, y: StructuredLogger) = StructuredLogger(Monoid[List[StructuredLogEntry]].combine(x.entries, y.entries))
   }
   class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
@@ -76,15 +76,16 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
           case ((lastHistory, messages), (level, history, message)) =>
             val showFullHistory = false
             def makePrefix(history: List[String]): String =
-              history.foldLeft("  ") { case (a, b) =>
-                (if (showFullHistory) { a } else { (" " * a.length) }) + " " + b
+              history.foldLeft("  ") {
+                case (a, b) =>
+                  (if (showFullHistory) { a } else { (" " * a.length) }) + " " + b
               }
 
             val commonPrefixLength = history.length - lastHistory.zip(history.toList).takeWhile(((_: String) == (_: String)).tupled).length
-            val histories = if (! showFullHistory) {
+            val histories = if (!showFullHistory) {
               (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(history.toList.take(i))}")
             } else Nil
-            val prefix = s"${level.show} ${makePrefix(history.toList)}: "
+            val prefix    = s"${level.show} ${makePrefix(history.toList)}: "
             val formatted = (message.lines.take(1).map(prefix + _) ++ message.lines.drop(1).map((" " * prefix.length) + _)).mkString("\n")
             (history.toList, (messages ++ histories) ++ List(formatted))
         })

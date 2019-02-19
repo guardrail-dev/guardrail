@@ -68,20 +68,27 @@ object CLICommon {
         def put(value: StructuredLogger): Logger[List[Path]] = {
           import cats.Id
           import cats.data.IndexedStateT
-          IndexedStateT.modify[Id, StructuredLogger, StructuredLogger](_ |+| value)
+          IndexedStateT
+            .modify[Id, StructuredLogger, StructuredLogger](_ |+| value)
             .map(_ => List.empty[Path])
         }
         def logRawError(err: String): Logger[List[Path]] = put(StructuredLogger.error(Nil, s"${AnsiColor.RED}${err}${AnsiColor.RESET}"))
         ReadSwagger
           .readSwagger(rs)
           .fold[Logger[List[Path]]](
-            { err => logRawError(s"Error in ${rs}") >> logRawError(err) },
-            _.fold({ case (err, errorKind) =>
-              logRawError(s"Error in ${rs}") >> logRawError(err).map({ x =>
-                if (errorKind == UserError) unsafePrintHelp()
-                x
-              })
-            }, xs => Applicative[Logger].pure(xs.map(WriteTree.unsafeWriteTree))).flatten
+            { err =>
+              logRawError(s"Error in ${rs}") >> logRawError(err)
+            },
+            _.fold(
+              {
+                case (err, errorKind) =>
+                  logRawError(s"Error in ${rs}") >> logRawError(err).map({ x =>
+                    if (errorKind == UserError) unsafePrintHelp()
+                    x
+                  })
+              },
+              xs => Applicative[Logger].pure(xs.map(WriteTree.unsafeWriteTree))
+            ).flatten
           ) <* put(StructuredLogger.reset)
       })
       .runEmpty

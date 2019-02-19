@@ -43,62 +43,67 @@ object ProtocolElems {
     import Sc._
     import Sw._
     import P._
-    log.function(s"resolve(${elems.length} references)") (FlatMap[Free[F, ?]]
-      .tailRecM[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]((limit, elems))({
-        case (iters, xs) if iters > 0 =>
-          val lazyElems: List[LazyProtocolElems[L]]     = xs.collect { case x: LazyProtocolElems[_]   => x }
-          val strictElems: List[StrictProtocolElems[L]] = xs.collect { case x: StrictProtocolElems[_] => x }
-          log.debug(s"$iters left") >> (if (lazyElems.nonEmpty) {
-            val newElems = lazyElems
-              .traverse[Free[F, ?], ProtocolElems[L]]({
-                case d @ Deferred(name) =>
-                  strictElems
-                    .find(_.name == name)
-                    .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
-                      case RandomType(name, tpe) =>
-                        Free.pure(RandomType[L](name, tpe))
-                      case ClassDefinition(name, tpe, cls, _, _) =>
-                        widenTypeName(tpe).map(RandomType[L](name, _))
-                      case EnumDefinition(name, tpe, elems, cls, _) =>
-                        widenTypeName(tpe).map(RandomType[L](name, _))
-                      case ADT(name, tpe, _, _) =>
-                        widenTypeName(tpe).map(RandomType[L](name, _))
-                    })
-                case d @ DeferredArray(name) =>
-                  strictElems
-                    .find(_.name == name)
-                    .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
-                      case RandomType(name, tpe) =>
-                        liftVectorType(tpe).map(RandomType[L](name, _))
-                      case ClassDefinition(name, tpe, cls, _, _) =>
-                        widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                      case EnumDefinition(name, tpe, elems, cls, _) =>
-                        widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                      case ADT(name, tpe, _, _) =>
-                        widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                    })
-                case d @ DeferredMap(name) =>
-                  strictElems
-                    .find(_.name == name)
-                    .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
-                      case RandomType(name, tpe) =>
-                        liftMapType(tpe).map(RandomType[L](name, _))
-                      case ClassDefinition(name, tpe, cls, _, _) =>
-                        widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                      case EnumDefinition(name, tpe, elems, cls, _) =>
-                        widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                      case ADT(name, tpe, _, _) =>
-                        widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                    })
-              })
-              .map(strictElems ++ _)
-            newElems.map { x =>
-              Left((iters - 1, x))
-            }
-          } else Free.pure(Right(strictElems)))
-        case (_, xs) =>
-          val lazyElems = xs.collect { case x: LazyProtocolElems[_] => x }
-          fallbackResolveElems(lazyElems).map(Right(_))
-      }))
+    log.function(s"resolve(${elems.length} references)")(
+      FlatMap[Free[F, ?]]
+        .tailRecM[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]((limit, elems))({
+          case (iters, xs) if iters > 0 =>
+            val lazyElems: List[LazyProtocolElems[L]]     = xs.collect { case x: LazyProtocolElems[_]   => x }
+            val strictElems: List[StrictProtocolElems[L]] = xs.collect { case x: StrictProtocolElems[_] => x }
+            for {
+              _ <- log.debug(s"$iters left")
+              res <- if (lazyElems.nonEmpty) {
+                val newElems = lazyElems
+                  .traverse[Free[F, ?], ProtocolElems[L]]({
+                    case d @ Deferred(name) =>
+                      strictElems
+                        .find(_.name == name)
+                        .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
+                          case RandomType(name, tpe) =>
+                            Free.pure(RandomType[L](name, tpe))
+                          case ClassDefinition(name, tpe, cls, _, _) =>
+                            widenTypeName(tpe).map(RandomType[L](name, _))
+                          case EnumDefinition(name, tpe, elems, cls, _) =>
+                            widenTypeName(tpe).map(RandomType[L](name, _))
+                          case ADT(name, tpe, _, _) =>
+                            widenTypeName(tpe).map(RandomType[L](name, _))
+                        })
+                    case d @ DeferredArray(name) =>
+                      strictElems
+                        .find(_.name == name)
+                        .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
+                          case RandomType(name, tpe) =>
+                            liftVectorType(tpe).map(RandomType[L](name, _))
+                          case ClassDefinition(name, tpe, cls, _, _) =>
+                            widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
+                          case EnumDefinition(name, tpe, elems, cls, _) =>
+                            widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
+                          case ADT(name, tpe, _, _) =>
+                            widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
+                        })
+                    case d @ DeferredMap(name) =>
+                      strictElems
+                        .find(_.name == name)
+                        .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
+                          case RandomType(name, tpe) =>
+                            liftMapType(tpe).map(RandomType[L](name, _))
+                          case ClassDefinition(name, tpe, cls, _, _) =>
+                            widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
+                          case EnumDefinition(name, tpe, elems, cls, _) =>
+                            widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
+                          case ADT(name, tpe, _, _) =>
+                            widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
+                        })
+                  })
+                  .map(strictElems ++ _)
+                newElems.map { x =>
+                  Left((iters - 1, x))
+                }
+              } else Free.pure[F, Either[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]](Right(strictElems))
+            } yield res
+          case (_, xs) =>
+            val lazyElems = xs.collect { case x: LazyProtocolElems[_] => x }
+            fallbackResolveElems(lazyElems).map(Right(_))
+        })
+    )
   }
 }

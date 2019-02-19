@@ -135,35 +135,36 @@ object SwaggerUtil {
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = Sw.log.function("modelMetaType") {
-      import Sc._
-      import Sw._
-      log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
-        case ref: Schema[_] if Option(ref.get$ref).isDefined =>
-          for {
-            ref <- getSimpleRef(ref)
-          } yield Deferred[L](ref)
-        case arr: ArraySchema =>
-          for {
-            items <- getItems(arr)
-            _ <- log.debug(s"items:\n${log.schemaToString(items)}")
-            meta  <- propMeta[L, F](items)
-            _ <- log.debug(s"meta: ${meta}")
-            res <- meta match {
-              case Resolved(inner, dep, default) =>
-                (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _))
-              case x: Deferred[L]      => embedArray(x)
-              case x: DeferredArray[L] => embedArray(x)
-              case x: DeferredMap[L]   => embedArray(x)
-            }
-          } yield res
-        case impl: Schema[_] =>
-          for {
-            tpeName <- getType(impl)
-            tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
-          } yield Resolved[L](tpe, None, None)
-      })
-    }
+    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+      Sw.log.function("modelMetaType") {
+        import Sc._
+        import Sw._
+        log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
+          case ref: Schema[_] if Option(ref.get$ref).isDefined =>
+            for {
+              ref <- getSimpleRef(ref)
+            } yield Deferred[L](ref)
+          case arr: ArraySchema =>
+            for {
+              items <- getItems(arr)
+              _     <- log.debug(s"items:\n${log.schemaToString(items)}")
+              meta  <- propMeta[L, F](items)
+              _     <- log.debug(s"meta: ${meta}")
+              res <- meta match {
+                case Resolved(inner, dep, default) =>
+                  (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _))
+                case x: Deferred[L]      => embedArray(x)
+                case x: DeferredArray[L] => embedArray(x)
+                case x: DeferredMap[L]   => embedArray(x)
+              }
+            } yield res
+          case impl: Schema[_] =>
+            for {
+              tpeName <- getType(impl)
+              tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
+            } yield Resolved[L](tpe, None, None)
+        })
+      }
   }
 
   def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] = new ModelMetaTypePartiallyApplied[L, F]()
@@ -199,114 +200,117 @@ object SwaggerUtil {
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeName[L <: LA, F[_]](
-      typeName: String, format: Option[String], customType: Option[String]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]
-    ): Free[F, L#Type] = Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
-    import Sc._
-    import F._
+      typeName: String,
+      format: Option[String],
+      customType: Option[String]
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, L#Type] =
+    Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
+      import Sc._
+      import F._
 
-    def log(fmt: Option[String], t: L#Type): L#Type = {
-      fmt.foreach { fmt =>
-        println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
+      def log(fmt: Option[String], t: L#Type): L#Type = {
+        fmt.foreach { fmt =>
+          println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
+        }
+
+        t
+      }
+      def liftCustomType(s: String): Free[F, Option[L#Type]] = {
+        val tpe = s.trim
+        if (tpe.nonEmpty) {
+          parseType(tpe)
+        } else Free.pure(Option.empty[L#Type])
       }
 
-      t
-    }
-    def liftCustomType(s: String): Free[F, Option[L#Type]] = {
-      val tpe = s.trim
-      if (tpe.nonEmpty) {
-        parseType(tpe)
-      } else Free.pure(Option.empty[L#Type])
-    }
-
-    for {
-      customTpe <- customType.flatTraverse(liftCustomType _)
-      result <- customTpe.fold({
-        (typeName, format) match {
-          case ("string", Some("date"))      => dateType()
-          case ("string", Some("date-time")) => dateTimeType()
-          case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
-          case ("number", Some("float"))     => floatType()
-          case ("number", Some("double"))    => doubleType()
-          case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
-          case ("integer", Some("int32"))    => intType()
-          case ("integer", Some("int64"))    => longType()
-          case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
-          case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
-          case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
-          case ("file", fmt) =>
-            fileType(fmt).map(log(fmt, _))
-          case ("binary", _) =>
-            fileType(None).map(log(None, _))
-          case ("object", fmt) => objectType(fmt).map(log(fmt, _))
-          case (tpe, fmt) =>
-            fallbackType(tpe, fmt)
-        }
-      })(Free.pure(_))
-      _ <- Sw.log.debug(s"Returning ${result}")
-    } yield result
-  }
-
-  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] = Sw.log.function("propMeta") {
-    import F._
-    import Sc._
-    import Sw._
-    log.debug(s"property:\n${log.schemaToString(property)}") >> (property match {
-      case p: ArraySchema =>
-        for {
-          items <- getItems(p)
-          rec   <- propMeta[L, F](items)
-          res <- rec match {
-            case Resolved(inner, dep, default) =>
-              (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _): ResolvedType[L])
-            case x: DeferredMap[L]   => embedArray(x)
-            case x: DeferredArray[L] => embedArray(x)
-            case x: Deferred[L]      => embedArray(x)
+      for {
+        customTpe <- customType.flatTraverse(liftCustomType _)
+        result <- customTpe.fold({
+          (typeName, format) match {
+            case ("string", Some("date"))      => dateType()
+            case ("string", Some("date-time")) => dateTimeType()
+            case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
+            case ("number", Some("float"))     => floatType()
+            case ("number", Some("double"))    => doubleType()
+            case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
+            case ("integer", Some("int32"))    => intType()
+            case ("integer", Some("int64"))    => longType()
+            case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
+            case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
+            case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
+            case ("file", fmt) =>
+              fileType(fmt).map(log(fmt, _))
+            case ("binary", _) =>
+              fileType(None).map(log(None, _))
+            case ("object", fmt) => objectType(fmt).map(log(fmt, _))
+            case (tpe, fmt) =>
+              fallbackType(tpe, fmt)
           }
-        } yield res
-      case m: MapSchema =>
-        for {
-          rec <- Option(m.getAdditionalProperties)
-            .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None)))({
-              case b: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None))
-              case s: Schema[_]         => propMeta[L, F](s)
-            })
-          res <- rec match {
-            case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
-            case x: DeferredMap[L]       => embedMap(x)
-            case x: DeferredArray[L]     => embedMap(x)
-            case x: Deferred[L]          => embedMap(x)
-          }
-        } yield res
-      case o: ObjectSchema =>
-        objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
+        })(Free.pure(_))
+        _ <- Sw.log.debug(s"Returning ${result}")
+      } yield result
+    }
 
-      case ref: Schema[_] if Option(ref.get$ref).isDefined =>
-        getSimpleRef(ref).map(Deferred[L])
+  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    Sw.log.function("propMeta") {
+      import F._
+      import Sc._
+      import Sw._
+      log.debug(s"property:\n${log.schemaToString(property)}") >> (property match {
+        case p: ArraySchema =>
+          for {
+            items <- getItems(p)
+            rec   <- propMeta[L, F](items)
+            res <- rec match {
+              case Resolved(inner, dep, default) =>
+                (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _): ResolvedType[L])
+              case x: DeferredMap[L]   => embedArray(x)
+              case x: DeferredArray[L] => embedArray(x)
+              case x: Deferred[L]      => embedArray(x)
+            }
+          } yield res
+        case m: MapSchema =>
+          for {
+            rec <- Option(m.getAdditionalProperties)
+              .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None)))({
+                case b: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None))
+                case s: Schema[_]         => propMeta[L, F](s)
+              })
+            res <- rec match {
+              case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
+              case x: DeferredMap[L]       => embedMap(x)
+              case x: DeferredArray[L]     => embedMap(x)
+              case x: Deferred[L]          => embedMap(x)
+            }
+          } yield res
+        case o: ObjectSchema =>
+          objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
 
-      case b: BooleanSchema =>
-        (typeName[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+        case ref: Schema[_] if Option(ref.get$ref).isDefined =>
+          getSimpleRef(ref).map(Deferred[L])
 
-      case s: StringSchema =>
-        (typeName[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
-          .mapN(Resolved[L](_, None, _))
+        case b: BooleanSchema =>
+          (typeName[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
 
-      case d: DateSchema =>
-        typeName[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
+        case s: StringSchema =>
+          (typeName[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
+            .mapN(Resolved[L](_, None, _))
 
-      case d: DateTimeSchema =>
-        typeName[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
+        case d: DateSchema =>
+          typeName[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
 
-      case i: IntegerSchema =>
-        typeName[L, F]("integer", Option(i.getFormat), ScalaType(i)).map(Resolved[L](_, None, None))
+        case d: DateTimeSchema =>
+          typeName[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
 
-      case d: NumberSchema =>
-        typeName[L, F]("number", Option(d.getFormat), ScalaType(d)).map(Resolved[L](_, None, None))
+        case i: IntegerSchema =>
+          typeName[L, F]("integer", Option(i.getFormat), ScalaType(i)).map(Resolved[L](_, None, None))
 
-      case x =>
-        fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
-    })
-  }
+        case d: NumberSchema =>
+          typeName[L, F]("number", Option(d.getFormat), ScalaType(d)).map(Resolved[L](_, None, None))
+
+        case x =>
+          fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
+      })
+    }
 
   /*
     Required \ Default  || Defined  || Undefined / NULL ||
