@@ -1,7 +1,7 @@
 package com.twilio
 
 import cats.{ Applicative, Id, MonadError }
-import cats.data.{ EitherK, EitherT, NonEmptyList, ReaderT, WriterT }
+import cats.data.{ EitherK, EitherT, IndexedStateT, ReaderT }
 import cats.implicits._
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
@@ -19,9 +19,40 @@ package guardrail {
   case object UserError     extends ErrorKind
   case object InternalError extends ErrorKind
 
-  object Target {
-    val A                        = Applicative[Target]
-    def pure[T](x: T): Target[T] = A.pure(x)
+  sealed trait LogAbstraction {
+    type F[_]
+    implicit def A: Applicative[F]
+    def pushLogger(value: StructuredLogger): F[Unit]
+    object log {
+      class LogAdapter(f: (List[String], String) => StructuredLogger, name: String, names: Seq[String]) {
+        implicit def apply: F[Unit] = pushLogger(f(List.empty, (name +: names).mkString(" ")))
+        @deprecated("0.44.0", "Use push/pop or log.function syntax instead of specifying call path")
+        def apply(message: String): F[Unit] = pushLogger(f((name +: names).toList, message))
+      }
+
+      def push(name: String): F[Unit] = pushLogger(StructuredLogger.push(name))
+      def pop: F[Unit]                = pushLogger(StructuredLogger.pop)
+      def function[A](name: String): F[A] => F[A] = { func =>
+        (push(name) *> func) <* pop
+      }
+      def debug(name: String, names: String*): LogAdapter   = new LogAdapter(StructuredLogger.debug(_, _), name, names)
+      def info(name: String, names: String*): LogAdapter    = new LogAdapter(StructuredLogger.info(_, _), name, names)
+      def warning(name: String, names: String*): LogAdapter = new LogAdapter(StructuredLogger.warning(_, _), name, names)
+      def error(name: String, names: String*): LogAdapter   = new LogAdapter(StructuredLogger.error(_, _), name, names)
+      /* FIXME: Once LogAdapter is removed, these simpler definitions can be used.
+      def debug(message: String): F[Unit] = pushLogger(StructuredLogger.debug(message))
+      def info(message: String): F[Unit] = pushLogger(StructuredLogger.info(message))
+      def warning(message: String): F[Unit] = pushLogger(StructuredLogger.warning(message))
+      def error(message: String): F[Unit] = pushLogger(StructuredLogger.error(message))
+     */
+    }
+  }
+
+  object Target extends LogAbstraction {
+    type F[A] = Target[A]
+    val A                                                 = Applicative[Target]
+    def pushLogger(value: StructuredLogger): Target[Unit] = EitherT.right(IndexedStateT.modify(_ |+| value))
+    def pure[T](x: T): Target[T]                          = A.pure(x)
     @deprecated("Use raiseError instead", "v0.41.2")
     def error[T](x: String): Target[T]          = raiseError(x)
     def raiseError[T](x: String): Target[T]     = EitherT.fromEither(Left((x, UserError)))
@@ -32,22 +63,14 @@ package guardrail {
       x.valueOr({ err =>
           throw new Exception(err.toString)
         })
-        .value
-
-    object log {
-      def debug(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
-      def info(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
-      def warning(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
-      def error(name: String, names: String*)(message: String): Target[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
-    }
+        .runEmptyA
   }
 
-  object CoreTarget {
-    def pure[T](x: T): CoreTarget[T] = x.pure[CoreTarget]
+  object CoreTarget extends LogAbstraction {
+    type F[A] = CoreTarget[A]
+    val A                                                     = Applicative[CoreTarget]
+    def pushLogger(value: StructuredLogger): CoreTarget[Unit] = EitherT.right(IndexedStateT.modify(_ |+| value))
+    def pure[T](x: T): CoreTarget[T]                          = x.pure[CoreTarget]
     def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] =
       EitherT.fromOption(x, default)
     @deprecated("Use raiseError instead", "v0.41.2")
@@ -57,18 +80,7 @@ package guardrail {
       x.valueOr({ err =>
           throw new Exception(err.toString)
         })
-        .value
-
-    object log {
-      def debug(name: String, names: String*)(message: String): CoreTarget[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.debug(NonEmptyList(name, names.toList), message)))
-      def info(name: String, names: String*)(message: String): CoreTarget[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.info(NonEmptyList(name, names.toList), message)))
-      def warning(name: String, names: String*)(message: String): CoreTarget[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.warning(NonEmptyList(name, names.toList), message)))
-      def error(name: String, names: String*)(message: String): CoreTarget[Unit] =
-        EitherT.right(WriterT.tell(StructuredLogger.error(NonEmptyList(name, names.toList), message)))
-    }
+        .runEmptyA
   }
 }
 
@@ -90,7 +102,10 @@ package object guardrail {
 
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
-  type Logger[T]     = WriterT[Id, StructuredLogger, T]
+  type Logger[T]     = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
   type Target[A]     = EitherT[Logger, (String, ErrorKind), A]
   type CoreTarget[A] = EitherT[Logger, Error, A]
+
+  // Likely can be removed in future versions of scala or cats? -Ypartial-unification seems to get confused here -- possibly higher arity issues?
+  implicit val loggerMonad: cats.Monad[Logger] = cats.data.IndexedStateT.catsDataMonadForIndexedStateT[cats.Id, StructuredLogger]
 }

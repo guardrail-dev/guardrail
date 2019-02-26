@@ -4,6 +4,7 @@ package terms
 import io.swagger.v3.oas.models._
 import cats.InjectK
 import cats.free.Free
+import cats.implicits._
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models.media.{ ArraySchema, ObjectSchema, Schema }
 import io.swagger.v3.oas.models.parameters.Parameter
@@ -53,6 +54,24 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
     Free.inject[SwaggerTerm[L, ?], F](ResolveType(name, protocolElems))
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): Free[F, List[StrictProtocolElems[L]]] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackResolveElems(lazyElems))
+  object log {
+    def schemaToString(value: Schema[_]): String = "    " + value.toString().lines.filterNot(_.contains(": null")).mkString("\n    ")
+    def function[A](name: String): Free[F, A] => Free[F, A] = { func =>
+      (push(name) *> func) <* pop
+    }
+    def push(name: String): Free[F, Unit] =
+      Free.inject[SwaggerTerm[L, ?], F](LogPush[L](name))
+    def pop: Free[F, Unit] =
+      Free.inject[SwaggerTerm[L, ?], F](LogPop[L]())
+    def debug(message: String): Free[F, Unit] =
+      Free.inject[SwaggerTerm[L, ?], F](LogDebug[L](message))
+    def info(message: String): Free[F, Unit] =
+      Free.inject[SwaggerTerm[L, ?], F](LogInfo[L](message))
+    def warning(message: String): Free[F, Unit] =
+      Free.inject[SwaggerTerm[L, ?], F](LogWarning[L](message))
+    def error(message: String): Free[F, Unit] =
+      Free.inject[SwaggerTerm[L, ?], F](LogError[L](message))
+  }
 }
 object SwaggerTerms {
   implicit def swaggerTerm[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]): SwaggerTerms[L, F] =

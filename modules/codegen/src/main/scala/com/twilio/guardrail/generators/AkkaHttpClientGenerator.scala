@@ -45,30 +45,32 @@ object AkkaHttpClientGenerator {
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(_, _ @RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
-          for {
-            _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
-            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
+          Target.log.function("generateUrlWithParams") {
+            for {
+              _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
+              base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
 
-            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: $qsArgs")
+              _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: $qsArgs")
 
-            suffix = if (path.contains("?")) {
-              Lit.String("&")
-            } else {
-              Lit.String("?")
-            }
+              suffix = if (path.contains("?")) {
+                Lit.String("&")
+              } else {
+                Lit.String("?")
+              }
 
-            _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
+              _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
 
-            result = NonEmptyList
-              .fromList(qsArgs)
-              .fold(base)({
-                _.foldLeft[Term](q"$base + $suffix") {
-                  case (a, ScalaParameter(_, _, paramName, argName, _)) =>
-                    q""" $a + Formatter.addArg(${Lit
-                      .String(argName.value)}, $paramName)"""
-                }
-              })
-          } yield result
+              result = NonEmptyList
+                .fromList(qsArgs)
+                .fold(base)({
+                  _.foldLeft[Term](q"$base + $suffix") {
+                    case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                      q""" $a + Formatter.addArg(${Lit
+                        .String(argName.value)}, $paramName)"""
+                  }
+                })
+            } yield result
+          }
 
         def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
@@ -256,7 +258,7 @@ object AkkaHttpClientGenerator {
           )
         }
 
-        for {
+        Target.log.function("generateClientOperation")(for {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
@@ -297,7 +299,7 @@ object AkkaHttpClientGenerator {
             headerArgs,
             extraImplicits
           )
-        } yield renderedClientOperation
+        } yield renderedClientOperation)
 
       case GetImports(tracing) => Target.pure(List.empty)
 
