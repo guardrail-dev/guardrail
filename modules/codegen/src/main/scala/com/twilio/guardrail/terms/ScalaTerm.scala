@@ -1,6 +1,7 @@
 package com.twilio.guardrail
 package terms
 
+import cats.data.NonEmptyList
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import java.nio.file.Path

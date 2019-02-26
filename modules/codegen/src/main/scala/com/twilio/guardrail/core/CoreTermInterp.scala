@@ -149,7 +149,7 @@ object CoreTermInterp {
                         })
                         .runA(Option.empty)
                         .value
-                    Target.raiseError(s"""
+                    Target.raiseException(s"""
                       |Error attempting to process ${specPath}:
                       |
                       |${ex.toString()}

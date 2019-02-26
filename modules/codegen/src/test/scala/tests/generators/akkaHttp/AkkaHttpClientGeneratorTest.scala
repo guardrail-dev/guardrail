@@ -176,7 +176,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
     """
 
     cmp.structure should equal(companion.structure)
-    cls.structure should equal(client.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 
   test("Ensure traced responses are generated") {
@@ -248,6 +248,6 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
     """
 
     cmp.structure should equal(companion.structure)
-    cls.structure should equal(client.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 }

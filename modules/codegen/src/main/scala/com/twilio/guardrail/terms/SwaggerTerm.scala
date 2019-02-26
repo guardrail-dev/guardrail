@@ -18,6 +18,20 @@ import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, ObjectSchema, Sc
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 
+object RouteMeta {
+  sealed abstract class ContentType(value: String)
+  case object ApplicationJson   extends ContentType("application/json")
+  case object MultipartFormData extends ContentType("multipart/form-data")
+  case object TextPlain         extends ContentType("text/plain")
+  object ContentType {
+    def unapply(value: String): Option[ContentType] = value match {
+      case "application/json"    => Some(ApplicationJson)
+      case "multipart/form-data" => Some(MultipartFormData)
+      case "text/plain"          => Some(TextPlain)
+      case _                     => None
+    }
+  }
+}
 case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 
   private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] =

@@ -1,0 +1,444 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  User:
+    type: object
+    required:
+      - id
+    properties:
+      id:
+        type: string
+paths:
+  /:
+    get:
+      operationId: ohNo_0
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/:
+    get:
+      operationId: ohNo_1
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/{p2}/:
+    get:
+      operationId: ohNo_2
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/{p2}/{p3}/:
+    get:
+      operationId: ohNo_3
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      - name: p3
+        in: path
+        required: true
+        type: string
+      - name: q3
+        in: query
+        required: true
+        type: string
+      - name: h3
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/{p2}/{p3}/{p4}/:
+    get:
+      operationId: ohNo_4
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      - name: p3
+        in: path
+        required: true
+        type: string
+      - name: q3
+        in: query
+        required: true
+        type: string
+      - name: h3
+        in: header
+        required: true
+        type: string
+      - name: p4
+        in: path
+        required: true
+        type: string
+      - name: q4
+        in: query
+        required: true
+        type: string
+      - name: h4
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/{p2}/{p3}/{p4}/{p5}/:
+    get:
+      operationId: ohNo_5
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      - name: p3
+        in: path
+        required: true
+        type: string
+      - name: q3
+        in: query
+        required: true
+        type: string
+      - name: h3
+        in: header
+        required: true
+        type: string
+      - name: p4
+        in: path
+        required: true
+        type: string
+      - name: q4
+        in: query
+        required: true
+        type: string
+      - name: h4
+        in: header
+        required: true
+        type: string
+      - name: p5
+        in: path
+        required: true
+        type: string
+      - name: q5
+        in: query
+        required: true
+        type: string
+      - name: h5
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/:
+    get:
+      operationId: ohNo_6
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      - name: p3
+        in: path
+        required: true
+        type: string
+      - name: q3
+        in: query
+        required: true
+        type: string
+      - name: h3
+        in: header
+        required: true
+        type: string
+      - name: p4
+        in: path
+        required: true
+        type: string
+      - name: q4
+        in: query
+        required: true
+        type: string
+      - name: h4
+        in: header
+        required: true
+        type: string
+      - name: p5
+        in: path
+        required: true
+        type: string
+      - name: q5
+        in: query
+        required: true
+        type: string
+      - name: h5
+        in: header
+        required: true
+        type: string
+      - name: p6
+        in: path
+        required: true
+        type: string
+      - name: q6
+        in: query
+        required: true
+        type: string
+      - name: h6
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'
+  /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/{p7}/:
+    get:
+      operationId: ohNo_7
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      - name: p3
+        in: path
+        required: true
+        type: string
+      - name: q3
+        in: query
+        required: true
+        type: string
+      - name: h3
+        in: header
+        required: true
+        type: string
+      - name: p4
+        in: path
+        required: true
+        type: string
+      - name: q4
+        in: query
+        required: true
+        type: string
+      - name: h4
+        in: header
+        required: true
+        type: string
+      - name: p5
+        in: path
+        required: true
+        type: string
+      - name: q5
+        in: query
+        required: true
+        type: string
+      - name: h5
+        in: header
+        required: true
+        type: string
+      - name: p6
+        in: path
+        required: true
+        type: string
+      - name: q6
+        in: query
+        required: true
+        type: string
+      - name: h6
+        in: header
+        required: true
+        type: string
+      - name: p7
+        in: path
+        required: true
+        type: string
+      - name: q7
+        in: query
+        required: true
+        type: string
+      - name: h7
+        in: header
+        required: true
+        type: string
+      - name: h12
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'

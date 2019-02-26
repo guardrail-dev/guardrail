@@ -76,6 +76,6 @@ class SchemeTest extends FunSuite with Matchers with SwaggerSpecRunner {
     """
 
     cmp.structure should equal(companion.structure)
-    cls.structure should equal(client.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 }

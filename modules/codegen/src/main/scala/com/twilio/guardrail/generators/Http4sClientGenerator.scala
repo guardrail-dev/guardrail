@@ -151,8 +151,8 @@ object Http4sClientGenerator {
                   formDataParams: Option[Term],
                   headerParams: Term,
                   responses: Responses[ScalaLanguage],
-                  produces: Seq[String],
-                  consumes: Seq[String],
+                  produces: Seq[RouteMeta.ContentType],
+                  consumes: Seq[RouteMeta.ContentType],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
                                     tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
                                     pathArgs: List[ScalaParameter[ScalaLanguage]],
@@ -166,7 +166,7 @@ object Http4sClientGenerator {
           val safeBody: Option[(Term, Type)] =
             body.map(sp => (sp.paramName, sp.argType))
 
-          val formDataNeedsMultipart = consumes.contains("multipart/form-data")
+          val formDataNeedsMultipart = consumes.contains(RouteMeta.MultipartFormData)
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
             if (formDataNeedsMultipart) {
               q"""_multipart"""
@@ -257,8 +257,8 @@ object Http4sClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          consumes = operation.consumes
-          produces = operation.produces
+          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams
@@ -273,7 +273,7 @@ object Http4sClientGenerator {
 
           _ <- Target.log.debug("generateClientOperation")(s"Generated: ${urlWithParams}")
           // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains("multipart/form-data"))
+          formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
@@ -372,23 +372,23 @@ object Http4sClientGenerator {
               ..$clientCalls
             }
           """
-        Target.pure(client)
+        Target.pure(NonEmptyList(Right(client), Nil))
     }
 
     def generateCodecs(methodName: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
                        responses: Responses[ScalaLanguage],
-                       produces: Seq[String],
-                       consumes: Seq[String]): List[Defn.Val] =
+                       produces: Seq[RouteMeta.ContentType],
+                       consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
 
-    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[String]): List[Defn.Val] =
+    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(q"val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, consumes)}")
       }
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1)

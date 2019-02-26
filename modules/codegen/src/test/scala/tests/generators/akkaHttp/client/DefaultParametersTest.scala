@@ -187,6 +187,6 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
     """
 
     cmp.structure should equal(companion.structure)
-    cls.structure should equal(client.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 }

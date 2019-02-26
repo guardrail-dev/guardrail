@@ -35,4 +35,4 @@ case class BuildClient[L <: LA](clientName: String,
                                 clientCalls: List[L#Definition],
                                 supportDefinitions: List[L#Definition],
                                 tracing: Boolean)
-    extends ClientTerm[L, L#ClassDefinition]
+    extends ClientTerm[L, NonEmptyList[Either[L#Trait, L#ClassDefinition]]]

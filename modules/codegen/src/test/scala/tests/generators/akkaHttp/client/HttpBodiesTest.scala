@@ -163,6 +163,6 @@ class HttpBodiesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.structure should equal(client.structure)
+    cls.head.right.get.structure should equal(client.structure)
   }
 }

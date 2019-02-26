@@ -15,14 +15,19 @@ import com.twilio.swagger.core.StructuredLogger
 package guardrail {
   case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server[L]])
 
+  sealed trait ErrorKind
+  case object UserError     extends ErrorKind
+  case object InternalError extends ErrorKind
+
   object Target {
     val A                        = Applicative[Target]
     def pure[T](x: T): Target[T] = A.pure(x)
     @deprecated("Use raiseError instead", "v0.41.2")
-    def error[T](x: String): Target[T]      = raiseError(x)
-    def raiseError[T](x: String): Target[T] = EitherT.fromEither(Left(x))
+    def error[T](x: String): Target[T]          = raiseError(x)
+    def raiseError[T](x: String): Target[T]     = EitherT.fromEither(Left((x, UserError)))
+    def raiseException[T](x: String): Target[T] = EitherT.fromEither(Left((x, InternalError)))
     def fromOption[T](x: Option[T], default: => String): Target[T] =
-      EitherT.fromOption(x, default)
+      EitherT.fromOption(x, (default, UserError))
     def unsafeExtract[T](x: Target[T]): T =
       x.valueOr({ err =>
           throw new Exception(err.toString)
@@ -86,6 +91,6 @@ package object guardrail {
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
   type Logger[T]     = WriterT[Id, StructuredLogger, T]
-  type Target[A]     = EitherT[Logger, String, A]
+  type Target[A]     = EitherT[Logger, (String, ErrorKind), A]
   type CoreTarget[A] = EitherT[Logger, Error, A]
 }

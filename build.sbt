@@ -17,6 +17,7 @@ val catsEffectVersion = "1.0.0"
 val circeVersion      = "0.10.1"
 val http4sVersion     = "0.19.0"
 val scalatestVersion  = "3.0.5"
+val endpointsVersion  = "0.8.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
@@ -38,25 +39,27 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
   (sampleResource("raw-response.yaml"), "raw", false, List.empty),
   (sampleResource("server1.yaml"), "tracer", true, List.empty),
-  (sampleResource("server2.yaml"), "tracer", true, List.empty)
+  (sampleResource("server2.yaml"), "tracer", true, List.empty),
+  (sampleResource("pathological-parameters.yaml"), "pathological", false, List.empty)
 )
 
 val exampleArgs: List[List[String]] = exampleCases
   .foldLeft(List.empty[List[String]])({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
-        kind <- List("client", "server")
-        frameworkPair <- List(
-          ("akka-http", "akkaHttp"),
-          ("http4s", "http4s")
+        frameworkSuite <- List(
+          ("akka-http", "akkaHttp", List("client", "server")),
+          ("endpoints", "endpoints", List("client")),
+          ("http4s", "http4s", List("client", "server"))
         )
-        (frameworkName, frameworkPackage) = frameworkPair
-        tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
+        (frameworkName, frameworkPackage, kinds) = frameworkSuite
+        kind <- kinds
+        tracingFlag = if (tracing) Option("--tracing") else Option.empty[String]
       } yield
         (
           List(s"--${kind}") ++
             List("--specPath", path.toString()) ++
-            List("--outputPath", s"modules/sample/src/main/scala/generated") ++
+            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/scala/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
         ) ++ tracingFlag ++ extra)
@@ -78,20 +81,22 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
+val frameworks = List("akkaHttp", "endpoints", "http4s")
 
 resetSample := {
   import scala.sys.process._
-  "git clean -fdx modules/sample/src modules/sample/target" !
+  (List("sample") ++ frameworks.map(x => s"sample-${x}"))
+    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/src modules/${sampleName}/target" !)
 }
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; sample/test")
+addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; " + frameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; sample/scalafmt ; sample/test:scalafmt")
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; sample/scalafmtCheck ; sample/test:scalafmtCheck")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + frameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + frameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite")
 
 addCommandAlias(
@@ -118,15 +123,6 @@ val codegenSettings = Seq(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
-  libraryDependencies ++= testDependencies ++ Seq(
-    "org.scalameta"           %% "scalameta"     % "4.1.0",
-    "io.swagger.parser.v3"    % "swagger-parser" % "2.0.8",
-    "org.tpolecat"            %% "atto-core"     % "0.6.3",
-    "org.typelevel"           %% "cats-core"     % catsVersion,
-    "org.typelevel"           %% "cats-kernel"   % catsVersion,
-    "org.typelevel"           %% "cats-macros"   % catsVersion,
-    "org.typelevel"           %% "cats-free"     % catsVersion
-  ),
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-Ydelambdafy:method",
@@ -140,8 +136,7 @@ val codegenSettings = Seq(
         } else {
           List("-Xlint:-unused,_")
         }),
-  parallelExecution in Test := true,
-  fork := true
+  parallelExecution in Test := true
 )
 
 lazy val root = (project in file("."))
@@ -155,6 +150,15 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(
     (name := "guardrail") +:
       codegenSettings,
+    libraryDependencies ++= testDependencies ++ Seq(
+      "org.scalameta"           %% "scalameta"     % "4.1.0",
+      "io.swagger.parser.v3"    % "swagger-parser" % "2.0.8",
+      "org.tpolecat"            %% "atto-core"     % "0.6.3",
+      "org.typelevel"           %% "cats-core"     % catsVersion,
+      "org.typelevel"           %% "cats-kernel"   % catsVersion,
+      "org.typelevel"           %% "cats-macros"   % catsVersion,
+      "org.typelevel"           %% "cats-free"     % catsVersion
+    ),
     scalacOptions += "-language:higherKinds",
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
@@ -183,40 +187,60 @@ lazy val codegen = (project in file("modules/codegen"))
     )
   )
 
-lazy val sample = (project in file("modules/sample"))
+lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
   .settings(
     codegenSettings,
-    initialCommands in console := """
-      |import cats._
-      |import cats.data.EitherT
-      |import cats.implicits._
-      |import cats.effect.IO
-      |import io.circe._
-      |import java.time._
-      |import org.http4s._
-      |import org.http4s.client._
-      |import org.http4s.client.blaze._
-      |import org.http4s.dsl._
-      |import org.http4s.multipart._
-      |import scala.concurrent.Await
-      |import scala.concurrent.ExecutionContext.Implicits.global
-      |import scala.concurrent.duration._
-      |import scala.meta._
-      |""".stripMargin,
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http"           % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-testkit"   % akkaVersion,
-      "io.circe"          %% "circe-core"          % circeVersion,
-      "io.circe"          %% "circe-generic"       % circeVersion,
-      "io.circe"          %% "circe-java8"         % circeVersion,
-      "io.circe"          %% "circe-parser"        % circeVersion,
-      "org.http4s"        %% "http4s-blaze-client" % http4sVersion,
-      "org.http4s"        %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s"        %% "http4s-circe"        % http4sVersion,
-      "org.http4s"        %% "http4s-dsl"          % http4sVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % catsVersion,
-      "org.typelevel"     %% "cats-effect"         % catsEffectVersion
+      "com.typesafe.akka" %% "akka-http"         % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
+      "io.circe"          %% "circe-core"        % circeVersion,
+      "io.circe"          %% "circe-generic"     % circeVersion,
+      "io.circe"          %% "circe-java8"       % circeVersion,
+      "io.circe"          %% "circe-parser"      % circeVersion,
+      "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"         % catsVersion
+    ),
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
+lazy val http4sSample = (project in file("modules/sample-http4s"))
+  .settings(
+    codegenSettings,
+    libraryDependencies ++= Seq(
+      "io.circe"      %% "circe-core"          % circeVersion,
+      "io.circe"      %% "circe-generic"       % circeVersion,
+      "io.circe"      %% "circe-java8"         % circeVersion,
+      "io.circe"      %% "circe-parser"        % circeVersion,
+      "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
+      "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
+      "org.http4s"    %% "http4s-circe"        % http4sVersion,
+      "org.http4s"    %% "http4s-dsl"          % http4sVersion,
+      "org.scalatest" %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel" %% "cats-core"           % catsVersion,
+      "org.typelevel" %% "cats-effect"         % catsEffectVersion
+    ),
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
+lazy val endpointsSample = (project in file("modules/sample-endpoints"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    codegenSettings,
+    libraryDependencies ++= Seq(
+      "io.circe"          %%% "circe-core"                    % circeVersion,
+      "io.circe"          %%% "circe-generic"                 % circeVersion,
+      "io.circe"          %%% "circe-java8"                   % circeVersion,
+      "io.circe"          %%% "circe-parser"                  % circeVersion,
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-M13",
+      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
+      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
+      "org.typelevel"     %%% "cats-core"                     % catsVersion
     ),
     skip in publish := true,
     scalafmtOnCompile := false

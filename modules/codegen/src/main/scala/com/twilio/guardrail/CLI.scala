@@ -72,11 +72,15 @@ object CLICommon {
               println(s"${AnsiColor.RED}${err}${AnsiColor.RESET}")
               Applicative[Logger].pure(List.empty[Path])
             },
-            _.fold({ err =>
-              println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
-              unsafePrintHelp()
-              List.empty[Path]
-            }, _.map(WriteTree.unsafeWriteTree))
+            _.fold(
+              {
+                case (err, errorKind) =>
+                  println(s"${AnsiColor.RED}Error: ${err}${AnsiColor.RESET}")
+                  if (errorKind == UserError) unsafePrintHelp()
+                  List.empty[Path]
+              },
+              _.map(WriteTree.unsafeWriteTree)
+            )
           )
       })
       .map(_.flatten)
@@ -135,11 +139,12 @@ trait CLICommon {
 }
 
 object CLI extends CLICommon {
-  import com.twilio.guardrail.generators.{ AkkaHttp, Http4s }
+  import com.twilio.guardrail.generators.{ AkkaHttp, Endpoints, Http4s }
   import scala.meta._
   val scalaInterpreter = CoreTermInterp[ScalaLanguage](
     "akka-http", {
       case "akka-http" => AkkaHttp
+      case "endpoints" => Endpoints
       case "http4s"    => Http4s
     }, {
       _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))

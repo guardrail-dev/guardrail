@@ -156,8 +156,8 @@ object AkkaHttpClientGenerator {
                   formDataParams: Option[Term],
                   headerParams: Term,
                   responses: Responses[ScalaLanguage],
-                  produces: Seq[String],
-                  consumes: Seq[String],
+                  produces: Seq[RouteMeta.ContentType],
+                  consumes: Seq[RouteMeta.ContentType],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
                                     tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
                                     pathArgs: List[ScalaParameter[ScalaLanguage]],
@@ -173,7 +173,7 @@ object AkkaHttpClientGenerator {
               Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))
             else None
           val textPlainBody: Option[Term] =
-            if (consumes.contains("text/plain"))
+            if (consumes.contains(RouteMeta.TextPlain))
               body.map(
                 sp =>
                   q"TextPlain(${if (sp.required) sp.paramName
@@ -184,7 +184,7 @@ object AkkaHttpClientGenerator {
             body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
-            if (consumes.contains("multipart/form-data")) {
+            if (consumes.contains(RouteMeta.MultipartFormData)) {
               q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
             } else {
               q"""FormData($formDataParams: _*)"""
@@ -260,8 +260,8 @@ object AkkaHttpClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          produces = operation.produces
-          consumes = operation.consumes
+          produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams
@@ -276,7 +276,7 @@ object AkkaHttpClientGenerator {
 
           _ <- Target.log.debug("generateClientOperation")(s"Generated: $urlWithParams")
           // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains("multipart/form-data"))
+          formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
@@ -402,13 +402,13 @@ object AkkaHttpClientGenerator {
               ..$clientCalls;
             }
           """
-        Target.pure(client)
+        Target.pure(NonEmptyList(Right(client), Nil))
     }
 
-    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
+    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       generateDecoders(methodName, responses, produces)
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[String]): List[Defn.Val] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1).toList

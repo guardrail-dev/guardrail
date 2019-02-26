@@ -130,8 +130,6 @@ object ScalaGenerator {
             import cats.implicits._
             import cats.data.EitherT
 
-            import scala.concurrent.Future
-
             object Implicits {
               abstract class AddArg[T] {
                 def addArg(key: String, v: T): String
@@ -176,7 +174,7 @@ object ScalaGenerator {
                 implicit val showBoolean = build[Boolean](_.toString)
                 implicit val showLocalDate = build[java.time.LocalDate](_.format(java.time.format.DateTimeFormatter.ISO_DATE))
                 implicit val showOffsetDateTime = build[java.time.OffsetDateTime](_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-                implicit val showJavaURL = build[java.net.URL](_.toString)
+                implicit val showJavaURL = build[java.net.URI](_.toString)
               }
 
               object Formatter {
@@ -199,6 +197,8 @@ object ScalaGenerator {
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        val implicitsRef: Term.Ref =
+          (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
         val frameworkImplicitsFile = source"""
             package ${pkg}
 
@@ -209,9 +209,7 @@ object ScalaGenerator {
             import cats.implicits._
             import cats.data.EitherT
 
-            import scala.concurrent.Future
-
-            import ${pkg}.Implicits._
+            import ${implicitsRef}._
 
             ${frameworkImplicits}
           """
@@ -325,7 +323,7 @@ object ScalaGenerator {
             ..${customImports};
             ..${imports};
             ${companionForStaticDefns(staticDefns)};
-            ${client};
+            ..${client.toList.map(_.merge)};
             ..${responseDefinitions}
             """.syntax.getBytes(StandardCharsets.UTF_8)
           )
