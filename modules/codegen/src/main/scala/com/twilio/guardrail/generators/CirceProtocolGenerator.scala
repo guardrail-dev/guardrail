@@ -6,6 +6,7 @@ import cats.implicits._
 import cats.~>
 import cats.data.NonEmptyList
 import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms
 import java.util.Locale
@@ -109,13 +110,10 @@ object CirceProtocolGenerator {
         }).map(_.map(_.asScala.toList).toList.flatten)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
-        def toCamelCase(s: String): String =
-          "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-
         for {
           _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
+          argName = if (needCamelSnakeConversion) name.toCamelCase else name
 
           defaultValue = property match {
             case _: MapSchema =>

@@ -5,6 +5,7 @@ import _root_.io.swagger.v3.oas.models.media.{ ArraySchema, ComposedSchema, Inte
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.shims._
@@ -65,21 +66,10 @@ object ProtocolGenerator {
     import E._
     import Sc._
 
-    val toPascalRegexes = List(
-      "[\\._-]([a-z])".r, // dotted, snake, or dashed case
-      "\\s+([a-zA-Z])".r, // spaces
-      "^([a-z])".r // initial letter
-    )
-
-    def toPascalCase(s: String): String =
-      toPascalRegexes.foldLeft(s)(
-        (accum, regex) => regex.replaceAllIn(accum, m => m.group(1).toUpperCase(Locale.US))
-      )
-
     def validProg(enum: List[String], tpe: L#Type): Free[F, EnumDefinition[L]] =
       for {
         elems <- enum.traverse { elem =>
-          val termName = toPascalCase(elem)
+          val termName = elem.toPascalCase
           for {
             valueTerm <- pureTermName(termName)
             accessor  <- buildAccessor(clsName, termName)

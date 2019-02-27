@@ -4,6 +4,7 @@ package generators
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
 import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.shims._
@@ -53,13 +54,6 @@ object ScalaParameter {
     import Fw._
     import Sc._
     import Sw._
-
-    def toCamelCase(s: String): String = {
-      val fromSnakeOrDashed =
-        "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-      "^([A-Z])".r
-        .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
-    }
 
     def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
       def getDefault[U <: Parameter: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
@@ -169,7 +163,7 @@ object ScalaParameter {
 
       name <- getParameterName(parameter)
 
-      paramName <- pureTermName(toCamelCase(name))
+      paramName <- pureTermName(name.toCamelCase)
       param     <- pureMethodParameter(paramName, declType, defaultValue)
 
       ftpe       <- fileType(None)
