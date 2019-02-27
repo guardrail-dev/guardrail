@@ -1,19 +1,18 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
-import _root_.io.swagger.v3.oas.models.media.{ ArraySchema, ComposedSchema, IntegerSchema, ObjectSchema, Schema, StringSchema }
+import _root_.io.swagger.v3.oas.models.media._
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.ScalaType
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
 import java.util.Locale
 import scala.collection.JavaConverters._
-import scala.language.{ higherKinds, postfixOps, reflectiveCalls }
+import scala.language.{higherKinds, postfixOps, reflectiveCalls}
 
 case class ProtocolDefinitions[L <: LA](elems: List[StrictProtocolElems[L]],
                                         protocolImports: List[L#Import],

@@ -38,7 +38,7 @@ object CirceProtocolGenerator {
         Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
 
       case RenderMembers(clsName, elems) =>
-        Target.pure(q"""
+        Target.pure(Some(q"""
           object members {
             ..${elems
           .map({
@@ -47,21 +47,21 @@ object CirceProtocolGenerator {
           })
           .to[List]}
           }
-        """)
+        """))
 
       case EncodeEnum(clsName) =>
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
             Encoder[String].contramap(_.value)
-        """)
+        """))
 
       case DecodeEnum(clsName) =>
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
             Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(Term.Name("s"),
                                                                                   List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
                                                                                   List(Term.Name("value")))}))
-        """)
+        """))
 
       case RenderClass(clsName, tpe) =>
         Target.pure(q"""
@@ -85,9 +85,9 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = List.empty[Import],
-            definitions = List(members) ++
+            definitions = members.to[List] ++
               terms ++
-              List(values, encoder, decoder) ++
+              List(Some(values), encoder, decoder).flatten ++
               implicits ++
               List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)")
           )
