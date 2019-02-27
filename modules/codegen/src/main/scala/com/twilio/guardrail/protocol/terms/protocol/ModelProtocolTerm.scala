@@ -18,8 +18,8 @@ case class TransformProperty[L <: LA](clsName: String,
 case class RenderDTOClass[L <: LA](clsName: String, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil)
     extends ModelProtocolTerm[L, L#ClassDefinition]
 case class EncodeModel[L <: LA](clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil)
-    extends ModelProtocolTerm[L, L#ValueDefinition]
+    extends ModelProtocolTerm[L, Option[L#ValueDefinition]]
 case class DecodeModel[L <: LA](clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil)
-    extends ModelProtocolTerm[L, L#ValueDefinition]
-case class RenderDTOStaticDefns[L <: LA](clsName: String, deps: List[L#TermName], encoder: L#ValueDefinition, decoder: L#ValueDefinition)
+    extends ModelProtocolTerm[L, Option[L#ValueDefinition]]
+case class RenderDTOStaticDefns[L <: LA](clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition])
     extends ModelProtocolTerm[L, StaticDefns[L]]

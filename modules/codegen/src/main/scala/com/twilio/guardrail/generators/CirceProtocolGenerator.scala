@@ -230,12 +230,12 @@ object CirceProtocolGenerator {
             }
           """
         }
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("encode", clsName)} = {
             val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
             $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-        """)
+        """))
 
       case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
@@ -285,9 +285,9 @@ object CirceProtocolGenerator {
           }
           """
         }
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("decode", clsName)} = $decVal
-        """)
+        """))
 
       case RenderDTOStaticDefns(clsName, deps, encoder, decoder) =>
         val extraImports: List[Import] = deps.map { term =>
@@ -297,7 +297,7 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = extraImports,
-            definitions = List(encoder, decoder)
+            definitions = List(encoder, decoder).flatten
           )
         )
     }
