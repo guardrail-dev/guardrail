@@ -79,7 +79,7 @@ object ProtocolGenerator {
         encoder <- encodeEnum(clsName)
         decoder <- decodeEnum(clsName)
 
-        defn        <- renderClass(clsName, tpe)
+        defn        <- renderClass(clsName, tpe, elems)
         staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
         classType   <- pureTypeName(clsName)
       } yield EnumDefinition[L](clsName, classType, elems, defn, staticDefns)

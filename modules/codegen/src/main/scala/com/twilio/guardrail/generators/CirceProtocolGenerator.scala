@@ -63,7 +63,7 @@ object CirceProtocolGenerator {
                                                                                   List(Term.Name("value")))}))
         """))
 
-      case RenderClass(clsName, tpe) =>
+      case RenderClass(clsName, tpe, _) =>
         Target.pure(q"""
           sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) {
             override def toString: String = value.toString

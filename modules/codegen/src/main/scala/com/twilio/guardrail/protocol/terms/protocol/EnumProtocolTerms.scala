@@ -15,8 +15,8 @@ class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?
     Free.inject[EnumProtocolTerm[L, ?], F](EncodeEnum[L](clsName))
   def decodeEnum(clsName: String): Free[F, Option[L#ValueDefinition]] =
     Free.inject[EnumProtocolTerm[L, ?], F](DecodeEnum[L](clsName))
-  def renderClass(clsName: String, tpe: L#Type): Free[F, L#ClassDefinition] =
-    Free.inject[EnumProtocolTerm[L, ?], F](RenderClass[L](clsName, tpe))
+  def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]): Free[F, L#ClassDefinition] =
+    Free.inject[EnumProtocolTerm[L, ?], F](RenderClass[L](clsName, tpe, elems))
   def renderStaticDefns(clsName: String,
                         members: Option[L#ObjectDefinition],
                         accessors: List[L#TermName],
