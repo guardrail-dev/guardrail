@@ -421,10 +421,11 @@ object CirceProtocolGenerator {
           }"""
         Target.pure(Some(code))
 
-      case RenderSealedTrait(className, terms, discriminator, parents) =>
+      case RenderSealedTrait(className, params, discriminator, parents) =>
         for {
           testTerms <- (
-            terms
+            params
+              .map(_.term)
               .filter(_.name.value != discriminator)
               .traverse { t =>
                 for {

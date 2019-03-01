@@ -2,9 +2,9 @@ package com.twilio.guardrail.protocol.terms.protocol
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ StaticDefns, SuperClass }
+import com.twilio.guardrail.{ProtocolParameter, StaticDefns, SuperClass}
 import com.twilio.guardrail.languages.LA
-import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
+import io.swagger.v3.oas.models.media.{ComposedSchema, Schema}
 
 /**
   * Protocol for Polymorphic models
@@ -14,7 +14,7 @@ sealed trait PolyProtocolTerm[L <: LA, T]
 case class ExtractSuperClass[L <: LA](swagger: ComposedSchema, definitions: List[(String, Schema[_])])
     extends PolyProtocolTerm[L, List[(String, Schema[_], List[Schema[_]])]]
 
-case class RenderSealedTrait[L <: LA](className: String, terms: List[L#MethodParameter], discriminator: String, parents: List[SuperClass[L]] = Nil)
+case class RenderSealedTrait[L <: LA](className: String, params: List[ProtocolParameter[L]], discriminator: String, parents: List[SuperClass[L]] = Nil)
     extends PolyProtocolTerm[L, L#Trait]
 
 case class EncodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
@@ -29,11 +29,11 @@ class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?
     Free.inject[PolyProtocolTerm[L, ?], F](ExtractSuperClass(swagger, definitions))
   def renderSealedTrait(
       className: String,
-      terms: List[L#MethodParameter],
+      params: List[ProtocolParameter[L]],
       discriminator: String,
       parents: List[SuperClass[L]] = Nil
   ): Free[F, L#Trait] =
-    Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, terms, discriminator, parents))
+    Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, params, discriminator, parents))
 
   def encodeADT(clsName: String, children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
     Free.inject[PolyProtocolTerm[L, ?], F](EncodeADT(clsName, children))
