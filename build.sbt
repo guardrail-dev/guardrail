@@ -50,7 +50,7 @@ val exampleJavaArgs: List[List[String]] = exampleCases
       acc ++ (for {
         kind <- List("client", "server")
         frameworkPair <- List(
-          ("akka-http", "akkaHttp"),
+          ("dropwizard", "dropwizard"),
         )
         (frameworkName, frameworkPackage) = frameworkPair
         tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
