@@ -3,9 +3,9 @@ package com.twilio.guardrail.generators
 import cats.~>
 import cats.instances.option._
 import cats.syntax.traverse._
-import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, PackageDeclaration }
-import com.github.javaparser.ast.`type`.{ PrimitiveType, Type }
-import com.github.javaparser.ast.body.{ BodyDeclaration, ClassOrInterfaceDeclaration, Parameter }
+import com.github.javaparser.ast._
+import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, VoidType, ArrayType => AstArrayType}
+import com.github.javaparser.ast.body.Parameter
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
 import com.twilio.guardrail._
@@ -14,10 +14,25 @@ import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
+import java.util
 
 object JavaGenerator {
   object JavaInterp extends (ScalaTerm[JavaLanguage, ?] ~> Target) {
     def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] = safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
+
+    def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
+      case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
+      case None => Target.pure(new MethodCallExpr(name))
+      case other => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+    }
+
+    def resolveReferenceTypeName(tpe: Type): Target[String] = tpe match {
+      case a: AstArrayType if a.getComponentType.isPrimitiveType => resolveReferenceTypeName(new AstArrayType(a.getComponentType.asPrimitiveType().toBoxedType))
+      case a: AstArrayType => Target.pure(a.asString)
+      case ci: ClassOrInterfaceType => Target.pure(ci.getNameAsString)
+      case p: PrimitiveType => Target.pure(p.toBoxedType.getNameAsString)
+      case _: VoidType => Target.pure("Void")
+    }
 
     def apply[T](term: ScalaTerm[JavaLanguage, T]): Target[T] = term match {
       case LitString(value)        => Target.pure(new StringLiteralExpr(value))
@@ -26,12 +41,12 @@ object JavaGenerator {
       case LitInt(value)           => Target.pure(new IntegerLiteralExpr(value))
       case LitLong(value)          => Target.pure(new LongLiteralExpr(value))
       case LitBoolean(value)       => Target.pure(new BooleanLiteralExpr(value))
-      case LiftOptionalType(value) => safeParseType(s"java.util.Optional<${value}>")
-      case LiftOptionalTerm(value) => safeParseExpression[MethodCallExpr](s"java.util.Optional.ofNullable(${value}").map(identity)
-      case EmptyOptionalTerm()     => safeParseExpression[MethodCallExpr]("java.util.Optional.empty()").map(identity)
-      case LiftVectorType(value)   => safeParseType(s"java.util.List<${value}>")
-      case LiftVectorTerm(value)   => safeParseExpression[MethodCallExpr](s"java.util.Collections.singletonList(${value})").map(identity)
-      case LiftMapType(value)      => safeParseType(s"java.util.Map<String, ${value}>")
+      case LiftOptionalType(value) => safeParseClassOrInterfaceType(s"java.util.Optional").map(_.setTypeArguments(new NodeList(value)))
+      case LiftOptionalTerm(value) => buildMethodCall("java.util.Optional.ofNullable", Some(value))
+      case EmptyOptionalTerm()     => buildMethodCall("java.util.Optional.empty")
+      case LiftVectorType(value)   => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
+      case LiftVectorTerm(value)   => buildMethodCall("java.util.Collections.singletonList", Some(value))
+      case LiftMapType(value)      => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
         defaultValue match {
@@ -77,9 +92,9 @@ object JavaGenerator {
       case PureTypeName(tpe) =>
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
 
-      case PureMethodParameter(name, tpe, default) =>
+      case PureMethodParameter(nameStr, tpe, default) =>
         // FIXME: java methods do not support default param values -- what should we do here?
-        safeParseParameter(s"final ${tpe} ${name}")
+        safeParseSimpleName(nameStr.asString).map(name => new Parameter(util.EnumSet.of(Modifier.FINAL), tpe, name))
 
       case TypeNamesEqual(a, b) =>
         Target.pure(a.asString == b.asString)
@@ -91,22 +106,30 @@ object JavaGenerator {
         safeParseName(tpe.asString).map(Option.apply)
 
       case ExtractTermName(term) =>
-        Target.pure(term.getIdentifier)
+        Target.pure(term.asString)
 
       case AlterMethodParameterName(param, name) =>
-        safeParseSimpleName(name.asString).map(new Parameter(param.getType, _))
+        safeParseSimpleName(name.asString).map(new Parameter(
+          param.getTokenRange.orElse(null),
+          param.getModifiers,
+          param.getAnnotations,
+          param.getType,
+          param.isVarArgs,
+          param.getVarArgsAnnotations,
+          _
+        ))
 
       case DateType()                => safeParseType("java.time.LocalDate")
       case DateTimeType()            => safeParseType("java.time.OffsetDateTime")
-      case StringType(format)        => format.fold(safeParseType("String"))(safeParseType)
+      case StringType(format)        => format.fold(Target.pure[Type](STRING_TYPE))(safeParseType)
       case FloatType()               => safeParseType("Float")
       case DoubleType()              => safeParseType("Double")
       case NumberType(format)        => safeParseType("java.math.BigDecimal")
-      case IntType()                 => safeParseType("Int")
+      case IntType()                 => safeParseType("Integer")
       case LongType()                => safeParseType("Long")
       case IntegerType(format)       => safeParseType("java.math.BigInteger")
       case BooleanType(format)       => safeParseType("Boolean")
-      case ArrayType(format)         => safeParseType("java.util.List<String>")
+      case ArrayType(format)         => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList[Type](STRING_TYPE)))
       case FallbackType(tpe, format) => safeParseType(tpe)
 
       case WidenTypeName(tpe)     => safeParseType(tpe.asString)

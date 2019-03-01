@@ -80,7 +80,6 @@ object JacksonGenerator {
       .map(_.tpe)
       .map(f)
 
-  private val STRING_TYPE = JavaParser.parseClassOrInterfaceType("String")
   private val HASH_MAP_TYPE = JavaParser.parseClassOrInterfaceType("java.util.HashMap")
   private val ARRAY_LIST_TYPE = JavaParser.parseClassOrInterfaceType("java.util.ArrayList")
 
