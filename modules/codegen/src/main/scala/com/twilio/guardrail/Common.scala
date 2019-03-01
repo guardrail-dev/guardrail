@@ -125,11 +125,9 @@ object Common {
     } yield
       (
         protocolDefinitions ++
-          List(packageObject) ++
+          packageObject.toList ++
           files ++
-          List(
-            implicits
-          ) ++
+          implicits.toList ++
           frameworkImplicitsFile.toList
       ).toList
   }

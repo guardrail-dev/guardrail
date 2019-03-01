@@ -136,14 +136,13 @@ object JavaGenerator {
       case WidenTermSelect(value) => Target.pure(value)
 
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
-        // FIXME
-        Target.pure(WriteTree(pkgPath.resolve("Implicits.java"), new Array[Byte](0)))
+        Target.pure(None)
 
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         Target.raiseError("Java does not support Framework Implicits")
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        Target.raiseError("Java does not support Package Objects")
+        Target.pure(None)
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         elem match {
@@ -219,18 +218,18 @@ object JavaGenerator {
                        Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
         for {
           pkgDecl         <- buildPkgDecl(pkgName ++ pkg)
-          implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
+          //implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
           //frameworkImplicitsImport <- safeParseName((pkgName ++ List(frameworkImplicitName.getIdentifier, "*")).mkString("."))
           //  .map(name => new ImportDeclaration(name, false, true))
-          dtoComponentsImport <- safeParseName((dtoComponents :+ "*").mkString(".")).map(name => new ImportDeclaration(name, false, true))
+          //dtoComponentsImport <- safeParseName((dtoComponents :+ "*").mkString(".")).map(name => new ImportDeclaration(name, false, true))
         } yield {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)
           imports.map(cu.addImport)
           customImports.map(cu.addImport)
-          cu.addImport(implicitsImport)
+          //cu.addImport(implicitsImport)
           //cu.addImport(frameworkImplicitsImport)
-          cu.addImport(dtoComponentsImport)
+          cu.addImport((dtoComponents :+ "*").mkString(".")) //dtoComponentsImport)
           val clientCopy = client.head.merge.clone() // FIXME: WriteClient needs to be altered to return `NonEmptyList[WriteTree]` to accommodate Java not being able to put multiple classes in the same file. Scala just jams them all together, but this could be improved over there as well.
           staticDefns.definitions.foreach(clientCopy.addMember)
           responseDefinitions.foreach(clientCopy.addMember)

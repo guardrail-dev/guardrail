@@ -58,7 +58,7 @@ case class RenderImplicits[L <: LA](pkgPath: Path,
                                     frameworkImports: List[L#Import],
                                     jsonImports: List[L#Import],
                                     customImports: List[L#Import])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, Option[WriteTree]]
 case class RenderFrameworkImplicits[L <: LA](pkgPath: Path,
                                              pkgName: List[String],
                                              frameworkImports: List[L#Import],
@@ -73,7 +73,7 @@ case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        protocolImports: List[L#Import],
                                        packageObjectContents: List[L#ValueDefinition],
                                        extraTypes: List[L#Statement])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, Option[WriteTree]]
 case class WriteProtocolDefinition[L <: LA](outputPath: Path,
                                             pkgName: List[String],
                                             definitions: List[String],

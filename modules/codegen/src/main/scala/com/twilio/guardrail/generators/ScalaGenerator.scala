@@ -192,7 +192,7 @@ object ScalaGenerator {
               }
             }
           """
-        Target.pure(WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(StandardCharsets.UTF_8)))
+        Target.pure(Some(WriteTree(pkgPath.resolve("Implicits.scala"), implicits.syntax.getBytes(StandardCharsets.UTF_8))))
 
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         val pkg: Term.Ref =
@@ -233,7 +233,7 @@ object ScalaGenerator {
             stat.copy(rhs = q"${companion}.${mirror}")
           })
 
-        Target.pure(
+        Target.pure(Some(
           WriteTree(
             dtoPackagePath.resolve("package.scala"),
             source"""
@@ -250,7 +250,7 @@ object ScalaGenerator {
             }
             """.syntax.getBytes(StandardCharsets.UTF_8)
           )
-        )
+        ))
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
           case EnumDefinition(_, _, _, cls, staticDefns) =>
