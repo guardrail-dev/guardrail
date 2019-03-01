@@ -318,7 +318,7 @@ object ScalaGenerator {
             source"""
             package ${buildPkgTerm(pkgName ++ pkg)}
             import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-            import ${buildPkgTerm(List("_root_") ++ pkgName)}.${frameworkImplicitName}._
+            ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
             import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
             ..${customImports};
             ..${imports};
@@ -336,7 +336,7 @@ object ScalaGenerator {
               package ${buildPkgTerm((pkgName ++ pkg.toList))}
               ..${extraImports}
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-              import ${buildPkgTerm(List("_root_") ++ pkgName)}.${frameworkImplicitName}._
+              ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
               import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
               ..${customImports}
               ..$src

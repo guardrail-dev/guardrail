@@ -6,13 +6,13 @@ import cats.free.Free
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
+import com.twilio.guardrail.protocol.terms.protocol.{ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms}
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SwaggerTerms }
-import java.nio.file.{ Path, Paths }
+import com.twilio.guardrail.terms.{CoreTerms, ScalaTerms, SwaggerTerms}
+import java.nio.file.{Path, Paths}
 import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
@@ -114,23 +114,23 @@ object Common {
       )
 
       frameworkImports    <- getFrameworkImports(context.tracing)
-      _frameworkImplicits <- getFrameworkImplicits()
-      (frameworkImplicitName, frameworkImplicits) = _frameworkImplicits
+      frameworkImplicits <- getFrameworkImplicits()
+      frameworkImplicitName = frameworkImplicits.map(_._1)
 
       files <- (clients.traverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
                 servers.traverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
 
       implicits              <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, frameworkImplicits, frameworkImplicitName)
+      frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({ case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply) })
     } yield
       (
         protocolDefinitions ++
           List(packageObject) ++
           files ++
           List(
-            implicits,
-            frameworkImplicitsFile
-          )
+            implicits
+          ) ++
+          frameworkImplicitsFile.toList
       ).toList
   }
 

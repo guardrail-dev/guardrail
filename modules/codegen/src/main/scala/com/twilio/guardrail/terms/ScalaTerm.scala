@@ -1,9 +1,8 @@
 package com.twilio.guardrail
 package terms
 
-import cats.data.NonEmptyList
-import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
+import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
 sealed trait ScalaTerm[L <: LA, T]
@@ -85,14 +84,14 @@ case class WriteProtocolDefinition[L <: LA](outputPath: Path,
 case class WriteClient[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
-                                frameworkImplicitName: L#TermName,
+                                frameworkImplicitName: Option[L#TermName],
                                 dtoComponents: List[String],
                                 client: Client[L])
     extends ScalaTerm[L, WriteTree]
 case class WriteServer[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
-                                frameworkImplicitName: L#TermName,
+                                frameworkImplicitName: Option[L#TermName],
                                 dtoComponents: List[String],
                                 server: Server[L])
     extends ScalaTerm[L, WriteTree]

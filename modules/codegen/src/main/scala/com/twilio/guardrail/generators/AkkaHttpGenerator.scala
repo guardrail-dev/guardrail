@@ -165,7 +165,7 @@ object AkkaHttpGenerator {
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
           }
         """
-        Target.pure((q"AkkaHttpImplicits", defn))
+        Target.pure(Some((q"AkkaHttpImplicits", defn)))
       }
 
       case LookupStatusCode(key) =>

@@ -92,14 +92,14 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def writeClient(pkgPath: Path,
                   pkgName: List[String],
                   customImports: List[L#Import],
-                  frameworkImplicitName: L#TermName,
+                  frameworkImplicitName: Option[L#TermName],
                   dtoComponents: List[String],
                   client: Client[L]): Free[F, WriteTree] =
     Free.inject[ScalaTerm[L, ?], F](WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client))
   def writeServer(pkgPath: Path,
                   pkgName: List[String],
                   customImports: List[L#Import],
-                  frameworkImplicitName: L#TermName,
+                  frameworkImplicitName: Option[L#TermName],
                   dtoComponents: List[String],
                   server: Server[L]): Free[F, WriteTree] =
     Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))

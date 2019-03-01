@@ -34,7 +34,7 @@ object EndpointsGenerator {
             q"import org.scalajs.dom.raw.XMLHttpRequest"
           )
         )
-      case GetFrameworkImplicits() => Target.pure((q"EndpointsImplicits", q"""
+      case GetFrameworkImplicits() => Target.pure(Some((q"EndpointsImplicits", q"""
         object EndpointsImplicits {
           case class UnknownStatusException(xhr: XMLHttpRequest) extends Exception
           implicit class FaithfulFutureExtensions[T](value: Future[T]) {
@@ -115,7 +115,7 @@ object EndpointsGenerator {
             }
           }
         }
-      """))
+      """)))
       case LookupStatusCode(key) =>
         key match {
           case "100" => Target.pure((100, q"Continue"))
