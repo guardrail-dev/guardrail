@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.syntax
 
 import cats.implicits._
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.{ CompilationUnit, Node }
 import com.github.javaparser.ast.`type`.Type
 import com.github.javaparser.ast.body.Parameter
 import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
@@ -23,7 +23,7 @@ object Java {
   def safeParseSimpleName(s: String): Target[SimpleName]                                    = safeParse("safeParseSimpleName")(JavaParser.parseSimpleName, s)
   def safeParseName(s: String): Target[Name]                                                = safeParse("safeParseName")(JavaParser.parseName, s)
   def safeParseType(s: String): Target[Type]                                                = safeParse("safeParseType")(JavaParser.parseType, s)
-  def safeParseExpression[T <: Expression](s: String)(implicit cls: ClassTag[T]): Target[T] = safeParse[T]("safeParseExpression")(JavaParser.parseExpression, s)
+  def safeParseExpression[T <: Expression](s: String)(implicit cls: ClassTag[T]): Target[T] = safeParse[T]("safeParseExpression")(JavaParser.parseExpression[T], s)
   def safeParseParameter(s: String): Target[Parameter]                                      = safeParse("safeParseParameter")(JavaParser.parseParameter, s)
 
   val printer: PrettyPrinterConfiguration = new PrettyPrinterConfiguration()
@@ -35,4 +35,19 @@ object Java {
     .setPrintComments(true)
     .setPrintJavadoc(true)
     .setTabWidth(4)
+
+/*
+  implicit class PrintStructure(value: Node) {
+    def toAST: String = {
+      @scala.annotation.tailrec
+      def walk(chunks: List[(String, Int, List[Node], String)]) = {
+        chunks.flatMap { case (pre, level, nodes, post) =>
+          
+        }
+      }
+
+      walk(List(("", 0, List(value), "")))
+    }
+  }
+*/
 }
