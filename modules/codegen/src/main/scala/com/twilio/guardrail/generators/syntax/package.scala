@@ -21,5 +21,11 @@ package object syntax {
       "^([A-Z])".r
         .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
+
+    def toSnakeCase: String = {
+      val noPascal = "^[A-Z]".r.replaceAllIn(s, _.group(0).toLowerCase(Locale.US))
+      val fromCamel = "[A-Z]".r.replaceAllIn(noPascal, "_" + _.group(0))
+      fromCamel.replaceAllLiterally("-", "_")
+    }
   }
 }

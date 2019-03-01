@@ -8,7 +8,7 @@ import com.twilio.guardrail.protocol.terms.server.ServerTerm
 import com.twilio.guardrail.terms.framework.FrameworkTerm
 import cats.~>
 
-import JacksonProtocolGenerator._
+import JacksonGenerator._
 import JavaGenerator.JavaInterp
 
 object AkkaHttp extends (CodegenApplication[JavaLanguage, ?] ~> Target) {

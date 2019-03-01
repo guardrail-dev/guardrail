@@ -3,33 +3,86 @@ package generators
 package Java
 
 import _root_.io.swagger.v3.oas.models.media._
-import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
-import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
+import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type}
+import com.twilio.guardrail.extract.{Default, ScalaEmptyIsNull}
 import com.twilio.guardrail.generators.syntax.Java._
-import com.twilio.guardrail.languages.{ LA, JavaLanguage }
+import com.twilio.guardrail.generators.syntax.RichString
+import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms
 import java.util.Locale
 import scala.collection.JavaConverters._
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.{ CompilationUnit, Node, NodeList }
-import com.github.javaparser.ast.stmt.{ BlockStmt, ExpressionStmt }
-import com.github.javaparser.ast.Modifier.{ PRIVATE, PUBLIC, STATIC }
-import com.github.javaparser.ast.expr.{ AssignExpr, BooleanLiteralExpr, DoubleLiteralExpr, Expression, FieldAccessExpr, IntegerLiteralExpr, LiteralExpr, LongLiteralExpr, NameExpr, SimpleName, StringLiteralExpr, ThisExpr }
+import com.github.javaparser.ast.{ImportDeclaration,NodeList}
+import com.github.javaparser.ast.stmt._
+import com.github.javaparser.ast.Modifier.{ABSTRACT, FINAL, PRIVATE, PUBLIC, STATIC}
+import com.github.javaparser.ast.body._
+import com.github.javaparser.ast.expr._
+import java.util
+import scala.language.existentials
+import scala.util.Try
 
-object JacksonProtocolGenerator {
+object JacksonGenerator {
   import ProtocolGenerator._
 
-  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[JavaLanguage]])(f: Type => Target[Type]): Option[Target[Type]] =
+  private case class ParameterTerm(propertyName: String,
+                                   parameterName: String,
+                                   fieldType: Type,
+                                   parameterType: Type)
+
+  // returns a tuple of (requiredTerms, optionalTerms)
+  private def sortParams(params: List[ProtocolParameter[JavaLanguage]]): (List[ParameterTerm], List[ParameterTerm]) = {
+    // TODO: if a required field has a default specified, include it in optionalTerms instead
+    val (req, opt) = params.partition(_.term.getType match {
+      case cls: ClassOrInterfaceType => !isOptionalType(cls)
+      case _ => true
+    })
+
+    val requiredTerms = req.map({ param =>
+      val types = param.term.getType match {
+        case cls: ClassOrInterfaceType => Try(cls.toUnboxedType).getOrElse(cls)
+        case tpe => tpe
+      }
+      ParameterTerm(param.name, param.term.getNameAsString, types, types)
+    })
+
+    val optionalTerms = opt.flatMap(param => param.term.getType match {
+      case cls: ClassOrInterfaceType => cls.getTypeArguments.asScala.flatMap({ typeArgument =>
+        val parameterType = typeArgument.asScala.headOption.map({
+          case innerCls: ClassOrInterfaceType => Try(innerCls.toUnboxedType).getOrElse(innerCls)
+          case tpe => tpe
+        })
+        parameterType.map(pt => ParameterTerm(param.name, param.term.getNameAsString, param.term.getType, pt))
+      })
+      case _ => None
+    })
+
+    (requiredTerms, optionalTerms)
+  }
+
+  private def addParents(cls: ClassOrInterfaceDeclaration, parentOpt: Option[SuperClass[JavaLanguage]]): Unit = {
+    parentOpt.foreach({ parent =>
+      val directParent = JavaParser.parseClassOrInterfaceType(parent.clsName)
+      val otherParents = parent.interfaces.map(JavaParser.parseClassOrInterfaceType)
+      cls.setExtendedTypes(
+        new NodeList((directParent +: otherParents): _*)
+      )
+    })
+  }
+
+  private def isOptionalType(cls: ClassOrInterfaceType): Boolean =
+    (cls.getScope.asScala.fold("")(_.asString + ".") + cls.getName.asString) == "java.util.Optional"
+
+  private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[JavaLanguage]])(f: Type => Target[Type]): Option[Target[Type]] =
     concreteTypes
       .find(_.clsName == tpeName)
       .map(_.tpe)
       .map(f)
 
+  private val STRING_TYPE = JavaParser.parseClassOrInterfaceType("String")
+  private val HASH_MAP_TYPE = JavaParser.parseClassOrInterfaceType("java.util.HashMap")
+  private val ARRAY_LIST_TYPE = JavaParser.parseClassOrInterfaceType("java.util.ArrayList")
 
   object EnumProtocolTermInterp extends (EnumProtocolTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: EnumProtocolTerm[JavaLanguage, T]): Target[T] = term match {
@@ -41,18 +94,115 @@ object JacksonProtocolGenerator {
             Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
         }
         Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
+
       case RenderMembers(clsName, elems) =>
-        Target.raiseError(s"RenderMembers($clsName, $elems)")
+        Target.pure(None)
+
       case EncodeEnum(clsName) =>
-        Target.raiseError(s"EncodeEnum($clsName)")
+        Target.pure(None)
+
       case DecodeEnum(clsName) =>
-        Target.raiseError(s"DecodeEnum($clsName)")
-      case RenderClass(clsName, tpe) =>
-        Target.raiseError(s"RenderClass($clsName, $tpe)")
+        Target.pure(None)
+
+      case RenderClass(clsName, tpe, elems) =>
+        val enumType = JavaParser.parseType(clsName)
+
+        val enumDefns = elems.map {
+          case (value, termName, _) => new EnumConstantDeclaration(
+            new NodeList(), new SimpleName(termName.getIdentifier.toSnakeCase.toUpperCase(Locale.US)),
+            new NodeList(new StringLiteralExpr(value)),
+            new NodeList()
+          )
+        }
+
+        val nameField = new FieldDeclaration(
+          util.EnumSet.of(PRIVATE, FINAL),
+          new VariableDeclarator(STRING_TYPE, "name")
+        )
+
+        val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
+        constructor.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("name")))
+        constructor.setBody(new BlockStmt(new NodeList(
+          new ExpressionStmt(new AssignExpr(
+            new FieldAccessExpr(new ThisExpr, "name"),
+            new NameExpr("name"),
+            AssignExpr.Operator.ASSIGN
+          ))
+        )))
+
+        val getNameMethod = new MethodDeclaration(
+          util.EnumSet.of(PUBLIC),
+          STRING_TYPE,
+          "getName"
+        )
+        getNameMethod.addMarkerAnnotation("JsonValue")
+        getNameMethod.setBody(new BlockStmt(new NodeList(
+          new ReturnStmt(new FieldAccessExpr(new ThisExpr, "name"))
+        )))
+
+        val parseMethod = new MethodDeclaration(
+          util.EnumSet.of(PUBLIC, STATIC),
+          enumType,
+          "parse"
+        )
+        parseMethod.addMarkerAnnotation("JsonCreator")
+        parseMethod.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("name")))
+        parseMethod.setBody(new BlockStmt(new NodeList(
+          new ForEachStmt(
+            new VariableDeclarationExpr(new VariableDeclarator(enumType, "value"), FINAL),
+            new MethodCallExpr("values"),
+            new BlockStmt(new NodeList(
+              new IfStmt(
+                new MethodCallExpr("value.name.equals", new NameExpr("name")),
+                new ReturnStmt(new NameExpr("value")),
+                null
+              )
+            ))
+          ),
+          new ThrowStmt(new ObjectCreationExpr(
+            null,
+            JavaParser.parseClassOrInterfaceType("IllegalArgumentException"),
+            new NodeList(
+              new BinaryExpr(
+                new BinaryExpr(new StringLiteralExpr("Name '"), new NameExpr("name"), BinaryExpr.Operator.PLUS),
+                new StringLiteralExpr(s"' is not valid for enum '${clsName}'"),
+                BinaryExpr.Operator.PLUS
+              )
+            )
+          ))
+        )))
+
+
+        val enumClass = new EnumDeclaration(
+          util.EnumSet.of(PUBLIC),
+          new NodeList(),
+          new SimpleName(clsName),
+          new NodeList(),
+          new NodeList(enumDefns: _*),
+          new NodeList(
+            nameField,
+            constructor,
+            getNameMethod,
+            parseMethod
+          )
+        )
+
+        Target.pure(enumClass)
+
       case RenderStaticDefns(clsName, members, accessors, encoder, decoder) =>
-        Target.raiseError(s"RenderStaticDefns($clsName, $members, $accessors, $encoder, $decoder)")
+        for {
+          extraImports <- List(
+            "com.fasterxml.jackson.annotations.JsonCreator",
+            "com.fasterxml.jackson.annotations.JsonValue"
+          ).map(safeParseRawImport).sequence
+        } yield StaticDefns[JavaLanguage](
+          className = clsName,
+          extraImports = extraImports,
+          definitions = List.empty
+        )
+
       case BuildAccessor(clsName, termName) =>
-        Target.raiseError(s"BuildAccessor($clsName, $termName)")
+        Target.pure(new Name(s"${clsName}.${termName}"))
     }
   }
 
@@ -64,116 +214,231 @@ object JacksonProtocolGenerator {
           case comp: ComposedSchema =>
             Target.pure(Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).lastOption.flatMap(prop => Option(prop.getProperties)))
           case comp: Schema[_] if Option(comp.get$ref).isDefined =>
-            Target.error(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
+            Target.raiseError(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
           case _ => Target.pure(None)
         }).map(_.map(_.asScala.toList).toList.flatten)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
-        def toCamelCase(s: String): String =
-          "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
+        Target.log.function("transformProperty") {
+          for {
+            defaultValue <- ((property match {
+              case _: MapSchema =>
+                Option(Target.pure(new ObjectCreationExpr(null, HASH_MAP_TYPE, new NodeList())).map(x => x: Expression))
+              case _: ArraySchema =>
+                Option(Target.pure(new ObjectCreationExpr(null, ARRAY_LIST_TYPE, new NodeList())).map(x => x: Expression))
+              case p: BooleanSchema =>
+                Default(p).extract[Boolean].map(x => Target.pure(new BooleanLiteralExpr(x)))
+              case p: NumberSchema if p.getFormat == "double" =>
+                Default(p).extract[Double].map(x => Target.pure(new DoubleLiteralExpr(x)))
+              case p: NumberSchema if p.getFormat == "float" =>
+                Default(p).extract[Float].map(x => Target.pure(new DoubleLiteralExpr(x)))
+              case p: IntegerSchema if p.getFormat == "int32" =>
+                Default(p).extract[Int].map(x => Target.pure(new IntegerLiteralExpr(x)))
+              case p: IntegerSchema if p.getFormat == "int64" =>
+                Default(p).extract[Long].map(x => Target.pure(new LongLiteralExpr(x)))
+              case p: StringSchema =>
+                Default(p).extract[String].map(x => Target.fromOption(Try(new StringLiteralExpr(x)).toOption, s"Default string literal for '${p.getTitle}' is null"))
+              case _ =>
+                None
+            }): Option[Target[Expression]]).sequence
 
-        for {
-          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+            readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
+            emptyToNull = (property match {
+              case d: DateSchema      => ScalaEmptyIsNull(d)
+              case dt: DateTimeSchema => ScalaEmptyIsNull(dt)
+              case s: StringSchema    => ScalaEmptyIsNull(s)
+              case _                  => None
+            }).getOrElse(EmptyIsEmpty)
 
-          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
+            tpeClassDep <- meta match {
+              case SwaggerUtil.Resolved(declType, classDep, _) =>
+                Target.pure((declType, classDep))
+              case SwaggerUtil.Deferred(tpeName) =>
+                val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
+                  println(s"Unable to find definition for ${tpeName}, just inlining")
+                  safeParseType(tpeName)
+                }
+                tpe.map((_, Option.empty))
+              case SwaggerUtil.DeferredArray(tpeName) =>
+                safeParseType(s"java.util.List<${tpeName}>").map((_, Option.empty))
+              case SwaggerUtil.DeferredMap(tpeName) =>
+                safeParseType(s"java.util.List<${tpeName}>").map((_, Option.empty))
+            }
+            (tpe, classDep) = tpeClassDep
 
-          defaultValue <- ((property match {
-            case _: MapSchema =>
-              Option(safeParseExpression[LiteralExpr]("new java.util.Map<>()").map(x => x: Expression))
-            case _: ArraySchema =>
-              Option(safeParseExpression[LiteralExpr]("new java.util.List<>()").map(x => x: Expression))
-            case p: BooleanSchema =>
-              Default(p).extract[Boolean].map(x => Target.pure(new BooleanLiteralExpr(x)))
-            case p: NumberSchema if p.getFormat == "double" =>
-              Default(p).extract[Double].map(x => Target.pure(new DoubleLiteralExpr(x)))
-            case p: NumberSchema if p.getFormat == "float" =>
-              Default(p).extract[Float].map(x => Target.pure(new DoubleLiteralExpr(x)))
-            case p: IntegerSchema if p.getFormat == "int32" =>
-              Default(p).extract[Int].map(x => Target.pure(new IntegerLiteralExpr(x)))
-            case p: IntegerSchema if p.getFormat == "int64" =>
-              Default(p).extract[Long].map(x => Target.pure(new LongLiteralExpr(x)))
-            case p: StringSchema =>
-              Default(p).extract[String].map(safeParseExpression[LiteralExpr](_).map(x => x: Expression))
-            case _ =>
-              None
-          }): Option[Target[Expression]]).sequence
+            argName = if (needCamelSnakeConversion) name.toCamelCase else name
+            _declDefaultPair <- Option(isRequired)
+              .filterNot(_ == false)
+              .fold[Target[(Type, Option[Expression])]](
+                (safeParseType(s"java.util.Optional<${tpe}>"), Option(defaultValue.fold[Target[Expression]](safeParseExpression[Expression](s"java.util.Optional.empty()"))(t => safeParseExpression[Expression](s"java.util.Optional.of($t)"))).sequence).mapN((_, _))
+              )(Function.const(Target.pure((tpe, defaultValue))) _)
+            (finalDeclType, finalDefaultValue) = _declDefaultPair
+            term <- safeParseParameter(s"${finalDeclType} ${argName}") // FIXME: How do we deal with default values? .copy(default = finalDefaultValue)
+            dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
+          } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull)
+        }
 
-          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-          emptyToNull = (property match {
-            case d: DateSchema      => ScalaEmptyIsNull(d)
-            case dt: DateTimeSchema => ScalaEmptyIsNull(dt)
-            case s: StringSchema    => ScalaEmptyIsNull(s)
-            case _                  => None
-          }).getOrElse(EmptyIsEmpty)
-
-          tpeClassDep <- meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _) =>
-              Target.pure((declType, classDep))
-            case SwaggerUtil.Deferred(tpeName) =>
-              val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
-                println(s"Unable to find definition for ${tpeName}, just inlining")
-                safeParseType(tpeName)
-              }
-              tpe.map((_, Option.empty))
-            case SwaggerUtil.DeferredArray(tpeName) =>
-              safeParseType(s"java.util.List<${tpeName}>").map((_, Option.empty))
-            case SwaggerUtil.DeferredMap(tpeName) =>
-              safeParseType(s"java.util.List<${tpeName}>").map((_, Option.empty))
-          }
-          (tpe, classDep) = tpeClassDep
-
-          _declDefaultPair <- Option(isRequired)
-            .filterNot(_ == false)
-            .fold[Target[(Type, Option[Expression])]](
-              (safeParseType(s"java.util.Optional<${tpe}>"), Option(defaultValue.fold[Target[Expression]](safeParseExpression[Expression](s"java.util.Optional.empty()"))(t => safeParseExpression[Expression](s"java.util.Optional.of($t)"))).sequence).mapN((_, _))
-            )(Function.const(Target.pure((tpe, defaultValue))) _)
-          (finalDeclType, finalDefaultValue) = _declDefaultPair
-          term <- safeParseParameter(s"${finalDeclType} ${argName}") // FIXME: How do we deal with default values? .copy(default = finalDefaultValue)
-          dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull)
-
-      case RenderDTOClass(clsName, selfTerms, parents) =>
+      case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
-        val parenOpt       = parents.headOption
-        val terms  = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfTerms).filterNot(
-          param => discriminators.contains(param.getName().getId())
+        val parentOpt      = parents.headOption
+        val params  = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
+          param => discriminators.contains(param.term.getName().getId())
         )
+        val (requiredTerms, optionalTerms) = sortParams(params)
+        val terms = requiredTerms ++ optionalTerms
 
-        val compilationUnit = new CompilationUnit()
-        val dtoClass = compilationUnit.addClass(clsName).setPublic(true)
+        val dtoClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, clsName)
+        dtoClass.addAnnotation(new NormalAnnotationExpr(
+          new Name("JsonDeserialize"),
+          new NodeList(new MemberValuePair(
+            "builder",
+            new ClassExpr(JavaParser.parseClassOrInterfaceType(s"${clsName}.Builder"))
+          ))
+        ))
+        dtoClass.addAnnotation(new NormalAnnotationExpr(
+          new Name("JsonIgnoreProperties"),
+          new NodeList(new MemberValuePair(
+            "ignoreUnknown",
+            new BooleanLiteralExpr(true)
+          ))
+        ))
 
-        parenOpt.foreach({ parent =>
-          val directParent = new ClassOrInterfaceType(null, new SimpleName(parent.clsName), null, null)
-          val otherParents = parent.interfaces.map({ a => new ClassOrInterfaceType(null, new SimpleName(a), null, null) })
-          dtoClass.setExtendedTypes(
-            new NodeList((directParent +: otherParents): _*)
-          )
+        addParents(dtoClass, parentOpt)
+
+        discriminators.foreach({ discriminator =>
+          val field = dtoClass.addFieldWithInitializer(STRING_TYPE, discriminator, new StringLiteralExpr(clsName), PRIVATE, FINAL)
+          field.addAnnotation(new NormalAnnotationExpr(
+            new Name("JsonProperty"),
+            new NodeList(
+              new MemberValuePair("value", new StringLiteralExpr(discriminator)),
+              new MemberValuePair("access", new FieldAccessExpr(new NameExpr("JsonProperty.Access"), "READ_ONLY"))
+            )
+          ))
         })
 
-        terms.foreach( term =>
-          dtoClass.addField(term.getType(), term.getNameAsString(), PRIVATE)
-        )
+        terms.foreach({ case ParameterTerm(propertyName, parameterName, fieldType, _) =>
+          val field: FieldDeclaration = dtoClass.addField(fieldType, parameterName, PRIVATE, FINAL)
+          field.addSingleMemberAnnotation("JsonProperty", new StringLiteralExpr(propertyName))
+        })
 
-        val primaryConstructor = dtoClass.addConstructor(PUBLIC)
-        primaryConstructor.setParameters(new NodeList(terms: _*))
+        val primaryConstructor = dtoClass.addConstructor(PRIVATE)
+        primaryConstructor.addMarkerAnnotation("JsonCreator")  // FIXME: is this needed?
+        primaryConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), JavaParser.parseClassOrInterfaceType("Builder"), new SimpleName("builder")));
         primaryConstructor.setBody(
           new BlockStmt(
             new NodeList(
-              terms.map( term =>
-                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, term.getNameAsString()), new NameExpr(term.getName()), AssignExpr.Operator.ASSIGN))
-              ): _*
+              terms.map({ case ParameterTerm(_, parameterName, fieldType, _) =>
+                new ExpressionStmt(new AssignExpr(
+                  new FieldAccessExpr(new ThisExpr, parameterName),
+                  fieldType match {
+                    case _: PrimitiveType => new FieldAccessExpr(new NameExpr("builder"), parameterName)
+                    case _ => new MethodCallExpr("requireNonNull", new FieldAccessExpr(new NameExpr("builder"), parameterName))
+                  },
+                  AssignExpr.Operator.ASSIGN
+                ))
+              }): _*
             )
           )
         )
 
-        Target.raiseError(dtoClass.toString())
+        // TODO: handle emptyToNull in the return for the getters
+        terms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+          val method = dtoClass.addMethod(s"get${parameterName.capitalize}", PUBLIC)
+          method.setType(fieldType)
+          method.setBody(new BlockStmt(new NodeList(
+            new ReturnStmt(new FieldAccessExpr(new ThisExpr, parameterName))
+          )))
+        })
+
+        val builderMethod = dtoClass.addMethod("builder", PUBLIC, STATIC)
+        builderMethod.setType("Builder")
+        builderMethod.setParameters(new NodeList(
+          requiredTerms.map({ case ParameterTerm(_, parameterName, _, parameterType) =>
+            new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName))
+          }): _*
+        ))
+        builderMethod.setBody(new BlockStmt(new NodeList(
+          new ReturnStmt(
+            new ObjectCreationExpr(
+              null,
+              JavaParser.parseClassOrInterfaceType("Builder"),
+              new NodeList(requiredTerms.map({
+                case ParameterTerm(_, parameterName, _, _) => new NameExpr(parameterName)
+              }): _*)
+            )
+          )
+        )))
+
+        val builderClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, "Builder")
+
+        requiredTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+          builderClass.addField(fieldType, parameterName, PRIVATE, FINAL)
+        })
+        optionalTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+          // TODO: initialize with default if one is specified
+          builderClass.addFieldWithInitializer(fieldType, parameterName, new MethodCallExpr("java.util.Optional.empty"), PRIVATE)
+        })
+
+        val builderConstructor = builderClass.addConstructor(PRIVATE)
+        builderConstructor.setParameters(new NodeList(
+          requiredTerms.map({ case ParameterTerm(_, parameterName, _, parameterType) =>
+            new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName))
+          }): _*
+        ))
+        builderConstructor.setBody(new BlockStmt(new NodeList(
+          requiredTerms.map({ case ParameterTerm(_, parameterName, fieldType, _) =>
+            new ExpressionStmt(
+              new AssignExpr(
+                new FieldAccessExpr(new ThisExpr, parameterName),
+                fieldType match {
+                  case _: PrimitiveType => new NameExpr(parameterName)
+                  case _ => new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
+                },
+                AssignExpr.Operator.ASSIGN
+              )
+            )
+          }): _*
+        )))
+
+        // TODO: leave out with${name}() if readOnlyKey?
+        optionalTerms.foreach({ case ParameterTerm(_, parameterName, _, parameterType) =>
+          val setter = builderClass.addMethod(s"with${parameterName.capitalize}", PUBLIC)
+          setter.setType("Builder")
+          setter.addAndGetParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
+          setter.setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(
+              new AssignExpr(
+                new FieldAccessExpr(new ThisExpr, parameterName),
+                new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName)),
+                AssignExpr.Operator.ASSIGN
+              )
+            ),
+            new ReturnStmt(new ThisExpr)
+          )))
+        })
+
+        val buildMethod = builderClass.addMethod("build", PUBLIC)
+        buildMethod.setType(clsName)
+        buildMethod.setBody(new BlockStmt(new NodeList(
+          new ReturnStmt(new ObjectCreationExpr(
+            null,
+            JavaParser.parseClassOrInterfaceType(clsName),
+            new NodeList(new ThisExpr)
+          ))
+        )))
+
+        dtoClass.addMember(builderClass)
+
+        Target.pure(dtoClass)
 
       case EncodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        Target.raiseError(s"EncodeModel($clsName, $needCamelSnakeConversion, $selfParams, $parents)")
+        Target.pure(None)
+
       case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        Target.raiseError(s"DecodeModel($clsName, $needCamelSnakeConversion, $selfParams, $parents)")
+        Target.pure(None)
+
       case RenderDTOStaticDefns(clsName, deps, encoder, decoder) =>
-        Target.raiseError(s"RenderDTOStaticDefns($clsName, $deps, $encoder, $decoder)")
+        Target.pure(StaticDefns(clsName, List.empty, List.empty))
     }
   }
 
@@ -197,28 +462,119 @@ object JacksonProtocolGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        Target.raiseError(s"ExtractConcreteTypes($definitions)")
+        definitions.fold[Target[List[PropMeta[JavaLanguage]]]](Target.raiseError, Target.pure)
+
       case ProtocolImports() =>
-        Target.raiseError(s"ProtocolImports()")
+        (List(
+          "com.fasterxml.jackson.annotation.JsonCreator",
+          "com.fasterxml.jackson.annotation.JsonDeserialize",
+          "com.fasterxml.jackson.annotation.JsonIgnoreProperties",
+          "com.fasterxml.jackson.annotation.JsonProperty"
+        ).map(safeParseRawImport) ++ List(
+          "java.lang.Objects.requireNonNull"
+        ).map(safeParseRawStaticImport)).sequence
+
       case PackageObjectImports() =>
-        Target.raiseError(s"PackageObjectImports()")
+        Target.pure(List.empty)
+
       case PackageObjectContents() =>
-        Target.raiseError(s"PackageObjectContents()")
+        Target.pure(List.empty)
     }
   }
 
   object PolyProtocolTermInterp extends (PolyProtocolTerm[JavaLanguage, ?] ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[JavaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
-        Target.raiseError(s"ExtractSuperClass($swagger, $definitions)")
+        def allParents(model: Schema[_]): List[(String, Schema[_], List[Schema[_]])] =
+          model match {
+            case elem: ComposedSchema =>
+              Option(elem.getAllOf).map(_.asScala.toList).getOrElse(List.empty) match {
+                case head :: tail =>
+                  definitions
+                    .collectFirst({
+                      case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
+                        (clsName, e, tail.toList) :: allParents(e)
+                    })
+                    .getOrElse(List.empty)
+                case _ => List.empty
+              }
+            case _ => List.empty
+          }
+
+        Target.pure(allParents(swagger))
+
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
-        Target.raiseError(s"RenderADTStaticDefns($clsName, $discriminator, $encoder, $decoder)")
+        for {
+          extraImports <- List(
+            "com.fasterxml.jackson.annotations.JsonIgnoreProperties",
+            "com.fasterxml.jackson.annotations.JsonSubTypes",
+            "com.fasterxml.jackson.annotations.JsonTypeInfo"
+          ).map(safeParseRawImport).sequence
+        } yield StaticDefns[JavaLanguage](
+          clsName,
+          extraImports,
+          List.empty
+        )
+
       case DecodeADT(clsName, children) =>
-        Target.raiseError(s"DecodeADT($clsName, $children)")
+        Target.pure(None)
+
       case EncodeADT(clsName, children) =>
-        Target.raiseError(s"EncodeADT($clsName, $children)")
-      case RenderSealedTrait(className, terms, discriminator, parents) =>
-        Target.raiseError(s"RenderSealedTrait($className, $terms, $discriminator, $parents)")
+        Target.pure(None)
+
+      case RenderSealedTrait(className, selfParams, discriminator, parents, children) =>
+        val parentOpt = parents.headOption
+        val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(_.term.getName.getId == discriminator)
+        val (requiredTerms, optionalTerms) = sortParams(params)
+        val terms = requiredTerms ++ optionalTerms
+
+        val abstractClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, className)
+        abstractClass.addAnnotation(new NormalAnnotationExpr(
+          new Name("JsonIgnoreProperties"),
+          new NodeList(new MemberValuePair(
+            "ignoreUnknown",
+            new BooleanLiteralExpr(true)
+          ))
+        ))
+        abstractClass.addAnnotation(new NormalAnnotationExpr(
+          new Name("JsonTypeInfo"),
+          new NodeList(
+            new MemberValuePair(
+              "use",
+              new FieldAccessExpr(new NameExpr("JsonTypeInfo.Id"), "NAME")
+            ),
+            new MemberValuePair(
+              "include",
+              new FieldAccessExpr(new NameExpr("JsonTypeInfo.As"), "PROPERTY")
+            ),
+            new MemberValuePair(
+              "property",
+              new StringLiteralExpr(discriminator)
+            )
+          )
+        ))
+        abstractClass.addSingleMemberAnnotation(
+          "JsonSubTypes",
+          new ArrayInitializerExpr(new NodeList(
+            children.map(child => new NormalAnnotationExpr(
+              new Name("JsonSubTypes.Type"),
+              new NodeList(
+                new MemberValuePair("name", new StringLiteralExpr(child)),
+                new MemberValuePair("value", new ClassExpr(JavaParser.parseType(child)))
+              )
+            )): _*
+          ))
+        )
+
+        addParents(abstractClass, parentOpt)
+
+        terms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+          val method: MethodDeclaration = abstractClass.addMethod(s"get${parameterName.capitalize}", PUBLIC, ABSTRACT)
+          method.setType(fieldType)
+          method.setBody(null)
+        })
+
+        Target.pure(abstractClass)
     }
   }
 }

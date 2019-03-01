@@ -2,17 +2,22 @@ package com.twilio.guardrail.generators.syntax
 
 import cats.implicits._
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.{ CompilationUnit, Node }
+import com.github.javaparser.ast.{CompilationUnit, ImportDeclaration}
 import com.github.javaparser.ast.`type`.Type
 import com.github.javaparser.ast.body.Parameter
-import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
+import com.github.javaparser.ast.expr.{Expression, Name, SimpleName}
 import com.github.javaparser.printer.PrettyPrinterConfiguration
 import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType
 import com.twilio.guardrail.Target
+import java.util.Optional
 import scala.reflect.ClassTag
 import scala.util.Try
 
 object Java {
+  implicit class RichJavaOptional[T](val o: Optional[T]) extends AnyVal {
+    def asScala: Option[T] = if (o.isPresent) Option(o.get) else None
+  }
+
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] = {
     Target.log.debug(log)(s) >> (
       Try(parser(s)).toEither.fold(t => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}"), Target.pure)
@@ -25,6 +30,9 @@ object Java {
   def safeParseType(s: String): Target[Type]                                                = safeParse("safeParseType")(JavaParser.parseType, s)
   def safeParseExpression[T <: Expression](s: String)(implicit cls: ClassTag[T]): Target[T] = safeParse[T]("safeParseExpression")(JavaParser.parseExpression[T], s)
   def safeParseParameter(s: String): Target[Parameter]                                      = safeParse("safeParseParameter")(JavaParser.parseParameter, s)
+  def safeParseImport(s: String): Target[ImportDeclaration]                                 = safeParse("safeParseImport")(JavaParser.parseImport, s)
+  def safeParseRawImport(s: String): Target[ImportDeclaration]                              = safeParse("safeParseRawImport")(JavaParser.parseImport, s"import ${s};")
+  def safeParseRawStaticImport(s: String): Target[ImportDeclaration]                        = safeParse("safeParseStaticImport")(JavaParser.parseImport, s"import static ${s};")
 
   val printer: PrettyPrinterConfiguration = new PrettyPrinterConfiguration()
     .setColumnAlignFirstMethodChain(true)
