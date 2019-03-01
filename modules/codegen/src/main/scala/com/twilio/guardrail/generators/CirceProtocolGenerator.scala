@@ -388,11 +388,11 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = List.empty[Import],
-            definitions = List[Defn](
-              q"val discriminator: String = ${Lit.String(discriminator)}",
+            definitions = List[Option[Defn]](
+              Some(q"val discriminator: String = ${Lit.String(discriminator)}"),
               encoder,
               decoder
-            )
+            ).flatten
           )
         )
 
@@ -409,7 +409,7 @@ object CirceProtocolGenerator {
                      Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit.String(s" (valid: ${children.mkString(", ")})")}, discriminatorCursor.history))
                  }
             })"""
-        Target.pure(code)
+        Target.pure(Some(code))
 
       case EncodeADT(clsName, children) =>
         val childrenCases = children.map(
@@ -419,7 +419,7 @@ object CirceProtocolGenerator {
           q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
               ..case $childrenCases
           }"""
-        Target.pure(code)
+        Target.pure(Some(code))
 
       case RenderSealedTrait(className, terms, discriminator, parents) =>
         for {

@@ -17,11 +17,11 @@ case class ExtractSuperClass[L <: LA](swagger: ComposedSchema, definitions: List
 case class RenderSealedTrait[L <: LA](className: String, terms: List[L#MethodParameter], discriminator: String, parents: List[SuperClass[L]] = Nil)
     extends PolyProtocolTerm[L, L#Trait]
 
-case class EncodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, L#ValueDefinition]
+case class EncodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
 
-case class DecodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, L#ValueDefinition]
+case class DecodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
 
-case class RenderADTStaticDefns[L <: LA](clsName: String, discriminator: String, encoder: L#ValueDefinition, decoder: L#ValueDefinition)
+case class RenderADTStaticDefns[L <: LA](clsName: String, discriminator: String, encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition])
     extends PolyProtocolTerm[L, StaticDefns[L]]
 
 class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?], F]) {
@@ -35,17 +35,17 @@ class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?
   ): Free[F, L#Trait] =
     Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, terms, discriminator, parents))
 
-  def encodeADT(clsName: String, children: List[String] = Nil): Free[F, L#ValueDefinition] =
+  def encodeADT(clsName: String, children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
     Free.inject[PolyProtocolTerm[L, ?], F](EncodeADT(clsName, children))
 
-  def decodeADT(clsName: String, children: List[String] = Nil): Free[F, L#ValueDefinition] =
+  def decodeADT(clsName: String, children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
     Free.inject[PolyProtocolTerm[L, ?], F](DecodeADT(clsName, children))
 
   def renderADTStaticDefns(
       clsName: String,
       discriminator: String,
-      encoder: L#ValueDefinition,
-      decoder: L#ValueDefinition
+      encoder: Option[L#ValueDefinition],
+      decoder: Option[L#ValueDefinition]
   ): Free[F, StaticDefns[L]] =
     Free.inject[PolyProtocolTerm[L, ?], F](RenderADTStaticDefns(clsName, discriminator, encoder, decoder))
 
