@@ -154,7 +154,7 @@ object ProtocolGenerator {
             .propMeta[L, F](prop)
             .flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
-      definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents)
+      definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
       encoder     <- encodeADT(hierarchy.name, children)
       decoder     <- decodeADT(hierarchy.name, children)
       staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)

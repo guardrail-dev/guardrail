@@ -14,7 +14,7 @@ sealed trait PolyProtocolTerm[L <: LA, T]
 case class ExtractSuperClass[L <: LA](swagger: ComposedSchema, definitions: List[(String, Schema[_])])
     extends PolyProtocolTerm[L, List[(String, Schema[_], List[Schema[_]])]]
 
-case class RenderSealedTrait[L <: LA](className: String, params: List[ProtocolParameter[L]], discriminator: String, parents: List[SuperClass[L]] = Nil)
+case class RenderSealedTrait[L <: LA](className: String, params: List[ProtocolParameter[L]], discriminator: String, parents: List[SuperClass[L]] = Nil, children: List[String] = Nil)
     extends PolyProtocolTerm[L, L#Trait]
 
 case class EncodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
@@ -31,9 +31,10 @@ class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?
       className: String,
       params: List[ProtocolParameter[L]],
       discriminator: String,
-      parents: List[SuperClass[L]] = Nil
+      parents: List[SuperClass[L]] = Nil,
+      children: List[String] = Nil
   ): Free[F, L#Trait] =
-    Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, params, discriminator, parents))
+    Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, params, discriminator, parents, children))
 
   def encodeADT(clsName: String, children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
     Free.inject[PolyProtocolTerm[L, ?], F](EncodeADT(clsName, children))
