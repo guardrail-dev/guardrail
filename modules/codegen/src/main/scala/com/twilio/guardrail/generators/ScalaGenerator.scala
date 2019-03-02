@@ -215,6 +215,25 @@ object ScalaGenerator {
           """
         Target.pure(WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile.syntax.getBytes(StandardCharsets.UTF_8)))
 
+      case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
+        val pkg: Term.Ref =
+          pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+        val implicitsRef: Term.Ref =
+          (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
+        val frameworkDefinitionsFile = source"""
+            package ${pkg}
+
+            ..${frameworkImports}
+
+            import cats.implicits._
+            import cats.data.EitherT
+
+            import ${implicitsRef}._
+
+            ${frameworkDefinitions}
+          """
+        Target.pure(WriteTree(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), frameworkDefinitionsFile.syntax.getBytes(StandardCharsets.UTF_8)))
+
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         val dtoHead :: dtoRest = dtoComponents
         val dtoPkg = dtoRest.init

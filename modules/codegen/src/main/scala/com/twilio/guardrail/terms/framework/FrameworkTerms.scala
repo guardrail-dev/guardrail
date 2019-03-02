@@ -10,6 +10,8 @@ class FrameworkTerms[L <: LA, F[_]](implicit I: InjectK[FrameworkTerm[L, ?], F])
     Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImports[L](tracing))
   def getFrameworkImplicits(): Free[F, Option[(L#TermName, L#ObjectDefinition)]] =
     Free.inject[FrameworkTerm[L, ?], F](GetFrameworkImplicits[L]())
+  def getFrameworkDefinitions(): Free[F, List[(L#TermName, L#ClassDefinition)]] =
+    Free.inject[FrameworkTerm[L, ?], F](GetFrameworkDefinitions[L]())
   def lookupStatusCode(key: String): Free[F, (Int, L#TermName)] =
     Free.inject[FrameworkTerm[L, ?], F](LookupStatusCode(key))
   def fileType(format: Option[String]): Free[F, L#Type] =

@@ -71,6 +71,12 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                                frameworkImplicits: L#ObjectDefinition,
                                frameworkImplicitName: L#TermName): Free[F, WriteTree] =
     Free.inject[ScalaTerm[L, ?], F](RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName))
+  def renderFrameworkDefinitions(pkgPath: Path,
+                                 pkgName: List[String],
+                                 frameworkImports: List[L#Import],
+                                 frameworkDefinitions: L#ClassDefinition,
+                                 frameworkDefinitionsName: L#TermName): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName))
 
   def writePackageObject(dtoPackagePath: Path,
                          dtoComponents: List[String],

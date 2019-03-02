@@ -116,19 +116,23 @@ object Common {
       frameworkImports    <- getFrameworkImports(context.tracing)
       frameworkImplicits <- getFrameworkImplicits()
       frameworkImplicitName = frameworkImplicits.map(_._1)
+      frameworkDefinitions <- getFrameworkDefinitions()
 
       files <- (clients.traverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
                 servers.traverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
 
       implicits              <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({ case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply) })
+
+      frameworkDefinitionsFiles <- frameworkDefinitions.traverse({ case (name, defn) => renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, defn, name) })
     } yield
       (
         protocolDefinitions ++
           packageObject.toList ++
           files ++
           implicits.toList ++
-          frameworkImplicitsFile.toList
+          frameworkImplicitsFile.toList ++
+          frameworkDefinitionsFiles
       ).toList
   }
 

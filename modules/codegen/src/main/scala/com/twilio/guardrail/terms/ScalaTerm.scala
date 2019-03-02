@@ -66,6 +66,12 @@ case class RenderFrameworkImplicits[L <: LA](pkgPath: Path,
                                              frameworkImplicits: L#ObjectDefinition,
                                              frameworkImplicitName: L#TermName)
     extends ScalaTerm[L, WriteTree]
+case class RenderFrameworkDefinitions[L <: LA](pkgPath: Path,
+                                               pkgName: List[String],
+                                               frameworkImports: List[L#Import],
+                                               frameworkDefinitions: L#ClassDefinition,
+                                               frameworkDefinitionsName: L#TermName)
+    extends ScalaTerm[L, WriteTree]
 case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        dtoComponents: List[String],
                                        customImports: List[L#Import],
