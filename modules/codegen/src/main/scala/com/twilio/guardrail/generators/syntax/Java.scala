@@ -36,6 +36,8 @@ object Java {
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration]                        = safeParse("safeParseStaticImport")(JavaParser.parseImport, s"import static ${s};")
 
   val STRING_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("String")
+  val THROWABLE_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Throwable")
+  val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")
 
   val printer: PrettyPrinterConfiguration = new PrettyPrinterConfiguration()
     .setColumnAlignFirstMethodChain(true)

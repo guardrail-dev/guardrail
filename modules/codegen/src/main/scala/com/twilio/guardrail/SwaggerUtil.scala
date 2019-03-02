@@ -1,23 +1,24 @@
 package com.twilio.guardrail
 
+import cats.data.EitherT
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.responses._
-import cats.{ FlatMap, Foldable }
+import cats.{FlatMap, Foldable}
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.github.javaparser.ast.expr._
+import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ Default, ScalaType }
-import com.twilio.guardrail.generators.{ Responses, ScalaParameter }
-import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.extract.{Default, ScalaType}
+import com.twilio.guardrail.generators.{Responses, ScalaParameter}
+import com.twilio.guardrail.languages.{JavaLanguage, LA, ScalaLanguage}
 import com.twilio.guardrail.shims._
-import java.util.{ Map => JMap }
+import java.util.{Map => JMap}
 import scala.language.reflectiveCalls
 import scala.meta._
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
 import scala.collection.JavaConverters._
 
@@ -365,6 +366,45 @@ object SwaggerUtil {
     } else {
       Resolved[L](ignoredType, None, None)
     }
+
+  // FIXME: this is mostly copy-paste from the scala impl; can almost certainly generic-ify it
+  object jpaths {
+    import atto._, Atto._
+
+    private[this] def lookupName[T](bindingName: String,
+                                    pathArgs: List[ScalaParameter[JavaLanguage]])(f: ScalaParameter[JavaLanguage] => atto.Parser[T]): atto.Parser[T] =
+      pathArgs
+        .find(_.argName.value == bindingName)
+        .fold[atto.Parser[T]](
+        err(s"Unable to find argument ${bindingName}")
+      )(param => f(param))
+
+    private[this] val variable: atto.Parser[String] = char('{') ~> many(notChar('}'))
+      .map(_.mkString("")) <~ char('}')
+
+    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[JavaLanguage]]): Target[Expression] = {
+      val term: atto.Parser[Expression] = variable.flatMap { binding =>
+        lookupName(binding, pathArgs) { param =>
+          ok(new MethodCallExpr(new NameExpr(param.paramName.asString), "toString"))
+        }
+      }
+      val other: atto.Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
+      val pattern: atto.Parser[List[Either[String, Expression]]] = many(either(term, other).map(_.swap: Either[String, Expression]))
+
+      for {
+        parts <- pattern
+          .parseOnly(path)
+          .either
+          .fold(Target.raiseError, Target.pure)
+        result = parts
+          .map({
+            case Left(part)  => new StringLiteralExpr(part)
+            case Right(term) => term
+          })
+          .foldLeft[Expression](new MethodCallExpr(new FieldAccessExpr(new ThisExpr, "baseUrl"), "toString"))({ case (a, b) => new BinaryExpr(a, b, BinaryExpr.Operator.PLUS) })
+      } yield result
+    }
+  }
 
   object paths {
     import atto._, Atto._

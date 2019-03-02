@@ -141,6 +141,26 @@ object JavaGenerator {
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
         Target.raiseError("Java does not support Framework Implicits")
 
+      case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
+        for {
+          pkgDecl         <- buildPkgDecl(pkgName)
+          //implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
+          //frameworkImplicitsImport <- safeParseName((pkgName ++ List(frameworkImplicitName.getIdentifier, "*")).mkString("."))
+          //  .map(name => new ImportDeclaration(name, false, true))
+          //dtoComponentsImport <- safeParseName((dtoComponents :+ "*").mkString(".")).map(name => new ImportDeclaration(name, false, true))
+        } yield {
+          val cu = new CompilationUnit()
+          cu.setPackageDeclaration(pkgDecl)
+          frameworkImports.map(cu.addImport)
+          //cu.addImport(implicitsImport)
+          //cu.addImport(frameworkImplicitsImport)
+          cu.addType(frameworkDefinitions)
+          WriteTree(
+            resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")),
+            cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+          )
+        }
+
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         Target.pure(None)
 
@@ -210,6 +230,7 @@ object JavaGenerator {
           case RandomType(_, _) =>
             Target.pure((List.empty, List.empty))
         }
+
       case WriteClient(pkgPath,
                        pkgName,
                        customImports,
@@ -221,7 +242,7 @@ object JavaGenerator {
           //implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
           //frameworkImplicitsImport <- safeParseName((pkgName ++ List(frameworkImplicitName.getIdentifier, "*")).mkString("."))
           //  .map(name => new ImportDeclaration(name, false, true))
-          //dtoComponentsImport <- safeParseName((dtoComponents :+ "*").mkString(".")).map(name => new ImportDeclaration(name, false, true))
+          dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
         } yield {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)
@@ -229,7 +250,7 @@ object JavaGenerator {
           customImports.map(cu.addImport)
           //cu.addImport(implicitsImport)
           //cu.addImport(frameworkImplicitsImport)
-          cu.addImport((dtoComponents :+ "*").mkString(".")) //dtoComponentsImport)
+          cu.addImport(dtoComponentsImport)
           val clientCopy = client.head.merge.clone() // FIXME: WriteClient needs to be altered to return `NonEmptyList[WriteTree]` to accommodate Java not being able to put multiple classes in the same file. Scala just jams them all together, but this could be improved over there as well.
           staticDefns.definitions.foreach(clientCopy.addMember)
           responseDefinitions.foreach(clientCopy.addMember)

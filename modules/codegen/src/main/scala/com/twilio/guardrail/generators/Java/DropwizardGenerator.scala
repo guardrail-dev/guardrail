@@ -1,22 +1,95 @@
 package com.twilio.guardrail.generators.Java
+
+import cats.instances.list._
+import cats.syntax.traverse._
 import cats.~>
-import com.github.javaparser.ast.expr.Name
+import com.github.javaparser.JavaParser
+import com.github.javaparser.ast.Modifier.{ABSTRACT, FINAL, PRIVATE, PUBLIC}
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, Parameter}
+import com.github.javaparser.ast.expr._
+import com.github.javaparser.ast.stmt.{BlockStmt, ExpressionStmt, ReturnStmt}
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.framework._
+import java.util
 
 object DropwizardGenerator {
+  private val RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("Response")
+
   object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: FrameworkTerm[JavaLanguage, T]): Target[T] = term match {
       case FileType(format) => safeParseType(format.getOrElse("org.asynchttpclient.request.body.multipart.FilePart"))
       case ObjectType(format) => safeParseType("com.fasterxml.jackson.databind.JsonNode")
 
       case GetFrameworkImports(tracing) =>
-        Target.pure(List.empty)
+        List(
+          "org.asynchttpclient.Response"
+        ).map(safeParseRawImport).sequence
 
       case GetFrameworkImplicits() =>
         Target.pure(None)
+
+      case GetFrameworkDefinitions() =>
+        def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
+          val msgConstructor = cls.addConstructor(PUBLIC)
+          msgConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")))
+          msgConstructor.setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message")))
+          )))
+
+          val msgCauseConstructor = cls.addConstructor(PUBLIC)
+          msgCauseConstructor.setParameters(new NodeList(
+            new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")),
+            new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("cause"))
+          ))
+          msgCauseConstructor.setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message"), new NameExpr("cause")))
+          )))
+        }
+
+        val clientExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "ClientException")
+        clientExceptionClass.addExtendedType("RuntimeException")
+        addStdConstructors(clientExceptionClass)
+
+        val marshallingExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "MarshallingException")
+        marshallingExceptionClass.addExtendedType("ClientException")
+        addStdConstructors(marshallingExceptionClass)
+
+        val httpErrorClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "HttpError")
+        httpErrorClass.addExtendedType("ClientException")
+        httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
+
+        val responseConstructor = httpErrorClass.addConstructor(PUBLIC)
+        responseConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), RESPONSE_TYPE, new SimpleName("response")))
+        responseConstructor.setBody(new BlockStmt(new NodeList(
+          new ExpressionStmt(new MethodCallExpr(
+            "super",
+            new BinaryExpr(
+              new StringLiteralExpr("HTTP server responded with status "),
+              new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
+              BinaryExpr.Operator.PLUS
+            )
+          )),
+          new ExpressionStmt(new AssignExpr(
+            new FieldAccessExpr(new ThisExpr, "response"),
+            new NameExpr("response"),
+            AssignExpr.Operator.ASSIGN
+          ))
+        )))
+
+        val getResponseMethod = httpErrorClass.addMethod("getResponse", PUBLIC)
+        getResponseMethod.setType(RESPONSE_TYPE)
+        getResponseMethod.setBody(new BlockStmt(new NodeList(
+          new ReturnStmt(new FieldAccessExpr(new ThisExpr, "response"))
+        )))
+
+        Target.pure(List(
+          (new Name("ClientException"), clientExceptionClass),
+          (new Name("MarshallingException"), marshallingExceptionClass),
+          (new Name("HttpError"), httpErrorClass)
+        ))
 
       case LookupStatusCode(key) =>
         def parseStatusCode(code: Int, termName: String): Target[(Int, Name)] =
