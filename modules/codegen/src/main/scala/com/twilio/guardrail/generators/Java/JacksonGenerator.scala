@@ -35,7 +35,7 @@ object JacksonGenerator {
   private def sortParams(params: List[ProtocolParameter[JavaLanguage]]): (List[ParameterTerm], List[ParameterTerm]) = {
     // TODO: if a required field has a default specified, include it in optionalTerms instead
     val (req, opt) = params.partition(_.term.getType match {
-      case cls: ClassOrInterfaceType => !isOptionalType(cls)
+      case cls: ClassOrInterfaceType => !cls.isOptional
       case _ => true
     })
 
@@ -70,9 +70,6 @@ object JacksonGenerator {
       )
     })
   }
-
-  private def isOptionalType(cls: ClassOrInterfaceType): Boolean =
-    (cls.getScope.asScala.fold("")(_.asString + ".") + cls.getName.asString) == "java.util.Optional"
 
   private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[JavaLanguage]])(f: Type => Target[Type]): Option[Target[Type]] =
     concreteTypes

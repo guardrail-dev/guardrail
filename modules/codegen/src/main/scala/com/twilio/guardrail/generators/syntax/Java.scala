@@ -4,11 +4,12 @@ import cats.implicits._
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.{CompilationUnit, ImportDeclaration}
 import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, Type}
-import com.github.javaparser.ast.body.Parameter
+import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, Parameter}
 import com.github.javaparser.ast.expr.{Expression, Name, SimpleName}
 import com.github.javaparser.printer.PrettyPrinterConfiguration
 import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType
 import com.twilio.guardrail.Target
+import java.nio.charset.StandardCharsets
 import java.util.Optional
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -16,6 +17,37 @@ import scala.util.Try
 object Java {
   implicit class RichJavaOptional[T](val o: Optional[T]) extends AnyVal {
     def asScala: Option[T] = if (o.isPresent) Option(o.get) else None
+  }
+
+  implicit class RichType(val tpe: Type) extends AnyVal {
+    def isOptional: Boolean =
+      tpe match {
+        case cls: ClassOrInterfaceType =>
+          val scope = cls.getScope.asScala
+          cls.getNameAsString == "Optional" && (scope.isEmpty || scope.map(_.asString).contains("java.util"))
+        case _ => false
+      }
+
+    def containedType: Type =
+      tpe match {
+        case cls: ClassOrInterfaceType => cls.getTypeArguments.asScala.filter(_.size == 1).fold(tpe)(_.get(0))
+        case _ => tpe
+      }
+
+    def isNamed(name: String): Boolean =
+      tpe match {
+        case cls: ClassOrInterfaceType if name.contains(".") =>
+          (cls.getScope.asScala.fold("")(_.getName.asString + ".") + cls.getNameAsString) == name
+        case cls: ClassOrInterfaceType => cls.getNameAsString == name
+        case _ => false
+      }
+
+    def name: Option[String] =
+      tpe match {
+        case cls: ClassOrInterfaceType =>
+          Some(cls.getScope.asScala.fold("")(_.getName.asString + ".") + cls.getNameAsString)
+        case _ => None
+      }
   }
 
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] = {
