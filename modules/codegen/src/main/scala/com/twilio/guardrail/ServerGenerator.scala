@@ -15,7 +15,7 @@ case class Servers[L <: LA](servers: List[Server[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
 case class TracingField[L <: LA](param: ScalaParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
-    routes: L#Term,
+    routes: List[L#Term],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],
     handlerDefinitions: List[L#Statement]

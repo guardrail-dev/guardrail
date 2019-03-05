@@ -59,7 +59,7 @@ object Http4sServerGenerator {
           methodSigs = renderedRoutes.map(_.methodSig)
         } yield {
           RenderedRoutes[ScalaLanguage](
-            combinedRouteTerms,
+            List(combinedRouteTerms),
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
             renderedRoutes.flatMap(_.handlerDefinitions)
@@ -92,7 +92,7 @@ object Http4sServerGenerator {
 
             ..${supportDefinitions};
             def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
-              ${combinedRouteTerms}
+              ..${combinedRouteTerms}
             }
           }
         """ +: responseDefinitions

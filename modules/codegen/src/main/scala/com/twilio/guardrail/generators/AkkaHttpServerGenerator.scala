@@ -132,7 +132,7 @@ object AkkaHttpServerGenerator {
           methodSigs = renderedRoutes.map(_.methodSig)
         } yield {
           RenderedRoutes[ScalaLanguage](
-            combinedRouteTerms,
+            List(combinedRouteTerms),
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
             renderedRoutes.flatMap(_.handlerDefinitions)
@@ -166,7 +166,7 @@ object AkkaHttpServerGenerator {
 
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
-              ${combinedRouteTerms}
+              ..${combinedRouteTerms}
             }
 
             ..${responseDefinitions}

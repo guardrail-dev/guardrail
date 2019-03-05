@@ -22,7 +22,7 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
     Free.inject[ServerTerm[L, ?], F](GenerateResponseDefinitions(operationId, responses, protocolElems))
   def renderClass(resourceName: String,
                   handlerName: String,
-                  combinedRouteTerms: L#Term,
+                  combinedRouteTerms: List[L#Term],
                   extraRouteParams: List[L#MethodParameter],
                   responseDefinitions: List[L#Definition],
                   supportDefinitions: List[L#Definition]): Free[F, List[L#Definition]] =
