@@ -32,6 +32,7 @@ class JavaLanguage extends LanguageAbstraction {
   type MethodParameter = com.github.javaparser.ast.body.Parameter
   type Type            = com.github.javaparser.ast.`type`.Type
   type TypeName        = com.github.javaparser.ast.expr.Name
+  type Annotation      = com.github.javaparser.ast.expr.AnnotationExpr
 
   // Result
   type FileContents = com.github.javaparser.ast.CompilationUnit

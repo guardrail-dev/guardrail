@@ -60,6 +60,7 @@ object Http4sServerGenerator {
         } yield {
           RenderedRoutes[ScalaLanguage](
             List(combinedRouteTerms),
+            List.empty,
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
             renderedRoutes.flatMap(_.handlerDefinitions)
@@ -83,7 +84,7 @@ object Http4sServerGenerator {
           } else Target.pure(List.empty)
         } yield res
 
-      case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
+      case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
           routesParams = List(param"handler: ${Type.Name(handlerName)}[F]")

@@ -16,6 +16,7 @@ case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], hand
 case class TracingField[L <: LA](param: ScalaParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
     routes: List[L#Term],
+    classAnnotations: List[L#Annotation],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],
     handlerDefinitions: List[L#Statement]
@@ -67,6 +68,7 @@ object ServerGenerator {
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc <- renderClass(resourceName,
                                     handlerName,
+                                    renderedRoutes.classAnnotations,
                                     renderedRoutes.routes,
                                     extraRouteParams,
                                     responseDefinitions.flatten,

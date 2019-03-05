@@ -18,6 +18,7 @@ case class GenerateResponseDefinitions[L <: LA](operationId: String, responses: 
     extends ServerTerm[L, List[L#Definition]]
 case class RenderClass[L <: LA](className: String,
                                 handlerName: String,
+                                annotations: List[L#Annotation],
                                 combinedRouteTerms: List[L#Term],
                                 extraRouteParams: List[L#MethodParameter],
                                 responseDefinitions: List[L#Definition],
