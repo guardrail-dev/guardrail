@@ -371,6 +371,7 @@ object AsyncHttpClientClientGenerator {
         Target.pure(List(abstractResponseClass))
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
+
         Target.pure(
           StaticDefns[JavaLanguage](
             className = clientName,
@@ -386,8 +387,6 @@ object AsyncHttpClientClientGenerator {
         val serverUrl = serverUrls.map(_.head).map(uri => new URI(uri.toString + basePath.getOrElse("")))
 
         val baseUrlField = builderClass.addField(URI_TYPE, "baseUrl", PRIVATE, FINAL)
-        val clientNameField = builderClass.addField(STRING_TYPE, "clientName", PRIVATE, FINAL)
-
         serverUrl.foreach({ serverUrl =>
           builderClass.addFieldWithInitializer(
             URI_TYPE, "DEFAULT_BASE_URL",
@@ -402,15 +401,18 @@ object AsyncHttpClientClientGenerator {
           baseUrlField.getVariables.iterator().next().setInitializer(new NameExpr("DEFAULT_BASE_URL"))
         })
 
-        tracingName.foreach({ tracingName =>
-          builderClass.addFieldWithInitializer(
-            STRING_TYPE, "DEFAULT_CLIENT_NAME",
-            new StringLiteralExpr(tracingName),
-            PRIVATE, STATIC, FINAL
-          )
-          clientNameField.setFinal(false)
-          clientNameField.getVariables.iterator().next().setInitializer(new NameExpr("DEFAULT_CLIENT_NAME"))
-        })
+        if (tracing) {
+          val clientNameField = builderClass.addField(STRING_TYPE, "clientName", PRIVATE, FINAL)
+          tracingName.foreach({ tracingName =>
+            builderClass.addFieldWithInitializer(
+              STRING_TYPE, "DEFAULT_CLIENT_NAME",
+              new StringLiteralExpr(tracingName),
+              PRIVATE, STATIC, FINAL
+            )
+            clientNameField.setFinal(false)
+            clientNameField.getVariables.iterator().next().setInitializer(new NameExpr("DEFAULT_CLIENT_NAME"))
+          })
+        }
 
         builderClass.addFieldWithInitializer(
           optionalType.setTypeArguments(HTTP_CLIENT_FUNCTION_TYPE), "httpClient",
@@ -434,7 +436,7 @@ object AsyncHttpClientClientGenerator {
           )
         }
         (serverUrl, tracingName) match {
-          case (None, None) =>
+          case (None, None) if tracing =>
             builderConstructor.setParameters(new NodeList(
               createConstructorParameter(URI_TYPE, "baseUrl"),
               createConstructorParameter(STRING_TYPE, "clientName")
@@ -444,7 +446,7 @@ object AsyncHttpClientClientGenerator {
               createBuilderConstructorAssignment("clientName")
             )))
 
-          case (Some(_), None) =>
+          case (Some(_), None) if tracing =>
             builderConstructor.setParameters(new NodeList(
               createConstructorParameter(STRING_TYPE, "clientName")
             ))
@@ -452,7 +454,7 @@ object AsyncHttpClientClientGenerator {
               createBuilderConstructorAssignment("clientName")
             )))
 
-          case (None, Some(_)) =>
+          case (None, _) =>
             builderConstructor.setParameters(new NodeList(
               createConstructorParameter(URI_TYPE, "baseUrl")
             ))
@@ -461,6 +463,8 @@ object AsyncHttpClientClientGenerator {
             )))
 
           case (Some(_), Some(_)) =>  // no params
+
+          case (Some(_), _) if !tracing =>  // no params
         }
 
         def addSetter(tpe: Type, name: String, initializer: String => Expression): Unit = {
@@ -477,7 +481,9 @@ object AsyncHttpClientClientGenerator {
         if (serverUrl.isDefined) {
           addSetter(URI_TYPE, "baseUrl", nonNullInitializer)
         }
-        addSetter(STRING_TYPE, "clientName", nonNullInitializer)
+        if (tracing) {
+          addSetter(STRING_TYPE, "clientName", nonNullInitializer)
+        }
         addSetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))
         addSetter(OBJECT_MAPPER_TYPE, "objectMapper",
           optionalInitializer(name => new MethodCallExpr("configureObjectMapper", new NameExpr(name))))
@@ -552,23 +558,23 @@ object AsyncHttpClientClientGenerator {
         val clientClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, clientName)
 
         List(
-          (URI_TYPE, "baseUrl"),
-          (STRING_TYPE, "clientName"),
-          (HTTP_CLIENT_FUNCTION_TYPE, "httpClient"),
-          (OBJECT_MAPPER_TYPE, "objectMapper")
-        ).foreach({ case (tpe, name) => clientClass.addField(tpe, name, PRIVATE, FINAL) })
+          Some((URI_TYPE, "baseUrl")),
+          if (tracing) Some((STRING_TYPE, "clientName")) else None,
+          Some((HTTP_CLIENT_FUNCTION_TYPE, "httpClient")),
+          Some((OBJECT_MAPPER_TYPE, "objectMapper"))
+        ).flatten.foreach({ case (tpe, name) => clientClass.addField(tpe, name, PRIVATE, FINAL) })
 
         val constructor = clientClass.addConstructor(PRIVATE)
         constructor.addParameter(new Parameter(util.EnumSet.of(FINAL), BUILDER_TYPE, new SimpleName("builder")))
         def newFieldAccessExpr(scope: Expression, name: String): Expression = new FieldAccessExpr(scope, name)
         def newMethodCallExpr(scope: Expression, name: String): Expression = new MethodCallExpr(scope, s"get${name.capitalize}")
         constructor.setBody(new BlockStmt(new NodeList(
-          List[(String, (Expression, String) => Expression)](
-            ("baseUrl", newFieldAccessExpr),
-            ("clientName", newFieldAccessExpr),
-            ("httpClient", newMethodCallExpr),
-            ("objectMapper", newMethodCallExpr)
-          ).map({ case (name, value) =>
+          List[Option[(String, (Expression, String) => Expression)]](
+            Some(("baseUrl", newFieldAccessExpr)),
+            if (tracing) Some(("clientName", newFieldAccessExpr)) else None,
+            Some(("httpClient", newMethodCallExpr)),
+            Some(("objectMapper", newMethodCallExpr))
+          ).flatten.map({ case (name, value) =>
             new ExpressionStmt(new AssignExpr(
               new FieldAccessExpr(new ThisExpr, name),
               value(new NameExpr("builder"), name),
