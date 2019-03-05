@@ -269,7 +269,7 @@ object JacksonGenerator {
                 (safeParseType(s"java.util.Optional<${tpe}>"), Option(defaultValue.fold[Target[Expression]](safeParseExpression[Expression](s"java.util.Optional.empty()"))(t => safeParseExpression[Expression](s"java.util.Optional.of($t)"))).sequence).mapN((_, _))
               )(Function.const(Target.pure((tpe, defaultValue))) _)
             (finalDeclType, finalDefaultValue) = _declDefaultPair
-            term <- safeParseParameter(s"${finalDeclType} ${argName}")
+            term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeReservedWord}")
             dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
           } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull, defaultValue)
         }

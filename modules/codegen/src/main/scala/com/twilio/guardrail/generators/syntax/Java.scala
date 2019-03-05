@@ -85,6 +85,19 @@ object Java {
     .setPrintJavadoc(true)
     .setTabWidth(4)
 
+  // from https://en.wikipedia.org/wiki/List_of_Java_keywords
+  private val reservedWords = Set(
+    "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const", "continue", "default",
+    "do", "double", "else", "enum", "exports", "extends", "false", "final", "finally", "float", "for", "goto", "if",
+    "implements", "import", "instanceof", "int", "interface", "long", "module", "native", "new", "null", "package",
+    "private", "protected", "public", "requires", "return", "short", "static", "strictfp", "super", "switch",
+    "synchronized", "this", "throw", "throws", "transient", "true", "try", "var", "void", "volatile", "while"
+  )
+
+  implicit class RichJavaString(val s: String) extends AnyVal {
+    def escapeReservedWord: String = if (reservedWords.contains(s)) s + "_" else s
+  }
+
 /*
   implicit class PrintStructure(value: Node) {
     def toAST: String = {
