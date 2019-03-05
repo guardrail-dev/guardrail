@@ -166,7 +166,7 @@ object CirceProtocolGenerator {
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull)
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, finalDefaultValue)
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)

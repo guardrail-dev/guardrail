@@ -269,9 +269,9 @@ object JacksonGenerator {
                 (safeParseType(s"java.util.Optional<${tpe}>"), Option(defaultValue.fold[Target[Expression]](safeParseExpression[Expression](s"java.util.Optional.empty()"))(t => safeParseExpression[Expression](s"java.util.Optional.of($t)"))).sequence).mapN((_, _))
               )(Function.const(Target.pure((tpe, defaultValue))) _)
             (finalDeclType, finalDefaultValue) = _declDefaultPair
-            term <- safeParseParameter(s"${finalDeclType} ${argName}") // FIXME: How do we deal with default values? .copy(default = finalDefaultValue)
+            term <- safeParseParameter(s"${finalDeclType} ${argName}")
             dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-          } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull)
+          } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull, defaultValue)
         }
 
       case RenderDTOClass(clsName, selfParams, parents) =>
