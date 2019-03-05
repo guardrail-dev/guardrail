@@ -261,26 +261,30 @@ object AsyncHttpClientClientGenerator {
         }
 
       case GetImports(tracing) =>
-        (List(
-          "java.net.URI",
-          "java.util.Optional",
-          "java.util.concurrent.CompletionStage",
-          "java.util.function.Function",
-          "com.fasterxml.jackson.core.JsonProcessingException",
-          "com.fasterxml.jackson.databind.ObjectMapper",
-          "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
-          "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
-          "org.asynchttpclient.AsyncHttpClient",
-          "org.asynchttpclient.AsyncHttpClientConfig",
-          "org.asynchttpclient.DefaultAsyncHttpClient",
-          "org.asynchttpclient.DefaultAsyncHttpClientConfig",
-          "org.asynchttpclient.Request",
-          "org.asynchttpclient.RequestBuilder",
-          "org.asynchttpclient.request.body.multipart.FilePart",
-          "org.asynchttpclient.request.body.multipart.StringPart"
-        ).map(safeParseRawImport) ++ List(
-          "java.util.Objects.requireNonNull"
-        ).map(safeParseRawStaticImport)).sequence
+        if (tracing) {
+          Target.raiseError("Tracing is not yet supported by this framework")
+        } else {
+          (List(
+            "java.net.URI",
+            "java.util.Optional",
+            "java.util.concurrent.CompletionStage",
+            "java.util.function.Function",
+            "com.fasterxml.jackson.core.JsonProcessingException",
+            "com.fasterxml.jackson.databind.ObjectMapper",
+            "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
+            "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+            "org.asynchttpclient.AsyncHttpClient",
+            "org.asynchttpclient.AsyncHttpClientConfig",
+            "org.asynchttpclient.DefaultAsyncHttpClient",
+            "org.asynchttpclient.DefaultAsyncHttpClientConfig",
+            "org.asynchttpclient.Request",
+            "org.asynchttpclient.RequestBuilder",
+            "org.asynchttpclient.request.body.multipart.FilePart",
+            "org.asynchttpclient.request.body.multipart.StringPart"
+          ).map(safeParseRawImport) ++ List(
+            "java.util.Objects.requireNonNull"
+          ).map(safeParseRawStaticImport)).sequence
+        }
 
       case GetExtraImports(tracing) =>
         Target.pure(List.empty)
@@ -371,7 +375,6 @@ object AsyncHttpClientClientGenerator {
         Target.pure(List(abstractResponseClass))
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
-
         Target.pure(
           StaticDefns[JavaLanguage](
             className = clientName,
