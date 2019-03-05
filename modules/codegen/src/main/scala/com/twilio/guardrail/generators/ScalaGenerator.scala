@@ -349,7 +349,7 @@ object ScalaGenerator {
         )
       case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, src)) =>
         Target.pure(
-          WriteTree(
+          List(WriteTree(
             resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
             source"""
               package ${buildPkgTerm((pkgName ++ pkg.toList))}
@@ -360,7 +360,7 @@ object ScalaGenerator {
               ..${customImports}
               ..$src
               """.syntax.getBytes(StandardCharsets.UTF_8)
-          )
+          ))
         )
     }
   }

@@ -107,7 +107,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                   customImports: List[L#Import],
                   frameworkImplicitName: Option[L#TermName],
                   dtoComponents: List[String],
-                  server: Server[L]): Free[F, WriteTree] =
+                  server: Server[L]): Free[F, List[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
 }
 object ScalaTerms {

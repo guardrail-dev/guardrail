@@ -100,4 +100,4 @@ case class WriteServer[L <: LA](pkgPath: Path,
                                 frameworkImplicitName: Option[L#TermName],
                                 dtoComponents: List[String],
                                 server: Server[L])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, List[WriteTree]]
