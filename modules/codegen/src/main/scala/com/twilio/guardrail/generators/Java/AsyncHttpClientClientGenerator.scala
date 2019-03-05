@@ -25,14 +25,22 @@ import java.util.Locale
 object AsyncHttpClientClientGenerator {
   private val URI_TYPE = JavaParser.parseClassOrInterfaceType("URI")
   private val DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("DefaultAsyncHttpClientConfig.Builder")
+  private val DEFAULT_ASYNC_HTTP_CLIENT_TYPE = JavaParser.parseClassOrInterfaceType("DefaultAsyncHttpClient")
   private val ASYNC_HTTP_CLIENT_TYPE = JavaParser.parseClassOrInterfaceType("AsyncHttpClient")
+  private val ASYNC_HTTP_CLIENT_CONFIG_TYPE = JavaParser.parseClassOrInterfaceType("AsyncHttpClientConfig")
   private val REQUEST_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("RequestBuilder")
+  private val REQUEST_TYPE = JavaParser.parseClassOrInterfaceType("Request")
   private val RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("Response")
   private val OBJECT_MAPPER_TYPE = JavaParser.parseClassOrInterfaceType("ObjectMapper")
   private val BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Builder")
   private val MARSHALLING_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("MarshallingException")
   private val HTTP_ERROR_TYPE = JavaParser.parseClassOrInterfaceType("HttpError")
   private val EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("Exception")
+
+  private val HTTP_CLIENT_FUNCTION_TYPE = functionType.setTypeArguments(new NodeList[Type](
+      REQUEST_TYPE,
+      completionStageType.setTypeArguments(RESPONSE_TYPE)
+    ))
 
   object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
@@ -42,7 +50,7 @@ object AsyncHttpClientClientGenerator {
           responseParentType <- safeParseClassOrInterfaceType(responseParentName)
           pathExpr <- jpaths.generateUrlPathParams(pathStr, parameters.pathParams)
         } yield {
-          val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operation.getOperationId)
+          val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, methodName)
           method.setType(completionStageType.setTypeArguments(responseParentType))
 
           val pathParams = parameters.pathParams.map(_.param)
@@ -52,11 +60,23 @@ object AsyncHttpClientClientGenerator {
           val bodyParams = parameters.bodyParams.map(_.param).toList
           (pathParams ++ qsParams ++ formParams ++ headerParams ++ bodyParams).foreach(method.addParameter)
 
-          val httpMethodCallName = s"prepare${httpMethod.toString.toLowerCase(Locale.US).capitalize}"
-          val httpMethodCallExpr = new MethodCallExpr(new FieldAccessExpr(new ThisExpr, "httpClient"), httpMethodCallName, new NodeList[Expression](new NameExpr("url")))
+          val requestBuilder = new MethodCallExpr(
+            new AssignExpr(new VariableDeclarationExpr(
+              new VariableDeclarator(REQUEST_BUILDER_TYPE, "builder"), FINAL),
+              new ObjectCreationExpr(null, REQUEST_BUILDER_TYPE, new NodeList[Expression](
+                new StringLiteralExpr(httpMethod.toString)
+              )),
+              AssignExpr.Operator.ASSIGN
+            ),
+            "setUrl", new NodeList[Expression](pathExpr)
+          )
 
-          val requestExecuteCall = new MethodCallExpr(new NameExpr("requestBuilder"), "execute")
-          val requestApplyCall = new MethodCallExpr(requestExecuteCall, "thenApply", new NodeList[Expression](
+          val httpMethodCallExpr = new MethodCallExpr(
+            new FieldAccessExpr(new ThisExpr, "httpClient"),
+            "apply",
+            new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
+          )
+          val requestCall = new MethodCallExpr(httpMethodCallExpr, "thenApply", new NodeList[Expression](
             new LambdaExpr(new NodeList(new Parameter(RESPONSE_TYPE, "response")), new BlockStmt(new NodeList(
               new SwitchStmt(new MethodCallExpr(new NameExpr("response"), "getStatusCode"), new NodeList(
                 responses.value.map(response => new SwitchEntryStmt(new IntegerLiteralExpr(response.statusCode), new NodeList(response.value match {
@@ -101,9 +121,8 @@ object AsyncHttpClientClientGenerator {
           ))
 
           method.setBody(new BlockStmt(new NodeList(
-            new ExpressionStmt(new AssignExpr(new VariableDeclarationExpr(new VariableDeclarator(STRING_TYPE, "url"), FINAL), pathExpr, AssignExpr.Operator.ASSIGN)),
-            new ExpressionStmt(new AssignExpr(new VariableDeclarationExpr(new VariableDeclarator(REQUEST_BUILDER_TYPE, "requestBuilder"), FINAL), httpMethodCallExpr, AssignExpr.Operator.ASSIGN)),
-            new ExpressionStmt(requestApplyCall)
+            new ExpressionStmt(requestBuilder),
+            new ReturnStmt(requestCall)
           )))
 
           RenderedClientOperation[JavaLanguage](method, List.empty)
@@ -119,8 +138,10 @@ object AsyncHttpClientClientGenerator {
           "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
           "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
           "org.asynchttpclient.AsyncHttpClient",
+          "org.asynchttpclient.AsyncHttpClientConfig",
           "org.asynchttpclient.DefaultAsyncHttpClient",
           "org.asynchttpclient.DefaultAsyncHttpClientConfig",
+          "org.asynchttpclient.Request",
           "org.asynchttpclient.RequestBuilder",
           "org.asynchttpclient.Response"
         ).map(safeParseRawImport) ++ List(
@@ -169,9 +190,8 @@ object AsyncHttpClientClientGenerator {
             )))
           })
 
-          val functionType = JavaParser.parseClassOrInterfaceType("Function")
-          functionType.setTypeArguments(responseType, genericTypeParam)
-          val foldMethodParameter = new Parameter(util.EnumSet.of(FINAL), functionType, new SimpleName(responseLambdaName))
+          val foldMethodParamType = functionType.setTypeArguments(responseType, genericTypeParam)
+          val foldMethodParameter = new Parameter(util.EnumSet.of(FINAL), foldMethodParamType, new SimpleName(responseLambdaName))
 
           val foldMethodBranch = new IfStmt(
             new InstanceOfExpr(new ThisExpr, responseType),
@@ -259,7 +279,7 @@ object AsyncHttpClientClientGenerator {
         })
 
         builderClass.addFieldWithInitializer(
-          optionalType.setTypeArguments(ASYNC_HTTP_CLIENT_TYPE), "httpClient",
+          optionalType.setTypeArguments(HTTP_CLIENT_FUNCTION_TYPE), "httpClient",
           new MethodCallExpr(new NameExpr("Optional"), "empty"),
           PRIVATE
         )
@@ -324,7 +344,7 @@ object AsyncHttpClientClientGenerator {
           addSetter(URI_TYPE, "baseUrl", nonNullInitializer)
         }
         addSetter(STRING_TYPE, "clientName", nonNullInitializer)
-        addSetter(ASYNC_HTTP_CLIENT_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))
+        addSetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))
         addSetter(OBJECT_MAPPER_TYPE, "objectMapper",
           optionalInitializer(name => new MethodCallExpr("configureObjectMapper", new NameExpr(name))))
 
@@ -347,27 +367,39 @@ object AsyncHttpClientClientGenerator {
             ))
           )))
         }
-        addInternalGetter(ASYNC_HTTP_CLIENT_TYPE, "httpClient",
+        addInternalGetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient",
           new MethodCallExpr("createDefaultHttpClient"))
         addInternalGetter(OBJECT_MAPPER_TYPE, "objectMapper",
           new MethodCallExpr("configureObjectMapper", new ObjectCreationExpr(null, OBJECT_MAPPER_TYPE, new NodeList())))
 
-        val createDefaultHttpClientMethod = builderClass.addMethod("createDefaultHttpClient", PRIVATE, STATIC)
-        createDefaultHttpClientMethod.setType(ASYNC_HTTP_CLIENT_TYPE)
-        createDefaultHttpClientMethod.setBody(new BlockStmt(new NodeList(new ReturnStmt({
-          val configBuilder = new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE, new NodeList())
-          val configBuilderChain = List(
+        val ahcConfigBuilder = new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE, new NodeList())
+        val ahcConfig = new MethodCallExpr(
+          List(
             ("setMaxRequestRetry", 2),
             ("setConnectTimeout", 3000),
             ("setRequestTimeout", 10000),
             ("setReadTimeout", 3000),
             ("setMaxConnections", 1024),
             ("setMaxConnectionsPerHost", 1024)
-          ).foldLeft[Expression](configBuilder)({ case (lastExpr, (name, arg)) =>
+          ).foldLeft[Expression](ahcConfigBuilder)({ case (lastExpr, (name, arg)) =>
             new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg)))
-          })
-          new MethodCallExpr(configBuilderChain, "build", new NodeList[Expression]())
-        }))))
+          }), "build", new NodeList[Expression]())
+
+        val createDefaultHttpClientMethod = builderClass.addMethod("createDefaultHttpClient", PRIVATE, STATIC)
+        createDefaultHttpClientMethod.setType(HTTP_CLIENT_FUNCTION_TYPE)
+        createDefaultHttpClientMethod.setBody(new BlockStmt(new NodeList(
+          new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(ASYNC_HTTP_CLIENT_CONFIG_TYPE, "config", ahcConfig), FINAL)),
+          new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(
+            ASYNC_HTTP_CLIENT_TYPE,
+            "client",
+            new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_TYPE, new NodeList(new NameExpr("config")))
+          ), FINAL)),
+          new ReturnStmt(new LambdaExpr(
+            new NodeList(new Parameter(util.EnumSet.of(FINAL), REQUEST_TYPE, new SimpleName("request"))),
+            new ExpressionStmt(new MethodCallExpr(new MethodCallExpr(new NameExpr("client"), "executeRequest", new NodeList[Expression](new NameExpr("request"))), "toCompletableFuture")),
+            true
+          ))
+        )))
 
         val configureObjectMapperMethod = builderClass.addMethod("configureObjectMapper", PRIVATE, STATIC)
         configureObjectMapperMethod.setType(OBJECT_MAPPER_TYPE)
@@ -388,7 +420,7 @@ object AsyncHttpClientClientGenerator {
         List(
           (URI_TYPE, "baseUrl"),
           (STRING_TYPE, "clientName"),
-          (ASYNC_HTTP_CLIENT_TYPE, "httpClient"),
+          (HTTP_CLIENT_FUNCTION_TYPE, "httpClient"),
           (OBJECT_MAPPER_TYPE, "objectMapper")
         ).foreach({ case (tpe, name) => clientClass.addField(tpe, name, PRIVATE, FINAL) })
 

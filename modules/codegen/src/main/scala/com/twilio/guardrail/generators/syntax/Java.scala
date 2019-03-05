@@ -37,6 +37,7 @@ object Java {
 
   def completionStageType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("CompletionStage" )
   def optionalType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Optional")
+  def functionType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function")
 
   val STRING_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("String")
   val THROWABLE_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Throwable")
