@@ -73,7 +73,7 @@ object AsyncHttpClientClientGenerator {
                           "readValue",
                           new NodeList[Expression](
                             new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
-                            new ClassExpr(valueType))
+                            new ClassExpr(valueType)
                           )
                         ), AssignExpr.Operator.ASSIGN)),
                       new IfStmt(

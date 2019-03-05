@@ -26,14 +26,6 @@ object JavaGenerator {
       case other => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
     }
 
-    def resolveReferenceTypeName(tpe: Type): Target[String] = tpe match {
-      case a: AstArrayType if a.getComponentType.isPrimitiveType => resolveReferenceTypeName(new AstArrayType(a.getComponentType.asPrimitiveType().toBoxedType))
-      case a: AstArrayType => Target.pure(a.asString)
-      case ci: ClassOrInterfaceType => Target.pure(ci.getNameAsString)
-      case p: PrimitiveType => Target.pure(p.toBoxedType.getNameAsString)
-      case _: VoidType => Target.pure("Void")
-    }
-
     def apply[T](term: ScalaTerm[JavaLanguage, T]): Target[T] = term match {
       case LitString(value)        => Target.pure(new StringLiteralExpr(value))
       case LitFloat(value)         => Target.pure(new DoubleLiteralExpr(value))
@@ -103,7 +95,18 @@ object JavaGenerator {
         Target.pure(a.equals(b))
 
       case ExtractTypeName(tpe) =>
-        safeParseName(tpe.asString).map(Option.apply)
+        def extractTypeName(tpe: Type): Target[Name] = tpe match {
+          case a: AstArrayType if a.getComponentType.isPrimitiveType => extractTypeName(new AstArrayType(a.getComponentType.asPrimitiveType().toBoxedType))
+          case a: AstArrayType => safeParseName(a.asString)
+          case ci: ClassOrInterfaceType => safeParseName(ci.getNameAsString)
+          case p: PrimitiveType => safeParseName(p.toBoxedType.getNameAsString)
+          case _: VoidType => safeParseName("Void")
+          case _ =>
+            println(s"WARN: ExtractTypeName: unhandled type ${tpe.getClass.getName}")
+            safeParseName("Void")
+        }
+
+        extractTypeName(tpe).map(Option.apply)
 
       case ExtractTermName(term) =>
         Target.pure(term.asString)
