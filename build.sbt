@@ -19,6 +19,8 @@ val http4sVersion     = "0.19.0"
 val scalatestVersion  = "3.0.7"
 val javaparserVersion = "3.7.1"
 val endpointsVersion  = "0.8.0"
+val ahcVersion        = "2.8.1"
+val dropwizardVersion = "1.3.9"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
@@ -58,7 +60,7 @@ val exampleJavaArgs: List[List[String]] = exampleCases
         (
           List(s"--${kind}") ++
             List("--specPath", path.toString()) ++
-            List("--outputPath", s"modules/sample/src/main/java/generated") ++
+            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/java/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
         ) ++ tracingFlag ++ extra)
@@ -110,11 +112,12 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
-val frameworks = List("akkaHttp", "endpoints", "http4s")
+val scalaFrameworks = List("akkaHttp", "endpoints", "http4s")
+val javaFrameworks = List("dropwizard")
 
 resetSample := {
   import scala.sys.process._
-  (List("sample") ++ frameworks.map(x => s"sample-${x}"))
+  (List("sample") ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}"))
     .foreach(sampleName => s"git clean -fdx modules/${sampleName}/src modules/${sampleName}/target" !)
 }
 
@@ -122,10 +125,12 @@ resetSample := {
 addCommandAlias("example", "runtimeSuite")
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; " + frameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeSuite", "runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + frameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + frameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite")
 
 addCommandAlias(
@@ -275,6 +280,22 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
     scalafmtOnCompile := false
   )
 
+lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
+  .settings(
+    codegenSettings,
+    libraryDependencies ++= Seq(
+      "io.dropwizard"       %  "dropwizard-core"   % dropwizardVersion,
+      "org.asynchttpclient" %  "async-http-client" % ahcVersion,
+      "org.scalatest"       %% "scalatest"         % scalatestVersion % Test,
+      "junit"               %  "junit"             % "4.12"           % Test,
+      "com.novocode"        % "junit-interface"    % "0.11"           % Test
+    ),
+    skip in publish := true,
+    scalafmtOnCompile := false,
+    testOptions in Test := Seq(Tests.Argument(TestFrameworks.JUnit, "-a"))
+  )
+
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
+watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
 
 logBuffered in Test := false
