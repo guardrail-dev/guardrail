@@ -23,9 +23,6 @@ import java.util
 import java.util.Locale
 
 object AsyncHttpClientClientGenerator {
-  private def completionStageType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("CompletionStage" )
-  private def optionalType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Optional")
-
   private val URI_TYPE = JavaParser.parseClassOrInterfaceType("URI")
   private val DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("DefaultAsyncHttpClientConfig.Builder")
   private val ASYNC_HTTP_CLIENT_TYPE = JavaParser.parseClassOrInterfaceType("AsyncHttpClient")

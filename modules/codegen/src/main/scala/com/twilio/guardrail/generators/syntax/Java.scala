@@ -35,6 +35,9 @@ object Java {
   def safeParseRawImport(s: String): Target[ImportDeclaration]                              = safeParse("safeParseRawImport")(JavaParser.parseImport, s"import ${s};")
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration]                        = safeParse("safeParseStaticImport")(JavaParser.parseImport, s"import static ${s};")
 
+  def completionStageType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("CompletionStage" )
+  def optionalType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Optional")
+
   val STRING_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("String")
   val THROWABLE_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Throwable")
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")

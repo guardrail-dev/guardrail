@@ -3,18 +3,14 @@ package com.twilio.guardrail.generators.Java
 import cats.~>
 import com.twilio.guardrail.generators.Java.AsyncHttpClientClientGenerator.ClientTermInterp
 import com.twilio.guardrail.generators.Java.DropwizardGenerator.FrameworkInterp
+import com.twilio.guardrail.generators.Java.DropwizardServerGenerator.ServerTermInterp
 import com.twilio.guardrail.generators.Java.JacksonGenerator._
 import com.twilio.guardrail.generators.JavaGenerator.JavaInterp
 import com.twilio.guardrail.generators.SwaggerGenerator
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.server.ServerTerm
 import com.twilio.guardrail.{ClientServerTerms, CodegenApplication, DefinitionPM, DefinitionPME, DefinitionPMEA, DefinitionPMEAP, FrameworkC, FrameworkCS, FrameworkCSF, ModelInterpreters, Parser, Target}
 
 object Dropwizard extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
-  object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
-    def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = Target.raiseError(s"interpServer: ${term.toString()}")
-  }
-
   val interpDefinitionPM: DefinitionPM[JavaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
   val interpDefinitionPME: DefinitionPME[JavaLanguage, ?] ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
   val interpDefinitionPMEA: DefinitionPMEA[JavaLanguage, ?] ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME
