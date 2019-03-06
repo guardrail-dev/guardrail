@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators
 
 import cats.~>
+import cats.instances.list._
 import cats.instances.option._
 import cats.syntax.traverse._
 import com.github.javaparser.ast._
@@ -265,44 +266,34 @@ object JavaGenerator {
         }
 
       case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
-        for {
-          pkgDecl         <- buildPkgDecl(pkgName ++ pkg)
-          //implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
-          //frameworkImplicitsImport <- safeParseName((pkgName ++ List(frameworkImplicitName.getIdentifier, "*")).mkString("."))
-          //  .map(name => new ImportDeclaration(name, false, true))
-          dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
-
-          handlerDefinition <- selfHandlerDefinition match {
-            case td: TypeDeclaration[_] => Target.pure(td)
-            case _ => Target.raiseError(s"Handler definition must be a TypeDeclaration but it is a ${selfHandlerDefinition.getClass.getName}")
-          }
-
-          serverDefinition <- serverDefinitions match {
-            case (td: TypeDeclaration[_]) :: Nil => Target.pure(td)
-            case other :: Nil => Target.raiseError(s"Server definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
-            case _ :: _ :: Nil => Target.raiseError("Only a single server definition is supported for Java generation")
-            case _ => Target.raiseError("No server definition provided")
-          }
-        } yield {
-          def writeClass(name: String, definition: TypeDeclaration[_]): WriteTree = {
-            val cu = new CompilationUnit()
-            cu.setPackageDeclaration(pkgDecl)
-            extraImports.map(cu.addImport)
-            customImports.map(cu.addImport)
-            //cu.addImport(implicitsImport)
-            //cu.addImport(frameworkImplicitsImport)
-            cu.addImport(dtoComponentsImport)
-            cu.addType(definition)
-            WriteTree(
-              resolveFile(pkgPath)(pkg :+ s"${name}.java"),
-              cu.toString(printer).getBytes(StandardCharsets.UTF_8)
-            )
-          }
-          List(
-            writeClass(handlerName, handlerDefinition),
-            writeClass(resourceName, serverDefinition)
+        def writeClass(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: TypeDeclaration[_]): WriteTree = {
+          val cu = new CompilationUnit()
+          cu.setPackageDeclaration(pkgDecl)
+          extraImports.map(cu.addImport)
+          customImports.map(cu.addImport)
+          extraImports.map(cu.addImport)
+          cu.addType(definition)
+          WriteTree(
+            resolveFile(pkgPath)(pkg :+ s"${definition.getNameAsString}.java"),
+            cu.toString(printer).getBytes(StandardCharsets.UTF_8)
           )
         }
+
+        def writeDefinition(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: BodyDeclaration[_]): Target[WriteTree] = {
+          definition match {
+            case td: TypeDeclaration[_] => Target.pure(writeClass(pkgDecl, extraImports, td))
+            case other => Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
+          }
+        }
+
+        for {
+          pkgDecl <- buildPkgDecl(pkgName ++ pkg)
+          dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
+
+          handlerTree <- writeDefinition(pkgDecl, extraImports :+ dtoComponentsImport, handlerDefinition)
+
+          serverTrees <- serverDefinitions.map(writeDefinition(pkgDecl, extraImports :+ dtoComponentsImport, _)).sequence
+        } yield handlerTree +: serverTrees
     }
   }
 }

@@ -323,7 +323,7 @@ object DropwizardServerGenerator {
             case _ =>
           })
 
-          Target.pure(cls :: Nil)
+          Target.pure(cls +: responseDefinitions)
         }
 
         safeParseSimpleName(className) >>
