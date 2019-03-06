@@ -8,7 +8,7 @@ import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, Type, VoidType}
-import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, MethodDeclaration, Parameter, VariableDeclarator}
+import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{MethodCallExpr, NameExpr, _}
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.SwaggerUtil.jpaths
@@ -45,6 +45,9 @@ object AsyncHttpClientClientGenerator {
       REQUEST_TYPE,
       completionStageType.setTypeArguments(RESPONSE_TYPE)
     ))
+
+  private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
+    JavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
 
   private def showParam(param: ScalaParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
@@ -166,6 +169,15 @@ object AsyncHttpClientClientGenerator {
     })
   }
 
+  private def jacksonTypeReferenceFor(tpe: Type): Expression = {
+    tpe match {
+      case cls: ClassOrInterfaceType if cls.getTypeArguments.isPresent =>
+        new ObjectCreationExpr(null, typeReferenceType(cls), new NodeList).setAnonymousClassBody(new NodeList)
+      case other =>
+        new ClassExpr(other)
+    }
+  }
+
   object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(_, RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
@@ -221,7 +233,7 @@ object AsyncHttpClientClientGenerator {
                           "readValue",
                           new NodeList[Expression](
                             new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
-                            new ClassExpr(valueType)
+                            jacksonTypeReferenceFor(valueType)
                           )
                         ), AssignExpr.Operator.ASSIGN)),
                       new IfStmt(
@@ -270,6 +282,7 @@ object AsyncHttpClientClientGenerator {
             "java.util.concurrent.CompletionStage",
             "java.util.function.Function",
             "com.fasterxml.jackson.core.JsonProcessingException",
+            "com.fasterxml.jackson.core.type.TypeReference",
             "com.fasterxml.jackson.databind.ObjectMapper",
             "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
             "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
