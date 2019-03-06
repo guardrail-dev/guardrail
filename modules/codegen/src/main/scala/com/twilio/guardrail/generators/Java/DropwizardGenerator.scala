@@ -16,7 +16,7 @@ import com.twilio.guardrail.terms.framework._
 import java.util
 
 object DropwizardGenerator {
-  private val RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("Response")
+  private val RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("org.asynchttpclient.Response")
 
   object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: FrameworkTerm[JavaLanguage, T]): Target[T] = term match {
@@ -24,9 +24,7 @@ object DropwizardGenerator {
       case ObjectType(format) => safeParseType("com.fasterxml.jackson.databind.JsonNode")
 
       case GetFrameworkImports(tracing) =>
-        List(
-          "org.asynchttpclient.Response"
-        ).map(safeParseRawImport).sequence
+        Target.pure(List.empty)
 
       case GetFrameworkImplicits() =>
         Target.pure(None)

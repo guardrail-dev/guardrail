@@ -188,8 +188,8 @@ object JacksonGenerator {
       case RenderStaticDefns(clsName, members, accessors, encoder, decoder) =>
         for {
           extraImports <- List(
-            "com.fasterxml.jackson.annotations.JsonCreator",
-            "com.fasterxml.jackson.annotations.JsonValue"
+            "com.fasterxml.jackson.annotation.JsonCreator",
+            "com.fasterxml.jackson.annotation.JsonValue"
           ).map(safeParseRawImport).sequence
         } yield StaticDefns[JavaLanguage](
           className = clsName,
@@ -463,11 +463,11 @@ object JacksonGenerator {
       case ProtocolImports() =>
         (List(
           "com.fasterxml.jackson.annotation.JsonCreator",
-          "com.fasterxml.jackson.annotation.JsonDeserialize",
           "com.fasterxml.jackson.annotation.JsonIgnoreProperties",
-          "com.fasterxml.jackson.annotation.JsonProperty"
+          "com.fasterxml.jackson.annotation.JsonProperty",
+          "com.fasterxml.jackson.databind.annotation.JsonDeserialize"
         ).map(safeParseRawImport) ++ List(
-          "java.lang.Objects.requireNonNull"
+          "java.util.Objects.requireNonNull"
         ).map(safeParseRawStaticImport)).sequence
 
       case PackageObjectImports() =>
@@ -502,9 +502,9 @@ object JacksonGenerator {
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
         for {
           extraImports <- List(
-            "com.fasterxml.jackson.annotations.JsonIgnoreProperties",
-            "com.fasterxml.jackson.annotations.JsonSubTypes",
-            "com.fasterxml.jackson.annotations.JsonTypeInfo"
+            "com.fasterxml.jackson.annotation.JsonIgnoreProperties",
+            "com.fasterxml.jackson.annotation.JsonSubTypes",
+            "com.fasterxml.jackson.annotation.JsonTypeInfo"
           ).map(safeParseRawImport).sequence
         } yield StaticDefns[JavaLanguage](
           clsName,

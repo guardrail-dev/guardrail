@@ -23,7 +23,7 @@ import java.util
 
 object DropwizardServerGenerator {
   private val ASYNC_RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("AsyncResponse")
-  private val RESPONSE_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("ResponseBuilder")
+  private val RESPONSE_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE = JavaParser.parseClassOrInterfaceType("Logger")
 
   private def removeEmpty(s: String): Option[String] = if (s.trim.isEmpty) None else Some(s.trim)
@@ -49,7 +49,6 @@ object DropwizardServerGenerator {
     checkMatch(List.empty, initialHeads, initialRest)
   }
 
-
   object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
@@ -71,6 +70,8 @@ object DropwizardServerGenerator {
           "javax.ws.rs.container.AsyncResponse",
           "javax.ws.rs.container.Suspended",
           "javax.ws.rs.core.MediaType",
+          "javax.ws.rs.core.Response",
+          "java.util.concurrent.CompletionStage",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory"
         ).map(safeParseRawImport).sequence

@@ -292,6 +292,7 @@ object AsyncHttpClientClientGenerator {
             "org.asynchttpclient.DefaultAsyncHttpClientConfig",
             "org.asynchttpclient.Request",
             "org.asynchttpclient.RequestBuilder",
+            "org.asynchttpclient.Response",
             "org.asynchttpclient.request.body.multipart.FilePart",
             "org.asynchttpclient.request.body.multipart.StringPart"
           ).map(safeParseRawImport) ++ List(

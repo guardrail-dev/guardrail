@@ -147,17 +147,11 @@ object JavaGenerator {
 
       case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
         for {
-          pkgDecl         <- buildPkgDecl(pkgName)
-          //implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
-          //frameworkImplicitsImport <- safeParseName((pkgName ++ List(frameworkImplicitName.getIdentifier, "*")).mkString("."))
-          //  .map(name => new ImportDeclaration(name, false, true))
-          //dtoComponentsImport <- safeParseName((dtoComponents :+ "*").mkString(".")).map(name => new ImportDeclaration(name, false, true))
+          pkgDecl <- buildPkgDecl(pkgName)
         } yield {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)
           frameworkImports.map(cu.addImport)
-          //cu.addImport(implicitsImport)
-          //cu.addImport(frameworkImplicitsImport)
           cu.addType(frameworkDefinitions)
           WriteTree(
             resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")),
@@ -169,10 +163,11 @@ object JavaGenerator {
         Target.pure(None)
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
-        elem match {
-          case EnumDefinition(_, _, _, cls, staticDefns) =>
-            val clsCopy = cls.clone()
-            buildPkgDecl(pkgName).map { pkgDecl =>
+        for {
+          pkgDecl <- buildPkgDecl(definitions)
+        } yield {
+          elem match {
+            case EnumDefinition(_, _, _, cls, staticDefns) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)
@@ -189,10 +184,8 @@ object JavaGenerator {
                 ),
                 List.empty[Statement]
               )
-            }
 
-          case ClassDefinition(_, _, cls, staticDefns, _) =>
-            buildPkgDecl(pkgName).map { pkgDecl =>
+            case ClassDefinition(_, _, cls, staticDefns, _) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)
@@ -209,10 +202,8 @@ object JavaGenerator {
                 ),
                 List.empty[Statement]
               )
-            }
 
-          case ADT(name, tpe, trt, staticDefns) =>
-            buildPkgDecl(pkgName).map { pkgDecl =>
+            case ADT(name, tpe, trt, staticDefns) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)
@@ -229,10 +220,10 @@ object JavaGenerator {
                 ),
                 List.empty[Statement]
               )
-            }
 
-          case RandomType(_, _) =>
-            Target.pure((List.empty, List.empty))
+            case RandomType(_, _) =>
+              (List.empty, List.empty)
+          }
         }
 
       case WriteClient(pkgPath,
@@ -243,17 +234,14 @@ object JavaGenerator {
                        Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
         for {
           pkgDecl         <- buildPkgDecl(pkgName ++ pkg)
-          //implicitsImport <- safeParseName((pkgName ++ List("Implicits", "*")).mkString(".")).map(name => new ImportDeclaration(name, false, true))
-          //frameworkImplicitsImport <- safeParseName((pkgName ++ List(frameworkImplicitName.getIdentifier, "*")).mkString("."))
-          //  .map(name => new ImportDeclaration(name, false, true))
+          commonImport <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
         } yield {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)
           imports.map(cu.addImport)
           customImports.map(cu.addImport)
-          //cu.addImport(implicitsImport)
-          //cu.addImport(frameworkImplicitsImport)
+          cu.addImport(commonImport)
           cu.addImport(dtoComponentsImport)
           val clientCopy = client.head.merge.clone() // FIXME: WriteClient needs to be altered to return `NonEmptyList[WriteTree]` to accommodate Java not being able to put multiple classes in the same file. Scala just jams them all together, but this could be improved over there as well.
           staticDefns.definitions.foreach(clientCopy.addMember)
@@ -271,7 +259,6 @@ object JavaGenerator {
           cu.setPackageDeclaration(pkgDecl)
           extraImports.map(cu.addImport)
           customImports.map(cu.addImport)
-          extraImports.map(cu.addImport)
           cu.addType(definition)
           WriteTree(
             resolveFile(pkgPath)(pkg :+ s"${definition.getNameAsString}.java"),
@@ -288,11 +275,13 @@ object JavaGenerator {
 
         for {
           pkgDecl <- buildPkgDecl(pkgName ++ pkg)
+
+          commonImport <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
+          allExtraImports = extraImports ++ List(commonImport, dtoComponentsImport)
 
-          handlerTree <- writeDefinition(pkgDecl, extraImports :+ dtoComponentsImport, handlerDefinition)
-
-          serverTrees <- serverDefinitions.map(writeDefinition(pkgDecl, extraImports :+ dtoComponentsImport, _)).sequence
+          handlerTree <- writeDefinition(pkgDecl, allExtraImports, handlerDefinition)
+          serverTrees <- serverDefinitions.map(writeDefinition(pkgDecl, allExtraImports, _)).sequence
         } yield handlerTree +: serverTrees
     }
   }
