@@ -284,15 +284,14 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
   .settings(
     codegenSettings,
     libraryDependencies ++= Seq(
-      "io.dropwizard"       %  "dropwizard-core"   % dropwizardVersion,
-      "org.asynchttpclient" %  "async-http-client" % ahcVersion,
-      "org.scalatest"       %% "scalatest"         % scalatestVersion % Test,
-      "junit"               %  "junit"             % "4.12"           % Test,
-      "com.novocode"        % "junit-interface"    % "0.11"           % Test
+      "io.dropwizard"          %  "dropwizard-core"    % dropwizardVersion,
+      "org.asynchttpclient"    %  "async-http-client"  % ahcVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"            % Test,
+      "org.scalatest"          %% "scalatest"          % scalatestVersion   % Test,
+      "org.mockito"            %% "mockito-scala"      % "1.2.0"            % Test,
     ),
     skip in publish := true,
-    scalafmtOnCompile := false,
-    testOptions in Test := Seq(Tests.Argument(TestFrameworks.JUnit, "-a"))
+    scalafmtOnCompile := false
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
