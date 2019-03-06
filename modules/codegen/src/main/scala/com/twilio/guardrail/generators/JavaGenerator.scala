@@ -160,7 +160,12 @@ object JavaGenerator {
         }
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        Target.pure(None)
+        for {
+          pkgDecl <- buildPkgDecl(dtoComponents)
+        } yield Some(WriteTree(
+          resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"),
+          pkgDecl.toString(printer).getBytes(StandardCharsets.UTF_8)
+        ))
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         for {
