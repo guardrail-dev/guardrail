@@ -1,11 +1,10 @@
 package com.twilio.guardrail.generators.syntax
 
-import cats.implicits._
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.{CompilationUnit, ImportDeclaration}
 import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, Type}
 import com.github.javaparser.ast.body.{ClassOrInterfaceDeclaration, Parameter}
 import com.github.javaparser.ast.expr.{Expression, Name, SimpleName}
+import com.github.javaparser.ast.{CompilationUnit, ImportDeclaration}
 import com.github.javaparser.printer.PrettyPrinterConfiguration
 import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType
 import com.twilio.guardrail.Target
@@ -51,9 +50,9 @@ object Java {
   }
 
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] = {
-    Target.log.debug(log)(s) >> (
+    Target.log.function(s"${log}: ${s}") {
       Try(parser(s)).toEither.fold(t => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}"), Target.pure)
-    )
+    }
   }
 
   def safeParseCode(s: String): Target[CompilationUnit]                                     = safeParse("safeParseCode")(JavaParser.parse, s)
@@ -96,6 +95,15 @@ object Java {
 
   implicit class RichJavaString(val s: String) extends AnyVal {
     def escapeReservedWord: String = if (reservedWords.contains(s)) s + "_" else s
+  }
+
+  lazy val SHOWER_CLASS_DEF: ClassOrInterfaceDeclaration = {
+    JavaParser.parseResource(getClass.getClassLoader, "java/Shower.java", StandardCharsets.UTF_8)
+      .getClassByName("Shower")
+      .asScala
+      .getOrElse(
+        throw new AssertionError("Shower.java in class resources is not valid")
+      )
   }
 
 /*

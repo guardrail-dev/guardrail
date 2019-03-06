@@ -19,12 +19,12 @@ public class PositiveLong {
         this.value = value;
     }
 
-    public String getValue() {
-        return String.valueOf(this.value);
+    public long getValue() {
+        return this.value;
     }
 
     @JsonValue
     public String toString() {
-        return getValue();
+        return String.valueOf(getValue());
     }
 }

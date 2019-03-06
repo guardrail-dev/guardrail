@@ -83,10 +83,13 @@ object DropwizardGenerator {
           new ReturnStmt(new FieldAccessExpr(new ThisExpr, "response"))
         )))
 
+        val showerClass = SHOWER_CLASS_DEF
+
         Target.pure(List(
           (new Name("ClientException"), clientExceptionClass),
           (new Name("MarshallingException"), marshallingExceptionClass),
-          (new Name("HttpError"), httpErrorClass)
+          (new Name("HttpError"), httpErrorClass),
+          (new Name(showerClass.getNameAsString), showerClass)
         ))
 
       case LookupStatusCode(key) =>

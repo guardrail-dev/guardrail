@@ -168,6 +168,16 @@ object JacksonGenerator {
           ))
         )))
 
+        val staticInitializer = new InitializerDeclaration(true, new BlockStmt(new NodeList(
+          new ExpressionStmt(new MethodCallExpr(
+            new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
+            "register",
+            new NodeList[Expression](
+              new ClassExpr(JavaParser.parseClassOrInterfaceType(clsName)),
+              new MethodReferenceExpr(new NameExpr(clsName), null, "getName")
+            )
+          ))
+        )))
 
         val enumClass = new EnumDeclaration(
           util.EnumSet.of(PUBLIC),
@@ -176,6 +186,7 @@ object JacksonGenerator {
           new NodeList(),
           new NodeList(enumDefns: _*),
           new NodeList(
+            staticInitializer,
             nameField,
             constructor,
             getNameMethod,
