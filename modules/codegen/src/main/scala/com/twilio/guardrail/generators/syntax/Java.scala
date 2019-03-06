@@ -33,6 +33,12 @@ object Java {
         case _ => tpe
       }
 
+    def unbox: Type =
+      tpe match {
+        case cls: ClassOrInterfaceType if cls.isBoxedType => cls.toUnboxedType
+        case _ => tpe
+      }
+
     def isNamed(name: String): Boolean =
       tpe match {
         case cls: ClassOrInterfaceType if name.contains(".") =>

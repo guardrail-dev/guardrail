@@ -8,7 +8,7 @@ import cats.syntax.traverse._
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.{Modifier, NodeList}
-import com.github.javaparser.ast.`type`.{PrimitiveType, VoidType}
+import com.github.javaparser.ast.`type`.{PrimitiveType, Type, VoidType}
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
@@ -289,16 +289,17 @@ object DropwizardServerGenerator {
               )))
               (List.empty[FieldDeclaration], constructor, List.empty[MethodDeclaration])
             })({ case (valueType, _) =>
-              val valueField = new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(valueType, "value"))
+              val unboxedValueType: Type = valueType.unbox
+              val valueField = new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(unboxedValueType, "value"))
 
               val constructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), clsName)
-              constructor.addParameter(new Parameter(util.EnumSet.of(FINAL), valueType, new SimpleName("value")))
+              constructor.addParameter(new Parameter(util.EnumSet.of(FINAL), unboxedValueType, new SimpleName("value")))
               constructor.setBody(new BlockStmt(new NodeList(
                 new ExpressionStmt(new MethodCallExpr("super", new IntegerLiteralExpr(response.statusCode))),
                 new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "value"), new NameExpr("value"), AssignExpr.Operator.ASSIGN))
               )))
 
-              val getValueMethod = new MethodDeclaration(util.EnumSet.of(PUBLIC), valueType, "getValue")
+              val getValueMethod = new MethodDeclaration(util.EnumSet.of(PUBLIC), unboxedValueType, "getValue")
               getValueMethod.setBody(new BlockStmt(new NodeList(
                 new ReturnStmt(new FieldAccessExpr(new ThisExpr, "value"))
               )))
