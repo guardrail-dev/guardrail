@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.responses._
 import cats.{FlatMap, Foldable}
 import cats.free.Free
 import cats.implicits._
+import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -385,7 +386,11 @@ object SwaggerUtil {
     def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[JavaLanguage]]): Target[Expression] = {
       val term: atto.Parser[Expression] = variable.flatMap { binding =>
         lookupName(binding, pathArgs) { param =>
-          ok(new MethodCallExpr(new NameExpr(param.paramName.asString), "toString"))
+          ok(new MethodCallExpr(
+            new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
+            "show",
+            new NodeList[Expression](new NameExpr(param.paramName.asString))
+          ))
         }
       }
       val other: atto.Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
