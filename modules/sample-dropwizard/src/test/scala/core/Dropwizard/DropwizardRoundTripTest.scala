@@ -1,46 +1,26 @@
 package core.Dropwizard
 
-import alias.client.dropwizard.foo.FooClient
-import alias.server.dropwizard.foo.{DoFooResponse, FooHandler, FooResource}
 import com.fasterxml.jackson.databind.ObjectMapper
+import examples.client.dropwizard.user.UserClient
 import examples.server.dropwizard.definitions.User
 import examples.server.dropwizard.user._
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
+import helpers.MockHelpers._
 import java.util
 import java.util.Optional
 import java.util.concurrent.{CompletableFuture, CompletionStage}
-import javax.ws.rs.container.AsyncResponse
 import org.asynchttpclient.{Request, Response}
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.Waiters
 import org.scalatest.{FreeSpec, Matchers}
-import scala.collection.JavaConverters._
 import scala.compat.java8.FunctionConverters._
-import scala.compat.java8.OptionConverters._
-import scala.reflect.ClassTag
-import scala.util.Try
 
 class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with MockitoSugar with ArgumentMatchersSugar {
-  private val mapper = new ObjectMapper
-
-  private def mockAsyncResponse[T](implicit cls: ClassTag[T]): (AsyncResponse, CompletableFuture[T]) = {
-    val asyncResponse = mock[AsyncResponse]
-    val future = new CompletableFuture[T]
-
-    when(asyncResponse.resume(any[T])) thenAnswer[AnyRef] { response => response match {
-      case t: Throwable => future.completeExceptionally(t)
-      case other: T => future.complete(other)
-      case other => fail(s"AsyncResponse.resume expected an object of type ${cls.runtimeClass.getName}, but got ${other.getClass.getName} instead")
-    }}
-
-    (asyncResponse, future)
-  }
+  private implicit val mapper = new ObjectMapper
 
   "Test server" in {
     val USERNAME = "foobar"
 
-    val (asyncResponse, future) = mockAsyncResponse[GetUserByNameResponse]
+    val (asyncResponse, serverFuture: CompletableFuture[GetUserByNameResponse]) = mockAsyncResponse[GetUserByNameResponse]
 
     val resource = new UserResource(new UserHandler {
       override def createUser(body: User): CompletionStage[CreateUserResponse] = ???
@@ -52,51 +32,56 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
       override def deleteUser(username: String): CompletionStage[DeleteUserResponse] = ???
 
       override def getUserByName(username: String): CompletionStage[GetUserByNameResponse] = {
-        if (USERNAME == "foobar") {
-          future.complete(new GetUserByNameResponse.Ok(User.b))
+        username match {
+          case USERNAME =>
+            serverFuture.complete(new GetUserByNameResponse.Ok(User.builder()
+              .withEmail("foo@bar.com")
+              .withFirstName("Foo")
+              .withLastName("Bar")
+              .withId(1)
+              .withUsername(USERNAME)
+              .build()
+            ))
+          case "" =>
+            serverFuture.complete(new GetUserByNameResponse.BadRequest)
+          case _ =>
+            serverFuture.complete(new GetUserByNameResponse.NotFound)
         }
-      }
-    })
-    val resource = new FooResource(new FooHandler {
-      override def doFoo(long: Optional[java.lang.Long], body: Optional[java.lang.Long]): CompletionStage[DoFooResponse] = {
-        future.complete(new DoFooResponse.Created(long.orElse(42L)))
-        future
+        serverFuture
       }
     })
 
     val httpClient: Request => CompletionStage[Response] = { request =>
-      if (request.getUri.getPath == "/foo") {
-        println("got request")
-        val queryParams = request.getQueryParams.asScala
-        val long = queryParams.find(_.getName == "long").map[java.lang.Long](_.getValue.toLong).asJava
-        val body = Try(java.lang.Long.valueOf(new String(request.getByteData, request.getCharset))).toOption.asJava
-        resource.doFoo(long, body, asyncResponse)
-        future.thenApply({
-          case _: DoFooResponse.Created =>
-            println("applying response object to http response")
-            val response = mock[Response]
-            when(response.getStatusCode) thenReturn 201
-            when(response.getResponseBody(any)) thenReturn ""
-            when(response.getResponseBody) thenReturn ""
-            when(response.getResponseBodyAsStream) thenReturn new ByteArrayInputStream(new Array[Byte](0))
-            when(response.getResponseBodyAsByteBuffer) thenReturn ByteBuffer.allocate(0)
-            response
-        })
-      } else {
-        CompletableFuture.completedFuture(new Response.ResponseBuilder().build())
+      val userPath = "^/v2/user/([^/]*)$".r
+      request.getUri.getPath match {
+        case userPath(username) =>
+          resource.getUserByName(username, asyncResponse)
+          serverFuture.thenApply({ response => response match {
+            case r: GetUserByNameResponse.Ok => mockAHCResponse(request.getUrl, r.getStatusCode, Some(r.getValue))
+            case r: GetUserByNameResponse.BadRequest => mockAHCResponse(request.getUrl, r.getStatusCode)
+            case r: GetUserByNameResponse.NotFound => mockAHCResponse(request.getUrl, r.getStatusCode)
+          }})
+        case _ =>
+          CompletableFuture.completedFuture(mockAHCResponse(request.getUrl, 404))
       }
     }
 
-    val client = new FooClient.Builder()
+    val client = new UserClient.Builder()
       .withHttpClient(httpClient.asJava)
       .withObjectMapper(mapper)
       .build()
 
     val w = new Waiter
-    client.doFoo(Optional.of(42), Optional.of(99)).whenComplete({ (response, t) =>
-      w {
-        t shouldBe null
-        response.getClass shouldBe classOf[FooClient.DoFooResponse.Created]
+    client.getUserByName(USERNAME).whenComplete({ (response, t) =>
+      w { t shouldBe null }
+      response match {
+        case r: UserClient.GetUserByNameResponse.Ok =>
+          w {
+            r.getValue.getUsername.get shouldBe USERNAME
+            r.getValue.getPassword shouldBe Optional.empty
+          }
+        case _: UserClient.GetUserByNameResponse.BadRequest => w { fail("Got BadRequest") }
+        case _: UserClient.GetUserByNameResponse.NotFound => w { fail("Got NotFound") }
       }
       w.dismiss()
     })
