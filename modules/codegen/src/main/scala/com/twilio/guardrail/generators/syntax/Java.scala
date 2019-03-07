@@ -76,6 +76,7 @@ object Java {
   def optionalType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Optional")
   def functionType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function")
 
+  val OBJECT_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Object")
   val STRING_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("String")
   val THROWABLE_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Throwable")
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")

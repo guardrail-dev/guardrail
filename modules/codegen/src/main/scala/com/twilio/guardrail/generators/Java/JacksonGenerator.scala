@@ -3,6 +3,7 @@ package generators
 package Java
 
 import _root_.io.swagger.v3.oas.models.media._
+import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type}
@@ -14,7 +15,7 @@ import com.twilio.guardrail.protocol.terms.protocol._
 import java.util.Locale
 import scala.collection.JavaConverters._
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.{ImportDeclaration,NodeList}
+import com.github.javaparser.ast.{ImportDeclaration, NodeList}
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.Modifier.{ABSTRACT, FINAL, PRIVATE, PUBLIC, STATIC}
 import com.github.javaparser.ast.body._
@@ -286,6 +287,7 @@ object JacksonGenerator {
         }
 
       case RenderDTOClass(clsName, selfParams, parents) =>
+        val dtoClassType   = JavaParser.parseClassOrInterfaceType(clsName)
         val discriminators = parents.flatMap(_.discriminators)
         val parentOpt      = parents.headOption
         val params  = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
@@ -354,6 +356,83 @@ object JacksonGenerator {
             new ReturnStmt(new FieldAccessExpr(new ThisExpr, parameterName))
           )))
         })
+
+        val toStringFieldExprs = NonEmptyList.fromList(terms).toList.flatMap(l =>
+          (new StringLiteralExpr(s"${l.head.parameterName}="), new FieldAccessExpr(new ThisExpr, l.head.parameterName)) +:
+            l.tail.map(param => (
+              new StringLiteralExpr(s", ${param.parameterName}="),
+              new FieldAccessExpr(new ThisExpr, param.parameterName)
+            ))
+        )
+
+        val toStringMethod = dtoClass.addMethod("toString", PUBLIC)
+          .setType(STRING_TYPE)
+          .addMarkerAnnotation("Override")
+        toStringMethod.setBody(new BlockStmt(new NodeList(new ReturnStmt(
+          new BinaryExpr(
+            toStringFieldExprs.foldLeft[Expression](new StringLiteralExpr(s"${clsName}{"))({ case (prevExpr, (strExpr, fieldExpr)) =>
+              new BinaryExpr(
+                new BinaryExpr(prevExpr, strExpr, BinaryExpr.Operator.PLUS),
+                fieldExpr,
+                BinaryExpr.Operator.PLUS
+              )
+            }),
+            new StringLiteralExpr("}"),
+            BinaryExpr.Operator.PLUS
+          )
+        ))))
+
+        val equalsConditions: List[Expression] = terms.map({ case ParameterTerm(_, parameterName, fieldType, _) =>
+          fieldType match {
+            case _: PrimitiveType => new BinaryExpr(
+              new FieldAccessExpr(new ThisExpr, parameterName),
+              new FieldAccessExpr(new NameExpr("other"), parameterName),
+              BinaryExpr.Operator.EQUALS
+            )
+            case _ => new MethodCallExpr(
+              new FieldAccessExpr(new ThisExpr, parameterName),
+              "equals",
+              new NodeList[Expression](new FieldAccessExpr(new NameExpr("other"), parameterName))
+            )
+          }
+        })
+        val returnExpr = NonEmptyList.fromList(equalsConditions).map(_.reduceLeft(
+          (prevExpr, condExpr) => new BinaryExpr(prevExpr, condExpr, BinaryExpr.Operator.AND)
+        )).getOrElse(new BooleanLiteralExpr(true))
+
+        val equalsMethod = dtoClass.addMethod("equals", PUBLIC)
+          .setType(PrimitiveType.booleanType)
+          .addMarkerAnnotation("Override")
+          .addParameter(new Parameter(util.EnumSet.of(FINAL), OBJECT_TYPE, new SimpleName("o")))
+        equalsMethod.setBody(new BlockStmt(new NodeList(
+          new IfStmt(
+            new BinaryExpr(new ThisExpr, new NameExpr("o"), BinaryExpr.Operator.EQUALS),
+            new BlockStmt(new NodeList(new ReturnStmt(new BooleanLiteralExpr(true)))),
+            null
+          ),
+          new IfStmt(
+            new BinaryExpr(
+              new BinaryExpr(new NameExpr("o"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
+              new BinaryExpr(new MethodCallExpr("getClass"), new MethodCallExpr(new NameExpr("o"), "getClass"), BinaryExpr.Operator.NOT_EQUALS),
+              BinaryExpr.Operator.OR
+            ),
+            new BlockStmt(new NodeList(new ReturnStmt(new BooleanLiteralExpr(false)))),
+            null
+          ),
+          new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(
+            dtoClassType, "other", new CastExpr(dtoClassType, new NameExpr("o"))
+          ), FINAL)),
+          new ReturnStmt(returnExpr)
+        )))
+
+        val hashCodeMethod = dtoClass.addMethod("hashCode", PUBLIC)
+          .setType(PrimitiveType.intType)
+          .addMarkerAnnotation("Override")
+        hashCodeMethod.setBody(new BlockStmt(new NodeList(new ReturnStmt(new MethodCallExpr(
+          new NameExpr("java.util.Objects"),
+          "hash",
+          new NodeList[Expression](terms.map(term => new FieldAccessExpr(new ThisExpr, term.parameterName)): _*)
+        )))))
 
         val builderMethod = dtoClass.addMethod("builder", PUBLIC, STATIC)
         builderMethod.setType("Builder")
