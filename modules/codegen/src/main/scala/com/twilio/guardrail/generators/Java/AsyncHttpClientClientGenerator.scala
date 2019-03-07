@@ -333,6 +333,7 @@ object AsyncHttpClientClientGenerator {
           val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, methodName)
           method.setType(completionStageType.setTypeArguments(responseParentType))
 
+          parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
           val pathParams = parameters.pathParams.map(_.param)
           val qsParams = parameters.queryStringParams.map(_.param)
           val formParams = parameters.formParams.map(_.param)
@@ -456,10 +457,7 @@ object AsyncHttpClientClientGenerator {
           val responseInnerClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, responseName);
           responseInnerClass.addExtendedType(abstractClassName)
           valueType.foreach({ vt =>
-            val finalValueType: Type = vt match {
-              case p: ClassOrInterfaceType if p.isBoxedType => p.toUnboxedType
-              case other => other
-            }
+            val finalValueType: Type = vt.unbox
 
             responseInnerClass.addField(finalValueType, "value", PRIVATE, FINAL)
 

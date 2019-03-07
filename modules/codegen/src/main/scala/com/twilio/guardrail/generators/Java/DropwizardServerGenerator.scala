@@ -93,6 +93,8 @@ object DropwizardServerGenerator {
           val commonPathPrefix = findPathPrefix(routes.map(_._3.path))
 
           val (routeMethods, handlerMethodSigs) = routes.map({ case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation), parameters, responses) =>
+            parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
+
             val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
             val httpMethodAnnotation = httpMethod match {
               case HttpMethod.DELETE => new MarkerAnnotationExpr("DELETE")

@@ -41,19 +41,13 @@ object JacksonGenerator {
     })
 
     val requiredTerms = req.map({ param =>
-      val types = param.term.getType match {
-        case cls: ClassOrInterfaceType => Try(cls.toUnboxedType).getOrElse(cls)
-        case tpe => tpe
-      }
+      val types = param.term.getType.unbox
       ParameterTerm(param.name, param.term.getNameAsString, types, types)
     })
 
     val optionalTerms = opt.flatMap(param => param.term.getType match {
       case cls: ClassOrInterfaceType => cls.getTypeArguments.asScala.flatMap({ typeArgument =>
-        val parameterType = typeArgument.asScala.headOption.map({
-          case innerCls: ClassOrInterfaceType => Try(innerCls.toUnboxedType).getOrElse(innerCls)
-          case tpe => tpe
-        })
+        val parameterType = typeArgument.asScala.headOption.map(_.unbox)
         parameterType.map(pt => ParameterTerm(param.name, param.term.getNameAsString, param.term.getType, pt))
       })
       case _ => None
