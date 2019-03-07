@@ -296,13 +296,6 @@ object JacksonGenerator {
 
         val dtoClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, clsName)
         dtoClass.addAnnotation(new NormalAnnotationExpr(
-          new Name("JsonDeserialize"),
-          new NodeList(new MemberValuePair(
-            "builder",
-            new ClassExpr(JavaParser.parseClassOrInterfaceType(s"${clsName}.Builder"))
-          ))
-        ))
-        dtoClass.addAnnotation(new NormalAnnotationExpr(
           new Name("JsonIgnoreProperties"),
           new NodeList(new MemberValuePair(
             "ignoreUnknown",
@@ -329,8 +322,13 @@ object JacksonGenerator {
         })
 
         val primaryConstructor = dtoClass.addConstructor(PRIVATE)
-        primaryConstructor.addMarkerAnnotation("JsonCreator")  // FIXME: is this needed?
-        primaryConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), JavaParser.parseClassOrInterfaceType("Builder"), new SimpleName("builder")));
+        primaryConstructor.addMarkerAnnotation("JsonCreator")
+        primaryConstructor.setParameters(new NodeList(
+          terms.map({ case ParameterTerm(propertyName, parameterName, fieldType, _) =>
+            new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName))
+              .addAnnotation(new SingleMemberAnnotationExpr(new Name("JsonProperty"), new StringLiteralExpr(propertyName)))
+          }): _*
+        ))
         primaryConstructor.setBody(
           new BlockStmt(
             new NodeList(
@@ -338,8 +336,8 @@ object JacksonGenerator {
                 new ExpressionStmt(new AssignExpr(
                   new FieldAccessExpr(new ThisExpr, parameterName),
                   fieldType match {
-                    case _: PrimitiveType => new FieldAccessExpr(new NameExpr("builder"), parameterName)
-                    case _ => new MethodCallExpr("requireNonNull", new FieldAccessExpr(new NameExpr("builder"), parameterName))
+                    case _: PrimitiveType => new NameExpr(parameterName)
+                    case _ => new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
                   },
                   AssignExpr.Operator.ASSIGN
                 ))
@@ -430,7 +428,7 @@ object JacksonGenerator {
           new ReturnStmt(new ObjectCreationExpr(
             null,
             JavaParser.parseClassOrInterfaceType(clsName),
-            new NodeList(new ThisExpr)
+            new NodeList(terms.map(param => new FieldAccessExpr(new ThisExpr, param.parameterName)): _*)
           ))
         )))
 
@@ -476,7 +474,6 @@ object JacksonGenerator {
           "com.fasterxml.jackson.annotation.JsonCreator",
           "com.fasterxml.jackson.annotation.JsonIgnoreProperties",
           "com.fasterxml.jackson.annotation.JsonProperty",
-          "com.fasterxml.jackson.databind.annotation.JsonDeserialize"
         ).map(safeParseRawImport) ++ List(
           "java.util.Objects.requireNonNull"
         ).map(safeParseRawStaticImport)).sequence
