@@ -38,7 +38,7 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
        |""".stripMargin
 
   test("Ensure routes are generated") {
-    val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil)) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val handler  = q"""
       trait StoreHandler[F[_]] {

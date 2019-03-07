@@ -32,7 +32,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |          description: Success
       |""".stripMargin
 
-    val (_, Clients(Client(_, _, _, _, cls, _) :: _), _) =
+    val (_, Clients(Client(_, _, _, _, cls, _) :: _, Nil), _) =
       runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val client = q"""
@@ -87,7 +87,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
 
     val (
       _,
-      Clients(Client(tags, className, _, _, cls, _) :: _),
+      Clients(Client(tags, className, _, _, cls, _) :: _, Nil),
       _
     ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 

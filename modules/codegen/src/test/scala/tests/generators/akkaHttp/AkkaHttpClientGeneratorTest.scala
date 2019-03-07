@@ -112,7 +112,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, _, staticDefns, cls, _) :: Nil),
+      Clients(Client(tags, className, _, staticDefns, cls, _) :: Nil, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
@@ -182,7 +182,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
   test("Ensure traced responses are generated") {
     val (
       _,
-      Clients(List(Client(tags, className, _, staticDefns, cls, _))),
+      Clients(List(Client(tags, className, _, staticDefns, cls, _)), Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)

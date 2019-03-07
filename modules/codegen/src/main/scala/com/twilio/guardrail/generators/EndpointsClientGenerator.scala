@@ -399,6 +399,8 @@ object EndpointsClientGenerator {
         Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
           params

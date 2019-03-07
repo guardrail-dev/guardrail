@@ -17,7 +17,7 @@ import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, Target, languages}
+import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, SupportDefinition, Target}
 import java.net.URI
 import java.util
 
@@ -379,6 +379,75 @@ object AsyncHttpClientClientGenerator {
         })
 
         Target.pure(List(abstractResponseClass))
+
+      case GenerateSupportDefinitions(tracing) =>
+        for {
+          httpErrorImports <- List(
+            "org.asynchttpclient.Response"
+          ).map(safeParseRawImport).sequence
+        } yield {
+          def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
+            val msgConstructor = cls.addConstructor(PUBLIC)
+            msgConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")))
+            msgConstructor.setBody(new BlockStmt(new NodeList(
+              new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message")))
+            )))
+
+            val msgCauseConstructor = cls.addConstructor(PUBLIC)
+            msgCauseConstructor.setParameters(new NodeList(
+              new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")),
+              new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("cause"))
+            ))
+            msgCauseConstructor.setBody(new BlockStmt(new NodeList(
+              new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message"), new NameExpr("cause")))
+            )))
+          }
+
+          val clientExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "ClientException")
+          clientExceptionClass.addExtendedType("RuntimeException")
+          addStdConstructors(clientExceptionClass)
+
+          val marshallingExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "MarshallingException")
+          marshallingExceptionClass.addExtendedType("ClientException")
+          addStdConstructors(marshallingExceptionClass)
+
+          val httpErrorClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "HttpError")
+          httpErrorClass.addExtendedType("ClientException")
+          httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
+
+          val responseConstructor = httpErrorClass.addConstructor(PUBLIC)
+          responseConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), RESPONSE_TYPE, new SimpleName("response")))
+          responseConstructor.setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(new MethodCallExpr(
+              "super",
+              new BinaryExpr(
+                new StringLiteralExpr("HTTP server responded with status "),
+                new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
+                BinaryExpr.Operator.PLUS
+              )
+            )),
+            new ExpressionStmt(new AssignExpr(
+              new FieldAccessExpr(new ThisExpr, "response"),
+              new NameExpr("response"),
+              AssignExpr.Operator.ASSIGN
+            ))
+          )))
+
+          val getResponseMethod = httpErrorClass.addMethod("getResponse", PUBLIC)
+          getResponseMethod.setType(RESPONSE_TYPE)
+          getResponseMethod.setBody(new BlockStmt(new NodeList(
+            new ReturnStmt(new FieldAccessExpr(new ThisExpr, "response"))
+          )))
+
+          val showerClass = SHOWER_CLASS_DEF
+
+          List(
+            SupportDefinition[JavaLanguage](new Name("ClientException"), List.empty, clientExceptionClass),
+            SupportDefinition[JavaLanguage](new Name("MarshallingException"), List.empty, marshallingExceptionClass),
+            SupportDefinition[JavaLanguage](new Name("HttpError"), httpErrorImports, httpErrorClass),
+            SupportDefinition[JavaLanguage](new Name(showerClass.getNameAsString), List.empty, SHOWER_CLASS_DEF)
+          )
+        }
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         Target.pure(

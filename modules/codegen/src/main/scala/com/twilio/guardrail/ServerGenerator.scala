@@ -11,7 +11,7 @@ import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{RouteMeta, ScalaTerms, SwaggerTerms}
 
-case class Servers[L <: LA](servers: List[Server[L]])
+case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
 case class TracingField[L <: LA](param: ScalaParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
@@ -45,6 +45,7 @@ object ServerGenerator {
         .mapValues(_.map(_._2))
         .toList
       extraImports <- getExtraImports(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>
           val routes       = unsortedRoutes.sortBy(r => (r.path, r.method))
@@ -77,6 +78,6 @@ object ServerGenerator {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
           }
       }
-    } yield Servers[L](servers)
+    } yield Servers[L](servers, supportDefinitions)
   }
 }

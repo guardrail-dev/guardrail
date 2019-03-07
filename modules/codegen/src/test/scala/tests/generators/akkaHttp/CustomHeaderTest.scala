@@ -39,7 +39,7 @@ class CustomHeaderTest extends FunSuite with Matchers with SwaggerSpecRunner {
                            |""".stripMargin
 
   test("Should produce static parameter constraints") {
-    val (_, Clients(client :: Nil), Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil)) =
+    val (_, Clients(client :: Nil, Nil), Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, Nil)) =
       runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler =

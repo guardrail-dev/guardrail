@@ -183,6 +183,9 @@ object AkkaHttpServerGenerator {
             Option(q"import scala.language.higherKinds")
           ).flatten
         }
+
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
     }
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {

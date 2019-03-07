@@ -314,6 +314,9 @@ object Http4sClientGenerator {
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
+
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
                               serverUrls: Option[NonEmptyList[URI]],

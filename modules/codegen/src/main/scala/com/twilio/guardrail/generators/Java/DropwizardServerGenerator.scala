@@ -13,7 +13,7 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Response
-import com.twilio.guardrail.{RenderedRoutes, Target}
+import com.twilio.guardrail.{RenderedRoutes, SupportDefinition, Target}
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.server._
@@ -314,6 +314,12 @@ object DropwizardServerGenerator {
 
           abstractResponseClass :: Nil
         }
+
+      case GenerateSupportDefinitions(tracing) =>
+        val showerClass = SHOWER_CLASS_DEF
+        Target.pure(List(
+          SupportDefinition[JavaLanguage](new Name(showerClass.getNameAsString), List.empty, showerClass)
+        ))
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         def doRender: Target[List[BodyDeclaration[_]]] = {

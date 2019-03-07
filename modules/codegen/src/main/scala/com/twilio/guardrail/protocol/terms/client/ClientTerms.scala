@@ -6,7 +6,7 @@ import cats.free.Free
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems }
+import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition}
 import java.net.URI
 
 class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
@@ -24,6 +24,8 @@ class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
     Free.inject[ClientTerm[L, ?], F](ClientClsArgs[L](tracingName, serverUrls, tracing))
   def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
     Free.inject[ClientTerm[L, ?], F](GenerateResponseDefinitions[L](operationId, responses, protocolElems))
+  def generateSupportDefinitions(tracing: Boolean): Free[F, List[SupportDefinition[L]]] =
+    Free.inject[ClientTerm[L, ?], F](GenerateSupportDefinitions[L](tracing))
   def buildStaticDefns(clientName: String,
                        tracingName: Option[String],
                        serverUrls: Option[NonEmptyList[URI]],

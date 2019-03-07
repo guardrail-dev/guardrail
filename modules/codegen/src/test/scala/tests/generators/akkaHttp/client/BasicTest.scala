@@ -107,7 +107,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, _, _, cls, _) :: _),
+      Clients(Client(tags, className, _, _, cls, _) :: _, Nil),
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 

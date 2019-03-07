@@ -107,7 +107,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Properly handle all methods") {
     val (
       _,
-      Clients(Client(tags, className, _, staticDefns, cls, statements) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, Http4s)
     val cmp = companionForStaticDefns(staticDefns)

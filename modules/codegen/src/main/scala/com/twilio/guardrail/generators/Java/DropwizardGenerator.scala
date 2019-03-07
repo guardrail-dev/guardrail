@@ -16,8 +16,6 @@ import com.twilio.guardrail.terms.framework._
 import java.util
 
 object DropwizardGenerator {
-  private val RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("org.asynchttpclient.Response")
-
   object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: FrameworkTerm[JavaLanguage, T]): Target[T] = term match {
       case FileType(format) => safeParseType(format.getOrElse("java.io.File"))
@@ -30,67 +28,7 @@ object DropwizardGenerator {
         Target.pure(None)
 
       case GetFrameworkDefinitions() =>
-        def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
-          val msgConstructor = cls.addConstructor(PUBLIC)
-          msgConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")))
-          msgConstructor.setBody(new BlockStmt(new NodeList(
-            new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message")))
-          )))
-
-          val msgCauseConstructor = cls.addConstructor(PUBLIC)
-          msgCauseConstructor.setParameters(new NodeList(
-            new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")),
-            new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("cause"))
-          ))
-          msgCauseConstructor.setBody(new BlockStmt(new NodeList(
-            new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message"), new NameExpr("cause")))
-          )))
-        }
-
-        val clientExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "ClientException")
-        clientExceptionClass.addExtendedType("RuntimeException")
-        addStdConstructors(clientExceptionClass)
-
-        val marshallingExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "MarshallingException")
-        marshallingExceptionClass.addExtendedType("ClientException")
-        addStdConstructors(marshallingExceptionClass)
-
-        val httpErrorClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "HttpError")
-        httpErrorClass.addExtendedType("ClientException")
-        httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
-
-        val responseConstructor = httpErrorClass.addConstructor(PUBLIC)
-        responseConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), RESPONSE_TYPE, new SimpleName("response")))
-        responseConstructor.setBody(new BlockStmt(new NodeList(
-          new ExpressionStmt(new MethodCallExpr(
-            "super",
-            new BinaryExpr(
-              new StringLiteralExpr("HTTP server responded with status "),
-              new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
-              BinaryExpr.Operator.PLUS
-            )
-          )),
-          new ExpressionStmt(new AssignExpr(
-            new FieldAccessExpr(new ThisExpr, "response"),
-            new NameExpr("response"),
-            AssignExpr.Operator.ASSIGN
-          ))
-        )))
-
-        val getResponseMethod = httpErrorClass.addMethod("getResponse", PUBLIC)
-        getResponseMethod.setType(RESPONSE_TYPE)
-        getResponseMethod.setBody(new BlockStmt(new NodeList(
-          new ReturnStmt(new FieldAccessExpr(new ThisExpr, "response"))
-        )))
-
-        val showerClass = SHOWER_CLASS_DEF
-
-        Target.pure(List(
-          (new Name("ClientException"), clientExceptionClass),
-          (new Name("MarshallingException"), marshallingExceptionClass),
-          (new Name("HttpError"), httpErrorClass),
-          (new Name(showerClass.getNameAsString), showerClass)
-        ))
+        Target.pure(List.empty)
 
       case LookupStatusCode(key) =>
         def parseStatusCode(code: Int, termName: String): Target[(Int, Name)] =

@@ -84,6 +84,9 @@ object Http4sServerGenerator {
           } else Target.pure(List.empty)
         } yield res
 
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
+
       case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")

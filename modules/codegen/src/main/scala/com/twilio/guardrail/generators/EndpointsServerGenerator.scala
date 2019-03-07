@@ -13,6 +13,7 @@ object EndpointsServerGenerator {
       case GenerateRoutes(resourceName, basePath, routes, protocolElems)                                                         => ???
       case RenderHandler(handlerName, methodSigs, handlerDefinitions)                                                            => ???
       case GetExtraRouteParams(tracing)                                                                                          => ???
+      case GenerateSupportDefinitions(tracing)                                                                                   => ???
       case RenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) => ???
       case GetExtraImports(tracing)                                                                                              => ???
     }

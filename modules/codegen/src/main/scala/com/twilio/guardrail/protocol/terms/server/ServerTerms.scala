@@ -2,8 +2,8 @@ package com.twilio.guardrail.protocol.terms.server
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
-import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
+import com.twilio.guardrail.{RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField}
+import com.twilio.guardrail.generators.{Responses, ScalaParameters}
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models.Operation
@@ -20,6 +20,8 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
     Free.inject[ServerTerm[L, ?], F](GetExtraRouteParams(tracing))
   def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
     Free.inject[ServerTerm[L, ?], F](GenerateResponseDefinitions(operationId, responses, protocolElems))
+  def generateSupportDefinitions(tracing: Boolean): Free[F, List[SupportDefinition[L]]] =
+    Free.inject[ServerTerm[L, ?], F](GenerateSupportDefinitions(tracing))
   def renderClass(resourceName: String,
                   handlerName: String,
                   annotations: List[L#Annotation],

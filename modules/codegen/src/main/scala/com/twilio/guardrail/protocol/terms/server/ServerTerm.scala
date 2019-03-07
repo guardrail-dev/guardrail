@@ -1,6 +1,6 @@
 package com.twilio.guardrail.protocol.terms.server
 
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, TracingField }
+import com.twilio.guardrail.{RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField}
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
@@ -16,6 +16,7 @@ case class GenerateRoutes[L <: LA](resourceName: String,
 case class GetExtraRouteParams[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#MethodParameter]]
 case class GenerateResponseDefinitions[L <: LA](operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]])
     extends ServerTerm[L, List[L#Definition]]
+case class GenerateSupportDefinitions[L <: LA](tracing: Boolean) extends ServerTerm[L, List[SupportDefinition[L]]]
 case class RenderClass[L <: LA](className: String,
                                 handlerName: String,
                                 annotations: List[L#Annotation],

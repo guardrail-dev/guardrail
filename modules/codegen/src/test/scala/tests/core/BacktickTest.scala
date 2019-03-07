@@ -68,7 +68,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Ensure paths are generated with escapes") {
     val (
       _,
-      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _),
+      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
