@@ -429,7 +429,7 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       </td>
     </tr>
     <tr>
-      <td nowrap><code>x-scala-raw-response</code></td>
+      <td nowrap><code>x-server-raw-response</code></td>
       <td>boolean</td>
       <td nowrap>servers, paths</td>
       <td>
