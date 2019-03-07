@@ -2,10 +2,11 @@ package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
 import cats.instances.list._
+import cats.instances.map
 import cats.syntax.traverse._
 import cats.~>
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.{ImportDeclaration, NodeList}
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, Type, VoidType}
 import com.github.javaparser.ast.body._
@@ -170,6 +171,157 @@ object AsyncHttpClientClientGenerator {
     }
   }
 
+  private def generateClientExceptionClasses(): Target[List[(List[ImportDeclaration], ClassOrInterfaceDeclaration)]] = {
+    for {
+      httpErrorImports <- List(
+        "org.asynchttpclient.Response"
+      ).map(safeParseRawImport).sequence
+    } yield {
+      def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
+        cls.addConstructor(PUBLIC)
+          .addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")))
+          .setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message")))
+          )))
+
+        cls.addConstructor(PUBLIC)
+          .setParameters(new NodeList(
+            new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")),
+            new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("cause"))
+          ))
+          .setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message"), new NameExpr("cause")))
+          )))
+      }
+
+      val clientExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "ClientException")
+        .addExtendedType("RuntimeException")
+      addStdConstructors(clientExceptionClass)
+
+      val marshallingExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "MarshallingException")
+        .addExtendedType("ClientException")
+      addStdConstructors(marshallingExceptionClass)
+
+      val httpErrorClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "HttpError")
+        .addExtendedType("ClientException")
+      httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
+
+      httpErrorClass.addConstructor(PUBLIC)
+        .addParameter(new Parameter(util.EnumSet.of(FINAL), RESPONSE_TYPE, new SimpleName("response")))
+        .setBody(new BlockStmt(new NodeList(
+          new ExpressionStmt(new MethodCallExpr(
+            "super",
+            new BinaryExpr(
+              new StringLiteralExpr("HTTP server responded with status "),
+              new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
+              BinaryExpr.Operator.PLUS
+            )
+          )),
+          new ExpressionStmt(new AssignExpr(
+            new FieldAccessExpr(new ThisExpr, "response"),
+            new NameExpr("response"),
+            AssignExpr.Operator.ASSIGN
+          ))
+        )))
+
+      httpErrorClass.addMethod("getResponse", PUBLIC)
+        .setType(RESPONSE_TYPE)
+        .setBody(new BlockStmt(new NodeList(
+          new ReturnStmt(new FieldAccessExpr(new ThisExpr, "response"))
+        )))
+
+      List(
+        (List.empty, clientExceptionClass),
+        (List.empty, marshallingExceptionClass),
+        (httpErrorImports, httpErrorClass)
+      )
+    }
+  }
+
+  def generateAsyncHttpClientSupportClass(): Target[(List[ImportDeclaration], ClassOrInterfaceDeclaration)] = {
+    for {
+      imports <- List(
+        "java.util.concurrent.CompletionStage",
+        "java.util.function.Function",
+        "org.asynchttpclient.AsyncHttpClient",
+        "org.asynchttpclient.AsyncHttpClientConfig",
+        "org.asynchttpclient.DefaultAsyncHttpClient",
+        "org.asynchttpclient.DefaultAsyncHttpClientConfig",
+        "org.asynchttpclient.Request",
+        "org.asynchttpclient.Response"
+      ).map(safeParseRawImport).sequence
+    } yield {
+      val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "AsyncHttpClientSupport")
+      cls.addConstructor(PRIVATE)
+
+      val ahcConfigBuilder = new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE, new NodeList())
+      val ahcConfig = new MethodCallExpr(
+        List(
+          ("setMaxRequestRetry", 2),
+          ("setConnectTimeout", 3000),
+          ("setRequestTimeout", 10000),
+          ("setReadTimeout", 3000),
+          ("setMaxConnections", 1024),
+          ("setMaxConnectionsPerHost", 1024)
+        ).foldLeft[Expression](ahcConfigBuilder)({ case (lastExpr, (name, arg)) =>
+          new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg)))
+        }), "build", new NodeList[Expression]()
+      )
+
+      cls.addMethod("createDefaultAsyncHttpClient", PUBLIC, STATIC)
+        .setType(ASYNC_HTTP_CLIENT_TYPE)
+        .setBody(new BlockStmt(new NodeList(
+          new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(ASYNC_HTTP_CLIENT_CONFIG_TYPE, "config", ahcConfig), FINAL)),
+          new ReturnStmt(
+            new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_TYPE, new NodeList(new NameExpr("config")))
+          )
+        )))
+
+
+      cls.addMethod("createHttpClient", PUBLIC, STATIC)
+        .setType(HTTP_CLIENT_FUNCTION_TYPE)
+        .addParameter(new Parameter(util.EnumSet.of(FINAL), ASYNC_HTTP_CLIENT_TYPE, new SimpleName("client")))
+        .setBody(new BlockStmt(new NodeList(
+          new ReturnStmt(new LambdaExpr(
+            new NodeList(new Parameter(util.EnumSet.of(FINAL), REQUEST_TYPE, new SimpleName("request"))),
+            new ExpressionStmt(new MethodCallExpr(new MethodCallExpr(new NameExpr("client"), "executeRequest", new NodeList[Expression](new NameExpr("request"))), "toCompletableFuture")),
+            true
+          ))
+        )))
+
+      (imports, cls)
+    }
+  }
+
+  def generateJacksonSupportClass(): Target[(List[ImportDeclaration], ClassOrInterfaceDeclaration)] = {
+    for {
+      imports <- List(
+        "com.fasterxml.jackson.databind.ObjectMapper",
+        "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
+        "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule"
+      ).map(safeParseRawImport).sequence
+    } yield {
+      val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "JacksonSupport")
+      cls.addConstructor(PRIVATE)
+
+      cls.addMethod("configureObjectMapper", PUBLIC, STATIC)
+        .setType(OBJECT_MAPPER_TYPE)
+        .addParameter(new Parameter(util.EnumSet.of(FINAL), OBJECT_MAPPER_TYPE, new SimpleName("objectMapper")))
+        .setBody(new BlockStmt(new NodeList(
+          List("JavaTimeModule", "Jdk8Module").map(name =>
+            new ExpressionStmt(new MethodCallExpr(
+              new NameExpr("objectMapper"),
+              "registerModule",
+              new NodeList[Expression](new ObjectCreationExpr(null, JavaParser.parseClassOrInterfaceType(name), new NodeList()))
+            ))
+          ) :+
+            new ReturnStmt(new NameExpr("objectMapper")): _*
+        )))
+
+      (imports, cls)
+    }
+  }
+
   object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(_, RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
@@ -276,12 +428,6 @@ object AsyncHttpClientClientGenerator {
             "com.fasterxml.jackson.core.JsonProcessingException",
             "com.fasterxml.jackson.core.type.TypeReference",
             "com.fasterxml.jackson.databind.ObjectMapper",
-            "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
-            "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
-            "org.asynchttpclient.AsyncHttpClient",
-            "org.asynchttpclient.AsyncHttpClientConfig",
-            "org.asynchttpclient.DefaultAsyncHttpClient",
-            "org.asynchttpclient.DefaultAsyncHttpClientConfig",
             "org.asynchttpclient.Request",
             "org.asynchttpclient.RequestBuilder",
             "org.asynchttpclient.Response",
@@ -382,70 +528,18 @@ object AsyncHttpClientClientGenerator {
 
       case GenerateSupportDefinitions(tracing) =>
         for {
-          httpErrorImports <- List(
-            "org.asynchttpclient.Response"
-          ).map(safeParseRawImport).sequence
+          exceptionClasses <- generateClientExceptionClasses()
+          ahcSupport <- generateAsyncHttpClientSupportClass()
+          (ahcSupportImports, ahcSupportClass) = ahcSupport
+          jacksonSupport <- generateJacksonSupportClass()
+          (jacksonSupportImports, jacksonSupportClass) = jacksonSupport
         } yield {
-          def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
-            val msgConstructor = cls.addConstructor(PUBLIC)
-            msgConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")))
-            msgConstructor.setBody(new BlockStmt(new NodeList(
-              new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message")))
-            )))
-
-            val msgCauseConstructor = cls.addConstructor(PUBLIC)
-            msgCauseConstructor.setParameters(new NodeList(
-              new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("message")),
-              new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("cause"))
-            ))
-            msgCauseConstructor.setBody(new BlockStmt(new NodeList(
-              new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message"), new NameExpr("cause")))
-            )))
-          }
-
-          val clientExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "ClientException")
-          clientExceptionClass.addExtendedType("RuntimeException")
-          addStdConstructors(clientExceptionClass)
-
-          val marshallingExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "MarshallingException")
-          marshallingExceptionClass.addExtendedType("ClientException")
-          addStdConstructors(marshallingExceptionClass)
-
-          val httpErrorClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "HttpError")
-          httpErrorClass.addExtendedType("ClientException")
-          httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
-
-          val responseConstructor = httpErrorClass.addConstructor(PUBLIC)
-          responseConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), RESPONSE_TYPE, new SimpleName("response")))
-          responseConstructor.setBody(new BlockStmt(new NodeList(
-            new ExpressionStmt(new MethodCallExpr(
-              "super",
-              new BinaryExpr(
-                new StringLiteralExpr("HTTP server responded with status "),
-                new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
-                BinaryExpr.Operator.PLUS
-              )
-            )),
-            new ExpressionStmt(new AssignExpr(
-              new FieldAccessExpr(new ThisExpr, "response"),
-              new NameExpr("response"),
-              AssignExpr.Operator.ASSIGN
-            ))
-          )))
-
-          val getResponseMethod = httpErrorClass.addMethod("getResponse", PUBLIC)
-          getResponseMethod.setType(RESPONSE_TYPE)
-          getResponseMethod.setBody(new BlockStmt(new NodeList(
-            new ReturnStmt(new FieldAccessExpr(new ThisExpr, "response"))
-          )))
-
-          val showerClass = SHOWER_CLASS_DEF
-
-          List(
-            SupportDefinition[JavaLanguage](new Name("ClientException"), List.empty, clientExceptionClass),
-            SupportDefinition[JavaLanguage](new Name("MarshallingException"), List.empty, marshallingExceptionClass),
-            SupportDefinition[JavaLanguage](new Name("HttpError"), httpErrorImports, httpErrorClass),
-            SupportDefinition[JavaLanguage](new Name(showerClass.getNameAsString), List.empty, SHOWER_CLASS_DEF)
+          exceptionClasses.map({ case (imports, cls) =>
+            SupportDefinition[JavaLanguage](new Name(cls.getNameAsString), imports, cls)
+          }) ++ List(
+            SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, ahcSupportClass),
+            SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, jacksonSupportClass),
+            SupportDefinition[JavaLanguage](new Name(SHOWER_CLASS_DEF.getNameAsString), List.empty, SHOWER_CLASS_DEF)
           )
         }
 
@@ -563,8 +657,11 @@ object AsyncHttpClientClientGenerator {
           addSetter(STRING_TYPE, "clientName", nonNullInitializer)
         }
         addSetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))
-        addSetter(OBJECT_MAPPER_TYPE, "objectMapper",
-          optionalInitializer(name => new MethodCallExpr("configureObjectMapper", new NameExpr(name))))
+        addSetter(OBJECT_MAPPER_TYPE, "objectMapper", optionalInitializer(name => new MethodCallExpr(
+          new NameExpr("JacksonSupport"),
+          "configureObjectMapper",
+          new NodeList[Expression](new NameExpr(name)))
+        ))
 
         val buildMethod = builderClass.addMethod("build", PUBLIC)
         buildMethod.setType(clientType)
@@ -585,53 +682,18 @@ object AsyncHttpClientClientGenerator {
             ))
           )))
         }
-        addInternalGetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient",
-          new MethodCallExpr("createDefaultHttpClient"))
-        addInternalGetter(OBJECT_MAPPER_TYPE, "objectMapper",
-          new MethodCallExpr("configureObjectMapper", new ObjectCreationExpr(null, OBJECT_MAPPER_TYPE, new NodeList())))
-
-        val ahcConfigBuilder = new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE, new NodeList())
-        val ahcConfig = new MethodCallExpr(
-          List(
-            ("setMaxRequestRetry", 2),
-            ("setConnectTimeout", 3000),
-            ("setRequestTimeout", 10000),
-            ("setReadTimeout", 3000),
-            ("setMaxConnections", 1024),
-            ("setMaxConnectionsPerHost", 1024)
-          ).foldLeft[Expression](ahcConfigBuilder)({ case (lastExpr, (name, arg)) =>
-            new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg)))
-          }), "build", new NodeList[Expression]())
-
-        val createDefaultHttpClientMethod = builderClass.addMethod("createDefaultHttpClient", PRIVATE, STATIC)
-        createDefaultHttpClientMethod.setType(HTTP_CLIENT_FUNCTION_TYPE)
-        createDefaultHttpClientMethod.setBody(new BlockStmt(new NodeList(
-          new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(ASYNC_HTTP_CLIENT_CONFIG_TYPE, "config", ahcConfig), FINAL)),
-          new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(
-            ASYNC_HTTP_CLIENT_TYPE,
-            "client",
-            new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_TYPE, new NodeList(new NameExpr("config")))
-          ), FINAL)),
-          new ReturnStmt(new LambdaExpr(
-            new NodeList(new Parameter(util.EnumSet.of(FINAL), REQUEST_TYPE, new SimpleName("request"))),
-            new ExpressionStmt(new MethodCallExpr(new MethodCallExpr(new NameExpr("client"), "executeRequest", new NodeList[Expression](new NameExpr("request"))), "toCompletableFuture")),
-            true
-          ))
-        )))
-
-        val configureObjectMapperMethod = builderClass.addMethod("configureObjectMapper", PRIVATE, STATIC)
-        configureObjectMapperMethod.setType(OBJECT_MAPPER_TYPE)
-        configureObjectMapperMethod.addParameter(new Parameter(util.EnumSet.of(FINAL), OBJECT_MAPPER_TYPE, new SimpleName("objectMapper")))
-        configureObjectMapperMethod.setBody(new BlockStmt(new NodeList(
-          List("JavaTimeModule", "Jdk8Module").map(name =>
-            new ExpressionStmt(new MethodCallExpr(
-              new NameExpr("objectMapper"),
-              "registerModule",
-              new NodeList[Expression](new ObjectCreationExpr(null, JavaParser.parseClassOrInterfaceType(name), new NodeList()))
-            ))
-          ) :+
-          new ReturnStmt(new NameExpr("objectMapper")): _*
-        )))
+        addInternalGetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", new MethodCallExpr(
+          new NameExpr("AsyncHttpClientSupport"),
+          "createHttpClient",
+          new NodeList[Expression](
+            new MethodCallExpr(new NameExpr("AsyncHttpClientSupport"), "createDefaultAsyncHttpClient")
+          )
+        ))
+        addInternalGetter(OBJECT_MAPPER_TYPE, "objectMapper", new MethodCallExpr(
+          new NameExpr("JacksonSupport"),
+          "configureObjectMapper",
+          new NodeList[Expression](new ObjectCreationExpr(null, OBJECT_MAPPER_TYPE, new NodeList()))
+        ))
 
         val clientClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, clientName)
 
