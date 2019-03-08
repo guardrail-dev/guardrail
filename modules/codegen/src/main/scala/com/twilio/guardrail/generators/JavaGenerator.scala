@@ -263,7 +263,8 @@ object JavaGenerator {
             cu.toString(printer).getBytes(StandardCharsets.UTF_8)
           )
         }
-      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, src)) =>
+
+      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, selfHandlerDefinition, serverDefinitions)) =>
         Target.raiseError("TODO: java server generation")
     }
   }

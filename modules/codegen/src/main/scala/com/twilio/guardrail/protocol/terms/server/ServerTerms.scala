@@ -25,9 +25,9 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
                   combinedRouteTerms: L#Term,
                   extraRouteParams: List[L#MethodParameter],
                   responseDefinitions: List[L#Definition],
-                  supportDefinitions: List[L#Definition]): Free[F, List[L#Statement]] =
+                  supportDefinitions: List[L#Definition]): Free[F, List[L#Definition]] =
     Free.inject[ServerTerm[L, ?], F](RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions))
-  def renderHandler(handlerName: String, methodSigs: List[L#MethodDeclaration], handlerDefinitions: List[L#Statement]) =
+  def renderHandler(handlerName: String, methodSigs: List[L#MethodDeclaration], handlerDefinitions: List[L#Statement]): Free[F, L#Definition] =
     Free.inject[ServerTerm[L, ?], F](RenderHandler(handlerName, methodSigs, handlerDefinitions))
   def getExtraImports(tracing: Boolean): Free[F, List[L#Import]] =
     Free.inject[ServerTerm[L, ?], F](GetExtraImports(tracing))

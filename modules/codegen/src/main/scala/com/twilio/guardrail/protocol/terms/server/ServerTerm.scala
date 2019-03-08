@@ -22,7 +22,7 @@ case class RenderClass[L <: LA](className: String,
                                 extraRouteParams: List[L#MethodParameter],
                                 responseDefinitions: List[L#Definition],
                                 supportDefinitions: List[L#Definition])
-    extends ServerTerm[L, List[L#Statement]]
+    extends ServerTerm[L, List[L#Definition]]
 case class RenderHandler[L <: LA](handlerName: String, methodSigs: List[L#MethodDeclaration], handlerDefinitions: List[L#Statement])
-    extends ServerTerm[L, L#Statement]
+    extends ServerTerm[L, L#Definition]
 case class GetExtraImports[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#Import]]

@@ -1,21 +1,18 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
-import cats.Id
-import cats.data.NonEmptyList
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.generators.{ Http4sHelper, ScalaParameter }
+import com.twilio.guardrail.generators.{Http4sHelper, ScalaParameter}
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
-import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
-import scala.collection.JavaConverters._
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{RouteMeta, ScalaTerms, SwaggerTerms}
 
 case class Servers[L <: LA](servers: List[Server[L]])
-case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], src: List[L#Statement])
+case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
 case class TracingField[L <: LA](param: ScalaParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
     routes: L#Term,
@@ -25,7 +22,6 @@ case class RenderedRoutes[L <: LA](
 )
 
 object ServerGenerator {
-  import NelShim._
 
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
@@ -67,7 +63,7 @@ object ServerGenerator {
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
             renderedRoutes   <- generateRoutes(resourceName, basePath, serverOperations, protocolElems)
-            handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
+            handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc <- renderClass(resourceName,
                                     handlerName,
@@ -76,7 +72,7 @@ object ServerGenerator {
                                     responseDefinitions.flatten,
                                     renderedRoutes.supportDefinitions)
           } yield {
-            Server(className, frameworkImports ++ extraImports, handlerSrc +: classSrc)
+            Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
           }
       }
     } yield Servers[L](servers)

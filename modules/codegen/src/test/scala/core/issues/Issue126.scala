@@ -25,7 +25,7 @@ class Issue126 extends FunSuite with Matchers with SwaggerSpecRunner {
     val (
       _,
       _,
-      Servers(Server(pkg, extraImports, genHandler :: genResource :: Nil) :: Nil)
+      Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil)
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     val handler  = q"""

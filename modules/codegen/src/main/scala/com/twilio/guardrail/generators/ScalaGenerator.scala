@@ -347,7 +347,7 @@ object ScalaGenerator {
             """.syntax.getBytes(StandardCharsets.UTF_8)
           )
         )
-      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, src)) =>
+      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
         Target.pure(
           List(WriteTree(
             resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
@@ -358,7 +358,8 @@ object ScalaGenerator {
               ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
               import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
               ..${customImports}
-              ..$src
+              ${handlerDefinition}
+              ..${serverDefinitions}
               """.syntax.getBytes(StandardCharsets.UTF_8)
           ))
         )
