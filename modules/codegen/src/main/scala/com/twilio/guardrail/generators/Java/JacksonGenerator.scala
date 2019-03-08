@@ -15,7 +15,7 @@ import com.twilio.guardrail.protocol.terms.protocol._
 import java.util.Locale
 import scala.collection.JavaConverters._
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.{ImportDeclaration, NodeList}
+import com.github.javaparser.ast.{ImportDeclaration, Node, NodeList}
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.Modifier.{ABSTRACT, FINAL, PRIVATE, PUBLIC, STATIC}
 import com.github.javaparser.ast.body._
@@ -25,35 +25,32 @@ import scala.language.existentials
 import scala.util.Try
 
 object JacksonGenerator {
-  import ProtocolGenerator._
-
   private case class ParameterTerm(propertyName: String,
                                    parameterName: String,
                                    fieldType: Type,
-                                   parameterType: Type)
+                                   parameterType: Type,
+                                   defaultValue: Option[Expression])
 
   // returns a tuple of (requiredTerms, optionalTerms)
+  // note that required terms _that have a default value_ are conceptually optional.
   private def sortParams(params: List[ProtocolParameter[JavaLanguage]]): (List[ParameterTerm], List[ParameterTerm]) = {
-    // TODO: if a required field has a default specified, include it in optionalTerms instead
-    val (req, opt) = params.partition(_.term.getType match {
-      case cls: ClassOrInterfaceType => !cls.isOptional
-      case _ => true
-    })
-
-    val requiredTerms = req.map({ param =>
-      val types = param.term.getType.unbox
-      ParameterTerm(param.name, param.term.getNameAsString, types, types)
-    })
-
-    val optionalTerms = opt.flatMap(param => param.term.getType match {
-      case cls: ClassOrInterfaceType => cls.getTypeArguments.asScala.flatMap({ typeArgument =>
-        val parameterType = typeArgument.asScala.headOption.map(_.unbox)
-        parameterType.map(pt => ParameterTerm(param.name, param.term.getNameAsString, param.term.getType, pt))
-      })
+    def defaultValueToExpression(defaultValue: Option[Node]): Option[Expression] = defaultValue match {
+      case Some(expr: Expression) => Some(expr)
       case _ => None
-    })
+    }
 
-    (requiredTerms, optionalTerms)
+    params.map({ case ProtocolParameter(term, name, _, _, _, selfDefaultValue) =>
+      val parameterType = if (term.getType.isOptional) {
+        term.getType.containedType.unbox
+      } else {
+        term.getType
+      }
+      val defaultValue = defaultValueToExpression(selfDefaultValue)
+
+      ParameterTerm(name, term.getNameAsString, term.getType, parameterType, defaultValue)
+    }).partition(
+      pt => !pt.fieldType.isOptional && pt.defaultValue.isEmpty
+    )
   }
 
   private def addParents(cls: ClassOrInterfaceDeclaration, parentOpt: Option[SuperClass[JavaLanguage]]): Unit = {
@@ -312,7 +309,7 @@ object JacksonGenerator {
           ))
         })
 
-        terms.foreach({ case ParameterTerm(propertyName, parameterName, fieldType, _) =>
+        terms.foreach({ case ParameterTerm(propertyName, parameterName, fieldType, _, _) =>
           val field: FieldDeclaration = dtoClass.addField(fieldType, parameterName, PRIVATE, FINAL)
           field.addSingleMemberAnnotation("JsonProperty", new StringLiteralExpr(propertyName))
         })
@@ -320,7 +317,7 @@ object JacksonGenerator {
         val primaryConstructor = dtoClass.addConstructor(PRIVATE)
         primaryConstructor.addMarkerAnnotation("JsonCreator")
         primaryConstructor.setParameters(new NodeList(
-          terms.map({ case ParameterTerm(propertyName, parameterName, fieldType, _) =>
+          terms.map({ case ParameterTerm(propertyName, parameterName, fieldType, _, _) =>
             new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName))
               .addAnnotation(new SingleMemberAnnotationExpr(new Name("JsonProperty"), new StringLiteralExpr(propertyName)))
           }): _*
@@ -328,7 +325,7 @@ object JacksonGenerator {
         primaryConstructor.setBody(
           new BlockStmt(
             new NodeList(
-              terms.map({ case ParameterTerm(_, parameterName, fieldType, _) =>
+              terms.map({ case ParameterTerm(_, parameterName, fieldType, _, _) =>
                 new ExpressionStmt(new AssignExpr(
                   new FieldAccessExpr(new ThisExpr, parameterName),
                   fieldType match {
@@ -343,7 +340,7 @@ object JacksonGenerator {
         )
 
         // TODO: handle emptyToNull in the return for the getters
-        terms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+        terms.foreach({ case ParameterTerm(_, parameterName, fieldType, _, _) =>
           val method = dtoClass.addMethod(s"get${parameterName.capitalize}", PUBLIC)
           method.setType(fieldType)
           method.setBody(new BlockStmt(new NodeList(
@@ -376,7 +373,7 @@ object JacksonGenerator {
           )
         ))))
 
-        val equalsConditions: List[Expression] = terms.map({ case ParameterTerm(_, parameterName, fieldType, _) =>
+        val equalsConditions: List[Expression] = terms.map({ case ParameterTerm(_, parameterName, fieldType, _, _) =>
           fieldType match {
             case _: PrimitiveType => new BinaryExpr(
               new FieldAccessExpr(new ThisExpr, parameterName),
@@ -431,7 +428,7 @@ object JacksonGenerator {
         val builderMethod = dtoClass.addMethod("builder", PUBLIC, STATIC)
         builderMethod.setType("Builder")
         builderMethod.setParameters(new NodeList(
-          requiredTerms.map({ case ParameterTerm(_, parameterName, _, parameterType) =>
+          requiredTerms.map({ case ParameterTerm(_, parameterName, _, parameterType, _) =>
             new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName))
           }): _*
         ))
@@ -441,7 +438,7 @@ object JacksonGenerator {
               null,
               JavaParser.parseClassOrInterfaceType("Builder"),
               new NodeList(requiredTerms.map({
-                case ParameterTerm(_, parameterName, _, _) => new NameExpr(parameterName)
+                case ParameterTerm(_, parameterName, _, _, _) => new NameExpr(parameterName)
               }): _*)
             )
           )
@@ -449,22 +446,30 @@ object JacksonGenerator {
 
         val builderClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, "Builder")
 
-        requiredTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+        requiredTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, _, _) =>
           builderClass.addField(fieldType, parameterName, PRIVATE, FINAL)
         })
-        optionalTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
-          // TODO: initialize with default if one is specified
-          builderClass.addFieldWithInitializer(fieldType, parameterName, new MethodCallExpr("java.util.Optional.empty"), PRIVATE)
+        optionalTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, _, defaultValue) =>
+          val initializer = defaultValue.fold[Expression](
+            new MethodCallExpr(new NameExpr("java.util.Optional"), "empty")
+          )(dv =>
+            if (fieldType.isOptional) {
+              new MethodCallExpr(new NameExpr("java.util.Optional"), "of", new NodeList[Expression](dv))
+            } else {
+              dv
+            }
+          )
+          builderClass.addFieldWithInitializer(fieldType, parameterName, initializer, PRIVATE)
         })
 
         val builderConstructor = builderClass.addConstructor(PRIVATE)
         builderConstructor.setParameters(new NodeList(
-          requiredTerms.map({ case ParameterTerm(_, parameterName, _, parameterType) =>
+          requiredTerms.map({ case ParameterTerm(_, parameterName, _, parameterType, _) =>
             new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName))
           }): _*
         ))
         builderConstructor.setBody(new BlockStmt(new NodeList(
-          requiredTerms.map({ case ParameterTerm(_, parameterName, fieldType, _) =>
+          requiredTerms.map({ case ParameterTerm(_, parameterName, fieldType, _, _) =>
             new ExpressionStmt(
               new AssignExpr(
                 new FieldAccessExpr(new ThisExpr, parameterName),
@@ -479,7 +484,7 @@ object JacksonGenerator {
         )))
 
         // TODO: leave out with${name}() if readOnlyKey?
-        optionalTerms.foreach({ case ParameterTerm(_, parameterName, _, parameterType) =>
+        optionalTerms.foreach({ case ParameterTerm(_, parameterName, fieldType, parameterType, _) =>
           val setter = builderClass.addMethod(s"with${parameterName.capitalize}", PUBLIC)
           setter.setType("Builder")
           setter.addAndGetParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
@@ -487,7 +492,7 @@ object JacksonGenerator {
             new ExpressionStmt(
               new AssignExpr(
                 new FieldAccessExpr(new ThisExpr, parameterName),
-                new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName)),
+                if (fieldType.isOptional) new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName)) else new NameExpr(parameterName),
                 AssignExpr.Operator.ASSIGN
               )
             ),
@@ -645,7 +650,7 @@ object JacksonGenerator {
 
         addParents(abstractClass, parentOpt)
 
-        terms.foreach({ case ParameterTerm(_, parameterName, fieldType, _) =>
+        terms.foreach({ case ParameterTerm(_, parameterName, fieldType, _, _) =>
           val method: MethodDeclaration = abstractClass.addMethod(s"get${parameterName.capitalize}", PUBLIC, ABSTRACT)
           method.setType(fieldType)
           method.setBody(null)
