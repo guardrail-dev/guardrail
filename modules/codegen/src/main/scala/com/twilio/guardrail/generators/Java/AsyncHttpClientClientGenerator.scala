@@ -2,7 +2,6 @@ package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
 import cats.instances.list._
-import cats.instances.map
 import cats.syntax.traverse._
 import cats.~>
 import com.github.javaparser.JavaParser
@@ -71,95 +70,73 @@ object AsyncHttpClientClientGenerator {
     doShow(param.argType)
   }
 
-  private def optionIfPresent(optionVarType: Type, optionVarName: String, innerStatement: Statement): Statement = {
-    new ExpressionStmt(new MethodCallExpr(new NameExpr(optionVarName), "ifPresent", new NodeList[Expression](
-      new LambdaExpr(new NodeList(new Parameter(util.EnumSet.of(FINAL), optionVarType, new SimpleName("arg"))),
-        innerStatement,
-        true
-      ))
-    ))
-  }
+  private def generateBuilderMethodCall(param: ScalaParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean): Statement = {
+    val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
+    val argName = param.paramName.asString
+    val isList = param.argType.isNamed("List")
 
-  private def generateBuilderMethodCalls(params: List[ScalaParameter[JavaLanguage]], builderMethodName: String): List[Statement] = {
-    val needsMultipart = params.exists(_.isFile)
-    params.map({ param =>
-      val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
-      val argName = if (param.required) param.paramName.asString else "arg"
-      val containedType = param.argType.containedType
-      val isList = if (param.required) param.argType.isNamed("List") else containedType.isNamed("List")
-      val listType = if (param.required) containedType else containedType.containedType
-
-      val makeArgList: String => NodeList[Expression] = name =>
-        if (param.isFile) {
-          new NodeList[Expression](new ObjectCreationExpr(null, FILE_PART_TYPE, new NodeList(
-            new StringLiteralExpr(param.argName.value),
-            new NameExpr(name)
-          )))
-        } else if (needsMultipart) {
-          new NodeList[Expression](new ObjectCreationExpr(null, STRING_PART_TYPE, new NodeList(
-            new StringLiteralExpr(param.argName.value),
-            showParam(param, Some(name))
-          )))
-        } else {
-          new NodeList[Expression](new StringLiteralExpr(param.argName.value), showParam(param, Some(name)))
-        }
-
-      val builderStatement: Statement = if (isList) {
-        new ForEachStmt(
-          new VariableDeclarationExpr(listType, "member", FINAL),
-          new NameExpr(argName),
-          new BlockStmt(new NodeList(
-            new ExpressionStmt(new MethodCallExpr(new NameExpr("builder"), finalMethodName, makeArgList("member")))
-          ))
-        )
+    val makeArgList: String => NodeList[Expression] = name =>
+      if (param.isFile) {
+        new NodeList[Expression](new ObjectCreationExpr(null, FILE_PART_TYPE, new NodeList(
+          new StringLiteralExpr(param.argName.value),
+          new NameExpr(name)
+        )))
+      } else if (needsMultipart) {
+        new NodeList[Expression](new ObjectCreationExpr(null, STRING_PART_TYPE, new NodeList(
+          new StringLiteralExpr(param.argName.value),
+          showParam(param, Some(name))
+        )))
       } else {
-        new ExpressionStmt(new MethodCallExpr(new NameExpr("builder"), finalMethodName, makeArgList(argName)))
+        new NodeList[Expression](new StringLiteralExpr(param.argName.value), showParam(param, Some(name)))
       }
 
-      if (param.required) {
-        builderStatement
-      } else {
-        optionIfPresent(containedType, param.paramName.asString, builderStatement)
-      }
-    })
+    if (isList) {
+      new ForEachStmt(
+        new VariableDeclarationExpr(param.argType.containedType, "member", FINAL),
+        new NameExpr(argName),
+        new BlockStmt(new NodeList(
+          new ExpressionStmt(new MethodCallExpr(new NameExpr("builder"), finalMethodName, makeArgList("member")))
+        ))
+      )
+    } else {
+      new ExpressionStmt(new MethodCallExpr(new NameExpr("builder"), finalMethodName, makeArgList(argName)))
+    }
   }
 
-  private def generateBodyMethodCall(param: Option[ScalaParameter[JavaLanguage]]): Option[Statement] = {
+  private def generateBodyMethodCall(param: ScalaParameter[JavaLanguage]): Statement = {
     def wrapSetBody(expr: Expression): MethodCallExpr = {
       new MethodCallExpr(new NameExpr("builder"), "setBody", new NodeList[Expression](expr))
     }
 
-    param.map({ param =>
-      if (param.isFile) {
-        new ExpressionStmt(wrapSetBody(new ObjectCreationExpr(null, FILE_PART_TYPE, new NodeList(
-          new StringLiteralExpr(param.argName.value),
-          new NameExpr(param.paramName.asString)
-        ))))
-      } else {
-        new TryStmt(
-          new BlockStmt(new NodeList(
-            new ExpressionStmt(wrapSetBody(new MethodCallExpr(
-              new FieldAccessExpr(new ThisExpr, "objectMapper"),
-              "writeValueAsString",
-              new NodeList[Expression](new NameExpr(param.paramName.asString))
-            )))
-          )),
-          new NodeList(
-            new CatchClause(
-              new Parameter(util.EnumSet.of(FINAL), JSON_PROCESSING_EXCEPTION_TYPE, new SimpleName("e")),
-              new BlockStmt(new NodeList(
-                new ThrowStmt(new ObjectCreationExpr(
-                  null,
-                  ILLEGAL_ARGUMENT_EXCEPTION_TYPE,
-                  new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
-                ))
+    if (param.isFile) {
+      new ExpressionStmt(wrapSetBody(new ObjectCreationExpr(null, FILE_PART_TYPE, new NodeList(
+        new StringLiteralExpr(param.argName.value),
+        new NameExpr(param.paramName.asString)
+      ))))
+    } else {
+      new TryStmt(
+        new BlockStmt(new NodeList(
+          new ExpressionStmt(wrapSetBody(new MethodCallExpr(
+            new FieldAccessExpr(new ThisExpr, "objectMapper"),
+            "writeValueAsString",
+            new NodeList[Expression](new NameExpr(param.paramName.asString))
+          )))
+        )),
+        new NodeList(
+          new CatchClause(
+            new Parameter(util.EnumSet.of(FINAL), JSON_PROCESSING_EXCEPTION_TYPE, new SimpleName("e")),
+            new BlockStmt(new NodeList(
+              new ThrowStmt(new ObjectCreationExpr(
+                null,
+                MARSHALLING_EXCEPTION_TYPE,
+                new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
               ))
-            )
-          ),
-          null
-        )
-      }
-    })
+            ))
+          )
+        ),
+        null
+      )
+    }
   }
 
   private def jacksonTypeReferenceFor(tpe: Type): Expression = {
@@ -326,20 +303,23 @@ object AsyncHttpClientClientGenerator {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(_, RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
         val responseParentName = s"${operation.getOperationId.capitalize}Response"
+        val callBuilderName = s"${operation.getOperationId.capitalize}CallBuilder"
         for {
           responseParentType <- safeParseClassOrInterfaceType(responseParentName)
+          callBuilderType <- safeParseClassOrInterfaceType(callBuilderName)
           pathExpr <- jpaths.generateUrlPathParams(pathStr, parameters.pathParams)
         } yield {
           val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, methodName)
-          method.setType(completionStageType.setTypeArguments(responseParentType))
+            .setType(callBuilderType)
 
           parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
-          val pathParams = parameters.pathParams.map(_.param)
-          val qsParams = parameters.queryStringParams.map(_.param)
-          val formParams = parameters.formParams.map(_.param)
-          val headerParams = parameters.headerParams.map(_.param)
-          val bodyParams = parameters.bodyParams.map(_.param).toList
-          (pathParams ++ qsParams ++ formParams ++ headerParams ++ bodyParams).foreach(method.addParameter)
+          (
+            parameters.pathParams ++
+              parameters.queryStringParams ++
+              parameters.formParams ++
+              parameters.headerParams ++
+              parameters.bodyParams
+          ).filter(_.required).map(_.param).foreach(method.addParameter)
 
           val requestBuilder = new MethodCallExpr(
             new AssignExpr(new VariableDeclarationExpr(
@@ -352,12 +332,73 @@ object AsyncHttpClientClientGenerator {
             "setUrl", new NodeList[Expression](pathExpr)
           )
 
-          val builderMethodCalls: List[Statement] = List(
-            generateBuilderMethodCalls(parameters.queryStringParams, "addQueryParam"),
-            generateBuilderMethodCalls(parameters.formParams, "addFormParam"),
-            generateBuilderMethodCalls(parameters.headerParams, "addHeader"),
-            generateBodyMethodCall(parameters.bodyParams).toList
-          ).flatten
+          val builderParamsMethodNames = List(
+            (parameters.queryStringParams, "addQueryParam", false),
+            (parameters.formParams, "addFormParam", parameters.formParams.exists(_.isFile)),
+            (parameters.headerParams, "addHeader", false)
+          )
+
+          val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
+            .flatMap({ case (params, name, needsMultipart) =>
+              params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
+            }) ++
+            parameters.bodyParams.map(param => (param, generateBodyMethodCall(param)))
+
+          val callBuilderCreation = new ObjectCreationExpr(null, callBuilderType, new NodeList(
+            new NameExpr("builder"),
+            new FieldAccessExpr(new ThisExpr, "httpClient"),
+            new FieldAccessExpr(new ThisExpr, "objectMapper")
+          ))
+
+          method.setBody(new BlockStmt(new NodeList(
+            new ExpressionStmt(requestBuilder) +:
+              builderMethodCalls.filter(_._1.required).map(_._2) :+
+              new ReturnStmt(callBuilderCreation): _*
+          )))
+
+          val callBuilderFinalFields = List(
+            (REQUEST_BUILDER_TYPE, "builder"),
+            (HTTP_CLIENT_FUNCTION_TYPE, "httpClient"),
+            (OBJECT_MAPPER_TYPE, "objectMapper")
+          )
+
+          val callBuilderCls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, callBuilderName)
+          callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, FINAL) })
+
+          callBuilderCls.addConstructor(PRIVATE)
+            .setParameters(callBuilderFinalFields.map({ case (tpe, name) => new Parameter(util.EnumSet.of(FINAL), tpe, new SimpleName(name)) }).toNodeList)
+            .setBody(new BlockStmt(
+              callBuilderFinalFields.map[Statement, List[Statement]]({ case (_, name) =>
+                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN))
+              }).toNodeList
+            ))
+
+          val optionalParamMethods = builderMethodCalls
+            .filterNot(_._1.required)
+            .map({ case (ScalaParameter(_, param, _, _, argType), methodCall) =>
+              new MethodDeclaration(util.EnumSet.of(PUBLIC), s"with${param.getNameAsString.unescapeReservedWord.capitalize}", callBuilderType, List(
+                new Parameter(util.EnumSet.of(FINAL), argType.containedType.unbox, new SimpleName(param.getNameAsString))
+              ).toNodeList).setBody(new BlockStmt(List(
+                methodCall,
+                new ReturnStmt(new ThisExpr)
+              ).toNodeList))
+            })
+          optionalParamMethods.foreach(callBuilderCls.addMember)
+
+          callBuilderCls.addMethod("withHeader", PUBLIC)
+            .setParameters(List(
+              new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("name")),
+              new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("value")),
+            ).toNodeList)
+            .setType(callBuilderType)
+            .setBody(new BlockStmt(List(
+              new ExpressionStmt(new MethodCallExpr(
+                new FieldAccessExpr(new ThisExpr, "builder"),
+                "addHeader",
+                List[Expression](new NameExpr("name"), new NameExpr("value")).toNodeList
+              )),
+              new ReturnStmt(new ThisExpr)
+            ).toNodeList))
 
           val httpMethodCallExpr = new MethodCallExpr(
             new FieldAccessExpr(new ThisExpr, "httpClient"),
@@ -408,13 +449,11 @@ object AsyncHttpClientClientGenerator {
             )), true)
           ))
 
-          method.setBody(new BlockStmt(new NodeList(
-            new ExpressionStmt(requestBuilder) +:
-            builderMethodCalls :+
-            new ReturnStmt(requestCall): _*
-          )))
+          callBuilderCls.addMethod("call", PUBLIC)
+            .setType(completionStageType.setTypeArguments(responseParentType))
+            .setBody(new BlockStmt(List[Statement](new ReturnStmt(requestCall)).toNodeList))
 
-          RenderedClientOperation[JavaLanguage](method, List.empty)
+          RenderedClientOperation[JavaLanguage](method, callBuilderCls :: Nil)
         }
 
       case GetImports(tracing) =>
@@ -723,6 +762,7 @@ object AsyncHttpClientClientGenerator {
 
         clientClass.addMember(builderClass)
         clientCalls.foreach(clientClass.addMember)
+        supportDefinitions.foreach(clientClass.addMember)
 
         Target.pure(NonEmptyList(Right(clientClass), Nil))
     }

@@ -72,7 +72,7 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
       .build()
 
     val w = new Waiter
-    client.getUserByName(USERNAME).whenComplete({ (response, t) =>
+    client.getUserByName(USERNAME).call().whenComplete({ (response, t) =>
       w { t shouldBe null }
       response match {
         case r: UserClient.GetUserByNameResponse.Ok =>
