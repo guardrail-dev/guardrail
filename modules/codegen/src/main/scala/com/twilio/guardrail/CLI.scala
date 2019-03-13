@@ -167,12 +167,8 @@ object CLI extends CLICommon {
       case "dropwizard" => Java.Dropwizard
     }, { str =>
       import com.github.javaparser.JavaParser
-      import scala.collection.JavaConverters._
       import scala.util.Try
-      (for {
-        imports <- Try(JavaParser.parse(s"import ${str};")).toOption.toRight(s"Unable to parse ${str} as an import")
-        stat <- imports.getImports().asScala.headOption.toRight(s"${str} was not an import")
-      } yield stat).leftMap(UnparseableArgument("import", _))
+      Try(JavaParser.parseImport(s"import ${str};")).toEither.leftMap(t => UnparseableArgument("import", t.getMessage))
     }
   )
 }
