@@ -193,7 +193,7 @@ object JacksonGenerator {
           extraImports <- List(
             "com.fasterxml.jackson.annotation.JsonCreator",
             "com.fasterxml.jackson.annotation.JsonValue"
-          ).map(safeParseRawImport).sequence
+          ).traverse(safeParseRawImport)
         } yield StaticDefns[JavaLanguage](
           className = clsName,
           extraImports = extraImports,
@@ -591,7 +591,7 @@ object JacksonGenerator {
             "com.fasterxml.jackson.annotation.JsonIgnoreProperties",
             "com.fasterxml.jackson.annotation.JsonSubTypes",
             "com.fasterxml.jackson.annotation.JsonTypeInfo"
-          ).map(safeParseRawImport).sequence
+          ).traverse(safeParseRawImport)
         } yield StaticDefns[JavaLanguage](
           clsName,
           extraImports,

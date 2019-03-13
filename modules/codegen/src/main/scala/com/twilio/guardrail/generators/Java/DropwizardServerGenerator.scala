@@ -74,7 +74,7 @@ object DropwizardServerGenerator {
           "java.util.concurrent.CompletionStage",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory"
-        ).map(safeParseRawImport).sequence
+        ).traverse(safeParseRawImport)
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         if (tracing) {

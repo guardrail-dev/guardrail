@@ -77,7 +77,7 @@ object JavaGenerator {
               None
           }
       case ParseTypeName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).sequence
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseName)
 
       case PureTermName(tpe) =>
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeReservedWord).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
@@ -288,7 +288,7 @@ object JavaGenerator {
           allExtraImports = extraImports ++ List(commonImport, dtoComponentsImport)
 
           handlerTree <- writeDefinition(pkgDecl, allExtraImports, handlerDefinition)
-          serverTrees <- serverDefinitions.map(writeDefinition(pkgDecl, allExtraImports, _)).sequence
+          serverTrees <- serverDefinitions.traverse(writeDefinition(pkgDecl, allExtraImports, _))
         } yield handlerTree +: serverTrees
     }
   }

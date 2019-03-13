@@ -152,7 +152,7 @@ object AsyncHttpClientClientGenerator {
     for {
       httpErrorImports <- List(
         "org.asynchttpclient.Response"
-      ).map(safeParseRawImport).sequence
+      ).traverse(safeParseRawImport)
     } yield {
       def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
         cls.addConstructor(PUBLIC)
@@ -226,7 +226,7 @@ object AsyncHttpClientClientGenerator {
         "org.asynchttpclient.DefaultAsyncHttpClientConfig",
         "org.asynchttpclient.Request",
         "org.asynchttpclient.Response"
-      ).map(safeParseRawImport).sequence
+      ).traverse(safeParseRawImport)
     } yield {
       val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "AsyncHttpClientSupport")
       cls.addConstructor(PRIVATE)
@@ -276,7 +276,7 @@ object AsyncHttpClientClientGenerator {
         "com.fasterxml.jackson.databind.ObjectMapper",
         "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
         "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule"
-      ).map(safeParseRawImport).sequence
+      ).traverse(safeParseRawImport)
     } yield {
       val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "JacksonSupport")
       cls.addConstructor(PRIVATE)
