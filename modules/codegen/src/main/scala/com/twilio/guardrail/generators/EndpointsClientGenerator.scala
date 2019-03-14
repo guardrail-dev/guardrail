@@ -8,6 +8,7 @@ import cats.arrow.FunctionK
 import cats.data.{ Ior, NonEmptyList }
 import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -20,17 +21,10 @@ import scala.meta._
 object EndpointsClientGenerator {
   object ClientTermInterp extends FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
 
-    private[this] def toDashedCase(s: String): String = {
-      val lowercased =
-        "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
-      "([A-Z])".r
-        .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
-    }
-
     private[this] def formatClientName(clientName: Option[String]): Term.Param =
       clientName.fold(
         param"clientName: String"
-      )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
+      )(name => param"clientName: String = ${Lit.String(name.toDashedCase)}")
 
     private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
       serverUrls
@@ -370,7 +364,7 @@ object EndpointsClientGenerator {
             List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"))
           else List.empty
           tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
+            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
           renderedClientOperation = build(methodName,

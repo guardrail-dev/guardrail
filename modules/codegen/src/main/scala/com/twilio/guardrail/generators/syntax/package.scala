@@ -27,5 +27,12 @@ package object syntax {
       val fromCamel = "[A-Z]".r.replaceAllIn(noPascal, "_" + _.group(0))
       fromCamel.replaceAllLiterally("-", "_")
     }
+
+    def toDashedCase: String = {
+      val lowercased =
+        "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
+      "([A-Z])".r
+        .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
+    }
   }
 }
