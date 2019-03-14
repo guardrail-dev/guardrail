@@ -21,6 +21,7 @@ val javaparserVersion = "3.7.1"
 val endpointsVersion  = "0.8.0"
 val ahcVersion        = "2.8.1"
 val dropwizardVersion = "1.3.9"
+val jerseyVersion     = "2.25.1"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
@@ -284,11 +285,12 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
   .settings(
     codegenSettings,
     libraryDependencies ++= Seq(
-      "io.dropwizard"          %  "dropwizard-core"    % dropwizardVersion,
-      "org.asynchttpclient"    %  "async-http-client"  % ahcVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"            % Test,
-      "org.scalatest"          %% "scalatest"          % scalatestVersion   % Test,
-      "org.mockito"            %% "mockito-scala"      % "1.2.0"            % Test,
+      "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
+      "org.glassfish.jersey.media" %  "jersey-media-multipart" % jerseyVersion,
+      "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
+      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
+      "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
+      "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
     ),
     skip in publish := true,
     scalafmtOnCompile := false

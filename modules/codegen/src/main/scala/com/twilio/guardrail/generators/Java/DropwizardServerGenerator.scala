@@ -12,16 +12,29 @@ import com.github.javaparser.ast.`type`.{PrimitiveType, Type, VoidType}
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.generators.Response
-import com.twilio.guardrail.{RenderedRoutes, SupportDefinition, Target}
+import com.twilio.guardrail.generators.{Response, ScalaParameter, ScalaParameters}
+import com.twilio.guardrail.{ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target}
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
 import io.swagger.v3.oas.models.PathItem.HttpMethod
+import io.swagger.v3.oas.models.responses.ApiResponse
 import java.util
+import scala.collection.JavaConverters._
+import scala.util.Try
 
 object DropwizardServerGenerator {
+  private implicit class ContentTypeExt(val ct: RouteMeta.ContentType) extends AnyVal {
+    def toJaxRsAnnotationName: String = ct match {
+      case RouteMeta.ApplicationJson => "APPLICATION_JSON"
+      case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
+      case RouteMeta.MultipartFormData => "MULTIPART_FORM_DATA"
+      case RouteMeta.TextPlain => "TEXT_PLAIN"
+    }
+  }
+
   private val ASYNC_RESPONSE_TYPE = JavaParser.parseClassOrInterfaceType("AsyncResponse")
   private val RESPONSE_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE = JavaParser.parseClassOrInterfaceType("Logger")
@@ -49,6 +62,57 @@ object DropwizardServerGenerator {
     checkMatch(List.empty, initialHeads, initialRest)
   }
 
+  // FIXME: does this handle includes from other files?
+  private def definitionName(refName: Option[String]): Option[String] = {
+    refName.flatMap({ rn =>
+      rn.split("/").toList match {
+        case "#" :: _ :: name :: Nil => Some(name)
+        case _ => None
+      }
+    })
+  }
+
+  def getBestConsumes(contentTypes: List[RouteMeta.ContentType],
+                      parameters: ScalaParameters[JavaLanguage]): Option[RouteMeta.ContentType] =
+  {
+    val priorityOrder = NonEmptyList.of(
+      RouteMeta.UrlencodedFormData,
+      RouteMeta.ApplicationJson,
+      RouteMeta.MultipartFormData,
+      RouteMeta.TextPlain
+    )
+
+    priorityOrder.foldLeft[Option[RouteMeta.ContentType]](None)({
+      case (s @ Some(_), _) => s
+      case (None, next) => contentTypes.find(_ == next)
+    })
+      .orElse(parameters.formParams.headOption.map(_ => RouteMeta.UrlencodedFormData))
+      .orElse(parameters.bodyParams.map(_ => RouteMeta.ApplicationJson))
+  }
+
+  private def getBestProduces(contentTypes: List[RouteMeta.ContentType],
+                              responses: List[ApiResponse],
+                              protocolElems: List[StrictProtocolElems[JavaLanguage]]): Option[RouteMeta.ContentType] =
+  {
+    val priorityOrder = NonEmptyList.of(
+      RouteMeta.ApplicationJson,
+      RouteMeta.TextPlain
+    )
+
+    priorityOrder.foldLeft[Option[RouteMeta.ContentType]](None)({
+      case (s @ Some(_), _) => s
+      case (None, next) => contentTypes.find(_ == next)
+    })
+      .orElse(responses.map({ resp =>
+        protocolElems.find(pe => definitionName(Option(resp.get$ref())).contains(pe.name)).flatMap({
+          case _: ClassDefinition[_] => Some(RouteMeta.ApplicationJson)
+          case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(RouteMeta.TextPlain)
+          case _: ADT[_] | _: EnumDefinition[_] =>  Some(RouteMeta.TextPlain)
+          case _ => None
+        })
+      }).headOption.flatten)
+  }
+
   object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
@@ -72,6 +136,7 @@ object DropwizardServerGenerator {
           "javax.ws.rs.core.MediaType",
           "javax.ws.rs.core.Response",
           "java.util.concurrent.CompletionStage",
+          "org.glassfish.jersey.media.multipart.FormDataParam",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory"
         ).traverse(safeParseRawImport)
@@ -110,14 +175,30 @@ object DropwizardServerGenerator {
 
             val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
             method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
-            parameters.formParams.headOption.map(_ => "APPLICATION_FORM_URLENCODED")
-              .orElse(parameters.bodyParams.map(_ => "APPLICATION_JSON"))
-              .foreach(produces =>
-                method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), produces)))
-              )
-            if (responses.value.exists(_.value.isDefined)) {
-              method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")))
-            }
+
+            val consumes = getBestConsumes(operation.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
+              .orElse({
+                if (parameters.formParams.nonEmpty) {
+                  if (parameters.formParams.exists(_.isFile)) {
+                    Some(RouteMeta.MultipartFormData)
+                  } else {
+                    Some(RouteMeta.UrlencodedFormData)
+                  }
+                } else if (parameters.bodyParams.nonEmpty) {
+                  Some(RouteMeta.ApplicationJson)
+                } else {
+                  None
+                }
+              })
+            consumes
+              .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
+              .foreach(method.addAnnotation)
+
+            val successResponses = operation.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
+            val produces = getBestProduces(operation.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
+            produces
+              .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
+              .foreach(method.addAnnotation)
 
             def addParamAnnotation(template: Parameter, annotationName: String, paramName: Name): Parameter = {
               val parameter = template.clone()
@@ -129,7 +210,7 @@ object DropwizardServerGenerator {
               (parameters.pathParams, "PathParam"),
               (parameters.headerParams, "HeaderParam"),
               (parameters.queryStringParams, "QueryParam"),
-              (parameters.formParams, "FormParam")
+              (parameters.formParams, if (parameters.formParams.exists(_.isFile)) "FormDataParam" else "FormParam")
             ).flatMap({ case (params, annotationName) =>
               params.map(param => addParamAnnotation(param.param, annotationName, param.paramName))
             }) ++ parameters.bodyParams.map(_.param)
