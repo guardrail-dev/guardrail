@@ -40,7 +40,7 @@ object AsyncHttpClientClientGenerator {
   private val JSON_PROCESSING_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("JsonProcessingException")
   private val CLIENT_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("ClientException")
 
-  private val HTTP_CLIENT_FUNCTION_TYPE = functionType(REQUEST_TYPE, completionStageType.setTypeArguments(RESPONSE_TYPE))
+  private val HTTP_CLIENT_FUNCTION_TYPE = functionType(REQUEST_TYPE, completionStageType(RESPONSE_TYPE))
 
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     JavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
@@ -447,7 +447,7 @@ object AsyncHttpClientClientGenerator {
           ))
 
           callBuilderCls.addMethod("call", PUBLIC)
-            .setType(completionStageType.setTypeArguments(responseParentType))
+            .setType(completionStageType(responseParentType))
             .addThrownException(CLIENT_EXCEPTION_TYPE)
             .setBody(new BlockStmt(List[Statement](new ReturnStmt(requestCall)).toNodeList))
 
@@ -628,12 +628,12 @@ object AsyncHttpClientClientGenerator {
         }
 
         builderClass.addFieldWithInitializer(
-          optionalType.setTypeArguments(HTTP_CLIENT_FUNCTION_TYPE), "httpClient",
+          optionalType(HTTP_CLIENT_FUNCTION_TYPE), "httpClient",
           new MethodCallExpr(new NameExpr("Optional"), "empty"),
           PRIVATE
         )
         builderClass.addFieldWithInitializer(
-          optionalType.setTypeArguments(OBJECT_MAPPER_TYPE), "objectMapper",
+          optionalType(OBJECT_MAPPER_TYPE), "objectMapper",
           new MethodCallExpr(new NameExpr("Optional"), "empty"),
           PRIVATE
         )

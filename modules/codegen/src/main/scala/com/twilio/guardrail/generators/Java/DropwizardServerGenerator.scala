@@ -291,7 +291,7 @@ object DropwizardServerGenerator {
               new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
             )))
 
-            val futureResponseType = completionStageType.setTypeArguments(responseType)
+            val futureResponseType = completionStageType(responseType)
             val handlerMethodSig = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
             (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({ parameter =>
               handlerMethodSig.addParameter(parameter.param.clone())
