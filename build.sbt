@@ -48,7 +48,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
 )
 
 val exampleJavaArgs: List[List[String]] = exampleCases
-  .foldLeft(List[List[String]](List("java", "--debug")))({
+  .foldLeft(List[List[String]](List("java")))({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
         kind <- List("client", "server")
