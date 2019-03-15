@@ -126,19 +126,4 @@ object Java {
         throw new AssertionError("Shower.java in class resources is not valid")
       )
   }
-
-/*
-  implicit class PrintStructure(value: Node) {
-    def toAST: String = {
-      @scala.annotation.tailrec
-      def walk(chunks: List[(String, Int, List[Node], String)]) = {
-        chunks.flatMap { case (pre, level, nodes, post) =>
-          
-        }
-      }
-
-      walk(List(("", 0, List(value), "")))
-    }
-  }
-*/
 }
