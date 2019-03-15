@@ -37,8 +37,8 @@ object AsyncHttpClientClientGenerator {
   private val MARSHALLING_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("MarshallingException")
   private val HTTP_ERROR_TYPE = JavaParser.parseClassOrInterfaceType("HttpError")
   private val EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("Exception")
-  private val ILLEGAL_ARGUMENT_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("IllegalArgumentException")
   private val JSON_PROCESSING_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("JsonProcessingException")
+  private val CLIENT_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("ClientException")
 
   private val HTTP_CLIENT_FUNCTION_TYPE = functionType.setTypeArguments(new NodeList[Type](
       REQUEST_TYPE,
@@ -451,6 +451,7 @@ object AsyncHttpClientClientGenerator {
 
           callBuilderCls.addMethod("call", PUBLIC)
             .setType(completionStageType.setTypeArguments(responseParentType))
+            .addThrownException(CLIENT_EXCEPTION_TYPE)
             .setBody(new BlockStmt(List[Statement](new ReturnStmt(requestCall)).toNodeList))
 
           RenderedClientOperation[JavaLanguage](method, callBuilderCls :: Nil)
