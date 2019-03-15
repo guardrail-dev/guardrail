@@ -167,17 +167,23 @@ object AsyncHttpClientClientGenerator {
             new ExpressionStmt(new MethodCallExpr("super", new NameExpr("message"), new NameExpr("cause")))
           )))
       }
+      def addNoSerialVersionUuid(cls: ClassOrInterfaceDeclaration): Unit = {
+        cls.addSingleMemberAnnotation("SuppressWarnings", new StringLiteralExpr("serial"))
+      }
 
       val clientExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, "ClientException")
         .addExtendedType("RuntimeException")
       addStdConstructors(clientExceptionClass)
+      addNoSerialVersionUuid(clientExceptionClass)
 
       val marshallingExceptionClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "MarshallingException")
         .addExtendedType("ClientException")
       addStdConstructors(marshallingExceptionClass)
+      addNoSerialVersionUuid(marshallingExceptionClass)
 
       val httpErrorClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, "HttpError")
         .addExtendedType("ClientException")
+      addNoSerialVersionUuid(httpErrorClass)
       httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
 
       httpErrorClass.addConstructor(PUBLIC)

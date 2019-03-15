@@ -284,6 +284,9 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
 lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
   .settings(
     codegenSettings,
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
     libraryDependencies ++= Seq(
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
       "org.glassfish.jersey.media" %  "jersey-media-multipart" % jerseyVersion,

@@ -69,8 +69,10 @@ object JacksonGenerator {
       .map(_.tpe)
       .map(f)
 
-  private val HASH_MAP_TYPE = JavaParser.parseClassOrInterfaceType("java.util.HashMap")
-  private val ARRAY_LIST_TYPE = JavaParser.parseClassOrInterfaceType("java.util.ArrayList")
+  private val HASH_MAP_TYPE_DIAMONDED = JavaParser.parseClassOrInterfaceType("java.util.HashMap")
+    .setTypeArguments(new NodeList[Type])
+  private val ARRAY_LIST_TYPE_DIAMONDED = JavaParser.parseClassOrInterfaceType("java.util.ArrayList")
+    .setTypeArguments(new NodeList[Type])
 
   object EnumProtocolTermInterp extends (EnumProtocolTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: EnumProtocolTerm[JavaLanguage, T]): Target[T] = term match {
@@ -222,9 +224,9 @@ object JacksonGenerator {
           for {
             defaultValue <- property match {
               case _: MapSchema =>
-                Target.pure(Option(new ObjectCreationExpr(null, HASH_MAP_TYPE, new NodeList())).map(x => x: Expression))
+                Target.pure(Option(new ObjectCreationExpr(null, HASH_MAP_TYPE_DIAMONDED, new NodeList())).map(x => x: Expression))
               case _: ArraySchema =>
-                Target.pure(Option(new ObjectCreationExpr(null, ARRAY_LIST_TYPE, new NodeList())).map(x => x: Expression))
+                Target.pure(Option(new ObjectCreationExpr(null, ARRAY_LIST_TYPE_DIAMONDED, new NodeList())).map(x => x: Expression))
               case p: BooleanSchema =>
                 Default(p).extract[Boolean].traverse(x => Target.pure(new BooleanLiteralExpr(x)))
               case p: NumberSchema if p.getFormat == "double" =>
