@@ -87,8 +87,8 @@ object Java {
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")
 
   val printer: PrettyPrinterConfiguration = new PrettyPrinterConfiguration()
-    .setColumnAlignFirstMethodChain(true)
-    .setColumnAlignParameters(true)
+    .setColumnAlignFirstMethodChain(false)
+    .setColumnAlignParameters(false)
     .setIndentSize(4)
     .setIndentType(IndentType.SPACES)
     .setOrderImports(true)
