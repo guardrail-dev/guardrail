@@ -230,12 +230,18 @@ object DropwizardServerGenerator {
               new IfStmt(
                 new InstanceOfExpr(new NameExpr("result"), responseType),
                 new BlockStmt(new NodeList(
-                  new ExpressionStmt(new VariableDeclarationExpr(new VariableDeclarator(responseType, s"result${statusCodeName}", new CastExpr(responseType, new NameExpr("result"))), FINAL)),
                   new ExpressionStmt(
-                  new MethodCallExpr(new NameExpr("builder"), "entity", new NodeList[Expression](
-                    new MethodCallExpr(new NameExpr(s"result${statusCodeName}"), "getValue")
-                  ))
-                ))),
+                    new MethodCallExpr(
+                      new NameExpr("builder"),
+                      "entity",
+                      new NodeList[Expression](
+                        new MethodCallExpr(
+                          new EnclosedExpr(new CastExpr(responseType, new NameExpr("result"))),
+                          "getValue")
+                      )
+                    )
+                  )
+                )),
                 null
               )
             })
