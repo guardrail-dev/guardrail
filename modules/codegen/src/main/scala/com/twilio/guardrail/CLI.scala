@@ -162,8 +162,7 @@ object CLI extends CLICommon {
   )
 
   val javaInterpreter = CoreTermInterp[JavaLanguage](
-    "akka-http", {
-      case "akka-http" => Java.AkkaHttp
+    "dropwizard", {
       case "dropwizard" => Java.Dropwizard
     }, { str =>
       import com.github.javaparser.JavaParser
