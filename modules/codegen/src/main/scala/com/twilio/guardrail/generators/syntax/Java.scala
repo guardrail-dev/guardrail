@@ -78,7 +78,8 @@ object Java {
 
   def completionStageType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("CompletionStage" )
   def optionalType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Optional")
-  def functionType: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function")
+  def functionType(in: Type, out: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
+  def supplierType(of: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
 
   val OBJECT_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Object")
   val STRING_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("String")

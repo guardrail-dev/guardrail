@@ -40,10 +40,7 @@ object AsyncHttpClientClientGenerator {
   private val JSON_PROCESSING_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("JsonProcessingException")
   private val CLIENT_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("ClientException")
 
-  private val HTTP_CLIENT_FUNCTION_TYPE = functionType.setTypeArguments(new NodeList[Type](
-      REQUEST_TYPE,
-      completionStageType.setTypeArguments(RESPONSE_TYPE)
-    ))
+  private val HTTP_CLIENT_FUNCTION_TYPE = functionType(REQUEST_TYPE, completionStageType.setTypeArguments(RESPONSE_TYPE))
 
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     JavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
@@ -466,6 +463,7 @@ object AsyncHttpClientClientGenerator {
             "java.util.Optional",
             "java.util.concurrent.CompletionStage",
             "java.util.function.Function",
+            "java.util.function.Supplier",
             "com.fasterxml.jackson.core.JsonProcessingException",
             "com.fasterxml.jackson.core.type.TypeReference",
             "com.fasterxml.jackson.databind.ObjectMapper",
@@ -496,7 +494,9 @@ object AsyncHttpClientClientGenerator {
 
           val responseInnerClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, responseName);
           responseInnerClass.addExtendedType(abstractClassName)
-          valueType.foreach({ vt =>
+          val (foldMethodParamType, foldMethodApplier, foldMethodArgs) = valueType.fold(
+            (supplierType(genericTypeParam), "get", new NodeList[Expression]())
+          )({ vt =>
             val finalValueType: Type = vt.unbox
 
             responseInnerClass.addField(finalValueType, "value", PRIVATE, FINAL)
@@ -516,9 +516,12 @@ object AsyncHttpClientClientGenerator {
             getValueMethod.setBody(new BlockStmt(new NodeList(
               new ReturnStmt(new FieldAccessExpr(new ThisExpr, "value"))
             )))
+
+            (functionType(vt, genericTypeParam), "apply", new NodeList[Expression](
+              new MethodCallExpr(new EnclosedExpr(new CastExpr(responseType, new ThisExpr)), "getValue")
+            ))
           })
 
-          val foldMethodParamType = functionType.setTypeArguments(responseType, genericTypeParam)
           val foldMethodParameter = new Parameter(util.EnumSet.of(FINAL), foldMethodParamType, new SimpleName(responseLambdaName))
 
           val foldMethodBranch = new IfStmt(
@@ -526,8 +529,8 @@ object AsyncHttpClientClientGenerator {
             new BlockStmt(new NodeList(
               new ReturnStmt(new MethodCallExpr(
                 new NameExpr(responseLambdaName),
-                "apply",
-                new NodeList[Expression](new CastExpr(responseType, new ThisExpr))
+                foldMethodApplier,
+                foldMethodArgs
               ))
             )),
             null
