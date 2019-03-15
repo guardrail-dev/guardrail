@@ -220,26 +220,26 @@ object JacksonGenerator {
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
         Target.log.function("transformProperty") {
           for {
-            defaultValue <- ((property match {
+            defaultValue <- property match {
               case _: MapSchema =>
-                Option(Target.pure(new ObjectCreationExpr(null, HASH_MAP_TYPE, new NodeList())).map(x => x: Expression))
+                Target.pure(Option(new ObjectCreationExpr(null, HASH_MAP_TYPE, new NodeList())).map(x => x: Expression))
               case _: ArraySchema =>
-                Option(Target.pure(new ObjectCreationExpr(null, ARRAY_LIST_TYPE, new NodeList())).map(x => x: Expression))
+                Target.pure(Option(new ObjectCreationExpr(null, ARRAY_LIST_TYPE, new NodeList())).map(x => x: Expression))
               case p: BooleanSchema =>
-                Default(p).extract[Boolean].map(x => Target.pure(new BooleanLiteralExpr(x)))
+                Default(p).extract[Boolean].traverse(x => Target.pure(new BooleanLiteralExpr(x)))
               case p: NumberSchema if p.getFormat == "double" =>
-                Default(p).extract[Double].map(x => Target.pure(new DoubleLiteralExpr(x)))
+                Default(p).extract[Double].traverse(x => Target.pure(new DoubleLiteralExpr(x)))
               case p: NumberSchema if p.getFormat == "float" =>
-                Default(p).extract[Float].map(x => Target.pure(new DoubleLiteralExpr(x)))
+                Default(p).extract[Float].traverse(x => Target.pure(new DoubleLiteralExpr(x)))
               case p: IntegerSchema if p.getFormat == "int32" =>
-                Default(p).extract[Int].map(x => Target.pure(new IntegerLiteralExpr(x)))
+                Default(p).extract[Int].traverse(x => Target.pure(new IntegerLiteralExpr(x)))
               case p: IntegerSchema if p.getFormat == "int64" =>
-                Default(p).extract[Long].map(x => Target.pure(new LongLiteralExpr(x)))
+                Default(p).extract[Long].traverse(x => Target.pure(new LongLiteralExpr(x)))
               case p: StringSchema =>
-                Default(p).extract[String].map(x => Target.fromOption(Try(new StringLiteralExpr(x)).toOption, s"Default string literal for '${p.getTitle}' is null"))
+                Default(p).extract[String].traverse(x => Target.fromOption(Try(new StringLiteralExpr(x)).toOption, s"Default string literal for '${p.getTitle}' is null"))
               case _ =>
-                None
-            }): Option[Target[Expression]]).sequence
+                Target.pure(None)
+            }
 
             readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
             emptyToNull = (property match {
