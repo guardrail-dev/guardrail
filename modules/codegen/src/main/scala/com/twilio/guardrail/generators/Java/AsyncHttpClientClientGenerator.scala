@@ -360,7 +360,7 @@ object AsyncHttpClientClientGenerator {
           )
 
           val callBuilderCls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, callBuilderName)
-          callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, FINAL) })
+          callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
 
           callBuilderCls.addConstructor(PRIVATE)
             .setParameters(callBuilderFinalFields.map({ case (tpe, name) => new Parameter(util.EnumSet.of(FINAL), tpe, new SimpleName(name)) }).toNodeList)
