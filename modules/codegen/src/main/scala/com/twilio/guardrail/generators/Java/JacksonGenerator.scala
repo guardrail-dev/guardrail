@@ -269,7 +269,17 @@ object JacksonGenerator {
             _declDefaultPair <- Option(isRequired)
               .filterNot(_ == false)
               .fold[Target[(Type, Option[Expression])]](
-                (safeParseType(s"java.util.Optional<${tpe}>"), Option(defaultValue.fold[Target[Expression]](safeParseExpression[Expression](s"java.util.Optional.empty()"))(t => safeParseExpression[Expression](s"java.util.Optional.of($t)"))).sequence).mapN((_, _))
+                (
+                  safeParseType(s"java.util.Optional<${tpe}>"),
+                  Target.pure(Option(
+                      defaultValue
+                        .fold(
+                          new MethodCallExpr(new NameExpr(s"java.util.Optional"), "empty")
+                        )(t =>
+                          new MethodCallExpr("java.util.Optional.of", t)
+                        )
+                  ))
+                ).mapN((_, _))
               )(Function.const(Target.pure((tpe, defaultValue))) _)
             (finalDeclType, finalDefaultValue) = _declDefaultPair
             term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeReservedWord}")
