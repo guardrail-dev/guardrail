@@ -86,7 +86,6 @@ object JavaGenerator {
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
 
       case PureMethodParameter(nameStr, tpe, default) =>
-        // FIXME: java methods do not support default param values -- what should we do here?
         safeParseSimpleName(nameStr.asString.escapeReservedWord).map(name => new Parameter(util.EnumSet.of(Modifier.FINAL), tpe, name))
 
       case TypeNamesEqual(a, b) =>
