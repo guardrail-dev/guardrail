@@ -211,7 +211,7 @@ object JacksonGenerator {
         (swagger match {
           case m: ObjectSchema => Target.pure(Option(m.getProperties))
           case comp: ComposedSchema =>
-            Target.pure(Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).lastOption.flatMap(prop => Option(prop.getProperties)))
+            Target.pure(Option(comp.getAllOf).flatMap(_.asScala.toList.lastOption).flatMap(prop => Option(prop.getProperties)))
           case comp: Schema[_] if Option(comp.get$ref).isDefined =>
             Target.raiseError(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
           case _ => Target.pure(None)
