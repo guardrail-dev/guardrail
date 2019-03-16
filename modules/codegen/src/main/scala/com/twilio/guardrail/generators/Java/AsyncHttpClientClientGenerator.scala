@@ -11,13 +11,12 @@ import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, Type, VoidType}
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{MethodCallExpr, NameExpr, _}
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.SwaggerUtil.jpaths
 import com.twilio.guardrail.generators.{Response, ScalaParameter}
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, SupportDefinition, Target}
+import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, SupportDefinition, SwaggerUtil, Target}
 import java.net.URI
 import java.util
 
@@ -310,7 +309,27 @@ object AsyncHttpClientClientGenerator {
         for {
           responseParentType <- safeParseClassOrInterfaceType(responseParentName)
           callBuilderType <- safeParseClassOrInterfaceType(callBuilderName)
-          pathExpr <- jpaths.generateUrlPathParams(pathStr, parameters.pathParams)
+
+          pathExprNode <- SwaggerUtil.paths.generateUrlPathParams[JavaLanguage](
+            pathStr,
+            parameters.pathParams,
+            new StringLiteralExpr(_),
+            name => new MethodCallExpr(
+              new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
+              "show",
+              new NodeList[Expression](new NameExpr(name.asString))
+            ),
+            new MethodCallExpr(new FieldAccessExpr(new ThisExpr, "baseUrl"), "toString"),
+            (a, b) => (a, b) match {
+              case (ae: Expression, be: Expression) => new BinaryExpr(ae, be, BinaryExpr.Operator.PLUS)
+              case _ => a
+            }
+          )
+
+          pathExpr <- pathExprNode match {
+            case e: Expression => Target.pure(e)
+            case x => Target.raiseError[Expression](s"BUG: Returned node from generateUrlPathParams() was a ${x.getClass.getName}, not an Expression as expected")
+          }
         } yield {
           val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, methodName)
             .setType(callBuilderType)

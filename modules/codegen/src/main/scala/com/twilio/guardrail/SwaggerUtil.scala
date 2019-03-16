@@ -395,33 +395,35 @@ object SwaggerUtil {
       Resolved[L](ignoredType, None, None)
     }
 
-  // FIXME: this is mostly copy-paste from the scala impl; can almost certainly generic-ify it
-  object jpaths {
+  object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[T](bindingName: String,
-                                    pathArgs: List[ScalaParameter[JavaLanguage]])(f: ScalaParameter[JavaLanguage] => atto.Parser[T]): atto.Parser[T] =
+    private[this] def lookupName[L <: LA, T](bindingName: String,
+                                             pathArgs: List[ScalaParameter[L]])
+                                            (f: ScalaParameter[L] => atto.Parser[T]): atto.Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[atto.Parser[T]](
-        err(s"Unable to find argument ${bindingName}")
-      )(param => f(param))
+          err(s"Unable to find argument ${bindingName}")
+        )(param => f(param))
 
     private[this] val variable: atto.Parser[String] = char('{') ~> many(notChar('}'))
       .map(_.mkString("")) <~ char('}')
 
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[JavaLanguage]]): Target[Expression] = {
-      val term: atto.Parser[Expression] = variable.flatMap { binding =>
+    def generateUrlPathParams[L <: LA](path: String,
+                                       pathArgs: List[ScalaParameter[L]],
+                                       showLiteralPathComponent: String => L#Term,
+                                       showInterpolatedPathComponent: L#TermName => L#Term,
+                                       initialPathTerm: L#Term,
+                                       combinePathTerms: (L#Term, L#Term) => L#Term
+                                      ): Target[L#Term] = {
+      val term: atto.Parser[L#Term] = variable.flatMap { binding =>
         lookupName(binding, pathArgs) { param =>
-          ok(new MethodCallExpr(
-            new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
-            "show",
-            new NodeList[Expression](new NameExpr(param.paramName.asString))
-          ))
+          ok(showInterpolatedPathComponent(param.paramName))
         }
       }
       val other: atto.Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: atto.Parser[List[Either[String, Expression]]] = many(either(term, other).map(_.swap: Either[String, Expression]))
+      val pattern: atto.Parser[List[Either[String, L#Term]]] = many(either(term, other).map(_.swap: Either[String, L#Term]))
 
       for {
         parts <- pattern
@@ -430,48 +432,10 @@ object SwaggerUtil {
           .fold(Target.raiseError, Target.pure)
         result = parts
           .map({
-            case Left(part)  => new StringLiteralExpr(part)
+            case Left(part)  => showLiteralPathComponent(part)
             case Right(term) => term
           })
-          .foldLeft[Expression](new MethodCallExpr(new FieldAccessExpr(new ThisExpr, "baseUrl"), "toString"))({ case (a, b) => new BinaryExpr(a, b, BinaryExpr.Operator.PLUS) })
-      } yield result
-    }
-  }
-
-  object paths {
-    import atto._, Atto._
-
-    private[this] def lookupName[T](bindingName: String,
-                                    pathArgs: List[ScalaParameter[ScalaLanguage]])(f: ScalaParameter[ScalaLanguage] => Parser[T]): Parser[T] =
-      pathArgs
-        .find(_.argName.value == bindingName)
-        .fold[Parser[T]](
-          err(s"Unable to find argument ${bindingName}")
-        )(param => f(param))
-
-    private[this] val variable: Parser[String] = char('{') ~> many(notChar('}'))
-      .map(_.mkString("")) <~ char('}')
-
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
-      val term: Parser[Term.Apply] = variable.flatMap { binding =>
-        lookupName(binding, pathArgs) { param =>
-          ok(q"Formatter.addPath(${param.paramName})")
-        }
-      }
-      val other: Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(term, other).map(_.swap: Either[String, Term.Apply]))
-
-      for {
-        parts <- pattern
-          .parseOnly(path)
-          .either
-          .fold(Target.raiseError(_), Target.pure(_))
-        result = parts
-          .map({
-            case Left(part)  => Lit.String(part)
-            case Right(term) => term
-          })
-          .foldLeft[Term](q"host + basePath")({ case (a, b) => q"${a} + ${b}" })
+          .foldLeft[L#Term](initialPathTerm)((a, b) => combinePathTerms(a, b))
       } yield result
     }
 
@@ -493,7 +457,7 @@ object SwaggerUtil {
       def regexSegment(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
-            lookupName(binding, pathArgs) {
+            lookupName[ScalaLanguage, (Option[TN], T)](binding, pathArgs) {
               case param @ ScalaParameter(_, _, paramName, argName, _) =>
                 val value = if (before.nonEmpty || after.nonEmpty) {
                   pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString)))

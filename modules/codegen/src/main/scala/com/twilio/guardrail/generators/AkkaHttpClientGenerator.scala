@@ -42,7 +42,7 @@ object AkkaHttpClientGenerator {
           Target.log.function("generateUrlWithParams") {
             for {
               _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
-              base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
+              base <- generateUrlPathParams(path, pathArgs)
 
               _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: $qsArgs")
 

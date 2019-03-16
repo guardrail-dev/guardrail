@@ -1,8 +1,8 @@
 package com.twilio.guardrail.generators.syntax
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.StaticDefns
-import com.twilio.guardrail.generators.{ RawParameterName, ScalaParameter }
+import com.twilio.guardrail.{StaticDefns, SwaggerUtil, Target}
+import com.twilio.guardrail.generators.{RawParameterName, ScalaParameter}
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 
@@ -46,4 +46,14 @@ object Scala {
       ..${staticDefns.definitions}
     }
     """
+
+  def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+    SwaggerUtil.paths.generateUrlPathParams[ScalaLanguage](
+      path,
+      pathArgs,
+      Lit.String(_),
+      name => q"Formatter.addPath(${name})",
+      q"host + basePath",
+      (a, b) => q"${a} + ${b}"
+    )
 }
