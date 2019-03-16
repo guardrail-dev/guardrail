@@ -129,10 +129,11 @@ addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("runtimeSuite", "runtimeScalaSuite ; runtimeJavaSuite")
-addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
+addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
+addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
 addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
 addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
-addCommandAlias("testSuite", "; scalaTestSuite")
+addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite")
 
 addCommandAlias(
   "publishBintray",
