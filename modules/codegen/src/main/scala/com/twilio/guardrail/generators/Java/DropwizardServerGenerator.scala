@@ -174,7 +174,9 @@ object DropwizardServerGenerator {
             method.addAnnotation(httpMethodAnnotation)
 
             val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
-            method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
+            if (pathSuffix.nonEmpty && pathSuffix != "/") {
+              method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
+            }
 
             val consumes = getBestConsumes(operation.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
               .orElse({
