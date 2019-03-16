@@ -288,14 +288,20 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     javacOptions ++= Seq(
       "-Xlint:all"
     ),
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
       "org.glassfish.jersey.media" %  "jersey-media-multipart" % jerseyVersion,
       "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
+      "junit"                      %  "junit"                  % "4.12"             % Test,
+      "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
       "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
+      "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
+		crossPaths := false,  // strangely needed to get the JUnit tests to run at all
     skip in publish := true,
     scalafmtOnCompile := false
   )
