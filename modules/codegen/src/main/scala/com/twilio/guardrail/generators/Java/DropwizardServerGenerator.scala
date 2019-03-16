@@ -368,34 +368,51 @@ object DropwizardServerGenerator {
 
           val responseClasses = responses.value.map { response =>
             val clsName: String = response.statusCodeName.asString
+            val clsType = JavaParser.parseClassOrInterfaceType(clsName)
             val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, clsName)
             cls.setExtendedTypes(new NodeList(abstractResponseClassType))
 
-            val (fields, constructor, methods) = response.value.fold({
-              val constructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), clsName)
+            val (fields, constructor, creator, methods) = response.value.fold[(List[FieldDeclaration], ConstructorDeclaration, BodyDeclaration[_], List[MethodDeclaration])]({
+              val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
               constructor.setBody(new BlockStmt(new NodeList(
                 new ExpressionStmt(new MethodCallExpr("super", new IntegerLiteralExpr(response.statusCode)))
               )))
-              (List.empty[FieldDeclaration], constructor, List.empty[MethodDeclaration])
+
+              val creator = new FieldDeclaration(
+                util.EnumSet.of(PUBLIC, STATIC, FINAL),
+                new VariableDeclarator(clsType, clsName, new ObjectCreationExpr(null, clsType, new NodeList))
+              )
+
+              (List.empty[FieldDeclaration], constructor, creator, List.empty[MethodDeclaration])
             })({ case (valueType, _) =>
               val unboxedValueType: Type = valueType.unbox
               val valueField = new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(unboxedValueType, "value"))
 
-              val constructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), clsName)
-              constructor.addParameter(new Parameter(util.EnumSet.of(FINAL), unboxedValueType, new SimpleName("value")))
-              constructor.setBody(new BlockStmt(new NodeList(
-                new ExpressionStmt(new MethodCallExpr("super", new IntegerLiteralExpr(response.statusCode))),
-                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "value"), new NameExpr("value"), AssignExpr.Operator.ASSIGN))
-              )))
+              val constructParam = new Parameter(util.EnumSet.of(FINAL), unboxedValueType, new SimpleName("value"))
+
+              val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
+                .addParameter(constructParam)
+                .setBody(new BlockStmt(new NodeList(
+                  new ExpressionStmt(new MethodCallExpr("super", new IntegerLiteralExpr(response.statusCode))),
+                  new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "value"), new NameExpr("value"), AssignExpr.Operator.ASSIGN))
+                )))
+
+              val creator = new MethodDeclaration(util.EnumSet.of(PUBLIC, STATIC), clsType, clsName)
+                .addParameter(constructParam)
+                .setBody(new BlockStmt(new NodeList(
+                  new ReturnStmt(new ObjectCreationExpr(null, clsType, new NodeList(new NameExpr("value"))))
+                )))
 
               val getValueMethod = new MethodDeclaration(util.EnumSet.of(PUBLIC), unboxedValueType, "getValue")
               getValueMethod.setBody(new BlockStmt(new NodeList(
                 new ReturnStmt(new FieldAccessExpr(new ThisExpr, "value"))
               )))
 
-              (valueField :: Nil, constructor, getValueMethod :: Nil)
+              (valueField :: Nil, constructor, creator, getValueMethod :: Nil)
             })
+
             (fields ++ Option(constructor) ++ methods).foreach(cls.addMember)
+            abstractResponseClass.addMember(creator)
 
             cls
           }

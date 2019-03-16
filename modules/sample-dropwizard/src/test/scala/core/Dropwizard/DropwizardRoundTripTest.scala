@@ -34,7 +34,7 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
       override def getUserByName(username: String): CompletionStage[GetUserByNameResponse] = {
         username match {
           case USERNAME =>
-            serverFuture.complete(new GetUserByNameResponse.Ok(User.builder()
+            serverFuture.complete(GetUserByNameResponse.Ok(User.builder()
               .withEmail("foo@bar.com")
               .withFirstName("Foo")
               .withLastName("Bar")
@@ -43,9 +43,9 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
               .build()
             ))
           case "" =>
-            serverFuture.complete(new GetUserByNameResponse.BadRequest)
+            serverFuture.complete(GetUserByNameResponse.BadRequest)
           case _ =>
-            serverFuture.complete(new GetUserByNameResponse.NotFound)
+            serverFuture.complete(GetUserByNameResponse.NotFound)
         }
         serverFuture
       }
