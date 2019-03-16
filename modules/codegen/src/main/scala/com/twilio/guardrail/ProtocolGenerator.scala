@@ -4,7 +4,7 @@ import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.oas.models.media._
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.extract.ScalaType
+import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -91,7 +91,8 @@ object ProtocolGenerator {
 
     for {
       enum <- extractEnum(swagger)
-      tpe  <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger))
+      customTpeName <- SwaggerUtil.customTypeName(swagger)
+      tpe  <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), customTpeName)
       res  <- enum.traverse(validProg(_, tpe))
     } yield res
   }
@@ -275,8 +276,12 @@ object ProtocolGenerator {
     for {
       tpe <- model
         .flatMap(model => Option(model.getType))
-        .fold[Free[F, L#Type]](objectType(None))(
-          raw => SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
+        .fold[Free[F, L#Type]](objectType(None))(raw =>
+          model
+            .flatTraverse(SwaggerUtil.customTypeName[L, F, ObjectSchema])
+            .flatMap(customTypeName =>
+              SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), customTypeName)
+            )
         )
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
@@ -410,8 +415,8 @@ object ProtocolGenerator {
             case x =>
               for {
                 tpeName <- getType(x)
-
-                tpe <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x))
+                customTypeName <- SwaggerUtil.customTypeName(x)
+                tpe <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), customTypeName)
                 res <- typeAlias(clsName, tpe)
               } yield res
           }

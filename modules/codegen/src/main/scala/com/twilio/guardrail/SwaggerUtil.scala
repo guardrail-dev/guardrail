@@ -13,7 +13,8 @@ import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{Default, ScalaType}
+import com.twilio.guardrail.extract.{Default, VendorExtension, extractFromNames}
+import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.{Responses, ScalaParameter}
 import com.twilio.guardrail.languages.{JavaLanguage, LA, ScalaLanguage}
 import com.twilio.guardrail.shims._
@@ -136,6 +137,12 @@ object SwaggerUtil {
     }
   }
 
+  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] = {
+    for {
+      prefixes <- S.customTypePrefixes()
+    } yield extractFromNames[String, A](prefixes.map(_ + "-type"), v)
+  }
+
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
@@ -163,7 +170,8 @@ object SwaggerUtil {
           case impl: Schema[_] =>
             for {
               tpeName <- getType(impl)
-              tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
+              customTpeName <- customTypeName(impl)
+              tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
             } yield Resolved[L](tpe, None, None)
         })
       }
@@ -257,6 +265,7 @@ object SwaggerUtil {
       import F._
       import Sc._
       import Sw._
+
       log.debug(s"property:\n${log.schemaToString(property)}") >> (property match {
         case p: ArraySchema =>
           for {
@@ -291,23 +300,41 @@ object SwaggerUtil {
           getSimpleRef(ref).map(Deferred[L])
 
         case b: BooleanSchema =>
-          (typeName[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+          for {
+            customTpeName <- customTypeName(b)
+            res <- (typeName[L, F]("boolean", None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+          } yield res
 
         case s: StringSchema =>
-          (typeName[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
-            .mapN(Resolved[L](_, None, _))
+          for {
+            customTpeName <- customTypeName(s)
+            res <- (typeName[L, F]("string", Option(s.getFormat()), customTpeName), Default(s).extract[String].traverse(litString(_)))
+              .mapN(Resolved[L](_, None, _))
+          } yield res
 
         case d: DateSchema =>
-          typeName[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(d)
+            res <- typeName[L, F]("string", Some("date"), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case d: DateTimeSchema =>
-          typeName[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(d)
+            res <- typeName[L, F]("string", Some("date-time"), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case i: IntegerSchema =>
-          typeName[L, F]("integer", Option(i.getFormat), ScalaType(i)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(i)
+            res <- typeName[L, F]("integer", Option(i.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case d: NumberSchema =>
-          typeName[L, F]("number", Option(d.getFormat), ScalaType(d)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(d)
+            res <- typeName[L, F]("number", Option(d.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case x =>
           fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))

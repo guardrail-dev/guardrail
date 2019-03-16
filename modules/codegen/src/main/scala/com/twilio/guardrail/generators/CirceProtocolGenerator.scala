@@ -5,7 +5,7 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
 import cats.~>
 import cats.data.NonEmptyList
-import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
+import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms
@@ -14,6 +14,7 @@ import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.protocol._
 import scala.collection.JavaConverters._
 import scala.meta._
+import scala.language.existentials
 
 object CirceProtocolGenerator {
   import ProtocolGenerator._

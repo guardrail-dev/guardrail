@@ -6,6 +6,9 @@ import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
 sealed trait ScalaTerm[L <: LA, T]
+
+case class CustomTypePrefixes[L <: LA]() extends ScalaTerm[L, List[String]]
+
 case class LitString[L <: LA](value: String)        extends ScalaTerm[L, L#Term]
 case class LitFloat[L <: LA](value: Float)          extends ScalaTerm[L, L#Term]
 case class LitDouble[L <: LA](value: Double)        extends ScalaTerm[L, L#Term]

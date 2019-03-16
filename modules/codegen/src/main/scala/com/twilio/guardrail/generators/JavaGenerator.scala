@@ -28,6 +28,8 @@ object JavaGenerator {
     }
 
     def apply[T](term: ScalaTerm[JavaLanguage, T]): Target[T] = term match {
+      case CustomTypePrefixes() => Target.pure(List("x-java", "x-jvm"))
+
       case LitString(value)        => Target.pure(new StringLiteralExpr(value))
       case LitFloat(value)         => Target.pure(new DoubleLiteralExpr(value))
       case LitDouble(value)        => Target.pure(new DoubleLiteralExpr(value))
