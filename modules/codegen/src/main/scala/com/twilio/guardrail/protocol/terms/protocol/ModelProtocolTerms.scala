@@ -29,7 +29,10 @@ class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L,
                   params: List[ProtocolParameter[L]],
                   parents: List[SuperClass[L]] = Nil): Free[F, Option[L#ValueDefinition]] =
     Free.inject[ModelProtocolTerm[L, ?], F](DecodeModel[L](clsName, needCamelSnakeConversion, params, parents))
-  def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]): Free[F, StaticDefns[L]] =
+  def renderDTOStaticDefns(clsName: String,
+                           deps: List[L#TermName],
+                           encoder: Option[L#ValueDefinition],
+                           decoder: Option[L#ValueDefinition]): Free[F, StaticDefns[L]] =
     Free.inject[ModelProtocolTerm[L, ?], F](RenderDTOStaticDefns[L](clsName, deps, encoder, decoder))
 }
 object ModelProtocolTerms {

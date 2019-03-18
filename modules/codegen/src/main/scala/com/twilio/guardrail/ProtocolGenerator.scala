@@ -9,10 +9,10 @@ import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import java.util.Locale
 import scala.collection.JavaConverters._
-import scala.language.{higherKinds, postfixOps, reflectiveCalls}
+import scala.language.{ higherKinds, postfixOps, reflectiveCalls }
 
 case class ProtocolDefinitions[L <: LA](elems: List[StrictProtocolElems[L]],
                                         protocolImports: List[L#Import],
@@ -90,10 +90,10 @@ object ProtocolGenerator {
     val tpeName = Option(swagger.getType).filterNot(_ == "object").getOrElse("string")
 
     for {
-      enum <- extractEnum(swagger)
+      enum          <- extractEnum(swagger)
       customTpeName <- SwaggerUtil.customTypeName(swagger)
-      tpe  <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), customTpeName)
-      res  <- enum.traverse(validProg(_, tpe))
+      tpe           <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), customTpeName)
+      res           <- enum.traverse(validProg(_, tpe))
     } yield res
   }
 
@@ -276,12 +276,11 @@ object ProtocolGenerator {
     for {
       tpe <- model
         .flatMap(model => Option(model.getType))
-        .fold[Free[F, L#Type]](objectType(None))(raw =>
-          model
-            .flatTraverse(SwaggerUtil.customTypeName[L, F, ObjectSchema])
-            .flatMap(customTypeName =>
-              SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), customTypeName)
-            )
+        .fold[Free[F, L#Type]](objectType(None))(
+          raw =>
+            model
+              .flatTraverse(SwaggerUtil.customTypeName[L, F, ObjectSchema])
+              .flatMap(customTypeName => SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), customTypeName))
         )
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
@@ -414,10 +413,10 @@ object ProtocolGenerator {
 
             case x =>
               for {
-                tpeName <- getType(x)
+                tpeName        <- getType(x)
                 customTypeName <- SwaggerUtil.customTypeName(x)
-                tpe <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), customTypeName)
-                res <- typeAlias(clsName, tpe)
+                tpe            <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), customTypeName)
+                res            <- typeAlias(clsName, tpe)
               } yield res
           }
       }

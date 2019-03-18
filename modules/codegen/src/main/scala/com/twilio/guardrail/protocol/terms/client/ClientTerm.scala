@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition}
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
 import java.net.URI
 
 sealed trait ClientTerm[L <: LA, T]

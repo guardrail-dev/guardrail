@@ -1,6 +1,6 @@
 package com.twilio.guardrail.protocol.terms.server
 
-import com.twilio.guardrail.{RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField}
+import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }

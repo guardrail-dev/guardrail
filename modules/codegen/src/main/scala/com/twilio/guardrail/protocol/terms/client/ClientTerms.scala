@@ -6,7 +6,7 @@ import cats.free.Free
 import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.{RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition}
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
 import java.net.URI
 
 class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {

@@ -8,7 +8,20 @@ import com.twilio.guardrail.generators.Java.JacksonGenerator._
 import com.twilio.guardrail.generators.JavaGenerator.JavaInterp
 import com.twilio.guardrail.generators.SwaggerGenerator
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.{ClientServerTerms, CodegenApplication, DefinitionPM, DefinitionPME, DefinitionPMEA, DefinitionPMEAP, FrameworkC, FrameworkCS, FrameworkCSF, ModelInterpreters, Parser, Target}
+import com.twilio.guardrail.{
+  ClientServerTerms,
+  CodegenApplication,
+  DefinitionPM,
+  DefinitionPME,
+  DefinitionPMEA,
+  DefinitionPMEAP,
+  FrameworkC,
+  FrameworkCS,
+  FrameworkCSF,
+  ModelInterpreters,
+  Parser,
+  Target
+}
 
 object Dropwizard extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
   val interpDefinitionPM: DefinitionPM[JavaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp

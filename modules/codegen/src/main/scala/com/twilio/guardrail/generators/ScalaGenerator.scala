@@ -254,10 +254,11 @@ object ScalaGenerator {
             stat.copy(rhs = q"${companion}.${mirror}")
           })
 
-        Target.pure(Some(
-          WriteTree(
-            dtoPackagePath.resolve("package.scala"),
-            source"""
+        Target.pure(
+          Some(
+            WriteTree(
+              dtoPackagePath.resolve("package.scala"),
+              source"""
             package ${dtoPkg}
 
             ..${customImports ++ packageObjectImports ++ protocolImports}
@@ -270,8 +271,9 @@ object ScalaGenerator {
               ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
             }
             """.syntax.getBytes(StandardCharsets.UTF_8)
+            )
           )
-        ))
+        )
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
           case EnumDefinition(_, _, _, cls, staticDefns) =>
@@ -349,11 +351,17 @@ object ScalaGenerator {
             """.syntax.getBytes(StandardCharsets.UTF_8)
           )
         )
-      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
+      case WriteServer(pkgPath,
+                       pkgName,
+                       customImports,
+                       frameworkImplicitName,
+                       dtoComponents,
+                       Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
         Target.pure(
-          List(WriteTree(
-            resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
-            source"""
+          List(
+            WriteTree(
+              resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
+              source"""
               package ${buildPkgTerm((pkgName ++ pkg.toList))}
               ..${extraImports}
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
@@ -363,7 +371,8 @@ object ScalaGenerator {
               ${handlerDefinition}
               ..${serverDefinitions}
               """.syntax.getBytes(StandardCharsets.UTF_8)
-          ))
+            )
+          )
         )
     }
   }

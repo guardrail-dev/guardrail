@@ -6,19 +6,19 @@ import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.responses._
-import cats.{FlatMap, Foldable}
+import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
 import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.expr._
-import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{Default, VendorExtension, extractFromNames}
+import com.twilio.guardrail.extract.{ Default, VendorExtension, extractFromNames }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
-import com.twilio.guardrail.generators.{Responses, ScalaParameter}
-import com.twilio.guardrail.languages.{JavaLanguage, LA, ScalaLanguage}
+import com.twilio.guardrail.generators.{ Responses, ScalaParameter }
+import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import com.twilio.guardrail.shims._
-import java.util.{Map => JMap}
+import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
@@ -137,11 +137,10 @@ object SwaggerUtil {
     }
   }
 
-  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] = {
+  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
     for {
       prefixes <- S.customTypePrefixes()
     } yield extractFromNames[String, A](prefixes.map(_ + "-type"), v)
-  }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
@@ -169,9 +168,9 @@ object SwaggerUtil {
             } yield res
           case impl: Schema[_] =>
             for {
-              tpeName <- getType(impl)
+              tpeName       <- getType(impl)
               customTpeName <- customTypeName(impl)
-              tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
+              tpe           <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
             } yield Resolved[L](tpe, None, None)
         })
       }
@@ -302,7 +301,7 @@ object SwaggerUtil {
         case b: BooleanSchema =>
           for {
             customTpeName <- customTypeName(b)
-            res <- (typeName[L, F]("boolean", None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+            res           <- (typeName[L, F]("boolean", None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
           } yield res
 
         case s: StringSchema =>
@@ -315,25 +314,25 @@ object SwaggerUtil {
         case d: DateSchema =>
           for {
             customTpeName <- customTypeName(d)
-            res <- typeName[L, F]("string", Some("date"), customTpeName).map(Resolved[L](_, None, None))
+            res           <- typeName[L, F]("string", Some("date"), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case d: DateTimeSchema =>
           for {
             customTpeName <- customTypeName(d)
-            res <- typeName[L, F]("string", Some("date-time"), customTpeName).map(Resolved[L](_, None, None))
+            res           <- typeName[L, F]("string", Some("date-time"), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case i: IntegerSchema =>
           for {
             customTpeName <- customTypeName(i)
-            res <- typeName[L, F]("integer", Option(i.getFormat), customTpeName).map(Resolved[L](_, None, None))
+            res           <- typeName[L, F]("integer", Option(i.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case d: NumberSchema =>
           for {
             customTpeName <- customTypeName(d)
-            res <- typeName[L, F]("number", Option(d.getFormat), customTpeName).map(Resolved[L](_, None, None))
+            res           <- typeName[L, F]("number", Option(d.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case x =>
@@ -398,9 +397,7 @@ object SwaggerUtil {
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[L <: LA, T](bindingName: String,
-                                             pathArgs: List[ScalaParameter[L]])
-                                            (f: ScalaParameter[L] => atto.Parser[T]): atto.Parser[T] =
+    private[this] def lookupName[L <: LA, T](bindingName: String, pathArgs: List[ScalaParameter[L]])(f: ScalaParameter[L] => atto.Parser[T]): atto.Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[atto.Parser[T]](
@@ -415,14 +412,13 @@ object SwaggerUtil {
                                        showLiteralPathComponent: String => L#Term,
                                        showInterpolatedPathComponent: L#TermName => L#Term,
                                        initialPathTerm: L#Term,
-                                       combinePathTerms: (L#Term, L#Term) => L#Term
-                                      ): Target[L#Term] = {
+                                       combinePathTerms: (L#Term, L#Term) => L#Term): Target[L#Term] = {
       val term: atto.Parser[L#Term] = variable.flatMap { binding =>
         lookupName(binding, pathArgs) { param =>
           ok(showInterpolatedPathComponent(param.paramName))
         }
       }
-      val other: atto.Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
+      val other: atto.Parser[String]                         = many1(notChar('{')).map(_.toList.mkString)
       val pattern: atto.Parser[List[Either[String, L#Term]]] = many(either(term, other).map(_.swap: Either[String, L#Term]))
 
       for {

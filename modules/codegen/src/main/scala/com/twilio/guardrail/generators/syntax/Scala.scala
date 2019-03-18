@@ -1,8 +1,8 @@
 package com.twilio.guardrail.generators.syntax
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.{StaticDefns, SwaggerUtil, Target}
-import com.twilio.guardrail.generators.{RawParameterName, ScalaParameter}
+import com.twilio.guardrail.{ StaticDefns, SwaggerUtil, Target }
+import com.twilio.guardrail.generators.{ RawParameterName, ScalaParameter }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 

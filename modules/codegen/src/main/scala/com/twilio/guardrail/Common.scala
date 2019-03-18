@@ -6,13 +6,13 @@ import cats.free.Free
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.protocol.{ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms}
+import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{CoreTerms, ScalaTerms, SwaggerTerms}
-import java.nio.file.{Path, Paths}
+import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SwaggerTerms }
+import java.nio.file.{ Path, Paths }
 import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.io.AnsiColor
@@ -116,7 +116,7 @@ object Common {
         extraTypes
       )
 
-      frameworkImports    <- getFrameworkImports(context.tracing)
+      frameworkImports   <- getFrameworkImports(context.tracing)
       frameworkImplicits <- getFrameworkImplicits()
       frameworkImplicitName = frameworkImplicits.map(_._1)
       frameworkDefinitions <- getFrameworkDefinitions()
@@ -124,11 +124,17 @@ object Common {
       files <- (clients.traverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
                 servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
 
-      implicits              <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({ case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply) })
+      implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
+      frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({
+        case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply)
+      })
 
-      frameworkDefinitionsFiles <- frameworkDefinitions.traverse({ case (name, defn) => renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, defn, name) })
-      supportDefinitionsFiles   <- supportDefinitions.traverse({ case SupportDefinition(name, imports, defn) => renderFrameworkDefinitions(pkgPath, pkgName, imports, defn, name) })
+      frameworkDefinitionsFiles <- frameworkDefinitions.traverse({
+        case (name, defn) => renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, defn, name)
+      })
+      supportDefinitionsFiles <- supportDefinitions.traverse({
+        case SupportDefinition(name, imports, defn) => renderFrameworkDefinitions(pkgPath, pkgName, imports, defn, name)
+      })
     } yield
       (
         protocolDefinitions ++

@@ -3,20 +3,20 @@ package generators
 
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
-import com.twilio.guardrail.extract.{Default, ScalaFileHashAlgorithm}
+import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms}
-import com.twilio.guardrail.terms.framework.{FrameworkTerm, FrameworkTerms}
+import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import java.util.Locale
 import scala.meta._
 import cats.MonadError
 import cats.implicits._
 import cats.arrow.FunctionK
 import cats.free.Free
-import cats.data.{EitherK, EitherT}
+import cats.data.{ EitherK, EitherT }
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible
 
@@ -80,7 +80,7 @@ object ScalaParameter {
 
       def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
         for {
-          tpeName <- typeFetcher(param)
+          tpeName        <- typeFetcher(param)
           customTypeName <- SwaggerUtil.customTypeName(param)
           res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _))

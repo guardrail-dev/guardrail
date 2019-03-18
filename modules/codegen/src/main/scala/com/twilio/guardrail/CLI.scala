@@ -7,7 +7,7 @@ import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
-import com.twilio.guardrail.languages.{ LA, JavaLanguage, ScalaLanguage }
+import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 
 import scala.io.AnsiColor
 
@@ -137,7 +137,7 @@ trait CLICommon {
   val javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
 
   val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
-    case "java" => CLICommon.run(_)(javaInterpreter)
+    case "java"  => CLICommon.run(_)(javaInterpreter)
     case "scala" => CLICommon.run(_)(scalaInterpreter)
   }
 

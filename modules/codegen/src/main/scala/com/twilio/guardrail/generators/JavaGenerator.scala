@@ -5,8 +5,8 @@ import cats.instances.list._
 import cats.instances.option._
 import cats.syntax.traverse._
 import com.github.javaparser.ast._
-import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, VoidType, ArrayType => AstArrayType}
-import com.github.javaparser.ast.body.{BodyDeclaration, Parameter, TypeDeclaration}
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType, ArrayType => AstArrayType }
+import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
 import com.twilio.guardrail._
@@ -23,8 +23,8 @@ object JavaGenerator {
 
     def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
       case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
-      case None => Target.pure(new MethodCallExpr(name))
-      case other => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+      case None                   => Target.pure(new MethodCallExpr(name))
+      case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
     }
 
     def apply[T](term: ScalaTerm[JavaLanguage, T]): Target[T] = term match {
@@ -99,10 +99,10 @@ object JavaGenerator {
       case ExtractTypeName(tpe) =>
         def extractTypeName(tpe: Type): Target[Name] = tpe match {
           case a: AstArrayType if a.getComponentType.isPrimitiveType => extractTypeName(new AstArrayType(a.getComponentType.asPrimitiveType().toBoxedType))
-          case a: AstArrayType => safeParseName(a.asString)
-          case ci: ClassOrInterfaceType => safeParseName(ci.getNameAsString)
-          case p: PrimitiveType => safeParseName(p.toBoxedType.getNameAsString)
-          case _: VoidType => safeParseName("Void")
+          case a: AstArrayType                                       => safeParseName(a.asString)
+          case ci: ClassOrInterfaceType                              => safeParseName(ci.getNameAsString)
+          case p: PrimitiveType                                      => safeParseName(p.toBoxedType.getNameAsString)
+          case _: VoidType                                           => safeParseName("Void")
           case _ =>
             println(s"WARN: ExtractTypeName: unhandled type ${tpe.getClass.getName}")
             safeParseName("Void")
@@ -114,15 +114,17 @@ object JavaGenerator {
         Target.pure(term.asString)
 
       case AlterMethodParameterName(param, name) =>
-        safeParseSimpleName(name.asString.escapeReservedWord).map(new Parameter(
-          param.getTokenRange.orElse(null),
-          param.getModifiers,
-          param.getAnnotations,
-          param.getType,
-          param.isVarArgs,
-          param.getVarArgsAnnotations,
-          _
-        ))
+        safeParseSimpleName(name.asString.escapeReservedWord).map(
+          new Parameter(
+            param.getTokenRange.orElse(null),
+            param.getModifiers,
+            param.getAnnotations,
+            param.getType,
+            param.isVarArgs,
+            param.getVarArgsAnnotations,
+            _
+          )
+        )
 
       case DateType()                => safeParseType("java.time.LocalDate")
       case DateTimeType()            => safeParseType("java.time.OffsetDateTime")
@@ -163,14 +165,17 @@ object JavaGenerator {
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         for {
           pkgDecl <- buildPkgDecl(dtoComponents)
-        } yield Some(WriteTree(
-          resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"),
-          pkgDecl.toString(printer).getBytes(StandardCharsets.UTF_8)
-        ))
+        } yield
+          Some(
+            WriteTree(
+              resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"),
+              pkgDecl.toString(printer).getBytes(StandardCharsets.UTF_8)
+            )
+          )
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         for {
-          pkgDecl <- buildPkgDecl(definitions)
+          pkgDecl      <- buildPkgDecl(definitions)
           showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
         } yield {
           elem match {
@@ -241,8 +246,8 @@ object JavaGenerator {
                        dtoComponents,
                        Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
         for {
-          pkgDecl         <- buildPkgDecl(pkgName ++ pkg)
-          commonImport <- safeParseRawImport((pkgName :+ "*").mkString("."))
+          pkgDecl             <- buildPkgDecl(pkgName ++ pkg)
+          commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
         } yield {
           val cu = new CompilationUnit()
@@ -261,7 +266,12 @@ object JavaGenerator {
           )
         }
 
-      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
+      case WriteServer(pkgPath,
+                       pkgName,
+                       customImports,
+                       frameworkImplicitName,
+                       dtoComponents,
+                       Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
         def writeClass(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: TypeDeclaration[_]): WriteTree = {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)
@@ -274,17 +284,16 @@ object JavaGenerator {
           )
         }
 
-        def writeDefinition(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: BodyDeclaration[_]): Target[WriteTree] = {
+        def writeDefinition(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: BodyDeclaration[_]): Target[WriteTree] =
           definition match {
             case td: TypeDeclaration[_] => Target.pure(writeClass(pkgDecl, extraImports, td))
-            case other => Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
+            case other                  => Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
           }
-        }
 
         for {
           pkgDecl <- buildPkgDecl(pkgName ++ pkg)
 
-          commonImport <- safeParseRawImport((pkgName :+ "*").mkString("."))
+          commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
           allExtraImports = extraImports ++ List(commonImport, dtoComponentsImport)
 

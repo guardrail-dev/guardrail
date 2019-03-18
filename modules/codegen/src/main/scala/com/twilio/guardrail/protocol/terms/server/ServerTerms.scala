@@ -2,8 +2,8 @@ package com.twilio.guardrail.protocol.terms.server
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField}
-import com.twilio.guardrail.generators.{Responses, ScalaParameters}
+import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
+import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models.Operation
@@ -29,7 +29,9 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
                   extraRouteParams: List[L#MethodParameter],
                   responseDefinitions: List[L#Definition],
                   supportDefinitions: List[L#Definition]): Free[F, List[L#Definition]] =
-    Free.inject[ServerTerm[L, ?], F](RenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions))
+    Free.inject[ServerTerm[L, ?], F](
+      RenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
+    )
   def renderHandler(handlerName: String, methodSigs: List[L#MethodDeclaration], handlerDefinitions: List[L#Statement]): Free[F, L#Definition] =
     Free.inject[ServerTerm[L, ?], F](RenderHandler(handlerName, methodSigs, handlerDefinitions))
   def getExtraImports(tracing: Boolean): Free[F, List[L#Import]] =

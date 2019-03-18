@@ -4,12 +4,12 @@ import _root_.io.swagger.v3.oas.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.generators.{Http4sHelper, ScalaParameter}
+import com.twilio.guardrail.generators.{ Http4sHelper, ScalaParameter }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{RouteMeta, ScalaTerms, SwaggerTerms}
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
@@ -44,7 +44,7 @@ object ServerGenerator {
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
-      extraImports <- getExtraImports(context.tracing)
+      extraImports       <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>
@@ -67,13 +67,15 @@ object ServerGenerator {
             renderedRoutes   <- generateRoutes(resourceName, basePath, serverOperations, protocolElems)
             handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
-            classSrc <- renderClass(resourceName,
-                                    handlerName,
-                                    renderedRoutes.classAnnotations,
-                                    renderedRoutes.routes,
-                                    extraRouteParams,
-                                    responseDefinitions.flatten,
-                                    renderedRoutes.supportDefinitions)
+            classSrc <- renderClass(
+              resourceName,
+              handlerName,
+              renderedRoutes.classAnnotations,
+              renderedRoutes.routes,
+              extraRouteParams,
+              responseDefinitions.flatten,
+              renderedRoutes.supportDefinitions
+            )
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
           }
