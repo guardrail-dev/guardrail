@@ -11,7 +11,7 @@ import com.twilio.guardrail.Target
 import java.nio.charset.StandardCharsets
 import java.util.Optional
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object Java {
   implicit class RichJavaOptional[T](val o: Optional[T]) extends AnyVal {
@@ -61,7 +61,10 @@ object Java {
 
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] =
     Target.log.function(s"${log}: ${s}") {
-      Try(parser(s)).toEither.fold(t => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}"), Target.pure)
+      Try(parser(s)) match {
+        case Success(value) => Target.pure(value)
+        case Failure(t)     => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}")
+      }
     }
 
   def safeParseCode(s: String): Target[CompilationUnit]  = safeParse("safeParseCode")(JavaParser.parse, s)

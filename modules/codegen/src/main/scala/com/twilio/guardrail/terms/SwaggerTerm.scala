@@ -11,6 +11,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
 
 import scala.collection.JavaConverters._
+import scala.language.existentials
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod

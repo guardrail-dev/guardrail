@@ -5,7 +5,7 @@ import java.math
 import java.net.{URI, URL}
 import java.time.{LocalDate, OffsetDateTime}
 import org.scalatest.{FreeSpec, Matchers}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class DropwizardShowerTest extends FreeSpec with Matchers {
   private val shower = Shower.getInstance
@@ -120,10 +120,10 @@ class DropwizardShowerTest extends FreeSpec with Matchers {
   "Shower should not be able to show for unregistered types" - {
     "This test class" in {
       assert(!shower.canShow(getClass))
-      Try(shower.show(this)).fold(
-        _.getClass shouldBe classOf[Shower.UnshowableInstanceException],
-        _ => fail("shower.show() should have thrown and UnshowableInstanceException")
-      )
+      Try(shower.show(this)) match {
+        case Failure(t) => t.getClass shouldBe classOf[Shower.UnshowableInstanceException]
+        case Success(_) => fail ("shower.show() should have thrown and UnshowableInstanceException")
+      }
     }
   }
 }

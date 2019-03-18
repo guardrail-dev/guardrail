@@ -23,6 +23,7 @@ import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.responses.ApiResponse
 import java.util
 import scala.collection.JavaConverters._
+import scala.language.existentials
 import scala.util.Try
 
 object DropwizardServerGenerator {

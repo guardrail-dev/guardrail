@@ -512,7 +512,7 @@ object AsyncHttpClientClientGenerator {
             .setParameters(
               List(
                 new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("name")),
-                new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("value")),
+                new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("value"))
               ).toNodeList
             )
             .setType(callBuilderType)

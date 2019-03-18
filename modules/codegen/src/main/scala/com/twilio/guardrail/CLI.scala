@@ -8,8 +8,8 @@ import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.terms.CoreTerm
 import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
-
 import scala.io.AnsiColor
+import scala.util.{ Failure, Success }
 
 object CLICommon {
   def run[L <: LA](args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
@@ -167,7 +167,10 @@ object CLI extends CLICommon {
     }, { str =>
       import com.github.javaparser.JavaParser
       import scala.util.Try
-      Try(JavaParser.parseImport(s"import ${str};")).toEither.leftMap(t => UnparseableArgument("import", t.getMessage))
+      Try(JavaParser.parseImport(s"import ${str};")) match {
+        case Success(value) => Right(value)
+        case Failure(t)     => Left(UnparseableArgument("import", t.getMessage))
+      }
     }
   )
 }

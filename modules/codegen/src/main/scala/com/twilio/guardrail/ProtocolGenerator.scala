@@ -12,7 +12,7 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import java.util.Locale
 import scala.collection.JavaConverters._
-import scala.language.{ higherKinds, postfixOps, reflectiveCalls }
+import scala.language.{ existentials, higherKinds, postfixOps, reflectiveCalls }
 
 case class ProtocolDefinitions[L <: LA](elems: List[StrictProtocolElems[L]],
                                         protocolImports: List[L#Import],
