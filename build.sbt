@@ -16,7 +16,7 @@ val catsVersion       = "1.4.0"
 val catsEffectVersion = "1.0.0"
 val circeVersion      = "0.10.1"
 val http4sVersion     = "0.19.0"
-val scalatestVersion  = "3.0.6"
+val scalatestVersion  = "3.0.7"
 val endpointsVersion  = "0.8.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
