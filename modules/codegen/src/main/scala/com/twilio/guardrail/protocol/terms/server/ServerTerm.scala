@@ -8,7 +8,8 @@ import io.swagger.v3.oas.models.Operation
 
 sealed trait ServerTerm[L <: LA, T]
 case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField[L]]]
-case class GenerateRoutes[L <: LA](resourceName: String,
+case class GenerateRoutes[L <: LA](tracing: Boolean,
+                                   resourceName: String,
                                    basePath: Option[String],
                                    routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
                                    protocolElems: List[StrictProtocolElems[L]])

@@ -64,7 +64,7 @@ object ServerGenerator {
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes   <- generateRoutes(resourceName, basePath, serverOperations, protocolElems)
+            renderedRoutes   <- generateRoutes(context.tracing, resourceName, basePath, serverOperations, protocolElems)
             handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc <- renderClass(

@@ -11,11 +11,12 @@ import io.swagger.v3.oas.models.Operation
 class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
   def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField[L]]] =
     Free.inject[ServerTerm[L, ?], F](BuildTracingFields(operation, resourceName, tracing))
-  def generateRoutes(resourceName: String,
+  def generateRoutes(tracing: Boolean,
+                     resourceName: String,
                      basePath: Option[String],
                      routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
                      protocolElems: List[StrictProtocolElems[L]]): Free[F, RenderedRoutes[L]] =
-    Free.inject[ServerTerm[L, ?], F](GenerateRoutes(resourceName, basePath, routes, protocolElems))
+    Free.inject[ServerTerm[L, ?], F](GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems))
   def getExtraRouteParams(tracing: Boolean): Free[F, List[L#MethodParameter]] =
     Free.inject[ServerTerm[L, ?], F](GetExtraRouteParams(tracing))
   def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =

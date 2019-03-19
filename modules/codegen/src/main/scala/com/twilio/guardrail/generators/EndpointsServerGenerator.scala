@@ -10,7 +10,7 @@ object EndpointsServerGenerator {
     def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
       case GenerateResponseDefinitions(operationId, responses, protocolElems)                                                                 => ???
       case BuildTracingFields(operation, resourceName, tracing)                                                                               => ???
-      case GenerateRoutes(resourceName, basePath, routes, protocolElems)                                                                      => ???
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems)                                                             => ???
       case RenderHandler(handlerName, methodSigs, handlerDefinitions)                                                                         => ???
       case GetExtraRouteParams(tracing)                                                                                                       => ???
       case GenerateSupportDefinitions(tracing)                                                                                                => ???
