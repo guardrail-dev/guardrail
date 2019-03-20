@@ -1,10 +1,13 @@
-1. Generate list of contributors:
+1. Create and edit release notes
 
-    git log --format='%aN' $(git tag | tail -n1)..@ | sort | uniq -c | sort -nr | sed 's/^ *[[:digit:]]* /- /' | pbcopy
+    bash support/write-release-template.sh
 
-2. Create a release tag: [link](https://github.com/twilio/guardrail/releases)
+2. Create and push a tag locally
 
-3. Checkout the tag. This will cause `sbt version` to print out a non-SNAPSHOT version number
+    git tag v0.xx.yy
+    git push github v0.xx.yy
+
+3. `sbt githubRelease` to push the release to github
 
 4. `sbt codegen/clean` to ensure only fresh artifacts are published
 
