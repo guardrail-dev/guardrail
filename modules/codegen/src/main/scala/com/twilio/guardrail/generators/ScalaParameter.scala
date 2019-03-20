@@ -3,20 +3,22 @@ package generators
 
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
-import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm, ScalaType }
+import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm }
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import java.util.Locale
-
 import scala.meta._
 import cats.MonadError
 import cats.implicits._
 import cats.arrow.FunctionK
 import cats.free.Free
 import cats.data.{ EitherK, EitherT }
+import com.twilio.guardrail.SwaggerUtil.ResolvedType
+import com.twilio.guardrail.extract.VendorExtension.VendorExtensible
 
 case class RawParameterName private[generators] (value: String)
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
@@ -54,13 +56,6 @@ object ScalaParameter {
     import Sc._
     import Sw._
 
-    def toCamelCase(s: String): String = {
-      val fromSnakeOrDashed =
-        "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-      "^([A-Z])".r
-        .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
-    }
-
     def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
       def getDefault[U <: Parameter: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
         Option(p.getSchema.getType)
@@ -83,6 +78,14 @@ object ScalaParameter {
             }
           })
 
+      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
+        for {
+          tpeName        <- typeFetcher(param)
+          customTypeName <- SwaggerUtil.customTypeName(param)
+          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(param))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _))
+        } yield res
+
       param match {
         case r: Parameter if r.isRef =>
           getRefParameterRef(r)
@@ -92,43 +95,19 @@ object ScalaParameter {
           getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
 
         case x: Parameter if x.isInHeader =>
-          getHeaderParameterType(x).flatMap(
-            tpeName =>
-              (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
-                .mapN(SwaggerUtil.Resolved[L](_, None, _))
-          )
+          resolveParam(x, getHeaderParameterType)
 
         case x: Parameter if x.isInPath =>
-          getPathParameterType(x)
-            .flatMap(
-              tpeName =>
-                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
-                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
+          resolveParam(x, getPathParameterType)
 
         case x: Parameter if x.isInQuery =>
-          getQueryParameterType(x)
-            .flatMap(
-              tpeName =>
-                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
-                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
+          resolveParam(x, getQueryParameterType)
 
         case x: Parameter if x.isInCookies =>
-          getCookieParameterType(x)
-            .flatMap(
-              tpeName =>
-                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
-                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
+          resolveParam(x, getCookieParameterType)
 
         case x: Parameter if x.isInFormData =>
-          getFormParameterType(x)
-            .flatMap(
-              tpeName =>
-                (SwaggerUtil.typeName[L, F](tpeName, Option(x.format()), ScalaType(x)), getDefault(x))
-                  .mapN(SwaggerUtil.Resolved[L](_, None, _))
-            )
+          resolveParam(x, getFormParameterType)
 
         case x =>
           fallbackParameterHandler(x)
@@ -169,7 +148,7 @@ object ScalaParameter {
 
       name <- getParameterName(parameter)
 
-      paramName <- pureTermName(toCamelCase(name))
+      paramName <- pureTermName(name.toCamelCase)
       param     <- pureMethodParameter(paramName, declType, defaultValue)
 
       ftpe       <- fileType(None)

@@ -1,12 +1,14 @@
 package com.twilio.guardrail
 package terms
 
-import cats.data.NonEmptyList
-import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
+import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
 sealed trait ScalaTerm[L <: LA, T]
+
+case class CustomTypePrefixes[L <: LA]() extends ScalaTerm[L, List[String]]
+
 case class LitString[L <: LA](value: String)        extends ScalaTerm[L, L#Term]
 case class LitFloat[L <: LA](value: Float)          extends ScalaTerm[L, L#Term]
 case class LitDouble[L <: LA](value: Double)        extends ScalaTerm[L, L#Term]
@@ -59,13 +61,19 @@ case class RenderImplicits[L <: LA](pkgPath: Path,
                                     frameworkImports: List[L#Import],
                                     jsonImports: List[L#Import],
                                     customImports: List[L#Import])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, Option[WriteTree]]
 case class RenderFrameworkImplicits[L <: LA](pkgPath: Path,
                                              pkgName: List[String],
                                              frameworkImports: List[L#Import],
                                              jsonImports: List[L#Import],
                                              frameworkImplicits: L#ObjectDefinition,
                                              frameworkImplicitName: L#TermName)
+    extends ScalaTerm[L, WriteTree]
+case class RenderFrameworkDefinitions[L <: LA](pkgPath: Path,
+                                               pkgName: List[String],
+                                               frameworkImports: List[L#Import],
+                                               frameworkDefinitions: L#ClassDefinition,
+                                               frameworkDefinitionsName: L#TermName)
     extends ScalaTerm[L, WriteTree]
 case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        dtoComponents: List[String],
@@ -74,7 +82,7 @@ case class WritePackageObject[L <: LA](dtoPackagePath: Path,
                                        protocolImports: List[L#Import],
                                        packageObjectContents: List[L#ValueDefinition],
                                        extraTypes: List[L#Statement])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, Option[WriteTree]]
 case class WriteProtocolDefinition[L <: LA](outputPath: Path,
                                             pkgName: List[String],
                                             definitions: List[String],
@@ -85,14 +93,14 @@ case class WriteProtocolDefinition[L <: LA](outputPath: Path,
 case class WriteClient[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
-                                frameworkImplicitName: L#TermName,
+                                frameworkImplicitName: Option[L#TermName],
                                 dtoComponents: List[String],
                                 client: Client[L])
     extends ScalaTerm[L, WriteTree]
 case class WriteServer[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
-                                frameworkImplicitName: L#TermName,
+                                frameworkImplicitName: Option[L#TermName],
                                 dtoComponents: List[String],
                                 server: Server[L])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, List[WriteTree]]

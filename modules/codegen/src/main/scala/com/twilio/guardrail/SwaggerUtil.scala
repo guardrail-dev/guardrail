@@ -1,5 +1,6 @@
 package com.twilio.guardrail
 
+import cats.data.EitherT
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
@@ -8,16 +9,18 @@ import io.swagger.v3.oas.models.responses._
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ Default, ScalaType }
+import com.twilio.guardrail.extract.{ Default, VendorExtension, extractFromNames }
+import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.{ Responses, ScalaParameter }
-import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import com.twilio.guardrail.shims._
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls
 import scala.meta._
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
 import scala.collection.JavaConverters._
 
@@ -134,6 +137,11 @@ object SwaggerUtil {
     }
   }
 
+  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
+    for {
+      prefixes <- S.customTypePrefixes()
+    } yield extractFromNames[String, A](prefixes.map(_ + "-type"), v)
+
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
@@ -160,8 +168,9 @@ object SwaggerUtil {
             } yield res
           case impl: Schema[_] =>
             for {
-              tpeName <- getType(impl)
-              tpe     <- typeName[L, F](tpeName, Option(impl.getFormat()), ScalaType(impl))
+              tpeName       <- getType(impl)
+              customTpeName <- customTypeName(impl)
+              tpe           <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
             } yield Resolved[L](tpe, None, None)
         })
       }
@@ -255,6 +264,7 @@ object SwaggerUtil {
       import F._
       import Sc._
       import Sw._
+
       log.debug(s"property:\n${log.schemaToString(property)}") >> (property match {
         case p: ArraySchema =>
           for {
@@ -289,23 +299,41 @@ object SwaggerUtil {
           getSimpleRef(ref).map(Deferred[L])
 
         case b: BooleanSchema =>
-          (typeName[L, F]("boolean", None, ScalaType(b)), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+          for {
+            customTpeName <- customTypeName(b)
+            res           <- (typeName[L, F]("boolean", None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+          } yield res
 
         case s: StringSchema =>
-          (typeName[L, F]("string", Option(s.getFormat()), ScalaType(s)), Default(s).extract[String].traverse(litString(_)))
-            .mapN(Resolved[L](_, None, _))
+          for {
+            customTpeName <- customTypeName(s)
+            res <- (typeName[L, F]("string", Option(s.getFormat()), customTpeName), Default(s).extract[String].traverse(litString(_)))
+              .mapN(Resolved[L](_, None, _))
+          } yield res
 
         case d: DateSchema =>
-          typeName[L, F]("string", Some("date"), ScalaType(d)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(d)
+            res           <- typeName[L, F]("string", Some("date"), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case d: DateTimeSchema =>
-          typeName[L, F]("string", Some("date-time"), ScalaType(d)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(d)
+            res           <- typeName[L, F]("string", Some("date-time"), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case i: IntegerSchema =>
-          typeName[L, F]("integer", Option(i.getFormat), ScalaType(i)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(i)
+            res           <- typeName[L, F]("integer", Option(i.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case d: NumberSchema =>
-          typeName[L, F]("number", Option(d.getFormat), ScalaType(d)).map(Resolved[L](_, None, None))
+          for {
+            customTpeName <- customTypeName(d)
+            res           <- typeName[L, F]("number", Option(d.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
 
         case x =>
           fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
@@ -369,37 +397,41 @@ object SwaggerUtil {
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[T](bindingName: String,
-                                    pathArgs: List[ScalaParameter[ScalaLanguage]])(f: ScalaParameter[ScalaLanguage] => Parser[T]): Parser[T] =
+    private[this] def lookupName[L <: LA, T](bindingName: String, pathArgs: List[ScalaParameter[L]])(f: ScalaParameter[L] => atto.Parser[T]): atto.Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
-        .fold[Parser[T]](
+        .fold[atto.Parser[T]](
           err(s"Unable to find argument ${bindingName}")
         )(param => f(param))
 
-    private[this] val variable: Parser[String] = char('{') ~> many(notChar('}'))
+    private[this] val variable: atto.Parser[String] = char('{') ~> many(notChar('}'))
       .map(_.mkString("")) <~ char('}')
 
-    def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
-      val term: Parser[Term.Apply] = variable.flatMap { binding =>
+    def generateUrlPathParams[L <: LA](path: String,
+                                       pathArgs: List[ScalaParameter[L]],
+                                       showLiteralPathComponent: String => L#Term,
+                                       showInterpolatedPathComponent: L#TermName => L#Term,
+                                       initialPathTerm: L#Term,
+                                       combinePathTerms: (L#Term, L#Term) => L#Term): Target[L#Term] = {
+      val term: atto.Parser[L#Term] = variable.flatMap { binding =>
         lookupName(binding, pathArgs) { param =>
-          ok(q"Formatter.addPath(${param.paramName})")
+          ok(showInterpolatedPathComponent(param.paramName))
         }
       }
-      val other: Parser[String]                             = many1(notChar('{')).map(_.toList.mkString)
-      val pattern: Parser[List[Either[String, Term.Apply]]] = many(either(term, other).map(_.swap: Either[String, Term.Apply]))
+      val other: atto.Parser[String]                         = many1(notChar('{')).map(_.toList.mkString)
+      val pattern: atto.Parser[List[Either[String, L#Term]]] = many(either(term, other).map(_.swap: Either[String, L#Term]))
 
       for {
         parts <- pattern
           .parseOnly(path)
           .either
-          .fold(Target.raiseError(_), Target.pure(_))
+          .fold(Target.raiseError, Target.pure)
         result = parts
           .map({
-            case Left(part)  => Lit.String(part)
+            case Left(part)  => showLiteralPathComponent(part)
             case Right(term) => term
           })
-          .foldLeft[Term](q"host + basePath")({ case (a, b) => q"${a} + ${b}" })
+          .foldLeft[L#Term](initialPathTerm)((a, b) => combinePathTerms(a, b))
       } yield result
     }
 
@@ -421,7 +453,7 @@ object SwaggerUtil {
       def regexSegment(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
-            lookupName(binding, pathArgs) {
+            lookupName[ScalaLanguage, (Option[TN], T)](binding, pathArgs) {
               case param @ ScalaParameter(_, _, paramName, argName, _) =>
                 val value = if (before.nonEmpty || after.nonEmpty) {
                   pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString)))

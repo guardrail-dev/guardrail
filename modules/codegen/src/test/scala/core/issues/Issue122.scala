@@ -53,7 +53,7 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Ensure clients are able to pass sequences of values for array form parameters") {
     val (
       _,
-      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _),
+      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)

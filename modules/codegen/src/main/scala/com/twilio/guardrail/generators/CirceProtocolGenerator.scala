@@ -5,7 +5,8 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
 import cats.~>
 import cats.data.NonEmptyList
-import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull, ScalaType }
+import com.twilio.guardrail.extract.{ Default, ScalaEmptyIsNull }
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms
 import java.util.Locale
@@ -13,6 +14,7 @@ import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.protocol._
 import scala.collection.JavaConverters._
 import scala.meta._
+import scala.language.existentials
 
 object CirceProtocolGenerator {
   import ProtocolGenerator._
@@ -37,7 +39,7 @@ object CirceProtocolGenerator {
         Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
 
       case RenderMembers(clsName, elems) =>
-        Target.pure(q"""
+        Target.pure(Some(q"""
           object members {
             ..${elems
           .map({
@@ -46,23 +48,23 @@ object CirceProtocolGenerator {
           })
           .to[List]}
           }
-        """)
+        """))
 
       case EncodeEnum(clsName) =>
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
             Encoder[String].contramap(_.value)
-        """)
+        """))
 
       case DecodeEnum(clsName) =>
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
             Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(Term.Name("s"),
                                                                                   List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
                                                                                   List(Term.Name("value")))}))
-        """)
+        """))
 
-      case RenderClass(clsName, tpe) =>
+      case RenderClass(clsName, tpe, _) =>
         Target.pure(q"""
           sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) {
             override def toString: String = value.toString
@@ -84,11 +86,11 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = List.empty[Import],
-            members = List(members),
-            definitions = List(
-              q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)"
-            ),
-            values = terms ++ List(values) ++ List(encoder, decoder) ++ implicits
+            definitions = members.to[List] ++
+              terms ++
+              List(Some(values), encoder, decoder).flatten ++
+              implicits ++
+              List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)")
           )
         )
       case BuildAccessor(clsName, termName) =>
@@ -109,13 +111,10 @@ object CirceProtocolGenerator {
         }).map(_.map(_.asScala.toList).toList.flatten)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
-        def toCamelCase(s: String): String =
-          "[_\\.]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
-
         for {
           _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) toCamelCase(name) else name
+          argName = if (needCamelSnakeConversion) name.toCamelCase else name
 
           defaultValue = property match {
             case _: MapSchema =>
@@ -168,12 +167,12 @@ object CirceProtocolGenerator {
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull)
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, finalDefaultValue)
 
-      case RenderDTOClass(clsName, selfTerms, parents) =>
+      case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
         val parenOpt       = parents.headOption
-        val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfTerms).filterNot(
+        val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfParams.map(_.term)).filterNot(
           param => discriminators.contains(param.name.value)
         )
         val code = parenOpt
@@ -232,12 +231,12 @@ object CirceProtocolGenerator {
             }
           """
         }
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("encode", clsName)} = {
             val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
             $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-        """)
+        """))
 
       case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
@@ -287,9 +286,9 @@ object CirceProtocolGenerator {
           }
           """
         }
-        Target.pure(q"""
+        Target.pure(Some(q"""
           implicit val ${suffixClsName("decode", clsName)} = $decVal
-        """)
+        """))
 
       case RenderDTOStaticDefns(clsName, deps, encoder, decoder) =>
         val extraImports: List[Import] = deps.map { term =>
@@ -299,9 +298,7 @@ object CirceProtocolGenerator {
           StaticDefns[ScalaLanguage](
             className = clsName,
             extraImports = extraImports,
-            members = List.empty,
-            definitions = List.empty,
-            values = List(encoder, decoder)
+            definitions = List(encoder, decoder).flatten
           )
         )
     }
@@ -389,16 +386,14 @@ object CirceProtocolGenerator {
 
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
         Target.pure(
-          StaticDefns(
+          StaticDefns[ScalaLanguage](
             className = clsName,
-            extraImports = List.empty,
-            members = List.empty,
-            definitions = List.empty,
-            values = List(
-              q"val discriminator: String = ${Lit.String(discriminator)}",
+            extraImports = List.empty[Import],
+            definitions = List[Option[Defn]](
+              Some(q"val discriminator: String = ${Lit.String(discriminator)}"),
               encoder,
               decoder
-            )
+            ).flatten
           )
         )
 
@@ -415,7 +410,7 @@ object CirceProtocolGenerator {
                      Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit.String(s" (valid: ${children.mkString(", ")})")}, discriminatorCursor.history))
                  }
             })"""
-        Target.pure(code)
+        Target.pure(Some(code))
 
       case EncodeADT(clsName, children) =>
         val childrenCases = children.map(
@@ -425,12 +420,13 @@ object CirceProtocolGenerator {
           q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
               ..case $childrenCases
           }"""
-        Target.pure(code)
+        Target.pure(Some(code))
 
-      case RenderSealedTrait(className, terms, discriminator, parents) =>
+      case RenderSealedTrait(className, params, discriminator, parents, _) =>
         for {
           testTerms <- (
-            terms
+            params
+              .map(_.term)
               .filter(_.name.value != discriminator)
               .traverse { t =>
                 for {

@@ -17,7 +17,11 @@ val catsEffectVersion = "1.0.0"
 val circeVersion      = "0.10.1"
 val http4sVersion     = "0.19.0"
 val scalatestVersion  = "3.0.7"
+val javaparserVersion = "3.7.1"
 val endpointsVersion  = "0.8.0"
+val ahcVersion        = "2.8.1"
+val dropwizardVersion = "1.3.9"
+val jerseyVersion     = "2.25.1"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
@@ -43,8 +47,28 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("pathological-parameters.yaml"), "pathological", false, List.empty)
 )
 
-val exampleArgs: List[List[String]] = exampleCases
-  .foldLeft(List.empty[List[String]])({
+val exampleJavaArgs: List[List[String]] = exampleCases
+  .foldLeft(List[List[String]](List("java")))({
+    case (acc, (path, prefix, tracing, extra)) =>
+      acc ++ (for {
+        kind <- List("client", "server")
+        frameworkPair <- List(
+          ("dropwizard", "dropwizard"),
+        )
+        (frameworkName, frameworkPackage) = frameworkPair
+        tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
+      } yield
+        (
+          List(s"--${kind}") ++
+            List("--specPath", path.toString()) ++
+            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/java/generated") ++
+            List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
+            List("--framework", frameworkName)
+        ) ++ tracingFlag ++ extra)
+  })
+
+val exampleScalaArgs: List[List[String]] = exampleCases
+  .foldLeft(List[List[String]](List("scala")))({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
         frameworkSuite <- List(
@@ -65,12 +89,20 @@ val exampleArgs: List[List[String]] = exampleCases
         ) ++ tracingFlag ++ extra)
   })
 
+lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
+fullRunTask(
+  runJavaExample,
+  Test,
+  "com.twilio.guardrail.CLI",
+  exampleJavaArgs.flatten.filter(_.nonEmpty): _*
+)
+
 lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
 fullRunTask(
   runScalaExample,
   Test,
   "com.twilio.guardrail.CLI",
-  exampleArgs.flatten.filter(_.nonEmpty): _*
+  exampleScalaArgs.flatten.filter(_.nonEmpty): _*
 )
 
 artifact in (Compile, assembly) := {
@@ -81,11 +113,12 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
-val frameworks = List("akkaHttp", "endpoints", "http4s")
+val scalaFrameworks = List("akkaHttp", "endpoints", "http4s")
+val javaFrameworks = List("dropwizard")
 
 resetSample := {
   import scala.sys.process._
-  (List("sample") ++ frameworks.map(x => s"sample-${x}"))
+  (List("sample") ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}"))
     .foreach(sampleName => s"git clean -fdx modules/${sampleName}/src modules/${sampleName}/target" !)
 }
 
@@ -93,11 +126,14 @@ resetSample := {
 addCommandAlias("example", "runtimeSuite")
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; " + frameworks.map(x => s"${x}Sample/test").mkString("; "))
-addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + frameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + frameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
-addCommandAlias("testSuite", "; scalaTestSuite")
+addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeSuite", "runtimeScalaSuite ; runtimeJavaSuite")
+addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
+addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
+addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite")
 
 addCommandAlias(
   "publishBintray",
@@ -150,13 +186,14 @@ lazy val codegen = (project in file("modules/codegen"))
     (name := "guardrail") +:
       codegenSettings,
     libraryDependencies ++= testDependencies ++ Seq(
-      "org.scalameta"           %% "scalameta"     % "4.1.0",
-      "io.swagger.parser.v3"    % "swagger-parser" % "2.0.8",
-      "org.tpolecat"            %% "atto-core"     % "0.6.3",
-      "org.typelevel"           %% "cats-core"     % catsVersion,
-      "org.typelevel"           %% "cats-kernel"   % catsVersion,
-      "org.typelevel"           %% "cats-macros"   % catsVersion,
-      "org.typelevel"           %% "cats-free"     % catsVersion
+      "org.scalameta"           %% "scalameta"                    % "4.1.0",
+      "com.github.javaparser"   % "javaparser-symbol-solver-core" % javaparserVersion,
+      "io.swagger.parser.v3"    % "swagger-parser"                % "2.0.8",
+      "org.tpolecat"            %% "atto-core"                    % "0.6.3",
+      "org.typelevel"           %% "cats-core"                    % catsVersion,
+      "org.typelevel"           %% "cats-kernel"                  % catsVersion,
+      "org.typelevel"           %% "cats-macros"                  % catsVersion,
+      "org.typelevel"           %% "cats-free"                    % catsVersion
     ),
     scalacOptions += "-language:higherKinds",
     bintrayRepository := {
@@ -245,6 +282,31 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
     scalafmtOnCompile := false
   )
 
+lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
+  .settings(
+    codegenSettings,
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    libraryDependencies ++= Seq(
+      "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
+      "org.glassfish.jersey.media" %  "jersey-media-multipart" % jerseyVersion,
+      "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
+      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
+      "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
+      "junit"                      %  "junit"                  % "4.12"             % Test,
+      "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
+      "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
+      "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
+    ),
+		crossPaths := false,  // strangely needed to get the JUnit tests to run at all
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
+watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
 
 logBuffered in Test := false

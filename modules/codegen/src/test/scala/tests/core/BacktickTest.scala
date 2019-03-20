@@ -68,7 +68,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Ensure paths are generated with escapes") {
     val (
       _,
-      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _),
+      Clients(Client(tags, className, imports, staticDefns, cls, _) :: _, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
@@ -146,13 +146,13 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-    case class `dashy-class`(`dashy-param`: Option[Long] = None)
+    case class `dashy-class`(dashyParam: Option[Long] = None)
     """
     val companion  = q"""
     object `dashy-class` {
       implicit val `encodedashy-class` = {
         val readOnlyKeys = Set[String]()
-        Encoder.forProduct1("dashy-param")((o: `dashy-class`) => o.`dashy-param`).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+        Encoder.forProduct1("dashy-param")((o: `dashy-class`) => o.dashyParam).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
       }
       implicit val `decodedashy-class` = Decoder.forProduct1("dashy-param")(`dashy-class`.apply _)
     }
@@ -160,7 +160,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     cls.structure should equal(definition.structure)
     cls.toString should include("case class `dashy-class`")
-    cls.toString should include("`dashy-param`")
+    cls.toString should include("dashyParam")
     cls.toString shouldNot include("``")
 
     cmp.structure should equal(companion.structure)

@@ -119,7 +119,7 @@ object AkkaHttpServerGenerator {
           } else Target.pure(None)
         } yield res
 
-      case GenerateRoutes(resourceName, basePath, routes, protocolElems) =>
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems) =>
         for {
           renderedRoutes <- routes.traverse {
             case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
@@ -132,7 +132,8 @@ object AkkaHttpServerGenerator {
           methodSigs = renderedRoutes.map(_.methodSig)
         } yield {
           RenderedRoutes[ScalaLanguage](
-            combinedRouteTerms,
+            List(combinedRouteTerms),
+            List.empty,
             methodSigs,
             renderedRoutes.flatMap(_.supportDefinitions),
             renderedRoutes.flatMap(_.handlerDefinitions)
@@ -156,7 +157,7 @@ object AkkaHttpServerGenerator {
           } else Target.pure(List.empty)
         } yield res
 
-      case RenderClass(resourceName, handlerName, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
+      case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
@@ -166,7 +167,7 @@ object AkkaHttpServerGenerator {
 
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
-              ${combinedRouteTerms}
+              ..${combinedRouteTerms}
             }
 
             ..${responseDefinitions}
@@ -182,6 +183,9 @@ object AkkaHttpServerGenerator {
             Option(q"import scala.language.higherKinds")
           ).flatten
         }
+
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
     }
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {

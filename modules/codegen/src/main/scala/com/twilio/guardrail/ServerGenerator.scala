@@ -1,31 +1,28 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
-import cats.Id
-import cats.data.NonEmptyList
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.{ Http4sHelper, ScalaParameter }
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
-import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
-import scala.collection.JavaConverters._
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
 
-case class Servers[L <: LA](servers: List[Server[L]])
-case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], src: List[L#Statement])
+case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
+case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
 case class TracingField[L <: LA](param: ScalaParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
-    routes: L#Term,
+    routes: List[L#Term],
+    classAnnotations: List[L#Annotation],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],
     handlerDefinitions: List[L#Statement]
 )
 
 object ServerGenerator {
-  import NelShim._
 
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
@@ -47,7 +44,8 @@ object ServerGenerator {
         .groupBy(_._1)
         .mapValues(_.map(_._2))
         .toList
-      extraImports <- getExtraImports(context.tracing)
+      extraImports       <- getExtraImports(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>
           val routes       = unsortedRoutes.sortBy(r => (r.path, r.method))
@@ -66,19 +64,22 @@ object ServerGenerator {
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes   <- generateRoutes(resourceName, basePath, serverOperations, protocolElems)
-            handlerSrc       <- renderHandler(formatHandlerName(className.lastOption.getOrElse("")), renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
+            renderedRoutes   <- generateRoutes(context.tracing, resourceName, basePath, serverOperations, protocolElems)
+            handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
             extraRouteParams <- getExtraRouteParams(context.tracing)
-            classSrc <- renderClass(resourceName,
-                                    handlerName,
-                                    renderedRoutes.routes,
-                                    extraRouteParams,
-                                    responseDefinitions.flatten,
-                                    renderedRoutes.supportDefinitions)
+            classSrc <- renderClass(
+              resourceName,
+              handlerName,
+              renderedRoutes.classAnnotations,
+              renderedRoutes.routes,
+              extraRouteParams,
+              responseDefinitions.flatten,
+              renderedRoutes.supportDefinitions
+            )
           } yield {
-            Server(className, frameworkImports ++ extraImports, handlerSrc +: classSrc)
+            Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
           }
       }
-    } yield Servers[L](servers)
+    } yield Servers[L](servers, supportDefinitions)
   }
 }

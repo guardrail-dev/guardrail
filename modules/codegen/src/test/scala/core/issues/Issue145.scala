@@ -52,15 +52,15 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
         object Pet {
           implicit val encodePet = {
             val readOnlyKeys = Set[String]()
-            Encoder.forProduct3("name", "underscore_name", "dash-name")((o: Pet) => (o.name, o.underscoreName, o.`dash-name`)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.forProduct3("name", "underscore_name", "dash-name")((o: Pet) => (o.name, o.underscoreName, o.dashName)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodePet = new Decoder[Pet] {
             final def apply(c: HCursor): Decoder.Result[Pet] =
               for (
                 name <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];
                 underscoreName <- c.downField("underscore_name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];
-                `dash-name` <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]
-              ) yield Pet(name, underscoreName, `dash-name`)
+                dashName <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]
+              ) yield Pet(name, underscoreName, dashName)
           }
         }""".toString()
     }

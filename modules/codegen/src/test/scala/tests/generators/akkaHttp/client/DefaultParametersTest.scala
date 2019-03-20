@@ -123,7 +123,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
   test("Ensure responses are generated") {
     val (
       _,
-      Clients(Client(tags, className, _, staticDefns, cls, _) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, _) :: _, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)

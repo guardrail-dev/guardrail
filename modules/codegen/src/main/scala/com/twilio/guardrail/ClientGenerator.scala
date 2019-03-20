@@ -10,7 +10,7 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
 import java.net.URI
 
-case class Clients[L <: LA](clients: List[Client[L]])
+case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Client[L <: LA](pkg: List[String],
                            clientName: String,
                            imports: List[L#Import],
@@ -35,6 +35,7 @@ object ClientGenerator {
     for {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing)
       clients <- groupedRoutes.traverse({
         case (className, unsortedRoutes) =>
           val routes     = unsortedRoutes.sortBy(r => (r.path, r.method))
@@ -73,6 +74,6 @@ object ClientGenerator {
             Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), staticDefns, client, responseDefinitions.flatten)
           }
       })
-    } yield Clients[L](clients)
+    } yield Clients[L](clients, supportDefinitions)
   }
 }

@@ -35,7 +35,7 @@ trait SwaggerSpecRunner {
     import F._
     import Sw._
 
-    val (proto, CodegenDefinitions(clients, Nil)) = Target.unsafeExtract(
+    val (proto, CodegenDefinitions(clients, Nil, Nil)) = Target.unsafeExtract(
       Common
         .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
           CodegenTarget.Client,
@@ -45,7 +45,7 @@ trait SwaggerSpecRunner {
         .foldMap(framework)
     )
 
-    val (_, CodegenDefinitions(Nil, servers)) = Target.unsafeExtract(
+    val (_, CodegenDefinitions(Nil, servers, Nil)) = Target.unsafeExtract(
       Common
         .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
           CodegenTarget.Server,
@@ -55,7 +55,7 @@ trait SwaggerSpecRunner {
         .foldMap(framework)
     )
 
-    (proto, Clients(clients), Servers(servers))
+    (proto, Clients(clients, Nil), Servers(servers, Nil))
   }
 
 }
