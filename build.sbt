@@ -47,35 +47,22 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("pathological-parameters.yaml"), "pathological", false, List.empty)
 )
 
-val exampleJavaArgs: List[List[String]] = exampleCases
-  .foldLeft(List[List[String]](List("java")))({
-    case (acc, (path, prefix, tracing, extra)) =>
-      acc ++ (for {
-        kind <- List("client", "server")
-        frameworkPair <- List(
-          ("dropwizard", "dropwizard"),
-        )
-        (frameworkName, frameworkPackage) = frameworkPair
-        tracingFlag                       = if (tracing) Option("--tracing") else Option.empty[String]
-      } yield
-        (
-          List(s"--${kind}") ++
-            List("--specPath", path.toString()) ++
-            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/java/generated") ++
-            List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
-            List("--framework", frameworkName)
-        ) ++ tracingFlag ++ extra)
-  })
+val exampleFrameworkSuites = Map(
+  "scala" -> List(
+    ("akka-http", "akkaHttp", List("client", "server")),
+    ("endpoints", "endpoints", List("client")),
+    ("http4s", "http4s", List("client", "server"))
+  ),
+  "java" -> List(
+    ("dropwizard", "dropwizard", List("client", "server"))
+  )
+)
 
-val exampleScalaArgs: List[List[String]] = exampleCases
-  .foldLeft(List[List[String]](List("scala")))({
+def exampleArgs(language: String): List[List[String]] = exampleCases
+  .foldLeft(List[List[String]](List(language)))({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
-        frameworkSuite <- List(
-          ("akka-http", "akkaHttp", List("client", "server")),
-          ("endpoints", "endpoints", List("client")),
-          ("http4s", "http4s", List("client", "server"))
-        )
+        frameworkSuite <- exampleFrameworkSuites(language)
         (frameworkName, frameworkPackage, kinds) = frameworkSuite
         kind <- kinds
         tracingFlag = if (tracing) Option("--tracing") else Option.empty[String]
@@ -83,7 +70,7 @@ val exampleScalaArgs: List[List[String]] = exampleCases
         (
           List(s"--${kind}") ++
             List("--specPath", path.toString()) ++
-            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/scala/generated") ++
+            List("--outputPath", s"modules/sample-${frameworkPackage}/target/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
         ) ++ tracingFlag ++ extra)
@@ -94,7 +81,7 @@ fullRunTask(
   runJavaExample,
   Test,
   "com.twilio.guardrail.CLI",
-  exampleJavaArgs.flatten.filter(_.nonEmpty): _*
+  exampleArgs("java").flatten.filter(_.nonEmpty): _*
 )
 
 lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
@@ -102,7 +89,7 @@ fullRunTask(
   runScalaExample,
   Test,
   "com.twilio.guardrail.CLI",
-  exampleScalaArgs.flatten.filter(_.nonEmpty): _*
+  exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
 artifact in (Compile, assembly) := {
@@ -113,13 +100,13 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
-val scalaFrameworks = List("akkaHttp", "endpoints", "http4s")
-val javaFrameworks = List("dropwizard")
+val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
+val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
 resetSample := {
   import scala.sys.process._
   (List("sample") ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}"))
-    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/src modules/${sampleName}/target" !)
+    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/target/generated" !)
 }
 
 // Deprecated command
@@ -128,7 +115,7 @@ addCommandAlias("example", "runtimeSuite")
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
-addCommandAlias("runtimeSuite", "runtimeScalaSuite ; runtimeJavaSuite")
+addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
 addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
 addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
@@ -236,6 +223,7 @@ lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
       "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
       "org.typelevel"     %% "cats-core"         % catsVersion
     ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,
     scalafmtOnCompile := false
   )
@@ -256,6 +244,7 @@ lazy val http4sSample = (project in file("modules/sample-http4s"))
       "org.typelevel" %% "cats-core"           % catsVersion,
       "org.typelevel" %% "cats-effect"         % catsEffectVersion
     ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,
     scalafmtOnCompile := false
   )
@@ -278,6 +267,7 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
       "org.typelevel"     %%% "cats-core"                     % catsVersion
     ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,
     scalafmtOnCompile := false
   )
@@ -301,7 +291,8 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
       "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
 			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
-		crossPaths := false,  // strangely needed to get the JUnit tests to run at all
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+    crossPaths := false,  // strangely needed to get the JUnit tests to run at all
     skip in publish := true,
     scalafmtOnCompile := false
   )
