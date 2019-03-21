@@ -256,7 +256,6 @@ object DropwizardServerGenerator {
           "javax.ws.rs.GET",
           "javax.ws.rs.HEAD",
           "javax.ws.rs.HeaderParam",
-          "javax.ws.rs.HttpMethod",
           "javax.ws.rs.OPTIONS",
           "javax.ws.rs.POST",
           "javax.ws.rs.PUT",
@@ -297,17 +296,7 @@ object DropwizardServerGenerator {
                 parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
                 val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
-                val httpMethodAnnotation = httpMethod match {
-                  case HttpMethod.DELETE  => new MarkerAnnotationExpr("DELETE")
-                  case HttpMethod.GET     => new MarkerAnnotationExpr("GET")
-                  case HttpMethod.HEAD    => new MarkerAnnotationExpr("HEAD")
-                  case HttpMethod.OPTIONS => new MarkerAnnotationExpr("OPTIONS")
-                  case HttpMethod.PATCH   => new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr("PATCH"))
-                  case HttpMethod.POST    => new MarkerAnnotationExpr("POST")
-                  case HttpMethod.PUT     => new MarkerAnnotationExpr("PUT")
-                  case HttpMethod.TRACE   => new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr("TRACE"))
-                }
-                method.addAnnotation(httpMethodAnnotation)
+                  .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
                 val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
                 if (pathSuffix.nonEmpty && pathSuffix != "/") {
@@ -524,12 +513,34 @@ object DropwizardServerGenerator {
         }
 
       case GenerateSupportDefinitions(tracing) =>
-        val showerClass = SHOWER_CLASS_DEF
-        Target.pure(
+        for {
+          annotationImports <- List(
+            "java.lang.annotation.ElementType",
+            "java.lang.annotation.Retention",
+            "java.lang.annotation.RetentionPolicy",
+            "java.lang.annotation.Target",
+            "javax.ws.rs.HttpMethod"
+          ).traverse(safeParseRawImport)
+        } yield {
+          def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
+            val annotationDecl = new AnnotationDeclaration(util.EnumSet.of(PUBLIC), name)
+              .addAnnotation(
+                new SingleMemberAnnotationExpr(new Name("Target"),
+                                               new ArrayInitializerExpr(new NodeList(new FieldAccessExpr(new NameExpr("ElementType"), "METHOD"))))
+              )
+              .addAnnotation(new SingleMemberAnnotationExpr(new Name("Retention"), new FieldAccessExpr(new NameExpr("RetentionPolicy"), "RUNTIME")))
+              .addAnnotation(new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr(name)))
+            SupportDefinition[JavaLanguage](new Name(name), annotationImports, annotationDecl)
+          }
+
+          val showerClass = SHOWER_CLASS_DEF
+
           List(
-            SupportDefinition[JavaLanguage](new Name(showerClass.getNameAsString), List.empty, showerClass)
+            SupportDefinition[JavaLanguage](new Name(showerClass.getNameAsString), List.empty, showerClass),
+            httpMethodAnnotation("PATCH"),
+            httpMethodAnnotation("TRACE")
           )
-        )
+        }
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         def doRender: Target[List[BodyDeclaration[_]]] = {
