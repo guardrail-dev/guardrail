@@ -85,6 +85,7 @@ object Java {
   def functionType(in: Type, out: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
   def supplierType(of: Type): ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
 
+  val VOID_TYPE: ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Void")
   val OBJECT_TYPE: ClassOrInterfaceType          = JavaParser.parseClassOrInterfaceType("Object")
   val STRING_TYPE: ClassOrInterfaceType          = JavaParser.parseClassOrInterfaceType("String")
   val THROWABLE_TYPE: ClassOrInterfaceType       = JavaParser.parseClassOrInterfaceType("Throwable")

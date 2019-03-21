@@ -13,6 +13,7 @@ import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.Waiters
 import org.scalatest.{FreeSpec, Matchers}
 import scala.compat.java8.FunctionConverters._
+import scala.compat.java8.OptionConverters._
 
 class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with MockitoSugar with ArgumentMatchersSugar {
   private implicit val mapper = new ObjectMapper
@@ -20,18 +21,19 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
   "Test server" in {
     val USERNAME = "foobar"
 
-    val (asyncResponse, serverFuture: CompletableFuture[GetUserByNameResponse]) = mockAsyncResponse[GetUserByNameResponse]
+    val serverFuture = new CompletableFuture[GetUserByNameResponse[_]]
+    val asyncResponse = mockAsyncResponse(serverFuture)
 
     val resource = new UserResource(new UserHandler {
-      override def createUser(body: User): CompletionStage[CreateUserResponse] = ???
-      override def createUsersWithArrayInput(body: util.List[User]): CompletionStage[CreateUsersWithArrayInputResponse] = ???
-      override def createUsersWithListInput(body: util.List[User]): CompletionStage[CreateUsersWithListInputResponse] = ???
-      override def loginUser(username: String, password: String): CompletionStage[LoginUserResponse] = ???
-      override def logoutUser(): CompletionStage[LogoutUserResponse] = ???
-      override def updateUser(username: String, body: User): CompletionStage[UpdateUserResponse] = ???
-      override def deleteUser(username: String): CompletionStage[DeleteUserResponse] = ???
+      override def createUser(body: User): CompletionStage[CreateUserResponse[_]] = ???
+      override def createUsersWithArrayInput(body: util.List[User]): CompletionStage[CreateUsersWithArrayInputResponse[_]] = ???
+      override def createUsersWithListInput(body: util.List[User]): CompletionStage[CreateUsersWithListInputResponse[_]] = ???
+      override def loginUser(username: String, password: String): CompletionStage[LoginUserResponse[_]] = ???
+      override def logoutUser(): CompletionStage[LogoutUserResponse[_]] = ???
+      override def updateUser(username: String, body: User): CompletionStage[UpdateUserResponse[_]] = ???
+      override def deleteUser(username: String): CompletionStage[DeleteUserResponse[_]] = ???
 
-      override def getUserByName(username: String): CompletionStage[GetUserByNameResponse] = {
+      override def getUserByName(username: String): CompletionStage[GetUserByNameResponse[_]] = {
         username match {
           case USERNAME =>
             serverFuture.complete(GetUserByNameResponse.Ok(User.builder()
@@ -56,11 +58,7 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
       request.getUri.getPath match {
         case userPath(username) =>
           resource.getUserByName(username, asyncResponse)
-          serverFuture.thenApply({ response => response match {
-            case r: GetUserByNameResponse.Ok => mockAHCResponse(request.getUrl, r.getStatusCode, Some(r.getValue))
-            case r: GetUserByNameResponse.BadRequest => mockAHCResponse(request.getUrl, r.getStatusCode)
-            case r: GetUserByNameResponse.NotFound => mockAHCResponse(request.getUrl, r.getStatusCode)
-          }})
+          serverFuture.thenApply(response => mockAHCResponse(request.getUrl, response.getStatusCode, response.getEntityBody.asScala))
         case _ =>
           CompletableFuture.completedFuture(mockAHCResponse(request.getUrl, 404))
       }

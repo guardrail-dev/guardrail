@@ -15,9 +15,8 @@ import org.scalatest.Assertions
 import scala.reflect.ClassTag
 
 object MockHelpers extends Assertions with MockitoSugar with ArgumentMatchersSugar {
-  def mockAsyncResponse[T](implicit cls: ClassTag[T]): (AsyncResponse, CompletableFuture[T]) = {
+  def mockAsyncResponse[T](future: CompletableFuture[T])(implicit cls: ClassTag[T]): AsyncResponse = {
     val asyncResponse = mock[AsyncResponse]
-    val future = new CompletableFuture[T]
 
     when(asyncResponse.resume(any[T])) thenAnswer[AnyRef] { response => response match {
       case t: Throwable => future.completeExceptionally(t)
@@ -25,7 +24,7 @@ object MockHelpers extends Assertions with MockitoSugar with ArgumentMatchersSug
       case other => fail(s"AsyncResponse.resume expected an object of type ${cls.runtimeClass.getName}, but got ${other.getClass.getName} instead")
     }}
 
-    (asyncResponse, future)
+    asyncResponse
   }
 
   def mockAHCResponse[T](uri: String, status: Int, maybeBody: Option[T] = None)(implicit mapper: ObjectMapper): Response = {
