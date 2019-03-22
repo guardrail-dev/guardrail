@@ -5,7 +5,7 @@ import cats.Applicative
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
-import com.twilio.guardrail.terms.CoreTerm
+import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms }
 import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import scala.io.AnsiColor
@@ -13,6 +13,7 @@ import scala.util.{ Failure, Success }
 
 object CLICommon {
   def run[L <: LA](args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
+    val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
     // language themselves.
@@ -21,8 +22,13 @@ object CLICommon {
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
     val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val result = Common
-      .runM[L, CoreTerm[L, ?]](newArgs)
+    val runCore = for {
+      defaultFramework <- C.getDefaultFramework
+      args             <- C.parseArgs(newArgs, defaultFramework)
+      result           <- Common.runM[L, CoreTerm[L, ?]](args)
+    } yield result
+
+    val result = runCore
       .foldMap(interpreter)
       .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
         {

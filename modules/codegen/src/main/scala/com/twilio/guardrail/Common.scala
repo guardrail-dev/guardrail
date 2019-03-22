@@ -161,15 +161,13 @@ object Common {
   }
 
   def runM[L <: LA, F[_]](
-      args: Array[String]
+      args: List[Args]
   )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {
-      defaultFramework <- getDefaultFramework
-      parsed           <- parseArgs(args, defaultFramework)
-      args             <- validateArgs(parsed)
-      writeTrees       <- processArgs(args)
+      validated  <- validateArgs(args)
+      writeTrees <- processArgs(validated)
     } yield writeTrees
   }
 }
