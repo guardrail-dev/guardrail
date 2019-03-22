@@ -2,7 +2,15 @@ package com.twilio.guardrail.generators.syntax
 
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
-import com.github.javaparser.ast.body.{ ClassOrInterfaceDeclaration, Parameter }
+import com.github.javaparser.ast.body.{
+  BodyDeclaration,
+  ClassOrInterfaceDeclaration,
+  ConstructorDeclaration,
+  FieldDeclaration,
+  InitializerDeclaration,
+  MethodDeclaration,
+  Parameter
+}
 import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.Target
@@ -163,6 +171,39 @@ object Java {
       } else {
         s
       }
+  }
+
+  def sortDefinitions(defns: List[BodyDeclaration[_]]): List[BodyDeclaration[_]] = {
+    import com.github.javaparser.ast.Modifier._
+    def sortKeyFor(x: BodyDeclaration[_]): Int = x match {
+      case cd: ClassOrInterfaceDeclaration if cd.getModifiers.contains(PUBLIC)                              => 0
+      case cd: ClassOrInterfaceDeclaration if cd.getModifiers.contains(PROTECTED)                           => 10
+      case cd: ClassOrInterfaceDeclaration if !cd.getModifiers.contains(PRIVATE)                            => 20
+      case _: ClassOrInterfaceDeclaration                                                                   => 30
+      case fd: FieldDeclaration if fd.getModifiers.contains(PUBLIC) && fd.getModifiers.contains(PUBLIC)     => 40
+      case fd: FieldDeclaration if fd.getModifiers.contains(STATIC) && fd.getModifiers.contains(PROTECTED)  => 50
+      case fd: FieldDeclaration if fd.getModifiers.contains(STATIC) && !fd.getModifiers.contains(PRIVATE)   => 60
+      case fd: FieldDeclaration if fd.getModifiers.contains(STATIC)                                         => 70
+      case _: InitializerDeclaration                                                                        => 80
+      case fd: FieldDeclaration if fd.getModifiers.contains(PUBLIC)                                         => 90
+      case fd: FieldDeclaration if fd.getModifiers.contains(PROTECTED)                                      => 100
+      case fd: FieldDeclaration if !fd.getModifiers.contains(PRIVATE)                                       => 110
+      case _: FieldDeclaration                                                                              => 120
+      case md: MethodDeclaration if md.getModifiers.contains(STATIC) && md.getModifiers.contains(PUBLIC)    => 130
+      case md: MethodDeclaration if md.getModifiers.contains(STATIC) && md.getModifiers.contains(PROTECTED) => 140
+      case md: MethodDeclaration if md.getModifiers.contains(STATIC) && !md.getModifiers.contains(PRIVATE)  => 150
+      case md: MethodDeclaration if md.getModifiers.contains(STATIC)                                        => 160
+      case cd: ConstructorDeclaration if cd.getModifiers.contains(PUBLIC)                                   => 170
+      case cd: ConstructorDeclaration if cd.getModifiers.contains(PROTECTED)                                => 180
+      case cd: ConstructorDeclaration if !cd.getModifiers.contains(PRIVATE)                                 => 190
+      case _: ConstructorDeclaration                                                                        => 200
+      case md: MethodDeclaration if md.getModifiers.contains(PUBLIC)                                        => 210
+      case md: MethodDeclaration if md.getModifiers.contains(PROTECTED)                                     => 220
+      case md: MethodDeclaration if !md.getModifiers.contains(PRIVATE)                                      => 230
+      case _: MethodDeclaration                                                                             => 240
+      case _                                                                                                => 250
+    }
+    defns.sortWith((a, b) => sortKeyFor(a) - sortKeyFor(b) < 0)
   }
 
   lazy val SHOWER_CLASS_DEF: ClassOrInterfaceDeclaration = {

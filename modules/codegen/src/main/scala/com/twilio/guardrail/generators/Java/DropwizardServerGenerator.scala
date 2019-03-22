@@ -503,11 +503,8 @@ object DropwizardServerGenerator {
           abstractResponseClass <- generateResponseSuperClass(abstractResponseClassName)
           responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
         } yield {
-          responseClasses.foreach({
-            case (cls, creator) =>
-              abstractResponseClass.addMember(cls)
-              abstractResponseClass.addMember(creator)
-          })
+          sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_]](cls, creator) }))
+            .foreach(abstractResponseClass.addMember)
 
           abstractResponseClass :: Nil
         }
@@ -546,11 +543,8 @@ object DropwizardServerGenerator {
         def doRender: Target[List[BodyDeclaration[_]]] = {
           val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, className)
           classAnnotations.foreach(cls.addAnnotation)
-          supportDefinitions.foreach(cls.addMember)
-          combinedRouteTerms.foreach({
-            case bd: BodyDeclaration[_] => cls.addMember(bd)
-            case _                      =>
-          })
+          sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
+            .foreach(cls.addMember)
 
           Target.pure(cls +: responseDefinitions)
         }
