@@ -5,8 +5,6 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.body.{ ClassOrInterfaceDeclaration, Parameter }
 import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
-import com.github.javaparser.printer.PrettyPrinterConfiguration
-import com.github.javaparser.printer.PrettyPrinterConfiguration.IndentType
 import com.twilio.guardrail.Target
 import java.nio.charset.StandardCharsets
 import java.util.Optional
@@ -90,16 +88,6 @@ object Java {
   val STRING_TYPE: ClassOrInterfaceType          = JavaParser.parseClassOrInterfaceType("String")
   val THROWABLE_TYPE: ClassOrInterfaceType       = JavaParser.parseClassOrInterfaceType("Throwable")
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")
-
-  val printer: PrettyPrinterConfiguration = new PrettyPrinterConfiguration()
-    .setColumnAlignFirstMethodChain(false)
-    .setColumnAlignParameters(false)
-    .setIndentSize(4)
-    .setIndentType(IndentType.SPACES)
-    .setOrderImports(true)
-    .setPrintComments(true)
-    .setPrintJavadoc(true)
-    .setTabWidth(4)
 
   // from https://en.wikipedia.org/wiki/List_of_Java_keywords
   private val reservedWords = Set(
