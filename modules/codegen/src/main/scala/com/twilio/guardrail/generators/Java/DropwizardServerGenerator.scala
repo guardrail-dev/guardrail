@@ -7,7 +7,7 @@ import cats.syntax.flatMap._
 import cats.syntax.traverse._
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.{ Modifier, NodeList }
+import com.github.javaparser.ast.{ Modifier, Node, NodeList }
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType, WildcardType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
@@ -540,23 +540,26 @@ object DropwizardServerGenerator {
         }
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
-        def doRender: Target[List[BodyDeclaration[_]]] = {
-          val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, className)
-          classAnnotations.foreach(cls.addAnnotation)
-          sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
-            .foreach(cls.addMember)
-
-          Target.pure(cls +: responseDefinitions)
-        }
-
         safeParseSimpleName(className) >>
           safeParseSimpleName(handlerName) >>
-          doRender
+          Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) +: responseDefinitions)
 
       case RenderHandler(handlerName, methodSigs, handlerDefinitions) =>
         val handlerClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), true, handlerName)
         methodSigs.foreach(handlerClass.addMember)
         Target.pure(handlerClass)
+    }
+
+    // Lift this function out of RenderClass above to work around a 2.11.x compiler syntax bug
+    private def doRenderClass(className: String,
+                              classAnnotations: List[AnnotationExpr],
+                              supportDefinitions: List[BodyDeclaration[_]],
+                              combinedRouteTerms: List[Node]): ClassOrInterfaceDeclaration = {
+      val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, className)
+      classAnnotations.foreach(cls.addAnnotation)
+      sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
+        .foreach(cls.addMember)
+      cls
     }
   }
 }
