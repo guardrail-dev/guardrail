@@ -21,7 +21,6 @@ object CLICommon {
       args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
-    val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
     val runCore = for {
       defaultFramework <- C.getDefaultFramework
       args             <- C.parseArgs(newArgs, defaultFramework)
@@ -30,7 +29,30 @@ object CLICommon {
 
     val result = runCore
       .foldMap(interpreter)
-      .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
+      .map(_.toList)
+
+    implicit val logLevel: LogLevel = level
+      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
+      .getOrElse(LogLevels.Warning)
+
+    val fallback = List.empty[Path]
+    val (logger, paths) = result
+      .flatMap(
+        _.flatTraverse(
+          rs =>
+            ReadSwagger
+              .readSwagger(rs)
+              .map(_.map(WriteTree.unsafeWriteTree))
+              .leftFlatMap(
+                value =>
+                  Target
+                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .subflatMap(_ => Either.left[Error, List[Path]](value))
+              )
+              <* Target.pushLogger(StructuredLogger.reset)
+        )
+      )
+      .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
             println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
@@ -57,49 +79,21 @@ object CLICommon {
           case UnparseableArgument(name, message) =>
             println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
             fallback
+          case RuntimeFailure(message) =>
+            println(s"${AnsiColor.RED}Error: $message")
+            fallback
+          case UserError(message) =>
+            println(s"${AnsiColor.RED}Error: $message")
+            unsafePrintHelp()
+            fallback
         },
-        _.toList
+        _.distinct
       )
-
-    implicit val logLevel: LogLevel = level
-      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
-      .getOrElse(LogLevels.Warning)
-
-    val (coreLogger, deferred) = result.runEmpty
-
-    print(coreLogger.show)
-
-    val (logger, paths) = deferred
-      .traverse({ rs =>
-        def put(value: StructuredLogger): Logger[List[Path]] = {
-          import cats.Id
-          import cats.data.IndexedStateT
-          IndexedStateT
-            .modify[Id, StructuredLogger, StructuredLogger](_ |+| value)
-            .map(_ => List.empty[Path])
-        }
-        def logRawError(err: String): Logger[List[Path]] = put(StructuredLogger.error(Nil, s"${AnsiColor.RED}${err}${AnsiColor.RESET}"))
-        ReadSwagger
-          .readSwagger(rs)
-          .fold[Logger[List[Path]]](
-            { err =>
-              logRawError(s"Error in ${rs}") >> logRawError(err)
-            },
-            _.fold(
-              {
-                case (err, errorKind) =>
-                  logRawError(s"Error in ${rs}") >> logRawError(err).map({ x =>
-                    if (errorKind == UserError) unsafePrintHelp()
-                    x
-                  })
-              },
-              xs => Applicative[Logger].pure(xs.map(WriteTree.unsafeWriteTree))
-            ).flatten
-          ) <* put(StructuredLogger.reset)
-      })
       .runEmpty
 
-    print(logger.show)
+    println(logger.show)
+
+    paths
   }
 
   def unsafePrintHelp(): Unit = {
