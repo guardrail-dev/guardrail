@@ -65,7 +65,7 @@ def exampleArgs(language: String): List[List[String]] = exampleCases
         frameworkSuite <- exampleFrameworkSuites(language)
         (frameworkName, frameworkPackage, kinds) = frameworkSuite
         kind <- kinds
-        tracingFlag = if (tracing) Option("--tracing") else Option.empty[String]
+        tracingFlag = if (tracing && language != "java") Option("--tracing") else Option.empty[String]
       } yield
         (
           List(s"--${kind}") ++
