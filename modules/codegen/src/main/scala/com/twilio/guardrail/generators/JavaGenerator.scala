@@ -9,6 +9,7 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
+import com.google.googlejavaformat.java.Formatter
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
@@ -26,6 +27,9 @@ object JavaGenerator {
       case None                   => Target.pure(new MethodCallExpr(name))
       case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
     }
+
+    def prettyPrintSource(source: CompilationUnit): Array[Byte] =
+      new Formatter().formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
 
     def apply[T](term: ScalaTerm[JavaLanguage, T]): Target[T] = term match {
       case CustomTypePrefixes() => Target.pure(List("x-java", "x-jvm"))
@@ -158,7 +162,7 @@ object JavaGenerator {
           cu.addType(frameworkDefinitions)
           WriteTree(
             resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")),
-            cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+            prettyPrintSource(cu)
           )
         }
 
@@ -169,7 +173,7 @@ object JavaGenerator {
           Some(
             WriteTree(
               resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"),
-              pkgDecl.toString(printer).getBytes(StandardCharsets.UTF_8)
+              prettyPrintSource(new CompilationUnit().setPackageDeclaration(pkgDecl))
             )
           )
 
@@ -192,7 +196,7 @@ object JavaGenerator {
                 List(
                   WriteTree(
                     resolveFile(outputPath)(dtoComponents).resolve(s"${cls.getName.getIdentifier}.java"),
-                    cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+                    prettyPrintSource(cu)
                   )
                 ),
                 List.empty[Statement]
@@ -210,7 +214,7 @@ object JavaGenerator {
                 List(
                   WriteTree(
                     resolveFile(outputPath)(dtoComponents).resolve(s"${cls.getName.getIdentifier}.java"),
-                    cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+                    prettyPrintSource(cu)
                   )
                 ),
                 List.empty[Statement]
@@ -228,7 +232,7 @@ object JavaGenerator {
                 List(
                   WriteTree(
                     resolveFile(outputPath)(dtoComponents).resolve(s"${name}.java"),
-                    cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+                    prettyPrintSource(cu)
                   )
                 ),
                 List.empty[Statement]
@@ -262,7 +266,7 @@ object JavaGenerator {
           cu.addType(clientCopy)
           WriteTree(
             resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
-            cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+            prettyPrintSource(cu)
           )
         }
 
@@ -280,7 +284,7 @@ object JavaGenerator {
           cu.addType(definition)
           WriteTree(
             resolveFile(pkgPath)(pkg :+ s"${definition.getNameAsString}.java"),
-            cu.toString(printer).getBytes(StandardCharsets.UTF_8)
+            prettyPrintSource(cu)
           )
         }
 

@@ -173,14 +173,15 @@ lazy val codegen = (project in file("modules/codegen"))
     (name := "guardrail") +:
       codegenSettings,
     libraryDependencies ++= testDependencies ++ Seq(
-      "org.scalameta"           %% "scalameta"                    % "4.1.0",
-      "com.github.javaparser"   % "javaparser-symbol-solver-core" % javaparserVersion,
-      "io.swagger.parser.v3"    % "swagger-parser"                % "2.0.8",
-      "org.tpolecat"            %% "atto-core"                    % "0.6.3",
-      "org.typelevel"           %% "cats-core"                    % catsVersion,
-      "org.typelevel"           %% "cats-kernel"                  % catsVersion,
-      "org.typelevel"           %% "cats-macros"                  % catsVersion,
-      "org.typelevel"           %% "cats-free"                    % catsVersion
+      "org.scalameta"               %% "scalameta"                    % "4.1.0",
+      "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
+      "com.google.googlejavaformat" % "google-java-format"            % "1.6",
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.8",
+      "org.tpolecat"                %% "atto-core"                    % "0.6.3",
+      "org.typelevel"               %% "cats-core"                    % catsVersion,
+      "org.typelevel"               %% "cats-kernel"                  % catsVersion,
+      "org.typelevel"               %% "cats-macros"                  % catsVersion,
+      "org.typelevel"               %% "cats-free"                    % catsVersion
     ),
     scalacOptions += "-language:higherKinds",
     bintrayRepository := {
