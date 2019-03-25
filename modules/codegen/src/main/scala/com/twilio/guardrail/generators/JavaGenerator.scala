@@ -6,7 +6,7 @@ import cats.instances.option._
 import cats.syntax.traverse._
 import com.github.javaparser.ast._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType, ArrayType => AstArrayType }
-import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
+import com.github.javaparser.ast.body.{ BodyDeclaration, ClassOrInterfaceDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
 import com.google.googlejavaformat.java.Formatter
@@ -254,22 +254,23 @@ object JavaGenerator {
           commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
         } yield {
-          val cu = new CompilationUnit()
-          cu.setPackageDeclaration(pkgDecl)
-          imports.map(cu.addImport)
-          customImports.map(cu.addImport)
-          cu.addImport(commonImport)
-          cu.addImport(dtoComponentsImport)
-          val clientCopy = client.head.merge.clone() // FIXME: WriteClient needs to be altered to return `NonEmptyList[WriteTree]` to accommodate Java not being able to put multiple classes in the same file. Scala just jams them all together, but this could be improved over there as well.
-          staticDefns.definitions.foreach(clientCopy.addMember)
-          responseDefinitions.foreach(clientCopy.addMember)
-          cu.addType(clientCopy)
-          List(
+          def writeTree(typeDecl: TypeDeclaration[_]): WriteTree = {
+            val cu = new CompilationUnit()
+            cu.setPackageDeclaration(pkgDecl)
+            imports.map(cu.addImport)
+            customImports.map(cu.addImport)
+            cu.addImport(commonImport)
+            cu.addImport(dtoComponentsImport)
+            cu.addType(typeDecl)
             WriteTree(
-              resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
+              resolveFile(pkgPath)(pkg :+ s"${typeDecl.getNameAsString}.java"),
               prettyPrintSource(cu)
             )
-          )
+          }
+
+          val clientClasses   = client.map(_.merge).toList
+          val responseClasses = responseDefinitions.collect({ case cd: ClassOrInterfaceDeclaration => cd })
+          (clientClasses ++ responseClasses).map(writeTree)
         }
 
       case WriteServer(pkgPath,

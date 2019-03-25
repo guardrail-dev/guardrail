@@ -1,7 +1,7 @@
 package core.Dropwizard
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import examples.client.dropwizard.user.UserClient
+import examples.client.dropwizard.user.{UserClient, GetUserByNameResponse => GetUserByNameClientResponse}
 import examples.server.dropwizard.definitions.User
 import examples.server.dropwizard.user._
 import helpers.MockHelpers._
@@ -73,13 +73,13 @@ class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with M
     client.getUserByName(USERNAME).call().whenComplete({ (response, t) =>
       w { t shouldBe null }
       response match {
-        case r: UserClient.GetUserByNameResponse.Ok =>
+        case r: GetUserByNameClientResponse.Ok =>
           w {
             r.getValue.getUsername.get shouldBe USERNAME
             r.getValue.getPassword shouldBe Optional.empty
           }
-        case _: UserClient.GetUserByNameResponse.BadRequest => w { fail("Got BadRequest") }
-        case _: UserClient.GetUserByNameResponse.NotFound => w { fail("Got NotFound") }
+        case _: GetUserByNameClientResponse.BadRequest => w { fail("Got BadRequest") }
+        case _: GetUserByNameClientResponse.NotFound => w { fail("Got NotFound") }
       }
       w.dismiss()
     })

@@ -752,7 +752,7 @@ object AsyncHttpClientClientGenerator {
             (responseInnerClass, foldMethodParameter, foldMethodBranch)
         })
 
-        val abstractResponseClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC, ABSTRACT), false, abstractClassName)
+        val abstractResponseClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, abstractClassName)
 
         val (innerClasses, foldMethodParameters, foldMethodIfBranches) = responseData.unzip3
 
