@@ -336,19 +336,21 @@ object ScalaGenerator {
                        dtoComponents,
                        Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
         Target.pure(
-          WriteTree(
-            resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
-            source"""
-            package ${buildPkgTerm(pkgName ++ pkg)}
-            import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-            ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
-            import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
-            ..${customImports};
-            ..${imports};
-            ${companionForStaticDefns(staticDefns)};
-            ..${client.toList.map(_.merge)};
-            ..${responseDefinitions}
-            """.syntax.getBytes(StandardCharsets.UTF_8)
+          List(
+            WriteTree(
+              resolveFile(pkgPath)(pkg :+ s"${clientName}.scala"),
+              source"""
+              package ${buildPkgTerm(pkgName ++ pkg)}
+              import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
+              ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
+              import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
+              ..${customImports};
+              ..${imports};
+              ${companionForStaticDefns(staticDefns)};
+              ..${client.toList.map(_.merge)};
+              ..${responseDefinitions}
+              """.syntax.getBytes(StandardCharsets.UTF_8)
+            )
           )
         )
       case WriteServer(pkgPath,

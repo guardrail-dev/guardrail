@@ -96,7 +96,7 @@ case class WriteClient[L <: LA](pkgPath: Path,
                                 frameworkImplicitName: Option[L#TermName],
                                 dtoComponents: List[String],
                                 client: Client[L])
-    extends ScalaTerm[L, WriteTree]
+    extends ScalaTerm[L, List[WriteTree]]
 case class WriteServer[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],

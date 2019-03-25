@@ -264,9 +264,11 @@ object JavaGenerator {
           staticDefns.definitions.foreach(clientCopy.addMember)
           responseDefinitions.foreach(clientCopy.addMember)
           cu.addType(clientCopy)
-          WriteTree(
-            resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
-            prettyPrintSource(cu)
+          List(
+            WriteTree(
+              resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
+              prettyPrintSource(cu)
+            )
           )
         }
 
