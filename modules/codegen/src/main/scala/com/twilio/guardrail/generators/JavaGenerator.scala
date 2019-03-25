@@ -16,21 +16,64 @@ import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.util
 
 object JavaGenerator {
-  object JavaInterp extends (ScalaTerm[JavaLanguage, ?] ~> Target) {
-    def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] = safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
+  def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] = safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
 
-    def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
-      case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
-      case None                   => Target.pure(new MethodCallExpr(name))
-      case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+  def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
+    case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
+    case None                   => Target.pure(new MethodCallExpr(name))
+    case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+  }
+
+  def prettyPrintSource(source: CompilationUnit): Array[Byte] =
+    new Formatter().formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
+
+  def writeClientTree(pkgPath: Path,
+                      pkg: List[String],
+                      pkgDecl: PackageDeclaration,
+                      imports: List[ImportDeclaration],
+                      definition: BodyDeclaration[_]): Target[WriteTree] =
+    definition match {
+      case td: TypeDeclaration[_] =>
+        val cu = new CompilationUnit()
+        cu.setPackageDeclaration(pkgDecl)
+        imports.map(cu.addImport)
+        cu.addType(td)
+        Target.pure(
+          WriteTree(
+            resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"),
+            prettyPrintSource(cu)
+          )
+        )
+      case other =>
+        Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
-    def prettyPrintSource(source: CompilationUnit): Array[Byte] =
-      new Formatter().formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
+  def writeServerTree(pkgPath: Path,
+                      pkg: List[String],
+                      pkgDecl: PackageDeclaration,
+                      imports: List[ImportDeclaration],
+                      definition: BodyDeclaration[_]): Target[WriteTree] =
+    definition match {
+      case td: TypeDeclaration[_] =>
+        val cu = new CompilationUnit()
+        cu.setPackageDeclaration(pkgDecl)
+        imports.map(cu.addImport)
+        cu.addType(td)
+        Target.pure(
+          WriteTree(
+            resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"),
+            prettyPrintSource(cu)
+          )
+        )
+      case other =>
+        Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
+    }
 
+  object JavaInterp extends (ScalaTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ScalaTerm[JavaLanguage, T]): Target[T] = term match {
       case CustomTypePrefixes() => Target.pure(List("x-java", "x-jvm"))
 
@@ -253,22 +296,10 @@ object JavaGenerator {
           pkgDecl             <- buildPkgDecl(pkgName ++ pkg)
           commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
-        } yield {
-          val cu = new CompilationUnit()
-          cu.setPackageDeclaration(pkgDecl)
-          imports.map(cu.addImport)
-          customImports.map(cu.addImport)
-          cu.addImport(commonImport)
-          cu.addImport(dtoComponentsImport)
-          val clientCopy = client.head.merge.clone() // FIXME: WriteClient needs to be altered to return `NonEmptyList[WriteTree]` to accommodate Java not being able to put multiple classes in the same file. Scala just jams them all together, but this could be improved over there as well.
-          staticDefns.definitions.foreach(clientCopy.addMember)
-          responseDefinitions.foreach(clientCopy.addMember)
-          cu.addType(clientCopy)
-          WriteTree(
-            resolveFile(pkgPath)(pkg :+ s"${clientName}.java"),
-            prettyPrintSource(cu)
-          )
-        }
+          allImports    = imports ++ customImports :+ commonImport :+ dtoComponentsImport
+          clientClasses = client.map(_.merge).toList
+          trees <- (clientClasses ++ responseDefinitions).traverse(writeClientTree(pkgPath, pkg, pkgDecl, allImports, _))
+        } yield trees
 
       case WriteServer(pkgPath,
                        pkgName,
@@ -276,33 +307,15 @@ object JavaGenerator {
                        frameworkImplicitName,
                        dtoComponents,
                        Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
-        def writeClass(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: TypeDeclaration[_]): WriteTree = {
-          val cu = new CompilationUnit()
-          cu.setPackageDeclaration(pkgDecl)
-          extraImports.map(cu.addImport)
-          customImports.map(cu.addImport)
-          cu.addType(definition)
-          WriteTree(
-            resolveFile(pkgPath)(pkg :+ s"${definition.getNameAsString}.java"),
-            prettyPrintSource(cu)
-          )
-        }
-
-        def writeDefinition(pkgDecl: PackageDeclaration, extraImports: List[ImportDeclaration], definition: BodyDeclaration[_]): Target[WriteTree] =
-          definition match {
-            case td: TypeDeclaration[_] => Target.pure(writeClass(pkgDecl, extraImports, td))
-            case other                  => Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
-          }
-
         for {
           pkgDecl <- buildPkgDecl(pkgName ++ pkg)
 
           commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
           dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
-          allExtraImports = extraImports ++ List(commonImport, dtoComponentsImport)
+          allImports = extraImports ++ List(commonImport, dtoComponentsImport) ++ customImports
 
-          handlerTree <- writeDefinition(pkgDecl, allExtraImports, handlerDefinition)
-          serverTrees <- serverDefinitions.traverse(writeDefinition(pkgDecl, allExtraImports, _))
+          handlerTree <- writeServerTree(pkgPath, pkg, pkgDecl, allImports, handlerDefinition)
+          serverTrees <- serverDefinitions.traverse(writeServerTree(pkgPath, pkg, pkgDecl, allImports, _))
         } yield handlerTree +: serverTrees
     }
   }
