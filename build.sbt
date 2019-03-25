@@ -37,7 +37,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("issues/issue127.yaml"), "issues.issue127", false, List.empty),
   (sampleResource("issues/issue143.yaml"), "issues.issue143", false, List.empty),
   (sampleResource("issues/issue148.yaml"), "issues.issue148", false, List.empty),
-  (sampleResource("issues/issue164.yaml"), "issues.issue148", false, List.empty),
+  (sampleResource("issues/issue164.yaml"), "issues.issue164", false, List.empty),
   (sampleResource("petstore.json"), "examples", false, List("--import", "support.PositiveLong")),
   (sampleResource("plain.json"), "tests.dtos", false, List.empty),
   (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
