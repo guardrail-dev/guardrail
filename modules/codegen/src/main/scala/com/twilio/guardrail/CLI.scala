@@ -22,10 +22,7 @@ object CLICommon {
       args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
-    val coreArgs = for {
-      defaultFramework <- C.getDefaultFramework
-      args             <- C.parseArgs(newArgs, defaultFramework)
-    } yield NonEmptyList.fromList(args)
+    val coreArgs = C.parseArgs(newArgs).map(NonEmptyList.fromList(_))
 
     val result = coreArgs
       .foldMap(interpreter)

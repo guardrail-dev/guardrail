@@ -154,7 +154,8 @@ object Common {
     args.traverse(
       arg =>
         for {
-          targetInterpreter <- extractGenerator(arg.context)
+          defaultFramework  <- getDefaultFramework
+          targetInterpreter <- extractGenerator(arg.context, defaultFramework)
           writeFile         <- processArgSet(targetInterpreter)(arg)
         } yield writeFile
     )
