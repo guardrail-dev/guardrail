@@ -26,7 +26,9 @@ object CLICommon {
 
     val result = coreArgs
       .foldMap(interpreter)
-      .flatMap(args => CLI.runLanguages(args.map(language -> _).toMap, _ => PartialFunction.empty))
+      .flatMap({ args =>
+        CLI.guardrailRunner(_ => PartialFunction.empty).apply(args.map(language -> _).toMap)
+      })
 
     implicit val logLevel: LogLevel = level
       .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
@@ -34,21 +36,6 @@ object CLICommon {
 
     val fallback = List.empty[Path]
     val (logger, paths) = result
-      .flatMap(
-        _.flatTraverse(
-          rs =>
-            ReadSwagger
-              .readSwagger(rs)
-              .map(_.map(WriteTree.unsafeWriteTree))
-              .leftFlatMap(
-                value =>
-                  Target
-                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
-                    .subflatMap(_ => Either.left[Error, List[Path]](value))
-              )
-              <* Target.pushLogger(StructuredLogger.reset)
-        )
-      )
       .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
@@ -84,13 +71,11 @@ object CLICommon {
             unsafePrintHelp()
             fallback
         },
-        _.distinct
+        identity
       )
       .runEmpty
 
     println(logger.show)
-
-    paths
   }
 
   def unsafePrintHelp(): Unit = {
@@ -196,4 +181,26 @@ object CLI extends CLICommon {
           )
           .map(_.toList)
     })
+
+  def guardrailRunner(
+      extra: String => PartialFunction[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+  ): Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
+    runLanguages(tasks, extra)
+      .flatMap(
+        _.flatTraverse(
+          rs =>
+            ReadSwagger
+              .readSwagger(rs)
+              .map(_.map(WriteTree.unsafeWriteTree))
+              .leftFlatMap(
+                value =>
+                  Target
+                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .subflatMap(_ => Either.left[Error, List[Path]](value))
+              )
+              <* Target.pushLogger(StructuredLogger.reset)
+        )
+      )
+      .map(_.distinct)
+  }
 }
