@@ -2,6 +2,7 @@ package com.twilio.guardrail
 
 import java.nio.file.Path
 import cats.Applicative
+import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
@@ -24,12 +25,12 @@ object CLICommon {
     val runCore = for {
       defaultFramework <- C.getDefaultFramework
       args             <- C.parseArgs(newArgs, defaultFramework)
-      result           <- Common.runM[L, CoreTerm[L, ?]](args)
+      result           <- NonEmptyList.fromList(args).traverse(Common.runM[L, CoreTerm[L, ?]](_))
     } yield result
 
     val result = runCore
       .foldMap(interpreter)
-      .map(_.toList)
+      .map(_.toList.flatMap(_.toList))
 
     implicit val logLevel: LogLevel = level
       .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
