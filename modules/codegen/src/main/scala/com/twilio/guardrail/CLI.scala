@@ -13,7 +13,7 @@ import scala.io.AnsiColor
 import scala.util.{ Failure, Success }
 
 object CLICommon {
-  def run[L <: LA](args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
+  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
     val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
@@ -22,15 +22,14 @@ object CLICommon {
       args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
-    val runCore = for {
+    val coreArgs = for {
       defaultFramework <- C.getDefaultFramework
       args             <- C.parseArgs(newArgs, defaultFramework)
-      result           <- NonEmptyList.fromList(args).traverse(Common.runM[L, CoreTerm[L, ?]](_))
-    } yield result
+    } yield NonEmptyList.fromList(args)
 
-    val result = runCore
+    val result = coreArgs
       .foldMap(interpreter)
-      .map(_.toList.flatMap(_.toList))
+      .flatMap(args => CLI.runLanguages(args.map(language -> _).toMap, _ => PartialFunction.empty))
 
     implicit val logLevel: LogLevel = level
       .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
@@ -138,8 +137,8 @@ trait CLICommon {
   val javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
 
   val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
-    case "java"  => CLICommon.run(_)(javaInterpreter)
-    case "scala" => CLICommon.run(_)(scalaInterpreter)
+    case "java"  => CLICommon.run("java", _)(javaInterpreter)
+    case "scala" => CLICommon.run("scala", _)(scalaInterpreter)
   }
 
   def main(args: Array[String]): Unit = {
@@ -174,4 +173,30 @@ object CLI extends CLICommon {
       }
     }
   )
+
+  def runLanguages(
+      tasks: Map[String, NonEmptyList[Args]],
+      extra: String => PartialFunction[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+  ): CoreTarget[List[ReadSwagger[Target[List[WriteTree]]]]] =
+    tasks.toList.flatTraverse[CoreTarget, ReadSwagger[Target[List[WriteTree]]]]({
+      case (language, args) =>
+        extra(language)
+          .applyOrElse[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]](
+            args,
+            args =>
+              language match {
+                case "java" =>
+                  Common
+                    .runM[JavaLanguage, CoreTerm[JavaLanguage, ?]](args)
+                    .foldMap(javaInterpreter)
+                case "scala" =>
+                  Common
+                    .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+                    .foldMap(scalaInterpreter)
+                case other =>
+                  CoreTarget.raiseError(UnparseableArgument("language", other))
+            }
+          )
+          .map(_.toList)
+    })
 }
