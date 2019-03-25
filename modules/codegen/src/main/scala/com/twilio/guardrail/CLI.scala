@@ -22,6 +22,10 @@ object CLICommon {
       args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
+    // FIXME: The only reason we need the interpreter at all is to call parseArgs on it
+    // This likely means the CLI should _not_ be part of CoreTerms. There's no reason
+    // for it to be in there, as CLI is effectively a bespoke build tool whose unused
+    // code is included into all other build tools.
     val coreArgs = C.parseArgs(newArgs).map(NonEmptyList.fromList(_))
 
     val result = coreArgs
