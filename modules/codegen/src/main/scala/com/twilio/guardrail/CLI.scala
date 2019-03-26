@@ -13,6 +13,61 @@ import scala.io.AnsiColor
 import scala.util.{ Failure, Success }
 
 object CLICommon {
+  def unsafePrintHelp(): Unit = {
+    val text = s"""
+    | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
+    |
+    |  Required:
+    |   --specPath path/to/[foo-swagger.json|foo-swagger.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be valid
+    |   --outputPath path/to/project                           : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, intermediate paths will be created
+    |   --packageName com.twilio.myservice.clients             : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, Where to store your clients. Files will end up in the directory specified by replacing all dots with slashes.
+    |
+    |  Argmuent list separators:
+    |   --client                                               : Start specifying arguments for a new client
+    |   --server                                               : Start specifying arguments for a new server
+    |
+    |  Optional:
+    |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
+    |   --tracing                                              : Pass through tracing context to all requests
+    |
+    |Examples:
+    |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
+    |    guardrail --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients --tracing
+    |
+    |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
+    |    guardrail \\
+    |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
+    |      --client --specPath client-specs/account-service.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.account --tracing
+    |
+    |  Generate client and server routes for the same specification:
+    |    guardrail \\
+    |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
+    |      --server --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events
+    |""".stripMargin
+
+    System.err.println(text)
+  }
+}
+
+trait CLICommon {
+  def scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
+  def javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
+
+  def main(args: Array[String]): Unit = {
+    val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
+    handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
+  }
+
+  def chainFrameworkMappings[L <: LA](
+      first: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
+      second: PartialFunction[String, CodegenApplication[L, ?] ~> Target]
+  ): PartialFunction[String, CodegenApplication[L, ?] ~> Target] = first.orElse(second)
+
+  def handleLanguage: PartialFunction[String, Array[String] => Unit] = {
+    case "java"  => run("java", _)(javaInterpreter)
+    case "scala" => run("scala", _)(scalaInterpreter)
+  }
+
   def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
     val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
     // Hacky loglevel parsing, only supports levels that come before absolutely
@@ -31,7 +86,7 @@ object CLICommon {
     val result = coreArgs
       .foldMap(interpreter)
       .flatMap({ args =>
-        CLI.guardrailRunner(_ => PartialFunction.empty).apply(args.map(language -> _).toMap)
+        guardrailRunner(args.map(language -> _).toMap)
       })
 
     implicit val logLevel: LogLevel = level
@@ -39,6 +94,7 @@ object CLICommon {
       .getOrElse(LogLevels.Warning)
 
     val fallback = List.empty[Path]
+    import CLICommon.unsafePrintHelp
     val (logger, paths) = result
       .fold(
         {
@@ -82,54 +138,43 @@ object CLICommon {
     println(logger.show)
   }
 
-  def unsafePrintHelp(): Unit = {
-    val text = s"""
-    | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
-    |
-    |  Required:
-    |   --specPath path/to/[foo-swagger.json|foo-swagger.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be valid
-    |   --outputPath path/to/project                           : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, intermediate paths will be created
-    |   --packageName com.twilio.myservice.clients             : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, Where to store your clients. Files will end up in the directory specified by replacing all dots with slashes.
-    |
-    |  Argmuent list separators:
-    |   --client                                               : Start specifying arguments for a new client
-    |   --server                                               : Start specifying arguments for a new server
-    |
-    |  Optional:
-    |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
-    |   --tracing                                              : Pass through tracing context to all requests
-    |
-    |Examples:
-    |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
-    |    guardrail --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients --tracing
-    |
-    |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
-    |    guardrail \\
-    |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
-    |      --client --specPath client-specs/account-service.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.account --tracing
-    |
-    |  Generate client and server routes for the same specification:
-    |    guardrail \\
-    |      --client --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events \\
-    |      --server --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events
-    |""".stripMargin
+  def runLanguages(
+      tasks: Map[String, NonEmptyList[Args]]
+  ): CoreTarget[List[ReadSwagger[Target[List[WriteTree]]]]] =
+    tasks.toList.flatTraverse[CoreTarget, ReadSwagger[Target[List[WriteTree]]]]({
+      case (language, args) =>
+        (language match {
+          case "java" =>
+            Common
+              .runM[JavaLanguage, CoreTerm[JavaLanguage, ?]](args)
+              .foldMap(javaInterpreter)
+          case "scala" =>
+            Common
+              .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+              .foldMap(scalaInterpreter)
+          case other =>
+            CoreTarget.raiseError(UnparseableArgument("language", other))
+        }).map(_.toList)
+    })
 
-    System.err.println(text)
-  }
-}
-
-trait CLICommon {
-  val scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
-  val javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
-
-  val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
-    case "java"  => CLICommon.run("java", _)(javaInterpreter)
-    case "scala" => CLICommon.run("scala", _)(scalaInterpreter)
-  }
-
-  def main(args: Array[String]): Unit = {
-    val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
-    handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
+  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
+    runLanguages(tasks)
+      .flatMap(
+        _.flatTraverse(
+          rs =>
+            ReadSwagger
+              .readSwagger(rs)
+              .map(_.map(WriteTree.unsafeWriteTree))
+              .leftFlatMap(
+                value =>
+                  Target
+                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .subflatMap(_ => Either.left[Error, List[Path]](value))
+              )
+              <* Target.pushLogger(StructuredLogger.reset)
+        )
+      )
+      .map(_.distinct)
   }
 }
 
@@ -159,52 +204,4 @@ object CLI extends CLICommon {
       }
     }
   )
-
-  def runLanguages(
-      tasks: Map[String, NonEmptyList[Args]],
-      extra: String => PartialFunction[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
-  ): CoreTarget[List[ReadSwagger[Target[List[WriteTree]]]]] =
-    tasks.toList.flatTraverse[CoreTarget, ReadSwagger[Target[List[WriteTree]]]]({
-      case (language, args) =>
-        extra(language)
-          .applyOrElse[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]](
-            args,
-            args =>
-              language match {
-                case "java" =>
-                  Common
-                    .runM[JavaLanguage, CoreTerm[JavaLanguage, ?]](args)
-                    .foldMap(javaInterpreter)
-                case "scala" =>
-                  Common
-                    .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
-                    .foldMap(scalaInterpreter)
-                case other =>
-                  CoreTarget.raiseError(UnparseableArgument("language", other))
-            }
-          )
-          .map(_.toList)
-    })
-
-  def guardrailRunner(
-      extra: String => PartialFunction[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
-  ): Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
-    runLanguages(tasks, extra)
-      .flatMap(
-        _.flatTraverse(
-          rs =>
-            ReadSwagger
-              .readSwagger(rs)
-              .map(_.map(WriteTree.unsafeWriteTree))
-              .leftFlatMap(
-                value =>
-                  Target
-                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
-                    .subflatMap(_ => Either.left[Error, List[Path]](value))
-              )
-              <* Target.pushLogger(StructuredLogger.reset)
-        )
-      )
-      .map(_.distinct)
-  }
 }
