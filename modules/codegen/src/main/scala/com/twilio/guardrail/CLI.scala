@@ -2,17 +2,19 @@ package com.twilio.guardrail
 
 import java.nio.file.Path
 import cats.Applicative
+import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
-import com.twilio.guardrail.terms.CoreTerm
+import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms }
 import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import scala.io.AnsiColor
 import scala.util.{ Failure, Success }
 
 object CLICommon {
-  def run[L <: LA](args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
+  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
+    val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
     // language themselves.
@@ -20,11 +22,25 @@ object CLICommon {
       args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
     val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
 
-    val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val result = Common
-      .runM[L, CoreTerm[L, ?]](newArgs)
+    // FIXME: The only reason we need the interpreter at all is to call parseArgs on it
+    // This likely means the CLI should _not_ be part of CoreTerms. There's no reason
+    // for it to be in there, as CLI is effectively a bespoke build tool whose unused
+    // code is included into all other build tools.
+    val coreArgs = C.parseArgs(newArgs).map(NonEmptyList.fromList(_))
+
+    val result = coreArgs
       .foldMap(interpreter)
-      .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
+      .flatMap({ args =>
+        CLI.guardrailRunner(_ => PartialFunction.empty).apply(args.map(language -> _).toMap)
+      })
+
+    implicit val logLevel: LogLevel = level
+      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
+      .getOrElse(LogLevels.Warning)
+
+    val fallback = List.empty[Path]
+    val (logger, paths) = result
+      .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
             println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
@@ -51,49 +67,19 @@ object CLICommon {
           case UnparseableArgument(name, message) =>
             println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
             fallback
+          case RuntimeFailure(message) =>
+            println(s"${AnsiColor.RED}Error: $message")
+            fallback
+          case UserError(message) =>
+            println(s"${AnsiColor.RED}Error: $message")
+            unsafePrintHelp()
+            fallback
         },
-        _.toList
+        identity
       )
-
-    implicit val logLevel: LogLevel = level
-      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
-      .getOrElse(LogLevels.Warning)
-
-    val (coreLogger, deferred) = result.runEmpty
-
-    print(coreLogger.show)
-
-    val (logger, paths) = deferred
-      .traverse({ rs =>
-        def put(value: StructuredLogger): Logger[List[Path]] = {
-          import cats.Id
-          import cats.data.IndexedStateT
-          IndexedStateT
-            .modify[Id, StructuredLogger, StructuredLogger](_ |+| value)
-            .map(_ => List.empty[Path])
-        }
-        def logRawError(err: String): Logger[List[Path]] = put(StructuredLogger.error(Nil, s"${AnsiColor.RED}${err}${AnsiColor.RESET}"))
-        ReadSwagger
-          .readSwagger(rs)
-          .fold[Logger[List[Path]]](
-            { err =>
-              logRawError(s"Error in ${rs}") >> logRawError(err)
-            },
-            _.fold(
-              {
-                case (err, errorKind) =>
-                  logRawError(s"Error in ${rs}") >> logRawError(err).map({ x =>
-                    if (errorKind == UserError) unsafePrintHelp()
-                    x
-                  })
-              },
-              xs => Applicative[Logger].pure(xs.map(WriteTree.unsafeWriteTree))
-            ).flatten
-          ) <* put(StructuredLogger.reset)
-      })
       .runEmpty
 
-    print(logger.show)
+    println(logger.show)
   }
 
   def unsafePrintHelp(): Unit = {
@@ -137,8 +123,8 @@ trait CLICommon {
   val javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
 
   val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
-    case "java"  => CLICommon.run(_)(javaInterpreter)
-    case "scala" => CLICommon.run(_)(scalaInterpreter)
+    case "java"  => CLICommon.run("java", _)(javaInterpreter)
+    case "scala" => CLICommon.run("scala", _)(scalaInterpreter)
   }
 
   def main(args: Array[String]): Unit = {
@@ -173,4 +159,52 @@ object CLI extends CLICommon {
       }
     }
   )
+
+  def runLanguages(
+      tasks: Map[String, NonEmptyList[Args]],
+      extra: String => PartialFunction[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+  ): CoreTarget[List[ReadSwagger[Target[List[WriteTree]]]]] =
+    tasks.toList.flatTraverse[CoreTarget, ReadSwagger[Target[List[WriteTree]]]]({
+      case (language, args) =>
+        extra(language)
+          .applyOrElse[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]](
+            args,
+            args =>
+              language match {
+                case "java" =>
+                  Common
+                    .runM[JavaLanguage, CoreTerm[JavaLanguage, ?]](args)
+                    .foldMap(javaInterpreter)
+                case "scala" =>
+                  Common
+                    .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+                    .foldMap(scalaInterpreter)
+                case other =>
+                  CoreTarget.raiseError(UnparseableArgument("language", other))
+            }
+          )
+          .map(_.toList)
+    })
+
+  def guardrailRunner(
+      extra: String => PartialFunction[NonEmptyList[Args], CoreTarget[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+  ): Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
+    runLanguages(tasks, extra)
+      .flatMap(
+        _.flatTraverse(
+          rs =>
+            ReadSwagger
+              .readSwagger(rs)
+              .map(_.map(WriteTree.unsafeWriteTree))
+              .leftFlatMap(
+                value =>
+                  Target
+                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .subflatMap(_ => Either.left[Error, List[Path]](value))
+              )
+              <* Target.pushLogger(StructuredLogger.reset)
+        )
+      )
+      .map(_.distinct)
+  }
 }

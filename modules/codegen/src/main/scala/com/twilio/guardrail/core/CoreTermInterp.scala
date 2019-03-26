@@ -18,15 +18,19 @@ object CoreTermInterp {
     new (CoreTerm[L, ?] ~> CoreTarget) {
       def apply[T](x: CoreTerm[L, T]): CoreTarget[T] = x match {
         case GetDefaultFramework() =>
-          CoreTarget.log.debug("core", "extractGenerator")("Using default framework") >> CoreTarget.pure(defaultFramework)
+          CoreTarget.log.function("getDefaultFramework") {
+            Target.log.debug(s"Providing ${defaultFramework}").apply >> CoreTarget.pure(Some(defaultFramework))
+          }
 
-        case ExtractGenerator(context) =>
-          for {
-            _             <- CoreTarget.log.debug("core", "extractGenerator")("Looking up framework")
-            frameworkName <- CoreTarget.fromOption(context.framework, NoFramework)
-            framework     <- CoreTarget.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
-            _             <- CoreTarget.log.debug("core", "extractGenerator")(s"Found: $framework")
-          } yield framework
+        case ExtractGenerator(context, vendorDefaultFramework) =>
+          CoreTarget.log.function("extractGenerator") {
+            for {
+              _             <- CoreTarget.log.debug("Looking up framework").apply
+              frameworkName <- CoreTarget.fromOption(context.framework.orElse(vendorDefaultFramework), NoFramework)
+              framework     <- CoreTarget.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
+              _             <- CoreTarget.log.debug(s"Found: $framework").apply
+            } yield framework
+          }
 
         case ValidateArgs(parsed) =>
           for {
@@ -37,11 +41,11 @@ object CoreTermInterp {
             else CoreTarget.pure(args)
           } yield args
 
-        case ParseArgs(args, defaultFramework) => {
+        case ParseArgs(args) => {
           def expandTilde(path: String): String =
             path.replaceFirst("^~", System.getProperty("user.home"))
           val defaultArgs =
-            Args.empty.copy(context = Args.empty.context.copy(framework = Some(defaultFramework)), defaults = true)
+            Args.empty.copy(context = Args.empty.context, defaults = true)
 
           type From = (List[Args], List[String])
           type To   = List[Args]

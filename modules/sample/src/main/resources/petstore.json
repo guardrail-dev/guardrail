@@ -514,7 +514,7 @@
           {
             "name": "custom-optional-value",
             "in": "formData",
-            "type": "number",
+            "type": "integer",
             "format": "int64",
             "x-scala-type": "PositiveLong"
           }

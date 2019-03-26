@@ -154,22 +154,21 @@ object Common {
     args.traverse(
       arg =>
         for {
-          targetInterpreter <- extractGenerator(arg.context)
+          defaultFramework  <- getDefaultFramework
+          targetInterpreter <- extractGenerator(arg.context, defaultFramework)
           writeFile         <- processArgSet(targetInterpreter)(arg)
         } yield writeFile
     )
   }
 
   def runM[L <: LA, F[_]](
-      args: Array[String]
+      args: NonEmptyList[Args]
   )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {
-      defaultFramework <- getDefaultFramework
-      parsed           <- parseArgs(args, defaultFramework)
-      args             <- validateArgs(parsed)
-      writeTrees       <- processArgs(args)
+      validated  <- validateArgs(args.toList)
+      writeTrees <- processArgs(validated)
     } yield writeTrees
   }
 }

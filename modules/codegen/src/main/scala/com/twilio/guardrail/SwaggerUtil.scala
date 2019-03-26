@@ -219,7 +219,9 @@ object SwaggerUtil {
 
       def log(fmt: Option[String], t: L#Type): L#Type = {
         fmt.foreach { fmt =>
-          println(s"Warning: Deprecated behavior: Unsupported type '$fmt', falling back to $t. Please switch definitions to x-scala-type for custom types")
+          println(
+            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${typeName}', falling back to $t. Please switch definitions to x-scala-type for custom types"
+          )
         }
 
         t
