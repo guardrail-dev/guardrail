@@ -2,10 +2,11 @@ package com.twilio.guardrail.protocol.terms.server
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
-import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
-import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import io.swagger.v3.oas.models.Operation
 
 class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {

@@ -7,58 +7,16 @@ import cats.implicits._
 import cats.data.EitherK
 import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.splitOperationParts
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.protocol.terms.{ Response, Responses }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
-
 import scala.collection.JavaConverters._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.Operation
 import _root_.io.swagger.v3.oas.models.media.Schema
 
-class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])]) {
-  override def toString() = s"Response($statusCodeName, $statusCode, $value)"
-}
-object Response {
-  def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type])] = Some((value.statusCodeName, value.value.map(_._1)))
-}
-class Responses[L <: LA](val value: List[Response[L]]) {
-  override def toString() = s"Responses($value)"
-}
 object Http4sHelper {
-  def getResponses[L <: LA, F[_]](operationId: String, operation: Operation, protocolElems: List[StrictProtocolElems[L]])(
-      implicit Fw: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, F],
-      Sw: SwaggerTerms[L, F]
-  ): Free[F, Responses[L]] = Sw.log.function("getResponses") {
-    import Fw._
-    import Sc._
-    for {
-      responses <- Sw.getResponses(operationId, operation)
-
-      instances <- responses
-        .foldLeft[List[Free[F, Response[L]]]](List.empty)({
-          case (acc, (key, resp)) =>
-            acc :+ (for {
-              httpCode <- lookupStatusCode(key)
-              (statusCode, statusCodeName) = httpCode
-              valueTypes <- (for {
-                content       <- Option(resp.getContent).toList
-                contentValues <- Option(content.values()).toList.flatMap(_.asScala) // FIXME: values() ignores Content-Types in the keys
-                schema        <- Option[Schema[_]](contentValues.getSchema()).toList
-              } yield schema).traverse { prop =>
-                for {
-                  meta     <- SwaggerUtil.propMeta[L, F](prop)
-                  resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
-                } yield (baseType, baseDefaultValue)
-              }
-            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption)) // FIXME: headOption
-        })
-        .sequence
-    } yield new Responses[L](instances)
-  }
-
   def generateResponseDefinitions(operationId: String,
                                   responses: Responses[ScalaLanguage],
                                   protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Defn] = {

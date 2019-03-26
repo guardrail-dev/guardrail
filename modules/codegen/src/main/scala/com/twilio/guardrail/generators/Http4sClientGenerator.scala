@@ -12,6 +12,7 @@ import com.twilio.guardrail.extract.ScalaPackage
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta

@@ -15,8 +15,9 @@ import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ Default, VendorExtension, extractFromNames }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
-import com.twilio.guardrail.generators.{ Responses, ScalaParameter }
+import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
+import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.shims._
 import java.util.{ Map => JMap }
 import scala.language.reflectiveCalls

@@ -1,8 +1,9 @@
 package com.twilio.guardrail.protocol.terms.client
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.generators.{ Responses, ScalaParameters }
+import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
 import java.net.URI
