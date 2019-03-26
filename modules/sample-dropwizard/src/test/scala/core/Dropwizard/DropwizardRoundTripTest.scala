@@ -3,6 +3,7 @@ package core.Dropwizard
 import com.fasterxml.jackson.databind.ObjectMapper
 import examples.client.dropwizard.user.{UserClient, GetUserByNameResponse => GetUserByNameClientResponse}
 import examples.server.dropwizard.definitions.User
+import examples.server.dropwizard.user.UserHandler._
 import examples.server.dropwizard.user._
 import helpers.MockHelpers._
 import java.util

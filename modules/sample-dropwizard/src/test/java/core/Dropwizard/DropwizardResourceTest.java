@@ -1,10 +1,10 @@
 package core.Dropwizard;
 
 import examples.server.dropwizard.definitions.User;
-import examples.server.dropwizard.user.CreateUserResponse;
-import examples.server.dropwizard.user.GetUserByNameResponse;
-import examples.server.dropwizard.user.LoginUserResponse;
 import examples.server.dropwizard.user.UserHandler;
+import examples.server.dropwizard.user.UserHandler.CreateUserResponse;
+import examples.server.dropwizard.user.UserHandler.GetUserByNameResponse;
+import examples.server.dropwizard.user.UserHandler.LoginUserResponse;
 import examples.server.dropwizard.user.UserResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.glassfish.jersey.test.grizzly.GrizzlyTestContainerFactory;
