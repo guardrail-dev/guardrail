@@ -11,9 +11,10 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.generators.{ Response, ScalaParameter }
+import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.protocol.terms.Response
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, SupportDefinition, SwaggerUtil, Target }

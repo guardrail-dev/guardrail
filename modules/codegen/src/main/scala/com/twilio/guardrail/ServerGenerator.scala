@@ -4,8 +4,9 @@ import _root_.io.swagger.v3.oas.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.generators.{ Http4sHelper, ScalaParameter }
+import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -57,7 +58,7 @@ object ServerGenerator {
               case route @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responses           <- Http4sHelper.getResponses(operationId, operation, protocolElems)
+                  responses           <- Responses.getResponses(operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
                   tracingField        <- buildTracingFields(operation, className, context.tracing)

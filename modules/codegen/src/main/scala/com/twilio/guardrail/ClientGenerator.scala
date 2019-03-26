@@ -3,12 +3,15 @@ package com.twilio.guardrail
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.generators.Http4sHelper
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.{ Response, Responses }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.media.Schema
 import java.net.URI
+import scala.collection.JavaConverters._
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Client[L <: LA](pkg: List[String],
@@ -50,7 +53,7 @@ object ClientGenerator {
               case route @ RouteMeta(path, method, operation) =>
                 for {
                   operationId         <- getOperationId(operation)
-                  responses           <- Http4sHelper.getResponses[L, F](operationId, operation, protocolElems)
+                  responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
                   clientOp            <- generateClientOperation(className, context.tracing, parameters)(route, operationId, responses)
