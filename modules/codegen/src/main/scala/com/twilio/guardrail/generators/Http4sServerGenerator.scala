@@ -68,7 +68,7 @@ object Http4sServerGenerator {
           )
         }
 
-      case RenderHandler(handlerName, methodSigs, handlerDefinitions) =>
+      case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"renderHandler(${handlerName}, ${methodSigs}")
         } yield q"""

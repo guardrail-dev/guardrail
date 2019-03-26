@@ -11,7 +11,7 @@ object EndpointsServerGenerator {
       case GenerateResponseDefinitions(operationId, responses, protocolElems)                                                                 => ???
       case BuildTracingFields(operation, resourceName, tracing)                                                                               => ???
       case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems)                                                             => ???
-      case RenderHandler(handlerName, methodSigs, handlerDefinitions)                                                                         => ???
+      case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)                                                    => ???
       case GetExtraRouteParams(tracing)                                                                                                       => ???
       case GenerateSupportDefinitions(tracing)                                                                                                => ???
       case RenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) => ???

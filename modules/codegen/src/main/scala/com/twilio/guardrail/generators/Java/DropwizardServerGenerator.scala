@@ -545,7 +545,7 @@ object DropwizardServerGenerator {
           safeParseSimpleName(handlerName) >>
           Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) +: responseDefinitions)
 
-      case RenderHandler(handlerName, methodSigs, handlerDefinitions) =>
+      case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
         val handlerClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), true, handlerName)
         methodSigs.foreach(handlerClass.addMember)
         Target.pure(handlerClass)

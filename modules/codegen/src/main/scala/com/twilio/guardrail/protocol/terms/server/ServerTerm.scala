@@ -27,6 +27,9 @@ case class RenderClass[L <: LA](className: String,
                                 responseDefinitions: List[L#Definition],
                                 supportDefinitions: List[L#Definition])
     extends ServerTerm[L, List[L#Definition]]
-case class RenderHandler[L <: LA](handlerName: String, methodSigs: List[L#MethodDeclaration], handlerDefinitions: List[L#Statement])
+case class RenderHandler[L <: LA](handlerName: String,
+                                  methodSigs: List[L#MethodDeclaration],
+                                  handlerDefinitions: List[L#Statement],
+                                  responseDefinitions: List[L#Definition])
     extends ServerTerm[L, L#Definition]
 case class GetExtraImports[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#Import]]
