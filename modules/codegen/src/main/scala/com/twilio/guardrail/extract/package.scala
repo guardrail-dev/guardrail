@@ -14,4 +14,9 @@ package object extract {
     VendorExtension(v).extract[EmptyToNullBehaviour]("x-scala-empty-is-null")
   def ScalaFileHashAlgorithm[F: VendorExtension.VendorExtensible](v: F): Option[String] =
     VendorExtension(v).extract[String]("x-scala-file-hash")
+
+  def extractFromNames[T: Extractable, F: VendorExtension.VendorExtensible](names: List[String], v: F): Option[T] =
+    names.foldLeft(Option.empty[T])(
+      (accum, name) => accum.orElse(VendorExtension(v).extract[T](name))
+    )
 }

@@ -19,6 +19,8 @@ import scala.io.AnsiColor
 import scala.meta._
 import java.net.URI
 
+case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: L#ClassDefinition)
+
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
@@ -68,16 +70,17 @@ object Common {
           for {
             clientMeta <- ClientGenerator
               .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems)
-            Clients(clients) = clientMeta
-          } yield CodegenDefinitions[L](clients, List.empty)
+            Clients(clients, supportDefinitions) = clientMeta
+          } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
               .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems)
-            Servers(servers) = serverMeta
-          } yield CodegenDefinitions[L](List.empty, servers)
-        case CodegenTarget.Models => Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty))
+            Servers(servers, supportDefinitions) = serverMeta
+          } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions)
+        case CodegenTarget.Models =>
+          Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty, List.empty))
       }
     } yield (proto, codegen)
   }
@@ -98,7 +101,7 @@ object Common {
     val dtoComponents: List[String] = definitions ++ dtoPackage
 
     val ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-    val CodegenDefinitions(clients, servers)                                                             = codegen
+    val CodegenDefinitions(clients, servers, supportDefinitions)                                         = codegen
 
     for {
       protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
@@ -113,24 +116,34 @@ object Common {
         extraTypes
       )
 
-      frameworkImports    <- getFrameworkImports(context.tracing)
-      _frameworkImplicits <- getFrameworkImplicits()
-      (frameworkImplicitName, frameworkImplicits) = _frameworkImplicits
+      frameworkImports   <- getFrameworkImports(context.tracing)
+      frameworkImplicits <- getFrameworkImplicits()
+      frameworkImplicitName = frameworkImplicits.map(_._1)
+      frameworkDefinitions <- getFrameworkDefinitions()
 
-      files <- (clients.traverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
-                servers.traverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
+      files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
+                servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
 
-      implicits              <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, frameworkImplicits, frameworkImplicitName)
+      implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
+      frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({
+        case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply)
+      })
+
+      frameworkDefinitionsFiles <- frameworkDefinitions.traverse({
+        case (name, defn) => renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, defn, name)
+      })
+      supportDefinitionsFiles <- supportDefinitions.traverse({
+        case SupportDefinition(name, imports, defn) => renderFrameworkDefinitions(pkgPath, pkgName, imports, defn, name)
+      })
     } yield
       (
         protocolDefinitions ++
-          List(packageObject) ++
+          packageObject.toList ++
           files ++
-          List(
-            implicits,
-            frameworkImplicitsFile
-          )
+          implicits.toList ++
+          frameworkImplicitsFile.toList ++
+          frameworkDefinitionsFiles ++
+          supportDefinitionsFiles
       ).toList
   }
 
@@ -141,22 +154,21 @@ object Common {
     args.traverse(
       arg =>
         for {
-          targetInterpreter <- extractGenerator(arg.context)
+          defaultFramework  <- getDefaultFramework
+          targetInterpreter <- extractGenerator(arg.context, defaultFramework)
           writeFile         <- processArgSet(targetInterpreter)(arg)
         } yield writeFile
     )
   }
 
   def runM[L <: LA, F[_]](
-      args: Array[String]
+      args: NonEmptyList[Args]
   )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {
-      defaultFramework <- getDefaultFramework
-      parsed           <- parseArgs(args, defaultFramework)
-      args             <- validateArgs(parsed)
-      writeTrees       <- processArgs(args)
+      validated  <- validateArgs(args.toList)
+      writeTrees <- processArgs(validated)
     } yield writeTrees
   }
 }

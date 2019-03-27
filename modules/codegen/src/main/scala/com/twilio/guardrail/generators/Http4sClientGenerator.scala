@@ -10,7 +10,9 @@ import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.extract.ScalaPackage
 import com.twilio.guardrail.generators.syntax.Scala._
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -28,17 +30,10 @@ object Http4sClientGenerator {
       (parts.drop(1).toList, parts.last)
     }
 
-    private[this] def toDashedCase(s: String): String = {
-      val lowercased =
-        "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
-      "([A-Z])".r
-        .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
-    }
-
     private[this] def formatClientName(clientName: Option[String]): Term.Param =
       clientName.fold(
         param"clientName: String"
-      )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
+      )(name => param"clientName: String = ${Lit.String(name.toDashedCase)}")
 
     private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
       serverUrls
@@ -49,7 +44,7 @@ object Http4sClientGenerator {
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
-            base <- SwaggerUtil.paths.generateUrlPathParams(path, pathArgs)
+            base <- generateUrlPathParams(path, pathArgs)
 
             _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
 
@@ -281,7 +276,7 @@ object Http4sClientGenerator {
             List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
           else List.empty
           tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
+            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
 
@@ -313,6 +308,9 @@ object Http4sClientGenerator {
 
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def extraConstructors(tracingName: Option[String],
@@ -356,9 +354,7 @@ object Http4sClientGenerator {
           StaticDefns[ScalaLanguage](
             className = clientName,
             extraImports = List.empty,
-            members = List.empty,
-            definitions = decls,
-            values = List.empty
+            definitions = decls
           )
         )
 

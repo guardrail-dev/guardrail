@@ -13,11 +13,7 @@ import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 import com.twilio.swagger.core.StructuredLogger
 
 package guardrail {
-  case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server[L]])
-
-  sealed trait ErrorKind
-  case object UserError     extends ErrorKind
-  case object InternalError extends ErrorKind
+  case class CodegenDefinitions[L <: LA](clients: List[Client[L]], servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 
   sealed trait LogAbstraction {
     type F[_]
@@ -55,10 +51,10 @@ package guardrail {
     def pure[T](x: T): Target[T]                          = A.pure(x)
     @deprecated("Use raiseError instead", "v0.41.2")
     def error[T](x: String): Target[T]          = raiseError(x)
-    def raiseError[T](x: String): Target[T]     = EitherT.fromEither(Left((x, UserError)))
-    def raiseException[T](x: String): Target[T] = EitherT.fromEither(Left((x, InternalError)))
+    def raiseError[T](x: String): Target[T]     = EitherT.fromEither(Left(UserError(x)))
+    def raiseException[T](x: String): Target[T] = EitherT.fromEither(Left(RuntimeFailure(x)))
     def fromOption[T](x: Option[T], default: => String): Target[T] =
-      EitherT.fromOption(x, (default, UserError))
+      EitherT.fromOption(x, UserError(default))
     def unsafeExtract[T](x: Target[T]): T =
       x.valueOr({ err =>
           throw new Exception(err.toString)
@@ -103,7 +99,7 @@ package object guardrail {
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
   type Logger[T]     = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
-  type Target[A]     = EitherT[Logger, (String, ErrorKind), A]
+  type Target[A]     = EitherT[Logger, Error, A]
   type CoreTarget[A] = EitherT[Logger, Error, A]
 
   // Likely can be removed in future versions of scala or cats? -Ypartial-unification seems to get confused here -- possibly higher arity issues?

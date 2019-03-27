@@ -37,6 +37,8 @@ definitions:
       $ref: '#/definitions/defArrayLong'
   propRef:
     type: object
+    required:
+      - arrayArray
     properties:
       param:
         $ref: "#/definitions/defLong"

@@ -32,6 +32,7 @@ class ScalaLanguage extends LanguageAbstraction {
   type MethodParameter = scala.meta.Term.Param
   type Type            = scala.meta.Type
   type TypeName        = scala.meta.Type.Name
+  type Annotation      = scala.meta.Mod.Annot
 
   // Result
   type FileContents = scala.meta.Source

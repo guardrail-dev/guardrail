@@ -8,6 +8,8 @@ case class UnparseableArgument(name: String, message: String) extends Error
 case object NoArgsSpecified                                   extends Error
 case object NoFramework                                       extends Error
 case object PrintHelp                                         extends Error
+case class RuntimeFailure(message: String)                    extends Error
+case class UserError(message: String)                         extends Error
 object Error {
   case class ArgName(value: String) extends AnyVal
 }

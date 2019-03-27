@@ -16,8 +16,12 @@ val catsVersion       = "1.4.0"
 val catsEffectVersion = "1.0.0"
 val circeVersion      = "0.10.1"
 val http4sVersion     = "0.19.0"
-val scalatestVersion  = "3.0.6"
+val scalatestVersion  = "3.0.7"
+val javaparserVersion = "3.7.1"
 val endpointsVersion  = "0.8.0"
+val ahcVersion        = "2.8.1"
+val dropwizardVersion = "1.3.9"
+val jerseyVersion     = "2.25.1"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 
@@ -33,7 +37,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("issues/issue127.yaml"), "issues.issue127", false, List.empty),
   (sampleResource("issues/issue143.yaml"), "issues.issue143", false, List.empty),
   (sampleResource("issues/issue148.yaml"), "issues.issue148", false, List.empty),
-  (sampleResource("issues/issue164.yaml"), "issues.issue148", false, List.empty),
+  (sampleResource("issues/issue164.yaml"), "issues.issue164", false, List.empty),
   (sampleResource("petstore.json"), "examples", false, List("--import", "support.PositiveLong")),
   (sampleResource("plain.json"), "tests.dtos", false, List.empty),
   (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
@@ -43,34 +47,49 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("pathological-parameters.yaml"), "pathological", false, List.empty)
 )
 
-val exampleArgs: List[List[String]] = exampleCases
-  .foldLeft(List.empty[List[String]])({
+val exampleFrameworkSuites = Map(
+  "scala" -> List(
+    ("akka-http", "akkaHttp", List("client", "server")),
+    ("endpoints", "endpoints", List("client")),
+    ("http4s", "http4s", List("client", "server"))
+  ),
+  "java" -> List(
+    ("dropwizard", "dropwizard", List("client", "server"))
+  )
+)
+
+def exampleArgs(language: String): List[List[String]] = exampleCases
+  .foldLeft(List[List[String]](List(language)))({
     case (acc, (path, prefix, tracing, extra)) =>
       acc ++ (for {
-        frameworkSuite <- List(
-          ("akka-http", "akkaHttp", List("client", "server")),
-          ("endpoints", "endpoints", List("client")),
-          ("http4s", "http4s", List("client", "server"))
-        )
+        frameworkSuite <- exampleFrameworkSuites(language)
         (frameworkName, frameworkPackage, kinds) = frameworkSuite
         kind <- kinds
-        tracingFlag = if (tracing) Option("--tracing") else Option.empty[String]
+        tracingFlag = if (tracing && language != "java") Option("--tracing") else Option.empty[String]
       } yield
         (
           List(s"--${kind}") ++
             List("--specPath", path.toString()) ++
-            List("--outputPath", s"modules/sample-${frameworkPackage}/src/main/scala/generated") ++
+            List("--outputPath", s"modules/sample-${frameworkPackage}/target/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
         ) ++ tracingFlag ++ extra)
   })
+
+lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
+fullRunTask(
+  runJavaExample,
+  Test,
+  "com.twilio.guardrail.CLI",
+  exampleArgs("java").flatten.filter(_.nonEmpty): _*
+)
 
 lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
 fullRunTask(
   runScalaExample,
   Test,
   "com.twilio.guardrail.CLI",
-  exampleArgs.flatten.filter(_.nonEmpty): _*
+  exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
 artifact in (Compile, assembly) := {
@@ -81,23 +100,27 @@ artifact in (Compile, assembly) := {
 addArtifact(artifact in (Compile, assembly), assembly)
 
 val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
-val frameworks = List("akkaHttp", "endpoints", "http4s")
+val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
+val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
 resetSample := {
   import scala.sys.process._
-  (List("sample") ++ frameworks.map(x => s"sample-${x}"))
-    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/src modules/${sampleName}/target" !)
+  (List("sample") ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}"))
+    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/target/generated" !)
 }
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
-addCommandAlias("runtimeSuite", "; resetSample ; runScalaExample ; " + frameworks.map(x => s"${x}Sample/test").mkString("; "))
-addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + frameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + frameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
-addCommandAlias("testSuite", "; scalaTestSuite")
+addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
+addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
+addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
+addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
+addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite")
 
 addCommandAlias(
   "publishBintray",
@@ -150,13 +173,15 @@ lazy val codegen = (project in file("modules/codegen"))
     (name := "guardrail") +:
       codegenSettings,
     libraryDependencies ++= testDependencies ++ Seq(
-      "org.scalameta"           %% "scalameta"     % "4.1.0",
-      "io.swagger.parser.v3"    % "swagger-parser" % "2.0.8",
-      "org.tpolecat"            %% "atto-core"     % "0.6.3",
-      "org.typelevel"           %% "cats-core"     % catsVersion,
-      "org.typelevel"           %% "cats-kernel"   % catsVersion,
-      "org.typelevel"           %% "cats-macros"   % catsVersion,
-      "org.typelevel"           %% "cats-free"     % catsVersion
+      "org.scalameta"               %% "scalameta"                    % "4.1.0",
+      "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
+      "com.google.googlejavaformat" % "google-java-format"            % "1.6",
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.8",
+      "org.tpolecat"                %% "atto-core"                    % "0.6.3",
+      "org.typelevel"               %% "cats-core"                    % catsVersion,
+      "org.typelevel"               %% "cats-kernel"                  % catsVersion,
+      "org.typelevel"               %% "cats-macros"                  % catsVersion,
+      "org.typelevel"               %% "cats-free"                    % catsVersion
     ),
     scalacOptions += "-language:higherKinds",
     bintrayRepository := {
@@ -199,6 +224,7 @@ lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
       "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
       "org.typelevel"     %% "cats-core"         % catsVersion
     ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,
     scalafmtOnCompile := false
   )
@@ -219,6 +245,7 @@ lazy val http4sSample = (project in file("modules/sample-http4s"))
       "org.typelevel" %% "cats-core"           % catsVersion,
       "org.typelevel" %% "cats-effect"         % catsEffectVersion
     ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,
     scalafmtOnCompile := false
   )
@@ -241,10 +268,37 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
       "org.typelevel"     %%% "cats-core"                     % catsVersion
     ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
+lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
+  .settings(
+    codegenSettings,
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    libraryDependencies ++= Seq(
+      "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
+      "org.glassfish.jersey.media" %  "jersey-media-multipart" % jerseyVersion,
+      "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
+      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
+      "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
+      "junit"                      %  "junit"                  % "4.12"             % Test,
+      "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
+      "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
+      "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
+    ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+    crossPaths := false,  // strangely needed to get the JUnit tests to run at all
     skip in publish := true,
     scalafmtOnCompile := false
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
+watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
 
 logBuffered in Test := false

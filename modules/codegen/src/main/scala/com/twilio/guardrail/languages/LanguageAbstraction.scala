@@ -32,6 +32,7 @@ class LanguageAbstraction {
   type MethodParameter
   type Type
   type TypeName
+  type Annotation
 
   // Result
   type FileContents

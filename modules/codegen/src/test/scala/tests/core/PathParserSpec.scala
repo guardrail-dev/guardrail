@@ -29,7 +29,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Client $str") {
-        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlPathParams(str, args))
+        val gen = Target.unsafeExtract(generateUrlPathParams(str, args))
         gen.toString shouldBe expected.toString
       }
   }

@@ -2,35 +2,28 @@ package com.twilio.guardrail
 package generators
 
 import java.util.Locale
-
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.arrow.FunctionK
 import cats.data.{ Ior, NonEmptyList }
 import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
+import com.twilio.guardrail.generators.syntax._
+import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.shims._
 import java.net.URI
-
 import scala.collection.JavaConverters._
 import scala.meta._
 
 object EndpointsClientGenerator {
   object ClientTermInterp extends FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
 
-    private[this] def toDashedCase(s: String): String = {
-      val lowercased =
-        "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
-      "([A-Z])".r
-        .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
-    }
-
     private[this] def formatClientName(clientName: Option[String]): Term.Param =
       clientName.fold(
         param"clientName: String"
-      )(name => param"clientName: String = ${Lit.String(toDashedCase(name))}")
+      )(name => param"clientName: String = ${Lit.String(name.toDashedCase)}")
 
     private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
       serverUrls
@@ -370,7 +363,7 @@ object EndpointsClientGenerator {
             List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"))
           else List.empty
           tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(toDashedCase(methodName))}"))
+            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
           renderedClientOperation = build(methodName,
@@ -399,6 +392,8 @@ object EndpointsClientGenerator {
         Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      case GenerateSupportDefinitions(tracing) =>
+        Target.pure(List.empty)
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
           params
@@ -419,7 +414,7 @@ object EndpointsClientGenerator {
           q"def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}"
         )
 
-        Target.pure(StaticDefns[ScalaLanguage](clientName, List.empty, List.empty, definitions, List.empty))
+        Target.pure(StaticDefns[ScalaLanguage](clientName, List.empty, definitions))
       case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
         val (endpointDefs, rest0) = supportDefinitions.partition {
           case q"val $name = endpoint(...$_)" => true

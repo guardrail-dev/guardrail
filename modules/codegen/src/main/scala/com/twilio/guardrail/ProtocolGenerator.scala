@@ -1,18 +1,18 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
-import _root_.io.swagger.v3.oas.models.media.{ ArraySchema, ComposedSchema, IntegerSchema, ObjectSchema, Schema, StringSchema }
+import _root_.io.swagger.v3.oas.models.media._
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.extract.ScalaType
+import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import java.util.Locale
 import scala.collection.JavaConverters._
-import scala.language.{ higherKinds, postfixOps, reflectiveCalls }
+import scala.language.{ existentials, higherKinds, postfixOps, reflectiveCalls }
 
 case class ProtocolDefinitions[L <: LA](elems: List[StrictProtocolElems[L]],
                                         protocolImports: List[L#Import],
@@ -26,7 +26,8 @@ case class ProtocolParameter[L <: LA](term: L#MethodParameter,
                                       name: String,
                                       dep: Option[L#TermName],
                                       readOnlyKey: Option[String],
-                                      emptyToNull: EmptyToNullBehaviour)
+                                      emptyToNull: EmptyToNullBehaviour,
+                                      defaultValue: Option[L#Term])
 
 case class SuperClass[L <: LA](
     clsName: String,
@@ -65,21 +66,10 @@ object ProtocolGenerator {
     import E._
     import Sc._
 
-    val toPascalRegexes = List(
-      "[\\._-]([a-z])".r, // dotted, snake, or dashed case
-      "\\s+([a-zA-Z])".r, // spaces
-      "^([a-z])".r // initial letter
-    )
-
-    def toPascalCase(s: String): String =
-      toPascalRegexes.foldLeft(s)(
-        (accum, regex) => regex.replaceAllIn(accum, m => m.group(1).toUpperCase(Locale.US))
-      )
-
     def validProg(enum: List[String], tpe: L#Type): Free[F, EnumDefinition[L]] =
       for {
         elems <- enum.traverse { elem =>
-          val termName = toPascalCase(elem)
+          val termName = elem.toPascalCase
           for {
             valueTerm <- pureTermName(termName)
             accessor  <- buildAccessor(clsName, termName)
@@ -90,7 +80,7 @@ object ProtocolGenerator {
         encoder <- encodeEnum(clsName)
         decoder <- decodeEnum(clsName)
 
-        defn        <- renderClass(clsName, tpe)
+        defn        <- renderClass(clsName, tpe, elems)
         staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
         classType   <- pureTypeName(clsName)
       } yield EnumDefinition[L](clsName, classType, elems, defn, staticDefns)
@@ -100,9 +90,10 @@ object ProtocolGenerator {
     val tpeName = Option(swagger.getType).filterNot(_ == "object").getOrElse("string")
 
     for {
-      enum <- extractEnum(swagger)
-      tpe  <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), ScalaType(swagger))
-      res  <- enum.traverse(validProg(_, tpe))
+      enum          <- extractEnum(swagger)
+      customTpeName <- SwaggerUtil.customTypeName(swagger)
+      tpe           <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), customTpeName)
+      res           <- enum.traverse(validProg(_, tpe))
     } yield res
   }
 
@@ -165,8 +156,7 @@ object ProtocolGenerator {
             .propMeta[L, F](prop)
             .flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
-      terms = params.map(_.term)
-      definition  <- renderSealedTrait(hierarchy.name, terms, discriminator, parents)
+      definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
       encoder     <- encodeADT(hierarchy.name, children)
       decoder     <- decodeADT(hierarchy.name, children)
       staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)
@@ -256,8 +246,7 @@ object ProtocolGenerator {
           val isRequired = requiredFields.contains(name)
           SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
-      terms = params.map(_.term)
-      defn <- renderDTOClass(clsName, terms, parents)
+      defn <- renderDTOClass(clsName, params, parents)
       deps = params.flatMap(_.dep)
       encoder     <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
       decoder     <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
@@ -288,7 +277,10 @@ object ProtocolGenerator {
       tpe <- model
         .flatMap(model => Option(model.getType))
         .fold[Free[F, L#Type]](objectType(None))(
-          raw => SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), model.flatMap(ScalaType(_)))
+          raw =>
+            model
+              .flatTraverse(SwaggerUtil.customTypeName[L, F, ObjectSchema])
+              .flatMap(customTypeName => SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), customTypeName))
         )
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
@@ -421,10 +413,10 @@ object ProtocolGenerator {
 
             case x =>
               for {
-                tpeName <- getType(x)
-
-                tpe <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), ScalaType(x))
-                res <- typeAlias(clsName, tpe)
+                tpeName        <- getType(x)
+                customTypeName <- SwaggerUtil.customTypeName(x)
+                tpe            <- SwaggerUtil.typeName[L, F](tpeName, Option(x.getFormat()), customTypeName)
+                res            <- typeAlias(clsName, tpe)
               } yield res
           }
       }

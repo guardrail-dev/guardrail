@@ -2,100 +2,17 @@ package com.twilio.guardrail
 
 import java.nio.file.Path
 import cats.Applicative
+import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.CoreTermInterp
-import com.twilio.guardrail.terms.CoreTerm
+import com.twilio.guardrail.terms.{ CoreTerm, CoreTerms }
 import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
-
+import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import scala.io.AnsiColor
+import scala.util.{ Failure, Success }
 
 object CLICommon {
-  def run[L <: LA](args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
-    // Hacky loglevel parsing, only supports levels that come before absolutely
-    // every other argument due to arguments being a small configuration
-    // language themselves.
-    val (levels, newArgs): (Array[String], Array[String]) =
-      args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
-    val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
-
-    val fallback = List.empty[ReadSwagger[Target[List[WriteTree]]]]
-    val result = Common
-      .runM[L, CoreTerm[L, ?]](newArgs)
-      .foldMap(interpreter)
-      .fold[List[ReadSwagger[Target[List[WriteTree]]]]](
-        {
-          case MissingArg(args, Error.ArgName(arg)) =>
-            println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
-            unsafePrintHelp()
-            fallback
-          case NoArgsSpecified =>
-            println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
-            unsafePrintHelp()
-            fallback
-          case NoFramework =>
-            println(s"${AnsiColor.RED}No framework specified${AnsiColor.RESET}")
-            unsafePrintHelp()
-            fallback
-          case PrintHelp =>
-            unsafePrintHelp()
-            fallback
-          case UnknownArguments(args) =>
-            println(s"${AnsiColor.RED}Unknown arguments: ${args.mkString(" ")}${AnsiColor.RESET}")
-            unsafePrintHelp()
-            fallback
-          case UnknownFramework(name) =>
-            println(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
-            fallback
-          case UnparseableArgument(name, message) =>
-            println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
-            fallback
-        },
-        _.toList
-      )
-
-    implicit val logLevel: LogLevel = level
-      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
-      .getOrElse(LogLevels.Warning)
-
-    val (coreLogger, deferred) = result.runEmpty
-
-    print(coreLogger.show)
-
-    val (logger, paths) = deferred
-      .traverse({ rs =>
-        def put(value: StructuredLogger): Logger[List[Path]] = {
-          import cats.Id
-          import cats.data.IndexedStateT
-          IndexedStateT
-            .modify[Id, StructuredLogger, StructuredLogger](_ |+| value)
-            .map(_ => List.empty[Path])
-        }
-        def logRawError(err: String): Logger[List[Path]] = put(StructuredLogger.error(Nil, s"${AnsiColor.RED}${err}${AnsiColor.RESET}"))
-        ReadSwagger
-          .readSwagger(rs)
-          .fold[Logger[List[Path]]](
-            { err =>
-              logRawError(s"Error in ${rs}") >> logRawError(err)
-            },
-            _.fold(
-              {
-                case (err, errorKind) =>
-                  logRawError(s"Error in ${rs}") >> logRawError(err).map({ x =>
-                    if (errorKind == UserError) unsafePrintHelp()
-                    x
-                  })
-              },
-              xs => Applicative[Logger].pure(xs.map(WriteTree.unsafeWriteTree))
-            ).flatten
-          ) <* put(StructuredLogger.reset)
-      })
-      .runEmpty
-
-    print(logger.show)
-  }
-
   def unsafePrintHelp(): Unit = {
     val text = s"""
     | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
@@ -133,20 +50,137 @@ object CLICommon {
 }
 
 trait CLICommon {
-  val scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
-
-  val handleLanguage: PartialFunction[String, Array[String] => Unit] = {
-    case "scala" => CLICommon.run(_)(scalaInterpreter)
-  }
+  def scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
+  def javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
 
   def main(args: Array[String]): Unit = {
     val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
     handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
   }
+
+  def chainFrameworkMappings[L <: LA](
+      first: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
+      second: PartialFunction[String, CodegenApplication[L, ?] ~> Target]
+  ): PartialFunction[String, CodegenApplication[L, ?] ~> Target] = first.orElse(second)
+
+  def handleLanguage: PartialFunction[String, Array[String] => Unit] = {
+    case "java"  => run("java", _)(javaInterpreter)
+    case "scala" => run("scala", _)(scalaInterpreter)
+  }
+
+  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
+    val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
+    // Hacky loglevel parsing, only supports levels that come before absolutely
+    // every other argument due to arguments being a small configuration
+    // language themselves.
+    val (levels, newArgs): (Array[String], Array[String]) =
+      args.span(arg => LogLevels(arg.stripPrefix("--")).isDefined)
+    val level: Option[String] = levels.lastOption.map(_.stripPrefix("--"))
+
+    // FIXME: The only reason we need the interpreter at all is to call parseArgs on it
+    // This likely means the CLI should _not_ be part of CoreTerms. There's no reason
+    // for it to be in there, as CLI is effectively a bespoke build tool whose unused
+    // code is included into all other build tools.
+    val coreArgs = C.parseArgs(newArgs).map(NonEmptyList.fromList(_))
+
+    val result = coreArgs
+      .foldMap(interpreter)
+      .flatMap({ args =>
+        guardrailRunner(args.map(language -> _).toMap)
+      })
+
+    implicit val logLevel: LogLevel = level
+      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
+      .getOrElse(LogLevels.Warning)
+
+    val fallback = List.empty[Path]
+    import CLICommon.unsafePrintHelp
+    val (logger, paths) = result
+      .fold(
+        {
+          case MissingArg(args, Error.ArgName(arg)) =>
+            println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
+            unsafePrintHelp()
+            fallback
+          case NoArgsSpecified =>
+            println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
+            unsafePrintHelp()
+            fallback
+          case NoFramework =>
+            println(s"${AnsiColor.RED}No framework specified${AnsiColor.RESET}")
+            unsafePrintHelp()
+            fallback
+          case PrintHelp =>
+            unsafePrintHelp()
+            fallback
+          case UnknownArguments(args) =>
+            println(s"${AnsiColor.RED}Unknown arguments: ${args.mkString(" ")}${AnsiColor.RESET}")
+            unsafePrintHelp()
+            fallback
+          case UnknownFramework(name) =>
+            println(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
+            fallback
+          case UnparseableArgument(name, message) =>
+            println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
+            fallback
+          case RuntimeFailure(message) =>
+            println(s"${AnsiColor.RED}Error: $message")
+            fallback
+          case UserError(message) =>
+            println(s"${AnsiColor.RED}Error: $message")
+            unsafePrintHelp()
+            fallback
+        },
+        identity
+      )
+      .runEmpty
+
+    println(logger.show)
+  }
+
+  def runLanguages(
+      tasks: Map[String, NonEmptyList[Args]]
+  ): CoreTarget[List[ReadSwagger[Target[List[WriteTree]]]]] =
+    tasks.toList.flatTraverse[CoreTarget, ReadSwagger[Target[List[WriteTree]]]]({
+      case (language, args) =>
+        (language match {
+          case "java" =>
+            Common
+              .runM[JavaLanguage, CoreTerm[JavaLanguage, ?]](args)
+              .foldMap(javaInterpreter)
+          case "scala" =>
+            Common
+              .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
+              .foldMap(scalaInterpreter)
+          case other =>
+            CoreTarget.raiseError(UnparseableArgument("language", other))
+        }).map(_.toList)
+    })
+
+  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
+    runLanguages(tasks)
+      .flatMap(
+        _.flatTraverse(
+          rs =>
+            ReadSwagger
+              .readSwagger(rs)
+              .map(_.map(WriteTree.unsafeWriteTree))
+              .leftFlatMap(
+                value =>
+                  Target
+                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .subflatMap(_ => Either.left[Error, List[Path]](value))
+              )
+              <* Target.pushLogger(StructuredLogger.reset)
+        )
+      )
+      .map(_.distinct)
+  }
 }
 
 object CLI extends CLICommon {
   import com.twilio.guardrail.generators.{ AkkaHttp, Endpoints, Http4s }
+  import com.twilio.guardrail.generators.Java
   import scala.meta._
   val scalaInterpreter = CoreTermInterp[ScalaLanguage](
     "akka-http", {
@@ -155,6 +189,19 @@ object CLI extends CLICommon {
       case "http4s"    => Http4s
     }, {
       _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
+    }
+  )
+
+  val javaInterpreter = CoreTermInterp[JavaLanguage](
+    "dropwizard", {
+      case "dropwizard" => Java.Dropwizard
+    }, { str =>
+      import com.github.javaparser.JavaParser
+      import scala.util.Try
+      Try(JavaParser.parseImport(s"import ${str};")) match {
+        case Success(value) => Right(value)
+        case Failure(t)     => Left(UnparseableArgument("import", t.getMessage))
+      }
     }
   )
 }

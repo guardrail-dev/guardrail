@@ -94,7 +94,7 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Use enums") {
     val (
       _,
-      Clients(Client(tags, className, _, staticDefns, cls, _) :: _),
+      Clients(Client(tags, className, _, staticDefns, cls, _) :: _, Nil),
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)

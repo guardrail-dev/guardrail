@@ -2,13 +2,14 @@ package com.twilio.guardrail
 package terms
 
 import cats.InjectK
-import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
+import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
 class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
+  def customTypePrefixes(): Free[F, List[String]] = Free.inject[ScalaTerm[L, ?], F](CustomTypePrefixes[L]())
+
   def litString(value: String): Free[F, L#Term]        = Free.inject[ScalaTerm[L, ?], F](LitString(value))
   def litFloat(value: Float): Free[F, L#Term]          = Free.inject[ScalaTerm[L, ?], F](LitFloat(value))
   def litDouble(value: Double): Free[F, L#Term]        = Free.inject[ScalaTerm[L, ?], F](LitDouble(value))
@@ -62,7 +63,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                       pkgName: List[String],
                       frameworkImports: List[L#Import],
                       jsonImports: List[L#Import],
-                      customImports: List[L#Import]): Free[F, WriteTree] =
+                      customImports: List[L#Import]): Free[F, Option[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports))
   def renderFrameworkImplicits(pkgPath: Path,
                                pkgName: List[String],
@@ -71,6 +72,12 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                                frameworkImplicits: L#ObjectDefinition,
                                frameworkImplicitName: L#TermName): Free[F, WriteTree] =
     Free.inject[ScalaTerm[L, ?], F](RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName))
+  def renderFrameworkDefinitions(pkgPath: Path,
+                                 pkgName: List[String],
+                                 frameworkImports: List[L#Import],
+                                 frameworkDefinitions: L#ClassDefinition,
+                                 frameworkDefinitionsName: L#TermName): Free[F, WriteTree] =
+    Free.inject[ScalaTerm[L, ?], F](RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName))
 
   def writePackageObject(dtoPackagePath: Path,
                          dtoComponents: List[String],
@@ -78,7 +85,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                          packageObjectImports: List[L#Import],
                          protocolImports: List[L#Import],
                          packageObjectContents: List[L#ValueDefinition],
-                         extraTypes: List[L#Statement]): Free[F, WriteTree] =
+                         extraTypes: List[L#Statement]): Free[F, Option[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](
       WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
     )
@@ -92,16 +99,16 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def writeClient(pkgPath: Path,
                   pkgName: List[String],
                   customImports: List[L#Import],
-                  frameworkImplicitName: L#TermName,
+                  frameworkImplicitName: Option[L#TermName],
                   dtoComponents: List[String],
-                  client: Client[L]): Free[F, WriteTree] =
+                  client: Client[L]): Free[F, List[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client))
   def writeServer(pkgPath: Path,
                   pkgName: List[String],
                   customImports: List[L#Import],
-                  frameworkImplicitName: L#TermName,
+                  frameworkImplicitName: Option[L#TermName],
                   dtoComponents: List[String],
-                  server: Server[L]): Free[F, WriteTree] =
+                  server: Server[L]): Free[F, List[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
 }
 object ScalaTerms {
