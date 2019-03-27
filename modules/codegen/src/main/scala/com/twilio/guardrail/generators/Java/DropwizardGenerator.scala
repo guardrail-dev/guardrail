@@ -27,7 +27,7 @@ object DropwizardGenerator {
       case GetFrameworkImplicits() =>
         Target.pure(None)
 
-      case GetFrameworkDefinitions() =>
+      case GetFrameworkDefinitions(tracing) =>
         Target.pure(List.empty)
 
       case LookupStatusCode(key) =>
