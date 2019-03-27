@@ -166,7 +166,7 @@ object ScalaGenerator {
                   def show(v: T): String = f(v)
                 }
 
-                implicit val showString = build[String](identity)
+                implicit val showString = build[String](Predef.identity)
                 implicit val showInt = build[Int](_.toString)
                 implicit val showLong = build[Long](_.toString)
                 implicit val showFloat = build[Float](_.toString)
