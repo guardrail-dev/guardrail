@@ -350,7 +350,7 @@ object DropwizardServerGenerator {
                   new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
                 )
 
-                val responseName = s"${operationId.capitalize}Response"
+                val responseName = s"${handlerName}.${operationId.capitalize}Response"
                 val responseType = JavaParser.parseClassOrInterfaceType(responseName)
 
                 val whenCompleteLambda = new LambdaExpr(
@@ -543,11 +543,11 @@ object DropwizardServerGenerator {
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         safeParseSimpleName(className) >>
           safeParseSimpleName(handlerName) >>
-          Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) +: responseDefinitions)
+          Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
 
-      case RenderHandler(handlerName, methodSigs, handlerDefinitions) =>
+      case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
         val handlerClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), true, handlerName)
-        methodSigs.foreach(handlerClass.addMember)
+        sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)
         Target.pure(handlerClass)
     }
 

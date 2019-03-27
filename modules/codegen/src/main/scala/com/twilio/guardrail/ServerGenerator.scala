@@ -66,7 +66,7 @@ object ServerGenerator {
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
             renderedRoutes   <- generateRoutes(context.tracing, resourceName, basePath, serverOperations, protocolElems)
-            handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions)
+            handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions, responseDefinitions.flatten)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc <- renderClass(
               resourceName,
