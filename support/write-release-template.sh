@@ -18,10 +18,11 @@ if [ -e "$notes_file" ]; then
         exit 1
 fi
 
+latest_ref="$(git rev-parse --short @)"
 
 github_api="$(mktemp)"
 
-curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...master"
+curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...${latest_ref}"
 
 cat > "${notes_file}" <<!
 TITLE
