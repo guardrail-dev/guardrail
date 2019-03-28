@@ -509,7 +509,7 @@ object SwaggerUtil {
                   case t"Int"    => Right(q"IntNumber")
                   case t"Long"   => Right(q"LongNumber")
                   case t"BigInt" => Right(q"Segment.map(BigInt.apply _)")
-                  case tpe @ Type.Name(_) =>
+                  case tpe =>
                     Right(q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
                 }
               } { segment =>
@@ -518,7 +518,7 @@ object SwaggerUtil {
                   case t"BigDecimal" =>
                     Right(q"${segment}.map(BigDecimal.apply _)")
                   case t"BigInt" => Right(q"${segment}.map(BigInt.apply _)")
-                  case tpe @ Type.Name(_) =>
+                  case tpe =>
                     Right(q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
                 }
               }
@@ -549,7 +549,7 @@ object SwaggerUtil {
                   case t"Int"        => Right(p"IntVar(${Pat.Var(paramName)})")
                   case t"Long"       => Right(p"LongVar(${Pat.Var(paramName)})")
                   case t"BigInt"     => Right(p"BigIntVar(${Pat.Var(paramName)})")
-                  case tpe @ Type.Name(_) =>
+                  case tpe =>
                     Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
                 }
               } { _ =>
