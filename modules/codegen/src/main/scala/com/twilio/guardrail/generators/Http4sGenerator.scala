@@ -70,7 +70,7 @@ object Http4sGenerator {
           Some((q"Http4sImplicits", defn))
         })
 
-      case GetFrameworkDefinitions() =>
+      case GetFrameworkDefinitions(tracing) =>
         Target.pure(List.empty)
 
       case LookupStatusCode(key) =>

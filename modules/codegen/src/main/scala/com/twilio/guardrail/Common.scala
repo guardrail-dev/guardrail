@@ -119,7 +119,7 @@ object Common {
       frameworkImports   <- getFrameworkImports(context.tracing)
       frameworkImplicits <- getFrameworkImplicits()
       frameworkImplicitName = frameworkImplicits.map(_._1)
-      frameworkDefinitions <- getFrameworkDefinitions()
+      frameworkDefinitions <- getFrameworkDefinitions(context.tracing)
 
       files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
                 servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)

@@ -117,7 +117,7 @@ object EndpointsGenerator {
         }
       """)))
 
-      case GetFrameworkDefinitions() =>
+      case GetFrameworkDefinitions(tracing) =>
         Target.pure(List.empty)
 
       case LookupStatusCode(key) =>
