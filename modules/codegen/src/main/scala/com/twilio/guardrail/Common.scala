@@ -4,7 +4,7 @@ import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
-import cats.~>
+import cats.{ Id, ~> }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -47,13 +47,14 @@ object Common {
       serverUrls = Option(swagger.getServers)
         .map(_.asScala.toList)
         .map(_.flatMap({ x =>
-          Option(x.getUrl().stripSuffix("/")).filter(_.nonEmpty)
+          Option(x.getUrl())
+            .map({ x =>
+              val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
+              new URI(uri.getScheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
+            })
+            .filterNot(_.toString().isEmpty)
         }))
         .flatMap(NonEmptyList.fromList(_))
-        .map(_.map({ x =>
-          val uri = new URI(x)
-          new URI(Option(uri.getScheme).getOrElse("http"), uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
-        }))
       basePath = swagger.basePath()
 
       paths = swagger.getPathsOpt()
