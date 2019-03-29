@@ -173,9 +173,9 @@ object Java {
       }
   }
 
-  def sortDefinitions(defns: List[BodyDeclaration[_]]): List[BodyDeclaration[_]] = {
+  def sortDefinitions(defns: List[BodyDeclaration[_ <: BodyDeclaration[_]]]): List[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
     import com.github.javaparser.ast.Modifier._
-    def sortKeyFor(x: BodyDeclaration[_]): Int = x match {
+    def sortKeyFor(x: BodyDeclaration[_ <: BodyDeclaration[_]]): Int = x match {
       case cd: ClassOrInterfaceDeclaration if cd.getModifiers.contains(PUBLIC)                              => 0
       case cd: ClassOrInterfaceDeclaration if cd.getModifiers.contains(PROTECTED)                           => 10
       case cd: ClassOrInterfaceDeclaration if !cd.getModifiers.contains(PRIVATE)                            => 20

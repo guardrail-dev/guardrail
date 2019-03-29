@@ -165,7 +165,7 @@ object DropwizardServerGenerator {
 
   def generateResponseClass(superClassType: ClassOrInterfaceType,
                             response: Response[JavaLanguage],
-                            errorEntityFallbackType: Option[Type]): Target[(ClassOrInterfaceDeclaration, BodyDeclaration[_])] = {
+                            errorEntityFallbackType: Option[Type]): Target[(ClassOrInterfaceDeclaration, BodyDeclaration[_ <: BodyDeclaration[_]])] = {
     val clsName = response.statusCodeName.asString
     for {
       clsType <- safeParseClassOrInterfaceType(clsName)
@@ -181,7 +181,7 @@ object DropwizardServerGenerator {
             None
           }
         })
-        .fold[(ConstructorDeclaration, BodyDeclaration[_])]({
+        .fold[(ConstructorDeclaration, BodyDeclaration[_ <: BodyDeclaration[_]])]({
           cls.setExtendedTypes(new NodeList(superClassType.clone().setTypeArguments(VOID_TYPE)))
 
           val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
@@ -471,7 +471,7 @@ object DropwizardServerGenerator {
             new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
           )
 
-          val supportDefinitions = List[BodyDeclaration[_]](
+          val supportDefinitions = List[BodyDeclaration[_ <: BodyDeclaration[_]]](
             new FieldDeclaration(
               util.EnumSet.of(PRIVATE, STATIC, FINAL),
               new VariableDeclarator(
@@ -504,7 +504,7 @@ object DropwizardServerGenerator {
           abstractResponseClass <- generateResponseSuperClass(abstractResponseClassName)
           responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
         } yield {
-          sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_]](cls, creator) }))
+          sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))
             .foreach(abstractResponseClass.addMember)
 
           abstractResponseClass :: Nil
@@ -554,7 +554,7 @@ object DropwizardServerGenerator {
     // Lift this function out of RenderClass above to work around a 2.11.x compiler syntax bug
     private def doRenderClass(className: String,
                               classAnnotations: List[AnnotationExpr],
-                              supportDefinitions: List[BodyDeclaration[_]],
+                              supportDefinitions: List[BodyDeclaration[_ <: BodyDeclaration[_]]],
                               combinedRouteTerms: List[Node]): ClassOrInterfaceDeclaration = {
       val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, className)
       classAnnotations.foreach(cls.addAnnotation)

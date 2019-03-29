@@ -35,7 +35,7 @@ object JavaGenerator {
                       pkg: List[String],
                       pkgDecl: PackageDeclaration,
                       imports: List[ImportDeclaration],
-                      definition: BodyDeclaration[_]): Target[WriteTree] =
+                      definition: BodyDeclaration[_ <: BodyDeclaration[_]]): Target[WriteTree] =
     definition match {
       case td: TypeDeclaration[_] =>
         val cu = new CompilationUnit()
@@ -56,7 +56,7 @@ object JavaGenerator {
                       pkg: List[String],
                       pkgDecl: PackageDeclaration,
                       imports: List[ImportDeclaration],
-                      definition: BodyDeclaration[_]): Target[WriteTree] =
+                      definition: BodyDeclaration[_ <: BodyDeclaration[_]]): Target[WriteTree] =
     definition match {
       case td: TypeDeclaration[_] =>
         val cu = new CompilationUnit()
