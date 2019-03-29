@@ -91,10 +91,13 @@ object Java {
   def safeParseRawImport(s: String): Target[ImportDeclaration]       = safeParse("safeParseRawImport")(JavaParser.parseImport, s"import ${s};")
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration] = safeParse("safeParseStaticImport")(JavaParser.parseImport, s"import static ${s};")
 
-  def completionStageType(of: Type): ClassOrInterfaceType     = JavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
-  def optionalType(of: Type): ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Optional").setTypeArguments(of)
-  def functionType(in: Type, out: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
-  def supplierType(of: Type): ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
+  def completionStageType(of: Type): ClassOrInterfaceType        = JavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
+  def optionalType(of: Type): ClassOrInterfaceType               = JavaParser.parseClassOrInterfaceType("Optional").setTypeArguments(of)
+  def functionType(in: Type, out: Type): ClassOrInterfaceType    = JavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
+  def supplierType(of: Type): ClassOrInterfaceType               = JavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
+  def listType(of: Type): ClassOrInterfaceType                   = JavaParser.parseClassOrInterfaceType("List").setTypeArguments(of)
+  def mapType(key: Type, value: Type): ClassOrInterfaceType      = JavaParser.parseClassOrInterfaceType("Map").setTypeArguments(key, value)
+  def mapEntryType(key: Type, value: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Map.Entry").setTypeArguments(new NodeList(key, value))
 
   val VOID_TYPE: ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Void")
   val OBJECT_TYPE: ClassOrInterfaceType          = JavaParser.parseClassOrInterfaceType("Object")
