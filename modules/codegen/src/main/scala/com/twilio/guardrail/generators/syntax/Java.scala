@@ -16,6 +16,7 @@ import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, Nod
 import com.twilio.guardrail.Target
 import java.nio.charset.StandardCharsets
 import java.util.Optional
+import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
@@ -63,6 +64,10 @@ object Java {
 
   implicit class RichListOfNode[T <: Node](val l: List[T]) extends AnyVal {
     def toNodeList: NodeList[T] = new NodeList[T](l: _*)
+  }
+
+  implicit class RichNodeList[T <: Node](val nl: NodeList[T]) extends AnyVal {
+    def toList(implicit cls: ClassTag[T]): List[T] = nl.iterator.asScala.toList
   }
 
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] =
