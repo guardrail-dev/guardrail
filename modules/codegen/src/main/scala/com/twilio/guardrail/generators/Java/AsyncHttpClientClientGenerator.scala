@@ -11,6 +11,7 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
+import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
@@ -22,23 +23,14 @@ import java.net.URI
 import java.util
 
 object AsyncHttpClientClientGenerator {
-  private val URI_TYPE                                      = JavaParser.parseClassOrInterfaceType("URI")
-  private val DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("DefaultAsyncHttpClientConfig.Builder")
-  private val DEFAULT_ASYNC_HTTP_CLIENT_TYPE                = JavaParser.parseClassOrInterfaceType("DefaultAsyncHttpClient")
-  private val ASYNC_HTTP_CLIENT_TYPE                        = JavaParser.parseClassOrInterfaceType("AsyncHttpClient")
-  private val ASYNC_HTTP_CLIENT_CONFIG_TYPE                 = JavaParser.parseClassOrInterfaceType("AsyncHttpClientConfig")
-  private val REQUEST_BUILDER_TYPE                          = JavaParser.parseClassOrInterfaceType("RequestBuilder")
-  private val REQUEST_TYPE                                  = JavaParser.parseClassOrInterfaceType("Request")
-  private val RESPONSE_TYPE                                 = JavaParser.parseClassOrInterfaceType("Response")
-  private val FILE_PART_TYPE                                = JavaParser.parseClassOrInterfaceType("FilePart")
-  private val STRING_PART_TYPE                              = JavaParser.parseClassOrInterfaceType("StringPart")
-  private val OBJECT_MAPPER_TYPE                            = JavaParser.parseClassOrInterfaceType("ObjectMapper")
-  private val BUILDER_TYPE                                  = JavaParser.parseClassOrInterfaceType("Builder")
-  private val MARSHALLING_EXCEPTION_TYPE                    = JavaParser.parseClassOrInterfaceType("MarshallingException")
-  private val HTTP_ERROR_TYPE                               = JavaParser.parseClassOrInterfaceType("HttpError")
-  private val EXCEPTION_TYPE                                = JavaParser.parseClassOrInterfaceType("Exception")
-  private val JSON_PROCESSING_EXCEPTION_TYPE                = JavaParser.parseClassOrInterfaceType("JsonProcessingException")
-  private val CLIENT_EXCEPTION_TYPE                         = JavaParser.parseClassOrInterfaceType("ClientException")
+  private val URI_TYPE                       = JavaParser.parseClassOrInterfaceType("URI")
+  private val OBJECT_MAPPER_TYPE             = JavaParser.parseClassOrInterfaceType("ObjectMapper")
+  private val BUILDER_TYPE                   = JavaParser.parseClassOrInterfaceType("Builder")
+  private val MARSHALLING_EXCEPTION_TYPE     = JavaParser.parseClassOrInterfaceType("MarshallingException")
+  private val HTTP_ERROR_TYPE                = JavaParser.parseClassOrInterfaceType("HttpError")
+  private val EXCEPTION_TYPE                 = JavaParser.parseClassOrInterfaceType("Exception")
+  private val JSON_PROCESSING_EXCEPTION_TYPE = JavaParser.parseClassOrInterfaceType("JsonProcessingException")
+  private val CLIENT_EXCEPTION_TYPE          = JavaParser.parseClassOrInterfaceType("ClientException")
 
   private val HTTP_CLIENT_FUNCTION_TYPE = functionType(REQUEST_TYPE, completionStageType(RESPONSE_TYPE))
 
