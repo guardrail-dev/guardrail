@@ -549,8 +549,13 @@ object SwaggerUtil {
                   case t"Int"        => Right(p"IntVar(${Pat.Var(paramName)})")
                   case t"Long"       => Right(p"LongVar(${Pat.Var(paramName)})")
                   case t"BigInt"     => Right(p"BigIntVar(${Pat.Var(paramName)})")
-                  case tpe =>
+                  case Type.Name(tpe) =>
                     Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
+                  case Type.Select(_, Type.Name(tpe)) =>
+                    Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
+                  case tpe =>
+                    println(s"Error: Unsure how to map ${tpe} into an extractor")
+                    Left(s"Unsure how to map ${tpe} into an extractor")
                 }
               } { _ =>
                 //todo add support for regex segment

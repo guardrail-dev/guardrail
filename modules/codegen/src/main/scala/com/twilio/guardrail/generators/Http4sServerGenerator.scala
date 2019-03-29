@@ -548,9 +548,14 @@ object Http4sServerGenerator {
 
     def generatePathParamExtractors(pathArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
       pathArgs
-        .map(_.argType.toString)
+        .map(_.argType)
+        .filterNot(x => List("Int", "Long", "String").contains(x.toString))
+        .flatMap({
+          case Type.Name(tpe)                 => Some(tpe)
+          case Type.Select(_, Type.Name(tpe)) => Some(tpe)
+          case tpe                            => None
+        })
         .distinct
-        .filter(!List("Int", "Long", "String").contains(_))
         .map(tpe => q"""
           object ${Term.Name(s"${tpe}Var")} {
             def unapply(str: String): Option[${Type.Name(tpe)}] = {
