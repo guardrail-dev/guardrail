@@ -16,6 +16,7 @@ import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, Nod
 import com.twilio.guardrail.Target
 import java.nio.charset.StandardCharsets
 import java.util.Optional
+import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
@@ -65,6 +66,10 @@ object Java {
     def toNodeList: NodeList[T] = new NodeList[T](l: _*)
   }
 
+  implicit class RichNodeList[T <: Node](val nl: NodeList[T]) extends AnyVal {
+    def toList(implicit cls: ClassTag[T]): List[T] = nl.iterator.asScala.toList
+  }
+
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] =
     Target.log.function(s"${log}: ${s}") {
       Try(parser(s)) match {
@@ -86,10 +91,13 @@ object Java {
   def safeParseRawImport(s: String): Target[ImportDeclaration]       = safeParse("safeParseRawImport")(JavaParser.parseImport, s"import ${s};")
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration] = safeParse("safeParseStaticImport")(JavaParser.parseImport, s"import static ${s};")
 
-  def completionStageType(of: Type): ClassOrInterfaceType     = JavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
-  def optionalType(of: Type): ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Optional").setTypeArguments(of)
-  def functionType(in: Type, out: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
-  def supplierType(of: Type): ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
+  def completionStageType(of: Type): ClassOrInterfaceType        = JavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
+  def optionalType(of: Type): ClassOrInterfaceType               = JavaParser.parseClassOrInterfaceType("Optional").setTypeArguments(of)
+  def functionType(in: Type, out: Type): ClassOrInterfaceType    = JavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
+  def supplierType(of: Type): ClassOrInterfaceType               = JavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
+  def listType(of: Type): ClassOrInterfaceType                   = JavaParser.parseClassOrInterfaceType("List").setTypeArguments(of)
+  def mapType(key: Type, value: Type): ClassOrInterfaceType      = JavaParser.parseClassOrInterfaceType("Map").setTypeArguments(key, value)
+  def mapEntryType(key: Type, value: Type): ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("Map.Entry").setTypeArguments(new NodeList(key, value))
 
   val VOID_TYPE: ClassOrInterfaceType            = JavaParser.parseClassOrInterfaceType("Void")
   val OBJECT_TYPE: ClassOrInterfaceType          = JavaParser.parseClassOrInterfaceType("Object")
@@ -173,9 +181,9 @@ object Java {
       }
   }
 
-  def sortDefinitions(defns: List[BodyDeclaration[_]]): List[BodyDeclaration[_]] = {
+  def sortDefinitions(defns: List[BodyDeclaration[_ <: BodyDeclaration[_]]]): List[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
     import com.github.javaparser.ast.Modifier._
-    def sortKeyFor(x: BodyDeclaration[_]): Int = x match {
+    def sortKeyFor(x: BodyDeclaration[_ <: BodyDeclaration[_]]): Int = x match {
       case cd: ClassOrInterfaceDeclaration if cd.getModifiers.contains(PUBLIC)                              => 0
       case cd: ClassOrInterfaceDeclaration if cd.getModifiers.contains(PROTECTED)                           => 10
       case cd: ClassOrInterfaceDeclaration if !cd.getModifiers.contains(PRIVATE)                            => 20

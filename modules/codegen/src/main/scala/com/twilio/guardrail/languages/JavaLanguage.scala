@@ -16,9 +16,9 @@ class JavaLanguage extends LanguageAbstraction {
   type MethodDeclaration = com.github.javaparser.ast.body.MethodDeclaration
 
   // Definitions
-  type Definition          = com.github.javaparser.ast.body.BodyDeclaration[_]
+  type Definition          = com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]
   type AbstractClass       = com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-  type ClassDefinition     = com.github.javaparser.ast.body.TypeDeclaration[_]
+  type ClassDefinition     = com.github.javaparser.ast.body.TypeDeclaration[_ <: com.github.javaparser.ast.body.TypeDeclaration[_]]
   type InterfaceDefinition = com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
   type ObjectDefinition    = Nothing
   type Trait               = com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
