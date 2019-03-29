@@ -1,0 +1,28 @@
+swagger: '2.0'
+info:
+  title: https://github.com/twilio/guardrail/issues/215
+host: localhost:1234
+schemes:
+- http
+paths:
+  /entity/{bar}:
+    delete:
+      operationId: deleteFoo
+      parameters:
+      - name: bar
+        in: path
+        type: string
+        x-scala-type: _root_.java.lang.String
+      responses:
+        '204':
+          description: No content
+definitions:
+  Foo:
+    type: object
+    discriminator: type
+    required:
+    - name
+    properties:
+      name:
+        type: string
+        x-scala-type: _root_.java.lang.String
