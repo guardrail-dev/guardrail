@@ -437,13 +437,15 @@ object AsyncHttpClientClientGenerator {
             }) ++
             parameters.bodyParams.map(param => (param, generateBodyMethodCall(param)))
 
-          val callBuilderCreation = new ObjectCreationExpr(null,
-                                                           callBuilderType,
-                                                           new NodeList(
-                                                             new NameExpr("builder"),
-                                                             new FieldAccessExpr(new ThisExpr, "httpClient"),
-                                                             new FieldAccessExpr(new ThisExpr, "objectMapper")
-                                                           ))
+          val callBuilderCreation = new ObjectCreationExpr(
+            null,
+            callBuilderType,
+            (List[Expression](
+              new NameExpr("builder"),
+              new FieldAccessExpr(new ThisExpr, "httpClient"),
+              new FieldAccessExpr(new ThisExpr, "objectMapper")
+            ) ++ (if (tracing) Option(new FieldAccessExpr(new ThisExpr, "clientName")) else None)).toNodeList
+          )
 
           method.setBody(
             new BlockStmt(
@@ -459,7 +461,7 @@ object AsyncHttpClientClientGenerator {
             (REQUEST_BUILDER_TYPE, "builder"),
             (HTTP_CLIENT_FUNCTION_TYPE, "httpClient"),
             (OBJECT_MAPPER_TYPE, "objectMapper")
-          )
+          ) ++ (if (tracing) Option((STRING_TYPE, "clientName")) else None)
 
           val callBuilderCls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, callBuilderName)
           callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
