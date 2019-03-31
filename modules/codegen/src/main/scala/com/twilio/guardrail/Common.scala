@@ -49,8 +49,9 @@ object Common {
         .map(_.flatMap({ x =>
           Option(x.getUrl())
             .map({ x =>
-              val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
-              new URI(uri.getScheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
+              val uri    = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
+              val scheme = Option(uri.getScheme).orElse(Option(uri.getHost).filterNot(_.isEmpty).map(_ => "http")).getOrElse(null) // Only force a scheme if we have a host, falling back to null as required by URI
+              new URI(scheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
             })
             .filterNot(_.toString().isEmpty)
         }))
