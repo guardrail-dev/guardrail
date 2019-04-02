@@ -20,7 +20,8 @@ object Http4sGenerator {
             q"import cats.data.EitherT",
             q"import cats.implicits._",
             q"import cats.effect.IO",
-            q"import cats.effect.Effect",
+            q"import cats.effect.Async",
+            q"import cats.effect.Sync",
             q"import org.http4s.{Status => _, _}",
             q"import org.http4s.circe._",
             q"import org.http4s.client.{Client => Http4sClient}",
@@ -52,7 +53,7 @@ object Http4sGenerator {
 
             type TraceBuilder[F[_]] = String => org.http4s.client.Client[F] => org.http4s.client.Client[F]
 
-            implicit def emptyEntityEncoder[F[_]: Effect]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
+            implicit def emptyEntityEncoder[F[_]: Sync]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
 
             object DoubleNumber {
               def unapply(value: String): Option[Double] = Try(value.toDouble).toOption

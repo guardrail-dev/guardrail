@@ -196,11 +196,11 @@ object Http4sClientGenerator {
           val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             resp.value.fold[Case](
-              p"case ${resp.statusCodeName}(_) => effect.pure($responseCompanionTerm.$responseTerm)"
+              p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
             ) { _ =>
               p"case ${resp.statusCodeName}(resp) => ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, identity).map($responseCompanionTerm.$responseTerm)"
             }
-          } :+ p"case resp => effect.raiseError(UnexpectedStatus(resp.status))"
+          } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
           // Get the response type
           val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
           val executeReqExpr  = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
@@ -298,7 +298,7 @@ object Http4sClientGenerator {
 
       case ClientClsArgs(tracingName, serverUrls, tracing) =>
         val ihc = param"implicit httpClient: Http4sClient[F]"
-        val ief = param"implicit effect: Effect[F]"
+        val ief = param"implicit F: Async[F]"
         Target.pure(
           List(List(formatHost(serverUrls)) ++ (if (tracing)
                                                   Some(formatClientName(tracingName))
@@ -326,7 +326,7 @@ object Http4sClientGenerator {
 
           List(
             q"""
-              def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(serverUrls)}, ..${tracingParams})(implicit effect: Effect[F]): ${tpe}[F] = ${ctorCall}
+              def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(serverUrls)}, ..${tracingParams})(implicit F: Async[F]): ${tpe}[F] = ${ctorCall}
             """
           )
         }
