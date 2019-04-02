@@ -113,10 +113,10 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val companion = q"""object Client {
-      def apply[F[_]](host: String = "http://localhost:1234")(implicit effect: Effect[F], httpClient: Http4sClient[F]): Client[F] = new Client[F](host = host)(effect = effect, httpClient = httpClient)
-      def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://localhost:1234")(implicit effect: Effect[F]): Client[F] = new Client[F](host = host)(effect = effect, httpClient = httpClient)
+      def apply[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
+      def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://localhost:1234")(implicit F: Async[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
     }"""
-    val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
+    val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
       val getBazOkDecoder = EntityDecoder[F, String].flatMapR[io.circe.Json] {
         str => Json.fromString(str).as[io.circe.Json].fold(failure => DecodeResult.failure(InvalidMessageBodyFailure(s"Could not decode response: $$str", Some(failure))), DecodeResult.success(_))
@@ -126,9 +126,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(_) =>
-            effect.pure(GetBarResponse.Ok)
+            F.pure(GetBarResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def getBaz(headers: List[Header] = List.empty): F[GetBazResponse] = {
@@ -138,7 +138,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
           case Ok(resp) =>
             getBazOkDecoder.decode(resp, strict = false).fold(throw _, identity).map(GetBazResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def postFoo(headers: List[Header] = List.empty): F[PostFooResponse] = {
@@ -146,9 +146,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(_) =>
-            effect.pure(PostFooResponse.Ok)
+            F.pure(PostFooResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def getFoo(headers: List[Header] = List.empty): F[GetFooResponse] = {
@@ -156,9 +156,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(_) =>
-            effect.pure(GetFooResponse.Ok)
+            F.pure(GetFooResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def putFoo(headers: List[Header] = List.empty): F[PutFooResponse] = {
@@ -166,9 +166,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(_) =>
-            effect.pure(PutFooResponse.Ok)
+            F.pure(PutFooResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def patchFoo(headers: List[Header] = List.empty): F[PatchFooResponse] = {
@@ -176,9 +176,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(_) =>
-            effect.pure(PatchFooResponse.Ok)
+            F.pure(PatchFooResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def deleteFoo(headers: List[Header] = List.empty): F[DeleteFooResponse] = {
@@ -186,9 +186,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(_) =>
-            effect.pure(DeleteFooResponse.Ok)
+            F.pure(DeleteFooResponse.Ok)
           case resp =>
-            effect.raiseError(UnexpectedStatus(resp.status))
+            F.raiseError(UnexpectedStatus(resp.status))
         })
       }
     }"""

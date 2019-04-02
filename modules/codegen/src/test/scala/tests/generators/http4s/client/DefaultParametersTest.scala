@@ -131,11 +131,11 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
     val cmp = companionForStaticDefns(staticDefns)
 
     val clientCompanion = q"""object StoreClient {
-      def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
-      def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://petstore.swagger.io")(implicit effect: Effect[F]): StoreClient[F] = new StoreClient[F](host = host)(effect = effect, httpClient = httpClient)
+      def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]): StoreClient[F] = new StoreClient[F](host = host)(F = F, httpClient = httpClient)
+      def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://petstore.swagger.io")(implicit F: Async[F]): StoreClient[F] = new StoreClient[F](host = host)(F = F, httpClient = httpClient)
     }"""
 
-    val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit effect: Effect[F], httpClient: Http4sClient[F]) {
+    val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
       val getOrderByIdOkDecoder = jsonOf[F, Order]
       def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[GetOrderByIdResponse] = {
@@ -145,10 +145,10 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
           case Ok(resp) =>
             getOrderByIdOkDecoder.decode(resp, strict = false).fold(throw _, identity).map(GetOrderByIdResponse.Ok)
           case BadRequest(_) =>
-            effect.pure(GetOrderByIdResponse.BadRequest)
+            F.pure(GetOrderByIdResponse.BadRequest)
           case NotFound(_) =>
-            effect.pure(GetOrderByIdResponse.NotFound)
-          case resp => effect.raiseError(UnexpectedStatus(resp.status))
+            F.pure(GetOrderByIdResponse.NotFound)
+          case resp => F.raiseError(UnexpectedStatus(resp.status))
         })
       }
       def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[DeleteOrderResponse] = {
@@ -156,10 +156,10 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case BadRequest(_) =>
-            effect.pure(DeleteOrderResponse.BadRequest)
+            F.pure(DeleteOrderResponse.BadRequest)
           case NotFound(_) =>
-            effect.pure(DeleteOrderResponse.NotFound)
-          case resp => effect.raiseError(UnexpectedStatus(resp.status))
+            F.pure(DeleteOrderResponse.NotFound)
+          case resp => F.raiseError(UnexpectedStatus(resp.status))
         })
       }
     }"""
