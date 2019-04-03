@@ -519,6 +519,8 @@ object DropwizardServerGenerator {
             "java.lang.annotation.Target",
             "javax.ws.rs.HttpMethod"
           ).traverse(safeParseRawImport)
+
+          shower <- SerializationHelpers.showerSupportDef
         } yield {
           def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
             val annotationDecl = new AnnotationDeclaration(util.EnumSet.of(PUBLIC), name)
@@ -531,10 +533,8 @@ object DropwizardServerGenerator {
             SupportDefinition[JavaLanguage](new Name(name), annotationImports, annotationDecl)
           }
 
-          val showerClass = SHOWER_CLASS_DEF
-
           List(
-            SupportDefinition[JavaLanguage](new Name(showerClass.getNameAsString), List.empty, showerClass),
+            shower,
             httpMethodAnnotation("PATCH"),
             httpMethodAnnotation("TRACE")
           )

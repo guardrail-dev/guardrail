@@ -2,19 +2,11 @@ package com.twilio.guardrail.generators.syntax
 
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
-import com.github.javaparser.ast.body.{
-  BodyDeclaration,
-  ClassOrInterfaceDeclaration,
-  ConstructorDeclaration,
-  FieldDeclaration,
-  InitializerDeclaration,
-  MethodDeclaration,
-  Parameter
-}
+import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
-import com.twilio.guardrail.Target
-import java.nio.charset.StandardCharsets
+import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.{ SupportDefinition, Target }
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
@@ -214,13 +206,24 @@ object Java {
     defns.sortWith((a, b) => sortKeyFor(a) - sortKeyFor(b) < 0)
   }
 
-  lazy val SHOWER_CLASS_DEF: ClassOrInterfaceDeclaration = {
-    JavaParser
-      .parseResource(getClass.getClassLoader, "java/Shower.java", StandardCharsets.UTF_8)
-      .getClassByName("Shower")
-      .asScala
-      .getOrElse(
-        throw new AssertionError("Shower.java in class resources is not valid")
-      )
-  }
+  def loadSupportDefinitionFromString(className: String, source: String): Target[SupportDefinition[JavaLanguage]] =
+    Try(JavaParser.parse(source)) match {
+      case Failure(t) =>
+        Target.raiseError[SupportDefinition[JavaLanguage]](s"Failed to parse class ${className} from string: $t")
+      case Success(cu) =>
+        cu.getClassByName(className)
+          .asScala
+          .fold(
+            Target.raiseError[SupportDefinition[JavaLanguage]](s"Unable to find class ${className} in parsed string")
+          )(
+            clsDef =>
+              Target.pure(
+                SupportDefinition[JavaLanguage](
+                  new Name(className),
+                  cu.getImports.toList,
+                  clsDef
+                )
+            )
+          )
+    }
 }
