@@ -93,7 +93,7 @@ object Http4sServerGenerator {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
           routesParams = List(param"handler: ${Type.Name(handlerName)}[F]")
         } yield q"""
-          class ${Type.Name(resourceName)}[F[_]](..$extraRouteParams)(implicit E: Effect[F]) extends Http4sDsl[F] {
+          class ${Type.Name(resourceName)}[F[_]](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
 
             ..${supportDefinitions};
             def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
@@ -307,7 +307,7 @@ object Http4sServerGenerator {
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => E.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                        enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       Some(
                         (
@@ -339,7 +339,7 @@ object Http4sServerGenerator {
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => E.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       None,
                       arg.paramName
@@ -366,7 +366,7 @@ object Http4sServerGenerator {
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => E.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
                       ),
                       None,
                       arg.paramName
@@ -393,7 +393,7 @@ object Http4sServerGenerator {
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => E.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       None,
                       arg.paramName
@@ -469,7 +469,7 @@ object Http4sServerGenerator {
                 valueType.fold[Case](
                   p"case $responseCompanionTerm.$responseTerm => ${statusCodeName}()"
                 ) { _ =>
-                  p"case $responseCompanionTerm.$responseTerm(value) => ${statusCodeName}(value)(E, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
+                  p"case $responseCompanionTerm.$responseTerm(value) => ${statusCodeName}(value)(F, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
                 }
             }
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"

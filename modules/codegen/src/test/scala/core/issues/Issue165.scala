@@ -48,7 +48,7 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
       }
     """
     val resource = q"""
-      class StoreResource[F[_]]()(implicit E: Effect[F]) extends Http4sDsl[F] {
+      class StoreResource[F[_]]()(implicit F: Async[F]) extends Http4sDsl[F] {
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root =>
