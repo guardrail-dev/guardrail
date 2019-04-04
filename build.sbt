@@ -183,7 +183,8 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-macros"                  % catsVersion,
-      "org.typelevel"               %% "cats-free"                    % catsVersion
+      "org.typelevel"               %% "cats-free"                    % catsVersion,
+      "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.0",
     ),
     scalacOptions += "-language:higherKinds",
     bintrayRepository := {
