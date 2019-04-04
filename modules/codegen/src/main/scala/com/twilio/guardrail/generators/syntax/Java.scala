@@ -7,16 +7,12 @@ import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.{ SupportDefinition, Target }
-import java.util.Optional
+import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
 object Java {
-  implicit class RichJavaOptional[T](val o: Optional[T]) extends AnyVal {
-    def asScala: Option[T] = if (o.isPresent) Option(o.get) else None
-  }
-
   implicit class RichType(val tpe: Type) extends AnyVal {
     def isOptional: Boolean =
       tpe match {
