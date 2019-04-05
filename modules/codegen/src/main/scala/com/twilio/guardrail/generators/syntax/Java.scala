@@ -209,6 +209,7 @@ object Java {
       case Success(cu) =>
         cu.getClassByName(className)
           .asScala
+          .orElse(cu.getInterfaceByName(className).asScala)
           .fold(
             Target.raiseError[SupportDefinition[JavaLanguage]](s"Unable to find class ${className} in parsed string")
           )(
