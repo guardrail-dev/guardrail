@@ -134,7 +134,7 @@ addCommandAlias(
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
-addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.9" cross CrossVersion.binary)
+addCompilerPlugin("org.spire-math" % "kind-projector"  % "0.9.10" cross CrossVersion.binary)
 
 publishMavenStyle := true
 
@@ -144,7 +144,7 @@ val testDependencies = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.10"),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
   scalacOptions in ThisBuild ++= Seq(
