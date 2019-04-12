@@ -1,5 +1,6 @@
 package core.Dropwizard;
 
+import helpers.JerseyTestHelpers;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import multipartFormData.server.dropwizard.GuardrailJerseySupport;
 import multipartFormData.server.dropwizard.definitions.Foo;
@@ -21,6 +22,10 @@ import java.util.concurrent.CompletionStage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class DropwizardMultiPartTest {
+    static {
+        JerseyTestHelpers.setRandomJerseyTestContainerPort();
+    }
+
     private static final FooHandler fooHandler = new FooHandler() {
         @Override
         public CompletionStage<DoFooResponse> doFoo(long id, OffsetDateTime date, Optional<OffsetDateTime> optionalDate) {
