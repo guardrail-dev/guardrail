@@ -341,7 +341,7 @@ object DropwizardServerGenerator {
                   (parameters.pathParams, "PathParam"),
                   (parameters.headerParams, "HeaderParam"),
                   (parameters.queryStringParams, "QueryParam"),
-                  (parameters.formParams, if (parameters.formParams.exists(_.isFile)) "FormDataParam" else "FormParam")
+                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
                 ).flatMap({
                   case (params, annotationName) =>
                     params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
