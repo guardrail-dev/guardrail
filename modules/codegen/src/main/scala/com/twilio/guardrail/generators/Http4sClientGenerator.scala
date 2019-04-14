@@ -203,7 +203,7 @@ object Http4sClientGenerator {
             resp.value.fold[Case](
               p"case ${resp.statusCodeName}(_) => effect.pure($responseCompanionTerm.$responseTerm)"
             ) { _ =>
-              p"case ${resp.statusCodeName}(resp) => ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, identity).map($responseCompanionTerm.$responseTerm)"
+              p"case ${resp.statusCodeName}(resp) => ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, Predef.identity).map($responseCompanionTerm.$responseTerm)"
             }
           } :+ p"case resp => effect.raiseError(UnexpectedStatus(resp.status))"
           // Get the response type

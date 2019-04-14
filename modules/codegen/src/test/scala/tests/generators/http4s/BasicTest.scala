@@ -136,7 +136,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(resp) =>
-            getBazOkDecoder.decode(resp, strict = false).fold(throw _, identity).map(GetBazResponse.Ok)
+            getBazOkDecoder.decode(resp, strict = false).fold(throw _, Predef.identity).map(GetBazResponse.Ok)
           case resp =>
             effect.raiseError(UnexpectedStatus(resp.status))
         })
