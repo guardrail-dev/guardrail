@@ -1,6 +1,5 @@
 package core.Dropwizard;
 
-import helpers.JerseyTestHelpers;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import multipartFormData.server.dropwizard.GuardrailJerseySupport;
 import multipartFormData.server.dropwizard.definitions.Foo;
@@ -8,6 +7,7 @@ import multipartFormData.server.dropwizard.foo.FooHandler;
 import multipartFormData.server.dropwizard.foo.FooResource;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
+import org.glassfish.jersey.test.TestProperties;
 import org.glassfish.jersey.test.grizzly.GrizzlyTestContainerFactory;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DropwizardMultiPartTest {
     static {
-        JerseyTestHelpers.setRandomJerseyTestContainerPort();
+        System.setProperty(TestProperties.CONTAINER_PORT, "0");
     }
 
     private static final FooHandler fooHandler = new FooHandler() {
