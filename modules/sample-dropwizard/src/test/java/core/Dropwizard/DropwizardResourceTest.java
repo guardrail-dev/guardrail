@@ -6,6 +6,7 @@ import examples.server.dropwizard.user.UserHandler.CreateUserResponse;
 import examples.server.dropwizard.user.UserHandler.GetUserByNameResponse;
 import examples.server.dropwizard.user.UserHandler.LoginUserResponse;
 import examples.server.dropwizard.user.UserResource;
+import helpers.JerseyTestHelpers;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.glassfish.jersey.test.grizzly.GrizzlyTestContainerFactory;
 import org.junit.Before;
@@ -25,6 +26,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class DropwizardResourceTest {
+    static {
+        JerseyTestHelpers.setRandomJerseyTestContainerPort();
+    }
+
     private static final String USERNAME = "foobar";
     private static final String PASSWORD = "sekrit";
     private static final String TOKEN = "abc123";

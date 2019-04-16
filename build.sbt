@@ -40,6 +40,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("issues/issue164.yaml"), "issues.issue164", false, List.empty),
   (sampleResource("issues/issue215.yaml"), "issues.issue215", false, List.empty),
   (sampleResource("issues/issue218.yaml"), "issues.issue218", false, List.empty),
+  (sampleResource("multipart-form-data.yaml"), "multipartFormData", false, List.empty),
   (sampleResource("petstore.json"), "examples", false, List("--import", "support.PositiveLong")),
   (sampleResource("plain.json"), "tests.dtos", false, List.empty),
   (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
@@ -285,7 +286,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
-      "org.glassfish.jersey.media" %  "jersey-media-multipart" % jerseyVersion,
+      "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
       "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,

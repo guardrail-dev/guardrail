@@ -1,0 +1,58 @@
+openapi: 3.0.2
+info:
+  title: Whatever
+  version: 1.0.0
+servers:
+  - url: http://localhost:1234
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      x-scala-package: foo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              # Including `type` causes us to emit the three form parameters as expected,
+              # but also a fourth body parameter of an uspecified JSON object type.  Not
+              # sure if this is a problem with the parser, or a problem with guardrail,
+              # or if you really are just supposed to leave out `type` here, despite the
+              # examples on the OpenAPI website including it.
+              # type: object
+              required:
+                - id
+                - date
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                date:
+                  type: string
+                  format: date-time
+                optional_date:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foo'
+components:
+  schemas:
+    Foo:
+      type: object
+      required:
+        - id
+        - date
+      properties:
+        id:
+          type: integer
+          format: int64
+        date:
+          type: string
+          format: date-time
+        optional_date:
+          type: string
+          format: date-time
