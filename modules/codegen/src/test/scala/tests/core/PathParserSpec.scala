@@ -55,7 +55,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Server ${str}") {
-        val gen = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args))
+        val (gen, _) = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args))
         gen.toString shouldBe ((expected.toString))
       }
   }

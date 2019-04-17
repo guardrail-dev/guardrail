@@ -603,7 +603,7 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
-    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
+    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, List[Term.Name])] = {
       import akkaExtractor._
       for {
         partsQS <- runParse(path, pathArgs)
@@ -624,7 +624,8 @@ object SwaggerUtil {
         result = queryParams.fold(trailingSlashed) { qs =>
           q"${trailingSlashed} & ${qs}"
         }
-      } yield result
+      } yield
+        (result, bindings) // FIXME: The path matching term here can still produce directives greater than 22 parameters long. A strategy for handling this is to separate the matchers into separate extractors as well as chunking the bindings into a proper List[List[Term.Name]].
     }
 
     def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
