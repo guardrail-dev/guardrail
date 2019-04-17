@@ -198,7 +198,7 @@ object AkkaHttpServerGenerator {
       case other              => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
+    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, List[Term.Name])] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash)
@@ -206,12 +206,9 @@ object AkkaHttpServerGenerator {
         else term
 
       (basePath.getOrElse("") + path).stripPrefix("/") match {
-        case "" => Target.pure(q"pathEndOrSingleSlash")
+        case "" => Target.pure((q"pathEndOrSingleSlash", List.empty))
         case path =>
-          for {
-            pathDirective <- SwaggerUtil.paths
-              .generateUrlAkkaPathExtractors(path, pathArgs)
-          } yield pathDirective
+          SwaggerUtil.paths.generateUrlAkkaPathExtractors(path, pathArgs)
       }
     }
 
@@ -589,9 +586,10 @@ object AkkaHttpServerGenerator {
         bodyArgs   = parameters.bodyParams
 
         akkaMethod <- httpMethodToAkka(method)
-        akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
-        akkaQs     <- qsToAkka(qsArgs)
-        akkaBody   <- bodyToAkka(operationId, bodyArgs)
+        _akkaPath  <- pathStrToAkka(basePath, path, pathArgs)
+        (akkaPath, consumedPathParams) = _akkaPath
+        akkaQs   <- qsToAkka(qsArgs)
+        akkaBody <- bodyToAkka(operationId, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile)
         akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
         (akkaForm, handlerDefinitions) = akkaForm_
