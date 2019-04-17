@@ -33,6 +33,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader", false, List.empty),
   (sampleResource("edgecases/defaults.yaml"), "edgecases.defaults", false, List.empty),
   (sampleResource("formData.yaml"), "form", false, List.empty),
+  (sampleResource("issues/issue45.yaml"), "issues.issue45", false, List.empty),
   (sampleResource("issues/issue121.yaml"), "issues.issue121", false, List.empty),
   (sampleResource("issues/issue127.yaml"), "issues.issue127", false, List.empty),
   (sampleResource("issues/issue143.yaml"), "issues.issue143", false, List.empty),
