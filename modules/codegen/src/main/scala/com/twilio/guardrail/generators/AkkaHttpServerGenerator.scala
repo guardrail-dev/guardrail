@@ -163,7 +163,12 @@ object AkkaHttpServerGenerator {
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         } yield List(q"""
           object ${Term.Name(resourceName)} {
-            def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
+            def discardEntity: Directive0 = extractMaterializer.flatMap { implicit mat =>
+              extractRequest.flatMap { req =>
+                req.discardEntityBytes().future
+                Directive.Empty
+              }
+            }
 
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {

@@ -47,9 +47,11 @@ class CustomHeaderTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val resource = q"""
       object Resource {
-        def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap { req =>
-          req.discardEntityBytes().future
-          Directive.Empty
+        def discardEntity: Directive0 = extractMaterializer.flatMap { implicit mat =>
+          extractRequest.flatMap { req =>
+            req.discardEntityBytes().future
+            Directive.Empty
+          }
         }
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
           (get & path("foo") & discardEntity & headerValueByName("CustomHeader").flatMap(str => onComplete(Unmarshal(str).to[Bar]).flatMap[Tuple1[Bar]]({
