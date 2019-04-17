@@ -42,8 +42,10 @@ class Issue126 extends FunSuite with Matchers with SwaggerSpecRunner {
           }
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
-          (options & pathEndOrSingleSlash & discardEntity) {
-            complete(handler.getRoot(getRootResponse)())
+          (options & pathEndOrSingleSlash) {
+            discardEntity {
+              complete(handler.getRoot(getRootResponse)())
+            }
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)

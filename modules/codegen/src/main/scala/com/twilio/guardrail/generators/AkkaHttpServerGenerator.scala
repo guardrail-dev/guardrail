@@ -611,28 +611,28 @@ object AkkaHttpServerGenerator {
           .map(List(_))
 
         val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
-        val fullRouteMatcher =
-          List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(entityProcessor), akkaHeaders, tracingFields.map(_.term)).flatten.reduceLeft {
-            (a, n) =>
-              q"${a} & ${n}"
-          }
-        val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-        val fullRoute: Term.Apply = orderedParameters match {
-          case List(List()) =>
-            q"""
-              ${fullRouteMatcher} {
-                complete(handler.${Term
-              .Name(operationId)}(...${handlerCallArgs}))
+        val fullRouteMatcher: Term => Term = {
+          def bindParams(directive: Option[Term], params: List[Term.Name]): Term => Term =
+            directive.fold[Term => Term](identity) { directive =>
+              params match {
+                case List() =>
+                  next =>
+                    q" ${directive} { ${next} } "
+                case xs =>
+                  next =>
+                    q" ${directive} { (..${xs.map(x => Term.Param(List.empty, x, None, None))}) => ${next} } "
               }
-              """
-          case params =>
-            q"""
-              ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
-                complete(handler.${Term
-              .Name(operationId)}(...${handlerCallArgs}))
-              }
-              """
+            }
+          val pathMatcher    = bindParams(Some(q"${akkaMethod} & ${akkaPath}"), consumedPathParams)
+          val qsMatcher      = bindParams(akkaQs, qsArgs.map(_.paramName))
+          val headerMatcher  = bindParams(akkaHeaders, headerArgs.map(_.paramName))
+          val tracingMatcher = bindParams(tracingFields.map(_.term), tracingFields.map(_.param.paramName).toList)
+          val bodyMatcher    = bindParams(Some(entityProcessor), (bodyArgs ++ formArgs).toList.map(_.paramName))
+
+          pathMatcher compose qsMatcher compose bodyMatcher compose headerMatcher compose tracingMatcher
         }
+        val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
+        val fullRoute: Term                        = fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")
 
         val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 

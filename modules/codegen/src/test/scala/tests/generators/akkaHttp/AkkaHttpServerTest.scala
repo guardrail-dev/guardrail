@@ -148,17 +148,31 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           }
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & pathEndOrSingleSlash & discardEntity) {
-            complete(handler.getRoot(getRootResponse)())
-          } ~ (put & path("bar") & parameter(Symbol("bar").as[Long]) & discardEntity) {
-            bar => complete(handler.putBar(putBarResponse)(bar))
-          } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash) & discardEntity) {
-            complete(handler.getFoo(getFooResponse)())
-          } ~ (get & path("foo" / LongNumber) & discardEntity) {
-            bar => complete(handler.getFooBar(getFooBarResponse)(bar))
-          } ~ (get & path("store" / "order" / LongNumber) & parameter(Symbol("status").as[OrderStatus]) & discardEntity) {
-            (orderId, status) => complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))
-          }
+          (get & pathEndOrSingleSlash) {
+            discardEntity {
+              complete(handler.getRoot(getRootResponse)())
+            }
+          } ~ (put & path("bar")) {
+            parameter(Symbol("bar").as[Long]) { bar => {
+              discardEntity {
+                complete(handler.putBar(putBarResponse)(bar))
+              }
+            } }
+          } ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash)) {
+            discardEntity {
+              complete(handler.getFoo(getFooResponse)())
+            }
+          } ~ (get & path("foo" / LongNumber)) { bar => {
+            discardEntity {
+              complete(handler.getFooBar(getFooBarResponse)(bar))
+            }
+          } } ~ (get & path("store" / "order" / LongNumber)) { orderId => {
+            parameter(Symbol("status").as[OrderStatus]) { status => {
+              discardEntity {
+                complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))
+              }
+            } }
+          } }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
         case object getRootResponseOK extends getRootResponse(StatusCodes.OK)
