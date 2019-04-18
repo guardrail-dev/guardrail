@@ -509,9 +509,8 @@ object AkkaHttpServerGenerator {
                           part.entity.discardBytes()
                           Nil
                         }
-                      }).mapAsync(1)({ part =>
-                        ${Term.Match(q"part.name", allCases)}
-                      }).toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
+                      }).mapAsync(1)(${Term.Block(List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases))))})
+                        .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
                     } yield {
                       results.toList.sequence.map({ successes =>
                         ..${grabHeads}
@@ -617,10 +616,10 @@ object AkkaHttpServerGenerator {
               params match {
                 case List() =>
                   next =>
-                    q" ${directive} { ${next} } "
+                    Term.Apply(directive, List(next))
                 case xs =>
                   next =>
-                    q" ${directive} { (..${xs.map(x => Term.Param(List.empty, x, None, None))}) => ${next} } "
+                    Term.Apply(directive, List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
               }
             }
           val pathMatcher    = bindParams(Some(q"${akkaMethod} & ${akkaPath}"), consumedPathParams)
