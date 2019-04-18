@@ -622,13 +622,14 @@ object AkkaHttpServerGenerator {
                     Term.Apply(directive, List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
               }
             }
-          val pathMatcher    = bindParams(Some(q"${akkaMethod} & ${akkaPath}"), consumedPathParams)
+          val methodMatcher  = bindParams(Some(akkaMethod), List.empty)
+          val pathMatcher    = bindParams(Some(akkaPath), consumedPathParams)
           val qsMatcher      = bindParams(akkaQs, qsArgs.map(_.paramName))
           val headerMatcher  = bindParams(akkaHeaders, headerArgs.map(_.paramName))
           val tracingMatcher = bindParams(tracingFields.map(_.term), tracingFields.map(_.param.paramName).toList)
           val bodyMatcher    = bindParams(Some(entityProcessor), (bodyArgs ++ formArgs).toList.map(_.paramName))
 
-          pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
+          methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
         val fullRoute: Term                        = fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")

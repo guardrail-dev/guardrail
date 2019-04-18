@@ -148,7 +148,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           }
         }
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
-          (get & pathEndOrSingleSlash)(discardEntity(complete(handler.getRoot(getRootResponse)()))) ~ (put & path("bar"))(parameter(Symbol("bar").as[Long])(bar => discardEntity(complete(handler.putBar(putBarResponse)(bar))))) ~ (get & (pathPrefix("foo") & pathEndOrSingleSlash))(discardEntity(complete(handler.getFoo(getFooResponse)()))) ~ (get & path("foo" / LongNumber))(bar => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)))) ~ (get & path("store" / "order" / LongNumber))(orderId => parameter(Symbol("status").as[OrderStatus])(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)))))
+          get(pathEndOrSingleSlash(discardEntity(complete(handler.getRoot(getRootResponse)())))) ~ put(path("bar")(parameter(Symbol("bar").as[Long])(bar => discardEntity(complete(handler.putBar(putBarResponse)(bar)))))) ~ get((pathPrefix("foo") & pathEndOrSingleSlash)(discardEntity(complete(handler.getFoo(getFooResponse)())))) ~ get(path("foo" / LongNumber)(bar => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar))))) ~ get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus])(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))))))
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
         case object getRootResponseOK extends getRootResponse(StatusCodes.OK)
@@ -264,26 +264,128 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
     val handler  = q"""
-      trait BazHandler {
-        def getFoo(bar: Long)(implicit traceBuilder: TraceBuilder): scala.concurrent.Future[Boolean]
+      trait StoreHandler {
+        def getRoot(respond: StoreResource.getRootResponse.type)()(traceBuilder: TraceBuilder): scala.concurrent.Future[StoreResource.getRootResponse]
+        def putBar(respond: StoreResource.putBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder): scala.concurrent.Future[HttpResponse]
+        def getFoo(respond: StoreResource.getFooResponse.type)()(traceBuilder: TraceBuilder): scala.concurrent.Future[StoreResource.getFooResponse]
+        def getFooBar(respond: StoreResource.getFooBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder): scala.concurrent.Future[StoreResource.getFooBarResponse]
+        def getOrderById(respond: StoreResource.getOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed)(traceBuilder: TraceBuilder): scala.concurrent.Future[StoreResource.getOrderByIdResponse]
       }
     """
     val resource = q"""
-      object BazResource {
-        def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap { req =>
-          req.discardEntityBytes().future
-          Directive.Empty
-        }
-        def routes(handler: BazHandler, trace: String => Directive1[TraceBuilder])(implicit mat: akka.stream.Materializer): Route = {
-          (get & path("foo" / LongNumber) & discardEntity & trace("completely-custom-label")) { (bar, traceBuilder) =>
-            complete(handler.getFoo(bar)(traceBuilder))
+      object StoreResource {
+        def discardEntity: Directive0 = extractMaterializer.flatMap { implicit mat =>
+          extractRequest.flatMap { req =>
+            req.discardEntityBytes().future
+            Directive.Empty
           }
+        }
+        def routes(handler: StoreHandler, trace: String => Directive1[TraceBuilder])(implicit mat: akka.stream.Materializer): Route = {
+          get(pathEndOrSingleSlash(trace("store:getRoot")(traceBuilder => discardEntity(complete(handler.getRoot(getRootResponse)()(traceBuilder)))))) ~ put(path("bar")(parameter(Symbol("bar").as[Long])(bar => trace("store:putBar")(traceBuilder => discardEntity(complete(handler.putBar(putBarResponse)(bar)(traceBuilder))))))) ~ get((pathPrefix("foo") & pathEndOrSingleSlash)(trace("store:getFoo")(traceBuilder => discardEntity(complete(handler.getFoo(getFooResponse)()(traceBuilder)))))) ~ get(path("foo" / LongNumber)(bar => trace("completely-custom-label")(traceBuilder => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)(traceBuilder)))))) ~ get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus])(status => trace("store:getOrderById")(traceBuilder => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder)))))))
+        }
+        sealed abstract class getRootResponse(val statusCode: StatusCode)
+        case object getRootResponseOK extends getRootResponse(StatusCodes.OK)
+        object getRootResponse {
+          implicit val getRootTRM: ToResponseMarshaller[getRootResponse] = Marshaller { implicit ec =>
+            resp => getRootTR(resp)
+          }
+          implicit def getRootTR(value: getRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: getRootResponseOK.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+          }
+          def apply[T](value: T)(implicit ev: T => getRootResponse): getRootResponse = ev(value)
+          def OK: getRootResponse = getRootResponseOK
+        }
+        sealed abstract class putBarResponse(val statusCode: StatusCode)
+        case class putBarResponseOK(value: Boolean) extends putBarResponse(StatusCodes.OK)
+        object putBarResponse {
+          implicit val putBarTRM: ToResponseMarshaller[putBarResponse] = Marshaller { implicit ec =>
+            resp => putBarTR(resp)
+          }
+          implicit def putBarTR(value: putBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ putBarResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque {
+                  () => HttpResponse(r.statusCode, entity = entity)
+                } :: Nil
+              }
+          }
+          def apply[T](value: T)(implicit ev: T => putBarResponse): putBarResponse = ev(value)
+          implicit def OKEv(value: Boolean): putBarResponse = OK(value)
+          def OK(value: Boolean): putBarResponse = putBarResponseOK(value)
+        }
+        sealed abstract class getFooResponse(val statusCode: StatusCode)
+        case class getFooResponseOK(value: Boolean) extends getFooResponse(StatusCodes.OK)
+        object getFooResponse {
+          implicit val getFooTRM: ToResponseMarshaller[getFooResponse] = Marshaller { implicit ec =>
+            resp => getFooTR(resp)
+          }
+          implicit def getFooTR(value: getFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getFooResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque {
+                  () => HttpResponse(r.statusCode, entity = entity)
+                } :: Nil
+              }
+          }
+          def apply[T](value: T)(implicit ev: T => getFooResponse): getFooResponse = ev(value)
+          implicit def OKEv(value: Boolean): getFooResponse = OK(value)
+          def OK(value: Boolean): getFooResponse = getFooResponseOK(value)
+        }
+        sealed abstract class getFooBarResponse(val statusCode: StatusCode)
+        case class getFooBarResponseOK(value: Boolean) extends getFooBarResponse(StatusCodes.OK)
+        object getFooBarResponse {
+          implicit val getFooBarTRM: ToResponseMarshaller[getFooBarResponse] = Marshaller { implicit ec =>
+            resp => getFooBarTR(resp)
+          }
+          implicit def getFooBarTR(value: getFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getFooBarResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque {
+                  () => HttpResponse(r.statusCode, entity = entity)
+                } :: Nil
+              }
+          }
+          def apply[T](value: T)(implicit ev: T => getFooBarResponse): getFooBarResponse = ev(value)
+          implicit def OKEv(value: Boolean): getFooBarResponse = OK(value)
+          def OK(value: Boolean): getFooBarResponse = getFooBarResponseOK(value)
+        }
+        sealed abstract class getOrderByIdResponse(val statusCode: StatusCode)
+        case class getOrderByIdResponseOK(value: Order) extends getOrderByIdResponse(StatusCodes.OK)
+        case object getOrderByIdResponseBadRequest extends getOrderByIdResponse(StatusCodes.BadRequest)
+        case object getOrderByIdResponseNotFound extends getOrderByIdResponse(StatusCodes.NotFound)
+        object getOrderByIdResponse {
+          implicit val getOrderByIdTRM: ToResponseMarshaller[getOrderByIdResponse] = Marshaller { implicit ec =>
+            resp => getOrderByIdTR(resp)
+          }
+          implicit def getOrderByIdTR(value: getOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r @ getOrderByIdResponseOK(value) =>
+              Marshal(value).to[ResponseEntity].map {
+                entity => Marshalling.Opaque {
+                  () => HttpResponse(r.statusCode, entity = entity)
+                } :: Nil
+              }
+            case r: getOrderByIdResponseBadRequest.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+            case r: getOrderByIdResponseNotFound.type =>
+              scala.concurrent.Future.successful(Marshalling.Opaque {
+                () => HttpResponse(r.statusCode)
+              } :: Nil)
+          }
+          def apply[T](value: T)(implicit ev: T => getOrderByIdResponse): getOrderByIdResponse = ev(value)
+          implicit def OKEv(value: Order): getOrderByIdResponse = OK(value)
+          def OK(value: Order): getOrderByIdResponse = getOrderByIdResponseOK(value)
+          def BadRequest: getOrderByIdResponse = getOrderByIdResponseBadRequest
+          def NotFound: getOrderByIdResponse = getOrderByIdResponseNotFound
         }
       }
     """
 
-//    TODO: Unsupported for akka-http
-//    genHandler.structure should equal(handler.structure)
-//    genResource.structure should equal(resource.structure)
+    genHandler.structure should equal(handler.structure)
+    genResource.structure should equal(resource.structure)
   }
 }
