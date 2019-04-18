@@ -611,23 +611,26 @@ object AkkaHttpServerGenerator {
 
         val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
         val fullRouteMatcher: Term => Term = {
-          def bindParams(directive: Option[Term], params: List[Term.Name]): Term => Term =
-            directive.fold[Term => Term](identity) { directive =>
-              params match {
-                case List() =>
-                  next =>
-                    Term.Apply(directive, List(next))
-                case xs =>
-                  next =>
-                    Term.Apply(directive, List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
-              }
-            }
-          val methodMatcher  = bindParams(Some(akkaMethod), List.empty)
-          val pathMatcher    = bindParams(Some(akkaPath), consumedPathParams)
-          val qsMatcher      = bindParams(akkaQs, qsArgs.map(_.paramName))
-          val headerMatcher  = bindParams(akkaHeaders, headerArgs.map(_.paramName))
-          val tracingMatcher = bindParams(tracingFields.map(_.term), tracingFields.map(_.param.paramName).toList)
-          val bodyMatcher    = bindParams(Some(entityProcessor), (bodyArgs ++ formArgs).toList.map(_.paramName))
+          def bindParams(pairs: List[(Term, List[Term.Name])]): Term => Term =
+            NonEmptyList
+              .fromList(pairs)
+              .fold[Term => Term](identity)(_.foldLeft[Term => Term](identity)({
+                case (acc, (directive, params)) =>
+                  params match {
+                    case List() =>
+                      next =>
+                        acc(Term.Apply(directive, List(next)))
+                    case xs =>
+                      next =>
+                        acc(Term.Apply(directive, List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next))))
+                  }
+              }))
+          val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
+          val pathMatcher    = bindParams(List((akkaPath, consumedPathParams)))
+          val qsMatcher      = bindParams(akkaQs.map((_, qsArgs.map(_.paramName))).toList)
+          val headerMatcher  = bindParams(akkaHeaders.map((_, headerArgs.map(_.paramName))).toList)
+          val tracingMatcher = bindParams(tracingFields.map(_.term).map((_, tracingFields.map(_.param.paramName).toList)).toList)
+          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs ++ formArgs).toList.map(_.paramName))))
 
           methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
