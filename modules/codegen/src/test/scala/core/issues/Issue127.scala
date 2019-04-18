@@ -77,7 +77,7 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
           }
         }
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
-          (post & path("file"))(({
+          post(path("file")(({
             object uploadFileParts {
               sealed trait Part
               case class IgnoredPart(unit: Unit) extends Part
@@ -146,7 +146,7 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
                 }
                 maybe.fold(reject(_), tprovide(_))
             }))
-          }: Directive[Tuple1[(File, Option[String], ContentType)]])(file => complete(handler.uploadFile(uploadFileResponse)(file))))
+          }: Directive[Tuple1[(File, Option[String], ContentType)]])(file => complete(handler.uploadFile(uploadFileResponse)(file)))))
         }
         sealed abstract class uploadFileResponse(val statusCode: StatusCode)
         case object uploadFileResponseCreated extends uploadFileResponse(StatusCodes.Created)
