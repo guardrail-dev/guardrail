@@ -203,18 +203,18 @@ object AkkaHttpServerGenerator {
       case other              => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, List[Term.Name])] = {
+    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash)
           q"${term.copy(fun = Term.Name("pathPrefix"))} & pathEndOrSingleSlash"
         else term
 
-      (basePath.getOrElse("") + path).stripPrefix("/") match {
-        case "" => Target.pure((q"pathEndOrSingleSlash", List.empty))
+      ((basePath.getOrElse("") + path).stripPrefix("/") match {
+        case "" => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
         case path =>
           SwaggerUtil.paths.generateUrlAkkaPathExtractors(path, pathArgs)
-      }
+      })
     }
 
     def directivesFromParams(
@@ -590,14 +590,13 @@ object AkkaHttpServerGenerator {
         bodyArgs   = parameters.bodyParams
 
         akkaMethod <- httpMethodToAkka(method)
-        _akkaPath  <- pathStrToAkka(basePath, path, pathArgs)
-        (akkaPath, consumedPathParams) = _akkaPath
-        akkaQs   <- qsToAkka(qsArgs)
-        akkaBody <- bodyToAkka(operationId, bodyArgs)
+        akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
+        akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
+        akkaBody   <- bodyToAkka(operationId, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile)
         akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
         (akkaForm, handlerDefinitions) = akkaForm_
-        akkaHeaders <- headersToAkka(headerArgs)
+        akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
       } yield {
         val (responseCompanionTerm, responseCompanionType) =
           (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
@@ -626,9 +625,9 @@ object AkkaHttpServerGenerator {
                   }
               }))
           val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
-          val pathMatcher    = bindParams(List((akkaPath, consumedPathParams)))
-          val qsMatcher      = bindParams(akkaQs.map((_, qsArgs.map(_.paramName))).toList)
-          val headerMatcher  = bindParams(akkaHeaders.map((_, headerArgs.map(_.paramName))).toList)
+          val pathMatcher    = bindParams(akkaPath.toList)
+          val qsMatcher      = bindParams(akkaQs)
+          val headerMatcher  = bindParams(akkaHeaders)
           val tracingMatcher = bindParams(tracingFields.map(_.term).map((_, tracingFields.map(_.param.paramName).toList)).toList)
           val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs ++ formArgs).toList.map(_.paramName))))
 
