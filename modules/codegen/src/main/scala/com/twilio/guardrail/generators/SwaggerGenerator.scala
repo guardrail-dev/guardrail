@@ -4,6 +4,7 @@ package generators
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
+import com.twilio.guardrail.generators.syntax.RichSchema
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
@@ -164,7 +165,7 @@ object SwaggerGenerator {
         Target.fromOption(
           Option(model.getType()),
           s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
-              |  ${model.toString().lines.filterNot(_.contains(": null")).mkString("\n  ")}
+              |  ${model.showNotNullIndented(1)}
               |""".stripMargin
         )
 
