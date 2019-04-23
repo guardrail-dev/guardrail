@@ -4,7 +4,7 @@ import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
-import cats.{ Id, ~> }
+import cats.Id
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -12,11 +12,8 @@ import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SwaggerTerms }
-import java.nio.file.{ Path, Paths }
-import java.util.Locale
+import java.nio.file.Path
 import scala.collection.JavaConverters._
-import scala.io.AnsiColor
-import scala.meta._
 import java.net.URI
 
 case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: L#ClassDefinition)

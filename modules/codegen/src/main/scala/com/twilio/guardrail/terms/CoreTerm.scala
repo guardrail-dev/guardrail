@@ -2,7 +2,6 @@ package com.twilio.guardrail
 package terms
 
 import cats.~>
-import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import com.twilio.guardrail.languages.LA
 

@@ -11,7 +11,6 @@ import com.twilio.guardrail.protocol.terms.{ Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
-import scala.collection.JavaConverters._
 import scala.meta.{ Term, _ }
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 

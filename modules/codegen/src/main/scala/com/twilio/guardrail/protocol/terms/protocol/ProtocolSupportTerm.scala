@@ -1,8 +1,6 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.{ ProtocolElems, StrictProtocolElems }
 
 case class PropMeta[L <: LA](clsName: String, tpe: L#Type)
 sealed trait ProtocolSupportTerm[L <: LA, T]

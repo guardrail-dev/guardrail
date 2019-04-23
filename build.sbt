@@ -156,6 +156,7 @@ val codegenSettings = Seq(
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-Ydelambdafy:method",
+    "-Ywarn-unused-import",
     "-feature",
     "-unchecked",
     "-deprecation",

@@ -7,8 +7,6 @@ import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
-import scala.io.AnsiColor
-import scala.meta._
 import scala.util.control.NonFatal
 
 case class CoreTermInterp[L <: LA](defaultFramework: String,

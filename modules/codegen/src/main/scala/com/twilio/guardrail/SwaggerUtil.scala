@@ -1,26 +1,21 @@
 package com.twilio.guardrail
 
-import cats.data.{ EitherT, NonEmptyList }
+import cats.data.NonEmptyList
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
-import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.responses._
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
-import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.Responses
-import com.twilio.guardrail.shims._
 import java.util.{ Map => JMap }
-import scala.language.reflectiveCalls
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
 import scala.collection.JavaConverters._

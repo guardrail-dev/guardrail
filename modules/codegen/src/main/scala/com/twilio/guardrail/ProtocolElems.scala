@@ -1,7 +1,6 @@
 package com.twilio.guardrail
 
-import cats.{ FlatMap, MonadError }
-import cats.data.EitherT
+import cats.FlatMap
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
@@ -38,7 +37,6 @@ object ProtocolElems {
                                                                              P: ProtocolSupportTerms[L, F]): Free[F, List[StrictProtocolElems[L]]] = {
     import Sc._
     import Sw._
-    import P._
     log.function(s"resolve(${elems.length} references)")(
       FlatMap[Free[F, ?]]
         .tailRecM[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]((limit, elems))({
