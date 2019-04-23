@@ -634,7 +634,7 @@ object AkkaHttpServerGenerator {
           methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-        val fullRoute: Term                        = fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")
+        val fullRoute: Term                        = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")))
 
         val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 
