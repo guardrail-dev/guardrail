@@ -341,7 +341,7 @@ object DropwizardServerGenerator {
                   (parameters.pathParams, "PathParam"),
                   (parameters.headerParams, "HeaderParam"),
                   (parameters.queryStringParams, "QueryParam"),
-                  (parameters.formParams, if (parameters.formParams.exists(_.isFile)) "FormDataParam" else "FormParam")
+                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
                 ).flatMap({
                   case (params, annotationName) =>
                     params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
@@ -543,6 +543,8 @@ object DropwizardServerGenerator {
           ).traverse(safeParseRawImport)
 
           shower <- SerializationHelpers.showerSupportDef
+
+          jersey <- SerializationHelpers.guardrailJerseySupportDef
         } yield {
           def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
             val annotationDecl = new AnnotationDeclaration(util.EnumSet.of(PUBLIC), name)
@@ -557,6 +559,7 @@ object DropwizardServerGenerator {
 
           List(
             shower,
+            jersey,
             httpMethodAnnotation("PATCH"),
             httpMethodAnnotation("TRACE")
           )

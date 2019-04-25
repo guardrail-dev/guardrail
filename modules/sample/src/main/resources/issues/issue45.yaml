@@ -1,0 +1,303 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  User:
+    type: object
+    required:
+      - id
+    properties:
+      id:
+        type: string
+paths:
+  /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/{p7}/{p8}/{p9}/{p10}/{p11}/{p12}/{p13}/{p14}/{p15}/{p16}/{p17}/{p18}/{p19}/{p20}/{p21}/{p22}/{p23}/:
+    get:
+      operationId: ohNo_23
+      x-scala-package: pathological
+      produces:
+        - application/json
+      parameters:
+      - name: p1
+        in: path
+        required: true
+        type: string
+      - name: q1
+        in: query
+        required: true
+        type: string
+      - name: h1
+        in: header
+        required: true
+        type: string
+      - name: p2
+        in: path
+        required: true
+        type: string
+      - name: q2
+        in: query
+        required: true
+        type: string
+      - name: h2
+        in: header
+        required: true
+        type: string
+      - name: p3
+        in: path
+        required: true
+        type: string
+      - name: q3
+        in: query
+        required: true
+        type: string
+      - name: h3
+        in: header
+        required: true
+        type: string
+      - name: p4
+        in: path
+        required: true
+        type: string
+      - name: q4
+        in: query
+        required: true
+        type: string
+      - name: h4
+        in: header
+        required: true
+        type: string
+      - name: p5
+        in: path
+        required: true
+        type: string
+      - name: q5
+        in: query
+        required: true
+        type: string
+      - name: h5
+        in: header
+        required: true
+        type: string
+      - name: p6
+        in: path
+        required: true
+        type: string
+      - name: q6
+        in: query
+        required: true
+        type: string
+      - name: h6
+        in: header
+        required: true
+        type: string
+      - name: p7
+        in: path
+        required: true
+        type: string
+      - name: q7
+        in: query
+        required: true
+        type: string
+      - name: h7
+        in: header
+        required: true
+        type: string
+      - name: p8
+        in: path
+        required: true
+        type: string
+      - name: q8
+        in: query
+        required: true
+        type: string
+      - name: h8
+        in: header
+        required: true
+        type: string
+      - name: p9
+        in: path
+        required: true
+        type: string
+      - name: q9
+        in: query
+        required: true
+        type: string
+      - name: h9
+        in: header
+        required: true
+        type: string
+      - name: p10
+        in: path
+        required: true
+        type: string
+      - name: q10
+        in: query
+        required: true
+        type: string
+      - name: h10
+        in: header
+        required: true
+        type: string
+      - name: p11
+        in: path
+        required: true
+        type: string
+      - name: q11
+        in: query
+        required: true
+        type: string
+      - name: h11
+        in: header
+        required: true
+        type: string
+      - name: p12
+        in: path
+        required: true
+        type: string
+      - name: q12
+        in: query
+        required: true
+        type: string
+      - name: h12
+        in: header
+        required: true
+        type: string
+      - name: p13
+        in: path
+        required: true
+        type: string
+      - name: q13
+        in: query
+        required: true
+        type: string
+      - name: h13
+        in: header
+        required: true
+        type: string
+      - name: p14
+        in: path
+        required: true
+        type: string
+      - name: q14
+        in: query
+        required: true
+        type: string
+      - name: h14
+        in: header
+        required: true
+        type: string
+      - name: p15
+        in: path
+        required: true
+        type: string
+      - name: q15
+        in: query
+        required: true
+        type: string
+      - name: h15
+        in: header
+        required: true
+        type: string
+      - name: p16
+        in: path
+        required: true
+        type: string
+      - name: q16
+        in: query
+        required: true
+        type: string
+      - name: h16
+        in: header
+        required: true
+        type: string
+      - name: p17
+        in: path
+        required: true
+        type: string
+      - name: q17
+        in: query
+        required: true
+        type: string
+      - name: h17
+        in: header
+        required: true
+        type: string
+      - name: p18
+        in: path
+        required: true
+        type: string
+      - name: q18
+        in: query
+        required: true
+        type: string
+      - name: h18
+        in: header
+        required: true
+        type: string
+      - name: p19
+        in: path
+        required: true
+        type: string
+      - name: q19
+        in: query
+        required: true
+        type: string
+      - name: h19
+        in: header
+        required: true
+        type: string
+      - name: p20
+        in: path
+        required: true
+        type: string
+      - name: q20
+        in: query
+        required: true
+        type: string
+      - name: h20
+        in: header
+        required: true
+        type: string
+      - name: p21
+        in: path
+        required: true
+        type: string
+      - name: q21
+        in: query
+        required: true
+        type: string
+      - name: h21
+        in: header
+        required: true
+        type: string
+      - name: p22
+        in: path
+        required: true
+        type: string
+      - name: q22
+        in: query
+        required: true
+        type: string
+      - name: h22
+        in: header
+        required: true
+        type: string
+      - name: p23
+        in: path
+        required: true
+        type: string
+      - name: q23
+        in: query
+        required: true
+        type: string
+      - name: h23
+        in: header
+        required: true
+        type: string
+      responses:
+        '200':
+          schema:
+            $ref: '#/definitions/User'

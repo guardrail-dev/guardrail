@@ -3,10 +3,7 @@ package generators
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
-import cats.instances.all._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.implicits._
 import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -449,9 +446,8 @@ object Http4sServerGenerator {
           .orElse(Some((content: Term) => q"req.decode[UrlForm] { urlForm => $content }").filter(_ => formArgs.nonEmpty && formArgs.forall(!_.isFile)))
           .orElse(Some((content: Term) => q"req.decode[Multipart[F]] { multipart => $content }").filter(_ => formArgs.nonEmpty))
         val fullRouteMatcher =
-          List(additionalQs, http4sQs).flatten match {
-            case Nil => p"$http4sMethod -> $http4sPath"
-            case qs  => p"$http4sMethod -> $http4sPath :? ${qs.reduceLeft((a, n) => p"$a :& $n")}"
+          NonEmptyList.fromList(List(additionalQs, http4sQs).flatten).fold(p"$http4sMethod -> $http4sPath") { qs =>
+            p"$http4sMethod -> $http4sPath :? ${qs.reduceLeft((a, n) => p"$a :& $n")}"
           }
         val fullRouteWithTracingMatcher = tracingFields
           .map(_ => p"$fullRouteMatcher ${Term.Name(s"usingFor${operationId.capitalize}")}(traceBuilder)")
@@ -475,19 +471,32 @@ object Http4sServerGenerator {
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
           }(_ => handlerCall)
         val matchers = (http4sForm ++ http4sHeaders).flatMap(_.matcher)
-        val responseInMatch =
-          matchers match {
-            case Nil => responseExpr
-            case (expr, pat) :: Nil =>
-              Term.Match(expr, List(Case(pat, None, responseExpr), Case(p"_", None, q"""BadRequest("Invalid data")""")))
-            case _ =>
-              q"""
-              (..${matchers.map(_._1)}) match {
-                case (..${matchers.map(_._2)}) => $responseExpr
-                case _ => BadRequest("Invalid data")
-              }
-              """
-          }
+        val responseInMatch = NonEmptyList.fromList(matchers).fold(responseExpr) {
+          case NonEmptyList((expr, pat), Nil) =>
+            Term.Match(expr, List(Case(pat, None, responseExpr), Case(p"_", None, q"""BadRequest("Invalid data")""")))
+          case matchers @ NonEmptyList(_, _) =>
+            val NonEmptyList(head, xs) = matchers.reverse
+            val (base, rest)           = xs.splitAt(21).bimap(left => NonEmptyList(head, left).reverse, _.grouped(21).map(_.reverse.unzip).toList)
+            val (buildTerms, buildPat) = rest.foldLeft[(Term => Term, Pat => Pat)]((identity, identity)) {
+              case ((accTerm, accPat), (nextTermGroup, nextPatGroup)) =>
+                (next => accTerm(q"(..${nextTermGroup :+ next})"), next => accPat(p"(..${nextPatGroup :+ next})"))
+            }
+
+            val (fullTerm, fullPat) = base match {
+              case NonEmptyList((term, pat), Nil) =>
+                (buildTerms(term), buildPat(pat))
+              case NonEmptyList((term, pat), xs) =>
+                val (terms, pats) = xs.unzip
+                (buildTerms(q"(..${term +: terms})"), buildPat(p"(..${pat +: pats})"))
+            }
+            Term.Match(
+              fullTerm,
+              List(
+                Case(fullPat, None, responseExpr),
+                Case(Pat.Wildcard(), None, q"""BadRequest("Invalid data")""")
+              )
+            )
+        }
         val responseInMatchInFor = (http4sForm ++ http4sHeaders).flatMap(_.generator) match {
           case Nil        => responseInMatch
           case generators => q"for {..${generators :+ enumerator"response <- $responseInMatch"}} yield response"
