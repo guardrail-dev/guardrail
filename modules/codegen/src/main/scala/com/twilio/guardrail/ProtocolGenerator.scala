@@ -401,9 +401,6 @@ object ProtocolGenerator {
                 model   <- fromModel(clsName, comp, parents, concreteTypes)
                 alias   <- modelTypeAlias(clsName, comp)
               } yield {
-                parents
-                model
-                alias
                 model.getOrElse(alias)
               }
 
