@@ -618,7 +618,11 @@ object JacksonGenerator {
                     new ExpressionStmt(
                       new AssignExpr(
                         new FieldAccessExpr(new ThisExpr, parameterName),
-                        if (fieldType.isOptional) new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName)) else new NameExpr(parameterName),
+                        if (fieldType.isOptional) {
+                          new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName))
+                        } else {
+                          new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
+                        },
                         AssignExpr.Operator.ASSIGN
                       )
                     ),
