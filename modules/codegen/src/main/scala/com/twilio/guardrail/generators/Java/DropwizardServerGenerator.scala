@@ -124,41 +124,30 @@ object DropwizardServerGenerator {
   }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] = {
-    val genericTypeT   = JavaParser.parseClassOrInterfaceType("T")
-    val entityBodyType = optionalType(genericTypeT)
-
-    val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, name)
-      .addTypeParameter("T")
+    val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(ABSTRACT), false, name)
     cls.addField(PrimitiveType.intType, "statusCode", PRIVATE, FINAL)
-    cls.addField(entityBodyType, "entityBody", PRIVATE, FINAL)
 
     cls
-      .addConstructor(PROTECTED)
+      .addConstructor()
       .addParameter(new Parameter(util.EnumSet.of(FINAL), PrimitiveType.intType, new SimpleName("statusCode")))
-      .addParameter(new Parameter(util.EnumSet.of(FINAL), entityBodyType, new SimpleName("entityBody")))
       .setBody(
         new BlockStmt(
           new NodeList(
-            new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "statusCode"), new NameExpr("statusCode"), AssignExpr.Operator.ASSIGN)),
-            new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "entityBody"), new NameExpr("entityBody"), AssignExpr.Operator.ASSIGN))
+            new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "statusCode"), new NameExpr("statusCode"), AssignExpr.Operator.ASSIGN))
           )
         )
       )
 
-    def addGetter(tpe: Type, name: String): Unit =
-      cls
-        .addMethod(s"get${name.capitalize}", PUBLIC)
-        .setType(tpe)
-        .setBody(
-          new BlockStmt(
-            new NodeList(
-              new ReturnStmt(new FieldAccessExpr(new ThisExpr, name))
-            )
+    cls
+      .addMethod(s"getStatusCode", PUBLIC)
+      .setType(PrimitiveType.intType)
+      .setBody(
+        new BlockStmt(
+          new NodeList(
+            new ReturnStmt(new FieldAccessExpr(new ThisExpr, "statusCode"))
           )
         )
-
-    addGetter(PrimitiveType.intType, "statusCode")
-    addGetter(entityBodyType, "entityBody")
+      )
 
     Target.pure(cls)
   }
@@ -171,8 +160,9 @@ object DropwizardServerGenerator {
       clsType <- safeParseClassOrInterfaceType(clsName)
     } yield {
       val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, clsName)
+        .setExtendedTypes(new NodeList(superClassType))
 
-      val (constructor, creator) = response.value
+      val (classDecls, creator) = response.value
         .map(_._1)
         .orElse({
           if (response.statusCode >= 400 && response.statusCode <= 599) {
@@ -181,9 +171,7 @@ object DropwizardServerGenerator {
             None
           }
         })
-        .fold[(ConstructorDeclaration, BodyDeclaration[_ <: BodyDeclaration[_]])]({
-          cls.setExtendedTypes(new NodeList(superClassType.clone().setTypeArguments(VOID_TYPE)))
-
+        .fold[(List[BodyDeclaration[_ <: BodyDeclaration[_]]], BodyDeclaration[_ <: BodyDeclaration[_]])]({
           val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
           constructor.setBody(
             new BlockStmt(
@@ -191,8 +179,7 @@ object DropwizardServerGenerator {
                 new ExpressionStmt(
                   new MethodCallExpr(
                     "super",
-                    new IntegerLiteralExpr(response.statusCode),
-                    new MethodCallExpr(new NameExpr("Optional"), "empty")
+                    new IntegerLiteralExpr(response.statusCode)
                   )
                 )
               )
@@ -204,9 +191,8 @@ object DropwizardServerGenerator {
             new VariableDeclarator(clsType, clsName, new ObjectCreationExpr(null, clsType, new NodeList))
           )
 
-          (constructor, creator)
+          (List(constructor), creator)
         })({ valueType =>
-          cls.setExtendedTypes(new NodeList(superClassType.clone().setTypeArguments(valueType)))
           val constructParam = new Parameter(util.EnumSet.of(FINAL), valueType.unbox, new SimpleName("entityBody"))
 
           val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
@@ -217,14 +203,30 @@ object DropwizardServerGenerator {
                   new ExpressionStmt(
                     new MethodCallExpr(
                       "super",
-                      new IntegerLiteralExpr(response.statusCode),
-                      new MethodCallExpr(
-                        new NameExpr("Optional"),
-                        "of",
-                        new NodeList[Expression](constructParam.getNameAsExpression)
-                      )
+                      new IntegerLiteralExpr(response.statusCode)
+                    )
+                  ),
+                  new ExpressionStmt(
+                    new AssignExpr(
+                      new FieldAccessExpr(new ThisExpr, constructParam.getNameAsString),
+                      constructParam.getNameAsExpression,
+                      AssignExpr.Operator.ASSIGN
                     )
                   )
+                )
+              )
+            )
+
+          val entityBodyField = new FieldDeclaration(
+            util.EnumSet.of(PRIVATE, FINAL),
+            new VariableDeclarator(valueType, "entityBody")
+          )
+
+          val entityBodyGetter = new MethodDeclaration(util.EnumSet.of(PUBLIC), valueType, "getEntityBody")
+            .setBody(
+              new BlockStmt(
+                new NodeList(
+                  new ReturnStmt(new FieldAccessExpr(new ThisExpr, "entityBody"))
                 )
               )
             )
@@ -239,10 +241,10 @@ object DropwizardServerGenerator {
               )
             )
 
-          (constructor, creator)
+          (List(constructor, entityBodyField, entityBodyGetter), creator)
         })
 
-      cls.addMember(constructor)
+      sortDefinitions(classDecls).foreach(cls.addMember)
       (cls, creator)
     }
   }
@@ -353,11 +355,38 @@ object DropwizardServerGenerator {
                 val responseName = s"${handlerName}.${operationId.capitalize}Response"
                 val responseType = JavaParser.parseClassOrInterfaceType(responseName)
 
+                val entitySetterIfTree = NonEmptyList
+                  .fromList(responses.value.collect({
+                    case Response(statusCodeName, Some(_)) => statusCodeName
+                  }))
+                  .map(_.reverse.foldLeft[IfStmt](null)({
+                    case (nextIfTree, statusCodeName) =>
+                      val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
+                      new IfStmt(
+                        new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                        new BlockStmt(
+                          new NodeList(
+                            new ExpressionStmt(
+                              new MethodCallExpr(
+                                new NameExpr("builder"),
+                                "entity",
+                                new NodeList[Expression](
+                                  new MethodCallExpr(
+                                    new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                                    "getEntityBody"
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        ),
+                        nextIfTree
+                      )
+                  }))
+
                 val whenCompleteLambda = new LambdaExpr(
                   new NodeList(
-                    new Parameter(util.EnumSet.of(FINAL),
-                                  JavaParser.parseClassOrInterfaceType(responseName).setTypeArguments(new WildcardType),
-                                  new SimpleName("result")),
+                    new Parameter(util.EnumSet.of(FINAL), responseType, new SimpleName("result")),
                     new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("err"))
                   ),
                   new BlockStmt(
@@ -395,35 +424,28 @@ object DropwizardServerGenerator {
                           )
                         ),
                         new BlockStmt(
-                          new NodeList(
-                            new ExpressionStmt(
-                              new VariableDeclarationExpr(
-                                new VariableDeclarator(
-                                  RESPONSE_BUILDER_TYPE,
-                                  "builder",
-                                  new MethodCallExpr(new NameExpr("Response"),
-                                                     "status",
-                                                     new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
-                                ),
-                                FINAL
+                          (
+                            List[Statement](
+                              new ExpressionStmt(
+                                new VariableDeclarationExpr(
+                                  new VariableDeclarator(
+                                    RESPONSE_BUILDER_TYPE,
+                                    "builder",
+                                    new MethodCallExpr(new NameExpr("Response"),
+                                                       "status",
+                                                       new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
+                                  ),
+                                  FINAL
+                                )
                               )
-                            ),
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new MethodCallExpr(
-                                  new NameExpr("result"),
-                                  "getEntityBody"
-                                ),
-                                "ifPresent",
-                                new NodeList[Expression](new MethodReferenceExpr(new NameExpr("builder"), new NodeList, "entity"))
+                            ) ++ entitySetterIfTree ++ List(
+                              new ExpressionStmt(
+                                new MethodCallExpr(new NameExpr("asyncResponse"),
+                                                   "resume",
+                                                   new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
                               )
-                            ),
-                            new ExpressionStmt(
-                              new MethodCallExpr(new NameExpr("asyncResponse"),
-                                                 "resume",
-                                                 new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
                             )
-                          )
+                          ).toNodeList
                         )
                       )
                     )
@@ -445,7 +467,7 @@ object DropwizardServerGenerator {
                   )
                 )
 
-                val futureResponseType = completionStageType(responseType.clone().setTypeArguments(new WildcardType))
+                val futureResponseType = completionStageType(responseType.clone())
                 val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
                 (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
                   parameter =>
