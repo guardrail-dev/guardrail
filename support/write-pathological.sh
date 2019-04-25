@@ -1,5 +1,6 @@
-target="modules/sample/src/main/resources/pathological-parameters.yaml"
-max=7
+target="modules/sample/src/main/resources/issues/issue45.yaml"
+min=23
+max=23
 cat >"${target}" <<!
 swagger: "2.0"
 info:
@@ -19,7 +20,7 @@ definitions:
 paths:
 !
 
-for c in $(seq 0 "$max"); do
+for c in $(seq "$min" "$max"); do
   echo -n '  /' >> "${target}"
 
 # Can't go higher than 7 due to 22 parameter limit
