@@ -246,7 +246,7 @@ object ProtocolGenerator {
           val isRequired = requiredFields.contains(name)
           SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
-      defn <- renderDTOClass(clsName, params, parents, parents.nonEmpty && Option(model.getDiscriminator).isDefined) //check for discriminator, see issue222
+      defn <- renderDTOClass(clsName, params, parents) //check for discriminator, see issue222
       deps = params.flatMap(_.dep)
       encoder     <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
       decoder     <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
