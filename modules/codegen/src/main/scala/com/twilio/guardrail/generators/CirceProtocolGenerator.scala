@@ -169,13 +169,14 @@ object CirceProtocolGenerator {
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
         } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, finalDefaultValue)
 
-      case RenderDTOClass(clsName, selfParams, parents) =>
+      case RenderDTOClass(clsName, selfParams, parents, renderPoly) =>
         val discriminators = parents.flatMap(_.discriminators)
         val parenOpt       = parents.headOption
         val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfParams.map(_.term)).filterNot(
           param => discriminators.contains(param.name.value)
         )
-        val code = parenOpt
+        
+        val code = parenOpt.filter(_ => renderPoly)
           .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
             parent =>
               q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces

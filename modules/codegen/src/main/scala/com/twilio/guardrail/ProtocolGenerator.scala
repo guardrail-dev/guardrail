@@ -246,7 +246,7 @@ object ProtocolGenerator {
           val isRequired = requiredFields.contains(name)
           SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
-      defn <- renderDTOClass(clsName, params, parents)
+      defn <- renderDTOClass(clsName, params, parents, parents.nonEmpty && Option(model.getDiscriminator).isDefined) //check for discriminator, see issue222
       deps = params.flatMap(_.dep)
       encoder     <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
       decoder     <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
@@ -361,6 +361,7 @@ object ProtocolGenerator {
 
     definitions.partitionEither({
       case (cls, model) =>
+        // mark ClassParents iff present and has children, otherwise left as model without hierarchies
         classHierarchy(cls, model).filterNot(_.children.isEmpty).toLeft((cls, model))
     })
   }
@@ -399,7 +400,12 @@ object ProtocolGenerator {
                 parents <- extractParents(comp, definitions, concreteTypes)
                 model   <- fromModel(clsName, comp, parents, concreteTypes)
                 alias   <- modelTypeAlias(clsName, comp)
-              } yield model.getOrElse(alias)
+              } yield {
+                parents
+                model
+                alias
+                model.getOrElse(alias)
+              }
 
             case arr: ArraySchema =>
               fromArray(clsName, arr, concreteTypes)

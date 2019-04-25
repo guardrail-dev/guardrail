@@ -38,7 +38,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |        type: integer
                            |""".stripMargin
 
-  test("Ensure routes are generated for OPTIONS method") {
+  test("Ensure case-to-case inheritance is not generated") {
     val (ProtocolDefinitions(List(request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage]), _, _, _), _, _) = runSwaggerSpec(swagger)(Context.empty, Http4s)
    
     val List(reqEncoder, reqDecoder) = request.staticDefns.definitions
@@ -50,11 +50,11 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
     val expectedRequestEncoder = q"""
          implicit val encodeRequest = {
            val readOnlyKeys = Set[String]()
-           Encoder.forProduct2("id")((o: Request) => o.id).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+           Encoder.forProduct2("state", "id")((o: Request) => (o.state, o.id)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key))) 
          }
       """
      val expectedRequestDecoder = q"""
-         implicit val decodeRequest = Decoder.forProduct1("id")(Request.apply _)
+         implicit val decodeRequest = Decoder.forProduct2("state", "id")(Request.apply _)
       """
 
 
@@ -85,6 +85,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
   }
   
   private def compare(t1: Tree, t2: Tree): Assertion = {
+    println(s"$t1 | $t2")
     t1.structure shouldEqual t2.structure
   }
 }
