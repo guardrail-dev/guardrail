@@ -444,7 +444,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
           :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
-        _3
+        _
       ),
       _,
       _

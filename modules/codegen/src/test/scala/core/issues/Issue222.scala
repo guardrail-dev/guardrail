@@ -85,7 +85,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
   }
   
   private def compare(t1: Tree, t2: Tree): Assertion = {
-    println(s"$t1 | $t2")
     t1.structure shouldEqual t2.structure
   }
 }
