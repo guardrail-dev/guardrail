@@ -238,6 +238,7 @@ object SwaggerUtil {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
           (typeName, format) match {
+            case ("string", Some("password"))  => stringType(None)
             case ("string", Some("date"))      => dateType()
             case ("string", Some("date-time")) => dateTimeType()
             case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
@@ -336,6 +337,12 @@ object SwaggerUtil {
           for {
             customTpeName <- customTypeName(d)
             res           <- typeName[L, F]("number", Option(d.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
+
+        case p: PasswordSchema =>
+          for {
+            customTpeName <- customTypeName(p)
+            res           <- typeName[L, F]("string", Option(p.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case x =>
