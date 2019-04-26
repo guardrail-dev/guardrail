@@ -38,6 +38,11 @@ object JacksonGenerator {
     params
       .map({
         case ProtocolParameter(term, name, _, _, _, selfDefaultValue) =>
+          val fieldType = if (term.getType.isOptional && term.getType.containedType.isNamed("List")) {
+            term.getType.containedType
+          } else {
+            term.getType
+          }
           val parameterType = if (term.getType.isOptional) {
             term.getType.containedType.unbox
           } else {
@@ -45,7 +50,7 @@ object JacksonGenerator {
           }
           val defaultValue = defaultValueToExpression(selfDefaultValue)
 
-          ParameterTerm(name, term.getNameAsString, term.getType, parameterType, defaultValue)
+          ParameterTerm(name, term.getNameAsString, fieldType, parameterType, defaultValue)
       })
       .partition(
         pt => !pt.fieldType.isOptional && pt.defaultValue.isEmpty

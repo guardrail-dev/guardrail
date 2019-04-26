@@ -1,0 +1,24 @@
+openapi: 3.0.2
+info:
+  title: Whatever
+  version: 1.0.0
+paths:
+  /foo:
+    get:
+      operationId: getFoo
+      x-scala-package: issue247
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issue247Foo"
+components:
+  schemas:
+    Issue247Foo:
+      type: object
+      properties:
+        optional_list:
+          type: array
+          items:
+            type: string
