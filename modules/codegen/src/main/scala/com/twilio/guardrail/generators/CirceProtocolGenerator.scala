@@ -177,7 +177,6 @@ object CirceProtocolGenerator {
         )
 
         val code = parentOpt
-          .filter(p => parents.exists(s => s.discriminators.nonEmpty)) // part of issue222
           .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
             parent =>
               q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces

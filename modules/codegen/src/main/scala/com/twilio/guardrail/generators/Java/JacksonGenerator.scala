@@ -56,11 +56,9 @@ object JacksonGenerator {
     parentOpt.foreach({ parent =>
       val directParent = JavaParser.parseClassOrInterfaceType(parent.clsName)
       val otherParents = parent.interfaces.map(JavaParser.parseClassOrInterfaceType)
-      if (parent.discriminators.nonEmpty) {
-        cls.setExtendedTypes(
-          new NodeList((directParent +: otherParents): _*)
-        )
-      }
+      cls.setExtendedTypes(
+        new NodeList((directParent +: otherParents): _*)
+      )
     })
 
   private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[JavaLanguage]])(f: Type => Target[Type]): Option[Target[Type]] =
@@ -324,7 +322,7 @@ object JacksonGenerator {
       case RenderDTOClass(clsName, selfParams, parents) =>
         val dtoClassType   = JavaParser.parseClassOrInterfaceType(clsName)
         val discriminators = parents.flatMap(_.discriminators)
-        val parentOpt      = parents.headOption
+        val parentOpt      = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
           param => discriminators.contains(param.term.getName().getId())
         )
@@ -741,7 +739,7 @@ object JacksonGenerator {
         Target.pure(None)
 
       case RenderSealedTrait(className, selfParams, discriminator, parents, children) =>
-        val parentOpt                      = parents.headOption
+        val parentOpt                      = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
         val params                         = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(_.term.getName.getId == discriminator)
         val (requiredTerms, optionalTerms) = sortParams(params)
         val terms                          = requiredTerms ++ optionalTerms
