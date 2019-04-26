@@ -171,7 +171,7 @@ object CirceProtocolGenerator {
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
-        val parentOpt      = parents.headOption
+        val parentOpt      = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
         val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfParams.map(_.term)).filterNot(
           param => discriminators.contains(param.name.value)
         )
