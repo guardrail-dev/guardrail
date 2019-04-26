@@ -163,7 +163,12 @@ object AkkaHttpServerGenerator {
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         } yield List(q"""
           object ${Term.Name(resourceName)} {
-            def discardEntity(implicit mat: akka.stream.Materializer): Directive0 = extractRequest.flatMap({ req => req.discardEntityBytes().future; Directive.Empty })
+            def discardEntity: Directive0 = extractMaterializer.flatMap { implicit mat =>
+              extractRequest.flatMap { req =>
+                req.discardEntityBytes().future
+                Directive.Empty
+              }
+            }
 
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
@@ -198,28 +203,25 @@ object AkkaHttpServerGenerator {
       case other              => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
+    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash)
           q"${term.copy(fun = Term.Name("pathPrefix"))} & pathEndOrSingleSlash"
         else term
 
-      (basePath.getOrElse("") + path).stripPrefix("/") match {
-        case "" => Target.pure(q"pathEndOrSingleSlash")
+      ((basePath.getOrElse("") + path).stripPrefix("/") match {
+        case "" => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
         case path =>
-          for {
-            pathDirective <- SwaggerUtil.paths
-              .generateUrlAkkaPathExtractors(path, pathArgs)
-          } yield pathDirective
-      }
+          SwaggerUtil.paths.generateUrlAkkaPathExtractors(path, pathArgs)
+      })
     }
 
     def directivesFromParams(
-        required: Term => Type => Target[Term.Apply],
-        multi: Term => Type => Target[Term.Apply],
-        multiOpt: Term => Type => Target[Term.Apply],
-        optional: Term => Type => Target[Term.Apply]
+        required: Term => Type => Target[Term],
+        multi: Term => Type => Target[Term],
+        multiOpt: Term => Type => Target[Term],
+        optional: Term => Type => Target[Term]
     )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       for {
         directives <- params.traverse {
@@ -295,7 +297,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*).map(Option.apply _)"),
+        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
@@ -303,7 +305,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(Option.apply _)"),
+        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
@@ -507,9 +509,8 @@ object AkkaHttpServerGenerator {
                           part.entity.discardBytes()
                           Nil
                         }
-                      }).mapAsync(1)({ part =>
-                        ${Term.Match(q"part.name", allCases)}
-                      }).toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
+                      }).mapAsync(1)(${Term.Block(List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases))))})
+                        .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
                     } yield {
                       results.toList.sequence.map({ successes =>
                         ..${grabHeads}
@@ -590,12 +591,12 @@ object AkkaHttpServerGenerator {
 
         akkaMethod <- httpMethodToAkka(method)
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
-        akkaQs     <- qsToAkka(qsArgs)
+        akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
         akkaBody   <- bodyToAkka(operationId, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile)
         akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
         (akkaForm, handlerDefinitions) = akkaForm_
-        akkaHeaders <- headersToAkka(headerArgs)
+        akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
       } yield {
         val (responseCompanionTerm, responseCompanionType) =
           (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
@@ -608,28 +609,32 @@ object AkkaHttpServerGenerator {
           .map(List(_))
 
         val entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
-        val fullRouteMatcher =
-          List[Option[Term]](Some(akkaMethod), Some(akkaPath), akkaQs, Some(entityProcessor), akkaHeaders, tracingFields.map(_.term)).flatten.reduceLeft {
-            (a, n) =>
-              q"${a} & ${n}"
-          }
-        val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-        val fullRoute: Term.Apply = orderedParameters match {
-          case List(List()) =>
-            q"""
-              ${fullRouteMatcher} {
-                complete(handler.${Term
-              .Name(operationId)}(...${handlerCallArgs}))
-              }
-              """
-          case params =>
-            q"""
-              ${fullRouteMatcher} { (..${params.flatten.map(p => param"${p.paramName}")}) =>
-                complete(handler.${Term
-              .Name(operationId)}(...${handlerCallArgs}))
-              }
-              """
+        val fullRouteMatcher: Term => Term = {
+          def bindParams(pairs: List[(Term, List[Term.Name])]): Term => Term =
+            NonEmptyList
+              .fromList(pairs)
+              .fold[Term => Term](identity)(_.foldLeft[Term => Term](identity)({
+                case (acc, (directive, params)) =>
+                  params match {
+                    case List() =>
+                      next =>
+                        acc(Term.Apply(directive, List(next)))
+                    case xs =>
+                      next =>
+                        acc(Term.Apply(directive, List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next))))
+                  }
+              }))
+          val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
+          val pathMatcher    = bindParams(akkaPath.toList)
+          val qsMatcher      = bindParams(akkaQs)
+          val headerMatcher  = bindParams(akkaHeaders)
+          val tracingMatcher = bindParams(tracingFields.map(_.term).map((_, tracingFields.map(_.param.paramName).toList)).toList)
+          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs ++ formArgs).toList.map(_.paramName))))
+
+          methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
+        val handlerCallArgs: List[List[Term.Name]] = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
+        val fullRoute: Term                        = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")))
 
         val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 

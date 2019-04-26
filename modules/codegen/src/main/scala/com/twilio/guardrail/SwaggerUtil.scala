@@ -1,6 +1,6 @@
 package com.twilio.guardrail
 
-import cats.data.EitherT
+import cats.data.{ EitherT, NonEmptyList }
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
@@ -610,28 +610,34 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
-    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] = {
+    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
       import akkaExtractor._
       for {
         partsQS <- runParse(path, pathArgs)
         (parts, (trailingSlash, queryParams)) = partsQS
-        (directive, bindings) = parts
-          .foldLeft[(Term, List[Term.Name])]((q"pathEnd", List.empty))({
-            case ((q"pathEnd   ", bindings), (termName, b)) =>
-              (q"path(${b}       )", bindings ++ termName)
-            case ((q"path(${a })", bindings), (termName, c)) =>
-              (q"path(${a} / ${c})", bindings ++ termName)
+        allPairs = parts
+          .foldLeft[NonEmptyList[(Term, List[Term.Name])]](NonEmptyList.one((q"pathEnd", List.empty)))({
+            case (NonEmptyList((q"pathEnd   ", bindings), xs), (termName, b)) =>
+              NonEmptyList((q"path(${b}       )", bindings ++ termName), xs)
+            case (NonEmptyList((q"path(${a })", bindings), xs), (termName, c)) =>
+              val newBindings = bindings ++ termName
+              if (newBindings.length < 22) {
+                NonEmptyList((q"path(${a} / ${c})", newBindings), xs)
+              } else {
+                NonEmptyList((q"pathEnd", List.empty), (q"pathPrefix(${a} / ${c})", newBindings) :: xs)
+              }
           })
         trailingSlashed = if (trailingSlash) {
-          directive match {
-            case q"path(${a })" => q"pathPrefix(${a}) & pathEndOrSingleSlash"
-            case q"pathEnd"     => q"pathEndOrSingleSlash"
+          allPairs match {
+            case NonEmptyList((q"path(${a })", bindings), xs) => NonEmptyList((q"pathPrefix(${a}) & pathEndOrSingleSlash", bindings), xs)
+            case NonEmptyList((q"pathEnd", bindings), xs)     => NonEmptyList((q"pathEndOrSingleSlash", bindings), xs)
           }
-        } else directive
+        } else allPairs
         result = queryParams.fold(trailingSlashed) { qs =>
-          q"${trailingSlashed} & ${qs}"
+          val NonEmptyList((directives, bindings), xs) = trailingSlashed
+          NonEmptyList((q"${directives} & ${qs}", bindings), xs)
         }
-      } yield result
+      } yield result.reverse
     }
 
     def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {

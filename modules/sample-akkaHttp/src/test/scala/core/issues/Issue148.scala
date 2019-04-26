@@ -38,49 +38,73 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     })
 
     /* Correct mime type
+     * Missing header
+     */
+    Post("/test") ~> route ~> check {
+      rejection match {
+        case MissingHeaderRejection("x-header") => ()
+      }
+    }
+
+    /* Correct mime type
+     * Valid "x-header" value
      * Missing content
      */
-    Post("/test").withEntity(ContentTypes.`application/json`, "") ~> route ~> check {
+    Post("/test")
+      .withHeaders(RawHeader("x-header", "false"))
+      .withEntity(ContentTypes.`application/json`, "") ~> route ~> check {
       rejection match {
         case RequestEntityExpectedRejection => ()
       }
     }
 
     /* Correct mime type
+     * Valid "x-header" value
      * Invalid JSON
      */
-    Post("/test").withEntity(ContentTypes.`application/json`, "{") ~> route ~> check {
+    Post("/test")
+      .withHeaders(RawHeader("x-header", "false"))
+      .withEntity(ContentTypes.`application/json`, "{") ~> route ~> check {
       rejection match {
         case ex: MalformedRequestContentRejection => ex.message shouldBe "exhausted input"
       }
     }
 
     /* Correct mime type
+     * Valid "x-header" value
      * Valid JSON
      * Missing discriminator
      */
-    Post("/test").withEntity(ContentTypes.`application/json`, "{}") ~> route ~> check {
+    Post("/test")
+      .withHeaders(RawHeader("x-header", "false"))
+      .withEntity(ContentTypes.`application/json`, "{}") ~> route ~> check {
       rejection match {
         case ex: MalformedRequestContentRejection => ex.message shouldBe "Attempt to decode value on failed cursor: DownField(type)"
       }
     }
 
     /* Correct mime type
+     * Valid "x-header" value
      * Valid JSON
      * Invalid discriminator
      */
-    Post("/test").withEntity(ContentTypes.`application/json`, """{"type": "blep"}""") ~> route ~> check {
+    Post("/test")
+      .withHeaders(RawHeader("x-header", "false"))
+      .withEntity(ContentTypes.`application/json`, """{"type": "blep"}""") ~> route ~> check {
       rejection match {
         case ex: MalformedRequestContentRejection => ex.message shouldBe "Unknown value blep (valid: Bar): DownField(type)"
       }
     }
 
     /* Correct mime type
+     * Valid "x-header" value
      * Valid JSON
      * Valid discriminator
      * Missing "name" field
      */
-    Post("/test").withEntity(ContentTypes.`application/json`, """{"type": "Bar"}""") ~> route ~> check {
+    Post("/test")
+      .withHeaders(RawHeader("x-header", "false"))
+      .withEntity(ContentTypes.`application/json`, """{"type": "Bar"}""") ~> route ~> check {
       rejection match {
         case ex: MalformedRequestContentRejection => ex.message shouldBe "Attempt to decode value on failed cursor: DownField(name)"
       }
