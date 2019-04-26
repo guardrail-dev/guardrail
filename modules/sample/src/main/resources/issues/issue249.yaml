@@ -1,0 +1,26 @@
+swagger: "2.0"
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  Baz:
+    type: string
+    enum:
+      - beep
+      - borp
+      - blap
+paths:
+  "/foo":
+    get:
+      operationId: doFoo
+      produces:
+        - application/json
+      parameters:
+        - name: bar
+          in: query
+          type: array
+          items:
+            $ref: "#/definitions/Baz"
+      responses:
+        200:
+          description: OK

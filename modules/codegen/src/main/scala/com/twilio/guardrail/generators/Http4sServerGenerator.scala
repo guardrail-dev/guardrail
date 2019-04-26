@@ -583,13 +583,23 @@ object Http4sServerGenerator {
           case ScalaParameter(_, param, _, argName, argType) =>
             val (queryParamMatcher, elemType) = param match {
               case param"$_: Option[Iterable[$tpe]]" =>
-                (q"""object ${Term
-                   .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
-                 tpe)
+                (q"""
+                  object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
+                    val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
+                    def unapply(params: Map[String, Seq[String]]): Option[Option[List[$tpe]]] = delegate.unapply(params).collectFirst {
+                      case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty)
+                    }
+                  }
+                 """, tpe)
               case param"$_: Option[Iterable[$tpe]] = $_" =>
-                (q"""object ${Term
-                   .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
-                 tpe)
+                (q"""
+                  object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
+                    val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
+                    def unapply(params: Map[String, Seq[String]]): Option[Option[List[$tpe]]] = delegate.unapply(params).collectFirst {
+                      case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty)
+                    }
+                  }
+                 """, tpe)
               case param"$_: Option[$tpe]" =>
                 (q"""object ${Term
                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
@@ -601,13 +611,15 @@ object Http4sServerGenerator {
               case param"$_: Iterable[$tpe]" =>
                 (q"""
                    object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
-                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}.unapplySeq(params)
+                     val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
+                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
                    }
                  """, tpe)
               case param"$_: Iterable[$tpe] = $_" =>
                 (q"""
                    object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
-                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}.unapplySeq(params)
+                     val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
+                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
                    }
                  """, tpe)
               case _ =>
