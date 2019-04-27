@@ -77,7 +77,7 @@ object Http4sServerGenerator {
       case GetExtraRouteParams(tracing) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
-          handlerWrapper = param"""wrapper: String => (Request[F] => F[Response[F]]) => F[Response[F]]"""
+          handlerWrapper = param"""handlerWrapper: (String, Request[F], F[Response[F]]) => F[Response[F]]"""
           tracing <- if (tracing) {
             Target.pure(List(param"""trace: String => Request[F] => TraceBuilder[F]"""))
           } else Target.pure(List.empty)
@@ -503,7 +503,7 @@ object Http4sServerGenerator {
           case generators => q"for {..${generators :+ enumerator"response <- $responseInMatch"}} yield response"
         }
         val routeBody       = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
-        val fullRoute: Case = p"case req @ $fullRouteWithTracingMatcher => $routeBody"
+        val fullRoute: Case = p"case req @ $fullRouteWithTracingMatcher => handlerWrapper($operationId, req, {$routeBody})"
 
         val respond: List[List[Term.Param]] = List(List(param"respond: $responseCompanionTerm.type"))
 

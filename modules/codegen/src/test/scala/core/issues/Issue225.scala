@@ -31,15 +31,15 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
       }
     """
     val resource = q"""
-      class Resource[F[_]](handlerWrapper: String => (Request[F] => F[Response[F]]) => F[Response[F]])(implicit F: Async[F]) extends Http4sDsl[F] {
-        def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
+      class Resource[F[_]](handlerWrapper: (String, Request[F], F[Response[F]]) => F[Response[F]])(implicit F: Async[F]) extends Http4sDsl[F] {
+        def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
-            case req @ GET -> Root => handlerWrapper("getRoot")((req) => 
+            case req @ GET -> Root => handlerWrapper("getRoot", req, {
               handler.getRoot(GetRootResponse)() flatMap {
                 case GetRootResponse.Ok =>
                   Ok()
               }
-            )(req)
+            })
           }
         }
       }
