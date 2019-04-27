@@ -1,8 +1,12 @@
 #!/bin/env bash
 
-read -p 'Tag: ' new_tag
-if [ "${new_tag}" = "${new_tag#v}" ]; then
-        new_tag="v${new_tag}"
+new_tag="$1"
+
+if [ -z "${new_tag}" ]; then
+        read -p 'Tag: ' new_tag
+        if [ "${new_tag}" = "${new_tag#v}" ]; then
+                new_tag="v${new_tag}"
+        fi
 fi
 notes_file="notes/${new_tag#v}.md"
 

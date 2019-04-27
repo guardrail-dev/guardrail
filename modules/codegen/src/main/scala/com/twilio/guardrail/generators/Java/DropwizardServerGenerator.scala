@@ -12,15 +12,15 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
+import com.twilio.guardrail.extract.ServerRawResponse
+import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.Response
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
-import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.responses.ApiResponse
 import java.util
 import scala.collection.JavaConverters._
@@ -38,6 +38,7 @@ object DropwizardServerGenerator {
   }
 
   private val ASYNC_RESPONSE_TYPE   = JavaParser.parseClassOrInterfaceType("AsyncResponse")
+  private val RESPONSE_TYPE         = JavaParser.parseClassOrInterfaceType("Response")
   private val RESPONSE_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = JavaParser.parseClassOrInterfaceType("Logger")
 
@@ -352,37 +353,82 @@ object DropwizardServerGenerator {
                   new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
                 )
 
-                val responseName = s"${handlerName}.${operationId.capitalize}Response"
-                val responseType = JavaParser.parseClassOrInterfaceType(responseName)
+                val (responseName, responseType, resultResumeBody) =
+                  ServerRawResponse(operation)
+                    .filter(_ == true)
+                    .fold({
+                      val responseName = s"${handlerName}.${operationId.capitalize}Response"
 
-                val entitySetterIfTree = NonEmptyList
-                  .fromList(responses.value.collect({
-                    case Response(statusCodeName, Some(_)) => statusCodeName
-                  }))
-                  .map(_.reverse.foldLeft[IfStmt](null)({
-                    case (nextIfTree, statusCodeName) =>
-                      val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
-                      new IfStmt(
-                        new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
-                        new BlockStmt(
-                          new NodeList(
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new NameExpr("builder"),
-                                "entity",
-                                new NodeList[Expression](
-                                  new MethodCallExpr(
-                                    new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
-                                    "getEntityBody"
+                      val entitySetterIfTree = NonEmptyList
+                        .fromList(responses.value.collect({
+                          case Response(statusCodeName, Some(_)) => statusCodeName
+                        }))
+                        .map(_.reverse.foldLeft[IfStmt](null)({
+                          case (nextIfTree, statusCodeName) =>
+                            val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
+                            new IfStmt(
+                              new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                              new BlockStmt(
+                                new NodeList(
+                                  new ExpressionStmt(
+                                    new MethodCallExpr(
+                                      new NameExpr("builder"),
+                                      "entity",
+                                      new NodeList[Expression](
+                                        new MethodCallExpr(
+                                          new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                                          "getEntityBody"
+                                        )
+                                      )
+                                    )
                                   )
                                 )
+                              ),
+                              nextIfTree
+                            )
+                        }))
+
+                      (
+                        responseName,
+                        JavaParser.parseClassOrInterfaceType(responseName),
+                        (
+                          List[Statement](
+                            new ExpressionStmt(
+                              new VariableDeclarationExpr(
+                                new VariableDeclarator(
+                                  RESPONSE_BUILDER_TYPE,
+                                  "builder",
+                                  new MethodCallExpr(new NameExpr("Response"),
+                                                     "status",
+                                                     new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
+                                ),
+                                FINAL
                               )
                             )
+                          ) ++ entitySetterIfTree ++ List(
+                            new ExpressionStmt(
+                              new MethodCallExpr(new NameExpr("asyncResponse"),
+                                                 "resume",
+                                                 new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
+                            )
                           )
-                        ),
-                        nextIfTree
+                        ).toNodeList
                       )
-                  }))
+                    })({ _ =>
+                      (
+                        "Response",
+                        RESPONSE_TYPE,
+                        new NodeList(
+                          new ExpressionStmt(
+                            new MethodCallExpr(
+                              new NameExpr("asyncResponse"),
+                              "resume",
+                              new NodeList[Expression](new NameExpr("result"))
+                            )
+                          )
+                        )
+                      )
+                    })
 
                 val whenCompleteLambda = new LambdaExpr(
                   new NodeList(
@@ -423,30 +469,7 @@ object DropwizardServerGenerator {
                             )
                           )
                         ),
-                        new BlockStmt(
-                          (
-                            List[Statement](
-                              new ExpressionStmt(
-                                new VariableDeclarationExpr(
-                                  new VariableDeclarator(
-                                    RESPONSE_BUILDER_TYPE,
-                                    "builder",
-                                    new MethodCallExpr(new NameExpr("Response"),
-                                                       "status",
-                                                       new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
-                                  ),
-                                  FINAL
-                                )
-                              )
-                            ) ++ entitySetterIfTree ++ List(
-                              new ExpressionStmt(
-                                new MethodCallExpr(new NameExpr("asyncResponse"),
-                                                   "resume",
-                                                   new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
-                              )
-                            )
-                          ).toNodeList
-                        )
+                        new BlockStmt(resultResumeBody)
                       )
                     )
                   ),
