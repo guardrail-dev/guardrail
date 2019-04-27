@@ -7,7 +7,7 @@ import cats.~>
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, UnknownType, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
@@ -482,14 +482,57 @@ object AsyncHttpClientClientGenerator {
 
           val optionalParamMethods = builderMethodCalls
             .filterNot(_._1.required)
-            .map({
+            .flatMap({
               case (ScalaParameter(_, param, _, _, argType), methodCall) =>
-                new MethodDeclaration(
+                val containedType = argType.containedType.unbox
+
+                val optionalOverrideMethod = if (argType.isOptional && !containedType.isOptional) {
+                  val methodParamName = s"optional${param.getNameAsString.capitalize}"
+
+                  val lambdaBody = methodCall match {
+                    case es: ExpressionStmt => es.clone()
+                    case stmt               => new BlockStmt(new NodeList(stmt.clone()))
+                  }
+
+                  Some(
+                    new MethodDeclaration(
+                      util.EnumSet.of(PUBLIC),
+                      s"with${param.getNameAsString.unescapeReservedWord.capitalize}",
+                      callBuilderType,
+                      List(
+                        new Parameter(util.EnumSet.of(FINAL), argType, new SimpleName(methodParamName))
+                      ).toNodeList
+                    ).setBody(
+                      new BlockStmt(
+                        List(
+                          new ExpressionStmt(
+                            new MethodCallExpr(
+                              new NameExpr(methodParamName),
+                              "ifPresent",
+                              new NodeList[Expression](
+                                new LambdaExpr(
+                                  new NodeList(new Parameter(new UnknownType, param.getNameAsString)),
+                                  lambdaBody,
+                                  false
+                                )
+                              )
+                            )
+                          ),
+                          new ReturnStmt(new ThisExpr)
+                        ).toNodeList
+                      )
+                    )
+                  )
+                } else {
+                  Option.empty[MethodDeclaration]
+                }
+
+                val mainMethod = new MethodDeclaration(
                   util.EnumSet.of(PUBLIC),
                   s"with${param.getNameAsString.unescapeReservedWord.capitalize}",
                   callBuilderType,
                   List(
-                    new Parameter(util.EnumSet.of(FINAL), argType.containedType.unbox, new SimpleName(param.getNameAsString))
+                    new Parameter(util.EnumSet.of(FINAL), containedType, new SimpleName(param.getNameAsString))
                   ).toNodeList
                 ).setBody(
                   new BlockStmt(
@@ -499,6 +542,8 @@ object AsyncHttpClientClientGenerator {
                     ).toNodeList
                   )
                 )
+
+                mainMethod +: optionalOverrideMethod.toList
             })
           optionalParamMethods.foreach(callBuilderCls.addMember)
 

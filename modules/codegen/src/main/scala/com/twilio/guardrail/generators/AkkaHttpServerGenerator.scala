@@ -218,10 +218,10 @@ object AkkaHttpServerGenerator {
     }
 
     def directivesFromParams(
-        required: Term => Type => Target[Term.Apply],
-        multi: Term => Type => Target[Term.Apply],
-        multiOpt: Term => Type => Target[Term.Apply],
-        optional: Term => Type => Target[Term.Apply]
+        required: Term => Type => Target[Term],
+        multi: Term => Type => Target[Term],
+        multiOpt: Term => Type => Target[Term],
+        optional: Term => Type => Target[Term]
     )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       for {
         directives <- params.traverse {
@@ -297,7 +297,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*).map(Option.apply _)"),
+        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
@@ -305,7 +305,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(Option.apply _)"),
+        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
       ) _
 

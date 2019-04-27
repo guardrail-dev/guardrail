@@ -25,6 +25,8 @@ import scala.language.existentials
 import scala.util.Try
 
 object JacksonGenerator {
+  private val BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Builder")
+
   private case class ParameterTerm(propertyName: String, parameterName: String, fieldType: Type, parameterType: Type, defaultValue: Option[Expression])
 
   // returns a tuple of (requiredTerms, optionalTerms)
@@ -528,7 +530,7 @@ object JacksonGenerator {
         )
 
         val builderMethod = dtoClass.addMethod("builder", PUBLIC, STATIC)
-        builderMethod.setType("Builder")
+        builderMethod.setType(BUILDER_TYPE)
         builderMethod.setParameters(
           new NodeList(
             requiredTerms.map({
@@ -543,7 +545,7 @@ object JacksonGenerator {
               new ReturnStmt(
                 new ObjectCreationExpr(
                   null,
-                  JavaParser.parseClassOrInterfaceType("Builder"),
+                  BUILDER_TYPE,
                   new NodeList(requiredTerms.map({
                     case ParameterTerm(_, parameterName, _, _, _) => new NameExpr(parameterName)
                   }): _*)
@@ -606,23 +608,49 @@ object JacksonGenerator {
         // TODO: leave out with${name}() if readOnlyKey?
         optionalTerms.foreach({
           case ParameterTerm(_, parameterName, fieldType, parameterType, _) =>
-            val setter = builderClass.addMethod(s"with${parameterName.capitalize}", PUBLIC)
-            setter.setType("Builder")
-            setter.addAndGetParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
-            setter.setBody(
-              new BlockStmt(
-                new NodeList(
-                  new ExpressionStmt(
-                    new AssignExpr(
-                      new FieldAccessExpr(new ThisExpr, parameterName),
-                      if (fieldType.isOptional) new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName)) else new NameExpr(parameterName),
-                      AssignExpr.Operator.ASSIGN
-                    )
-                  ),
-                  new ReturnStmt(new ThisExpr)
+            builderClass
+              .addMethod(s"with${parameterName.capitalize}", PUBLIC)
+              .setType(BUILDER_TYPE)
+              .addParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
+              .setBody(
+                new BlockStmt(
+                  new NodeList(
+                    new ExpressionStmt(
+                      new AssignExpr(
+                        new FieldAccessExpr(new ThisExpr, parameterName),
+                        if (fieldType.isOptional) {
+                          new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName))
+                        } else {
+                          new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
+                        },
+                        AssignExpr.Operator.ASSIGN
+                      )
+                    ),
+                    new ReturnStmt(new ThisExpr)
+                  )
                 )
               )
-            )
+
+            if (fieldType.isOptional && !parameterType.isOptional) {
+              builderClass
+                .addMethod(s"with${parameterName.capitalize}", PUBLIC)
+                .setType(BUILDER_TYPE)
+                .addParameter(new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName)))
+                .setBody(
+                  new BlockStmt(
+                    new NodeList(
+                      new ExpressionStmt(
+                        new AssignExpr(
+                          new FieldAccessExpr(new ThisExpr, parameterName),
+                          new MethodCallExpr("requireNonNull", new NameExpr(parameterName)),
+                          AssignExpr.Operator.ASSIGN
+                        )
+                      ),
+                      new ReturnStmt(new ThisExpr)
+                    )
+                  )
+                )
+            }
         })
 
         val buildMethod = builderClass.addMethod("build", PUBLIC)
