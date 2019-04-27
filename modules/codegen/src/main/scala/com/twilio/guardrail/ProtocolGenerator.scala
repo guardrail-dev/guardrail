@@ -361,7 +361,6 @@ object ProtocolGenerator {
 
     definitions.partitionEither({
       case (cls, model) =>
-        // mark ClassParents iff present and has children, otherwise left as model without hierarchies
         classHierarchy(cls, model).filterNot(_.children.isEmpty).toLeft((cls, model))
     })
   }
