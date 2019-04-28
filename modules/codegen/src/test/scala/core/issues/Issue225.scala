@@ -31,17 +31,16 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
       }
     """
     val resource = q"""
-      class Resource[F[_]](handlerWrapper: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_, _, r) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
+      class Resource[F[_]](handlerWrapper: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
         def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root => 
-              val response = {
+              handlerWrapper("getRoot", req, {
                 handler.getRoot(GetRootResponse)() flatMap {
                   case GetRootResponse.Ok =>
                     Ok()
                 } 
-              }
-              handlerWrapper("getRoot", req, response)
+              })
           }
         }
       }
@@ -54,8 +53,6 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
   }
   
   private def compare(actual: Tree, expected: Tree): Unit = {
-    println(s"actual: ${actual.syntax}")
-    println(s"expected: ${expected.syntax}")
     actual.structure shouldEqual expected.structure
   }
 }
