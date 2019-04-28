@@ -48,24 +48,33 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
       }
     """
     val resource = q"""
-      class StoreResource[F[_]]()(implicit F: Async[F]) extends Http4sDsl[F] {
+      class StoreResource[F[_]](handlerWrapper: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_, _, r) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root =>
-              handler.getRoot(GetRootResponse)() flatMap {
-                case GetRootResponse.Ok =>
-                  Ok()
-              }
+              val response = { 
+                handler.getRoot(GetRootResponse)() flatMap {
+                  case GetRootResponse.Ok =>
+                    Ok()
+                }
+              }  
+              handlerWrapper("getRoot", req, response)  
             case req @ GET -> Root / "foo" =>
-              handler.getFoo(GetFooResponse)() flatMap {
-                case GetFooResponse.Ok =>
-                  Ok()
+              val response = {
+                handler.getFoo(GetFooResponse)() flatMap {
+                  case GetFooResponse.Ok =>
+                    Ok()
+                }
               }
+              handlerWrapper("getFoo", req, response)  
             case req @ GET -> Root / "foo" / "" =>
-              handler.getFooDir(GetFooDirResponse)() flatMap {
-                case GetFooDirResponse.Ok =>
-                  Ok()
-              }
+              val response = {
+                handler.getFooDir(GetFooDirResponse)() flatMap {
+                  case GetFooDirResponse.Ok =>
+                    Ok()
+                }
+              }  
+              handlerWrapper("getFooDir", req, response)
           }
         }
       }
