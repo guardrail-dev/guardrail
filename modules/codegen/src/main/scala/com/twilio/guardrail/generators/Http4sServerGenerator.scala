@@ -60,7 +60,7 @@ object Http4sServerGenerator {
             List(combinedRouteTerms),
             List.empty,
             methodSigs,
-            renderedRoutes.flatMap(_.supportDefinitions),
+            renderedRoutes.flatMap(_.supportDefinitions).groupBy(_.structure).map(_._2.head).toList, // Only unique supportDefinitions by structure
             renderedRoutes.flatMap(_.handlerDefinitions)
           )
         }
