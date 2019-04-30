@@ -497,7 +497,7 @@ object AsyncHttpClientClientGenerator {
                   Some(
                     new MethodDeclaration(
                       util.EnumSet.of(PUBLIC),
-                      s"with${param.getNameAsString.unescapeReservedWord.capitalize}",
+                      s"with${param.getNameAsString.unescapeIdentifier.capitalize}",
                       callBuilderType,
                       List(
                         new Parameter(util.EnumSet.of(FINAL), argType, new SimpleName(methodParamName))
@@ -529,7 +529,7 @@ object AsyncHttpClientClientGenerator {
 
                 val mainMethod = new MethodDeclaration(
                   util.EnumSet.of(PUBLIC),
-                  s"with${param.getNameAsString.unescapeReservedWord.capitalize}",
+                  s"with${param.getNameAsString.unescapeIdentifier.capitalize}",
                   callBuilderType,
                   List(
                     new Parameter(util.EnumSet.of(FINAL), containedType, new SimpleName(param.getNameAsString))

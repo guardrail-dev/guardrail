@@ -20,3 +20,4 @@ components:
       enum:
         - foo-bar-1
         - baz-quux-2-flurb
+        - 3-moo-cow
