@@ -9,7 +9,7 @@ package object syntax {
   )
 
   private val toPascalRegexes = List(
-    "[\\._-]([a-z])".r, // dotted, snake, or dashed case
+    "[\\._-]([a-z0-9])".r, // dotted, snake, or dashed case
     "\\s+([a-zA-Z])".r, // spaces
     "^([a-z])".r // initial letter
   )
