@@ -4,7 +4,7 @@ package generators
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
-import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.extract.{ JvmPackage, ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ Response, Responses }
@@ -35,7 +35,7 @@ object Http4sServerGenerator {
                                                  .map(_._2),
                                                "Missing operationId")
               label <- Target.fromOption(
-                ScalaTracingLabel(operation)
+                TracingLabel(operation)
                   .map(Lit.String(_))
                   .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
                 "Missing client name"

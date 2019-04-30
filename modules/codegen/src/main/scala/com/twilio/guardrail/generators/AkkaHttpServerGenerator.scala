@@ -9,7 +9,7 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.SwaggerUtil
-import com.twilio.guardrail.extract.{ ScalaPackage, ScalaTracingLabel, ServerRawResponse }
+import com.twilio.guardrail.extract.{ JvmPackage, ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
@@ -110,7 +110,7 @@ object AkkaHttpServerGenerator {
                                                  .map(_._2),
                                                "Missing operationId")
               label <- Target.fromOption(
-                ScalaTracingLabel(operation)
+                TracingLabel(operation)
                   .map(Lit.String(_))
                   .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
                 "Missing client name"
