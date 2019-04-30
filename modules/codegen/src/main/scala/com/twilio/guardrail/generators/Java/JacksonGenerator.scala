@@ -555,6 +555,20 @@ object JacksonGenerator {
           )
         )
 
+        dtoClass
+          .addMethod("builder", PUBLIC, STATIC)
+          .setType(BUILDER_TYPE)
+          .setParameters(new NodeList(new Parameter(util.EnumSet.of(FINAL), dtoClassType, new SimpleName("template"))))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ReturnStmt(
+                  new ObjectCreationExpr(null, BUILDER_TYPE, new NodeList(new NameExpr("template")))
+                )
+              )
+            )
+          )
+
         val builderClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, "Builder")
 
         requiredTerms.foreach({
@@ -604,6 +618,26 @@ object JacksonGenerator {
             )
           )
         )
+
+        builderClass
+          .addConstructor(PRIVATE)
+          .setParameters(new NodeList(new Parameter(util.EnumSet.of(FINAL), dtoClassType, new SimpleName("template"))))
+          .setBody(
+            new BlockStmt(
+              terms
+                .map({
+                  case ParameterTerm(_, parameterName, _, _, _) =>
+                    new ExpressionStmt(
+                      new AssignExpr(
+                        new FieldAccessExpr(new ThisExpr, parameterName),
+                        new FieldAccessExpr(new NameExpr("template"), parameterName),
+                        AssignExpr.Operator.ASSIGN
+                      )
+                    ): Statement
+                })
+                .toNodeList
+            )
+          )
 
         // TODO: leave out with${name}() if readOnlyKey?
         optionalTerms.foreach({
