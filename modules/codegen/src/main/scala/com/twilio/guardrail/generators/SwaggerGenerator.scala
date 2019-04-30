@@ -1,17 +1,21 @@
 package com.twilio.guardrail
 package generators
 
-import _root_.io.swagger.v3.oas.models._
 import cats.implicits._
-import cats.syntax.either._
 import cats.~>
 import com.twilio.guardrail.extract.ScalaPackage
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms._
+import io.swagger.v3.oas.models.parameters.Parameter
 import scala.collection.JavaConverters._
 
 object SwaggerGenerator {
+  private def parameterSchemaType(parameter: Parameter): Target[String] =
+    for {
+      schema <- Target.fromOption(Option(parameter.getSchema), s"Parameter '${parameter.getName}' has no schema")
+      tpe    <- Target.fromOption(Option(schema.getType), s"Parameter '${parameter.getName}' has no schema type")
+    } yield tpe
+
   def apply[L <: LA]() = new (SwaggerTerm[L, ?] ~> Target) {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
@@ -56,31 +60,31 @@ object SwaggerGenerator {
         } yield className
 
       case GetParameterName(parameter) =>
-        Target.fromOption(Option(parameter.getName()), "Parameter missing \"name\"")
+        Target.fromOption(Option(parameter.getName()), s"Parameter missing 'name': ${parameter}")
 
       case GetBodyParameterSchema(parameter) =>
-        Target.fromOption(Option(parameter.getSchema()), "Schema not specified")
+        Target.fromOption(Option(parameter.getSchema()), s"Schema not specified for parameter '${parameter.getName}'")
 
       case GetHeaderParameterType(parameter) =>
-        Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
+        parameterSchemaType(parameter)
 
       case GetPathParameterType(parameter) =>
-        Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
+        parameterSchemaType(parameter)
 
       case GetQueryParameterType(parameter) =>
-        Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
+        parameterSchemaType(parameter)
 
       case GetCookieParameterType(parameter) =>
-        Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
+        parameterSchemaType(parameter)
 
       case GetFormParameterType(parameter) =>
-        Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
+        parameterSchemaType(parameter)
 
       case GetSerializableParameterType(parameter) =>
-        Target.fromOption(Option(parameter.getSchema.getType()), s"Missing type")
+        parameterSchemaType(parameter)
 
       case GetRefParameterRef(parameter) =>
-        Target.fromOption(Option(parameter.get$ref).flatMap(_.split("/").lastOption), "$ref not defined")
+        Target.fromOption(Option(parameter.get$ref).flatMap(_.split("/").lastOption), s"$$ref not defined for parameter '${parameter.getName}'")
 
       case FallbackParameterHandler(parameter) =>
         Target.raiseError(s"Unsure how to handle ${parameter}")
