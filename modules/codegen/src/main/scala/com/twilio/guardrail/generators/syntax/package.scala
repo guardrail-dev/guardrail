@@ -38,6 +38,7 @@ package object syntax {
         "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
       "([A-Z])".r
         .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
+        .replaceAllLiterally(" ", "-")
     }
   }
 }
