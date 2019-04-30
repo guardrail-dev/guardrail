@@ -458,11 +458,37 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       <td nowrap>definitions, parameters</td>
       <td>
         Override the primitive types specified in the OpenAPI specification
-        with a domain-specific type. This requires the type to have either
-        serializers/deserializers in the underlying JSON framework or
-        HTTP framework. As this is an advanced feature, it may require use of
-        custom <code>imports</code> provided via build tool plugins or at
-        the CLI.
+        with a domain-specific type for generated Scala code. This requires the
+        type to have either serializers/deserializers in the underlying JSON
+        framework or HTTP framework. As this is an advanced feature, it may
+        require use of custom <code>imports</code> provided via build tool
+        plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-java-type</code></td>
+      <td>string</td>
+      <td nowrap>definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated Java code. This requires the
+        type to have either serializers/deserializers in the underlying JSON
+        framework or HTTP framework. As this is an advanced feature, it may
+        require use of custom <code>imports</code> provided via build tool
+        plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-jvm-type</code></td>
+      <td>string</td>
+      <td nowrap>definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated JVM (Scala and Java) code.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
       </td>
     </tr>
   </tbody>
