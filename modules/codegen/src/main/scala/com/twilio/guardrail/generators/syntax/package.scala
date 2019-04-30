@@ -22,7 +22,7 @@ package object syntax {
 
     def toCamelCase: String = {
       val fromSnakeOrDashed =
-        "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
+        "[-_ ]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
       "^([A-Z])".r
         .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
