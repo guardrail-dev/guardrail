@@ -13,11 +13,13 @@ import com.google.googlejavaformat.java.{ Formatter, JavaFormatterOptions }
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
+import java.util.Locale
 import scala.collection.JavaConverters._
 
 object JavaGenerator {
@@ -105,6 +107,7 @@ object JavaGenerator {
             Target.raiseError(s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
+      case FormatEnumName(enumValue) => Target.pure(enumValue.toSnakeCase.toUpperCase(Locale.US))
       case EmbedArray(tpe) =>
         tpe match {
           case SwaggerUtil.Deferred(tpe) =>

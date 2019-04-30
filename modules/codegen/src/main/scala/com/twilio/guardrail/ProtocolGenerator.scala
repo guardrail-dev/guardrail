@@ -5,7 +5,6 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
-import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -69,8 +68,8 @@ object ProtocolGenerator {
     def validProg(enum: List[String], tpe: L#Type): Free[F, EnumDefinition[L]] =
       for {
         elems <- enum.traverse { elem =>
-          val termName = elem.toPascalCase
           for {
+            termName  <- formatEnumName(elem)
             valueTerm <- pureTermName(termName)
             accessor  <- buildAccessor(clsName, termName)
           } yield (elem, valueTerm, accessor)

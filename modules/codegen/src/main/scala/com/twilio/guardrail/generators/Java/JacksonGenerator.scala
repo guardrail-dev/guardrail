@@ -103,7 +103,7 @@ object JacksonGenerator {
           case (value, termName, _) =>
             new EnumConstantDeclaration(
               new NodeList(),
-              new SimpleName(termName.getIdentifier.toSnakeCase.toUpperCase(Locale.US)),
+              new SimpleName(termName.getIdentifier),
               new NodeList(new StringLiteralExpr(value)),
               new NodeList()
             )
