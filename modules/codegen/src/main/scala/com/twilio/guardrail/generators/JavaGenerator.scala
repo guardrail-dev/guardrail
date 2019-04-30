@@ -9,7 +9,7 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
-import com.google.googlejavaformat.java.Formatter
+import com.google.googlejavaformat.java.{ Formatter, JavaFormatterOptions }
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
@@ -18,6 +18,7 @@ import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
+import scala.collection.JavaConverters._
 
 object JavaGenerator {
   def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] = safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
@@ -28,8 +29,12 @@ object JavaGenerator {
     case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
   }
 
-  def prettyPrintSource(source: CompilationUnit): Array[Byte] =
-    new Formatter().formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
+  private val formatter = new Formatter(JavaFormatterOptions.builder().style(JavaFormatterOptions.Style.AOSP).build())
+
+  def prettyPrintSource(source: CompilationUnit): Array[Byte] = {
+    source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
+    formatter.formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
+  }
 
   def writeClientTree(pkgPath: Path,
                       pkg: List[String],
