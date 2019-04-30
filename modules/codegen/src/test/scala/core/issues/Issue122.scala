@@ -22,7 +22,7 @@ class Issue122 extends FunSuite with Matchers with SwaggerSpecRunner {
     |  /user/{id}:
     |    get:
     |      operationId: getUser
-    |      x-scala-package: users
+    |      x-jvm-package: users
     |      consumes:
     |        - application/x-www-form-urlencoded
     |      produces:

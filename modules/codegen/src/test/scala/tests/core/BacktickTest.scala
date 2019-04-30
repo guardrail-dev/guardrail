@@ -22,7 +22,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |  /dashy-route:
     |    get:
     |      tags: ["dashy-package"]
-    |      x-scala-package: dashy-package
+    |      x-jvm-package: dashy-package
     |      operationId: dashy-op-id
     |      produces:
     |        - application/json
@@ -38,7 +38,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |            $$ref: "#/definitions/dashy-class"
     |    post:
     |      tags: ["dashy-package"]
-    |      x-scala-package: dashy-package
+    |      x-jvm-package: dashy-package
     |      operationId: postDashy-op-id
     |      parameters:
     |        - name: dashy-parameter

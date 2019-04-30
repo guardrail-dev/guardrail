@@ -8,7 +8,7 @@ paths:
     post:
       operationId: doFoo
       x-server-raw-response: true
-      x-scala-package: foo
+      x-jvm-package: foo
       responses:
         '201':
           schema:

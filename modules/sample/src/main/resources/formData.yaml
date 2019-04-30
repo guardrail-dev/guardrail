@@ -7,7 +7,7 @@ paths:
   /foo:
     post:
       operationId: doFoo
-      x-scala-package: foo
+      x-jvm-package: foo
       consumes:
         - application/x-www-form-urlencoded
       parameters:
@@ -24,7 +24,7 @@ paths:
   /bar:
     post:
       operationId: doBar
-      x-scala-package: foo
+      x-jvm-package: foo
       consumes:
         - application/x-www-form-urlencoded
       parameters:

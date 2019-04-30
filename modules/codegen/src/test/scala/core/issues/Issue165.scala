@@ -16,21 +16,21 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
        |paths:
        |  "/":
        |    get:
-       |      x-scala-package: store
+       |      x-jvm-package: store
        |      operationId: getRoot
        |      responses:
        |        200:
        |         description: description
        |  "/foo":
        |    get:
-       |      x-scala-package: store
+       |      x-jvm-package: store
        |      operationId: getFoo
        |      responses:
        |        200:
        |         description: description
        |  "/foo/":
        |    get:
-       |      x-scala-package: store
+       |      x-jvm-package: store
        |      operationId: getFooDir
        |      responses:
        |        200:

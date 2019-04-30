@@ -34,7 +34,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     |  /foo:
     |    get:
     |      operationId: getFoo
-    |      x-scala-package: foo
+    |      x-jvm-package: foo
     |      parameters:
     |      - in: body
     |        name: foo
@@ -53,7 +53,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     |        type: string
     |  Bar:
     |    type: object
-    |    x-scala-package: com.example.test
+    |    x-jvm-package: com.example.test
     |    properties:
     |      a:
     |        type: string

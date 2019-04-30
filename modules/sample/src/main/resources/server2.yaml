@@ -19,7 +19,7 @@ paths:
   /address:
     get:
       operationId: getAddresses
-      x-scala-package: addresses
+      x-jvm-package: addresses
       produces:
         - application/json
       responses:
@@ -32,7 +32,7 @@ paths:
   /address/{id}:
     get:
       operationId: getAddress
-      x-scala-package: addresses
+      x-jvm-package: addresses
       produces:
         - application/json
       parameters:

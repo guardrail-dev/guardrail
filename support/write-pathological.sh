@@ -33,7 +33,7 @@ for c in $(seq "$min" "$max"); do
   cat >>"${target}" <<!
     get:
       operationId: ohNo_${c}
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:

@@ -8,7 +8,7 @@ paths:
   /foo:
     post:
       operationId: doFoo
-      x-scala-package: foo
+      x-jvm-package: foo
       requestBody:
         required: true
         content:
