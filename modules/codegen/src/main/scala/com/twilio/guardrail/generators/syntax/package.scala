@@ -30,7 +30,7 @@ package object syntax {
     def toSnakeCase: String = {
       val noPascal  = "^[A-Z]".r.replaceAllIn(s, _.group(0).toLowerCase(Locale.US))
       val fromCamel = "[A-Z]".r.replaceAllIn(noPascal, "_" + _.group(0))
-      fromCamel.replaceAllLiterally("-", "_")
+      fromCamel.replaceAll("[- ]", "_")
     }
 
     def toDashedCase: String = {
