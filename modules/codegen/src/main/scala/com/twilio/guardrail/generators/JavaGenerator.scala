@@ -9,7 +9,7 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
-import com.google.googlejavaformat.java.Formatter
+import com.google.googlejavaformat.java.{ Formatter, JavaFormatterOptions }
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
@@ -29,9 +29,11 @@ object JavaGenerator {
     case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
   }
 
+  private val formatter = new Formatter(JavaFormatterOptions.builder().style(JavaFormatterOptions.Style.AOSP).build())
+
   def prettyPrintSource(source: CompilationUnit): Array[Byte] = {
     source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
-    new Formatter().formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
+    formatter.formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
   }
 
   def writeClientTree(pkgPath: Path,
