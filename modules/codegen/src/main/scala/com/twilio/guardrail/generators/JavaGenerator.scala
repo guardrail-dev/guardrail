@@ -13,11 +13,13 @@ import com.google.googlejavaformat.java.{ Formatter, JavaFormatterOptions }
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
+import java.util.Locale
 import scala.collection.JavaConverters._
 
 object JavaGenerator {
@@ -105,6 +107,7 @@ object JavaGenerator {
             Target.raiseError(s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
+      case FormatEnumName(enumValue) => Target.pure(enumValue.toSnakeCase.toUpperCase(Locale.US))
       case EmbedArray(tpe) =>
         tpe match {
           case SwaggerUtil.Deferred(tpe) =>
@@ -134,13 +137,13 @@ object JavaGenerator {
         Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseName)
 
       case PureTermName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeReservedWord).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeIdentifier).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
 
       case PureTypeName(tpe) =>
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
 
       case PureMethodParameter(nameStr, tpe, default) =>
-        safeParseSimpleName(nameStr.asString.escapeReservedWord).map(name => new Parameter(util.EnumSet.of(Modifier.FINAL), tpe, name))
+        safeParseSimpleName(nameStr.asString.escapeIdentifier).map(name => new Parameter(util.EnumSet.of(Modifier.FINAL), tpe, name))
 
       case TypeNamesEqual(a, b) =>
         Target.pure(a.asString == b.asString)
@@ -166,7 +169,7 @@ object JavaGenerator {
         Target.pure(term.asString)
 
       case AlterMethodParameterName(param, name) =>
-        safeParseSimpleName(name.asString.escapeReservedWord).map(
+        safeParseSimpleName(name.asString.escapeIdentifier).map(
           new Parameter(
             param.getTokenRange.orElse(null),
             param.getModifiers,

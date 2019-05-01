@@ -9,7 +9,7 @@ package object syntax {
   )
 
   private val toPascalRegexes = List(
-    "[\\._-]([a-z])".r, // dotted, snake, or dashed case
+    "[\\._-]([a-z0-9])".r, // dotted, snake, or dashed case
     "\\s+([a-zA-Z])".r, // spaces
     "^([a-z])".r // initial letter
   )
@@ -22,7 +22,7 @@ package object syntax {
 
     def toCamelCase: String = {
       val fromSnakeOrDashed =
-        "[_-]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
+        "[-_ ]([a-z])".r.replaceAllIn(s, m => m.group(1).toUpperCase(Locale.US))
       "^([A-Z])".r
         .replaceAllIn(fromSnakeOrDashed, m => m.group(1).toLowerCase(Locale.US))
     }
@@ -30,7 +30,7 @@ package object syntax {
     def toSnakeCase: String = {
       val noPascal  = "^[A-Z]".r.replaceAllIn(s, _.group(0).toLowerCase(Locale.US))
       val fromCamel = "[A-Z]".r.replaceAllIn(noPascal, "_" + _.group(0))
-      fromCamel.replaceAllLiterally("-", "_")
+      fromCamel.replaceAll("[- ]", "_")
     }
 
     def toDashedCase: String = {
@@ -38,6 +38,7 @@ package object syntax {
         "^([A-Z])".r.replaceAllIn(s, m => m.group(1).toLowerCase(Locale.US))
       "([A-Z])".r
         .replaceAllIn(lowercased, m => '-' +: m.group(1).toLowerCase(Locale.US))
+        .replaceAllLiterally(" ", "-")
     }
   }
 }
