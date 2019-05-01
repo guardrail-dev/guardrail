@@ -369,7 +369,7 @@ object CirceProtocolGenerator {
   object PolyProtocolTermInterp extends (PolyProtocolTerm[ScalaLanguage, ?] ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[ScalaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
-        def allParents(model: Schema[_]): List[(String, Schema[_], List[Schema[_]])] =
+        def allParents(model: Schema[_]): Target[List[(String, Schema[_], List[Schema[_]])]] =
           model match {
             case elem: ComposedSchema =>
               Option(elem.getAllOf).map(_.asScala.toList).getOrElse(List.empty) match {
@@ -377,15 +377,19 @@ object CirceProtocolGenerator {
                   definitions
                     .collectFirst({
                       case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
-                        (clsName, e, tail) :: allParents(e)
+                        for {
+                          currentParent <- Target.pure((clsName, e, tail))
+                          otherParents <- allParents(e)
+                        } yield {
+                          currentParent :: otherParents
+                        }
                     })
-                    .getOrElse(List.empty)
-                case _ => List.empty
+                    .getOrElse(Target.raiseError(s"Reference ${head.get$ref()} not found among definitions"))
+                case _ => Target.pure(List.empty)
               }
-            case _ => List.empty
+            case _ => Target.pure(List.empty)
           }
-
-        Target.pure(allParents(swagger))
+        allParents(swagger)
 
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
         Target.pure(
