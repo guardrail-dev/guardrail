@@ -9,7 +9,7 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.twilio.guardrail.SwaggerUtil
-import com.twilio.guardrail.extract.{ JvmPackage, ServerRawResponse, TracingLabel }
+import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses

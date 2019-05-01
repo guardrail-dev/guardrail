@@ -419,13 +419,37 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       </td>
     </tr>
     <tr>
+      <td nowrap><code>x-scala-package</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating Scala code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. See also <code>x-jvm-package</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-java-package</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating Java code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. See also <code>x-jvm-package</code>.
+      </td>
+    </tr>
+    <tr>
       <td nowrap><code>x-jvm-package</code></td>
       <td>string</td>
       <td nowrap>clients/servers, paths</td>
       <td>
         A dot-separated package segment concatenated to the end of the supplied
-        <code>packageName</code>. This permits splitting up large specifications
-        into smaller, domain-specific <code>Handler</code>s.
+        <code>packageName</code> when generating JVM code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. Note that <code>x-scala-package</code> and
+        <code>x-java-package</code> take precedence over this property.
       </td>
     </tr>
     <tr>

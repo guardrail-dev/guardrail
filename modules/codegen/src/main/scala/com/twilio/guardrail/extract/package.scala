@@ -16,8 +16,8 @@ package object extract {
   def TracingLabel[F: VendorExtension.VendorExtensible](v: F): Option[String] =
     extractWithFallback[F, String](v, "x-tracing-label", "x-scala-tracing-label")
 
-  def JvmPackage[F: VendorExtension.VendorExtensible](v: F): Option[String] =
-    extractWithFallback[F, String](v, "x-jvm-package", "x-scala-package")
+  def PackageName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
+    extractFromNames[String, F](vendorPrefixes.map(_ + "-package"), v)
 
   def ServerRawResponse[F: VendorExtension.VendorExtensible](v: F): Option[Boolean] =
     VendorExtension(v).extract[Boolean]("x-server-raw-response")

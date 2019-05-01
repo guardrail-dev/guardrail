@@ -3,7 +3,7 @@ package generators
 
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.JvmPackage
+import com.twilio.guardrail.extract.PackageName
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.parameters.Parameter
@@ -40,11 +40,11 @@ object SwaggerGenerator {
           }
         } yield routes.flatten
 
-      case GetClassName(operation) =>
+      case GetClassName(operation, vendorPrefixes) =>
         for {
           _ <- Target.log.debug("SwaggerGenerator", "swagger")(s"getClassName(${operation})")
 
-          pkg = JvmPackage(operation)
+          pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
             .orElse({
               Option(operation.getTags).map { tags =>

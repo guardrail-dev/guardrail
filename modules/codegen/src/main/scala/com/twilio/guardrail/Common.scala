@@ -38,6 +38,7 @@ object Common {
       Sw: SwaggerTerms[L, F]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import F._
+    import Sc._
     import Sw._
 
     for {
@@ -60,7 +61,8 @@ object Common {
 
       paths = swagger.getPathsOpt()
       routes           <- extractOperations(paths)
-      classNamedRoutes <- routes.traverse(route => getClassName(route.operation).map(_ -> route))
+      prefixes         <- vendorPrefixes()
+      classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
         .mapValues(_.map(_._2))

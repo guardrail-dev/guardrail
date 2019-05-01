@@ -4,7 +4,7 @@ package generators
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
-import com.twilio.guardrail.extract.{ JvmPackage, ServerRawResponse, TracingLabel }
+import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ Response, Responses }
