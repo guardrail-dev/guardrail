@@ -378,12 +378,8 @@ object CirceProtocolGenerator {
                   definitions
                     .collectFirst({
                       case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
-                        for {
-                          currentParent <- Target.pure((clsName, e, tail))
-                          otherParents  <- allParents(e)
-                        } yield {
-                          currentParent :: otherParents
-                        }
+                        val thisParent = (clsName, e, tail)
+                        allParents(e).map(otherParents => thisParent :: otherParents)
                     })
                     .getOrElse(Target.raiseError(s"Reference ${head.get$ref()} not found among definitions"))
                 case _ => Target.pure(List.empty)
