@@ -504,11 +504,10 @@ object Http4sServerGenerator {
           case Nil        => responseInMatch
           case generators => q"for {..${generators :+ enumerator"response <- $responseInMatch"}} yield response"
         }
-        val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
+        val routeBody    = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
         val responseName = generateSafeRouteValName("response", pathArgs)
 
         val responseComputationDefn = Defn.Val(Nil, List(Pat.Var(name = Term.Name(responseName))), None, q"{$routeBody}")
-
 
         val fullRoute: Case =
           p"""case req @ $fullRouteWithTracingMatcher => 
@@ -677,15 +676,13 @@ object Http4sServerGenerator {
         q"val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }
 
-    
-    
     def generateTracingExtractor(operationId: String, tracingField: Term) =
       q"""
          object ${Term.Name(s"usingFor${operationId.capitalize}")} {
            def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
          }
        """
-    
+
     def generateSafeRouteValName(suggested: String, reserved: List[ScalaParameter[ScalaLanguage]]): String = {
       def iter(i: Int): String = {
         val withIter = suggested + i
