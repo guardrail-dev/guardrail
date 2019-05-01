@@ -4,6 +4,7 @@ import cats.syntax.either._
 import cats.~>
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
@@ -50,6 +51,7 @@ object ScalaGenerator {
             Target.raiseError[Term.Select](s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
+      case FormatEnumName(enumValue) => Target.pure(enumValue.toPascalCase)
       case EmbedArray(tpe) =>
         tpe match {
           case SwaggerUtil.Deferred(tpe) =>

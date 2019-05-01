@@ -103,7 +103,7 @@ object JacksonGenerator {
           case (value, termName, _) =>
             new EnumConstantDeclaration(
               new NodeList(),
-              new SimpleName(termName.getIdentifier.toSnakeCase.toUpperCase(Locale.US)),
+              new SimpleName(termName.getIdentifier),
               new NodeList(new StringLiteralExpr(value)),
               new NodeList()
             )
@@ -316,7 +316,7 @@ object JacksonGenerator {
                 ).mapN((_, _))
               )(Function.const(Target.pure((tpe, defaultValue))) _)
             (finalDeclType, finalDefaultValue) = _declDefaultPair
-            term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeReservedWord}")
+            term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
             dep = classDep.filterNot(_.value == clsName) // Filter out our own class name
           } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull, defaultValue)
         }

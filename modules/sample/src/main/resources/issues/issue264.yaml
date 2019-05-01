@@ -1,0 +1,23 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+paths:
+  /foo:
+    get:
+      operationId: getFoo
+      parameters:
+        - in: query
+          name: FooEnum
+          $ref: "#/components/schemas/FooEnum"
+          required: true
+      responses:
+        204:
+          description: OK
+components:
+  schemas:
+    FooEnum:
+      type: string
+      enum:
+        - foo-bar-1
+        - baz-quux-2-flurb
+#        - 3-moo-cow

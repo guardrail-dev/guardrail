@@ -25,6 +25,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
 
   def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): Free[F, L#TermSelect] =
     Free.inject[ScalaTerm[L, ?], F](LookupEnumDefaultValue(tpe, defaultValue, values))
+  def formatEnumName(enumValue: String): Free[F, String] = Free.inject[ScalaTerm[L, ?], F](FormatEnumName(enumValue))
 
   def embedArray(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedArray(tpe))
   def embedMap(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]]   = Free.inject[ScalaTerm[L, ?], F](EmbedMap(tpe))

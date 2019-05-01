@@ -170,6 +170,19 @@ object Java {
       } else {
         s
       }
+
+    def escapeIdentifier: String = {
+      val reservedEscaped = s.escapeReservedWord
+      if (reservedEscaped.nonEmpty && reservedEscaped.charAt(0) >= '0' && reservedEscaped.charAt(0) <= '9') "_" + reservedEscaped
+      else reservedEscaped
+    }
+
+    def unescapeIdentifier: String = {
+      val removedLeadingUnderscore =
+        if (s.startsWith("_") && s.length >= 2 && s.charAt(1) >= '0' && s.charAt(1) <= '9') s.substring(1)
+        else s
+      removedLeadingUnderscore.unescapeReservedWord
+    }
   }
 
   def sortDefinitions(defns: List[BodyDeclaration[_ <: BodyDeclaration[_]]]): List[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
