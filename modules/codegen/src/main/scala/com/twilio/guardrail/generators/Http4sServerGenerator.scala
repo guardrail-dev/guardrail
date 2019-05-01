@@ -77,7 +77,7 @@ object Http4sServerGenerator {
       case GetExtraRouteParams(tracing) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
-          handlerWrapper = param"""handlerWrapper: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+          handlerWrapper = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]]"""
           tracing <- if (tracing) {
             Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
           } else Target.pure(Option.empty)
@@ -505,9 +505,16 @@ object Http4sServerGenerator {
           case generators => q"for {..${generators :+ enumerator"response <- $responseInMatch"}} yield response"
         }
         val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
+        val responseName = generateSafeRouteValName("response", pathArgs)
+
+        val responseComputationDefn = Defn.Val(Nil, List(Pat.Var(name = Term.Name(responseName))), None, q"{$routeBody}")
+
+
         val fullRoute: Case =
           p"""case req @ $fullRouteWithTracingMatcher => 
-             handlerWrapper($operationId, req, {$routeBody})
+             $responseComputationDefn
+             
+             mapRoute($operationId, req, ${Term.Name(responseName)})
             """
 
         val respond: List[List[Term.Param]] = List(List(param"respond: $responseCompanionTerm.type"))
@@ -670,11 +677,22 @@ object Http4sServerGenerator {
         q"val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }
 
+    
+    
     def generateTracingExtractor(operationId: String, tracingField: Term) =
       q"""
          object ${Term.Name(s"usingFor${operationId.capitalize}")} {
            def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
          }
        """
+    
+    def generateSafeRouteValName(suggested: String, reserved: List[ScalaParameter[ScalaLanguage]]): String = {
+      def iter(i: Int): String = {
+        val withIter = suggested + i
+        reserved.find(_.argName.value == withIter).map(_ => iter(i + 1)).getOrElse(withIter)
+      }
+      iter(0)
+    }
+
   }
 }
