@@ -80,6 +80,33 @@ object JacksonGenerator {
         )
       )
 
+  private def dtoConstructorBody(superCall: Expression, terms: List[ParameterTerm]): BlockStmt =
+    new BlockStmt(
+      (
+        List[Statement](new ExpressionStmt(superCall)) ++
+          terms
+            .map(
+              term =>
+                new ExpressionStmt(
+                  new AssignExpr(
+                    new FieldAccessExpr(new ThisExpr, term.parameterName),
+                    term.fieldType match {
+                      case _: PrimitiveType => new NameExpr(term.parameterName)
+                      case ft if ft.isOptional =>
+                        new ConditionalExpr(
+                          new BinaryExpr(new NameExpr(term.parameterName), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
+                          new MethodCallExpr(new NameExpr("java.util.Optional"), "empty"),
+                          new NameExpr(term.parameterName)
+                        )
+                      case _ => new MethodCallExpr("requireNonNull", new NameExpr(term.parameterName))
+                    },
+                    AssignExpr.Operator.ASSIGN
+                  )
+              )
+            )
+      ).toNodeList
+    )
+
   private val HASH_MAP_TYPE_DIAMONDED = JavaParser
     .parseClassOrInterfaceType("java.util.HashMap")
     .setTypeArguments(new NodeList[Type])
@@ -391,26 +418,7 @@ object JacksonGenerator {
             }
           }): _*
         )
-        primaryConstructor.setBody(
-          new BlockStmt(
-            (
-              List[Statement](new ExpressionStmt(superCall)) ++
-                terms.map({
-                  case ParameterTerm(_, parameterName, fieldType, _, _) =>
-                    new ExpressionStmt(
-                      new AssignExpr(
-                        new FieldAccessExpr(new ThisExpr, parameterName),
-                        fieldType match {
-                          case _: PrimitiveType => new NameExpr(parameterName)
-                          case _                => new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
-                        },
-                        AssignExpr.Operator.ASSIGN
-                      )
-                    )
-                })
-            ).toNodeList
-          )
-        )
+        primaryConstructor.setBody(dtoConstructorBody(superCall, terms))
 
         terms.foreach(addParameterGetter(dtoClass, _))
 
@@ -887,27 +895,7 @@ object JacksonGenerator {
               .map(term => new Parameter(util.EnumSet.of(FINAL), term.fieldType, new SimpleName(term.parameterName)))
               .toNodeList
           )
-          .setBody(
-            new BlockStmt(
-              (
-                List[Statement](new ExpressionStmt(superCall)) ++
-                  (requiredTerms ++ optionalTerms)
-                    .map(
-                      term =>
-                        new ExpressionStmt(
-                          new AssignExpr(
-                            new FieldAccessExpr(new ThisExpr, term.parameterName),
-                            term.fieldType match {
-                              case _: PrimitiveType => new NameExpr(term.parameterName)
-                              case _                => new MethodCallExpr("requireNonNull", new NameExpr(term.parameterName))
-                            },
-                            AssignExpr.Operator.ASSIGN
-                          )
-                      )
-                    )
-              ).toNodeList
-            )
-          )
+          .setBody(dtoConstructorBody(superCall, requiredTerms ++ optionalTerms))
 
         terms.foreach(addParameterGetter(abstractClass, _))
 
