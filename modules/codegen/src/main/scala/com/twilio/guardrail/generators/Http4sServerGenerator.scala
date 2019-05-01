@@ -77,12 +77,12 @@ object Http4sServerGenerator {
       case GetExtraRouteParams(tracing) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
-          handlerWrapper = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+          mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
           tracing <- if (tracing) {
             Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
           } else Target.pure(Option.empty)
         } yield {
-          tracing.toList ::: List(handlerWrapper)
+          tracing.toList ::: List(mapRoute)
         }
 
       case GenerateSupportDefinitions(tracing) =>
