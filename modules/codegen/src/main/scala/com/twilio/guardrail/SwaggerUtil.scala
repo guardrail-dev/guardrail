@@ -140,7 +140,7 @@ object SwaggerUtil {
 
   def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
     for {
-      prefixes <- S.customTypePrefixes()
+      prefixes <- S.vendorPrefixes()
     } yield extractFromNames[String, A](prefixes.map(_ + "-type"), v)
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
