@@ -104,7 +104,8 @@ object CirceProtocolGenerator {
         (swagger match {
           case m: ObjectSchema => Target.pure(Option(m.getProperties))
           case comp: ComposedSchema =>
-            val extractedProps = Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).map(e => Option(e.getProperties).map(_.asScala.toMap)).collect { case Some(e) => e }
+            val extractedProps =
+              Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).map(e => Option(e.getProperties).map(_.asScala.toMap)).collect { case Some(e) => e }
             val mergedProps = extractedProps.fold(Map.empty)(_ ++ _)
             Target.pure(Option(mergedProps.asJava))
           case comp: Schema[_] if Option(comp.get$ref).isDefined =>
@@ -379,7 +380,7 @@ object CirceProtocolGenerator {
                       case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
                         for {
                           currentParent <- Target.pure((clsName, e, tail))
-                          otherParents <- allParents(e)
+                          otherParents  <- allParents(e)
                         } yield {
                           currentParent :: otherParents
                         }
