@@ -39,6 +39,12 @@ object Scala {
       }
   }
 
+  val GENERATED_CODE_COMMENT: String =
+    s"""/*
+       |${GENERATED_CODE_COMMENT_LINES.mkString(" * ", "\n| * ", "")}
+       | */
+       |""".stripMargin
+
   def companionForStaticDefns(staticDefns: StaticDefns[ScalaLanguage]): Defn.Object =
     q"""
     object ${Term.Name(staticDefns.className)} {
