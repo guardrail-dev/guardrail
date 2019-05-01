@@ -1,6 +1,12 @@
 package com.twilio.guardrail
 
+import cats.instances.list._
+import cats.syntax.foldable._
+
 package object extract {
+  private def extractFromNames[F: VendorExtension.VendorExtensible, T: Extractable](v: F, names: List[String]): Option[T] =
+    names.collectFirstSome(VendorExtension(v).extract[T](_))
+
   private def extractWithFallback[F: VendorExtension.VendorExtensible, T: Extractable](v: F, name: String, fallbackName: String): Option[T] = {
     val ve = VendorExtension(v)
     ve.extract[T](name)
@@ -13,11 +19,14 @@ package object extract {
       })
   }
 
+  def CustomTypeName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
+    extractFromNames[F, String](v, vendorPrefixes.map(_ + "-type"))
+
   def TracingLabel[F: VendorExtension.VendorExtensible](v: F): Option[String] =
     extractWithFallback[F, String](v, "x-tracing-label", "x-scala-tracing-label")
 
   def PackageName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
-    extractFromNames[String, F](vendorPrefixes.map(_ + "-package"), v)
+    extractFromNames[F, String](v, vendorPrefixes.map(_ + "-package"))
 
   def ServerRawResponse[F: VendorExtension.VendorExtensible](v: F): Option[Boolean] =
     VendorExtension(v).extract[Boolean]("x-server-raw-response")
@@ -27,9 +36,4 @@ package object extract {
 
   def FileHashAlgorithm[F: VendorExtension.VendorExtensible](v: F): Option[String] =
     extractWithFallback[F, String](v, "x-file-hash", "x-scala-file-hash")
-
-  def extractFromNames[T: Extractable, F: VendorExtension.VendorExtensible](names: List[String], v: F): Option[T] =
-    names.foldLeft(Option.empty[T])(
-      (accum, name) => accum.orElse(VendorExtension(v).extract[T](name))
-    )
 }
