@@ -57,9 +57,8 @@ object JacksonGenerator {
     parentOpt.foreach({ parent =>
       val directParent = JavaParser.parseClassOrInterfaceType(parent.clsName)
       val otherParents = parent.interfaces.map(JavaParser.parseClassOrInterfaceType)
-      cls.setExtendedTypes(
-        new NodeList((directParent +: otherParents): _*)
-      )
+      cls.setExtendedTypes(new NodeList(directParent))
+      cls.setImplementedTypes(otherParents.toNodeList)
     })
 
   private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[JavaLanguage]])(f: Type => Target[Type]): Option[Target[Type]] =
