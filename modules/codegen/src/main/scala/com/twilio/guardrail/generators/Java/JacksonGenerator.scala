@@ -643,7 +643,7 @@ object JacksonGenerator {
         optionalTerms.foreach({
           case ParameterTerm(_, parameterName, fieldType, parameterType, _) =>
             builderClass
-              .addMethod(s"with${parameterName.capitalize}", PUBLIC)
+              .addMethod(s"with${parameterName.unescapeIdentifier.capitalize}", PUBLIC)
               .setType(BUILDER_TYPE)
               .addParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
               .setBody(
@@ -667,7 +667,7 @@ object JacksonGenerator {
 
             if (fieldType.isOptional && !parameterType.isOptional) {
               builderClass
-                .addMethod(s"with${parameterName.capitalize}", PUBLIC)
+                .addMethod(s"with${parameterName.unescapeIdentifier.capitalize}", PUBLIC)
                 .setType(BUILDER_TYPE)
                 .addParameter(new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName)))
                 .setBody(
