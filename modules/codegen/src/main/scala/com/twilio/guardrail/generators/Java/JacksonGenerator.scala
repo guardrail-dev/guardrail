@@ -103,7 +103,7 @@ object JacksonGenerator {
           case (value, termName, _) =>
             new EnumConstantDeclaration(
               new NodeList(),
-              new SimpleName(termName.getIdentifier.toSnakeCase.toUpperCase(Locale.US)),
+              new SimpleName(termName.getIdentifier),
               new NodeList(new StringLiteralExpr(value)),
               new NodeList()
             )
@@ -316,7 +316,7 @@ object JacksonGenerator {
                 ).mapN((_, _))
               )(Function.const(Target.pure((tpe, defaultValue))) _)
             (finalDeclType, finalDefaultValue) = _declDefaultPair
-            term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeReservedWord}")
+            term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
             dep = classDep.filterNot(_.value == clsName) // Filter out our own class name
           } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull, defaultValue)
         }
@@ -555,6 +555,20 @@ object JacksonGenerator {
           )
         )
 
+        dtoClass
+          .addMethod("builder", PUBLIC, STATIC)
+          .setType(BUILDER_TYPE)
+          .setParameters(new NodeList(new Parameter(util.EnumSet.of(FINAL), dtoClassType, new SimpleName("template"))))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ReturnStmt(
+                  new ObjectCreationExpr(null, BUILDER_TYPE, new NodeList(new NameExpr("template")))
+                )
+              )
+            )
+          )
+
         val builderClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, "Builder")
 
         requiredTerms.foreach({
@@ -605,11 +619,31 @@ object JacksonGenerator {
           )
         )
 
+        builderClass
+          .addConstructor(PRIVATE)
+          .setParameters(new NodeList(new Parameter(util.EnumSet.of(FINAL), dtoClassType, new SimpleName("template"))))
+          .setBody(
+            new BlockStmt(
+              terms
+                .map({
+                  case ParameterTerm(_, parameterName, _, _, _) =>
+                    new ExpressionStmt(
+                      new AssignExpr(
+                        new FieldAccessExpr(new ThisExpr, parameterName),
+                        new FieldAccessExpr(new NameExpr("template"), parameterName),
+                        AssignExpr.Operator.ASSIGN
+                      )
+                    ): Statement
+                })
+                .toNodeList
+            )
+          )
+
         // TODO: leave out with${name}() if readOnlyKey?
         optionalTerms.foreach({
           case ParameterTerm(_, parameterName, fieldType, parameterType, _) =>
             builderClass
-              .addMethod(s"with${parameterName.capitalize}", PUBLIC)
+              .addMethod(s"with${parameterName.unescapeIdentifier.capitalize}", PUBLIC)
               .setType(BUILDER_TYPE)
               .addParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
               .setBody(
@@ -633,7 +667,7 @@ object JacksonGenerator {
 
             if (fieldType.isOptional && !parameterType.isOptional) {
               builderClass
-                .addMethod(s"with${parameterName.capitalize}", PUBLIC)
+                .addMethod(s"with${parameterName.unescapeIdentifier.capitalize}", PUBLIC)
                 .setType(BUILDER_TYPE)
                 .addParameter(new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName)))
                 .setBody(

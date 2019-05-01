@@ -3,6 +3,7 @@ package com.twilio.guardrail.generators.syntax
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.body._
+import com.github.javaparser.ast.comments.{ BlockComment, Comment }
 import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
@@ -93,6 +94,8 @@ object Java {
   val THROWABLE_TYPE: ClassOrInterfaceType       = JavaParser.parseClassOrInterfaceType("Throwable")
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")
 
+  val GENERATED_CODE_COMMENT: Comment = new BlockComment(GENERATED_CODE_COMMENT_LINES.mkString("\n * ", "\n * ", "\n"))
+
   // from https://en.wikipedia.org/wiki/List_of_Java_keywords
   private val reservedWords = Set(
     "abstract",
@@ -167,6 +170,19 @@ object Java {
       } else {
         s
       }
+
+    def escapeIdentifier: String = {
+      val reservedEscaped = s.escapeReservedWord
+      if (reservedEscaped.nonEmpty && reservedEscaped.charAt(0) >= '0' && reservedEscaped.charAt(0) <= '9') "_" + reservedEscaped
+      else reservedEscaped
+    }
+
+    def unescapeIdentifier: String = {
+      val removedLeadingUnderscore =
+        if (s.startsWith("_") && s.length >= 2 && s.charAt(1) >= '0' && s.charAt(1) <= '9') s.substring(1)
+        else s
+      removedLeadingUnderscore.unescapeReservedWord
+    }
   }
 
   def sortDefinitions(defns: List[BodyDeclaration[_ <: BodyDeclaration[_]]]): List[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
