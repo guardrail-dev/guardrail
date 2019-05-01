@@ -1,3 +1,28 @@
+Migrating to 0.49.0
+===================
+
+0.49.0 may contain breaking changes for all clients and servers
+---------------------------------------------------------------
+
+The case converters (the code that takes identifiers and turns them into camelCase, snake_case, etc.) has been rewritten to fix bugs and inconsistencies. As a result, some identifiers (parameter, property, class, etc. names) may be slightly different from what they were before and will need to be updated.
+
+This is especially true in Scala code, where invalid identifiers were simply backtick-escaped.  For example, the following specification:
+
+```
+parameters:
+  - name: X-Foo-Bar
+    in: header
+    type: string
+```
+
+which defines a header method parameter, would have generated a method signature such as:
+
+```
+def someMethod(`x-Foo-Bar`: Option[String])
+```
+
+With this change, the parameter name will be the more idiomatic (and backtick-free) `xFooBar`.
+
 Migrating to 0.42.0
 ===================
 
