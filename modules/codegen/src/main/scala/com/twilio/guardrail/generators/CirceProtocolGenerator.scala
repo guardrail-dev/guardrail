@@ -377,7 +377,7 @@ object CirceProtocolGenerator {
                   definitions
                     .collectFirst({
                       case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
-                        (clsName, e, tail.toList) :: allParents(e)
+                        (clsName, e, tail) :: allParents(e)
                     })
                     .getOrElse(List.empty)
                 case _ => List.empty
