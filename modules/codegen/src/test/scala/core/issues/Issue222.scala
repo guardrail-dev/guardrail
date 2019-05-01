@@ -39,7 +39,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |  Request2:
                            |    description: Request fields with id
                            |    allOf:
-                           |      - "$$ref": "#/definitions/RequestFields"
+                           |      - "$$ref": "#/definitions/RequestFields2"
                            |      - type: object
                            |        properties:
                            |          id:
@@ -52,7 +52,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |    description: Request fields
                            |    type: object
                            |    properties:
-                           |      state:
+                           |      state2:
                            |        type: integer
                            |        
                            |""".stripMargin
@@ -110,16 +110,16 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestTpe = t"""Request2"""
 
-    val expectedRequestCls = q"""case class Request2(state: Option[BigInt] = None, id: Option[String] = None, id2: Option[String] = None)"""
+    val expectedRequestCls = q"""case class Request2(state2: Option[BigInt] = None, id: Option[String] = None, id2: Option[String] = None)"""
 
     val expectedRequestEncoder = q"""
          implicit val encodeRequest2 = {
            val readOnlyKeys = Set[String]()
-           Encoder.forProduct3("state", "id", "id2")((o: Request2) => (o.state, o.id, o.id2)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key))) 
+           Encoder.forProduct3("state2", "id", "id2")((o: Request2) => (o.state2, o.id, o.id2)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key))) 
          }
       """
     val expectedRequestDecoder = q"""
-         implicit val decodeRequest2 = Decoder.forProduct3("state", "id", "id2")(Request2.apply _)
+         implicit val decodeRequest2 = Decoder.forProduct3("state2", "id", "id2")(Request2.apply _)
       """
 
 
@@ -129,18 +129,18 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
     compare(reqDecoder, expectedRequestDecoder)
 
     val expectedFieldsTpe = t"""RequestFields2"""
-    val expectedFieldsCls = q"""case class RequestFields2(state: Option[BigInt] = None)"""
+    val expectedFieldsCls = q"""case class RequestFields2(state2: Option[BigInt] = None)"""
 
     val List(fieldsEncoder, fieldsDecoder) = requestFields.staticDefns.definitions
 
     val expectedFieldsEncoder =  q"""
          implicit val encodeRequestFields2 = {
            val readOnlyKeys = Set[String]()
-           Encoder.forProduct1("state")((o: RequestFields2) => o.state).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+           Encoder.forProduct1("state2")((o: RequestFields2) => o.state2).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
          }
       """
     val expectedFieldsDecoder = q"""
-         implicit val decodeRequestFields2 = Decoder.forProduct1("state")(RequestFields2.apply _)
+         implicit val decodeRequestFields2 = Decoder.forProduct1("state2")(RequestFields2.apply _)
       """
 
     compare(requestFields.tpe, expectedFieldsTpe)
@@ -153,8 +153,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
 
   private def compare(t1: Tree, t2: Tree): Assertion = {
-    println(s"expected: ${t1.syntax}")
-    println(s"actual: ${t2.syntax}")
     t1.structure shouldEqual t2.structure
   }
 }
