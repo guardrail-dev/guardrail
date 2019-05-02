@@ -285,7 +285,7 @@ object DropwizardServerGenerator {
           Target.pure(Option.empty)
         }
 
-      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems) =>
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
         for {
           resourceType <- safeParseClassOrInterfaceType(resourceName)
           handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"

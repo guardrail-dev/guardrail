@@ -1,10 +1,10 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import com.twilio.guardrail.generators.ScalaParameters
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
-import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import io.swagger.v3.oas.models.Operation
 
 sealed trait ServerTerm[L <: LA, T]
@@ -13,7 +13,8 @@ case class GenerateRoutes[L <: LA](tracing: Boolean,
                                    resourceName: String,
                                    basePath: Option[String],
                                    routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
-                                   protocolElems: List[StrictProtocolElems[L]])
+                                   protocolElems: List[StrictProtocolElems[L]],
+                                   securitySchemes: Map[String, SecurityScheme])
     extends ServerTerm[L, RenderedRoutes[L]]
 case class GetExtraRouteParams[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#MethodParameter]]
 case class GenerateResponseDefinitions[L <: LA](operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]])

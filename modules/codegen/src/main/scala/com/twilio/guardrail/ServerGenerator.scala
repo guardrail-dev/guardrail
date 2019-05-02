@@ -10,7 +10,8 @@ import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityScheme, SwaggerTerms }
+import scala.collection.JavaConverters._
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
@@ -41,6 +42,10 @@ object ServerGenerator {
     for {
       prefixes <- vendorPrefixes()
       routes   <- extractOperations(paths)
+      securitySchemes <- Option(swagger.getComponents)
+        .flatMap(components => Option(components.getSecuritySchemes))
+        .map(_.asScala.toMap)
+        .fold(Free.pure[F, Map[String, SecurityScheme]](Map.empty[String, SecurityScheme]))(extractSecuritySchemes(_, prefixes))
       classNamedRoutes <- routes
         .traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
@@ -67,7 +72,7 @@ object ServerGenerator {
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes   <- generateRoutes(context.tracing, resourceName, basePath, serverOperations, protocolElems)
+            renderedRoutes   <- generateRoutes(context.tracing, resourceName, basePath, serverOperations, protocolElems, securitySchemes)
             handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions, responseDefinitions.flatten)
             extraRouteParams <- getExtraRouteParams(context.tracing)
             classSrc <- renderClass(

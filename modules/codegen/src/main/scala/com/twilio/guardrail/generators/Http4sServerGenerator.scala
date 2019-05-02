@@ -43,7 +43,7 @@ object Http4sServerGenerator {
           } else Target.pure(None)
         } yield res
 
-      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems) =>
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
         for {
           renderedRoutes <- routes
             .traverse {
