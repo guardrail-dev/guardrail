@@ -17,10 +17,12 @@ import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.Response
+import com.twilio.guardrail.protocol.terms.{ Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.responses.ApiResponse
 import java.util
 import scala.collection.JavaConverters._
@@ -250,6 +252,214 @@ object DropwizardServerGenerator {
     }
   }
 
+  private def generateRoute(operation: Operation,
+                            path: String,
+                            commonPathPrefix: List[String],
+                            httpMethod: HttpMethod,
+                            parameters: ScalaParameters[JavaLanguage],
+                            responses: Responses[JavaLanguage],
+                            protocolElems: List[StrictProtocolElems[JavaLanguage]],
+                            handlerName: String): Target[(MethodDeclaration, MethodDeclaration)] = {
+    val operationId = operation.getOperationId
+    parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
+
+    val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
+      .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
+
+    val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
+    if (pathSuffix.nonEmpty && pathSuffix != "/") {
+      method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
+    }
+
+    val consumes = getBestConsumes(operation.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
+      .orElse({
+        if (parameters.formParams.nonEmpty) {
+          if (parameters.formParams.exists(_.isFile)) {
+            Some(RouteMeta.MultipartFormData)
+          } else {
+            Some(RouteMeta.UrlencodedFormData)
+          }
+        } else if (parameters.bodyParams.nonEmpty) {
+          Some(RouteMeta.ApplicationJson)
+        } else {
+          None
+        }
+      })
+    consumes
+      .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
+      .foreach(method.addAnnotation)
+
+    val successResponses =
+      operation.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
+    val produces = getBestProduces(operation.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
+    produces
+      .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
+      .foreach(method.addAnnotation)
+
+    def addParamAnnotation(template: Parameter, annotationName: String, argName: String): Parameter = {
+      val parameter = template.clone()
+      parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(argName)))
+      parameter
+    }
+
+    val methodParams: List[Parameter] = List(
+      (parameters.pathParams, "PathParam"),
+      (parameters.headerParams, "HeaderParam"),
+      (parameters.queryStringParams, "QueryParam"),
+      (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
+    ).flatMap({
+      case (params, annotationName) =>
+        params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
+    }) ++ parameters.bodyParams.map(_.param)
+
+    methodParams.foreach(method.addParameter)
+    method.addParameter(
+      new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
+    )
+
+    val (responseType, resultResumeBody) =
+      ServerRawResponse(operation)
+        .filter(_ == true)
+        .fold({
+          val responseName = s"${handlerName}.${operationId.capitalize}Response"
+
+          val entitySetterIfTree = NonEmptyList
+            .fromList(responses.value.collect({
+              case Response(statusCodeName, Some(_)) => statusCodeName
+            }))
+            .map(_.reverse.foldLeft[IfStmt](null)({
+              case (nextIfTree, statusCodeName) =>
+                val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
+                new IfStmt(
+                  new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                  new BlockStmt(
+                    new NodeList(
+                      new ExpressionStmt(
+                        new MethodCallExpr(
+                          new NameExpr("builder"),
+                          "entity",
+                          new NodeList[Expression](
+                            new MethodCallExpr(
+                              new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                              "getEntityBody"
+                            )
+                          )
+                        )
+                      )
+                    )
+                  ),
+                  nextIfTree
+                )
+            }))
+
+          (
+            JavaParser.parseClassOrInterfaceType(responseName),
+            (
+              List[Statement](
+                new ExpressionStmt(
+                  new VariableDeclarationExpr(
+                    new VariableDeclarator(
+                      RESPONSE_BUILDER_TYPE,
+                      "builder",
+                      new MethodCallExpr(new NameExpr("Response"),
+                                         "status",
+                                         new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
+                    ),
+                    FINAL
+                  )
+                )
+              ) ++ entitySetterIfTree ++ List(
+                new ExpressionStmt(
+                  new MethodCallExpr(new NameExpr("asyncResponse"), "resume", new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
+                )
+              )
+            ).toNodeList
+          )
+        })({ _ =>
+          (
+            RESPONSE_TYPE,
+            new NodeList(
+              new ExpressionStmt(
+                new MethodCallExpr(
+                  new NameExpr("asyncResponse"),
+                  "resume",
+                  new NodeList[Expression](new NameExpr("result"))
+                )
+              )
+            )
+          )
+        })
+
+    val whenCompleteLambda = new LambdaExpr(
+      new NodeList(
+        new Parameter(util.EnumSet.of(FINAL), responseType, new SimpleName("result")),
+        new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("err"))
+      ),
+      new BlockStmt(
+        new NodeList(
+          new IfStmt(
+            new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
+            new BlockStmt(
+              new NodeList(
+                new ExpressionStmt(
+                  new MethodCallExpr(
+                    new NameExpr("logger"),
+                    "error",
+                    new NodeList[Expression](
+                      new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
+                      new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
+                      new MethodCallExpr(new NameExpr("err"), "getMessage"),
+                      new NameExpr("err")
+                    )
+                  )
+                ),
+                new ExpressionStmt(
+                  new MethodCallExpr(
+                    new NameExpr("asyncResponse"),
+                    "resume",
+                    new NodeList[Expression](
+                      new MethodCallExpr(new MethodCallExpr(
+                                           new NameExpr("Response"),
+                                           "status",
+                                           new NodeList[Expression](new IntegerLiteralExpr(500))
+                                         ),
+                                         "build")
+                    )
+                  )
+                )
+              )
+            ),
+            new BlockStmt(resultResumeBody)
+          )
+        )
+      ),
+      true
+    )
+
+    val handlerCall = new MethodCallExpr(
+      new FieldAccessExpr(new ThisExpr, "handler"),
+      operationId,
+      new NodeList[Expression](methodParams.map(param => new NameExpr(param.getName.asString)): _*)
+    )
+
+    method.setBody(
+      new BlockStmt(
+        new NodeList(
+          new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
+        )
+      )
+    )
+
+    val futureResponseType = completionStageType(responseType.clone())
+    val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
+    (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({ parameter =>
+      handlerMethodSig.addParameter(parameter.param.clone())
+    })
+    handlerMethodSig.setBody(null)
+
+    Target.pure((method, handlerMethodSig))
+  }
+
   object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
@@ -290,218 +500,18 @@ object DropwizardServerGenerator {
           resourceType <- safeParseClassOrInterfaceType(resourceName)
           handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
           handlerType <- safeParseClassOrInterfaceType(handlerName)
-        } yield {
-          val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-          val commonPathPrefix   = findPathPrefix(routes.map(_._3.path))
 
-          val (routeMethods, handlerMethodSigs) = routes
-            .map({
-              case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation), parameters, responses) =>
-                parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
+          basePathComponents = basePath.toList.flatMap(splitPathComponents)
+          commonPathPrefix   = findPathPrefix(routes.map(_._3.path))
 
-                val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
-                  .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
-
-                val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
-                if (pathSuffix.nonEmpty && pathSuffix != "/") {
-                  method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
-                }
-
-                val consumes = getBestConsumes(operation.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
-                  .orElse({
-                    if (parameters.formParams.nonEmpty) {
-                      if (parameters.formParams.exists(_.isFile)) {
-                        Some(RouteMeta.MultipartFormData)
-                      } else {
-                        Some(RouteMeta.UrlencodedFormData)
-                      }
-                    } else if (parameters.bodyParams.nonEmpty) {
-                      Some(RouteMeta.ApplicationJson)
-                    } else {
-                      None
-                    }
-                  })
-                consumes
-                  .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
-                  .foreach(method.addAnnotation)
-
-                val successResponses =
-                  operation.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
-                val produces = getBestProduces(operation.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
-                produces
-                  .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
-                  .foreach(method.addAnnotation)
-
-                def addParamAnnotation(template: Parameter, annotationName: String, argName: String): Parameter = {
-                  val parameter = template.clone()
-                  parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(argName)))
-                  parameter
-                }
-
-                val methodParams: List[Parameter] = List(
-                  (parameters.pathParams, "PathParam"),
-                  (parameters.headerParams, "HeaderParam"),
-                  (parameters.queryStringParams, "QueryParam"),
-                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
-                ).flatMap({
-                  case (params, annotationName) =>
-                    params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
-                }) ++ parameters.bodyParams.map(_.param)
-
-                methodParams.foreach(method.addParameter)
-                method.addParameter(
-                  new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
-                )
-
-                val (responseName, responseType, resultResumeBody) =
-                  ServerRawResponse(operation)
-                    .filter(_ == true)
-                    .fold({
-                      val responseName = s"${handlerName}.${operationId.capitalize}Response"
-
-                      val entitySetterIfTree = NonEmptyList
-                        .fromList(responses.value.collect({
-                          case Response(statusCodeName, Some(_)) => statusCodeName
-                        }))
-                        .map(_.reverse.foldLeft[IfStmt](null)({
-                          case (nextIfTree, statusCodeName) =>
-                            val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
-                            new IfStmt(
-                              new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
-                              new BlockStmt(
-                                new NodeList(
-                                  new ExpressionStmt(
-                                    new MethodCallExpr(
-                                      new NameExpr("builder"),
-                                      "entity",
-                                      new NodeList[Expression](
-                                        new MethodCallExpr(
-                                          new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
-                                          "getEntityBody"
-                                        )
-                                      )
-                                    )
-                                  )
-                                )
-                              ),
-                              nextIfTree
-                            )
-                        }))
-
-                      (
-                        responseName,
-                        JavaParser.parseClassOrInterfaceType(responseName),
-                        (
-                          List[Statement](
-                            new ExpressionStmt(
-                              new VariableDeclarationExpr(
-                                new VariableDeclarator(
-                                  RESPONSE_BUILDER_TYPE,
-                                  "builder",
-                                  new MethodCallExpr(new NameExpr("Response"),
-                                                     "status",
-                                                     new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
-                                ),
-                                FINAL
-                              )
-                            )
-                          ) ++ entitySetterIfTree ++ List(
-                            new ExpressionStmt(
-                              new MethodCallExpr(new NameExpr("asyncResponse"),
-                                                 "resume",
-                                                 new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
-                            )
-                          )
-                        ).toNodeList
-                      )
-                    })({ _ =>
-                      (
-                        "Response",
-                        RESPONSE_TYPE,
-                        new NodeList(
-                          new ExpressionStmt(
-                            new MethodCallExpr(
-                              new NameExpr("asyncResponse"),
-                              "resume",
-                              new NodeList[Expression](new NameExpr("result"))
-                            )
-                          )
-                        )
-                      )
-                    })
-
-                val whenCompleteLambda = new LambdaExpr(
-                  new NodeList(
-                    new Parameter(util.EnumSet.of(FINAL), responseType, new SimpleName("result")),
-                    new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("err"))
-                  ),
-                  new BlockStmt(
-                    new NodeList(
-                      new IfStmt(
-                        new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
-                        new BlockStmt(
-                          new NodeList(
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new NameExpr("logger"),
-                                "error",
-                                new NodeList[Expression](
-                                  new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
-                                  new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
-                                  new MethodCallExpr(new NameExpr("err"), "getMessage"),
-                                  new NameExpr("err")
-                                )
-                              )
-                            ),
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new NameExpr("asyncResponse"),
-                                "resume",
-                                new NodeList[Expression](
-                                  new MethodCallExpr(new MethodCallExpr(
-                                                       new NameExpr("Response"),
-                                                       "status",
-                                                       new NodeList[Expression](new IntegerLiteralExpr(500))
-                                                     ),
-                                                     "build")
-                                )
-                              )
-                            )
-                          )
-                        ),
-                        new BlockStmt(resultResumeBody)
-                      )
-                    )
-                  ),
-                  true
-                )
-
-                val handlerCall = new MethodCallExpr(
-                  new FieldAccessExpr(new ThisExpr, "handler"),
-                  operationId,
-                  new NodeList[Expression](methodParams.map(param => new NameExpr(param.getName.asString)): _*)
-                )
-
-                method.setBody(
-                  new BlockStmt(
-                    new NodeList(
-                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
-                    )
-                  )
-                )
-
-                val futureResponseType = completionStageType(responseType.clone())
-                val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
-                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
-                  parameter =>
-                    handlerMethodSig.addParameter(parameter.param.clone())
-                })
-                handlerMethodSig.setBody(null)
-
-                (method, handlerMethodSig)
+          processedRoutes <- routes
+            .traverse({
+              case (_, _, RouteMeta(path, httpMethod, operation), parameters, responses) =>
+                generateRoute(operation, path, commonPathPrefix, httpMethod, parameters, responses, protocolElems, handlerName)
             })
-            .unzip
 
+          (routeMethods, handlerMethodSigs) = processedRoutes.unzip
+        } yield {
           val resourceConstructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), resourceName)
           resourceConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), handlerType, new SimpleName("handler")))
           resourceConstructor.setBody(
