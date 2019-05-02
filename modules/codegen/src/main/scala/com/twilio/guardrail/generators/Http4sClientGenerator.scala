@@ -178,7 +178,7 @@ object Http4sClientGenerator {
               .filter(_ => formDataNeedsMultipart)
               .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
           val headersExpr = if (formDataNeedsMultipart) {
-            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers")
+            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
           } else {
             List(q"val allHeaders = headers ++ $headerParams")
           }
