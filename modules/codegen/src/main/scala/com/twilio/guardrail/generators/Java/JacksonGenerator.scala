@@ -362,7 +362,7 @@ object JacksonGenerator {
       case RenderDTOClass(clsName, selfParams, parents) =>
         val dtoClassType                               = JavaParser.parseClassOrInterfaceType(clsName)
         val discriminators                             = parents.flatMap(_.discriminators)
-        val parentOpt                                  = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
+        val parentOpt                                  = parents.headOption
         val parentParams                               = parents.reverse.flatMap(_.params)
         val parentParamNames                           = parentParams.map(_.name)
         val (parentRequiredTerms, parentOptionalTerms) = sortParams(parentParams)
@@ -822,7 +822,7 @@ object JacksonGenerator {
         Target.pure(None)
 
       case RenderSealedTrait(className, selfParams, discriminator, parents, children) =>
-        val parentOpt                                  = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
+        val parentOpt                                  = parents.headOption
         val parentParams                               = parents.reverse.flatMap(_.params)
         val parentParamNames                           = parentParams.map(_.name)
         val params                                     = selfParams.filterNot(param => parentParamNames.contains(param.name))
