@@ -504,7 +504,7 @@ object Http4sServerGenerator {
           case Nil        => responseInMatch
           case generators => q"for {..${generators :+ enumerator"response <- $responseInMatch"}} yield response"
         }
-        val routeBody    = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
+        val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
         val fullRoute: Case =
           p"""case req @ $fullRouteWithTracingMatcher => 

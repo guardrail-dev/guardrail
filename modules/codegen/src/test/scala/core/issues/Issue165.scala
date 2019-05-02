@@ -58,14 +58,13 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
                     Ok()
                 }  
               })
-              
             case req @ GET -> Root / "foo" =>
               mapRoute("getFoo", req, {
                 handler.getFoo(GetFooResponse)() flatMap {
                   case GetFooResponse.Ok =>
                     Ok()
                 }
-              })  
+              })
             case req @ GET -> Root / "foo" / "" =>
               mapRoute("getFooDir", req, {
                 handler.getFooDir(GetFooDirResponse)() flatMap {
