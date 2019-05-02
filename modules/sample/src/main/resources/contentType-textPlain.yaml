@@ -7,7 +7,7 @@ paths:
   /foo:
     post:
       operationId: doFoo
-      x-scala-package: foo
+      x-jvm-package: foo
       consumes:
         - text/plain
       produces:
@@ -26,7 +26,7 @@ paths:
   /bar:
     post:
       operationId: doBar
-      x-scala-package: foo
+      x-jvm-package: foo
       consumes:
         - text/plain
       produces:

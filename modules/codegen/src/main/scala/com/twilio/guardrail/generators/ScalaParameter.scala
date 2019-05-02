@@ -3,7 +3,7 @@ package generators
 
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
-import com.twilio.guardrail.extract.{ Default, ScalaFileHashAlgorithm }
+import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -154,14 +154,7 @@ object ScalaParameter {
       ftpe       <- fileType(None)
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
-      new ScalaParameter[L](Option(parameter.getIn),
-                            param,
-                            paramName,
-                            RawParameterName(name),
-                            declType,
-                            required,
-                            ScalaFileHashAlgorithm(parameter),
-                            isFileType)
+      new ScalaParameter[L](Option(parameter.getIn), param, paramName, RawParameterName(name), declType, required, FileHashAlgorithm(parameter), isFileType)
     })
   }
 

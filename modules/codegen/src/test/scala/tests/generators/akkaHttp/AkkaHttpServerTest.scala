@@ -14,7 +14,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |paths:
     |  /:
     |    get:
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      operationId: getRoot
     |      responses:
     |        200:
@@ -23,7 +23,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |    get:
     |      tags:
     |      - store
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      operationId: getOrderById
     |      produces:
     |      - application/xml
@@ -51,7 +51,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |          description: Order not found
     |  /foo/:
     |    get:
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      operationId: getFoo
     |      responses:
     |        200:
@@ -59,8 +59,8 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |            type: boolean
     |  "/foo/{bar}":
     |    get:
-    |      x-scala-package: store
-    |      x-scala-tracing-label: "completely-custom-label"
+    |      x-jvm-package: store
+    |      x-tracing-label: "completely-custom-label"
     |      operationId: getFooBar
     |      parameters:
     |      - name: bar
@@ -76,7 +76,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
     |    put:
     |      operationId: putBar
     |      x-server-raw-response: true
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      parameters:
     |      - name: bar
     |        in: query

@@ -46,7 +46,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Add a new pet to the store",
         "description": "",
         "operationId": "addPet",
@@ -90,7 +90,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Update an existing pet",
         "description": "",
         "operationId": "updatePet",
@@ -139,7 +139,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Finds Pets by status",
         "description": "Multiple status values can be provided with comma separated strings",
         "operationId": "findPetsByStatusEnum",
@@ -183,7 +183,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Finds Pets by status",
         "description": "Multiple status values can be provided with comma separated strings",
         "operationId": "findPetsByStatus",
@@ -238,7 +238,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Finds Pets by tags",
         "description": "Muliple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.",
         "operationId": "findPetsByTags",
@@ -289,7 +289,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Find pet by ID",
         "description": "Returns a single pet",
         "operationId": "getPetById",
@@ -331,7 +331,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Updates a pet in the store with form data",
         "description": "",
         "operationId": "updatePetWithForm",
@@ -384,7 +384,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "Deletes a pet",
         "description": "",
         "operationId": "deletePet",
@@ -447,7 +447,7 @@
         "tags": [
           "pet"
         ],
-        "x-scala-package": "pet",
+        "x-jvm-package": "pet",
         "summary": "uploads an image",
         "description": "",
         "operationId": "uploadFile",
@@ -494,7 +494,7 @@
             "description": "file to upload",
             "required": true,
             "type": "file",
-            "x-scala-file-hash": "SHA-256"
+            "x-file-hash": "SHA-256"
           },
           {
             "name": "long-value",
@@ -542,7 +542,7 @@
         "tags": [
           "store"
         ],
-        "x-scala-package": "store",
+        "x-jvm-package": "store",
         "summary": "Returns pet inventories by status",
         "description": "Returns a map of status codes to quantities",
         "operationId": "getInventory",
@@ -574,7 +574,7 @@
         "tags": [
           "store"
         ],
-        "x-scala-package": "store",
+        "x-jvm-package": "store",
         "summary": "Place an order for a pet",
         "description": "",
         "operationId": "placeOrder",
@@ -611,7 +611,7 @@
         "tags": [
           "store"
         ],
-        "x-scala-package": "store",
+        "x-jvm-package": "store",
         "summary": "Find purchase order by ID",
         "description": "For valid response try integer IDs with value >= 1 and <= 10. Other values will generated exceptions",
         "operationId": "getOrderById",
@@ -650,7 +650,7 @@
         "tags": [
           "store"
         ],
-        "x-scala-package": "store",
+        "x-jvm-package": "store",
         "summary": "Delete purchase order by ID",
         "description": "For valid response try integer IDs with positive integer value. Negative or non-integer values will generate API errors",
         "operationId": "deleteOrder",
@@ -684,7 +684,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Create user",
         "description": "This can only be done by the logged in user.",
         "operationId": "createUser",
@@ -715,7 +715,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Creates list of users with given input array",
         "description": "",
         "operationId": "createUsersWithArrayInput",
@@ -749,7 +749,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Creates list of users with given input array",
         "description": "",
         "operationId": "createUsersWithListInput",
@@ -783,7 +783,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Logs user into the system",
         "description": "",
         "operationId": "loginUser",
@@ -837,7 +837,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Logs out current logged in user session",
         "description": "",
         "operationId": "logoutUser",
@@ -858,7 +858,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Get user by user name",
         "description": "",
         "operationId": "getUserByName",
@@ -894,7 +894,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Updated user",
         "description": "This can only be done by the logged in user.",
         "operationId": "updateUser",
@@ -933,7 +933,7 @@
         "tags": [
           "user"
         ],
-        "x-scala-package": "user",
+        "x-jvm-package": "user",
         "summary": "Delete user",
         "description": "This can only be done by the logged in user.",
         "operationId": "deleteUser",

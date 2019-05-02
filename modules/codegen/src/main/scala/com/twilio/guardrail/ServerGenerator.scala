@@ -32,15 +32,17 @@ object ServerGenerator {
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
+    import Sc._
     import Sw._
 
     val paths: List[(String, PathItem)] = swagger.getPathsOpt()
     val basePath: Option[String]        = swagger.basePath()
 
     for {
-      routes <- extractOperations(paths)
+      prefixes <- vendorPrefixes()
+      routes   <- extractOperations(paths)
       classNamedRoutes <- routes
-        .traverse(route => getClassName(route.operation).map(_ -> route))
+        .traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
         .mapValues(_.map(_._2))

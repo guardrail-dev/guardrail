@@ -14,7 +14,7 @@ class Issue126 extends FunSuite with Matchers with SwaggerSpecRunner {
     |paths:
     |  /:
     |    options:
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      operationId: getRoot
     |      responses:
     |        200:

@@ -7,7 +7,7 @@ import java.nio.file.Path
 
 sealed trait ScalaTerm[L <: LA, T]
 
-case class CustomTypePrefixes[L <: LA]() extends ScalaTerm[L, List[String]]
+case class VendorPrefixes[L <: LA]() extends ScalaTerm[L, List[String]]
 
 case class LitString[L <: LA](value: String)        extends ScalaTerm[L, L#Term]
 case class LitFloat[L <: LA](value: Float)          extends ScalaTerm[L, L#Term]

@@ -26,7 +26,7 @@ object ScalaGenerator {
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
     def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
-      case CustomTypePrefixes() => Target.pure(List("x-scala", "x-jvm"))
+      case VendorPrefixes() => Target.pure(List("x-scala", "x-jvm"))
 
       case LitString(value)        => Target.pure(Lit.String(value))
       case LitFloat(value)         => Target.pure(Lit.Float(value))

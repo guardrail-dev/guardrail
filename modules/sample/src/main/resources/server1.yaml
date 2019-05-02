@@ -29,7 +29,7 @@ paths:
   /user/{id}:
     get:
       operationId: getUser
-      x-scala-package: users
+      x-jvm-package: users
       produces:
         - application/json
       parameters:
