@@ -114,10 +114,10 @@ object AkkaHttpServerGenerator {
           } else Target.pure(None)
         } yield res
 
-      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems) =>
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
         for {
           renderedRoutes <- routes.traverse {
-            case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
+            case (operationId, tracingFields, sr @ RouteMeta(path, method, operation, securityRequirements), parameters, responses) =>
               for {
                 rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
               } yield rendered
@@ -184,7 +184,7 @@ object AkkaHttpServerGenerator {
           ).flatten
         }
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
     }
 
@@ -558,7 +558,7 @@ object AkkaHttpServerGenerator {
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        RouteMeta(path, method, operation) = route
+        RouteMeta(path, method, operation, securityRequirements) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),

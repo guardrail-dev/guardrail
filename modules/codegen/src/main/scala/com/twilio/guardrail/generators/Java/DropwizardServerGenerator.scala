@@ -285,7 +285,7 @@ object DropwizardServerGenerator {
           Target.pure(Option.empty)
         }
 
-      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems) =>
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
         for {
           resourceType <- safeParseClassOrInterfaceType(resourceName)
           handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
@@ -296,7 +296,7 @@ object DropwizardServerGenerator {
 
           val (routeMethods, handlerMethodSigs) = routes
             .map({
-              case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation), parameters, responses) =>
+              case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation, securityRequirements), parameters, responses) =>
                 parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
                 val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
@@ -555,7 +555,7 @@ object DropwizardServerGenerator {
           abstractResponseClass :: Nil
         }
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         for {
           annotationImports <- List(
             "java.lang.annotation.ElementType",

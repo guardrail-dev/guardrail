@@ -4,14 +4,17 @@ package terms
 import cats.free.Free
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
-
-import scala.collection.JavaConverters._
+import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityRequirement, SecurityScheme => SwSecurityScheme }
+import java.net.URI
+import java.util
+import scala.collection.JavaConverters._
 
 object RouteMeta {
   sealed abstract class ContentType(value: String)
@@ -29,7 +32,20 @@ object RouteMeta {
     }
   }
 }
-case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
+
+object SecurityRequirements {
+  type SecurityScopes = List[String]
+
+  sealed trait Location
+  case object Global extends Location
+  case object Local  extends Location
+
+  def apply(requirements: util.List[SecurityRequirement], optionalSchemes: List[String], location: Location): SecurityRequirements =
+    SecurityRequirements(requirements.asScala.map(_.asScala.mapValues(_.asScala.toList).toMap).toList, optionalSchemes, location)
+}
+case class SecurityRequirements(requirements: List[Map[String, SecurityScopes]], optionalSchemes: List[String], location: SecurityRequirements.Location)
+
+case class RouteMeta(path: String, method: HttpMethod, operation: Operation, securityRequirements: Option[SecurityRequirements]) {
 
   private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] =
     for {
@@ -157,8 +173,25 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       })
 }
 
+sealed trait SecurityScheme[L <: LA] {
+  def tpe: Option[L#Type]
+}
+case class ApiKeySecurityScheme[L <: LA](name: String, in: SwSecurityScheme.In, tpe: Option[L#Type]) extends SecurityScheme[L]
+case class HttpSecurityScheme[L <: LA](authScheme: String, tpe: Option[L#Type])                      extends SecurityScheme[L]
+case class OpenIdConnectSecurityScheme[L <: LA](url: URI, tpe: Option[L#Type])                       extends SecurityScheme[L]
+case class OAuth2SecurityScheme[L <: LA](flows: OAuthFlows, tpe: Option[L#Type])                     extends SecurityScheme[L]
+
 sealed trait SwaggerTerm[L <: LA, T]
-case class ExtractOperations[L <: LA](paths: List[(String, PathItem)])                     extends SwaggerTerm[L, List[RouteMeta]]
+case class ExtractOperations[L <: LA](paths: List[(String, PathItem)], globalSecurityRequirements: Option[SecurityRequirements])
+    extends SwaggerTerm[L, List[RouteMeta]]
+case class ExtractApiKeySecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])
+    extends SwaggerTerm[L, ApiKeySecurityScheme[L]]
+case class ExtractHttpSecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])
+    extends SwaggerTerm[L, HttpSecurityScheme[L]]
+case class ExtractOpenIdConnectSecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])
+    extends SwaggerTerm[L, OpenIdConnectSecurityScheme[L]]
+case class ExtractOAuth2SecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])
+    extends SwaggerTerm[L, OAuth2SecurityScheme[L]]
 case class GetClassName[L <: LA](operation: Operation, vendorPrefixes: List[String])       extends SwaggerTerm[L, List[String]]
 case class GetParameterName[L <: LA](parameter: Parameter)                                 extends SwaggerTerm[L, String]
 case class GetBodyParameterSchema[L <: LA](parameter: Parameter)                           extends SwaggerTerm[L, Schema[_]]

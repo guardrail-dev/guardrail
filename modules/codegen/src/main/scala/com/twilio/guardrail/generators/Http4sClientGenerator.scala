@@ -32,7 +32,13 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
+      case GenerateClientOperation(className,
+                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+                                   methodName,
+                                   tracing,
+                                   parameters,
+                                   responses,
+                                   securitySchemes) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           for {
             _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using ${path} and ${pathArgs.map(_.argName)}")
@@ -301,7 +307,7 @@ object Http4sClientGenerator {
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>

@@ -3,11 +3,14 @@ package generators
 
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.PackageName
+import com.twilio.guardrail.extract.{ CustomTypeName, PackageName, SecurityOptional }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import java.net.URI
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object SwaggerGenerator {
   private def parameterSchemaType(parameter: Parameter): Target[String] =
@@ -23,7 +26,7 @@ object SwaggerGenerator {
     }
 
     def apply[T](term: SwaggerTerm[L, T]): Target[T] = term match {
-      case ExtractOperations(paths) =>
+      case ExtractOperations(paths, globalSecurityRequirements) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
           routes <- paths.traverse {
@@ -34,11 +37,38 @@ object SwaggerGenerator {
               } yield {
                 operationMap.asScala.toList.map {
                   case (httpMethod, operation) =>
-                    RouteMeta(pathStr, httpMethod, operation)
+                    val securityRequirements = Option(operation.getSecurity)
+                      .map(SecurityRequirements(_, SecurityOptional(operation), SecurityRequirements.Local))
+                      .orElse(globalSecurityRequirements)
+                    RouteMeta(pathStr, httpMethod, operation, securityRequirements)
                 }
               }
           }
         } yield routes.flatten
+
+      case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
+        for {
+          name <- Target.fromOption(Option(securityScheme.getName), s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property")
+          in   <- Target.fromOption(Option(securityScheme.getIn), s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property")
+        } yield ApiKeySecurityScheme[L](name, in, tpe)
+
+      case ExtractHttpSecurityScheme(schemeName, securityScheme, tpe) =>
+        for {
+          authScheme <- Target.fromOption(Option(securityScheme.getScheme), s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme")
+        } yield HttpSecurityScheme[L](authScheme, tpe)
+
+      case ExtractOpenIdConnectSecurityScheme(schemeName, securityScheme, tpe) =>
+        for {
+          url <- Target.fromOption(
+            Option(securityScheme.getOpenIdConnectUrl).flatMap(url => Try(new URI(url)).toOption),
+            s"Security scheme ${schemeName} has a missing or invalid OpenID Connect URL"
+          )
+        } yield OpenIdConnectSecurityScheme[L](url, tpe)
+
+      case ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe) =>
+        for {
+          flows <- Target.fromOption(Option(securityScheme.getFlows), s"Security scheme ${schemeName} has no OAuth2 flows")
+        } yield OAuth2SecurityScheme[L](flows, tpe)
 
       case GetClassName(operation, vendorPrefixes) =>
         for {

@@ -28,7 +28,13 @@ object EndpointsClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route @ RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
+      case GenerateClientOperation(className,
+                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+                                   methodName,
+                                   tracing,
+                                   parameters,
+                                   responses,
+                                   securitySchemes) =>
         def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
             None
@@ -390,7 +396,7 @@ object EndpointsClientGenerator {
         Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
         def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
