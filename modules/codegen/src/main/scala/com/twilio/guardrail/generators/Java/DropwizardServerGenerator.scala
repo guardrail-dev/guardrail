@@ -12,7 +12,7 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
+import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.generators.syntax.Java._
@@ -146,7 +146,7 @@ object DropwizardServerGenerator {
 
   def generateSecurityParams(operation: Operation,
                              securitySchemes: Map[String, SecurityScheme],
-                             unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler = emptyUnknownHttpAuthSchemeHandler): Target[SecurityParameters] =
+                             unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler): Target[SecurityParameters] =
     Option(operation.getSecurity).toList
       .flatMap(_.asScala)
       .flatTraverse({ requirement =>
@@ -363,15 +363,16 @@ object DropwizardServerGenerator {
     }
   }
 
-  private def generateRoute(operation: Operation,
-                            path: String,
-                            commonPathPrefix: List[String],
-                            httpMethod: HttpMethod,
-                            parameters: ScalaParameters[JavaLanguage],
-                            responses: Responses[JavaLanguage],
-                            protocolElems: List[StrictProtocolElems[JavaLanguage]],
-                            securitySchemes: Map[String, SecurityScheme],
-                            handlerName: String): Target[(MethodDeclaration, MethodDeclaration)] = {
+  def generateRoute(operation: Operation,
+                    path: String,
+                    commonPathPrefix: List[String],
+                    httpMethod: HttpMethod,
+                    parameters: ScalaParameters[JavaLanguage],
+                    responses: Responses[JavaLanguage],
+                    protocolElems: List[StrictProtocolElems[JavaLanguage]],
+                    securitySchemes: Map[String, SecurityScheme],
+                    unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler,
+                    handlerName: String): Target[(MethodDeclaration, MethodDeclaration)] = {
     val operationId = operation.getOperationId
     parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
@@ -415,7 +416,7 @@ object DropwizardServerGenerator {
     }
 
     for {
-      securityParameters <- generateSecurityParams(operation, securitySchemes)
+      securityParameters <- generateSecurityParams(operation, securitySchemes, unknownHttpAuthSchemeHandler)
     } yield {
       val methodParams: List[Parameter] = List(
         (parameters.pathParams, "PathParam"),
@@ -585,6 +586,68 @@ object DropwizardServerGenerator {
     }
   }
 
+  def generateRoutes(tracing: Boolean,
+                     resourceName: String,
+                     basePath: Option[String],
+                     routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, ScalaParameters[JavaLanguage], Responses[JavaLanguage])],
+                     protocolElems: List[StrictProtocolElems[JavaLanguage]],
+                     securitySchemes: Map[String, SecurityScheme],
+                     unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler = emptyUnknownHttpAuthSchemeHandler): Target[RenderedRoutes[JavaLanguage]] =
+    for {
+      resourceType <- safeParseClassOrInterfaceType(resourceName)
+      handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
+      handlerType <- safeParseClassOrInterfaceType(handlerName)
+
+      basePathComponents = basePath.toList.flatMap(splitPathComponents)
+      commonPathPrefix   = findPathPrefix(routes.map(_._3.path))
+
+      processedRoutes <- routes
+        .traverse({
+          case (_, _, RouteMeta(path, httpMethod, operation), parameters, responses) =>
+            generateRoute(operation,
+                          path,
+                          commonPathPrefix,
+                          httpMethod,
+                          parameters,
+                          responses,
+                          protocolElems,
+                          securitySchemes,
+                          unknownHttpAuthSchemeHandler,
+                          handlerName)
+        })
+
+      (routeMethods, handlerMethodSigs) = processedRoutes.unzip
+    } yield {
+      val resourceConstructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), resourceName)
+      resourceConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), handlerType, new SimpleName("handler")))
+      resourceConstructor.setBody(
+        new BlockStmt(
+          new NodeList(
+            new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN))
+          )
+        )
+      )
+
+      val annotations = List(
+        new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
+      )
+
+      val supportDefinitions = List[BodyDeclaration[_ <: BodyDeclaration[_]]](
+        new FieldDeclaration(
+          util.EnumSet.of(PRIVATE, STATIC, FINAL),
+          new VariableDeclarator(
+            LOGGER_TYPE,
+            "logger",
+            new MethodCallExpr(new NameExpr("LoggerFactory"), "getLogger", new NodeList[Expression](new ClassExpr(resourceType)))
+          )
+        ),
+        new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(handlerType, "handler")),
+        resourceConstructor
+      )
+
+      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
+    }
+
   object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
@@ -621,51 +684,7 @@ object DropwizardServerGenerator {
         }
 
       case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
-        for {
-          resourceType <- safeParseClassOrInterfaceType(resourceName)
-          handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
-          handlerType <- safeParseClassOrInterfaceType(handlerName)
-
-          basePathComponents = basePath.toList.flatMap(splitPathComponents)
-          commonPathPrefix   = findPathPrefix(routes.map(_._3.path))
-
-          processedRoutes <- routes
-            .traverse({
-              case (_, _, RouteMeta(path, httpMethod, operation), parameters, responses) =>
-                generateRoute(operation, path, commonPathPrefix, httpMethod, parameters, responses, protocolElems, securitySchemes, handlerName)
-            })
-
-          (routeMethods, handlerMethodSigs) = processedRoutes.unzip
-        } yield {
-          val resourceConstructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), resourceName)
-          resourceConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), handlerType, new SimpleName("handler")))
-          resourceConstructor.setBody(
-            new BlockStmt(
-              new NodeList(
-                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN))
-              )
-            )
-          )
-
-          val annotations = List(
-            new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
-          )
-
-          val supportDefinitions = List[BodyDeclaration[_ <: BodyDeclaration[_]]](
-            new FieldDeclaration(
-              util.EnumSet.of(PRIVATE, STATIC, FINAL),
-              new VariableDeclarator(
-                LOGGER_TYPE,
-                "logger",
-                new MethodCallExpr(new NameExpr("LoggerFactory"), "getLogger", new NodeList[Expression](new ClassExpr(resourceType)))
-              )
-            ),
-            new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(handlerType, "handler")),
-            resourceConstructor
-          )
-
-          RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
-        }
+        generateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes)
 
       case GetExtraRouteParams(tracing) =>
         if (tracing) {
