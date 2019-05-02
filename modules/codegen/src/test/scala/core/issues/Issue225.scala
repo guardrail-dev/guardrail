@@ -14,10 +14,10 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
        |swagger: '2.0'
        |host: petstore.swagger.io
        |paths:
-       |  /{response0}:
+       |  /{response}:
        |    parameters:
        |    - in: path
-       |      name: response0
+       |      name: response
        |      type: string
        |    get:
        |      operationId: getRoot
@@ -26,26 +26,25 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
        |         description: description
        |""".stripMargin
 
-  test("Ensure handlerWrapper is generated and conflicting name is resolved correctly (response0 param conflicts with generated val name)") {
+  test("Ensure mapRoute is generated") {
     val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val handler  = q"""
       trait Handler[F[_]] {
-        def getRoot(respond: GetRootResponse.type)(response0: String): F[GetRootResponse]
+        def getRoot(respond: GetRootResponse.type)(response: String): F[GetRootResponse]
       }
     """
     val resource = q"""
       class Resource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
         def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
-            case req @ GET -> Root / response0 => 
-              val response1 = {
-                handler.getRoot(GetRootResponse)(response0) flatMap {
+            case req @ GET -> Root / response => 
+              mapRoute("getRoot", req, {
+                handler.getRoot(GetRootResponse)(response) flatMap {
                   case GetRootResponse.Ok =>
                     Ok()
                 } 
-              }
-              mapRoute("getRoot", req, response1)
+              })
           }
         }
       }
@@ -58,8 +57,6 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
   }
   
   private def compare(actual: Tree, expected: Tree): Unit = {
-    println(s"actual: ${actual.syntax}")
-    println(s"expected: ${expected.syntax}")
     actual.structure shouldEqual expected.structure
   }
 }

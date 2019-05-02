@@ -52,30 +52,27 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root => 
-              val response0 = {
+              mapRoute("getRoot", req, {
                 handler.getRoot(GetRootResponse)() flatMap {
                   case GetRootResponse.Ok =>
                     Ok()
-                }    
-              }
-              mapRoute("getRoot", req, response0)
+                }  
+              })
               
             case req @ GET -> Root / "foo" =>
-              val response0 = {
+              mapRoute("getFoo", req, {
                 handler.getFoo(GetFooResponse)() flatMap {
                   case GetFooResponse.Ok =>
                     Ok()
-                }    
-              }
-              mapRoute("getFoo", req, response0)  
+                }
+              })  
             case req @ GET -> Root / "foo" / "" =>
-              val response0 = {
+              mapRoute("getFooDir", req, {
                 handler.getFooDir(GetFooDirResponse)() flatMap {
                   case GetFooDirResponse.Ok =>
                     Ok()
-                }
               }
-              mapRoute("getFooDir", req, response0)
+            })
           }
         }
       }
