@@ -4,14 +4,15 @@ package terms
 import cats.free.Free
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
-
-import scala.collection.JavaConverters._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityScheme => SwSecurityScheme }
+import java.net.URL
+import scala.collection.JavaConverters._
 
 object RouteMeta {
   sealed abstract class ContentType(value: String)
@@ -157,8 +158,18 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       })
 }
 
+sealed trait SecurityScheme {
+  def extensions: Map[String, AnyRef]
+}
+case class ApiKeySecurityScheme(name: String, in: SwSecurityScheme.In, typeName: Option[String], extensions: Map[String, AnyRef]) extends SecurityScheme
+case class HttpSecurityScheme(authScheme: String, extensions: Map[String, AnyRef])                                                extends SecurityScheme
+case class OpenIdConnectSecurityScheme(url: URL, extensions: Map[String, AnyRef])                                                 extends SecurityScheme
+case class OAuth2SecurityScheme(flows: OAuthFlows, extensions: Map[String, AnyRef])                                               extends SecurityScheme
+
 sealed trait SwaggerTerm[L <: LA, T]
-case class ExtractOperations[L <: LA](paths: List[(String, PathItem)])                     extends SwaggerTerm[L, List[RouteMeta]]
+case class ExtractOperations[L <: LA](paths: List[(String, PathItem)]) extends SwaggerTerm[L, List[RouteMeta]]
+case class ExtractSecuritySchemes[L <: LA](securitySchemes: Map[String, SwSecurityScheme], vendorPrefixes: List[String])
+    extends SwaggerTerm[L, Map[String, SecurityScheme]]
 case class GetClassName[L <: LA](operation: Operation, vendorPrefixes: List[String])       extends SwaggerTerm[L, List[String]]
 case class GetParameterName[L <: LA](parameter: Parameter)                                 extends SwaggerTerm[L, String]
 case class GetBodyParameterSchema[L <: LA](parameter: Parameter)                           extends SwaggerTerm[L, Schema[_]]

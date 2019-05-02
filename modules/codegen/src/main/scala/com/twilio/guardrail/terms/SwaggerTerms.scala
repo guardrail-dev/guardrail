@@ -1,18 +1,21 @@
 package com.twilio.guardrail
 package terms
 
-import io.swagger.v3.oas.models._
 import cats.InjectK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
+import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 
 class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractOperations(paths: List[(String, PathItem)]): Free[F, List[RouteMeta]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths))
+  def extractSecuritySchemes(securitySchemes: Map[String, SwSecurityScheme], vendorPrefixes: List[String]): Free[F, Map[String, SecurityScheme]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractSecuritySchemes(securitySchemes, vendorPrefixes))
   def getClassName(operation: Operation, vendorPrefixes: List[String]): Free[F, List[String]] =
     Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation, vendorPrefixes))
   def getParameterName(parameter: Parameter): Free[F, String] =

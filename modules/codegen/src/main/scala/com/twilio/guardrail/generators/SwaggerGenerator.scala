@@ -3,11 +3,14 @@ package generators
 
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.PackageName
+import com.twilio.guardrail.extract.{ CustomTypeName, PackageName }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import java.net.URL
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object SwaggerGenerator {
   private def parameterSchemaType(parameter: Parameter): Target[String] =
@@ -39,6 +42,41 @@ object SwaggerGenerator {
               }
           }
         } yield routes.flatten
+
+      case ExtractSecuritySchemes(securitySchemes, vendorPrefixes) =>
+        securitySchemes.toList
+          .traverse({
+            case (schemeName, scheme) =>
+              val extensions = Option(scheme.getExtensions).fold(Map.empty[String, AnyRef])(_.asScala.toMap)
+              Option(scheme.getType)
+                .fold(Target.raiseError[SecurityScheme](s"Security scheme ${schemeName} has no type"))({
+                  case SwSecurityScheme.Type.APIKEY =>
+                    for {
+                      name <- Target.fromOption(Option(scheme.getName), s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property")
+                      in   <- Target.fromOption(Option(scheme.getIn), s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property")
+                    } yield ApiKeySecurityScheme(name, in, CustomTypeName(scheme, vendorPrefixes), extensions)
+
+                  case SwSecurityScheme.Type.HTTP =>
+                    for {
+                      authScheme <- Target.fromOption(Option(scheme.getScheme), s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme")
+                    } yield HttpSecurityScheme(authScheme, extensions)
+
+                  case SwSecurityScheme.Type.OPENIDCONNECT =>
+                    for {
+                      url <- Target.fromOption(
+                        Option(scheme.getOpenIdConnectUrl).flatMap(url => Try(new URL(url)).toOption),
+                        s"Security scheme ${schemeName} has a missing or invalid OpenID Connect URL"
+                      )
+                    } yield OpenIdConnectSecurityScheme(url, extensions)
+
+                  case SwSecurityScheme.Type.OAUTH2 =>
+                    for {
+                      flows <- Target.fromOption(Option(scheme.getFlows), s"Security scheme ${schemeName} has no OAuth2 flows")
+                    } yield OAuth2SecurityScheme(flows, extensions)
+                })
+                .map(schemeName -> _)
+          })
+          .map(_.toMap)
 
       case GetClassName(operation, vendorPrefixes) =>
         for {

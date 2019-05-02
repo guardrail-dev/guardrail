@@ -1,9 +1,11 @@
 package com.twilio.guardrail.extract
 
+import com.twilio.guardrail.terms.SecurityScheme
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.parameters.{ CookieParameter, Parameter }
 import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 
 object VendorExtension {
   trait VendorExtensible[-F] {
@@ -66,6 +68,11 @@ object VendorExtension {
     implicit val defaultVendorExtensibleCookieParameter: VendorExtensible[CookieParameter] =
       build[CookieParameter](m => key => Option(m.getExtensions).map(_.get(key)))
 
+    implicit val defaultVendorExtensibleSwSecurityScheme: VendorExtensible[SwSecurityScheme] =
+      build[SwSecurityScheme](m => key => Option(m.getExtensions).map(_.get(key)))
+
+    implicit val defaultVendorExtensibleSecurityScheme: VendorExtensible[SecurityScheme] =
+      build[SecurityScheme](m => key => Option(m.extensions).flatMap(_.get(key)))
   }
 
   case class VendorExtensibleAdapter[F](from: F) extends AnyVal {
