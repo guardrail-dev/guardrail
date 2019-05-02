@@ -29,9 +29,10 @@ public class DropwizardMultiPartTest {
     private static final FooHandler fooHandler = new FooHandler() {
         @Override
         public CompletionStage<DoFooResponse> doFoo(long id, OffsetDateTime date, Optional<OffsetDateTime> optionalDate) {
-            final Foo.Builder builder = Foo.builder(id, date);
-            optionalDate.ifPresent(builder::withOptionalDate);
-            return CompletableFuture.completedFuture(FooHandler.DoFooResponse.Created(builder.build()));
+            final Foo foo = new Foo.Builder(id, date)
+                    .withOptionalDate(optionalDate)
+                    .build();
+            return CompletableFuture.completedFuture(FooHandler.DoFooResponse.Created(foo));
         }
     };
 

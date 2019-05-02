@@ -33,7 +33,7 @@ public class DropwizardResourceTest {
     private static final String USERNAME = "foobar";
     private static final String PASSWORD = "sekrit";
     private static final String TOKEN = "abc123";
-    private static final User USER = User.builder()
+    private static final User USER = new User.Builder()
             .withId(1)
             .withUsername(USERNAME)
             .withPassword(PASSWORD)
