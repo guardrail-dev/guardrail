@@ -105,7 +105,7 @@ object CirceProtocolGenerator {
           case m: ObjectSchema => Target.pure(Option(m.getProperties))
           case comp: ComposedSchema =>
             val extractedProps =
-              Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).map(e => Option(e.getProperties).map(_.asScala.toMap)).collect { case Some(e) => e }
+              Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).flatMap(e => Option(e.getProperties).map(_.asScala.toMap))
             val mergedProps = extractedProps.fold(Map.empty)(_ ++ _)
             Target.pure(Option(mergedProps.asJava))
           case comp: Schema[_] if Option(comp.get$ref).isDefined =>
