@@ -77,10 +77,13 @@ object Http4sServerGenerator {
       case GetExtraRouteParams(tracing) =>
         for {
           _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
-          res <- if (tracing) {
-            Target.pure(List(param"""trace: String => Request[F] => TraceBuilder[F]"""))
-          } else Target.pure(List.empty)
-        } yield res
+          mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+          tracing <- if (tracing) {
+            Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
+          } else Target.pure(Option.empty)
+        } yield {
+          tracing.toList ::: List(mapRoute)
+        }
 
       case GenerateSupportDefinitions(tracing) =>
         Target.pure(List.empty)
@@ -501,8 +504,12 @@ object Http4sServerGenerator {
           case Nil        => responseInMatch
           case generators => q"for {..${generators :+ enumerator"response <- $responseInMatch"}} yield response"
         }
-        val routeBody       = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
-        val fullRoute: Case = p"case req @ $fullRouteWithTracingMatcher => $routeBody"
+        val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
+
+        val fullRoute: Case =
+          p"""case req @ $fullRouteWithTracingMatcher => 
+             mapRoute($operationId, req, {$routeBody})
+            """
 
         val respond: List[List[Term.Param]] = List(List(param"respond: $responseCompanionTerm.type"))
 
@@ -670,5 +677,6 @@ object Http4sServerGenerator {
            def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
          }
        """
+
   }
 }
