@@ -16,14 +16,16 @@ import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, 
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.generators.syntax.Java._
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{ Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.terms.{ ApiKeySecurityScheme, HttpSecurityScheme, OAuth2SecurityScheme, OpenIdConnectSecurityScheme, RouteMeta, SecurityScheme }
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import java.util
 import scala.collection.JavaConverters._
 import scala.language.existentials
@@ -43,6 +45,9 @@ object DropwizardServerGenerator {
   private val RESPONSE_TYPE         = JavaParser.parseClassOrInterfaceType("Response")
   private val RESPONSE_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = JavaParser.parseClassOrInterfaceType("Logger")
+
+  private val HTTP_BASIC_CREDENTIALS_TYPE  = JavaParser.parseClassOrInterfaceType("HttpSecurityUtils.HttpBasicCredentials")
+  private val HTTP_BEARER_CREDENTIALS_TYPE = JavaParser.parseClassOrInterfaceType("HttpSecurityUtils.HttpBearerCredentials")
 
   private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
   private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
@@ -125,6 +130,112 @@ object DropwizardServerGenerator {
           .flatten
       )
   }
+
+  case class SecurityParameters(routeParameters: List[Parameter],
+                                routeStatements: List[Statement],
+                                handlerParameters: List[Parameter],
+                                handlerArgs: List[Expression])
+
+  type UnknownHttpAuthSchemeHandler = (Operation, String, SecurityScheme, String) => Target[SecurityParameters]
+
+  def emptyUnknownHttpAuthSchemeHandler(operation: Operation,
+                                        schemeName: String,
+                                        securityScheme: SecurityScheme,
+                                        authScheme: String): Target[SecurityParameters] =
+    Target.raiseError(s"HTTP auth scheme $authScheme is not yet supported")
+
+  def generateSecurityParams(operation: Operation,
+                             securitySchemes: Map[String, SecurityScheme],
+                             unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler = emptyUnknownHttpAuthSchemeHandler): Target[SecurityParameters] =
+    Option(operation.getSecurity).toList
+      .flatMap(_.asScala)
+      .flatTraverse({ requirement =>
+        requirement.asScala.toList.traverse({
+          case (schemeName, _) =>
+            securitySchemes
+              .get(schemeName)
+              .fold(
+                Target.raiseError[SecurityParameters](s"Operation '${operation.getOperationId} references undefined security scheme $schemeName")
+              )({
+                case ApiKeySecurityScheme(name, in, typeName, _) =>
+                  for {
+                    annotationName <- in match {
+                      case SwSecurityScheme.In.QUERY =>
+                        Target.pure("QueryParam")
+                      case SwSecurityScheme.In.HEADER =>
+                        Target.pure("HeaderParam")
+                      case SwSecurityScheme.In.COOKIE =>
+                        Target.raiseError[String]("API Key security schemes stored in cookies are not yet supported")
+                    }
+                    rawParameterType <- typeName.fold(Target.pure(STRING_TYPE))(safeParseClassOrInterfaceType)
+                  } yield {
+                    val parameterType    = if (rawParameterType.isOptional) rawParameterType else optionalType(rawParameterType)
+                    val handlerParameter = new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(name.toCamelCase))
+                    val routeParameter = handlerParameter
+                      .clone()
+                      .addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(name)))
+                    SecurityParameters(List(routeParameter), List.empty, List(handlerParameter), List(new NameExpr(name.toCamelCase)))
+                  }
+
+                case scheme @ HttpSecurityScheme(authScheme, _) =>
+                  authScheme match {
+                    case "basic" =>
+                      val routeParameters = List(
+                        new Parameter(util.EnumSet.of(FINAL), optionalType(STRING_TYPE), new SimpleName("httpBasicAuthorization"))
+                          .addAnnotation(new SingleMemberAnnotationExpr(new Name("HeaderParam"), new StringLiteralExpr("Authorization")))
+                      )
+                      val handlerParameters = List(
+                        new Parameter(util.EnumSet.of(FINAL), optionalType(HTTP_BASIC_CREDENTIALS_TYPE), new SimpleName("httpBasicCredentials"))
+                      )
+                      val handlerArgs = List(
+                        new MethodCallExpr(
+                          new NameExpr("HttpSecurityUtils.HttpBasicCredentials"),
+                          "parse",
+                          new NodeList[Expression](new NameExpr("httpBasicAuthorization"))
+                        )
+                      )
+                      Target.pure(SecurityParameters(routeParameters, List.empty, handlerParameters, handlerArgs))
+
+                    case "bearer" =>
+                      val routeParameters = List(
+                        new Parameter(util.EnumSet.of(FINAL), optionalType(STRING_TYPE), new SimpleName("httpBearerAuthorization"))
+                          .addAnnotation(new SingleMemberAnnotationExpr(new Name("HeaderParam"), new StringLiteralExpr("Authorization")))
+                      )
+                      val handlerParameters = List(
+                        new Parameter(util.EnumSet.of(FINAL), optionalType(HTTP_BEARER_CREDENTIALS_TYPE), new SimpleName("httpBearerCredentials"))
+                      )
+                      val handlerArgs = List(
+                        new MethodCallExpr(
+                          new NameExpr("HttpSecurityUtils.HttpBearerCredentials"),
+                          "parse",
+                          new NodeList[Expression](new NameExpr("httpBearerAuthorization"))
+                        )
+                      )
+                      Target.pure(SecurityParameters(routeParameters, List.empty, handlerParameters, handlerArgs))
+
+                    case _ =>
+                      unknownHttpAuthSchemeHandler(operation, schemeName, scheme, authScheme)
+                  }
+
+                case _: OpenIdConnectSecurityScheme =>
+                  Target.raiseError("OpenID Connect is not yet supported")
+
+                case _: OAuth2SecurityScheme =>
+                  Target.raiseError("OAuth2 is not yet supported")
+              })
+        })
+      })
+      .map(
+        _.foldLeft(SecurityParameters(List.empty, List.empty, List.empty, List.empty))(
+          (accum, next) =>
+            SecurityParameters(
+              routeParameters = accum.routeParameters ++ next.routeParameters,
+              routeStatements = accum.routeStatements ++ next.routeStatements,
+              handlerParameters = accum.handlerParameters ++ next.handlerParameters,
+              handlerArgs = accum.handlerArgs ++ next.handlerArgs
+          )
+        )
+      )
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] = {
     val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(ABSTRACT), false, name)
@@ -259,6 +370,7 @@ object DropwizardServerGenerator {
                             parameters: ScalaParameters[JavaLanguage],
                             responses: Responses[JavaLanguage],
                             protocolElems: List[StrictProtocolElems[JavaLanguage]],
+                            securitySchemes: Map[String, SecurityScheme],
                             handlerName: String): Target[(MethodDeclaration, MethodDeclaration)] = {
     val operationId = operation.getOperationId
     parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
@@ -302,162 +414,175 @@ object DropwizardServerGenerator {
       parameter
     }
 
-    val methodParams: List[Parameter] = List(
-      (parameters.pathParams, "PathParam"),
-      (parameters.headerParams, "HeaderParam"),
-      (parameters.queryStringParams, "QueryParam"),
-      (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
-    ).flatMap({
-      case (params, annotationName) =>
-        params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
-    }) ++ parameters.bodyParams.map(_.param)
+    for {
+      securityParameters <- generateSecurityParams(operation, securitySchemes)
+    } yield {
+      val methodParams: List[Parameter] = List(
+        (parameters.pathParams, "PathParam"),
+        (parameters.headerParams, "HeaderParam"),
+        (parameters.queryStringParams, "QueryParam"),
+        (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
+      ).flatMap({
+        case (params, annotationName) =>
+          params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
+      }) ++ parameters.bodyParams.map(_.param)
 
-    methodParams.foreach(method.addParameter)
-    method.addParameter(
-      new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
-    )
+      securityParameters.routeParameters.foreach(method.addParameter)
+      methodParams.foreach(method.addParameter)
+      method.addParameter(
+        new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
+      )
 
-    val (responseType, resultResumeBody) =
-      ServerRawResponse(operation)
-        .filter(_ == true)
-        .fold({
-          val responseName = s"${handlerName}.${operationId.capitalize}Response"
+      val (responseType, resultResumeBody) =
+        ServerRawResponse(operation)
+          .filter(_ == true)
+          .fold({
+            val responseName = s"${handlerName}.${operationId.capitalize}Response"
 
-          val entitySetterIfTree = NonEmptyList
-            .fromList(responses.value.collect({
-              case Response(statusCodeName, Some(_)) => statusCodeName
-            }))
-            .map(_.reverse.foldLeft[IfStmt](null)({
-              case (nextIfTree, statusCodeName) =>
-                val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
-                new IfStmt(
-                  new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
-                  new BlockStmt(
-                    new NodeList(
-                      new ExpressionStmt(
-                        new MethodCallExpr(
-                          new NameExpr("builder"),
-                          "entity",
-                          new NodeList[Expression](
-                            new MethodCallExpr(
-                              new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
-                              "getEntityBody"
+            val entitySetterIfTree = NonEmptyList
+              .fromList(responses.value.collect({
+                case Response(statusCodeName, Some(_)) => statusCodeName
+              }))
+              .map(_.reverse.foldLeft[IfStmt](null)({
+                case (nextIfTree, statusCodeName) =>
+                  val responseSubclassType = JavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
+                  new IfStmt(
+                    new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                    new BlockStmt(
+                      new NodeList(
+                        new ExpressionStmt(
+                          new MethodCallExpr(
+                            new NameExpr("builder"),
+                            "entity",
+                            new NodeList[Expression](
+                              new MethodCallExpr(
+                                new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                                "getEntityBody"
+                              )
                             )
                           )
                         )
                       )
-                    )
-                  ),
-                  nextIfTree
-                )
-            }))
-
-          (
-            JavaParser.parseClassOrInterfaceType(responseName),
-            (
-              List[Statement](
-                new ExpressionStmt(
-                  new VariableDeclarationExpr(
-                    new VariableDeclarator(
-                      RESPONSE_BUILDER_TYPE,
-                      "builder",
-                      new MethodCallExpr(new NameExpr("Response"),
-                                         "status",
-                                         new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
                     ),
-                    FINAL
+                    nextIfTree
                   )
-                )
-              ) ++ entitySetterIfTree ++ List(
-                new ExpressionStmt(
-                  new MethodCallExpr(new NameExpr("asyncResponse"), "resume", new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
-                )
-              )
-            ).toNodeList
-          )
-        })({ _ =>
-          (
-            RESPONSE_TYPE,
-            new NodeList(
-              new ExpressionStmt(
-                new MethodCallExpr(
-                  new NameExpr("asyncResponse"),
-                  "resume",
-                  new NodeList[Expression](new NameExpr("result"))
-                )
-              )
-            )
-          )
-        })
+              }))
 
-    val whenCompleteLambda = new LambdaExpr(
-      new NodeList(
-        new Parameter(util.EnumSet.of(FINAL), responseType, new SimpleName("result")),
-        new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("err"))
-      ),
-      new BlockStmt(
-        new NodeList(
-          new IfStmt(
-            new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
-            new BlockStmt(
-              new NodeList(
-                new ExpressionStmt(
-                  new MethodCallExpr(
-                    new NameExpr("logger"),
-                    "error",
-                    new NodeList[Expression](
-                      new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
-                      new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
-                      new MethodCallExpr(new NameExpr("err"), "getMessage"),
-                      new NameExpr("err")
+            (
+              JavaParser.parseClassOrInterfaceType(responseName),
+              (
+                List[Statement](
+                  new ExpressionStmt(
+                    new VariableDeclarationExpr(
+                      new VariableDeclarator(
+                        RESPONSE_BUILDER_TYPE,
+                        "builder",
+                        new MethodCallExpr(new NameExpr("Response"),
+                                           "status",
+                                           new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
+                      ),
+                      FINAL
                     )
                   )
-                ),
+                ) ++ entitySetterIfTree ++ List(
+                  new ExpressionStmt(
+                    new MethodCallExpr(new NameExpr("asyncResponse"), "resume", new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
+                  )
+                )
+              ).toNodeList
+            )
+          })({ _ =>
+            (
+              RESPONSE_TYPE,
+              new NodeList(
                 new ExpressionStmt(
                   new MethodCallExpr(
                     new NameExpr("asyncResponse"),
                     "resume",
-                    new NodeList[Expression](
-                      new MethodCallExpr(new MethodCallExpr(
-                                           new NameExpr("Response"),
-                                           "status",
-                                           new NodeList[Expression](new IntegerLiteralExpr(500))
-                                         ),
-                                         "build")
-                    )
+                    new NodeList[Expression](new NameExpr("result"))
                   )
                 )
               )
-            ),
-            new BlockStmt(resultResumeBody)
-          )
-        )
-      ),
-      true
-    )
+            )
+          })
 
-    val handlerCall = new MethodCallExpr(
-      new FieldAccessExpr(new ThisExpr, "handler"),
-      operationId,
-      new NodeList[Expression](methodParams.map(param => new NameExpr(param.getName.asString)): _*)
-    )
-
-    method.setBody(
-      new BlockStmt(
+      val whenCompleteLambda = new LambdaExpr(
         new NodeList(
-          new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
+          new Parameter(util.EnumSet.of(FINAL), responseType, new SimpleName("result")),
+          new Parameter(util.EnumSet.of(FINAL), THROWABLE_TYPE, new SimpleName("err"))
+        ),
+        new BlockStmt(
+          new NodeList(
+            new IfStmt(
+              new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
+              new BlockStmt(
+                new NodeList(
+                  new ExpressionStmt(
+                    new MethodCallExpr(
+                      new NameExpr("logger"),
+                      "error",
+                      new NodeList[Expression](
+                        new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
+                        new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
+                        new MethodCallExpr(new NameExpr("err"), "getMessage"),
+                        new NameExpr("err")
+                      )
+                    )
+                  ),
+                  new ExpressionStmt(
+                    new MethodCallExpr(
+                      new NameExpr("asyncResponse"),
+                      "resume",
+                      new NodeList[Expression](
+                        new MethodCallExpr(new MethodCallExpr(
+                                             new NameExpr("Response"),
+                                             "status",
+                                             new NodeList[Expression](new IntegerLiteralExpr(500))
+                                           ),
+                                           "build")
+                      )
+                    )
+                  )
+                )
+              ),
+              new BlockStmt(resultResumeBody)
+            )
+          )
+        ),
+        true
+      )
+
+      val handlerCall = new MethodCallExpr(
+        new FieldAccessExpr(new ThisExpr, "handler"),
+        operationId,
+        (securityParameters.handlerArgs ++ methodParams.map(param => new NameExpr(param.getName.asString))).toNodeList
+      )
+
+      method.setBody(
+        new BlockStmt(
+          (
+            securityParameters.routeStatements :+
+              new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
+          ).toNodeList
         )
       )
-    )
 
-    val futureResponseType = completionStageType(responseType.clone())
-    val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
-    (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({ parameter =>
-      handlerMethodSig.addParameter(parameter.param.clone())
-    })
-    handlerMethodSig.setBody(null)
+      val futureResponseType = completionStageType(responseType.clone())
+      val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
+      (securityParameters.handlerParameters ++
+        (
+          parameters.pathParams ++
+            parameters.headerParams ++
+            parameters.queryStringParams ++
+            parameters.formParams ++
+            parameters.bodyParams
+        ).map(_.param)).foreach({ parameter =>
+        handlerMethodSig.addParameter(parameter.clone())
+      })
+      handlerMethodSig.setBody(null)
 
-    Target.pure((method, handlerMethodSig))
+      (method, handlerMethodSig)
+    }
   }
 
   object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
@@ -507,7 +632,7 @@ object DropwizardServerGenerator {
           processedRoutes <- routes
             .traverse({
               case (_, _, RouteMeta(path, httpMethod, operation), parameters, responses) =>
-                generateRoute(operation, path, commonPathPrefix, httpMethod, parameters, responses, protocolElems, handlerName)
+                generateRoute(operation, path, commonPathPrefix, httpMethod, parameters, responses, protocolElems, securitySchemes, handlerName)
             })
 
           (routeMethods, handlerMethodSigs) = processedRoutes.unzip
@@ -577,7 +702,8 @@ object DropwizardServerGenerator {
 
           shower <- SerializationHelpers.showerSupportDef
 
-          jersey <- SerializationHelpers.guardrailJerseySupportDef
+          jersey   <- SerializationHelpers.guardrailJerseySupportDef
+          security <- DropwizardHelpers.httpSecurityUtilsSupportDef
         } yield {
           def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
             val annotationDecl = new AnnotationDeclaration(util.EnumSet.of(PUBLIC), name)
@@ -593,6 +719,7 @@ object DropwizardServerGenerator {
           List(
             shower,
             jersey,
+            security,
             httpMethodAnnotation("PATCH"),
             httpMethodAnnotation("TRACE")
           )

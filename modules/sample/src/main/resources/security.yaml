@@ -1,0 +1,90 @@
+openapi: 3.0.1
+info:
+  name: Whatever
+  version: 1.0.0
+paths:
+  /api-key-header:
+    get:
+      security:
+        - ApiKeyHeader: []
+      operationId: apiKeyHeader
+      parameters:
+        - name: foo
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200: {}
+  /api-key-query:
+    get:
+      security:
+        - ApiKeyQuery: []
+      operationId: apiKeyQuery
+      parameters:
+        - name: foo
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200: {}
+  /http-basic:
+    get:
+      security:
+        - HttpBasicAuth: []
+      operationId: httpBasicAuth
+      parameters:
+        - name: foo
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200: {}
+  /http-bearer:
+    get:
+      security:
+        - HttpBearerAuth: []
+      operationId: httpBearerAuth
+      parameters:
+        - name: foo
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200: {}
+  /multiple-or:
+    get:
+      security:
+        - ApiKeyQuery: []
+        - HttpBasicAuth: []
+        - HttpBearerAuth: []
+      operationId: multipleAuthOr
+      responses:
+        200: {}
+  /multiple-and:
+    get:
+      security:
+        - ApiKeyHeader: []
+          HttpBearerAuth: []
+      operationId: multipleAuthAnd
+      responses:
+        200: {}
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: x-api-key
+    ApiKeyQuery:
+      type: apiKey
+      in: query
+      name: ApiKey
+    HttpBasicAuth:
+      type: http
+      scheme: basic
+    HttpBearerAuth:
+      type: http
+      scheme: bearer
