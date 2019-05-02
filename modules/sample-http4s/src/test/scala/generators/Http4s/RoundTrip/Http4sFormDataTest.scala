@@ -18,7 +18,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
         new FooResource[IO]()
           .routes(new FooHandler[IO] {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status): IO[DoFooResponse] =
-              if (status == sdefs.definitions.Status.OK) {
+              if (status == sdefs.definitions.Status.Ok) {
                 IO.pure(respond.Ok)
               } else {
                 IO.pure(respond.NotAcceptable)
@@ -28,7 +28,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doFoo(cdefs.definitions.Status.OK).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Ok
+    fooClient.doFoo(cdefs.definitions.Status.Ok).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Ok
   }
 
   test("missing required form param") {
@@ -36,7 +36,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
       new FooResource[IO]()
         .routes(new FooHandler[IO] {
           def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status): IO[DoFooResponse] =
-            if (status == sdefs.definitions.Status.OK) {
+            if (status == sdefs.definitions.Status.Ok) {
               IO.pure(respond.Ok)
             } else {
               IO.pure(respond.NotAcceptable)
@@ -56,7 +56,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
           .routes(new FooHandler[IO] {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status): IO[DoFooResponse] = ???
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status]): IO[DoBarResponse] =
-              if (status.contains(sdefs.definitions.Status.OK)) {
+              if (status.contains(sdefs.definitions.Status.Ok)) {
                 IO.pure(respond.Ok)
               } else {
                 IO.pure(respond.NotAcceptable)
@@ -65,7 +65,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doBar(Some(cdefs.definitions.Status.OK)).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Ok
+    fooClient.doBar(Some(cdefs.definitions.Status.Ok)).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Ok
   }
 
   test("missing optional form param") {
