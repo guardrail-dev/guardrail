@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
 import cats.instances.list._
+import cats.syntax.foldable._
 import cats.syntax.traverse._
 import cats.~>
 import com.github.javaparser.JavaParser
@@ -12,15 +13,21 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.Response
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.terms.RouteMeta.ContentType
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, SupportDefinition, SwaggerUtil, Target }
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.media.MediaType
 import java.net.URI
 import java.util
+import java.util.Locale
+import scala.collection.JavaConverters._
 
 object AsyncHttpClientClientGenerator {
   private val URI_TYPE                       = JavaParser.parseClassOrInterfaceType("URI")
@@ -36,6 +43,52 @@ object AsyncHttpClientClientGenerator {
 
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     JavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
+
+  def getBestConsumes(operation: Operation, parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
+    if (parameters.formParams.nonEmpty) {
+      if (parameters.formParams.exists(_.isFile)) {
+        Option(RouteMeta.MultipartFormData)
+      } else {
+        Option(RouteMeta.UrlencodedFormData)
+      }
+    } else if (parameters.bodyParams.isDefined) {
+      val allConsumes = operation.consumes.flatMap(ContentType.unapply)
+      allConsumes
+        .find(_ == RouteMeta.ApplicationJson)
+        .orElse(allConsumes.find(_ == RouteMeta.TextPlain))
+        .orElse({
+          println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to application/json")
+          Option(RouteMeta.ApplicationJson)
+        })
+    } else {
+      Option.empty
+    }
+
+  def getBestProduces(operation: Operation, response: Response[JavaLanguage]): Option[ContentType] = {
+    val priorityOrder = NonEmptyList.of(
+      RouteMeta.ApplicationJson,
+      RouteMeta.TextPlain,
+      RouteMeta.OctetStream
+    )
+
+    response.value
+      .map(_._1)
+      .flatMap({ valueType =>
+        val allProduces = operation.getResponses.asScala
+          .get(response.statusCode.toString)
+          .flatMap(resp => Option(resp.getContent))
+          .fold(List.empty[(String, MediaType)])(_.asScala.toList)
+          .flatMap({ case (name, _) => ContentType.unapply(name.toLowerCase(Locale.US)) })
+
+        priorityOrder
+          .collectFirstSome(ct => allProduces.find(_ == ct))
+          .orElse({
+            val fallback = if (valueType.isNamed("String")) RouteMeta.TextPlain else RouteMeta.ApplicationJson
+            println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to ${fallback.value}")
+            Option(fallback)
+          })
+      })
+  }
 
   private def showParam(param: ScalaParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
@@ -102,54 +155,82 @@ object AsyncHttpClientClientGenerator {
     }
   }
 
-  private def generateBodyMethodCall(param: ScalaParameter[JavaLanguage]): Statement = {
+  private def generateBodyMethodCall(param: ScalaParameter[JavaLanguage], contentType: Option[ContentType]): Option[Statement] = {
     def wrapSetBody(expr: Expression): MethodCallExpr =
       new MethodCallExpr(new NameExpr("builder"), "setBody", new NodeList[Expression](expr))
 
     if (param.isFile) {
-      new ExpressionStmt(
-        wrapSetBody(
-          new ObjectCreationExpr(null,
-                                 FILE_PART_TYPE,
-                                 new NodeList(
-                                   new StringLiteralExpr(param.argName.value),
-                                   new NameExpr(param.paramName.asString)
-                                 ))
+      Option(
+        new ExpressionStmt(
+          wrapSetBody(
+            new ObjectCreationExpr(null,
+                                   FILE_PART_TYPE,
+                                   new NodeList(
+                                     new StringLiteralExpr(param.argName.value),
+                                     new NameExpr(param.paramName.asString)
+                                   ))
+          )
         )
       )
     } else {
-      new TryStmt(
-        new BlockStmt(
-          new NodeList(
+      contentType match {
+        case Some(RouteMeta.ApplicationJson) =>
+          Option(
+            new TryStmt(
+              new BlockStmt(
+                new NodeList(
+                  new ExpressionStmt(
+                    wrapSetBody(
+                      new MethodCallExpr(
+                        new FieldAccessExpr(new ThisExpr, "objectMapper"),
+                        "writeValueAsString",
+                        new NodeList[Expression](new NameExpr(param.paramName.asString))
+                      )
+                    )
+                  )
+                )
+              ),
+              new NodeList(
+                new CatchClause(
+                  new Parameter(util.EnumSet.of(FINAL), JSON_PROCESSING_EXCEPTION_TYPE, new SimpleName("e")),
+                  new BlockStmt(
+                    new NodeList(
+                      new ThrowStmt(
+                        new ObjectCreationExpr(
+                          null,
+                          MARSHALLING_EXCEPTION_TYPE,
+                          new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                        )
+                      )
+                    )
+                  )
+                )
+              ),
+              null
+            )
+          )
+
+        case Some(RouteMeta.TextPlain) =>
+          Option(
             new ExpressionStmt(
               wrapSetBody(
                 new MethodCallExpr(
-                  new FieldAccessExpr(new ThisExpr, "objectMapper"),
-                  "writeValueAsString",
+                  new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
+                  "show",
                   new NodeList[Expression](new NameExpr(param.paramName.asString))
                 )
               )
             )
           )
-        ),
-        new NodeList(
-          new CatchClause(
-            new Parameter(util.EnumSet.of(FINAL), JSON_PROCESSING_EXCEPTION_TYPE, new SimpleName("e")),
-            new BlockStmt(
-              new NodeList(
-                new ThrowStmt(
-                  new ObjectCreationExpr(
-                    null,
-                    MARSHALLING_EXCEPTION_TYPE,
-                    new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
-                  )
-                )
-              )
-            )
-          )
-        ),
-        null
-      )
+
+        case Some(RouteMeta.OctetStream) | None =>
+          // FIXME: we're hoping that the type is something that AHC already supports
+          Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
+
+        case Some(RouteMeta.UrlencodedFormData) | Some(RouteMeta.MultipartFormData) =>
+          // We shouldn't be here, since we can't have a body param with these content types
+          None
+      }
     }
   }
 
@@ -436,12 +517,15 @@ object AsyncHttpClientClientGenerator {
             (parameters.headerParams, "addHeader", false)
           )
 
+          val consumes = getBestConsumes(operation, parameters)
+          val produces = responses.value.map(resp => (resp.statusCode, getBestProduces(operation, resp))).toMap
+
           val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
             .flatMap({
               case (params, name, needsMultipart) =>
                 params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
             }) ++
-            parameters.bodyParams.map(param => (param, generateBodyMethodCall(param)))
+            parameters.bodyParams.flatMap(param => generateBodyMethodCall(param, consumes).map(stmt => (param, stmt)))
 
           val callBuilderCreation = new ObjectCreationExpr(
             null,
@@ -471,18 +555,47 @@ object AsyncHttpClientClientGenerator {
 
           val callBuilderCls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, callBuilderName)
           callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
+          val callBuilderInitContentType = consumes.map(
+            ct =>
+              new ExpressionStmt(
+                new MethodCallExpr(
+                  "withHeader",
+                  new StringLiteralExpr("Content-Type"),
+                  new StringLiteralExpr(ct.value)
+                )
+            )
+          )
+          val callBuilderInitAccept = {
+            val acceptHeaderString = produces
+              .flatMap({ case (_, ct) => ct.map(ct => s"${ct.value}; q=1.0") })
+              .mkString(", ")
+            if (acceptHeaderString.nonEmpty) {
+              Option(
+                new ExpressionStmt(
+                  new MethodCallExpr(
+                    "withHeader",
+                    new StringLiteralExpr("Accept"),
+                    new StringLiteralExpr(s"$acceptHeaderString, */*; q=0.1")
+                  )
+                )
+              )
+            } else {
+              Option.empty
+            }
+          }
 
           callBuilderCls
             .addConstructor(PRIVATE)
             .setParameters(callBuilderFinalFields.map({ case (tpe, name) => new Parameter(util.EnumSet.of(FINAL), tpe, new SimpleName(name)) }).toNodeList)
             .setBody(
               new BlockStmt(
-                callBuilderFinalFields
-                  .map[Statement, List[Statement]]({
-                    case (_, name) =>
-                      new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN))
-                  })
-                  .toNodeList
+                (
+                  callBuilderFinalFields
+                    .map[Statement, List[Statement]]({
+                      case (_, name) =>
+                        new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN))
+                    }) ++ callBuilderInitContentType ++ callBuilderInitAccept
+                ).toNodeList
               )
             )
 
@@ -609,18 +722,52 @@ object AsyncHttpClientClientGenerator {
                                     new BlockStmt(
                                       new NodeList(
                                         new ExpressionStmt(
-                                          new AssignExpr(
-                                            new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), FINAL),
-                                            new MethodCallExpr(
-                                              new FieldAccessExpr(new ThisExpr, "objectMapper"),
-                                              "readValue",
-                                              new NodeList[Expression](
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
-                                                jacksonTypeReferenceFor(valueType)
+                                          produces
+                                            .get(response.statusCode)
+                                            .flatten
+                                            .getOrElse({
+                                              println(
+                                                s"WARNING: no supported content type specified for ${operation.getOperationId}'s ${response.statusCode} response; falling back to application/json"
                                               )
-                                            ),
-                                            AssignExpr.Operator.ASSIGN
-                                          )
+                                              RouteMeta.ApplicationJson
+                                            }) match {
+                                            case RouteMeta.ApplicationJson =>
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), FINAL),
+                                                new MethodCallExpr(
+                                                  new FieldAccessExpr(new ThisExpr, "objectMapper"),
+                                                  "readValue",
+                                                  new NodeList[Expression](
+                                                    new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
+                                                    jacksonTypeReferenceFor(valueType)
+                                                  )
+                                                ),
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+
+                                            case RouteMeta.TextPlain =>
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), FINAL),
+                                                new MethodCallExpr(new NameExpr("response"), "getResponseBody"),
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+
+                                            case RouteMeta.OctetStream =>
+                                              // FIXME: need to standardize on a type for byte streams
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), FINAL),
+                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsByteBuffer"),
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+
+                                            case RouteMeta.UrlencodedFormData | RouteMeta.MultipartFormData =>
+                                              // This should never happen & would be a bug in Guardrail
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), FINAL),
+                                                new NullLiteralExpr,
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+                                          }
                                         ),
                                         new IfStmt(
                                           new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
