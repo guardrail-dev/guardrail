@@ -8,7 +8,7 @@ import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
 class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
-  def customTypePrefixes(): Free[F, List[String]] = Free.inject[ScalaTerm[L, ?], F](CustomTypePrefixes[L]())
+  def vendorPrefixes(): Free[F, List[String]] = Free.inject[ScalaTerm[L, ?], F](VendorPrefixes[L]())
 
   def litString(value: String): Free[F, L#Term]        = Free.inject[ScalaTerm[L, ?], F](LitString(value))
   def litFloat(value: Float): Free[F, L#Term]          = Free.inject[ScalaTerm[L, ?], F](LitFloat(value))

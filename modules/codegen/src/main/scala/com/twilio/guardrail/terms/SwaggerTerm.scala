@@ -165,7 +165,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 
 sealed trait SwaggerTerm[L <: LA, T]
 case class ExtractOperations[L <: LA](paths: List[(String, PathItem)])                     extends SwaggerTerm[L, List[RouteMeta]]
-case class GetClassName[L <: LA](operation: Operation)                                     extends SwaggerTerm[L, List[String]]
+case class GetClassName[L <: LA](operation: Operation, vendorPrefixes: List[String])       extends SwaggerTerm[L, List[String]]
 case class GetParameterName[L <: LA](parameter: Parameter)                                 extends SwaggerTerm[L, String]
 case class GetBodyParameterSchema[L <: LA](parameter: Parameter)                           extends SwaggerTerm[L, Schema[_]]
 case class GetHeaderParameterType[L <: LA](parameter: Parameter)                           extends SwaggerTerm[L, String]

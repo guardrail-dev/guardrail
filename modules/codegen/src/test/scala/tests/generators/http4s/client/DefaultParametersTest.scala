@@ -17,7 +17,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
     |    get:
     |      tags:
     |      - store
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      operationId: getOrderById
     |      produces:
     |      - application/xml
@@ -57,7 +57,7 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
     |    delete:
     |      tags:
     |      - store
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      summary: Delete purchase order by ID
     |      description: For valid response try integer IDs with positive integer value.
     |        Negative or non-integer values will generate API errors

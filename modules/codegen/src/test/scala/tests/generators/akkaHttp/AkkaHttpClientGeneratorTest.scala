@@ -17,7 +17,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
     |    get:
     |      tags:
     |      - store
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      operationId: getOrderById
     |      produces:
     |      - application/xml
@@ -46,7 +46,7 @@ class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpe
     |    delete:
     |      tags:
     |      - store
-    |      x-scala-package: store
+    |      x-jvm-package: store
     |      summary: Delete purchase order by ID
     |      description: For valid response try integer IDs with positive integer value.
     |        Negative or non-integer values will generate API errors

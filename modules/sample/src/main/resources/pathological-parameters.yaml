@@ -17,7 +17,7 @@ paths:
   /:
     get:
       operationId: ohNo_0
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -28,7 +28,7 @@ paths:
   /{p1}/:
     get:
       operationId: ohNo_1
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -51,7 +51,7 @@ paths:
   /{p1}/{p2}/:
     get:
       operationId: ohNo_2
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -86,7 +86,7 @@ paths:
   /{p1}/{p2}/{p3}/:
     get:
       operationId: ohNo_3
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -133,7 +133,7 @@ paths:
   /{p1}/{p2}/{p3}/{p4}/:
     get:
       operationId: ohNo_4
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -192,7 +192,7 @@ paths:
   /{p1}/{p2}/{p3}/{p4}/{p5}/:
     get:
       operationId: ohNo_5
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -263,7 +263,7 @@ paths:
   /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/:
     get:
       operationId: ohNo_6
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:
@@ -346,7 +346,7 @@ paths:
   /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/{p7}/:
     get:
       operationId: ohNo_7
-      x-scala-package: pathological
+      x-jvm-package: pathological
       produces:
         - application/json
       parameters:

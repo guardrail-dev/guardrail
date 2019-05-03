@@ -21,7 +21,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |  /foo:
       |    get:
       |      operationId: getFoo
-      |      x-scala-package: foo.barBaz
+      |      x-jvm-package: foo.barBaz
       |      parameters:
       |        - name: bleep
       |          in: query
@@ -78,7 +78,7 @@ class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecR
       |  /foo:
       |    get:
       |      tags: ["foo", "barBaz"]
-      |      x-scala-package: foo.barBaz
+      |      x-jvm-package: foo.barBaz
       |      operationId: getFoo
       |      responses:
       |        200:

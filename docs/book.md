@@ -96,7 +96,7 @@ paths:                                      # All HTTP paths are direct children
 
       operationId: getUser                  # Friendly name, ends up as the function name (in clients and servers)
 
-      x-scala-package: users                # Relative package for this client to live in. For convenience, the
+      x-jvm-package: users                  # Relative package for this client to live in. For convenience, the
                                             # last package parameter is turned into a class name for clients and
                                             # servers. In this case, `UsersClient`.
 
@@ -407,7 +407,7 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
   </thead>
   <tbody>
     <tr>
-      <td nowrap><code>x-scala-empty-is-null</code></td>
+      <td nowrap><code>x-empty-is-null</code></td>
       <td>boolean</td>
       <td>clients/servers, definitions</td>
       <td>
@@ -417,7 +417,7 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       </td>
     </tr>
     <tr>
-      <td nowrap><code>x-scala-file-hash</code></td>
+      <td nowrap><code>x-file-hash</code></td>
       <td>string</td>
       <td nowrap>servers, parameters, file</td>
       <td>
@@ -431,8 +431,32 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       <td nowrap>clients/servers, paths</td>
       <td>
         A dot-separated package segment concatenated to the end of the supplied
-        <code>packageName</code>. This permits splitting up large specifications
-        into smaller, domain-specific <code>Handler</code>s.
+        <code>packageName</code> when generating Scala code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. See also <code>x-jvm-package</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-java-package</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating Java code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. See also <code>x-jvm-package</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-jvm-package</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating JVM code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. Note that <code>x-scala-package</code> and
+        <code>x-java-package</code> take precedence over this property.
       </td>
     </tr>
     <tr>
@@ -449,7 +473,7 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       </td>
     </tr>
     <tr>
-      <td nowrap><code>x-scala-tracing-label</code></td>
+      <td nowrap><code>x-tracing-label</code></td>
       <td>string</td>
       <td nowrap>clients/servers, paths</td>
       <td>
@@ -465,11 +489,37 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       <td nowrap>definitions, parameters</td>
       <td>
         Override the primitive types specified in the OpenAPI specification
-        with a domain-specific type. This requires the type to have either
-        serializers/deserializers in the underlying JSON framework or
-        HTTP framework. As this is an advanced feature, it may require use of
-        custom <code>imports</code> provided via build tool plugins or at
-        the CLI.
+        with a domain-specific type for generated Scala code. This requires the
+        type to have either serializers/deserializers in the underlying JSON
+        framework or HTTP framework. As this is an advanced feature, it may
+        require use of custom <code>imports</code> provided via build tool
+        plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-java-type</code></td>
+      <td>string</td>
+      <td nowrap>definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated Java code. This requires the
+        type to have either serializers/deserializers in the underlying JSON
+        framework or HTTP framework. As this is an advanced feature, it may
+        require use of custom <code>imports</code> provided via build tool
+        plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-jvm-type</code></td>
+      <td>string</td>
+      <td nowrap>definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated JVM (Scala and Java) code.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
       </td>
     </tr>
   </tbody>

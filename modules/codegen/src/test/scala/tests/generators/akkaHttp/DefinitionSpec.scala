@@ -37,7 +37,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     |      - v2
     |      - i like spaces
     |  Fourth:
-    |    x-scala-package: com.twilio.whatever
+    |    x-jvm-package: com.twilio.whatever
     |    type: string
     |    enum:
     |      - v1

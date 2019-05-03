@@ -19,7 +19,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
     |  /foo:
     |    post:
     |      operationId: doFoo
-    |      x-scala-package: foo
+    |      x-jvm-package: foo
     |      parameters:
     |      - in: query
     |        name: long

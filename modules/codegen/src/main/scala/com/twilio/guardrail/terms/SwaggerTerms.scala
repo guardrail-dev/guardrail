@@ -13,8 +13,8 @@ import io.swagger.v3.oas.models.responses.ApiResponse
 class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractOperations(paths: List[(String, PathItem)]): Free[F, List[RouteMeta]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths))
-  def getClassName(operation: Operation): Free[F, List[String]] =
-    Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation))
+  def getClassName(operation: Operation, vendorPrefixes: List[String]): Free[F, List[String]] =
+    Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation, vendorPrefixes))
   def getParameterName(parameter: Parameter): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetParameterName(parameter))
   def getBodyParameterSchema(parameter: Parameter): Free[F, Schema[_]] =

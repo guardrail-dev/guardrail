@@ -13,7 +13,7 @@ import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ Default, VendorExtension, extractFromNames }
+import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
@@ -140,8 +140,8 @@ object SwaggerUtil {
 
   def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
     for {
-      prefixes <- S.customTypePrefixes()
-    } yield extractFromNames[String, A](prefixes.map(_ + "-type"), v)
+      prefixes <- S.vendorPrefixes()
+    } yield CustomTypeName(v, prefixes)
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
