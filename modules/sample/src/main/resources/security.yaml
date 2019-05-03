@@ -46,6 +46,8 @@ paths:
     get:
       security:
         - HttpBearerAuth: []
+      x-security-optional:
+        - HttpBearerAuth
       operationId: httpBearerAuth
       parameters:
         - name: foo
@@ -72,6 +74,17 @@ paths:
       operationId: multipleAuthAnd
       responses:
         200: {}
+  /multiple-mixed:
+    get:
+      security:
+        - ApiKeyQuery: []
+          HttpBasicAuth: []
+        - ApiKeyHeader: []
+      x-security-optional:
+        - HttpBasicAuth
+      operationId: multipleMixed
+      responses:
+        200: {}
 components:
   securitySchemes:
     ApiKeyHeader:
@@ -85,6 +98,7 @@ components:
     HttpBasicAuth:
       type: http
       scheme: basic
+      x-jvm-type: Object
     HttpBearerAuth:
       type: http
       scheme: bearer

@@ -47,6 +47,7 @@ object SwaggerGenerator {
         securitySchemes.toList
           .traverse({
             case (schemeName, scheme) =>
+              val typeName = CustomTypeName(scheme, vendorPrefixes)
               val extensions = Option(scheme.getExtensions).fold(Map.empty[String, AnyRef])(_.asScala.toMap)
               Option(scheme.getType)
                 .fold(Target.raiseError[SecurityScheme](s"Security scheme ${schemeName} has no type"))({
@@ -54,12 +55,12 @@ object SwaggerGenerator {
                     for {
                       name <- Target.fromOption(Option(scheme.getName), s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property")
                       in   <- Target.fromOption(Option(scheme.getIn), s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property")
-                    } yield ApiKeySecurityScheme(name, in, CustomTypeName(scheme, vendorPrefixes), extensions)
+                    } yield ApiKeySecurityScheme(name, in, typeName, extensions)
 
                   case SwSecurityScheme.Type.HTTP =>
                     for {
                       authScheme <- Target.fromOption(Option(scheme.getScheme), s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme")
-                    } yield HttpSecurityScheme(authScheme, extensions)
+                    } yield HttpSecurityScheme(authScheme, typeName, extensions)
 
                   case SwSecurityScheme.Type.OPENIDCONNECT =>
                     for {
@@ -67,12 +68,12 @@ object SwaggerGenerator {
                         Option(scheme.getOpenIdConnectUrl).flatMap(url => Try(new URL(url)).toOption),
                         s"Security scheme ${schemeName} has a missing or invalid OpenID Connect URL"
                       )
-                    } yield OpenIdConnectSecurityScheme(url, extensions)
+                    } yield OpenIdConnectSecurityScheme(url, typeName, extensions)
 
                   case SwSecurityScheme.Type.OAUTH2 =>
                     for {
                       flows <- Target.fromOption(Option(scheme.getFlows), s"Security scheme ${schemeName} has no OAuth2 flows")
-                    } yield OAuth2SecurityScheme(flows, extensions)
+                    } yield OAuth2SecurityScheme(flows, typeName, extensions)
                 })
                 .map(schemeName -> _)
           })

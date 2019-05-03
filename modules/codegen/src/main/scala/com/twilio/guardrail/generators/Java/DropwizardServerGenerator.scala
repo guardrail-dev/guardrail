@@ -8,12 +8,12 @@ import cats.syntax.traverse._
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.{ Modifier, Node, NodeList }
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, TypeParameter, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
-import com.twilio.guardrail.extract.ServerRawResponse
+import com.twilio.guardrail.extract.{ SecurityOptional, ServerRawResponse }
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.syntax.RichString
@@ -27,6 +27,7 @@ import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import java.util
+import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.language.existentials
 import scala.util.Try
@@ -46,8 +47,12 @@ object DropwizardServerGenerator {
   private val RESPONSE_BUILDER_TYPE = JavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = JavaParser.parseClassOrInterfaceType("Logger")
 
-  private val HTTP_BASIC_CREDENTIALS_TYPE  = JavaParser.parseClassOrInterfaceType("HttpSecurityUtils.HttpBasicCredentials")
-  private val HTTP_BEARER_CREDENTIALS_TYPE = JavaParser.parseClassOrInterfaceType("HttpSecurityUtils.HttpBearerCredentials")
+  private val PRINCIPAL_TYPE = JavaParser.parseClassOrInterfaceType("Principal")
+
+  private val GENERIC_A_TYPE                   = JavaParser.parseClassOrInterfaceType("A")
+  private def apiKeyAuthFilterType(of: Type) = JavaParser.parseClassOrInterfaceType("ApiKeyAuthFilter").setTypeArguments(of)
+
+  private def apiKeyAuthFilterBuilderType(a: Type, b: Type) = JavaParser.parseClassOrInterfaceType("ApiKeyAuthFilterBuilder").setTypeArguments(a, b)
 
   private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
   private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
@@ -131,111 +136,71 @@ object DropwizardServerGenerator {
       )
   }
 
-  case class SecurityParameters(routeParameters: List[Parameter],
+  case class SecurityParameters(methodSuffix: String,
+                                routeParameters: List[Parameter],
                                 routeStatements: List[Statement],
-                                handlerParameters: List[Parameter],
-                                handlerArgs: List[Expression])
+                                principals: List[(Type, String)])
 
-  type UnknownHttpAuthSchemeHandler = (Operation, String, SecurityScheme, String) => Target[SecurityParameters]
+  type UnknownHttpAuthSchemeHandler = (Operation, String, HttpSecurityScheme, List[String]) => Target[SecurityParameters]
 
   def emptyUnknownHttpAuthSchemeHandler(operation: Operation,
                                         schemeName: String,
-                                        securityScheme: SecurityScheme,
-                                        authScheme: String): Target[SecurityParameters] =
-    Target.raiseError(s"HTTP auth scheme $authScheme is not yet supported")
+                                        securityScheme: HttpSecurityScheme,
+                                        scopes: List[String]): Target[SecurityParameters] =
+    Target.raiseError(s"HTTP auth scheme ${securityScheme.authScheme} is not yet supported")
 
   def generateSecurityParams(operation: Operation,
                              securitySchemes: Map[String, SecurityScheme],
-                             unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler): Target[SecurityParameters] =
-    Option(operation.getSecurity).toList
-      .flatMap(_.asScala)
-      .flatTraverse({ requirement =>
+                             unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler): Target[List[SecurityParameters]] = {
+    val optionalRequirements = SecurityOptional(operation)
+    val security = Option(operation.getSecurity).toList.flatMap(_.asScala)
+    security
+      .traverse({ requirement =>
         requirement.asScala.toList.traverse({
-          case (schemeName, _) =>
+          case (schemeName, scopes) =>
             securitySchemes
               .get(schemeName)
               .fold(
                 Target.raiseError[SecurityParameters](s"Operation '${operation.getOperationId} references undefined security scheme $schemeName")
-              )({
-                case ApiKeySecurityScheme(name, in, typeName, _) =>
+              )({ scheme =>
+                def createParameters(authPrincipalTypePrefix: String): Target[SecurityParameters] =
                   for {
-                    annotationName <- in match {
-                      case SwSecurityScheme.In.QUERY =>
-                        Target.pure("QueryParam")
-                      case SwSecurityScheme.In.HEADER =>
-                        Target.pure("HeaderParam")
-                      case SwSecurityScheme.In.COOKIE =>
-                        Target.raiseError[String]("API Key security schemes stored in cookies are not yet supported")
-                    }
-                    rawParameterType <- typeName.fold(Target.pure(STRING_TYPE))(safeParseClassOrInterfaceType)
+                    authPrincipalType <- safeParseClassOrInterfaceType(s"${authPrincipalTypePrefix}AuthPrincipal")
+                    authPrincipalTypeArg <- scheme.typeName.fold(Target.pure(STRING_TYPE))(safeParseClassOrInterfaceType)
                   } yield {
-                    val parameterType    = if (rawParameterType.isOptional) rawParameterType else optionalType(rawParameterType)
-                    val handlerParameter = new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(name.toCamelCase))
-                    val routeParameter = handlerParameter
-                      .clone()
-                      .addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(name)))
-                    SecurityParameters(List(routeParameter), List.empty, List(handlerParameter), List(new NameExpr(name.toCamelCase)))
+                    val parameterName = s"${schemeName.toCamelCase}Principal"
+                    val rawParameterType = authPrincipalType.setTypeArguments(authPrincipalTypeArg)
+                    val parameterType = if (optionalRequirements.contains(schemeName)) {
+                      optionalType(rawParameterType)
+                    } else {
+                      rawParameterType
+                    }
+                    val routeParameter = new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName))
+                      .addMarkerAnnotation("Auth")
+                    SecurityParameters(schemeName.toPascalCase, List(routeParameter), List.empty, List((parameterType, parameterName)))
                   }
 
-                case scheme @ HttpSecurityScheme(authScheme, _) =>
-                  authScheme match {
-                    case "basic" =>
-                      val routeParameters = List(
-                        new Parameter(util.EnumSet.of(FINAL), optionalType(STRING_TYPE), new SimpleName("httpBasicAuthorization"))
-                          .addAnnotation(new SingleMemberAnnotationExpr(new Name("HeaderParam"), new StringLiteralExpr("Authorization")))
-                      )
-                      val handlerParameters = List(
-                        new Parameter(util.EnumSet.of(FINAL), optionalType(HTTP_BASIC_CREDENTIALS_TYPE), new SimpleName("httpBasicCredentials"))
-                      )
-                      val handlerArgs = List(
-                        new MethodCallExpr(
-                          new NameExpr("HttpSecurityUtils.HttpBasicCredentials"),
-                          "parse",
-                          new NodeList[Expression](new NameExpr("httpBasicAuthorization"))
-                        )
-                      )
-                      Target.pure(SecurityParameters(routeParameters, List.empty, handlerParameters, handlerArgs))
-
-                    case "bearer" =>
-                      val routeParameters = List(
-                        new Parameter(util.EnumSet.of(FINAL), optionalType(STRING_TYPE), new SimpleName("httpBearerAuthorization"))
-                          .addAnnotation(new SingleMemberAnnotationExpr(new Name("HeaderParam"), new StringLiteralExpr("Authorization")))
-                      )
-                      val handlerParameters = List(
-                        new Parameter(util.EnumSet.of(FINAL), optionalType(HTTP_BEARER_CREDENTIALS_TYPE), new SimpleName("httpBearerCredentials"))
-                      )
-                      val handlerArgs = List(
-                        new MethodCallExpr(
-                          new NameExpr("HttpSecurityUtils.HttpBearerCredentials"),
-                          "parse",
-                          new NodeList[Expression](new NameExpr("httpBearerAuthorization"))
-                        )
-                      )
-                      Target.pure(SecurityParameters(routeParameters, List.empty, handlerParameters, handlerArgs))
-
-                    case _ =>
-                      unknownHttpAuthSchemeHandler(operation, schemeName, scheme, authScheme)
-                  }
-
-                case _: OpenIdConnectSecurityScheme =>
-                  Target.raiseError("OpenID Connect is not yet supported")
-
-                case _: OAuth2SecurityScheme =>
-                  Target.raiseError("OAuth2 is not yet supported")
+                scheme match {
+                  case ApiKeySecurityScheme(_, SwSecurityScheme.In.QUERY, _, _) => createParameters("ApiKeyQuery")
+                  case ApiKeySecurityScheme(_, SwSecurityScheme.In.HEADER, _, _) => createParameters("ApiKeyHeader")
+                  case ApiKeySecurityScheme(_, SwSecurityScheme.In.COOKIE, _, _) => createParameters("ApiKeyCookie")
+                  case HttpSecurityScheme("basic", _, _) => createParameters("HttpBasic")
+                  case HttpSecurityScheme("bearer", _, _) => createParameters("HttpBearer")
+                  case httpScheme: HttpSecurityScheme => unknownHttpAuthSchemeHandler(operation, schemeName, httpScheme, scopes.asScala.toList)
+                  case _: OAuth2SecurityScheme => createParameters("OAuth")
+                  case _: OpenIdConnectSecurityScheme => createParameters("OpenIdConnect")
+                }
               })
-        })
-      })
-      .map(
-        _.foldLeft(SecurityParameters(List.empty, List.empty, List.empty, List.empty))(
-          (accum, next) =>
-            SecurityParameters(
-              routeParameters = accum.routeParameters ++ next.routeParameters,
-              routeStatements = accum.routeStatements ++ next.routeStatements,
-              handlerParameters = accum.handlerParameters ++ next.handlerParameters,
-              handlerArgs = accum.handlerArgs ++ next.handlerArgs
+        }).map(_.foldLeft(SecurityParameters("", List.empty, List.empty, List.empty))(
+          (accum, next) => SecurityParameters(
+            methodSuffix = accum.methodSuffix + next.methodSuffix,
+            routeParameters = accum.routeParameters ++ next.routeParameters,
+            routeStatements = accum.routeStatements ++ next.routeStatements,
+            principals = accum.principals ++ next.principals
           )
-        )
-      )
+        ))
+      })
+  }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] = {
     val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(ABSTRACT), false, name)
@@ -370,19 +335,12 @@ object DropwizardServerGenerator {
                     parameters: ScalaParameters[JavaLanguage],
                     responses: Responses[JavaLanguage],
                     protocolElems: List[StrictProtocolElems[JavaLanguage]],
-                    securitySchemes: Map[String, SecurityScheme],
+                    securityParameters: List[SecurityParameters],
                     unknownHttpAuthSchemeHandler: UnknownHttpAuthSchemeHandler,
-                    handlerName: String): Target[(MethodDeclaration, MethodDeclaration)] = {
-    val operationId = operation.getOperationId
-    parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
-
-    val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
-      .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
-
+                    handlerName: String): Target[(List[MethodDeclaration], MethodDeclaration)] = {
+    val methodName = operation.getOperationId.toCamelCase
     val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
-    if (pathSuffix.nonEmpty && pathSuffix != "/") {
-      method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
-    }
+    parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
     val consumes = getBestConsumes(operation.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
       .orElse({
@@ -398,48 +356,63 @@ object DropwizardServerGenerator {
           None
         }
       })
-    consumes
-      .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
-      .foreach(method.addAnnotation)
 
     val successResponses =
       operation.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
     val produces = getBestProduces(operation.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
-    produces
-      .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
-      .foreach(method.addAnnotation)
 
-    def addParamAnnotation(template: Parameter, annotationName: String, argName: String): Parameter = {
-      val parameter = template.clone()
-      parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(argName)))
-      parameter
-    }
+    val methodParams: List[Parameter] = List(
+      (parameters.pathParams, "PathParam"),
+      (parameters.headerParams, "HeaderParam"),
+      (parameters.queryStringParams, "QueryParam"),
+      (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
+    ).flatMap({
+      case (params, annotationName) =>
+        params.map({ param =>
+          param.param.clone()
+            .addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
+        })
+    }) ++ parameters.bodyParams.map(_.param)
 
-    for {
-      securityParameters <- generateSecurityParams(operation, securitySchemes, unknownHttpAuthSchemeHandler)
-    } yield {
-      val methodParams: List[Parameter] = List(
-        (parameters.pathParams, "PathParam"),
-        (parameters.headerParams, "HeaderParam"),
-        (parameters.queryStringParams, "QueryParam"),
-        (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
-      ).flatMap({
-        case (params, annotationName) =>
-          params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
-      }) ++ parameters.bodyParams.map(_.param)
+    val (responseName, responseType) = ServerRawResponse(operation)
+      .filter(_ == true)
+      .fold({
+        val name = s"${handlerName}.${methodName.capitalize}Response"
+        (name, JavaParser.parseClassOrInterfaceType(name))
+      })(_ => (RESPONSE_TYPE.getName.asString, RESPONSE_TYPE))
 
-      securityParameters.routeParameters.foreach(method.addParameter)
-      methodParams.foreach(method.addParameter)
+    val handlerNeedsPrincipalList = securityParameters.map(_.principals).nonEmpty
+
+    val methodVariants = NonEmptyList
+      .fromList(securityParameters)
+      .getOrElse(NonEmptyList.one(SecurityParameters("", List.empty, List.empty, List.empty)))
+
+    val routeMethods = methodVariants.map({ securityParams =>
+      val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, methodName + securityParams.methodSuffix)
+        .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
+
+      if (pathSuffix.nonEmpty && pathSuffix != "/") {
+        method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
+      }
+
+      consumes
+        .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
+        .foreach(method.addAnnotation)
+
+      produces
+        .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
+        .foreach(method.addAnnotation)
+
+      securityParams.routeParameters.foreach(method.addParameter)
+      methodParams.map(_.clone()).foreach(method.addParameter)
       method.addParameter(
         new Parameter(util.EnumSet.of(FINAL), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
       )
 
-      val (responseType, resultResumeBody) =
+      val resultResumeBody =
         ServerRawResponse(operation)
           .filter(_ == true)
           .fold({
-            val responseName = s"${handlerName}.${operationId.capitalize}Response"
-
             val entitySetterIfTree = NonEmptyList
               .fromList(responses.value.collect({
                 case Response(statusCodeName, Some(_)) => statusCodeName
@@ -470,38 +443,32 @@ object DropwizardServerGenerator {
               }))
 
             (
-              JavaParser.parseClassOrInterfaceType(responseName),
-              (
-                List[Statement](
-                  new ExpressionStmt(
-                    new VariableDeclarationExpr(
-                      new VariableDeclarator(
-                        RESPONSE_BUILDER_TYPE,
-                        "builder",
-                        new MethodCallExpr(new NameExpr("Response"),
-                                           "status",
-                                           new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
-                      ),
-                      FINAL
-                    )
-                  )
-                ) ++ entitySetterIfTree ++ List(
-                  new ExpressionStmt(
-                    new MethodCallExpr(new NameExpr("asyncResponse"), "resume", new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
+              List[Statement](
+                new ExpressionStmt(
+                  new VariableDeclarationExpr(
+                    new VariableDeclarator(
+                      RESPONSE_BUILDER_TYPE,
+                      "builder",
+                      new MethodCallExpr(new NameExpr("Response"),
+                        "status",
+                        new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
+                    ),
+                    FINAL
                   )
                 )
-              ).toNodeList
-            )
-          })({ _ =>
-            (
-              RESPONSE_TYPE,
-              new NodeList(
+              ) ++ entitySetterIfTree ++ List(
                 new ExpressionStmt(
-                  new MethodCallExpr(
-                    new NameExpr("asyncResponse"),
-                    "resume",
-                    new NodeList[Expression](new NameExpr("result"))
-                  )
+                  new MethodCallExpr(new NameExpr("asyncResponse"), "resume", new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
+                )
+              )
+            ).toNodeList
+          })({ _ =>
+            new NodeList(
+              new ExpressionStmt(
+                new MethodCallExpr(
+                  new NameExpr("asyncResponse"),
+                  "resume",
+                  new NodeList[Expression](new NameExpr("result"))
                 )
               )
             )
@@ -523,7 +490,7 @@ object DropwizardServerGenerator {
                       new NameExpr("logger"),
                       "error",
                       new NodeList[Expression](
-                        new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
+                        new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
                         new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
                         new MethodCallExpr(new NameExpr("err"), "getMessage"),
                         new NameExpr("err")
@@ -553,37 +520,80 @@ object DropwizardServerGenerator {
         true
       )
 
+      val securityHandlerArg: Option[Expression] = NonEmptyList
+        .fromList(securityParams.principals)
+        .fold(
+          if (handlerNeedsPrincipalList) {
+            Some(new MethodCallExpr(new NameExpr("Collections"), "emptyList"))
+          } else {
+            Option.empty
+          }
+        )(
+          principals =>
+            Some(
+              new MethodCallExpr(
+                new MethodCallExpr(
+                  new MethodCallExpr(
+                    new MethodCallExpr(
+                      new MethodCallExpr(
+                        new NameExpr("Arrays"),
+                        "asList",
+                        principals.map[Expression]({
+                          case (tpe, name) if tpe.isOptional => new NameExpr(name)
+                          case (_, name) => new MethodCallExpr(new NameExpr("Optional"), "of", new NodeList[Expression](new NameExpr(name)))
+                        }).toList.toNodeList
+                      ),
+                      "stream"
+                    ),
+                    "filter",
+                    new NodeList[Expression](new MethodReferenceExpr(new NameExpr("Optional"), null, "isPresent"))
+                  ),
+                  "map",
+                  new NodeList[Expression](new MethodReferenceExpr(new NameExpr("Optional"), null, "get"))
+                ),
+                "collect",
+                new NodeList[Expression](new MethodCallExpr(new NameExpr("Collectors"), "toList"))
+              )
+            )
+        )
+
       val handlerCall = new MethodCallExpr(
         new FieldAccessExpr(new ThisExpr, "handler"),
-        operationId,
-        (securityParameters.handlerArgs ++ methodParams.map(param => new NameExpr(param.getName.asString))).toNodeList
+        methodName,
+        (securityHandlerArg.toList ++ methodParams.map(param => new NameExpr(param.getName.asString))).toNodeList
       )
 
       method.setBody(
         new BlockStmt(
           (
-            securityParameters.routeStatements :+
+            securityParams.routeStatements :+
               new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
           ).toNodeList
         )
       )
 
-      val futureResponseType = completionStageType(responseType.clone())
-      val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, operationId)
-      (securityParameters.handlerParameters ++
-        (
-          parameters.pathParams ++
-            parameters.headerParams ++
-            parameters.queryStringParams ++
-            parameters.formParams ++
-            parameters.bodyParams
-        ).map(_.param)).foreach({ parameter =>
-        handlerMethodSig.addParameter(parameter.clone())
-      })
-      handlerMethodSig.setBody(null)
+      method
+    })
 
-      (method, handlerMethodSig)
+    val futureResponseType = completionStageType(responseType.clone())
+    val handlerMethodSig   = new MethodDeclaration(util.EnumSet.noneOf(classOf[Modifier]), futureResponseType, methodName)
+    if (handlerNeedsPrincipalList) {
+      handlerMethodSig.addParameter(
+        new Parameter(util.EnumSet.of(FINAL), listType(PRINCIPAL_TYPE), new SimpleName("authPrincipals"))
+      )
     }
+    (
+      parameters.pathParams ++
+        parameters.headerParams ++
+        parameters.queryStringParams ++
+        parameters.formParams ++
+        parameters.bodyParams
+    ).map(_.param).foreach({ parameter =>
+      handlerMethodSig.addParameter(parameter.clone())
+    })
+    handlerMethodSig.setBody(null)
+
+    Target.pure((routeMethods.toList, handlerMethodSig))
   }
 
   def generateRoutes(tracing: Boolean,
@@ -604,16 +614,21 @@ object DropwizardServerGenerator {
       processedRoutes <- routes
         .traverse({
           case (_, _, RouteMeta(path, httpMethod, operation), parameters, responses) =>
-            generateRoute(operation,
-                          path,
-                          commonPathPrefix,
-                          httpMethod,
-                          parameters,
-                          responses,
-                          protocolElems,
-                          securitySchemes,
-                          unknownHttpAuthSchemeHandler,
-                          handlerName)
+            for {
+              securityParameters <- generateSecurityParams(operation, securitySchemes, unknownHttpAuthSchemeHandler)
+              processedRoutes <- generateRoute(
+                operation,
+                path,
+                commonPathPrefix,
+                httpMethod,
+                parameters,
+                responses,
+                protocolElems,
+                securityParameters,
+                unknownHttpAuthSchemeHandler,
+                handlerName
+              )
+            } yield processedRoutes
         })
 
       (routeMethods, handlerMethodSigs) = processedRoutes.unzip
@@ -645,13 +660,14 @@ object DropwizardServerGenerator {
         resourceConstructor
       )
 
-      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
+      RenderedRoutes[JavaLanguage](routeMethods.flatten, annotations, handlerMethodSigs, supportDefinitions, List.empty)
     }
 
   object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
         List(
+          "io.dropwizard.auth.Auth",
           "javax.ws.rs.Consumes",
           "javax.ws.rs.DELETE",
           "javax.ws.rs.FormParam",
@@ -669,8 +685,13 @@ object DropwizardServerGenerator {
           "javax.ws.rs.container.Suspended",
           "javax.ws.rs.core.MediaType",
           "javax.ws.rs.core.Response",
+          "java.util.Arrays",
+          "java.util.Collections",
+          "java.util.List",
           "java.util.Optional",
           "java.util.concurrent.CompletionStage",
+          "java.util.stream.Collectors",
+          "java.security.Principal",
           "org.glassfish.jersey.media.multipart.FormDataParam",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory"
@@ -695,7 +716,7 @@ object DropwizardServerGenerator {
 
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         for {
-          abstractResponseClassName <- safeParseSimpleName(s"${operationId.capitalize}Response").map(_.asString)
+          abstractResponseClassName <- safeParseSimpleName(s"${operationId.toPascalCase}Response").map(_.asString)
           abstractResponseClassType <- safeParseClassOrInterfaceType(abstractResponseClassName)
 
           // TODO: verify valueTypes are in protocolElems
@@ -721,8 +742,16 @@ object DropwizardServerGenerator {
 
           shower <- SerializationHelpers.showerSupportDef
 
-          jersey   <- SerializationHelpers.guardrailJerseySupportDef
-          security <- DropwizardHelpers.httpSecurityUtilsSupportDef
+          jersey <- SerializationHelpers.guardrailJerseySupportDef
+
+          apiKeyQueryAuthPrincipal <- DropwizardHelpers.apiKeyQueryAuthPrincipalSupportDef
+          apiKeyHeaderAuthPrincipal <- DropwizardHelpers.apiKeyHeaderAuthPrincipalSupportDef
+          apiKeyCookieAuthPrincipal <- DropwizardHelpers.apiKeyCookieAuthPrincipalSupportDef
+          httpBasicAuthPrincipal <- DropwizardHelpers.httpBasicAuthPrincipalSupportDef
+          httpBearerAuthPrincipal <- DropwizardHelpers.httpBearerAuthPrincipalSupportDef
+          oauthAuthPrincipal <- DropwizardHelpers.oauthAuthPrincipalSupportDef
+          openIdConnectAuthPrincipal <- DropwizardHelpers.openIdConnectAuthPrincipalSupportDef
+          apiKeyAuthFilter <- DropwizardHelpers.apiKeyAuthFilterSupportDef
         } yield {
           def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
             val annotationDecl = new AnnotationDeclaration(util.EnumSet.of(PUBLIC), name)
@@ -735,13 +764,57 @@ object DropwizardServerGenerator {
             SupportDefinition[JavaLanguage](new Name(name), annotationImports, annotationDecl)
           }
 
+          val authFilters = securitySchemes.collect({
+            case (schemeName, scheme: ApiKeySecurityScheme) => (schemeName, scheme)
+          }).map({
+            case (schemeName, ApiKeySecurityScheme(name, in, _, _)) =>
+              val className = s"${schemeName.toPascalCase}ApiKeyAuthFilter"
+              val classType = JavaParser.parseClassOrInterfaceType(className).setTypeArguments(GENERIC_A_TYPE)
+              val classTypeDiamonded = classType.clone().setTypeArguments(new NodeList[Type])
+              val principalName = s"ApiKey${in.toString.toLowerCase(Locale.US).capitalize}AuthPrincipal"
+              val principalType = JavaParser.parseClassOrInterfaceType(principalName).setTypeArguments(GENERIC_A_TYPE)
+
+              val cls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, className)
+                .setTypeParameters(new NodeList(new TypeParameter("A")))
+                .setExtendedTypes(new NodeList(apiKeyAuthFilterType(principalType)))
+              cls.addConstructor(PRIVATE)
+                .setBody(new BlockStmt(new NodeList(
+                  new ExpressionStmt(new MethodCallExpr(
+                    "super",
+                    new StringLiteralExpr(name),
+                    new FieldAccessExpr(new NameExpr("In"), in.toString.toUpperCase(Locale.US))
+                  ))
+                )))
+
+              val builderCls = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, "Builder")
+                .setTypeParameters(new NodeList(new TypeParameter("A")))
+                .setExtendedTypes(new NodeList(apiKeyAuthFilterBuilderType(principalType, classType)))
+              builderCls.addMethod("newInstance", PUBLIC)
+                .setType(classType)
+                .setBody(new BlockStmt(new NodeList(
+                  new ReturnStmt(new ObjectCreationExpr(null, classTypeDiamonded, new NodeList))
+                )))
+              cls.addMember(builderCls)
+
+              SupportDefinition[JavaLanguage](new Name(className), List.empty, cls)
+          })
+
+          val authPrincipalDefs = List(
+            securitySchemes.collectFirst({ case (_, ApiKeySecurityScheme(_, SwSecurityScheme.In.QUERY, _, _)) => apiKeyQueryAuthPrincipal }),
+            securitySchemes.collectFirst({ case (_, ApiKeySecurityScheme(_, SwSecurityScheme.In.HEADER, _, _)) => apiKeyHeaderAuthPrincipal }),
+            securitySchemes.collectFirst({ case (_, ApiKeySecurityScheme(_, SwSecurityScheme.In.COOKIE, _, _)) => apiKeyCookieAuthPrincipal }),
+            securitySchemes.collectFirst({ case (_, HttpSecurityScheme("basic", _, _)) => httpBasicAuthPrincipal }),
+            securitySchemes.collectFirst({ case (_, HttpSecurityScheme("bearer", _, _)) => httpBearerAuthPrincipal }),
+            securitySchemes.collectFirst({ case (_, _: OAuth2SecurityScheme) => oauthAuthPrincipal }),
+            securitySchemes.collectFirst({ case (_, _: OpenIdConnectSecurityScheme) => openIdConnectAuthPrincipal })
+          ).flatten
+
           List(
             shower,
             jersey,
-            security,
             httpMethodAnnotation("PATCH"),
             httpMethodAnnotation("TRACE")
-          )
+          ) ++ authPrincipalDefs ++ (if (authFilters.nonEmpty) List(apiKeyAuthFilter) else List.empty) ++ authFilters
         }
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>

@@ -1,6 +1,8 @@
 package com.twilio.guardrail.extract
-import com.twilio.guardrail.{ EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour }
 
+import com.twilio.guardrail.{ EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour }
+import java.util
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 trait Extractable[T] {
@@ -36,5 +38,11 @@ object Extractable {
     build[EmptyToNullBehaviour]({
       case x: Boolean if x  => EmptyIsNull
       case x: Boolean if !x => EmptyIsEmpty
+    })
+
+  implicit def defaultExtractableList[T]: Extractable[List[T]] =
+    build[List[T]]({
+      case x: Seq[T] => x.toList
+      case x: util.List[T] => x.asScala.toList
     })
 }

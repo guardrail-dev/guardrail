@@ -294,6 +294,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     libraryDependencies ++= Seq(
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
       "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
+      "io.dropwizard"              %  "dropwizard-auth"        % dropwizardVersion,
       "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,

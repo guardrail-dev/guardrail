@@ -1,86 +1,123 @@
 package com.twilio.guardrail.generators.Java
 
-import com.twilio.guardrail.{ SupportDefinition, Target }
 import com.twilio.guardrail.generators.syntax.Java.loadSupportDefinitionFromString
 import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.{SupportDefinition, Target}
 
 object DropwizardHelpers {
-  def httpSecurityUtilsSupportDef: Target[SupportDefinition[JavaLanguage]] = loadSupportDefinitionFromString(
-    "HttpSecurityUtils",
+  def authPrincipalSupportDef(classPrefix: String): Target[SupportDefinition[JavaLanguage]] = loadSupportDefinitionFromString(
+    s"${classPrefix}AuthPrincipal",
+    s"""
+      import java.security.Principal;
+      import java.util.Objects;
+
+      import static java.util.Objects.requireNonNull;
+
+      public class ${classPrefix}AuthPrincipal<T> implements Principal {
+          private final String name;
+          private final T data;
+
+          public ${classPrefix}AuthPrincipal(final String name, final T data) {
+              this.name = requireNonNull(name);
+              this.data = requireNonNull(data);
+          }
+
+          public T getData() {
+              return this.data;
+          }
+
+          @Override
+          public String getName() {
+              return this.name;
+          }
+
+          @Override
+          public boolean equals(Object o) {
+              if (this == o) return true;
+              if (o == null || getClass() != o.getClass()) return false;
+              final ${classPrefix}AuthPrincipal<?> that = (${classPrefix}AuthPrincipal<?>) o;
+              return this.name.equals(that.name) &&
+                      this.data.equals(that.data);
+          }
+
+          @Override
+          public int hashCode() {
+              return Objects.hash(this.name, this.data);
+          }
+
+          @Override
+          public String toString() {
+              return this.name;
+          }
+      }
     """
-      import java.nio.charset.StandardCharsets;
-      import java.util.Base64;
+  )
+
+  def apiKeyQueryAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("ApiKeyQuery")
+  def apiKeyHeaderAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("ApiKeyHeader")
+  def apiKeyCookieAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("ApiKeyCookie")
+  def httpBasicAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("HttpBasic")
+  def httpBearerAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("HttpBearer")
+  def oauthAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("OAuth")
+  def openIdConnectAuthPrincipalSupportDef: Target[SupportDefinition[JavaLanguage]] = authPrincipalSupportDef("OpenIdConnect")
+
+  def apiKeyAuthFilterSupportDef: Target[SupportDefinition[JavaLanguage]] = loadSupportDefinitionFromString(
+    "ApiKeyAuthFilter",
+    """
+      import io.dropwizard.auth.AuthFilter;
+      import javax.ws.rs.WebApplicationException;
+      import javax.ws.rs.container.ContainerRequestContext;
+      import javax.ws.rs.core.Cookie;
+      import java.io.IOException;
+      import java.security.Principal;
       import java.util.Optional;
-      import java.util.Locale;
 
-      public class HttpSecurityUtils {
-          public static class HttpBasicCredentials {
-              public static Optional<HttpBasicCredentials> parse(final Optional<String> authHeader) {
-                  return authHeader.flatMap(hdr -> {
-                      final String[] parts = hdr.trim().split("\\s+");
-                      if (parts.length == 2) {
-                          if ("basic".equals(parts[0].toLowerCase(Locale.US))) {
-                              final String userPass = new String(Base64.getDecoder().decode(parts[1].trim()), StandardCharsets.UTF_8);
-                              final String[] userPassParts = userPass.split(":", 2);
-                              if (userPassParts.length == 2) {
-                                  return Optional.of(new HttpBasicCredentials(userPassParts[0], userPassParts[1]));
-                              } else {
-                                  return Optional.of(new HttpBasicCredentials(userPassParts[0], ""));
-                              }
-                          } else {
-                              return Optional.empty();
-                          }
-                      } else {
-                          return Optional.empty();
-                      }
-                  });
-              }
+      import static java.util.Objects.requireNonNull;
 
-              private final String username;
-              private final String password;
+      public abstract class ApiKeyAuthFilter<P extends Principal> extends AuthFilter<String, P> {
+          protected enum In {
+              QUERY,
+              HEADER,
+              COOKIE
+          }
 
-              private HttpBasicCredentials(final String username, final String password) {
-                  this.username = username;
-                  this.password = password;
-              }
+          protected final String name;
+          protected final In in;
 
-              public String getUsername() {
-                  return this.username;
-              }
+          protected ApiKeyAuthFilter(final String name, final In in) {
+              this.name = requireNonNull(name);
+              this.in = requireNonNull(in);
+          }
 
-              public String getPassword() {
-                  return this.password;
+          @Override
+          public void filter(final ContainerRequestContext requestContext) throws IOException {
+              final Optional<String> apiKey = getApiKey(requestContext);
+              if (!authenticate(requestContext, apiKey.orElse(null), "apiKey")) {
+                  throw new WebApplicationException(unauthorizedHandler.buildResponse(prefix, realm));
               }
           }
 
-          public static class HttpBearerCredentials {
-              public static Optional<HttpBearerCredentials> parse(final Optional<String> authHeader) {
-                  return authHeader.flatMap(hdr -> {
-                      final String[] parts = hdr.trim().split("\\s+");
-                      if (parts.length == 2) {
-                          if ("bearer".equals(parts[0].toLowerCase(Locale.US))) {
-                              return Optional.of(new HttpBearerCredentials(parts[1]));
-                          } else {
-                              return Optional.empty();
-                          }
-                      } else {
-                          return Optional.empty();
-                      }
-                  });
-              }
-
-              private final String token;
-
-              private HttpBearerCredentials(final String token) {
-                  this.token = token;
-              }
-
-              public String getToken() {
-                  return this.token;
+          private Optional<String> getApiKey(final ContainerRequestContext requestContext) {
+              switch (this.in) {
+                  case QUERY:
+                      return Optional.ofNullable(requestContext.getUriInfo().getQueryParameters().getFirst(this.name));
+                  case HEADER:
+                      return Optional.ofNullable(requestContext.getHeaders().getFirst(this.name));
+                  case COOKIE:
+                      return Optional.ofNullable(requestContext.getCookies().get(this.name)).map(Cookie::getValue);
+                  default:
+                      throw new IllegalStateException("This should never happen");
               }
           }
 
-          private HttpSecurityUtils() {}
+          public static abstract class ApiKeyAuthFilterBuilder<P extends Principal, T extends ApiKeyAuthFilter<P>>
+                  extends AuthFilterBuilder<String, P, T>
+          {
+              public ApiKeyAuthFilterBuilder() {
+                  super();
+                  setPrefix("apiKey");
+              }
+          }
       }
     """
   )

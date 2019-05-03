@@ -159,12 +159,13 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 }
 
 sealed trait SecurityScheme {
+  def typeName: Option[String]
   def extensions: Map[String, AnyRef]
 }
 case class ApiKeySecurityScheme(name: String, in: SwSecurityScheme.In, typeName: Option[String], extensions: Map[String, AnyRef]) extends SecurityScheme
-case class HttpSecurityScheme(authScheme: String, extensions: Map[String, AnyRef])                                                extends SecurityScheme
-case class OpenIdConnectSecurityScheme(url: URL, extensions: Map[String, AnyRef])                                                 extends SecurityScheme
-case class OAuth2SecurityScheme(flows: OAuthFlows, extensions: Map[String, AnyRef])                                               extends SecurityScheme
+case class HttpSecurityScheme(authScheme: String, typeName: Option[String], extensions: Map[String, AnyRef])                      extends SecurityScheme
+case class OpenIdConnectSecurityScheme(url: URL, typeName: Option[String], extensions: Map[String, AnyRef])                       extends SecurityScheme
+case class OAuth2SecurityScheme(flows: OAuthFlows, typeName: Option[String], extensions: Map[String, AnyRef])                     extends SecurityScheme
 
 sealed trait SwaggerTerm[L <: LA, T]
 case class ExtractOperations[L <: LA](paths: List[(String, PathItem)]) extends SwaggerTerm[L, List[RouteMeta]]
