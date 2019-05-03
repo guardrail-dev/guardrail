@@ -14,6 +14,7 @@ import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityRequirement, SecurityScheme => SwSecurityScheme }
 import java.net.URI
 import java.util
+import java.util.Locale
 import scala.collection.JavaConverters._
 
 object RouteMeta {
@@ -26,7 +27,7 @@ object RouteMeta {
   case object TextPlain          extends ContentType("text/plain")
   case object OctetStream        extends ContentType("application/octet-stream")
   object ContentType {
-    def unapply(value: String): Option[ContentType] = value match {
+    def unapply(value: String): Option[ContentType] = value.toLowerCase(Locale.US) match {
       case "application/json"                  => Some(ApplicationJson)
       case "multipart/form-data"               => Some(MultipartFormData)
       case "application/x-www-form-urlencoded" => Some(UrlencodedFormData)
