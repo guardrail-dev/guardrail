@@ -23,6 +23,7 @@ import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
 import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
 import org.eclipse.jface.text.Document
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object JavaGenerator {
   def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] = safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
@@ -45,13 +46,20 @@ object JavaGenerator {
     ).asJava
   )
 
-  def prettyPrintSource(source: CompilationUnit): Array[Byte] = {
+  def prettyPrintSource(source: CompilationUnit): Target[Array[Byte]] = {
     source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
+    val className = Try(source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
     val sourceStr = source.toString
-    val textEdit  = formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n")
-    val doc       = new Document(sourceStr)
-    textEdit.apply(doc)
-    doc.get.getBytes(StandardCharsets.UTF_8)
+    Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
+      .fold(
+        Target.raiseError[Array[Byte]](s"Failed to format class '$className'")
+      )({ textEdit =>
+        val doc = new Document(sourceStr)
+        Try(textEdit.apply(doc)).fold(
+          t => Target.raiseError[Array[Byte]](s"Failed to format class '$className': $t"),
+          _ => Target.pure(doc.get.getBytes(StandardCharsets.UTF_8))
+        )
+      })
   }
 
   def writeClientTree(pkgPath: Path,
@@ -65,12 +73,7 @@ object JavaGenerator {
         cu.setPackageDeclaration(pkgDecl)
         imports.map(cu.addImport)
         cu.addType(td)
-        Target.pure(
-          WriteTree(
-            resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"),
-            prettyPrintSource(cu)
-          )
-        )
+        prettyPrintSource(cu).map(bytes => WriteTree(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), bytes))
       case other =>
         Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
@@ -86,12 +89,7 @@ object JavaGenerator {
         cu.setPackageDeclaration(pkgDecl)
         imports.map(cu.addImport)
         cu.addType(td)
-        Target.pure(
-          WriteTree(
-            resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"),
-            prettyPrintSource(cu)
-          )
-        )
+        prettyPrintSource(cu).map(bytes => WriteTree(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), bytes))
       case other =>
         Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
@@ -222,34 +220,28 @@ object JavaGenerator {
       case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
         for {
           pkgDecl <- buildPkgDecl(pkgName)
-        } yield {
-          val cu = new CompilationUnit()
-          cu.setPackageDeclaration(pkgDecl)
-          frameworkImports.map(cu.addImport)
-          cu.addType(frameworkDefinitions)
-          WriteTree(
-            resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")),
-            prettyPrintSource(cu)
-          )
-        }
+          cu = {
+            val cu = new CompilationUnit()
+            cu.setPackageDeclaration(pkgDecl)
+            frameworkImports.map(cu.addImport)
+            cu.addType(frameworkDefinitions)
+            cu
+          }
+          bytes <- prettyPrintSource(cu)
+        } yield WriteTree(resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")), bytes)
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         for {
           pkgDecl <- buildPkgDecl(dtoComponents)
-        } yield
-          Some(
-            WriteTree(
-              resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"),
-              prettyPrintSource(new CompilationUnit().setPackageDeclaration(pkgDecl))
-            )
-          )
+          bytes   <- prettyPrintSource(new CompilationUnit().setPackageDeclaration(pkgDecl))
+        } yield Option(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), bytes))
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         for {
           pkgDecl      <- buildPkgDecl(definitions)
           showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
-        } yield {
-          elem match {
+
+          nameAndCompilationUnit = elem match {
             case EnumDefinition(_, _, _, cls, staticDefns) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
@@ -259,15 +251,7 @@ object JavaGenerator {
               val clsCopy = cls.clone()
               staticDefns.definitions.foreach(clsCopy.addMember)
               cu.addType(clsCopy)
-              (
-                List(
-                  WriteTree(
-                    resolveFile(outputPath)(dtoComponents).resolve(s"${cls.getName.getIdentifier}.java"),
-                    prettyPrintSource(cu)
-                  )
-                ),
-                List.empty[Statement]
-              )
+              Option((cls.getName.getIdentifier, cu))
 
             case ClassDefinition(_, _, cls, staticDefns, _) =>
               val cu = new CompilationUnit()
@@ -277,15 +261,7 @@ object JavaGenerator {
               val clsCopy = cls.clone()
               staticDefns.definitions.foreach(clsCopy.addMember)
               cu.addType(clsCopy)
-              (
-                List(
-                  WriteTree(
-                    resolveFile(outputPath)(dtoComponents).resolve(s"${cls.getName.getIdentifier}.java"),
-                    prettyPrintSource(cu)
-                  )
-                ),
-                List.empty[Statement]
-              )
+              Option((cls.getName.getIdentifier, cu))
 
             case ADT(name, tpe, trt, staticDefns) =>
               val cu = new CompilationUnit()
@@ -295,20 +271,24 @@ object JavaGenerator {
               val trtCopy = trt.clone()
               staticDefns.definitions.foreach(trtCopy.addMember)
               cu.addType(trtCopy)
-              (
-                List(
-                  WriteTree(
-                    resolveFile(outputPath)(dtoComponents).resolve(s"${name}.java"),
-                    prettyPrintSource(cu)
-                  )
-                ),
-                List.empty[Statement]
-              )
+              Option((name, cu))
 
             case RandomType(_, _) =>
-              (List.empty, List.empty)
+              Option.empty
           }
-        }
+
+          nameAndBytes <- nameAndCompilationUnit.fold(Target.pure(Option.empty[(String, Array[Byte])]))({
+            case (name, cu) =>
+              prettyPrintSource(cu).map(bytes => Option((name, bytes)))
+          })
+        } yield
+          nameAndBytes.fold((List.empty[WriteTree], List.empty[Statement]))({
+            case (name, bytes) =>
+              (
+                List(WriteTree(resolveFile(outputPath)(dtoComponents).resolve(s"${name}.java"), bytes)),
+                List.empty[Statement]
+              )
+          })
 
       case WriteClient(pkgPath,
                        pkgName,
