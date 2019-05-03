@@ -34,6 +34,7 @@ object DropwizardServerGenerator {
       case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
       case RouteMeta.MultipartFormData  => "MULTIPART_FORM_DATA"
       case RouteMeta.TextPlain          => "TEXT_PLAIN"
+      case RouteMeta.OctetStream        => "APPLICATION_OCTET_STREAM"
     }
   }
 
@@ -99,7 +100,8 @@ object DropwizardServerGenerator {
                               protocolElems: List[StrictProtocolElems[JavaLanguage]]): Option[RouteMeta.ContentType] = {
     val priorityOrder = NonEmptyList.of(
       RouteMeta.ApplicationJson,
-      RouteMeta.TextPlain
+      RouteMeta.TextPlain,
+      RouteMeta.OctetStream
     )
 
     priorityOrder
