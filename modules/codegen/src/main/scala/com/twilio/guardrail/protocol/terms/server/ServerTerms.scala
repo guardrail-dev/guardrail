@@ -23,8 +23,8 @@ class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
     Free.inject[ServerTerm[L, ?], F](GetExtraRouteParams(tracing))
   def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Free[F, List[L#Definition]] =
     Free.inject[ServerTerm[L, ?], F](GenerateResponseDefinitions(operationId, responses, protocolElems))
-  def generateSupportDefinitions(tracing: Boolean): Free[F, List[SupportDefinition[L]]] =
-    Free.inject[ServerTerm[L, ?], F](GenerateSupportDefinitions(tracing))
+  def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme]): Free[F, List[SupportDefinition[L]]] =
+    Free.inject[ServerTerm[L, ?], F](GenerateSupportDefinitions(tracing, securitySchemes))
   def renderClass(resourceName: String,
                   handlerName: String,
                   annotations: List[L#Annotation],

@@ -19,7 +19,7 @@ case class GenerateRoutes[L <: LA](tracing: Boolean,
 case class GetExtraRouteParams[L <: LA](tracing: Boolean) extends ServerTerm[L, List[L#MethodParameter]]
 case class GenerateResponseDefinitions[L <: LA](operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]])
     extends ServerTerm[L, List[L#Definition]]
-case class GenerateSupportDefinitions[L <: LA](tracing: Boolean) extends ServerTerm[L, List[SupportDefinition[L]]]
+case class GenerateSupportDefinitions[L <: LA](tracing: Boolean, securitySchemes: Map[String, SecurityScheme]) extends ServerTerm[L, List[SupportDefinition[L]]]
 case class RenderClass[L <: LA](className: String,
                                 handlerName: String,
                                 annotations: List[L#Annotation],

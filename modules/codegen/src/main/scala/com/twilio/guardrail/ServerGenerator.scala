@@ -53,7 +53,7 @@ object ServerGenerator {
         .mapValues(_.map(_._2))
         .toList
       extraImports       <- getExtraImports(context.tracing)
-      supportDefinitions <- generateSupportDefinitions(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>
           val routes       = unsortedRoutes.sortBy(r => (r.path, r.method))

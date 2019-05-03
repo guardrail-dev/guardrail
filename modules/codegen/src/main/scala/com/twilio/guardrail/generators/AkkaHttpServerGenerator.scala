@@ -184,7 +184,7 @@ object AkkaHttpServerGenerator {
           ).flatten
         }
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
     }
 

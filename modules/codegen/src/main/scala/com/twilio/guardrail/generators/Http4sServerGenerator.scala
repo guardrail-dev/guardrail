@@ -84,7 +84,7 @@ object Http4sServerGenerator {
           tracing.toList ::: List(mapRoute)
         }
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
 
       case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>

@@ -709,7 +709,7 @@ object DropwizardServerGenerator {
           abstractResponseClass :: Nil
         }
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         for {
           annotationImports <- List(
             "java.lang.annotation.ElementType",
