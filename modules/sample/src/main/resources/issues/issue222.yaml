@@ -1,0 +1,26 @@
+swagger: '2.0'
+info:
+  title: someapp
+  description: someapp
+  version: '1'
+basePath: "/v1"
+schemes:
+  - http
+produces:
+  - application/json
+paths: {}
+definitions:
+  Request:
+    description: Request fields with id
+    allOf:
+      - "$ref": "#/definitions/RequestFields"
+      - type: object
+        properties:
+          id:
+            type: string
+  RequestFields:
+    description: Request fields
+    type: object
+    properties:
+      state:
+        type: integer

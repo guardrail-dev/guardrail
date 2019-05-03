@@ -104,9 +104,12 @@ object CirceProtocolGenerator {
         (swagger match {
           case m: ObjectSchema => Target.pure(Option(m.getProperties))
           case comp: ComposedSchema =>
-            Target.pure(Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).lastOption.flatMap(prop => Option(prop.getProperties)))
+            val extractedProps =
+              Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).flatMap(e => Option(e.getProperties).map(_.asScala.toMap))
+            val mergedProps = extractedProps.fold(Map.empty)(_ ++ _)
+            Target.pure(Option(mergedProps.asJava))
           case comp: Schema[_] if Option(comp.get$ref).isDefined =>
-            Target.error(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
+            Target.raiseError(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
           case _ => Target.pure(None)
         }).map(_.map(_.asScala.toList).toList.flatten)
 
@@ -171,11 +174,12 @@ object CirceProtocolGenerator {
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators = parents.flatMap(_.discriminators)
-        val parenOpt       = parents.headOption
+        val parentOpt      = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
         val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfParams.map(_.term)).filterNot(
           param => discriminators.contains(param.name.value)
         )
-        val code = parenOpt
+
+        val code = parentOpt
           .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
             parent =>
               q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces
@@ -366,7 +370,7 @@ object CirceProtocolGenerator {
   object PolyProtocolTermInterp extends (PolyProtocolTerm[ScalaLanguage, ?] ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[ScalaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
-        def allParents(model: Schema[_]): List[(String, Schema[_], List[Schema[_]])] =
+        def allParents(model: Schema[_]): Target[List[(String, Schema[_], List[Schema[_]])]] =
           model match {
             case elem: ComposedSchema =>
               Option(elem.getAllOf).map(_.asScala.toList).getOrElse(List.empty) match {
@@ -374,15 +378,15 @@ object CirceProtocolGenerator {
                   definitions
                     .collectFirst({
                       case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
-                        (clsName, e, tail.toList) :: allParents(e)
+                        val thisParent = (clsName, e, tail)
+                        allParents(e).map(otherParents => thisParent :: otherParents)
                     })
-                    .getOrElse(List.empty)
-                case _ => List.empty
+                    .getOrElse(Target.raiseError(s"Reference ${head.get$ref()} not found among definitions"))
+                case _ => Target.pure(List.empty)
               }
-            case _ => List.empty
+            case _ => Target.pure(List.empty)
           }
-
-        Target.pure(allParents(swagger))
+        allParents(swagger)
 
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>
         Target.pure(

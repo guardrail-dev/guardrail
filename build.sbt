@@ -41,6 +41,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("issues/issue164.yaml"), "issues.issue164", false, List.empty),
   (sampleResource("issues/issue215.yaml"), "issues.issue215", false, List.empty),
   (sampleResource("issues/issue218.yaml"), "issues.issue218", false, List.empty),
+  (sampleResource("issues/issue222.yaml"), "issues.issue222", false, List.empty),
   (sampleResource("issues/issue249.yaml"), "issues.issue249", false, List.empty),
   (sampleResource("issues/issue264.yaml"), "issues.issue264", false, List.empty),
   (sampleResource("multipart-form-data.yaml"), "multipartFormData", false, List.empty),
