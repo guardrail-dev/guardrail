@@ -1,0 +1,28 @@
+openapi: 3.0.1
+info:
+  title: Whatever
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    FooMapValues:
+      type: object
+      required:
+        - foo
+        - bar
+      properties:
+        foo:
+          type: string
+        bar:
+          type: integer
+          format: int32
+    Foo:
+      type: object
+      required:
+        - stuff
+      properties:
+        stuff:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/FooMapValues"
+

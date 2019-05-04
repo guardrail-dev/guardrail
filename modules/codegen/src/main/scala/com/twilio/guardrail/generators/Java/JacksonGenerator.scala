@@ -673,9 +673,15 @@ object JacksonGenerator {
                 }
                 tpe.map((_, Option.empty))
               case SwaggerUtil.DeferredArray(tpeName) =>
-                safeParseType(s"java.util.List<${tpeName}>").map((_, Option.empty))
+                for {
+                  fqListType <- safeParseClassOrInterfaceType("java.util.List")
+                  innerType  <- safeParseType(tpeName)
+                } yield (fqListType.setTypeArguments(innerType), Option.empty)
               case SwaggerUtil.DeferredMap(tpeName) =>
-                safeParseType(s"java.util.List<${tpeName}>").map((_, Option.empty))
+                for {
+                  fqMapType <- safeParseClassOrInterfaceType("java.util.Map")
+                  innerType <- safeParseType(tpeName)
+                } yield (fqMapType.setTypeArguments(STRING_TYPE, innerType), Option.empty)
             }
             (tpe, classDep) = tpeClassDep
 
