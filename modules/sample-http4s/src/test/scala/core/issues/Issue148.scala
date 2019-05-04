@@ -3,7 +3,7 @@ package core.issues
 import io.circe._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 
 /** Changes
   *
@@ -191,7 +191,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import cats.effect.IO
     import issues.issue148.client.http4s.Client
     import org.http4s._
-    import org.http4s.client.{Client => Http4sClient}
+    import org.http4s.client.{ Client => Http4sClient }
     import org.http4s.headers._
 
     def jsonResponse(str: String): Http4sClient[IO] =

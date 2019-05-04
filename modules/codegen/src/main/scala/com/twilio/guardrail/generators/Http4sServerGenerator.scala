@@ -219,7 +219,10 @@ object Http4sServerGenerator {
             Target.pure(
               Param(
                 None,
-                Some((q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.headOption).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))")),
+                Some(
+                  (q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.headOption).map(Json.fromString(_).as[$tpe])",
+                   p"Some(Right(${Pat.Var(arg.paramName)}))")
+                ),
                 arg.paramName
               )
             )
