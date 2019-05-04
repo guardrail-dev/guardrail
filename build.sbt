@@ -28,6 +28,7 @@ mainClass in assembly := Some("com.twilio.guardrail.CLI")
 // (filename, prefix, tracing)
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
 val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
+  (sampleResource("additional-properties.yaml"), "additionalProperties", false, List.empty),
   (sampleResource("alias.yaml"), "alias", false, List.empty),
   (sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain", false, List.empty),
   (sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader", false, List.empty),
