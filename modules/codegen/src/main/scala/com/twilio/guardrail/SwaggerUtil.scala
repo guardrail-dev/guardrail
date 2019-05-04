@@ -380,8 +380,7 @@ object SwaggerUtil {
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],
       F: FrameworkTerms[L, F]
-  ): Free[F, ResolvedType[L]] = {
-    import Sc._
+  ): Free[F, ResolvedType[L]] =
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>
@@ -398,7 +397,6 @@ object SwaggerUtil {
     } else {
       Free.pure(Resolved[L](ignoredType, None, None): ResolvedType[L])
     }
-  }
 
   def getResponseType[L <: LA](httpMethod: HttpMethod, responses: Responses[L], ignoredType: L#Type): Resolved[L] =
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {

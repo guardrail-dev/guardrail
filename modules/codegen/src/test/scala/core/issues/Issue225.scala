@@ -55,8 +55,7 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
     // Cause structure is slightly different but source code is the same the value converted to string and then parsed
     compare(genResource.toString().parse[Stat].get, resource)
   }
-  
-  private def compare(actual: Tree, expected: Tree): Unit = {
+
+  private def compare(actual: Tree, expected: Tree): Unit =
     actual.structure shouldEqual expected.structure
-  }
 }
