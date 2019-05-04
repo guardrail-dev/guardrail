@@ -49,32 +49,29 @@ object ScalaParameter {
     import Sw._
 
     def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
-      def getDefault[U <: Parameter: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
-        Option(p.getSchema.getType)
-          .flatTraverse[Free[F, ?], L#Term]({ _type =>
-            val fmt = Option(p.getSchema.getFormat)
-            (_type, fmt) match {
-              case ("string", None) =>
-                Default(p).extract[String].traverse(litString(_))
-              case ("number", Some("float")) =>
-                Default(p).extract[Float].traverse(litFloat(_))
-              case ("number", Some("double")) =>
-                Default(p).extract[Double].traverse(litDouble(_))
-              case ("integer", Some("int32")) =>
-                Default(p).extract[Int].traverse(litInt(_))
-              case ("integer", Some("int64")) =>
-                Default(p).extract[Long].traverse(litLong(_))
-              case ("boolean", None) =>
-                Default(p).extract[Boolean].traverse(litBoolean(_))
-              case x => Free.pure(Option.empty[L#Term])
-            }
-          })
+      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Option[String], p: U): Free[F, Option[L#Term]] =
+        (_type, fmt) match {
+          case ("string", None) =>
+            Default(p).extract[String].traverse(litString(_))
+          case ("number", Some("float")) =>
+            Default(p).extract[Float].traverse(litFloat(_))
+          case ("number", Some("double")) =>
+            Default(p).extract[Double].traverse(litDouble(_))
+          case ("integer", Some("int32")) =>
+            Default(p).extract[Int].traverse(litInt(_))
+          case ("integer", Some("int64")) =>
+            Default(p).extract[Long].traverse(litLong(_))
+          case ("boolean", None) =>
+            Default(p).extract[Boolean].traverse(litBoolean(_))
+          case x => Free.pure(Option.empty[L#Term])
+        }
 
       def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
         for {
-          tpeName        <- typeFetcher(param)
+          tpeName <- typeFetcher(param)
+          fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
           customTypeName <- SwaggerUtil.customTypeName(param)
-          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(param))
+          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _))
         } yield res
 
