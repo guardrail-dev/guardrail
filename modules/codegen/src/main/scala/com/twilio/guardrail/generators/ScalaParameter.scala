@@ -13,6 +13,7 @@ import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 case class RawParameterName private[generators] (value: String)
+case class RawParameterType private[generators] (tpe: String, format: Option[String])
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
   val filterParamBy     = ScalaParameter.filterParams(parameters)
   val headerParams      = filterParamBy("header")
@@ -27,6 +28,7 @@ class ScalaParameter[L <: LA] private[generators] (
     val paramName: L#TermName,
     val argName: RawParameterName,
     val argType: L#Type,
+    val rawType: RawParameterType,
     val required: Boolean,
     val hashAlgorithm: Option[String],
     val isFile: Boolean
@@ -34,8 +36,8 @@ class ScalaParameter[L <: LA] private[generators] (
   override def toString: String =
     s"ScalaParameter($in, $param, $paramName, $argName, $argType)"
 
-  def withType(newArgType: L#Type): ScalaParameter[L] =
-    new ScalaParameter[L](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
+  def withType(newArgType: L#Type, rawType: String = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): ScalaParameter[L] =
+    new ScalaParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
@@ -109,7 +111,15 @@ object ScalaParameter {
       }
     }
 
-    log.function(s"fromParameter(${parameter})")(for {
+    log.function(s"fromParameter")(for {
+      rawTypeFormat <- Option(parameter.getSchema())
+        .flatMap(s => Option(s.getType()).map((_, Option(s.getFormat()))))
+        .fold(
+          for {
+            _ <- log.warning("No type specified, defaulting to \"string\"")
+          } yield ("string", Option.empty[String])
+        )(tpeFormat => Free.pure[F, (String, Option[String])](tpeFormat))
+      (rawType, rawFormat) = rawTypeFormat
       meta     <- paramMeta(parameter)
       resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
@@ -149,7 +159,15 @@ object ScalaParameter {
       ftpe       <- fileType(None)
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
-      new ScalaParameter[L](Option(parameter.getIn), param, paramName, RawParameterName(name), declType, required, FileHashAlgorithm(parameter), isFileType)
+      new ScalaParameter[L](Option(parameter.getIn),
+                            param,
+                            paramName,
+                            RawParameterName(name),
+                            declType,
+                            RawParameterType(rawType, rawFormat),
+                            required,
+                            FileHashAlgorithm(parameter),
+                            isFileType)
     })
   }
 
@@ -171,6 +189,7 @@ object ScalaParameter {
                   escapedName,
                   param.argName,
                   param.argType,
+                  param.rawType,
                   param.required,
                   param.hashAlgorithm,
                   param.isFile
