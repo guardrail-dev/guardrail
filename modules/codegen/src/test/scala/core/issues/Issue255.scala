@@ -1,7 +1,7 @@
 package core.issues
 
 import com.twilio.guardrail.generators.Http4s
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions, RandomType}
+import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
 import org.scalatest.{FunSuite, Matchers}
 import support.SwaggerSpecRunner
 
@@ -33,25 +33,15 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
   test("Test password format generation") {
     val (
       ProtocolDefinitions(ClassDefinition(_, _, c1, _, _) :: Nil, _, _, _),
-      cli,
-      srv
+      _,
+      _
       ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val expected = q"case class Foo(somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[java.io.File] = None)"
-    srv.servers.foreach { s =>
-      println(s.handlerDefinition.syntax)
-
-      s.serverDefinitions.foreach { sd =>
-        println(sd.syntax)
-      }
-    }
-    
     compare(c1, expected)
   }
   
   def compare(t: Tree, t2: Tree) = {
-    println(t)
-    println(t2)
     t.structure shouldBe t2.structure
   }
 }
