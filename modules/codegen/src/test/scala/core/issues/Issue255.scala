@@ -27,17 +27,25 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |        type: file
                            |      someBinary:
                            |        type: string
-                           |        name: binary
+                           |        format: binary
                            |""".stripMargin
 
   test("Test password format generation") {
     val (
       ProtocolDefinitions(ClassDefinition(_, _, c1, _, _) :: Nil, _, _, _),
-      _,
-      _
+      cli,
+      srv
       ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
-    val expected = q"case class Foo(somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[String] = None)"
+    val expected = q"case class Foo(somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[java.io.File] = None)"
+    srv.servers.foreach { s =>
+      println(s.handlerDefinition.syntax)
+
+      s.serverDefinitions.foreach { sd =>
+        println(sd.syntax)
+      }
+    }
+    
     compare(c1, expected)
   }
   
