@@ -23,6 +23,11 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |      somePassword:
                            |        type: string
                            |        format: password
+                           |      someFile:
+                           |        type: file
+                           |      someBinary:
+                           |        type: string
+                           |        name: binary
                            |""".stripMargin
 
   test("Test password format generation") {
@@ -31,7 +36,14 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
       _,
       _
       ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
-    
-    c1.structure shouldBe q"case class Foo(somePassword: Option[String] = None)".structure
+
+    val expected = q"case class Foo(somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[String] = None)"
+    compare(c1, expected)
+  }
+  
+  def compare(t: Tree, t2: Tree) = {
+    println(t)
+    println(t2)
+    t.structure shouldBe t2.structure
   }
 }

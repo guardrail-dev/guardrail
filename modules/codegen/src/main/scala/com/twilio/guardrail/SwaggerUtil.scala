@@ -251,9 +251,9 @@ object SwaggerUtil {
             case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
             case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
             case ("file", fmt) =>
-              fileType(fmt).map(log(fmt, _))
-            case ("binary", _) =>
-              fileType(None).map(log(None, _))
+              fileType(None).map(log(fmt, _))
+            case ("binary", fmt) =>
+              fileType(None).map(log(fmt, _))
             case ("object", fmt) => objectType(fmt).map(log(fmt, _))
             case (tpe, fmt) =>
               fallbackType(tpe, fmt)
@@ -343,6 +343,12 @@ object SwaggerUtil {
           for {
             customTpeName <- customTypeName(p)
             res           <- typeName[L, F]("string", Option(p.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
+
+        case f: FileSchema =>
+          for {
+            customTpeName <- customTypeName(f)
+            res           <- typeName[L, F]("file", Option(f.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case x =>
