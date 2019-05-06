@@ -333,63 +333,71 @@ object AkkaHttpServerGenerator {
                     case t"Option[$x]" => (true, x)
                     case x             => (!rawParameter.required, x)
                   }
-                  val (unmarshaller, caseMatch, grabHead) = isFile match {
-                    case true =>
-                      (
+                  def interpolateUnmarshaller(unmarshaller: Term, liftUnmarshaller: Term => Term, patTerms: (Pat, Term)): (Defn.Val, Case, Defn.Val) =
+                    (
+                      q"""
+                          val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
+                        .Select(partsTerm, containerName.toType)}] = ${unmarshaller}
+                        """,
+                      Case(
+                        argName.toLit,
+                        None,
                         q"""
-                        val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type.Select(partsTerm, containerName.toType)}] = (
-                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm.fold(t"Option")(Function.const(t"Id"))}](
-                                ${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
-                          .Name(s"${operationId}MapFileField")}(_, _, _)
-                              ).map({ case (v1, v2, v3, v4) =>
-                                ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
-                          .map(Function.const(q"v4"))}))
-                              })
-                            )
-                      """,
-                        Case(
-                          argName.toLit,
-                          None,
-                          q"""
-                          SafeUnmarshaller(AccumulatingUnmarshaller(${referenceAccumulator}, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
-                      """
-                        ),
+                            SafeUnmarshaller(${liftUnmarshaller(unmarshallerName.toTerm)}).apply(part)
+                        """
+                      ), {
+                        val (pats, terms) = patTerms
                         q"""
-                        val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
+                          val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
                           List(
                             Case(
-                              Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
-                                          List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
+                              Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(pats)),
                               None,
-                              q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
+                              terms
                             )
                           )
                         )})
-                      """
+                        """
+                      }
+                    )
+
+                  val (unmarshaller, caseMatch, grabHead) = isFile match {
+                    case true =>
+                      val (targetFunctor, targetHashName) = rawParameter.hashAlgorithm.fold[(Type, Term)]((t"Option", q"None"))(x => (t"Id", Lit.String(x)))
+                      interpolateUnmarshaller(
+                        q"""
+                          (
+                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${targetFunctor}](${targetHashName}, handler.${Term
+                          .Name(s"${operationId}MapFileField")}(_, _, _))
+                              .map({ case (v1, v2, v3, v4) =>
+                                ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
+                          .map(Function.const(q"v4"))}))
+                              })
+                          )
+                        """,
+                        wrapped => q"AccumulatingUnmarshaller(${referenceAccumulator}, ${wrapped})(_.value._1)",
+                        (
+                          p"(..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))})",
+                          q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
+                        )
                       )
                     case false =>
-                      (
+                      interpolateUnmarshaller(
                         q"""
-                        val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                          .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
-                          val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
-                          val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                          Unmarshaller.firstOf(json, string)
-                            .apply(part)
-                            .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
-                            .recoverWith {
-                              case ex => Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
-                            }
-                        }
-                      """,
-                        Case(argName.toLit, None, q"""
-                          SafeUnmarshaller(${unmarshallerName.toTerm}).apply(part)
-                      """),
-                        q"""
-                        val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
-                          List(Case(Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(Pat.Var(Term.Name("v1")))), None, Term.Name("v1")))
-                        )})
-                      """
+                          Unmarshaller { implicit executionContext => part =>
+                            val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
+                            val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
+                            Unmarshaller.firstOf(json, string)
+                              .apply(part)
+                              .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                              .recoverWith({
+                                case ex =>
+                                  Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                              })
+                          }
+                        """,
+                        identity,
+                        (p"v1", q"v1")
                       )
                   }
 
