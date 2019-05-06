@@ -1,3 +1,6 @@
 language: scala
+scala:
+  - 2.11.8
+  - 2.12.3
 script:
-- sbt checkFormatting +testSuite
+- sbt  ++$TRAVIS_SCALA_VERSION checkFormatting +testSuite
