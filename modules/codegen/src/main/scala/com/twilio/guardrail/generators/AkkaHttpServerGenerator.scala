@@ -316,7 +316,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)})"),
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*)"),
-        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
+        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty))"),
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.?)")
       ) _
     }
