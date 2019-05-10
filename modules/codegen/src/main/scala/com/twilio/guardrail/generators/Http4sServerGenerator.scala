@@ -651,7 +651,7 @@ object Http4sServerGenerator {
             }
             if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.toString())) {
               val queryParamDecoder = q"""
-                implicit val ${Pat.Var(Term.Name(s"${argName.value}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
+                implicit val ${Pat.Var(Term.Name(s"${elemType}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
                     Json.fromString(value.value).as[$elemType]
                       .leftMap(t => ParseFailure("Query decoding failed", t.getMessage))
                       .toValidatedNel
