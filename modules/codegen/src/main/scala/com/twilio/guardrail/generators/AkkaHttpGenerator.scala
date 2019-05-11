@@ -91,6 +91,21 @@ object AkkaHttpGenerator {
                     Json.fromString(data.decodeString("utf-8"))
                 })
 
+            final val sneakyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`text/plain`)
+                .flatMapWithInput { (httpEntity, byteString) =>
+                  if (byteString.isEmpty) {
+                    FastFuture.failed(Unmarshaller.NoContentException)
+                  } else {
+                    val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
+                      case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
+                      case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
+                    }
+                    parseResult.fold(FastFuture.failed, FastFuture.successful)
+                  }
+                }
+
             final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
               Unmarshaller.strict(value => Json.fromString(value))
 

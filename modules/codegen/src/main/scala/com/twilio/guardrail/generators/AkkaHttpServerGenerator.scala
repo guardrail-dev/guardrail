@@ -395,10 +395,12 @@ object AkkaHttpServerGenerator {
                         )
                       )
                     case false =>
-                      val unmarshaller = rawParameter.rawType.tpe match {
-                        case "string" => q"MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller[${realType}]))"
-                        case _        => q"MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                      val textPlainUnmarshaller = rawParameter.rawType.tpe match {
+                        case "string" => q"MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                        case _        => q"MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
                       }
+                      val jsonUnmarshaller = q"MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                      val unmarshaller = q"Unmarshaller.firstOf(${textPlainUnmarshaller}, ${jsonUnmarshaller})"
                       interpolateUnmarshaller(
                         q"""
                           Unmarshaller { implicit executionContext => part =>
