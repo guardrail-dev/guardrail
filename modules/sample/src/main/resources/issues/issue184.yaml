@@ -21,6 +21,7 @@ paths:
         required: true
       consumes:
       - application/x-www-form-urlencoded
+      - multipart/form-data
       responses:
         '204':
           description: No content

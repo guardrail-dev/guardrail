@@ -122,7 +122,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
       .withEntity(ContentTypes.`application/json`, validEntity)
       .withHeaders(RawHeader("x-header", "foo")) ~> route ~> check {
       rejection match {
-        case MalformedHeaderRejection("x-header", message, _) => message shouldBe "Boolean"
+        case MalformedHeaderRejection("x-header", message, _) => message shouldBe "'foo' is not a valid Boolean value"
       }
     }
 
@@ -137,7 +137,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
       .withEntity(ContentTypes.`application/json`, validEntity)
       .withHeaders(RawHeader("x-header", "false"), RawHeader("x-optional-header", "foo")) ~> route ~> check {
       rejection match {
-        case MalformedHeaderRejection("x-optional-header", message, _) => message shouldBe "Boolean"
+        case MalformedHeaderRejection("x-optional-header", message, _) => message shouldBe "'foo' is not a valid Boolean value"
       }
     }
 

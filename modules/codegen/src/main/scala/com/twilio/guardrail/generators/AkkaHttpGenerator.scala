@@ -91,6 +91,9 @@ object AkkaHttpGenerator {
                     Json.fromString(data.decodeString("utf-8"))
                 })
 
+            final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
+              Unmarshaller.strict(value => Json.fromString(value))
+
             implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`application/json`)
@@ -111,6 +114,12 @@ object AkkaHttpGenerator {
                 .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
             }
 
+            def unmarshallJson[A](implicit J: ${jsonDecoderTypeclass}[A]): Unmarshaller[${jsonType}, A] =
+              Unmarshaller { _ => value =>
+                J.decodeJson(value)
+                  .fold(FastFuture.failed, FastFuture.successful)
+              }
+
             final val jsonStringUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
               case "" =>
                 throw Unmarshaller.NoContentException
@@ -118,7 +127,7 @@ object AkkaHttpGenerator {
                 jawn.parse(data).getOrElse(Json.fromString(data))
             }
 
-            implicit def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
+            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
               jsonStringUnmarshaller
                 .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
             }
