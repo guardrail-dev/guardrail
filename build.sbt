@@ -208,7 +208,10 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.typelevel"               %% "cats-free"                    % catsVersion,
       "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.0",
     ),
-    scalacOptions += "-language:higherKinds",
+    scalacOptions ++= List(
+      "-language:higherKinds",
+      "-Ywarn-unused-import",
+    ),
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
       else "releases"
