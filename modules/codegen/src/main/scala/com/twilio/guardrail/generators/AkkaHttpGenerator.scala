@@ -68,6 +68,7 @@ object AkkaHttpGenerator {
               val empty: IgnoredEntity = new IgnoredEntity {}
             }
 
+            // Translate Json => HttpEntity
             implicit final def jsonMarshaller(
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${jsonType}] =
@@ -75,12 +76,14 @@ object AkkaHttpGenerator {
                 HttpEntity(MediaTypes.`application/json`, printer.pretty(json))
               }
 
+            // Translate [A: Encoder] => HttpEntity
             implicit final def jsonEntityMarshaller[A](
                 implicit J: ${jsonEncoderTypeclass}[A],
                          printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[A] =
               jsonMarshaller(printer).compose(J.apply)
 
+            // Translate HttpEntity => Json (for `text/plain`)
             final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`text/plain`)
@@ -91,6 +94,9 @@ object AkkaHttpGenerator {
                     Json.fromString(data.decodeString("utf-8"))
                 })
 
+            // Translate HttpEntity => Json (for `text/plain`, relying on the Decoder to reject incorrect types.
+            //   This permits not having to manually construct ToStringMarshaller/FromStringUnmarshallers.
+            //   This is definitely lazy, but lets us save a lot of scalar parsers as circe decoders are fairly common.)
             final val sneakyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`text/plain`)
@@ -109,6 +115,7 @@ object AkkaHttpGenerator {
             final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
               Unmarshaller.strict(value => Json.fromString(value))
 
+            // Translate HttpEntity => Json (for `application/json`)
             implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
                 .forContentTypes(MediaTypes.`application/json`)
@@ -124,6 +131,7 @@ object AkkaHttpGenerator {
                   }
                 }
 
+            // Translate HttpEntity => [A: Decoder] (for `application/json` or `text/plain`)
             implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
               Unmarshaller.firstOf(structuredJsonEntityUnmarshaller, stringyJsonEntityUnmarshaller)
                 .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
@@ -135,6 +143,7 @@ object AkkaHttpGenerator {
                   .fold(FastFuture.failed, FastFuture.successful)
               }
 
+            // Translate String => Json (by either successfully parsing or string literalizing (Dangerous!))
             final val jsonStringUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
               case "" =>
                 throw Unmarshaller.NoContentException
@@ -142,6 +151,7 @@ object AkkaHttpGenerator {
                 jawn.parse(data).getOrElse(Json.fromString(data))
             }
 
+            // Translate String => [A: Decoder]
             def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
               jsonStringUnmarshaller
                 .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
