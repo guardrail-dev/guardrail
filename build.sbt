@@ -156,7 +156,7 @@ val codegenSettings = Seq(
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-Ydelambdafy:method",
-    "-Ywarn-unused-import",
+    // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/twilio/guardrail/pull/282
     "-feature",
     "-unchecked",
     "-deprecation",
