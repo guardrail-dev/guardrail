@@ -2,8 +2,8 @@ package core.issues
 
 import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
-import org.scalatest.{Assertion, FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import org.scalatest.{ Assertion, FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -75,7 +75,8 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
        |""".stripMargin
 
   test("Ensure case-to-case inheritance is not generated") {
-    val (ProtocolDefinitions(List(request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _, _, _), _, _, _), _, _) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    val (ProtocolDefinitions(List(request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _, _, _), _, _, _), _, _) =
+      runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val List(reqEncoder, reqDecoder) = request.staticDefns.definitions
 
@@ -94,7 +95,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
          implicit val decodeRequest = Decoder.forProduct2("state", "id")(Request.apply _)
       """
-
 
     compare(request.tpe, expectedRequestTpe)
     compare(request.cls, expectedRequestCls)
@@ -125,7 +125,8 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
   }
 
   test("Ensure case-to-case inheritance is not generated, extends two objects") {
-    val (ProtocolDefinitions(List(_, _, request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _), _, _, _), _, _) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    val (ProtocolDefinitions(List(_, _, request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _), _, _, _), _, _) =
+      runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val List(reqEncoder, reqDecoder) = request.staticDefns.definitions
 
@@ -144,7 +145,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
          implicit val decodeRequest2 = Decoder.forProduct3("state2", "id", "id2")(Request2.apply _)
       """
-
 
     compare(request.tpe, expectedRequestTpe)
     compare(request.cls, expectedRequestCls)
@@ -195,7 +195,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
          implicit val decodeRequest3 = Decoder.forProduct4("state", "state2", "id", "id2")(Request3.apply _)
       """
 
-
     compare(request.tpe, expectedRequestTpe)
     compare(request.cls, expectedRequestCls)
     compare(reqEncoder, expectedRequestEncoder)
@@ -203,8 +202,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   }
 
-
-  private def compare(t1: Tree, t2: Tree): Assertion = {
+  private def compare(t1: Tree, t2: Tree): Assertion =
     t1.structure shouldEqual t2.structure
-  }
 }

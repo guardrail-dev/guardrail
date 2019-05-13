@@ -1,7 +1,5 @@
 package com.twilio.guardrail
 
-import cats.syntax.either._
-
 case class Args(
     kind: CodegenTarget,
     specPath: Option[String],

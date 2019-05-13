@@ -1,19 +1,11 @@
 package com.twilio.guardrail.generators.Java
 
-import cats.instances.list._
-import cats.syntax.traverse._
 import cats.~>
-import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.Modifier.{ ABSTRACT, FINAL, PRIVATE, PUBLIC }
-import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.body.{ ClassOrInterfaceDeclaration, Parameter }
 import com.github.javaparser.ast.expr._
-import com.github.javaparser.ast.stmt.{ BlockStmt, ExpressionStmt, ReturnStmt }
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.framework._
-import java.util
 
 object DropwizardGenerator {
   object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {

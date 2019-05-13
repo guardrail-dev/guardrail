@@ -1,6 +1,5 @@
 package com.twilio.guardrail.generators
 
-import cats.syntax.either._
 import cats.~>
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile

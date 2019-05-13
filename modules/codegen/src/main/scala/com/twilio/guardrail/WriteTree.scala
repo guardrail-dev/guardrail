@@ -5,7 +5,6 @@ import cats.implicits._
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{ Files, Path, StandardOpenOption }
 import scala.io.AnsiColor
-import scala.meta._
 
 case class WriteTree(path: Path, contents: Array[Byte])
 object WriteTree {

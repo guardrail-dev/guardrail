@@ -4,7 +4,6 @@ import _root_.io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
-import scala.language.existentials
 
 sealed trait ModelProtocolTerm[L <: LA, T]
 case class ExtractProperties[L <: LA](swagger: Schema[_]) extends ModelProtocolTerm[L, List[(String, Schema[_])]]

@@ -1,20 +1,10 @@
 package com.twilio.guardrail.generators
 
-import cats.MonadError
-import cats.data.{ EitherK, EitherT }
-import cats.free.Free
-import cats.implicits._
-import cats.data.EitherK
-import com.twilio.guardrail.generators.Http4sServerGenerator.ServerTermInterp.splitOperationParts
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ Response, Responses }
-import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
-import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
-import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, Target }
-import scala.collection.JavaConverters._
+import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.StrictProtocolElems
 import scala.meta._
-import _root_.io.swagger.v3.oas.models.Operation
-import _root_.io.swagger.v3.oas.models.media.Schema
 
 object Http4sHelper {
   def generateResponseDefinitions(operationId: String,

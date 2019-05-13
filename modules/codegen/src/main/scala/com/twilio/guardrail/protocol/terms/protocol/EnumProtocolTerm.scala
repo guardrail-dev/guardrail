@@ -3,7 +3,6 @@ package com.twilio.guardrail.protocol.terms.protocol
 import _root_.io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
-import scala.language.existentials
 
 sealed trait EnumProtocolTerm[L <: LA, T]
 case class ExtractEnum[L <: LA](swagger: Schema[_])                                                            extends EnumProtocolTerm[L, Either[String, List[String]]]

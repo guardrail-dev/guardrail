@@ -1,24 +1,16 @@
 package com.twilio.guardrail
 package generators
 
-import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
 import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
-import java.util.Locale
-import scala.meta._
-import cats.MonadError
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 import cats.implicits._
-import cats.arrow.FunctionK
 import cats.free.Free
-import cats.data.{ EitherK, EitherT }
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
-import com.twilio.guardrail.extract.VendorExtension.VendorExtensible
 
 case class RawParameterName private[generators] (value: String)
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {

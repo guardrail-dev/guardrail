@@ -1,9 +1,9 @@
 package com.twilio
 
-import cats.{ Applicative, Id, MonadError }
-import cats.data.{ EitherK, EitherT, IndexedStateT, ReaderT }
+import cats.{ Applicative, Id }
+import cats.data.{ EitherK, EitherT, IndexedStateT }
 import cats.implicits._
-import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
+import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm

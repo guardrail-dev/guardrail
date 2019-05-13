@@ -6,7 +6,7 @@ import cats.InjectK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
-import io.swagger.v3.oas.models.media.{ ArraySchema, ObjectSchema, Schema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 
