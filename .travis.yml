@@ -4,7 +4,7 @@ scala:
 - 2.12.3
 
 script:
-- sbt "set scalaVersion in ThisBuild := \"$TRAVIS_SCALA_VERSION\"" checkFormatting testSuite
+- sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite
 
 # Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
 before_cache:
@@ -25,5 +25,5 @@ before_install:
   fi
 after_success:
 - if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
-    sbt "set scalaVersion in ThisBuild := \"$TRAVIS_SCALA_VERSION\""  codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
+    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
   fi
