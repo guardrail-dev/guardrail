@@ -3,7 +3,7 @@ pgpSecretRing := file("./travis/local.secring.asc")
 
 lazy val pgpPass = Option(System.getenv("PGP_PASS"))
 
-pgpPassphrase in ThisBuild := {
+pgpPassphrase := {
     if (pgpPass.isDefined) {
       println("Running under CI and PGP password specified under settings.")
       pgpPass.map(_.toCharArray)
