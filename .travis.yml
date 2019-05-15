@@ -1,3 +1,28 @@
 language: scala
+scala:
+- 2.11.12
+- 2.12.3
+
 script:
-- sbt checkFormatting +testSuite
+- sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite
+
+# Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
+before_cache:
+  # Cleanup the cached directories to avoid unnecessary cache updates
+  - rm -fv $HOME/.ivy2/.sbt.ivy.lock
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+
+# Releasing configs taken from https://github.com/scalacenter/sbt-release-early/wiki/How-to-release-in-Travis-(CI)
+before_install:
+- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then
+    openssl aes-256-cbc -K $encrypted_9eb262af688a_key -iv $encrypted_9eb262af688a_iv -in travis/secrets.tar.enc -out travis/local.secrets.tar -d;
+    tar xv -C travis -f travis/local.secrets.tar;
+  fi
+after_success:
+- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
+  fi
