@@ -4,7 +4,7 @@ scala:
 - 2.12.3
 
 script:
-- sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite
+- sbt "set scalaVersion in ThisBuild := \"$TRAVIS_SCALA_VERSION\"" checkFormatting testSuite
 
 # Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
 before_cache:
@@ -19,10 +19,11 @@ cache:
 
 # Releasing configs taken from https://github.com/scalacenter/sbt-release-early/wiki/How-to-release-in-Travis-(CI)
 before_install:
-- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then
+- if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
     openssl aes-256-cbc -K $encrypted_9eb262af688a_key -iv $encrypted_9eb262af688a_iv -in travis/secrets.tar.enc -out travis/local.secrets.tar -d;
     tar xv -C travis -f travis/local.secrets.tar;
   fi
 after_success:
-- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
+- if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
+    sbt "set scalaVersion in ThisBuild := \"$TRAVIS_SCALA_VERSION\""  codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
   fi
