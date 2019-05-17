@@ -1,15 +1,21 @@
 package com.twilio.guardrail.extract
-import com.twilio.guardrail.{ EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour }
 
-import scala.util.Try
+import com.twilio.guardrail.{ EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour }
+import scala.util.{ Success, Try }
+import scala.reflect.ClassTag
+import scala.collection.JavaConverters._
+import java.util
 
 trait Extractable[T] {
   def extract(v: Any): Try[T]
 }
 
 object Extractable {
+  private[this] def buildExceptionally[T](f: PartialFunction[Any, Try[T]]): Extractable[T] =
+    (v: Any) => Try(f(v)).flatten
+
   def build[T](f: PartialFunction[Any, T]): Extractable[T] =
-    (v: Any) => Try(f(v))
+    buildExceptionally(f.andThen(Success(_)))
 
   implicit val defaultExtractableBoolean: Extractable[Boolean] =
     build[Boolean]({ case x: Boolean => x })
@@ -37,4 +43,16 @@ object Extractable {
       case x: Boolean if x  => EmptyIsNull
       case x: Boolean if !x => EmptyIsEmpty
     })
+
+  implicit def defaultExtractableList[T: Extractable: ClassTag]: Extractable[List[T]] =
+    buildExceptionally[List[T]](validateSeq.andThen(xs => Try(validateListItems[T].apply(xs))))
+
+  private[this] def validateSeq: PartialFunction[Any, List[_]] = {
+    case x: Seq[_]       => x.toList
+    case x: util.List[_] => x.asScala.toList
+  }
+
+  private[this] def validateListItems[A](implicit cls: ClassTag[A]): PartialFunction[List[_], List[A]] = {
+    case xs: List[_] if xs.forall(x => cls.runtimeClass.isAssignableFrom(x.getClass)) => xs.asInstanceOf[List[A]]
+  }
 }
