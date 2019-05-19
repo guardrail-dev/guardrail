@@ -144,7 +144,7 @@ object SwaggerUtil {
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: T
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, (ResolvedType[L], Option[(String, Option[String])])] =
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, (ResolvedType[L], (String, Option[String]))] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
@@ -153,7 +153,7 @@ object SwaggerUtil {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
               ref <- getSimpleRef(ref)
-            } yield (Deferred[L](ref), None)
+            } yield (Deferred[L](ref), ("object", None))
           case arr: ArraySchema =>
             for {
               items <- getItems(arr)
@@ -167,7 +167,7 @@ object SwaggerUtil {
                 case x: DeferredArray[L] => embedArray(x)
                 case x: DeferredMap[L]   => embedArray(x)
               }
-            } yield (res, None)
+            } yield (res, ("array", None))
           case map: MapSchema =>
             for {
               rec <- Option(map.getAdditionalProperties)
@@ -181,13 +181,14 @@ object SwaggerUtil {
                 case x: DeferredArray[L]     => embedMap(x)
                 case x: Deferred[L]          => embedMap(x)
               }
-            } yield (res, None)
+            } yield (res, ("map", None))
           case impl: Schema[_] =>
             for {
               tpeName       <- getType(impl)
               customTpeName <- customTypeName(impl)
-              tpe           <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
-            } yield (Resolved[L](tpe, None, None), None)
+              fmt = Option(impl.getFormat())
+              tpe <- typeName[L, F](tpeName, fmt, customTpeName)
+            } yield (Resolved[L](tpe, None, None), (tpeName, fmt))
         })
       }
   }
@@ -210,11 +211,9 @@ object SwaggerUtil {
             resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None): SwaggerUtil.ResolvedType[L]
           } yield (clsName, resolvedType)
         case (clsName, definition) =>
-          SwaggerUtil
-            .modelMetaType[L, F](definition)
-            .map(_._1)
-            .value
-            .map(x => (clsName, x))
+          for {
+            (resolved, _) <- SwaggerUtil.modelMetaType[L, F](definition)
+          } yield (clsName, resolved.value)
       }
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
     } yield

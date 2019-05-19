@@ -68,14 +68,14 @@ object ScalaParameter {
           case x => Free.pure(Option.empty[L#Term])
         }
 
-      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, (ResolvedType[L], Option[(String, Option[String])])] =
+      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, (ResolvedType[L], (String, Option[String]))] =
         for {
           tpeName <- typeFetcher(param)
           fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
           customTypeName <- SwaggerUtil.customTypeName(param)
           res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _))
-        } yield (res, Some((tpeName, fmt)))
+        } yield (res, (tpeName, fmt))
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
@@ -93,21 +93,27 @@ object ScalaParameter {
         case x: Parameter if x.isInBody =>
           getBodyParameterSchema(x)
             .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInHeader =>
           resolveParam(x, getHeaderParameterType)
+            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInPath =>
           resolveParam(x, getPathParameterType)
+            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInQuery =>
           resolveParam(x, getQueryParameterType)
+            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInCookies =>
           resolveParam(x, getCookieParameterType)
+            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInFormData =>
           resolveParam(x, getFormParameterType)
+            .map(_.map(Option(_)))
 
         case x =>
           fallbackParameterHandler(x)
