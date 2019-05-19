@@ -149,11 +149,11 @@ object SwaggerUtil {
         import Sc._
         import Sw._
         import F._
-        log.debug(s"model:\n${log.schemaToString(model)}") >> ((model match {
+        log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
               ref <- getSimpleRef(ref)
-            } yield Deferred[L](ref)
+            } yield (Deferred[L](ref), None)
           case arr: ArraySchema =>
             for {
               items <- getItems(arr)
@@ -167,7 +167,7 @@ object SwaggerUtil {
                 case x: DeferredArray[L] => embedArray(x)
                 case x: DeferredMap[L]   => embedArray(x)
               }
-            } yield res
+            } yield (res, None)
           case map: MapSchema =>
             for {
               rec <- Option(map.getAdditionalProperties)
@@ -181,14 +181,14 @@ object SwaggerUtil {
                 case x: DeferredArray[L]     => embedMap(x)
                 case x: Deferred[L]          => embedMap(x)
               }
-            } yield res
+            } yield (res, None)
           case impl: Schema[_] =>
             for {
               tpeName       <- getType(impl)
               customTpeName <- customTypeName(impl)
               tpe           <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
-            } yield Resolved[L](tpe, None, None)
-        }): Free[F, ResolvedType[L]]).map((_, None))
+            } yield (Resolved[L](tpe, None, None), None)
+        })
       }
   }
 
@@ -689,8 +689,7 @@ object SwaggerUtil {
     def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
       import akkaExtractor._
       for {
-        partsQS <- runParse(path, pathArgs)
-        (parts, (trailingSlash, queryParams)) = partsQS
+        (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
         allPairs = parts
           .foldLeft[NonEmptyList[(Term, List[Term.Name])]](NonEmptyList.one((q"pathEnd", List.empty)))({
             case (NonEmptyList((q"pathEnd   ", bindings), xs), (termName, b)) =>
@@ -719,8 +718,7 @@ object SwaggerUtil {
     def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
-        partsQS <- runParse(path, pathArgs)
-        (parts, (trailingSlash, queryParams)) = partsQS
+        (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
         (directive, bindings) = parts
           .foldLeft[(Pat, List[Term.Name])]((p"${Term.Name("Root")}", List.empty))({
             case ((acc, bindings), (termName, c)) =>
@@ -735,12 +733,11 @@ object SwaggerUtil {
     def generateUrlEndpointsPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
       import endpointsExtractor._
       for {
-        partsQS <- pattern(pathArgs)
+        (parts, (trailingSlash, queryParams)) <- pattern(pathArgs)
           .parse(path)
           .done
           .either
           .fold(Target.raiseError(_), Target.pure(_))
-        (parts, (trailingSlash, queryParams)) = partsQS
         (directive, bindings) = parts
           .foldLeft[(Term, List[Term.Name])]((q"pathRoot", List.empty))({
             case ((acc, bindings), (termName, c)) =>
