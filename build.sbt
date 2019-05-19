@@ -164,6 +164,7 @@ val testDependencies = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.0"),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.10"),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
