@@ -117,15 +117,17 @@ object ScalaParameter {
     }
 
     log.function(s"fromParameter")(for {
-      rawTypeFormat <- Option(parameter.getSchema())
-        .flatMap(s => Option(s.getType()).map((_, Option(s.getFormat()))))
+      (meta, metaTypeFormat) <- paramMeta(parameter)
+      (rawType, rawFormat) <- metaTypeFormat
+        .orElse(
+          Option(parameter.getSchema())
+            .flatMap(s => Option(s.getType()).map((_, Option(s.getFormat()))))
+        )
         .fold(
           for {
             _ <- log.warning("No type specified, defaulting to \"string\"")
           } yield ("string", Option.empty[String])
         )(tpeFormat => Free.pure[F, (String, Option[String])](tpeFormat))
-      (rawType, rawFormat) = rawTypeFormat
-      (meta, _) <- paramMeta(parameter)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.getRequired()).fold(false)(identity)
