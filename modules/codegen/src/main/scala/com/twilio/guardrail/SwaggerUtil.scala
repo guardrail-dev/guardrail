@@ -142,12 +142,14 @@ object SwaggerUtil {
     } yield CustomTypeName(v, prefixes)
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    def apply[T <: Schema[_]](
+        model: T
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, (ResolvedType[L], Option[(String, Option[String])])] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
-        import Fw._
-        log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
+        import F._
+        log.debug(s"model:\n${log.schemaToString(model)}") >> ((model match {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
               ref <- getSimpleRef(ref)
@@ -186,7 +188,7 @@ object SwaggerUtil {
               customTpeName <- customTypeName(impl)
               tpe           <- typeName[L, F](tpeName, Option(impl.getFormat()), customTpeName)
             } yield Resolved[L](tpe, None, None)
-        })
+        }): Free[F, ResolvedType[L]]).map((_, None))
       }
   }
 
@@ -210,6 +212,7 @@ object SwaggerUtil {
         case (clsName, definition) =>
           SwaggerUtil
             .modelMetaType[L, F](definition)
+            .map(_._1)
             .value
             .map(x => (clsName, x))
       }

@@ -50,7 +50,7 @@ object ScalaParameter {
     import Sc._
     import Sw._
 
-    def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
+    def paramMeta(param: Parameter): Free[F, (SwaggerUtil.ResolvedType[L], Option[(String, Option[String])])] = {
       def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Option[String], p: U): Free[F, Option[L#Term]] =
         (_type, fmt) match {
           case ("string", None) =>
@@ -68,14 +68,14 @@ object ScalaParameter {
           case x => Free.pure(Option.empty[L#Term])
         }
 
-      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
+      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, (ResolvedType[L], Option[(String, Option[String])])] =
         for {
           tpeName <- typeFetcher(param)
           fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
           customTypeName <- SwaggerUtil.customTypeName(param)
           res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _))
-        } yield res
+        } yield (res, Some((tpeName, fmt)))
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
@@ -83,13 +83,17 @@ object ScalaParameter {
         case r: Parameter if r.isRef =>
           getRefParameterRef(r)
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
+            .map((_, None))
 
         case r: Parameter if paramHasRefSchema(r) =>
           getSimpleRef(r.getSchema)
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
+            .map((_, None))
 
         case x: Parameter if x.isInBody =>
-          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+          getBodyParameterSchema(x)
+            .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+
 
         case x: Parameter if x.isInHeader =>
           resolveParam(x, getHeaderParameterType)
@@ -108,6 +112,7 @@ object ScalaParameter {
 
         case x =>
           fallbackParameterHandler(x)
+            .map((_, None))
       }
     }
 
@@ -120,9 +125,8 @@ object ScalaParameter {
           } yield ("string", Option.empty[String])
         )(tpeFormat => Free.pure[F, (String, Option[String])](tpeFormat))
       (rawType, rawFormat) = rawTypeFormat
-      meta     <- paramMeta(parameter)
-      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-      SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
+      (meta, _) <- paramMeta(parameter)
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.getRequired()).fold(false)(identity)
       declType <- if (!required) {

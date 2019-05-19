@@ -342,9 +342,9 @@ object ProtocolGenerator {
   ): Free[F, ProtocolElems[L]] = {
     import R._
     for {
-      deferredTpe <- SwaggerUtil.modelMetaType(arr)
-      tpe         <- extractArrayType(deferredTpe, concreteTypes)
-      ret         <- typeAlias[L, F](clsName, tpe)
+      (deferredTpe, _) <- SwaggerUtil.modelMetaType(arr)
+      tpe              <- extractArrayType(deferredTpe, concreteTypes)
+      ret              <- typeAlias[L, F](clsName, tpe)
     } yield ret
   }
 
