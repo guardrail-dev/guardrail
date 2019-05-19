@@ -94,7 +94,6 @@ object ScalaParameter {
           getBodyParameterSchema(x)
             .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
 
-
         case x: Parameter if x.isInHeader =>
           resolveParam(x, getHeaderParameterType)
 
