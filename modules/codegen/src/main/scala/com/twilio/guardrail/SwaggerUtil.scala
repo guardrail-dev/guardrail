@@ -213,7 +213,7 @@ object SwaggerUtil {
         case (clsName, definition) =>
           for {
             (resolved, _) <- SwaggerUtil.modelMetaType[L, F](definition)
-          } yield (clsName, resolved.value)
+          } yield (clsName, resolved)
       }
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
     } yield

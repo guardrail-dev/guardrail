@@ -11,7 +11,7 @@ git.useGitDescribe := true
 crossScalaVersions in ThisBuild := Seq("2.12.8")
 
 val akkaVersion       = "10.0.14"
-val catsVersion       = "1.4.0"
+val catsVersion       = "1.6.0"
 val catsEffectVersion = "1.0.0"
 val circeVersion      = "0.10.1"
 val http4sVersion     = "0.20.0"
