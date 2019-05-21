@@ -23,6 +23,16 @@ val dropwizardVersion = "1.3.9"
 val jerseyVersion     = "2.25.1"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
+assemblyMergeStrategy in assembly := {
+  case ".api_description" => MergeStrategy.discard
+  case ".options" => MergeStrategy.concat
+  case "plugin.properties" => MergeStrategy.discard
+  case "plugin.xml" => MergeStrategy.concat
+  case "META-INF/eclipse.inf" => MergeStrategy.first
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
 
 // (filename, prefix, tracing)
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
