@@ -8,8 +8,7 @@ licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-crossScalaVersions := Seq("2.11.12", "2.12.3")
-scalaVersion in ThisBuild := crossScalaVersions.value.last
+crossScalaVersions in ThisBuild := Seq("2.12.3")
 
 val akkaVersion       = "10.0.14"
 val catsVersion       = "1.4.0"
@@ -156,6 +155,7 @@ val codegenSettings = Seq(
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-Ydelambdafy:method",
+    // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/twilio/guardrail/pull/282
     "-feature",
     "-unchecked",
     "-deprecation",
@@ -183,7 +183,8 @@ lazy val codegen = (project in file("modules/codegen"))
     libraryDependencies ++= testDependencies ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.1.0",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "com.google.googlejavaformat" % "google-java-format"            % "1.6",
+      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.17.0",
+      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.3.600",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.12",
       "org.tpolecat"                %% "atto-core"                    % "0.6.3",
       "org.typelevel"               %% "cats-core"                    % catsVersion,

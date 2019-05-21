@@ -1,21 +1,15 @@
 package com.twilio.guardrail
 package terms
 
-import java.{ lang, util }
-
-import cats.MonadError
 import cats.free.Free
-import cats.implicits._
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.shims._
 
 import scala.collection.JavaConverters._
-import scala.language.existentials
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
-import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, ObjectSchema, Schema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 
@@ -57,7 +51,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
       p.setSchema(schema)
       p.setRequired(requestBody.getRequired)
 
-      p.setExtensions(Option(schema.getExtensions).getOrElse(new util.HashMap[String, Object]()))
+      p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
       p
     }
 
@@ -86,7 +80,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 
       p.setRequired(requestBody.getRequired)
 
-      p.setExtensions(Option(schema.getExtensions).getOrElse(new util.HashMap[String, Object]()))
+      p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
       p
     }
 
@@ -99,7 +93,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
 
       p.setRequired(requestBody.getRequired)
 
-      p.setExtensions(Option(requestBody.getExtensions).getOrElse(new util.HashMap[String, Object]()))
+      p.setExtensions(Option(requestBody.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
 
       p
     }
@@ -134,7 +128,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation) {
             }
 
             p.setRequired(isRequired)
-            p.setExtensions(Option(schema.getExtensions).getOrElse(new util.HashMap[String, Object]()))
+            p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
             p
         }
       }

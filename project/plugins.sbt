@@ -1,6 +1,6 @@
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.9")
 
-addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.4")
+addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.5")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
@@ -14,6 +14,6 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.3")
 
 addSbtPlugin("ohnosequences" % "sbt-github-release" % "0.7.0")
 
-addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.1")
+addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.2")
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.27")

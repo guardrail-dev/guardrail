@@ -1,8 +1,8 @@
 package core.issues
 
 import com.twilio.guardrail.generators.Http4s
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions, RandomType}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions, RandomType }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -23,6 +23,11 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |      somePassword:
                            |        type: string
                            |        format: password
+                           |      someFile:
+                           |        type: file
+                           |      someBinary:
+                           |        type: string
+                           |        format: binary
                            |""".stripMargin
 
   test("Test password format generation") {
@@ -30,8 +35,8 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, c1, _, _) :: Nil, _, _, _),
       _,
       _
-      ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
-    
-    c1.structure shouldBe q"case class Foo(somePassword: Option[String] = None)".structure
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+
+    c1.structure shouldBe q"case class Foo(somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[java.io.File] = None)".structure
   }
 }

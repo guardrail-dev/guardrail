@@ -1,26 +1,21 @@
 package com.twilio.guardrail
 
-import cats.data.{ EitherT, NonEmptyList }
+import cats.data.NonEmptyList
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
-import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.responses._
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
-import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.Responses
-import com.twilio.guardrail.shims._
 import java.util.{ Map => JMap }
-import scala.language.reflectiveCalls
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
 import scala.collection.JavaConverters._
@@ -238,22 +233,23 @@ object SwaggerUtil {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
           (typeName, format) match {
-            case ("string", Some("password"))  => stringType(None)
-            case ("string", Some("date"))      => dateType()
-            case ("string", Some("date-time")) => dateTimeType()
-            case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
-            case ("number", Some("float"))     => floatType()
-            case ("number", Some("double"))    => doubleType()
-            case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
-            case ("integer", Some("int32"))    => intType()
-            case ("integer", Some("int64"))    => longType()
-            case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
-            case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
-            case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
+            case ("string", Some("password"))     => stringType(None)
+            case ("string", Some("date"))         => dateType()
+            case ("string", Some("date-time"))    => dateTimeType()
+            case ("string", fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
+            case ("string", fmt)                  => stringType(fmt).map(log(fmt, _))
+            case ("number", Some("float"))        => floatType()
+            case ("number", Some("double"))       => doubleType()
+            case ("number", fmt)                  => numberType(fmt).map(log(fmt, _))
+            case ("integer", Some("int32"))       => intType()
+            case ("integer", Some("int64"))       => longType()
+            case ("integer", fmt)                 => integerType(fmt).map(log(fmt, _))
+            case ("boolean", fmt)                 => booleanType(fmt).map(log(fmt, _))
+            case ("array", fmt)                   => arrayType(fmt).map(log(fmt, _))
             case ("file", fmt) =>
-              fileType(fmt).map(log(fmt, _))
-            case ("binary", _) =>
-              fileType(None).map(log(None, _))
+              fileType(None).map(log(fmt, _))
+            case ("binary", fmt) =>
+              fileType(None).map(log(fmt, _))
             case ("object", fmt) => objectType(fmt).map(log(fmt, _))
             case (tpe, fmt) =>
               fallbackType(tpe, fmt)
@@ -345,6 +341,12 @@ object SwaggerUtil {
             res           <- typeName[L, F]("string", Option(p.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
+        case f: FileSchema =>
+          for {
+            customTpeName <- customTypeName(f)
+            res           <- typeName[L, F]("file", Option(f.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
+
         case x =>
           fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
       })
@@ -373,8 +375,7 @@ object SwaggerUtil {
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],
       F: FrameworkTerms[L, F]
-  ): Free[F, ResolvedType[L]] = {
-    import Sc._
+  ): Free[F, ResolvedType[L]] =
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
       Option(operation.getResponses)
         .flatMap { responses =>
@@ -391,7 +392,6 @@ object SwaggerUtil {
     } else {
       Free.pure(Resolved[L](ignoredType, None, None): ResolvedType[L])
     }
-  }
 
   def getResponseType[L <: LA](httpMethod: HttpMethod, responses: Responses[L], ignoredType: L#Type): Resolved[L] =
     if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {

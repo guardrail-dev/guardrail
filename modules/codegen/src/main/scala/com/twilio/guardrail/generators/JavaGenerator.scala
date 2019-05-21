@@ -9,7 +9,6 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
-import com.google.googlejavaformat.java.{ Formatter, JavaFormatterOptions }
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
@@ -20,6 +19,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
 import java.util.Locale
+import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
+import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
+import org.eclipse.jface.text.Document
 import scala.collection.JavaConverters._
 
 object JavaGenerator {
@@ -31,11 +33,25 @@ object JavaGenerator {
     case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
   }
 
-  private val formatter = new Formatter(JavaFormatterOptions.builder().style(JavaFormatterOptions.Style.AOSP).build())
+  private val formatter = ToolFactory.createCodeFormatter(
+    Map(
+      JavaCore.COMPILER_SOURCE                                                     -> JavaCore.VERSION_1_8,
+      JavaCore.COMPILER_COMPLIANCE                                                 -> JavaCore.VERSION_1_8,
+      JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM                                    -> JavaCore.VERSION_1_8,
+      DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR                             -> JavaCore.SPACE,
+      DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE                             -> "4",
+      DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_CASE    -> DefaultCodeFormatterConstants.FALSE,
+      DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_DEFAULT -> DefaultCodeFormatterConstants.FALSE
+    ).asJava
+  )
 
   def prettyPrintSource(source: CompilationUnit): Array[Byte] = {
     source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
-    formatter.formatSource(source.toString).getBytes(StandardCharsets.UTF_8)
+    val sourceStr = source.toString
+    val textEdit  = formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n")
+    val doc       = new Document(sourceStr)
+    textEdit.apply(doc)
+    doc.get.getBytes(StandardCharsets.UTF_8)
   }
 
   def writeClientTree(pkgPath: Path,

@@ -4,7 +4,7 @@ import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.{ Response, Responses }
+import com.twilio.guardrail.protocol.terms.Responses
 import io.swagger.v3.oas.models.Operation
 
 sealed trait ServerTerm[L <: LA, T]

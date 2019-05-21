@@ -1,8 +1,6 @@
 package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models.Operation
-import _root_.io.swagger.v3.oas.models.media.MediaType
-import _root_.io.swagger.v3.oas.models.media.Schema
 import _root_.io.swagger.v3.oas.models.parameters.Parameter
 import _root_.io.swagger.v3.oas.models.{ OpenAPI, PathItem }
 import java.net.URI

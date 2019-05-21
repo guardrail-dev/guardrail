@@ -1,16 +1,8 @@
 package com.twilio.guardrail
 package generators
 
-import io.swagger.v3.oas.models._
 import cats.arrow.FunctionK
-import cats.data.NonEmptyList
-import cats.instances.all._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
 import com.twilio.guardrail.terms.framework._
-import java.util.Locale
-import scala.collection.JavaConverters._
 import scala.meta._
 import com.twilio.guardrail.languages.ScalaLanguage
 

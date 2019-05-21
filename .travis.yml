@@ -1,3 +1,38 @@
 language: scala
+scala:
+- 2.12.3
+
+# Currently skip building on non-PR and non-release builds (ie: Skip on master)
+# PR validation and release attempts are the gatekeepers for test validation.
+# This is only necessary currently as sbt-sonatype doesn't track which staging repo it uses,
+# so sonatypeClose and sonatypeRelease get confused if multiple builds are going on at the same time.
+# Currently, the maximum concurrent builds is set to "1" to avoid this race condition.
+#
+# This means that during releases, when the release notes are pushed to master, that triggers a build.
+# Travis doesn't know it's safe to do a relase build (tag build) at the same time as the safety net master build,
+# so the release build is always delayed by a full test run unnecessarily.
 script:
-- sbt checkFormatting +testSuite
+- ( [[ "$TRAVIS_PULL_REQUEST" != "false" ]] || [[ ! -z "$TRAVIS_TAG" ]] ) &&
+  sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite || exit 0
+
+# Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
+before_cache:
+  # Cleanup the cached directories to avoid unnecessary cache updates
+  - rm -fv $HOME/.ivy2/.sbt.ivy.lock
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+
+# Releasing configs taken from https://github.com/scalacenter/sbt-release-early/wiki/How-to-release-in-Travis-(CI)
+before_install:
+- if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
+    openssl aes-256-cbc -K $encrypted_9eb262af688a_key -iv $encrypted_9eb262af688a_iv -in travis/secrets.tar.enc -out travis/local.secrets.tar -d;
+    tar xv -C travis -f travis/local.secrets.tar;
+  fi
+after_success:
+- if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
+    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
+  fi
