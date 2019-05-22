@@ -167,10 +167,11 @@ object CirceProtocolGenerator {
         } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, finalDefaultValue)
 
       case RenderDTOClass(clsName, selfParams, parents) =>
-        val discriminators = parents.flatMap(_.discriminators)
-        val parentOpt      = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
+        val discriminators     = parents.flatMap(_.discriminators)
+        val discriminatorNames = discriminators.map(_.propertyName).toSet
+        val parentOpt          = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
         val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfParams.map(_.term)).filterNot(
-          param => discriminators.contains(param.name.value)
+          param => discriminatorNames.contains(param.name.value)
         )
 
         val code = parentOpt
@@ -183,9 +184,10 @@ object CirceProtocolGenerator {
         Target.pure(code)
 
       case EncodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        val discriminators = parents.flatMap(_.discriminators)
+        val discriminators     = parents.flatMap(_.discriminators)
+        val discriminatorNames = discriminators.map(_.propertyName).toSet
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminators.contains(param.name)
+          param => discriminatorNames.contains(param.name)
         )
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
         val paramCount                 = params.length
@@ -237,9 +239,10 @@ object CirceProtocolGenerator {
         """))
 
       case DecodeModel(clsName, needCamelSnakeConversion, selfParams, parents) =>
-        val discriminators = parents.flatMap(_.discriminators)
+        val discriminators     = parents.flatMap(_.discriminators)
+        val discriminatorNames = discriminators.map(_.propertyName).toSet
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminators.contains(param.name)
+          param => discriminatorNames.contains(param.name)
         )
         val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
         val paramCount                = params.length
@@ -388,32 +391,44 @@ object CirceProtocolGenerator {
             className = clsName,
             extraImports = List.empty[Import],
             definitions = List[Option[Defn]](
-              Some(q"val discriminator: String = ${Lit.String(discriminator)}"),
+              Some(q"val discriminator: String = ${Lit.String(discriminator.propertyName)}"),
               encoder,
               decoder
             ).flatten
           )
         )
 
-      case DecodeADT(clsName, children) =>
-        val childrenCases = children.map(
-          child => p"case ${Lit.String(child)} => c.as[${Type.Name(child)}]"
-        )
+      case DecodeADT(clsName, discriminator, children) =>
+        val (childrenCases, childrenDiscriminators) = children
+          .map({ child =>
+            val discriminatorValue = discriminator.mapping
+              .collectFirst({ case (value, elem) if elem.name == child => value })
+              .getOrElse(child)
+            (
+              p"case ${Lit.String(discriminatorValue)} => c.as[${Type.Name(child)}]",
+              discriminatorValue
+            )
+          })
+          .unzip
         val code =
           q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance({ c =>
                  val discriminatorCursor = c.downField(discriminator)
                  discriminatorCursor.as[String].flatMap {
                    ..case $childrenCases;
                    case tpe =>
-                     Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit.String(s" (valid: ${children.mkString(", ")})")}, discriminatorCursor.history))
+                     Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit
+            .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
                  }
             })"""
         Target.pure(Some(code))
 
-      case EncodeADT(clsName, children) =>
-        val childrenCases = children.map(
-          child => p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(child)}.asJson).asJson"
-        )
+      case EncodeADT(clsName, discriminator, children) =>
+        val childrenCases = children.map({ child =>
+          val discriminatorValue = discriminator.mapping
+            .collectFirst({ case (value, elem) if elem.name == child => value })
+            .getOrElse(child)
+          p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(discriminatorValue)}.asJson).asJson"
+        })
         val code =
           q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
               ..case $childrenCases
