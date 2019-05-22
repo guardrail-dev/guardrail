@@ -367,7 +367,13 @@ object AsyncHttpClientClientGenerator {
 
   object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(_, RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
+      case GenerateClientOperation(_,
+                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+                                   methodName,
+                                   tracing,
+                                   parameters,
+                                   responses,
+                                   securitySchemes) =>
         val responseParentName = s"${operation.getOperationId.capitalize}Response"
         val callBuilderName    = s"${operation.getOperationId.capitalize}CallBuilder"
         for {
@@ -824,7 +830,7 @@ object AsyncHttpClientClientGenerator {
 
         Target.pure(List(abstractResponseClass))
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         for {
           exceptionClasses <- generateClientExceptionClasses()
           ahcSupport       <- generateAsyncHttpClientSupportClass()

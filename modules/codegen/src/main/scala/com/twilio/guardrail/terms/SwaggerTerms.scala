@@ -1,18 +1,29 @@
 package com.twilio.guardrail
 package terms
 
-import io.swagger.v3.oas.models._
 import cats.InjectK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
+import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 
 class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
-  def extractOperations(paths: List[(String, PathItem)]): Free[F, List[RouteMeta]] =
-    Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths))
+  def extractOperations(paths: List[(String, PathItem)], globalSecurityRequirements: Option[SecurityRequirements]): Free[F, List[RouteMeta]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths, globalSecurityRequirements))
+
+  def extractApiKeySecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, ApiKeySecurityScheme[L]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe))
+  def extractHttpSecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, HttpSecurityScheme[L]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractHttpSecurityScheme(schemeName, securityScheme, tpe))
+  def extractOpenIdConnectSecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, OpenIdConnectSecurityScheme[L]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractOpenIdConnectSecurityScheme(schemeName, securityScheme, tpe))
+  def extractOAuth2SecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, OAuth2SecurityScheme[L]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe))
+
   def getClassName(operation: Operation, vendorPrefixes: List[String]): Free[F, List[String]] =
     Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation, vendorPrefixes))
   def getParameterName(parameter: Parameter): Free[F, String] =

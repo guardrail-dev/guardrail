@@ -5,10 +5,11 @@ import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.responses._
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
@@ -403,6 +404,31 @@ object SwaggerUtil {
     } else {
       Resolved[L](ignoredType, None, None)
     }
+
+  def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],
+                                                                                      Sc: ScalaTerms[L, F]): Free[F, Map[String, SecurityScheme[L]]] = {
+    import Sw._
+    import Sc._
+
+    Option(swagger.getComponents)
+      .flatMap(components => Option(components.getSecuritySchemes))
+      .fold(Map.empty[String, SwSecurityScheme])(_.asScala.toMap)
+      .toList
+      .traverse({
+        case (schemeName, scheme) =>
+          val typeName = CustomTypeName(scheme, prefixes)
+          for {
+            tpe <- typeName.fold(Free.pure[F, Option[L#Type]](Option.empty[L#Type]))(parseType)
+            parsedScheme <- scheme.getType match {
+              case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+              case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+              case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+              case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            }
+          } yield (schemeName, parsedScheme)
+      })
+      .map(_.toMap)
+  }
 
   object paths {
     import atto._, Atto._

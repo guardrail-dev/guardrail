@@ -32,7 +32,13 @@ object AkkaHttpClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(_, _ @RouteMeta(pathStr, httpMethod, operation), methodName, tracing, parameters, responses) =>
+      case GenerateClientOperation(_,
+                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+                                   methodName,
+                                   tracing,
+                                   parameters,
+                                   responses,
+                                   securitySchemes) =>
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           Target.log.function("generateUrlWithParams") {
             for {
@@ -309,7 +315,7 @@ object AkkaHttpClientGenerator {
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>

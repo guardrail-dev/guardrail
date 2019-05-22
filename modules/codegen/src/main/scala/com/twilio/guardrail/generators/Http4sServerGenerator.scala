@@ -43,11 +43,11 @@ object Http4sServerGenerator {
           } else Target.pure(None)
         } yield res
 
-      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems) =>
+      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
         for {
           renderedRoutes <- routes
             .traverse {
-              case (operationId, tracingFields, sr @ RouteMeta(path, method, operation), parameters, responses) =>
+              case (operationId, tracingFields, sr @ RouteMeta(path, method, operation, securityRequirements), parameters, responses) =>
                 generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
             }
             .map(_.flatten)
@@ -84,7 +84,7 @@ object Http4sServerGenerator {
           tracing.toList ::: List(mapRoute)
         }
 
-      case GenerateSupportDefinitions(tracing) =>
+      case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
 
       case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
@@ -412,7 +412,7 @@ object Http4sServerGenerator {
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
         _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
-        RouteMeta(path, method, operation) = route
+        RouteMeta(path, method, operation, securityRequirements) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),

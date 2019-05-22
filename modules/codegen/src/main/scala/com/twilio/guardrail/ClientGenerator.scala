@@ -7,7 +7,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityScheme, SwaggerTerms }
 import java.net.URI
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
@@ -28,14 +28,15 @@ object ClientGenerator {
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
-      protocolElems: List[StrictProtocolElems[L]]
+      protocolElems: List[StrictProtocolElems[L]],
+      securitySchemes: Map[String, SecurityScheme[L]]
   )(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Clients[L]] = {
     import C._
     import Sw._
     for {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
-      supportDefinitions <- generateSupportDefinitions(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       clients <- groupedRoutes.traverse({
         case (className, unsortedRoutes) =>
           val routes     = unsortedRoutes.sortBy(r => (r.path, r.method))
@@ -47,13 +48,13 @@ object ClientGenerator {
 
           for {
             responseClientPair <- routes.traverse {
-              case route @ RouteMeta(path, method, operation) =>
+              case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
                   operationId         <- getOperationId(operation)
                   responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
-                  clientOp            <- generateClientOperation(className, context.tracing, parameters)(route, operationId, responses)
+                  clientOp            <- generateClientOperation(className, context.tracing, securitySchemes, parameters)(route, operationId, responses)
                 } yield (responseDefinitions, clientOp)
             }
             (responseDefinitions, clientOperations) = responseClientPair.unzip

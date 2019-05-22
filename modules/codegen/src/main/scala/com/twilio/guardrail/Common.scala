@@ -5,13 +5,14 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
 import cats.Id
+import com.twilio.guardrail.extract.SecurityOptional
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SecurityRequirements, SecurityScheme, SwaggerTerms }
 import java.nio.file.Path
 import scala.collection.JavaConverters._
 import java.net.URI
@@ -56,9 +57,11 @@ object Common {
         .flatMap(NonEmptyList.fromList(_))
       basePath = swagger.basePath()
 
-      paths = swagger.getPathsOpt()
-      routes           <- extractOperations(paths)
+      paths                      = swagger.getPathsOpt()
+      globalSecurityRequirements = Option(swagger.getSecurity).map(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
+      routes           <- extractOperations(paths, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()
+      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
@@ -70,14 +73,14 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems)
+              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
             Clients(clients, supportDefinitions) = clientMeta
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems)
+              .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions)
         case CodegenTarget.Models =>
