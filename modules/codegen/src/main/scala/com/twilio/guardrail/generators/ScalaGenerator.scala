@@ -180,6 +180,7 @@ object ScalaGenerator {
                 implicit val showLocalDate = build[java.time.LocalDate](_.format(java.time.format.DateTimeFormatter.ISO_DATE))
                 implicit val showOffsetDateTime = build[java.time.OffsetDateTime](_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 implicit val showJavaURL = build[java.net.URI](_.toString)
+                implicit def showIterable[K](implicit s: Show[K]) = build[Iterable[K]](_.map(s.show).mkString(","))
               }
 
               object Formatter {

@@ -16,6 +16,10 @@ paths:
           type: string
           x-scala-type: Status
           required: true
+        - name: description
+          in: formData
+          type: string
+          required: true
       responses:
         200:
           description: "Created"
@@ -32,6 +36,32 @@ paths:
           in: formData
           type: string
           x-scala-type: Status
+        - name: description
+          in: formData
+          type: string
+      responses:
+        200:
+          description: "Created"
+        406:
+          description: "Invalid"
+  /baz:
+    post:
+      operationId: doBaz
+      x-scala-package: foo
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - name: Status
+          in: formData
+          type: array
+          items:
+            type: string
+          required: true
+        - name: description
+          in: formData
+          type: array
+          items:
+            type: string
       responses:
         200:
           description: "Created"
