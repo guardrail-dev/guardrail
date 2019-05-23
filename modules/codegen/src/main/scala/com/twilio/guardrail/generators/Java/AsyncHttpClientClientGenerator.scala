@@ -53,7 +53,7 @@ object AsyncHttpClientClientGenerator {
       }
     } else if (parameters.bodyParams.isDefined) {
       val validTypes = Seq(RouteMeta.ApplicationJson, RouteMeta.TextPlain)
-      List(RouteMeta.ApplicationJson.value, RouteMeta.TextPlain.value)
+      operation.consumes
         .collectFirst({ case ContentType(value) if validTypes.contains(value) => value })
         .orElse({
           println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to application/json")
