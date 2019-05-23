@@ -1079,7 +1079,7 @@ object AsyncHttpClientClientGenerator {
           new Parameter(util.EnumSet.of(FINAL), tpe, new SimpleName(name))
         def createBuilderConstructorAssignment(name: String): Statement =
           new ExpressionStmt(
-            new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new MethodCallExpr("requireNonNull", new NameExpr(name)), AssignExpr.Operator.ASSIGN)
+            new AssignExpr(new FieldAccessExpr(new ThisExpr, name), requireNonNullExpr(name), AssignExpr.Operator.ASSIGN)
           )
         (serverUrl, tracingName) match {
           case (None, None) if tracing =>
@@ -1142,9 +1142,8 @@ object AsyncHttpClientClientGenerator {
                 )
               )
             )
-        val nonNullInitializer: String => Expression = name => new MethodCallExpr(null, "requireNonNull", new NodeList[Expression](new NameExpr(name)))
-        def optionalInitializer(valueArg: String => Expression): String => Expression =
-          name => new MethodCallExpr(new NameExpr("Optional"), "of", new NodeList[Expression](valueArg(name)))
+        val nonNullInitializer: String => Expression                                  = name => requireNonNullExpr(name)
+        def optionalInitializer(valueArg: String => Expression): String => Expression = name => optionalOfExpr(valueArg(name))
 
         val builderSetters = List(
           if (serverUrl.isDefined) Some(createSetter(URI_TYPE, "baseUrl", nonNullInitializer)) else None,

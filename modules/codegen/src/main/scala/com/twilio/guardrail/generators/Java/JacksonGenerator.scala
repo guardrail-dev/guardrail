@@ -95,10 +95,10 @@ object JacksonGenerator {
                       case ft if ft.isOptional =>
                         new ConditionalExpr(
                           new BinaryExpr(new NameExpr(term.parameterName), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
-                          new MethodCallExpr(new NameExpr("java.util.Optional"), "empty"),
+                          new MethodCallExpr(new NameExpr("Optional"), "empty"),
                           new NameExpr(term.parameterName)
                         )
-                      case _ => new MethodCallExpr("requireNonNull", new NameExpr(term.parameterName))
+                      case _ => requireNonNullExpr(term.parameterName)
                     },
                     AssignExpr.Operator.ASSIGN
                   )
@@ -484,11 +484,11 @@ object JacksonGenerator {
       withoutDiscriminators(parentOptionalTerms ++ optionalTerms).foreach({
         case ParameterTerm(_, parameterName, fieldType, _, defaultValue) =>
           val initializer = defaultValue.fold[Expression](
-            new MethodCallExpr(new NameExpr("java.util.Optional"), "empty")
+            new MethodCallExpr(new NameExpr("Optional"), "empty")
           )(
             dv =>
               if (fieldType.isOptional) {
-                new MethodCallExpr(new NameExpr("java.util.Optional"), "of", new NodeList[Expression](dv))
+                optionalOfExpr(dv)
               } else {
                 dv
             }
@@ -515,7 +515,7 @@ object JacksonGenerator {
                     new FieldAccessExpr(new ThisExpr, parameterName),
                     fieldType match {
                       case _: PrimitiveType => new NameExpr(parameterName)
-                      case _                => new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
+                      case _                => requireNonNullExpr(parameterName)
                     },
                     AssignExpr.Operator.ASSIGN
                   )
@@ -560,8 +560,8 @@ object JacksonGenerator {
                       new FieldAccessExpr(new ThisExpr, parameterName),
                       fieldType match {
                         case _: PrimitiveType    => new NameExpr(parameterName)
-                        case ft if ft.isOptional => new MethodCallExpr("java.util.Optional.of", new NameExpr(parameterName))
-                        case _                   => new MethodCallExpr("requireNonNull", new NameExpr(parameterName))
+                        case ft if ft.isOptional => optionalOfExpr(new NameExpr(parameterName))
+                        case _                   => requireNonNullExpr(parameterName)
                       },
                       AssignExpr.Operator.ASSIGN
                     )
@@ -582,7 +582,7 @@ object JacksonGenerator {
                     new ExpressionStmt(
                       new AssignExpr(
                         new FieldAccessExpr(new ThisExpr, parameterName),
-                        new MethodCallExpr("requireNonNull", new NameExpr(parameterName)),
+                        requireNonNullExpr(parameterName),
                         AssignExpr.Operator.ASSIGN
                       )
                     ),
@@ -690,13 +690,13 @@ object JacksonGenerator {
               .filterNot(_ == false)
               .fold[Target[(Type, Option[Expression])]](
                 (
-                  safeParseType(s"java.util.Optional<${tpe}>"),
+                  safeParseType(s"Optional<${tpe}>"),
                   Target.pure(
                     Option(
                       defaultValue
                         .fold(
-                          new MethodCallExpr(new NameExpr(s"java.util.Optional"), "empty")
-                        )(t => new MethodCallExpr("java.util.Optional.of", t))
+                          new MethodCallExpr(new NameExpr(s"Optional"), "empty"): Expression
+                        )(t => optionalOfExpr(t))
                     )
                   )
                 ).mapN((_, _))
@@ -749,7 +749,8 @@ object JacksonGenerator {
         (List(
           "com.fasterxml.jackson.annotation.JsonCreator",
           "com.fasterxml.jackson.annotation.JsonIgnoreProperties",
-          "com.fasterxml.jackson.annotation.JsonProperty"
+          "com.fasterxml.jackson.annotation.JsonProperty",
+          "java.util.Optional"
         ).map(safeParseRawImport) ++ List(
           "java.util.Objects.requireNonNull"
         ).map(safeParseRawStaticImport)).sequence
