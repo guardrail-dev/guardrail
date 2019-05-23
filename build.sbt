@@ -309,6 +309,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
       "junit"                      %  "junit"                  % "4.12"             % Test,
       "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
       "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
+      "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
       "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
 			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
