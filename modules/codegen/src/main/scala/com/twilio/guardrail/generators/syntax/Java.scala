@@ -4,12 +4,13 @@ import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.comments.{ BlockComment, Comment }
-import com.github.javaparser.ast.expr.{ Expression, Name, SimpleName }
+import com.github.javaparser.ast.expr.{ Expression, LiteralStringValueExpr, MethodCallExpr, Name, NameExpr, SimpleName, StringLiteralExpr }
+import com.github.javaparser.ast.nodeTypes.{ NodeWithName, NodeWithSimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.{ SupportDefinition, Target }
-import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
@@ -93,6 +94,29 @@ object Java {
   val STRING_TYPE: ClassOrInterfaceType          = JavaParser.parseClassOrInterfaceType("String")
   val THROWABLE_TYPE: ClassOrInterfaceType       = JavaParser.parseClassOrInterfaceType("Throwable")
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")
+
+  private def nameFromExpr(expr: Expression): String = expr match {
+    case nwsn: NodeWithSimpleName[_]  => nwsn.getNameAsString
+    case nwn: NodeWithName[_]         => nwn.getNameAsString
+    case lsve: LiteralStringValueExpr => lsve.getValue
+    case other                        => other.toString
+  }
+
+  def requireNonNullExpr(param: Expression): Expression = new MethodCallExpr(
+    "requireNonNull",
+    param,
+    new StringLiteralExpr(s"${nameFromExpr(param)} is required")
+  )
+
+  def requireNonNullExpr(paramName: String): Expression = requireNonNullExpr(new NameExpr(paramName))
+
+  def optionalOfExpr(param: Expression): Expression = new MethodCallExpr(
+    new NameExpr("Optional"),
+    "of",
+    new NodeList[Expression](
+      requireNonNullExpr(param)
+    )
+  )
 
   val GENERATED_CODE_COMMENT: Comment = new BlockComment(GENERATED_CODE_COMMENT_LINES.mkString("\n * ", "\n * ", "\n"))
 
