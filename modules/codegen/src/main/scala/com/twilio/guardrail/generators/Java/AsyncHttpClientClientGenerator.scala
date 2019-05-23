@@ -862,37 +862,47 @@ object AsyncHttpClientClientGenerator {
         val clientType = JavaParser.parseClassOrInterfaceType(clientName)
         val serverUrl  = serverUrls.map(_.head).map(uri => new URI(uri.toString + basePath.getOrElse("")))
 
-        val baseUrlField = new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(URI_TYPE, "baseUrl"))
-        val defaultBaseUrlField = serverUrl.map({ serverUrl =>
-          val fieldDecl = new FieldDeclaration(
-            util.EnumSet.of(PRIVATE, STATIC, FINAL),
-            new VariableDeclarator(
-              URI_TYPE,
-              "DEFAULT_BASE_URL",
-              new MethodCallExpr(
-                new NameExpr("URI"),
-                "create",
-                new NodeList[Expression](new StringLiteralExpr(serverUrl.toString))
-              )
-            )
+        val (baseUrlField, defaultBaseUrlField) = {
+          val (modifiers, declarator) = serverUrl.fold(
+            (util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(URI_TYPE, "baseUrl"))
+          )(
+            _ => (util.EnumSet.of(PRIVATE), new VariableDeclarator(URI_TYPE, "baseUrl", new NameExpr("DEFAULT_BASE_URL")))
           )
-          baseUrlField.setFinal(false)
-          baseUrlField.getVariables.iterator().next().setInitializer(new NameExpr("DEFAULT_BASE_URL"))
-          fieldDecl
-        })
+          (
+            new FieldDeclaration(modifiers, declarator),
+            serverUrl.map({ serverUrl =>
+              new FieldDeclaration(
+                util.EnumSet.of(PRIVATE, STATIC, FINAL),
+                new VariableDeclarator(
+                  URI_TYPE,
+                  "DEFAULT_BASE_URL",
+                  new MethodCallExpr(
+                    new NameExpr("URI"),
+                    "create",
+                    new NodeList[Expression](new StringLiteralExpr(serverUrl.toString))
+                  )
+                )
+              )
+            })
+          )
+        }
 
         val tracingFields = if (tracing) {
-          val clientNameField = new FieldDeclaration(util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(STRING_TYPE, "clientName"))
+          val (modifiers, declarator) = tracingName.fold(
+            (util.EnumSet.of(PRIVATE, FINAL), new VariableDeclarator(STRING_TYPE, "clientName"))
+          )(
+            _ => (util.EnumSet.of(PRIVATE), new VariableDeclarator(STRING_TYPE, "clientName", new NameExpr("DEFAULT_CLIENT_NAME")))
+          )
+          val clientNameField = new FieldDeclaration(modifiers, declarator)
           val defaultClientNameField = tracingName.map({ tracingName =>
-            val fieldDecl = new FieldDeclaration(util.EnumSet.of(PRIVATE, STATIC, FINAL),
-                                                 new VariableDeclarator(
-                                                   STRING_TYPE,
-                                                   "DEFAULT_CLIENT_NAME",
-                                                   new StringLiteralExpr(tracingName)
-                                                 ))
-            clientNameField.setFinal(false)
-            clientNameField.getVariables.iterator().next().setInitializer(new NameExpr("DEFAULT_CLIENT_NAME"))
-            fieldDecl
+            new FieldDeclaration(
+              util.EnumSet.of(PRIVATE, STATIC, FINAL),
+              new VariableDeclarator(
+                STRING_TYPE,
+                "DEFAULT_CLIENT_NAME",
+                new StringLiteralExpr(tracingName)
+              )
+            )
           })
 
           defaultClientNameField.toList :+ clientNameField
@@ -989,7 +999,7 @@ object AsyncHttpClientClientGenerator {
 
         val builderSetters = List(
           if (serverUrl.isDefined) Some(createSetter(URI_TYPE, "baseUrl", nonNullInitializer)) else None,
-          if (tracing) Some(createSetter(STRING_TYPE, "clientName", nonNullInitializer)) else None,
+          if (tracing && tracingName.isDefined) Some(createSetter(STRING_TYPE, "clientName", nonNullInitializer)) else None,
           Some(createSetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))),
           Some(
             createSetter(
