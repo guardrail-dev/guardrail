@@ -109,6 +109,7 @@ object ScalaGenerator {
 
       case DateType()                => Target.pure(t"java.time.LocalDate")
       case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")
+      case UUIDType()                => Target.pure(t"java.util.UUID")
       case StringType(format)        => Target.pure(format.fold(t"String")(Type.Name(_)))
       case FloatType()               => Target.pure(t"Float")
       case DoubleType()              => Target.pure(t"Double")

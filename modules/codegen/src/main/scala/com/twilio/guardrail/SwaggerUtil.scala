@@ -250,6 +250,7 @@ object SwaggerUtil {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
           (typeName, format) match {
+            case ("string", fmt @ Some("uuid"))   => uuidType().map(log(fmt, _))
             case ("string", Some("password"))     => stringType(None)
             case ("string", Some("date"))         => dateType()
             case ("string", Some("date-time"))    => dateTimeType()
@@ -362,6 +363,12 @@ object SwaggerUtil {
           for {
             customTpeName <- customTypeName(f)
             res           <- typeName[L, F]("file", Option(f.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
+
+        case u: UUIDSchema =>
+          for {
+            customTpeName <- customTypeName(u)
+            res           <- typeName[L, F]("string", Option(u.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case x =>

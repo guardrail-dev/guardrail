@@ -41,6 +41,7 @@ case class ExtractTypeName[L <: LA](tpe: L#Type)                                
 case class ExtractTermName[L <: LA](term: L#TermName)                                           extends ScalaTerm[L, String]
 case class AlterMethodParameterName[L <: LA](param: L#MethodParameter, name: L#TermName)        extends ScalaTerm[L, L#MethodParameter]
 
+case class UUIDType[L <: LA]()                                        extends ScalaTerm[L, L#Type]
 case class DateType[L <: LA]()                                        extends ScalaTerm[L, L#Type]
 case class DateTimeType[L <: LA]()                                    extends ScalaTerm[L, L#Type]
 case class StringType[L <: LA](format: Option[String])                extends ScalaTerm[L, L#Type]
