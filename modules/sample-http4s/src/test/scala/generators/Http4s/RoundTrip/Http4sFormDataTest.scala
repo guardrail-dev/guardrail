@@ -18,7 +18,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
         new FooResource[IO]()
           .routes(new FooHandler[IO] {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse] =
-              if (status == sdefs.definitions.Status.OK) {
+              if (status == sdefs.definitions.Status.Ok) {
                 IO.pure(respond.Ok)
               } else {
                 IO.pure(respond.NotAcceptable)
@@ -29,7 +29,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doFoo(cdefs.definitions.Status.OK, "Description").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Ok
+    fooClient.doFoo(cdefs.definitions.Status.Ok, "Description").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Ok
   }
 
   test("missing required form param") {
@@ -37,7 +37,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
       new FooResource[IO]()
         .routes(new FooHandler[IO] {
           def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse] =
-            if (status == sdefs.definitions.Status.OK) {
+            if (status == sdefs.definitions.Status.Ok) {
               IO.pure(respond.Ok)
             } else {
               IO.pure(respond.NotAcceptable)
@@ -58,7 +58,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
           .routes(new FooHandler[IO] {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse] = ???
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] =
-              if (status.contains(sdefs.definitions.Status.OK)) {
+              if (status.contains(sdefs.definitions.Status.Ok)) {
                 IO.pure(respond.Ok)
               } else {
                 IO.pure(respond.NotAcceptable)
@@ -100,7 +100,7 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse]                 = ???
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] = ???
             def doBaz(respond: DoBazResponse.type)(status: Iterable[String], description: Option[Iterable[String]]): IO[DoBazResponse] =
-              if (status.size == 1 && status.iterator.next() == sdefs.definitions.Status.OK.toString) {
+              if (status.size == 1 && status.iterator.next() == sdefs.definitions.Status.Ok.toString) {
                 IO.pure(respond.Ok)
               } else {
                 IO.pure(respond.NotAcceptable)
@@ -109,6 +109,6 @@ class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doBaz(Seq(cdefs.definitions.Status.OK.toString)).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBazResponse.Ok
+    fooClient.doBaz(Seq(cdefs.definitions.Status.Ok.toString)).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBazResponse.Ok
   }
 }
