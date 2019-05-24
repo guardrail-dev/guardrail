@@ -13,7 +13,7 @@ scala:
 # so the release build is always delayed by a full test run unnecessarily.
 script:
 - if ( [[ "$TRAVIS_PULL_REQUEST" != "false" ]] || [[ ! -z "$TRAVIS_TAG" ]] ); then
-    sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite
+    sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite;
   fi
 
 # Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
