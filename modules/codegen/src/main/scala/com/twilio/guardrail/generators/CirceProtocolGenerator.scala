@@ -440,7 +440,7 @@ object CirceProtocolGenerator {
           testTerms <- (
             params
               .map(_.term)
-              .filter(_.name.value != discriminator)
+              .filter(_.name.value != discriminator.propertyName)
               .traverse { t =>
                 for {
                   tpe <- Target.fromOption(
