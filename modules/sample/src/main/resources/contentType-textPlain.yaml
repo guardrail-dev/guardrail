@@ -39,6 +39,24 @@ paths:
       responses:
         201:
           description: "Created"
+        406:
+          description: "Invalid"
+  /baz:
+    post:
+      operationId: doBaz
+      x-jvm-package: foo
+      consumes:
+        - text/plain
+      produces:
+        - text/plain
+      parameters:
+        - in: body
+          name: body
+          schema:
+            type: string
+      responses:
+        201:
+          description: "Created"
           schema:
             type: string
         406:
