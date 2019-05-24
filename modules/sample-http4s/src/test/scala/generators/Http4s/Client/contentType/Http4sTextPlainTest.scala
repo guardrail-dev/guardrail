@@ -2,12 +2,11 @@ package generators.Http4s.Client.contentType
 
 import _root_.tests.contentTypes.textPlain.client.http4s.foo.FooClient
 import _root_.tests.contentTypes.textPlain.client.{ http4s => cdefs }
-import _root_.tests.contentTypes.textPlain.server.http4s.foo.{ DoBarResponse, DoFooResponse, FooHandler, FooResource }
+import _root_.tests.contentTypes.textPlain.server.http4s.foo.{ DoBarResponse, DoBazResponse, DoFooResponse, FooHandler, FooResource }
 import _root_.tests.contentTypes.textPlain.server.{ http4s => sdefs }
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import org.http4s.dsl.io._
 import org.http4s.headers._
-
 import cats.effect.IO
 import org.http4s.client.Client
 import org.http4s.{ Charset, HttpRoutes, MediaType }
@@ -53,6 +52,7 @@ class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
           IO.pure(respond.NotAcceptable)
         }
       def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[sdefs.foo.DoBarResponse] = ???
+      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[sdefs.foo.DoBazResponse] = ???
     })
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
@@ -69,6 +69,7 @@ class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
         } else {
           IO.pure(respond.NotAcceptable)
         }
+      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[sdefs.foo.DoBazResponse] = ???
     })
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
@@ -85,6 +86,7 @@ class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
         } else {
           IO.pure(respond.NotAcceptable)
         }
+      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[sdefs.foo.DoBazResponse] = ???
     })
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
