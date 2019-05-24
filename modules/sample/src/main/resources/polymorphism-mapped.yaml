@@ -1,0 +1,47 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Base:
+      type: object
+      required:
+        - polytype
+      properties:
+        polytype:
+          type: string
+      discriminator:
+        propertyName: polytype
+        mapping:
+          this_is_a: A
+          this_is_b: "#/components/schemas/B"
+    A:
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - type: object
+          required:
+            - some_a
+          properties:
+            some_a:
+              type: integer
+              format: int32
+    B:
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - type: object
+          required:
+            - some_b
+          properties:
+            some_b:
+              type: string
+    C:
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - type: object
+          required:
+            - some_c
+          properties:
+            some_c:
+              type: number
+              format: double

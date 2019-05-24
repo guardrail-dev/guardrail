@@ -2,7 +2,7 @@ package com.twilio.guardrail.protocol.terms.protocol
 
 import cats.InjectK
 import cats.free.Free
-import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
+import com.twilio.guardrail.{ Discriminator, ProtocolParameter, StaticDefns, SuperClass }
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
 
@@ -16,16 +16,21 @@ case class ExtractSuperClass[L <: LA](swagger: ComposedSchema, definitions: List
 
 case class RenderSealedTrait[L <: LA](className: String,
                                       params: List[ProtocolParameter[L]],
-                                      discriminator: String,
+                                      discriminator: Discriminator[L],
                                       parents: List[SuperClass[L]] = Nil,
                                       children: List[String] = Nil)
     extends PolyProtocolTerm[L, L#Trait]
 
-case class EncodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
+case class EncodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], children: List[String] = Nil)
+    extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
 
-case class DecodeADT[L <: LA](clsName: String, children: List[String] = Nil) extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
+case class DecodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], children: List[String] = Nil)
+    extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
 
-case class RenderADTStaticDefns[L <: LA](clsName: String, discriminator: String, encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition])
+case class RenderADTStaticDefns[L <: LA](clsName: String,
+                                         discriminator: Discriminator[L],
+                                         encoder: Option[L#ValueDefinition],
+                                         decoder: Option[L#ValueDefinition])
     extends PolyProtocolTerm[L, StaticDefns[L]]
 
 class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?], F]) {
@@ -34,21 +39,21 @@ class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?
   def renderSealedTrait(
       className: String,
       params: List[ProtocolParameter[L]],
-      discriminator: String,
+      discriminator: Discriminator[L],
       parents: List[SuperClass[L]] = Nil,
       children: List[String] = Nil
   ): Free[F, L#Trait] =
     Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, params, discriminator, parents, children))
 
-  def encodeADT(clsName: String, children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
-    Free.inject[PolyProtocolTerm[L, ?], F](EncodeADT(clsName, children))
+  def encodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
+    Free.inject[PolyProtocolTerm[L, ?], F](EncodeADT(clsName, discriminator, children))
 
-  def decodeADT(clsName: String, children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
-    Free.inject[PolyProtocolTerm[L, ?], F](DecodeADT(clsName, children))
+  def decodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
+    Free.inject[PolyProtocolTerm[L, ?], F](DecodeADT(clsName, discriminator, children))
 
   def renderADTStaticDefns(
       clsName: String,
-      discriminator: String,
+      discriminator: Discriminator[L],
       encoder: Option[L#ValueDefinition],
       decoder: Option[L#ValueDefinition]
   ): Free[F, StaticDefns[L]] =

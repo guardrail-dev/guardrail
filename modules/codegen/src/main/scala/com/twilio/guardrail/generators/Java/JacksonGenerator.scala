@@ -7,6 +7,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.github.javaparser.ast.`type`.{ PrimitiveType, Type }
+import com.twilio.guardrail.Discriminator
 import com.twilio.guardrail.extract.{ Default, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.syntax.RichString
@@ -292,12 +293,13 @@ object JacksonGenerator {
       }
     } yield {
       val discriminators                             = parents.flatMap(_.discriminators)
+      val discriminatorNames                         = discriminators.map(_.propertyName).toSet
       val parentParams                               = parentOpt.toList.flatMap(_.params)
       val parentParamNames                           = parentParams.map(_.name)
       val (parentRequiredTerms, parentOptionalTerms) = sortParams(parentParams)
       val parentTerms                                = parentRequiredTerms ++ parentOptionalTerms
       val params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(
-        param => discriminators.contains(param.term.getName.getIdentifier) || parentParamNames.contains(param.term.getName.getIdentifier)
+        param => discriminatorNames.contains(param.term.getName.getIdentifier) || parentParamNames.contains(param.term.getName.getIdentifier)
       )
       val (requiredTerms, optionalTerms) = sortParams(params)
       val terms                          = requiredTerms ++ optionalTerms
@@ -318,7 +320,7 @@ object JacksonGenerator {
       addParents(dtoClass, parentOpt)
 
       def withoutDiscriminators(terms: List[ParameterTerm]): List[ParameterTerm] =
-        terms.filterNot(term => discriminators.contains(term.propertyName))
+        terms.filterNot(term => discriminatorNames.contains(term.propertyName))
 
       terms.foreach({
         case ParameterTerm(propertyName, parameterName, fieldType, _, _) =>
@@ -340,11 +342,16 @@ object JacksonGenerator {
       val superCall = new MethodCallExpr(
         "super",
         parentTerms.map({ term =>
-          if (discriminators.contains(term.propertyName)) {
-            new StringLiteralExpr(clsName)
-          } else {
-            new NameExpr(term.parameterName)
-          }
+          discriminators
+            .find(_.propertyName == term.propertyName)
+            .fold[Expression](new NameExpr(term.parameterName))(
+              discriminator =>
+                new StringLiteralExpr(
+                  discriminator.mapping
+                    .collectFirst({ case (value, elem) if elem.name == clsName => value })
+                    .getOrElse(clsName)
+              )
+            )
         }): _*
       )
       primaryConstructor.setBody(dtoConstructorBody(superCall, terms))
@@ -765,7 +772,7 @@ object JacksonGenerator {
 
   private def renderSealedTrait(className: String,
                                 selfParams: List[ProtocolParameter[JavaLanguage]],
-                                discriminator: String,
+                                discriminator: Discriminator[JavaLanguage],
                                 parents: List[SuperClass[JavaLanguage]],
                                 children: List[String]): Target[ClassOrInterfaceDeclaration] = {
     val parentsWithDiscriminators = parents.collect({ case p if p.discriminators.nonEmpty => p })
@@ -816,7 +823,7 @@ object JacksonGenerator {
             ),
             new MemberValuePair(
               "property",
-              new StringLiteralExpr(discriminator)
+              new StringLiteralExpr(discriminator.propertyName)
             )
           )
         )
@@ -830,7 +837,12 @@ object JacksonGenerator {
                 new NormalAnnotationExpr(
                   new Name("JsonSubTypes.Type"),
                   new NodeList(
-                    new MemberValuePair("name", new StringLiteralExpr(child)),
+                    new MemberValuePair("name",
+                                        new StringLiteralExpr(
+                                          discriminator.mapping
+                                            .collectFirst({ case (value, elem) if elem.name == child => value })
+                                            .getOrElse(child)
+                                        )),
                     new MemberValuePair("value", new ClassExpr(JavaParser.parseType(child)))
                   )
               )
@@ -898,10 +910,10 @@ object JacksonGenerator {
             List.empty
           )
 
-      case DecodeADT(clsName, children) =>
+      case DecodeADT(clsName, discriminator, children) =>
         Target.pure(None)
 
-      case EncodeADT(clsName, children) =>
+      case EncodeADT(clsName, discriminator, children) =>
         Target.pure(None)
 
       case RenderSealedTrait(className, selfParams, discriminator, parents, children) =>

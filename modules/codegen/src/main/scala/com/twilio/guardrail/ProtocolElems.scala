@@ -9,14 +9,14 @@ import com.twilio.guardrail.protocol.terms.protocol.ProtocolSupportTerms
 
 case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
 
-sealed trait ProtocolElems[L <: LA]
+sealed trait ProtocolElems[L <: LA] { def name: String }
 
-sealed trait LazyProtocolElems[L <: LA]         extends ProtocolElems[L] { def name: String }
+sealed trait LazyProtocolElems[L <: LA]         extends ProtocolElems[L]
 case class Deferred[L <: LA](name: String)      extends LazyProtocolElems[L]
 case class DeferredArray[L <: LA](name: String) extends LazyProtocolElems[L]
 case class DeferredMap[L <: LA](name: String)   extends LazyProtocolElems[L]
 
-sealed trait StrictProtocolElems[L <: LA]                 extends ProtocolElems[L] { def name: String }
+sealed trait StrictProtocolElems[L <: LA]                 extends ProtocolElems[L]
 case class RandomType[L <: LA](name: String, tpe: L#Type) extends StrictProtocolElems[L]
 case class ClassDefinition[L <: LA](name: String, tpe: L#TypeName, cls: L#ClassDefinition, staticDefns: StaticDefns[L], parents: List[SuperClass[L]] = Nil)
     extends StrictProtocolElems[L]

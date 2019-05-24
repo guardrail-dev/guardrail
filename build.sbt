@@ -58,6 +58,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("petstore.json"), "examples", false, List("--import", "support.PositiveLong")),
   (sampleResource("plain.json"), "tests.dtos", false, List.empty),
   (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
+  (sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped", false, List.empty),
   (sampleResource("raw-response.yaml"), "raw", false, List.empty),
   (sampleResource("server1.yaml"), "tracer", true, List.empty),
   (sampleResource("server2.yaml"), "tracer", true, List.empty),

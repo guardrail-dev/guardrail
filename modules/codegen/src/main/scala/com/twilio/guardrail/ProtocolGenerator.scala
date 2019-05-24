@@ -8,7 +8,7 @@ import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
 import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
@@ -28,12 +28,39 @@ case class ProtocolParameter[L <: LA](term: L#MethodParameter,
                                       emptyToNull: EmptyToNullBehaviour,
                                       defaultValue: Option[L#Term])
 
+case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
+
+object Discriminator {
+  def fromSchema[L <: LA, F[_]](schema: Schema[_])(implicit Sc: ScalaTerms[L, F]): Free[F, Option[Discriminator[L]]] = {
+    import Sc._
+    Option(schema.getDiscriminator)
+      .flatMap(x => Option(x.getPropertyName).map((x, _)))
+      .traverse {
+        case (x, propertyName) =>
+          val possibleMappings = Option(x.getMapping)
+            .map(_.asScala)
+            .getOrElse(Map.empty[String, String])
+            .flatMap({
+              case (k, s) if s.startsWith("#/") => s.split("/").lastOption.filter(_.nonEmpty).map((k, _))
+              case (k, s)                       => Option((k, s))
+            })
+            .toList
+          for {
+            mapping <- possibleMappings.flatTraverse({
+              case (key, name) =>
+                parseType(name).map(_.map(tpe => (key, RandomType(name, tpe))).toList)
+            })
+          } yield Discriminator[L](propertyName, mapping.toMap)
+      }
+  }
+}
+
 case class SuperClass[L <: LA](
     clsName: String,
     tpl: L#TypeName,
     interfaces: List[String],
     params: List[ProtocolParameter[L]],
-    discriminators: List[String]
+    discriminators: List[Discriminator[L]]
 )
 
 object ProtocolGenerator {
@@ -119,7 +146,7 @@ object ProtocolGenerator {
     * Handle polymorphic model
     */
   private[this] def fromPoly[L <: LA, F[_]](
-      hierarchy: ClassParent,
+      hierarchy: ClassParent[L],
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Schema[_])]
   )(implicit F: FrameworkTerms[L, F],
@@ -131,9 +158,9 @@ object ProtocolGenerator {
     import P._
     import Sc._
 
-    def child(hierarchy: ClassHierarchy): List[String] =
+    def child(hierarchy: ClassHierarchy[L]): List[String] =
       hierarchy.children.map(_.name) ::: hierarchy.children.flatMap(child)
-    def parent(hierarchy: ClassHierarchy): List[String] =
+    def parent(hierarchy: ClassHierarchy[L]): List[String] =
       if (hierarchy.children.nonEmpty) hierarchy.name :: hierarchy.children.flatMap(parent)
       else Nil
 
@@ -156,8 +183,8 @@ object ProtocolGenerator {
             .flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
       })
       definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
-      encoder     <- encodeADT(hierarchy.name, children)
-      decoder     <- decodeADT(hierarchy.name, children)
+      encoder     <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
+      decoder     <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
       staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)
       tpe         <- pureTypeName(hierarchy.name)
     } yield {
@@ -208,6 +235,11 @@ object ProtocolGenerator {
             })
             interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
             tpe <- parseTypeName(clsName)
+
+            discriminators <- (_extends :: concreteInterfaces).flatTraverse({
+              case m: ObjectSchema => Discriminator.fromSchema(m).map(_.toList)
+              case _               => Free.pure[F, List[Discriminator[L]]](List.empty)
+            })
           } yield
             tpe
               .map(
@@ -216,9 +248,7 @@ object ProtocolGenerator {
                   _,
                   interfacesCls,
                   params,
-                  (_extends :: concreteInterfaces).collect {
-                    case m: ObjectSchema if Option(m.getDiscriminator).isDefined => m.getDiscriminator.getPropertyName
-                  }
+                  discriminators
                 )
               )
               .toList
@@ -313,19 +343,22 @@ object ProtocolGenerator {
     } yield ret
   }
 
-  sealed trait ClassHierarchy {
+  sealed trait ClassHierarchy[L <: LA] {
     def name: String
     def model: Schema[_]
-    def children: List[ClassChild]
+    def children: List[ClassChild[L]]
     def required: List[String]
   }
-  case class ClassChild(name: String, model: Schema[_], children: List[ClassChild], required: List[String])                         extends ClassHierarchy
-  case class ClassParent(name: String, model: Schema[_], children: List[ClassChild], discriminator: String, required: List[String]) extends ClassHierarchy
+  case class ClassChild[L <: LA](name: String, model: Schema[_], children: List[ClassChild[L]], required: List[String]) extends ClassHierarchy[L]
+  case class ClassParent[L <: LA](name: String, model: Schema[_], children: List[ClassChild[L]], discriminator: Discriminator[L], required: List[String])
+      extends ClassHierarchy[L]
 
   /**
     * returns objects grouped into hierarchies
     */
-  def groupHierarchies(definitions: List[(String, Schema[_])]): (List[ClassParent], List[(String, Schema[_])]) = {
+  def groupHierarchies[L <: LA, F[_]](
+      definitions: List[(String, Schema[_])]
+  )(implicit Sc: ScalaTerms[L, F]): Free[F, (List[ClassParent[L]], List[(String, Schema[_])])] = {
 
     def firstInHierarchy(model: Schema[_]): Option[ObjectSchema] =
       (model match {
@@ -341,7 +374,7 @@ object ProtocolGenerator {
         case _                       => None
       }
 
-    def children(cls: String): List[ClassChild] = definitions.collect {
+    def children(cls: String): List[ClassChild[L]] = definitions.collect {
       case (clsName, comp: ComposedSchema)
           if Option(comp.getAllOf)
             .map(_.asScala)
@@ -350,18 +383,24 @@ object ProtocolGenerator {
         ClassChild(clsName, comp, children(clsName), getRequiredFieldsRec(comp))
     }
 
-    def classHierarchy(cls: String, model: Schema[_]): Option[ClassParent] =
+    def classHierarchy(cls: String, model: Schema[_]): Free[F, Option[ClassParent[L]]] =
       (model match {
         case c: ComposedSchema =>
-          firstInHierarchy(c).flatMap(x => Option(x.getDiscriminator)).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(c))))
-        case m: Schema[_] => Option(m.getDiscriminator).flatMap(x => Option(x.getPropertyName).map((_, getRequiredFieldsRec(m))))
-        case _            => None
-      }).map({ case (a, b) => ClassParent(cls, model, children(cls), a, b) })
+          firstInHierarchy(c)
+            .fold(Free.pure[F, Option[Discriminator[L]]](Option.empty))(Discriminator.fromSchema)
+            .map(_.map((_, getRequiredFieldsRec(c))))
+        case m: Schema[_]                            => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m))))
+        case _                                       => Free.pure[F, Option[(Discriminator[L], List[String])]](Option.empty)
+      }).map(_.map({ case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) }))
 
-    definitions.partitionEither({
-      case (cls, model) =>
-        classHierarchy(cls, model).filterNot(_.children.isEmpty).toLeft((cls, model))
-    })
+    definitions
+      .traverse({
+        case (cls, model) =>
+          for {
+            hierarchy <- classHierarchy(cls, model)
+          } yield hierarchy.filterNot(_.children.isEmpty).toLeft((cls, model))
+      })
+      .map(_.partitionEither[ClassParent[L], (String, Schema[_])](identity))
   }
 
   def fromSwagger[L <: LA, F[_]](swagger: OpenAPI)(
@@ -377,10 +416,12 @@ object ProtocolGenerator {
     import S._
     import Sw._
 
-    val definitions                           = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
-    val (hierarchies, definitionsWithoutPoly) = groupHierarchies(definitions)
+    val definitions = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
 
     for {
+      groupedHierarchies <- groupHierarchies(definitions)
+      (hierarchies, definitionsWithoutPoly) = groupedHierarchies
+
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions)
       polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions))
       elems <- definitionsWithoutPoly.traverse {
