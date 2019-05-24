@@ -60,6 +60,9 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
       def doBar(respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse.type)(
           body: Option[String]
       ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBarResponse] = ???
+      def doBaz(respond: FooResource.doBazResponse.type)(
+          body: Option[String]
+      ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBazResponse] = ???
     })
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
@@ -80,6 +83,9 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
         } else {
           Future.successful(respond.NotAcceptable)
         }
+      def doBaz(respond: FooResource.doBazResponse.type)(
+          body: Option[String]
+      ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBazResponse] = ???
     })
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
@@ -100,6 +106,9 @@ class AkkaHttpTextPlainTest extends FunSuite with Matchers with EitherValues wit
         } else {
           Future.successful(respond.NotAcceptable)
         }
+      def doBaz(respond: FooResource.doBazResponse.type)(
+          body: Option[String]
+      ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.doBazResponse] = ???
     })
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)

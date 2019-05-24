@@ -8,7 +8,7 @@ import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
