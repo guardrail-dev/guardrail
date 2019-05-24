@@ -4,7 +4,18 @@ import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.comments.{ BlockComment, Comment }
-import com.github.javaparser.ast.expr.{ Expression, LiteralStringValueExpr, MethodCallExpr, Name, NameExpr, SimpleName, StringLiteralExpr }
+import com.github.javaparser.ast.expr.{
+  ClassExpr,
+  Expression,
+  FieldAccessExpr,
+  LiteralStringValueExpr,
+  MethodCallExpr,
+  Name,
+  NameExpr,
+  SimpleName,
+  StringLiteralExpr,
+  ThisExpr
+}
 import com.github.javaparser.ast.nodeTypes.{ NodeWithName, NodeWithSimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
@@ -96,6 +107,9 @@ object Java {
   val ASSERTION_ERROR_TYPE: ClassOrInterfaceType = JavaParser.parseClassOrInterfaceType("AssertionError")
 
   private def nameFromExpr(expr: Expression): String = expr match {
+    case _: ThisExpr                  => "this"
+    case ce: ClassExpr                => s"${ce.getType.toString}.class"
+    case fae: FieldAccessExpr         => s"${nameFromExpr(fae.getScope)}.${fae.getNameAsString}"
     case nwsn: NodeWithSimpleName[_]  => nwsn.getNameAsString
     case nwn: NodeWithName[_]         => nwn.getNameAsString
     case lsve: LiteralStringValueExpr => lsve.getValue

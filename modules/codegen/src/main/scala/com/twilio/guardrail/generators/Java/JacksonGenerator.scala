@@ -6,7 +6,7 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
-import com.github.javaparser.ast.`type`.{ PrimitiveType, Type }
+import com.github.javaparser.ast.`type`.{ PrimitiveType, Type, UnknownType }
 import com.twilio.guardrail.Discriminator
 import com.twilio.guardrail.extract.{ DataRedaction, Default, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.Java._
@@ -496,7 +496,7 @@ object JacksonGenerator {
 
       withoutDiscriminators(parentRequiredTerms ++ requiredTerms).foreach({
         case ParameterTerm(_, parameterName, fieldType, _, _, _) =>
-          builderClass.addField(fieldType, parameterName, PRIVATE, FINAL)
+          builderClass.addField(fieldType, parameterName, PRIVATE)
       })
       withoutDiscriminators(parentOptionalTerms ++ optionalTerms).foreach({
         case ParameterTerm(_, parameterName, fieldType, _, defaultValue, _) =>
@@ -563,10 +563,12 @@ object JacksonGenerator {
         )
 
       // TODO: leave out with${name}() if readOnlyKey?
-      withoutDiscriminators(parentOptionalTerms ++ optionalTerms).foreach({
+      withoutDiscriminators(parentTerms ++ terms).foreach({
         case ParameterTerm(_, parameterName, fieldType, parameterType, _, _) =>
+          val methodName = s"with${parameterName.unescapeIdentifier.capitalize}"
+
           builderClass
-            .addMethod(s"with${parameterName.unescapeIdentifier.capitalize}", PUBLIC)
+            .addMethod(methodName, PUBLIC)
             .setType(BUILDER_TYPE)
             .addParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
             .setBody(
@@ -575,10 +577,12 @@ object JacksonGenerator {
                   new ExpressionStmt(
                     new AssignExpr(
                       new FieldAccessExpr(new ThisExpr, parameterName),
-                      fieldType match {
-                        case _: PrimitiveType    => new NameExpr(parameterName)
-                        case ft if ft.isOptional => optionalOfExpr(new NameExpr(parameterName))
-                        case _                   => requireNonNullExpr(parameterName)
+                      (fieldType, parameterType) match {
+                        case (_: PrimitiveType, _) => new NameExpr(parameterName)
+                        case (ft, pt) if ft.isOptional && pt.isPrimitiveType =>
+                          new MethodCallExpr(new NameExpr("Optional"), "of", new NodeList[Expression](new NameExpr(parameterName)))
+                        case (ft, _) if ft.isOptional => optionalOfExpr(new NameExpr(parameterName))
+                        case _                        => requireNonNullExpr(parameterName)
                       },
                       AssignExpr.Operator.ASSIGN
                     )
@@ -588,20 +592,46 @@ object JacksonGenerator {
               )
             )
 
-          if (fieldType.isOptional && !parameterType.isOptional) {
+          if (!parameterType.isOptional) {
+            val newParameterName = s"optional${parameterName.unescapeIdentifier.capitalize}"
+            val newParameterType = fieldType match {
+              case pt: PrimitiveType   => optionalType(pt.toBoxedType)
+              case ft if ft.isOptional => ft
+              case ft                  => optionalType(ft)
+            }
             builderClass
-              .addMethod(s"with${parameterName.unescapeIdentifier.capitalize}", PUBLIC)
+              .addMethod(methodName, PUBLIC)
               .setType(BUILDER_TYPE)
-              .addParameter(new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName)))
+              .addParameter(new Parameter(util.EnumSet.of(FINAL), newParameterType, new SimpleName(newParameterName)))
               .setBody(
                 new BlockStmt(
                   new NodeList(
                     new ExpressionStmt(
-                      new AssignExpr(
-                        new FieldAccessExpr(new ThisExpr, parameterName),
-                        requireNonNullExpr(parameterName),
-                        AssignExpr.Operator.ASSIGN
-                      )
+                      if (fieldType.isOptional) {
+                        new AssignExpr(
+                          new FieldAccessExpr(new ThisExpr, parameterName),
+                          requireNonNullExpr(newParameterName),
+                          AssignExpr.Operator.ASSIGN
+                        )
+                      } else {
+                        new MethodCallExpr(
+                          requireNonNullExpr(newParameterName),
+                          "ifPresent",
+                          new NodeList[Expression](
+                            new LambdaExpr(
+                              new NodeList(new Parameter(new UnknownType, parameterName)),
+                              new ExpressionStmt(
+                                new AssignExpr(
+                                  new FieldAccessExpr(new ThisExpr, parameterName),
+                                  new NameExpr(parameterName),
+                                  AssignExpr.Operator.ASSIGN
+                                )
+                              ),
+                              false
+                            )
+                          )
+                        )
+                      }
                     ),
                     new ReturnStmt(new ThisExpr)
                   )
@@ -610,23 +640,27 @@ object JacksonGenerator {
           }
       })
 
-      val buildMethod = builderClass.addMethod("build", PUBLIC)
-      buildMethod.setType(clsName)
-      buildMethod.setBody(
-        new BlockStmt(
-          new NodeList(
-            new ReturnStmt(
-              new ObjectCreationExpr(
-                null,
-                JavaParser.parseClassOrInterfaceType(clsName),
-                new NodeList(
-                  withoutDiscriminators(parentTerms ++ terms).map(param => new FieldAccessExpr(new ThisExpr, param.parameterName)): _*
+      val builderBuildTerms = withoutDiscriminators(parentTerms ++ terms)
+      builderClass
+        .addMethod("build", PUBLIC)
+        .setType(clsName)
+        .setBody(
+          new BlockStmt(
+            (
+              builderBuildTerms
+                .filterNot(_.fieldType.isPrimitiveType)
+                .map(term => new ExpressionStmt(requireNonNullExpr(new FieldAccessExpr(new ThisExpr, term.parameterName)))) :+ new ReturnStmt(
+                new ObjectCreationExpr(
+                  null,
+                  JavaParser.parseClassOrInterfaceType(clsName),
+                  new NodeList(
+                    builderBuildTerms.map(param => new FieldAccessExpr(new ThisExpr, param.parameterName)): _*
+                  )
                 )
               )
-            )
+            ).toNodeList
           )
         )
-      )
 
       dtoClass.addMember(builderClass)
 
