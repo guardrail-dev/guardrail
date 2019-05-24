@@ -12,7 +12,7 @@ class AsyncHttpClientContentHeaderTest extends FreeSpec with Matchers with WireM
   "AsyncHttpClient with text/plain" - {
     "in both req/resp bodies has Content-Type and Accept headers set" in {
       wireMockServer.stubFor(
-        post(urlPathEqualTo("/bar"))
+        post(urlPathEqualTo("/baz"))
           .withHeader("Content-Type", equalTo("text/plain; charset=utf-8"))
           .withHeader("Accept", equalTo("text/plain; q=1.0, */*; q=0.1"))
           .withRequestBody(equalTo(MOCK_REQUEST_BODY))
@@ -25,7 +25,7 @@ class AsyncHttpClientContentHeaderTest extends FreeSpec with Matchers with WireM
       )
 
       val client = new FooClient.Builder().withBaseUrl(wireMockBaseUrl).build()
-      client.doBar().withBody(MOCK_REQUEST_BODY).call().toCompletableFuture.get().fold(
+      client.doBaz().withBody(MOCK_REQUEST_BODY).call().toCompletableFuture.get().fold(
         { body => body shouldBe MOCK_RESPONSE_BODY; () },
         { () => fail("Should have gotten 2xx response"); () }
       )
