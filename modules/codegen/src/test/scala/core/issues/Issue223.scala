@@ -28,7 +28,7 @@ class Issue223 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |        description: uuid of kernel
                            |""".stripMargin
 
-  test("Test password format generation") {
+  test("Test uuid format generation") {
     val (
       ProtocolDefinitions(ClassDefinition(_, _, c1, _, _) :: Nil, _, _, _),
       _,

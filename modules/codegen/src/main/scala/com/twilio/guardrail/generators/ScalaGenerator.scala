@@ -181,6 +181,7 @@ object ScalaGenerator {
                 implicit val showLocalDate = build[java.time.LocalDate](_.format(java.time.format.DateTimeFormatter.ISO_DATE))
                 implicit val showOffsetDateTime = build[java.time.OffsetDateTime](_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 implicit val showJavaURL = build[java.net.URI](_.toString)
+                implicit val showUUID = build[java.util.UUID](_.toString)
               }
 
               object Formatter {

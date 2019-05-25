@@ -197,6 +197,7 @@ object JavaGenerator {
 
       case DateType()                => safeParseType("java.time.LocalDate")
       case DateTimeType()            => safeParseType("java.time.OffsetDateTime")
+      case UUIDType()                => safeParseType("java.util.UUID")
       case StringType(format)        => format.fold(Target.pure[Type](STRING_TYPE))(safeParseType)
       case FloatType()               => safeParseType("Float")
       case DoubleType()              => safeParseType("Double")
