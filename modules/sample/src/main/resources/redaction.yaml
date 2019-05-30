@@ -1,0 +1,22 @@
+openapi: 3.0.2
+info:
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Redaction:
+      type: object
+      required:
+        - visible_required
+        - redacted_required
+      properties:
+        visible_required:
+          type: string
+        redacted_required:
+          type: string
+          x-data-redaction: true
+        visible_optional:
+          type: string
+        redacted_optional:
+          type: string
+          x-data-redaction: true

@@ -21,11 +21,16 @@ sealed trait EmptyToNullBehaviour
 case object EmptyIsNull  extends EmptyToNullBehaviour
 case object EmptyIsEmpty extends EmptyToNullBehaviour
 
+sealed trait RedactionBehaviour
+case object DataVisible  extends RedactionBehaviour
+case object DataRedacted extends RedactionBehaviour
+
 case class ProtocolParameter[L <: LA](term: L#MethodParameter,
                                       name: String,
                                       dep: Option[L#TermName],
                                       readOnlyKey: Option[String],
                                       emptyToNull: EmptyToNullBehaviour,
+                                      dataRedaction: RedactionBehaviour,
                                       defaultValue: Option[L#Term])
 
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
