@@ -120,7 +120,7 @@ object AsyncHttpClientClientGenerator {
       if (param.isFile) {
         new NodeList[Expression](
           new ObjectCreationExpr(null,
-                                 FILE_PART_TYPE,
+                                 INPUT_STREAM_PART_TYPE,
                                  new NodeList(
                                    new StringLiteralExpr(param.argName.value),
                                    new NameExpr(name)
@@ -163,7 +163,7 @@ object AsyncHttpClientClientGenerator {
         new ExpressionStmt(
           wrapSetBody(
             new ObjectCreationExpr(null,
-                                   FILE_PART_TYPE,
+                                   INPUT_STREAM_PART_TYPE,
                                    new NodeList(
                                      new StringLiteralExpr(param.argName.value),
                                      new NameExpr(param.paramName.asString)
@@ -860,7 +860,6 @@ object AsyncHttpClientClientGenerator {
             "org.asynchttpclient.Request",
             "org.asynchttpclient.RequestBuilder",
             "org.asynchttpclient.Response",
-            "org.asynchttpclient.request.body.multipart.FilePart",
             "org.asynchttpclient.request.body.multipart.StringPart"
           ).map(safeParseRawImport) ++ List(
             "java.util.Objects.requireNonNull"
@@ -986,7 +985,8 @@ object AsyncHttpClientClientGenerator {
           (ahcSupportImports, ahcSupportClass) = ahcSupport
           jacksonSupport <- generateJacksonSupportClass()
           (jacksonSupportImports, jacksonSupportClass) = jacksonSupport
-          shower <- SerializationHelpers.showerSupportDef
+          inputStreamPart <- inputStreamPartDef
+          shower          <- SerializationHelpers.showerSupportDef
         } yield {
           exceptionClasses.map({
             case (imports, cls) =>
@@ -994,6 +994,7 @@ object AsyncHttpClientClientGenerator {
           }) ++ List(
             SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, ahcSupportClass),
             SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, jacksonSupportClass),
+            inputStreamPart,
             shower
           )
         }
