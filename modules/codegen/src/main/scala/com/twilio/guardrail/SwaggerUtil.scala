@@ -234,19 +234,19 @@ object SwaggerUtil {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
           (typeName, format) match {
-            case ("string", Some("password"))     => stringType(None)
-            case ("string", Some("date"))         => dateType()
-            case ("string", Some("date-time"))    => dateTimeType()
-            case ("string", fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
-            case ("string", fmt)                  => stringType(fmt).map(log(fmt, _))
-            case ("number", Some("float"))        => floatType()
-            case ("number", Some("double"))       => doubleType()
-            case ("number", fmt)                  => numberType(fmt).map(log(fmt, _))
-            case ("integer", Some("int32"))       => intType()
-            case ("integer", Some("int64"))       => longType()
-            case ("integer", fmt)                 => integerType(fmt).map(log(fmt, _))
-            case ("boolean", fmt)                 => booleanType(fmt).map(log(fmt, _))
-            case ("array", fmt)                   => arrayType(fmt).map(log(fmt, _))
+            case ("string", Some("password"))  => stringType(None)
+            case ("string", Some("date"))      => dateType()
+            case ("string", Some("date-time")) => dateTimeType()
+            case ("string", Some("binary"))    => fileType(None)
+            case ("string", fmt)               => stringType(fmt).map(log(fmt, _))
+            case ("number", Some("float"))     => floatType()
+            case ("number", Some("double"))    => doubleType()
+            case ("number", fmt)               => numberType(fmt).map(log(fmt, _))
+            case ("integer", Some("int32"))    => intType()
+            case ("integer", Some("int64"))    => longType()
+            case ("integer", fmt)              => integerType(fmt).map(log(fmt, _))
+            case ("boolean", fmt)              => booleanType(fmt).map(log(fmt, _))
+            case ("array", fmt)                => arrayType(fmt).map(log(fmt, _))
             case ("file", fmt) =>
               fileType(None).map(log(fmt, _))
             case ("binary", fmt) =>
@@ -346,6 +346,12 @@ object SwaggerUtil {
           for {
             customTpeName <- customTypeName(f)
             res           <- typeName[L, F]("file", Option(f.getFormat), customTpeName).map(Resolved[L](_, None, None))
+          } yield res
+
+        case b: BinarySchema =>
+          for {
+            customTpeName <- customTypeName(b)
+            res           <- typeName[L, F]("string", Option(b.getFormat), customTpeName).map(Resolved[L](_, None, None))
           } yield res
 
         case x =>

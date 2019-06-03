@@ -1,0 +1,49 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+paths:
+  /binary-inline:
+    post:
+      x-jvm-package: binary
+      operationId: postBinaryInline
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                optionalFile:
+                  type: string
+                  format: binary
+      responses:
+        200: {}
+  /binary-ref:
+    post:
+      x-jvm-package: binary
+      operationId: postBinaryRef
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/Files"
+      responses:
+        200: {}
+components:
+  schemas:
+    Files:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        optionalFile:
+          type: string
+          format: binary
