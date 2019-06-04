@@ -559,6 +559,7 @@ object AkkaHttpServerGenerator {
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
+        consumes                                                 = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
@@ -588,7 +589,7 @@ object AkkaHttpServerGenerator {
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
         akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
         akkaBody   <- bodyToAkka(operationId, bodyArgs)
-        asyncFormProcessing = formArgs.exists(_.isFile)
+        asyncFormProcessing = formArgs.exists(_.isFile) || consumes.contains(RouteMeta.MultipartFormData)
         akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
         (akkaForm, handlerDefinitions) = akkaForm_
         akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
@@ -654,7 +655,6 @@ object AkkaHttpServerGenerator {
           )
         )
 
-        val consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
         RenderedRoute(
           fullRoute,
           q"""
