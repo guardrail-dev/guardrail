@@ -313,6 +313,7 @@ object AkkaHttpServerGenerator {
 
         override def toString(): String = s"Binding($value)"
       }
+      val hasFile              = params.exists(_.isFile)
       val referenceAccumulator = q"fileReferences"
       (for {
         params <- NonEmptyList.fromList(params)
@@ -430,32 +431,62 @@ object AkkaHttpServerGenerator {
 
         val allCases: List[Case] = matchers ++ List(ignoredUnmarshaller)
 
-        val handlerDefinitions = List(
-          q"""
-          def ${Term.Name(s"${operationId}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
-          """,
-          q"""
-            def ${Term
-            .Name(s"${operationId}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
-              val dest = destFn(part.name, part.filename, part.entity.contentType)
-              val messageDigest = hashType.map(MessageDigest.getInstance(_))
-              val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
+        type EntityDirective = Term
+        val (handlerDefinitions, trackFileStuff): (List[Stat], EntityDirective => Term) = if (hasFile) {
+          (List(
+             q"""
+            def ${Term.Name(s"${operationId}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
+            """,
+             q"""
+              def ${Term
+               .Name(s"${operationId}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
+                val dest = destFn(part.name, part.filename, part.entity.contentType)
+                val messageDigest = hashType.map(MessageDigest.getInstance(_))
+                val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
 
-              part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
-                .transform({
-                  case IOResult(_, Success(_)) =>
-                    val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
-                    (dest, part.filename, part.entity.contentType, hash)
-                  case IOResult(_, Failure(t)) =>
+                part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
+                  .transform({
+                    case IOResult(_, Success(_)) =>
+                      val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
+                      (dest, part.filename, part.entity.contentType, hash)
+                    case IOResult(_, Failure(t)) =>
+                      dest.delete()
+                      throw t
+                  }, { case t =>
                     dest.delete()
-                    throw t
-                }, { case t =>
-                  dest.delete()
-                  t
-                })
-            }
-          """
-        )
+                    t
+                  })
+              }
+            """
+           ),
+           entityDirective => q"""
+          (
+            extractSettings.flatMap({ settings =>
+              handleExceptions(ExceptionHandler {
+                case EntityStreamSizeException(limit, contentLength) ⇒
+                  ${referenceAccumulator}.get().foreach(_.delete())
+                  val summary = contentLength match {
+                    case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
+                    case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
+                  }
+                  val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
+                  val status = StatusCodes.RequestEntityTooLarge
+                  val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
+                  complete(HttpResponse(status, entity = msg))
+                case e: Throwable =>
+                  ${referenceAccumulator}.get().foreach(_.delete())
+                  throw e
+              })
+            }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
+              ${referenceAccumulator}.get().foreach(_.delete())
+              None
+            }) & mapResponse({ resp =>
+              ${referenceAccumulator}.get().foreach(_.delete())
+              resp
+            }) & ${entityDirective}
+          )
+          """)
+        } else (List.empty[Stat], term => term)
 
         val directive: Term = (
           q"""
@@ -472,31 +503,7 @@ object AkkaHttpServerGenerator {
             (extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
                 val ${Pat.Var(referenceAccumulator)} = new AtomicReference(List.empty[File])
-                (
-                  extractSettings.flatMap({ settings =>
-                    handleExceptions(ExceptionHandler {
-                      case EntityStreamSizeException(limit, contentLength) ⇒
-                        ${referenceAccumulator}.get().foreach(_.delete())
-                        val summary = contentLength match {
-                          case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
-                          case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
-                        }
-                        val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
-                        val status = StatusCodes.RequestEntityTooLarge
-                        val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
-                        complete(HttpResponse(status, entity = msg))
-                      case e: Throwable =>
-                        ${referenceAccumulator}.get().foreach(_.delete())
-                        throw e
-                    })
-                  }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
-                    ${referenceAccumulator}.get().foreach(_.delete())
-                    None
-                  }) & mapResponse({ resp =>
-                    ${referenceAccumulator}.get().foreach(_.delete())
-                    resp
-                  }) & entity(as[Multipart.FormData])
-                ).flatMap { formData =>
+                ${trackFileStuff(q"entity(as[Multipart.FormData])")}.flatMap { formData =>
                   val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
                     results <- formData.parts
                       .mapConcat({ part =>
