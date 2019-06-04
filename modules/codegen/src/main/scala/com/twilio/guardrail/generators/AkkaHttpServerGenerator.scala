@@ -313,6 +313,7 @@ object AkkaHttpServerGenerator {
 
         override def toString(): String = s"Binding($value)"
       }
+      val referenceAccumulator = q"fileReferences"
       (for {
         params <- NonEmptyList.fromList(params)
       } yield {
@@ -348,7 +349,7 @@ object AkkaHttpServerGenerator {
                       argName.toLit,
                       None,
                       q"""
-                          SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
+                          SafeUnmarshaller(AccumulatingUnmarshaller(${referenceAccumulator}, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
                       """
                     ),
                     q"""
@@ -470,12 +471,12 @@ object AkkaHttpServerGenerator {
 
             (extractExecutionContext.flatMap { implicit executionContext =>
               extractMaterializer.flatMap { implicit mat =>
-                val fileReferences = new AtomicReference(List.empty[File])
+                val ${Pat.Var(referenceAccumulator)} = new AtomicReference(List.empty[File])
                 (
                   extractSettings.flatMap({ settings =>
                     handleExceptions(ExceptionHandler {
                       case EntityStreamSizeException(limit, contentLength) ⇒
-                        fileReferences.get().foreach(_.delete())
+                        ${referenceAccumulator}.get().foreach(_.delete())
                         val summary = contentLength match {
                           case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
                           case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
@@ -485,14 +486,14 @@ object AkkaHttpServerGenerator {
                         val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
                         complete(HttpResponse(status, entity = msg))
                       case e: Throwable =>
-                        fileReferences.get().foreach(_.delete())
+                        ${referenceAccumulator}.get().foreach(_.delete())
                         throw e
                     })
                   }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
-                    fileReferences.get().foreach(_.delete())
+                    ${referenceAccumulator}.get().foreach(_.delete())
                     None
                   }) & mapResponse({ resp =>
-                    fileReferences.get().foreach(_.delete())
+                    ${referenceAccumulator}.get().foreach(_.delete())
                     resp
                   }) & entity(as[Multipart.FormData])
                 ).flatMap { formData =>
