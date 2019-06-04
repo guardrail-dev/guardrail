@@ -38,7 +38,7 @@ object SwaggerGenerator {
                 operationMap.asScala.toList.map {
                   case (httpMethod, operation) =>
                     val securityRequirements = Option(operation.getSecurity)
-                      .map(SecurityRequirements(_, SecurityOptional(operation), SecurityRequirements.Local))
+                      .flatMap(SecurityRequirements(_, SecurityOptional(operation), SecurityRequirements.Local))
                       .orElse(globalSecurityRequirements)
                     RouteMeta(pathStr, httpMethod, operation, securityRequirements)
                 }

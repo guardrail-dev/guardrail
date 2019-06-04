@@ -42,7 +42,7 @@ object ServerGenerator {
 
     for {
       prefixes <- vendorPrefixes()
-      globalSecurityRequirements = Option(swagger.getSecurity).map(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
+      globalSecurityRequirements = Option(swagger.getSecurity).flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
       routes <- extractOperations(paths, globalSecurityRequirements)
       classNamedRoutes <- routes
         .traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
