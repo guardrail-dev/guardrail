@@ -1,6 +1,6 @@
 package com.twilio.guardrail.extract
 
-import com.twilio.guardrail.{ EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour }
+import com.twilio.guardrail.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
 import scala.util.{ Success, Try }
 import scala.reflect.ClassTag
 import scala.collection.JavaConverters._
@@ -42,6 +42,11 @@ object Extractable {
     build[EmptyToNullBehaviour]({
       case x: Boolean if x  => EmptyIsNull
       case x: Boolean if !x => EmptyIsEmpty
+    })
+  implicit val defaultExtractableRedactionBehaviour: Extractable[RedactionBehaviour] =
+    build[RedactionBehaviour]({
+      case x: Boolean if x  => DataRedacted
+      case x: Boolean if !x => DataVisible
     })
 
   implicit def defaultExtractableList[T: Extractable: ClassTag]: Extractable[List[T]] =

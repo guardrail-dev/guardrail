@@ -2,9 +2,10 @@ package com.twilio.guardrail
 package generators
 
 import _root_.io.swagger.v3.oas.models.media._
+import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.{ Default, EmptyValueIsNull }
+import com.twilio.guardrail.extract.{ DataRedaction, Default, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -141,6 +142,7 @@ object CirceProtocolGenerator {
             case s: StringSchema    => EmptyValueIsNull(s)
             case _                  => None
           }).getOrElse(EmptyIsEmpty)
+          dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
             case SwaggerUtil.Resolved(declType, classDep, _) =>
@@ -164,21 +166,41 @@ object CirceProtocolGenerator {
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators     = parents.flatMap(_.discriminators)
         val discriminatorNames = discriminators.map(_.propertyName).toSet
         val parentOpt          = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
-        val terms = (parents.reverse.flatMap(_.params.map(_.term)) ++ selfParams.map(_.term)).filterNot(
-          param => discriminatorNames.contains(param.name.value)
+        val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
+          param => discriminatorNames.contains(param.term.name.value)
         )
+        val terms = params.map(_.term)
+
+        val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
+          def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
+            case param if param.dataRedaction == DataVisible => Term.Name(param.term.name.value)
+            case _                                           => Lit.String("[redacted]")
+          }
+
+          val toStringTerms = NonEmptyList
+            .fromList(params)
+            .fold(List.empty[Term])(list => mkToStringTerm(list.head) +: list.tail.map(param => q"${Lit.String(",")} + ${mkToStringTerm(param)}"))
+
+          List[Defn.Def](
+            q"override def toString: String = ${toStringTerms.foldLeft[Term](Lit.String(s"${clsName}("))(
+              (accum, term) => q"$accum + $term"
+            )} + ${Lit.String(")")}"
+          )
+        } else {
+          List.empty[Defn.Def]
+        }
 
         val code = parentOpt
-          .fold(q"""case class ${Type.Name(clsName)}(..${terms})""")(
+          .fold(q"""case class ${Type.Name(clsName)}(..${terms}) { ..$toStringMethod }""")(
             parent =>
               q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces
-                .map(a => init"${Type.Name(a)}(...$Nil)")}"}"""
+                .map(a => init"${Type.Name(a)}(...$Nil)")} { ..$toStringMethod }"}"""
           )
 
         Target.pure(code)
