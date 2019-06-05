@@ -4,14 +4,13 @@ import _root_.io.swagger.v3.oas.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
-import com.twilio.guardrail.extract.SecurityOptional
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityRequirements, SecurityScheme, SwaggerTerms }
+import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityScheme, SwaggerTerms }
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
@@ -30,26 +29,17 @@ object ServerGenerator {
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
   def fromSwagger[L <: LA, F[_]](context: Context, swagger: OpenAPI, frameworkImports: List[L#Import])(
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
-    import Sc._
     import Sw._
 
-    val paths: List[(String, PathItem)] = swagger.getPathsOpt()
-    val basePath: Option[String]        = swagger.basePath()
+    val basePath: Option[String] = swagger.basePath()
 
     for {
-      prefixes <- vendorPrefixes()
-      globalSecurityRequirements = Option(swagger.getSecurity).flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
-      routes <- extractOperations(paths, globalSecurityRequirements)
-      classNamedRoutes <- routes
-        .traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
-      groupedRoutes = classNamedRoutes
-        .groupBy(_._1)
-        .mapValues(_.map(_._2))
-        .toList
       extraImports       <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       servers <- groupedRoutes.traverse {

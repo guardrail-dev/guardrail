@@ -80,7 +80,7 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, swagger, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions)
         case CodegenTarget.Models =>
