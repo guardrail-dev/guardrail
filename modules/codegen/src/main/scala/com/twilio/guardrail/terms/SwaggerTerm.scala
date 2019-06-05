@@ -1,7 +1,9 @@
 package com.twilio.guardrail
 package terms
 
+import cats.data.{ NonEmptyList, NonEmptyMap }
 import cats.free.Free
+import cats.kernel.Order
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
@@ -16,6 +18,7 @@ import java.net.URI
 import java.util
 import java.util.Locale
 import scala.collection.JavaConverters._
+import scala.collection.immutable.TreeMap
 
 object RouteMeta {
   sealed abstract class ContentType(val value: String) {
@@ -45,10 +48,25 @@ object SecurityRequirements {
   case object Global extends Location
   case object Local  extends Location
 
-  def apply(requirements: util.List[SecurityRequirement], optionalSchemes: List[String], location: Location): SecurityRequirements =
-    SecurityRequirements(requirements.asScala.map(_.asScala.mapValues(_.asScala.toList).toMap).toList, optionalSchemes, location)
+  def apply(requirements: util.List[SecurityRequirement], optionalSchemes: List[String], location: Location): Option[SecurityRequirements] = {
+    implicit val strOrder = Order.fromComparable[String]
+    for {
+      convertedReqs <- NonEmptyList.fromList(
+        requirements.asScala
+          .flatMap(
+            req =>
+              NonEmptyMap.fromMap(
+                TreeMap(req.asScala.mapValues(_.asScala.toList).toSeq: _*)
+            )
+          )
+          .toList
+      )
+    } yield SecurityRequirements(convertedReqs, optionalSchemes, location)
+  }
 }
-case class SecurityRequirements(requirements: List[Map[String, SecurityScopes]], optionalSchemes: List[String], location: SecurityRequirements.Location)
+case class SecurityRequirements(requirements: NonEmptyList[NonEmptyMap[String, SecurityScopes]],
+                                optionalSchemes: List[String],
+                                location: SecurityRequirements.Location)
 
 case class RouteMeta(path: String, method: HttpMethod, operation: Operation, securityRequirements: Option[SecurityRequirements]) {
 

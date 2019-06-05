@@ -58,7 +58,7 @@ object Common {
       basePath = swagger.basePath()
 
       paths                      = swagger.getPathsOpt()
-      globalSecurityRequirements = Option(swagger.getSecurity).map(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
+      globalSecurityRequirements = Option(swagger.getSecurity).flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
       routes           <- extractOperations(paths, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger, prefixes)
