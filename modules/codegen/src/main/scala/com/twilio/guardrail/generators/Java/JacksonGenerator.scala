@@ -748,10 +748,13 @@ object JacksonGenerator {
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), s"Unresolved reference ${tpeName}").flatten
             case SwaggerUtil.DeferredArray(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"Array<${tpe}>")), s"Unresolved reference ${tpeName}").flatten
+              Target
+                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"java.util.List<${tpe}>")), s"Unresolved reference ${tpeName}")
+                .flatten
             case SwaggerUtil.DeferredMap(tpeName) =>
               Target
-                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"Array<Map<String, ${tpe}>>")), s"Unresolved reference ${tpeName}")
+                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"java.util.List<java.util.Map<String, ${tpe}>>")),
+                            s"Unresolved reference ${tpeName}")
                 .flatten
           }
         } yield result
