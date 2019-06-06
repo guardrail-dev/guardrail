@@ -154,9 +154,13 @@ object CirceProtocolGenerator {
               }
               (tpe, Option.empty)
             case SwaggerUtil.DeferredArray(tpeName) =>
-              (t"IndexedSeq[${Type.Name(tpeName)}]", Option.empty)
+              val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
+              val innerType    = concreteType.getOrElse(Type.Name(tpeName))
+              (t"IndexedSeq[$innerType]", Option.empty)
             case SwaggerUtil.DeferredMap(tpeName) =>
-              (t"Map[String, ${Type.Name(tpeName)}]", Option.empty)
+              val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
+              val innerType    = concreteType.getOrElse(Type.Name(tpeName))
+              (t"Map[String, $innerType]", Option.empty)
           }
 
           (finalDeclType, finalDefaultValue) = Option(isRequired)

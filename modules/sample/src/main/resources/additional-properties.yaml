@@ -37,3 +37,12 @@ components:
       properties:
         stuff:
           $ref: "#/components/schemas/BarMap"
+    BarMapOfMap:
+      type: object
+      required:
+        - stuff
+      properties:
+        stuff:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/BarMap"

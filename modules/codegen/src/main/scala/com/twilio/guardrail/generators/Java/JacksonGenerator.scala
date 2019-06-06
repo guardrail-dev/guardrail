@@ -693,12 +693,14 @@ object JacksonGenerator {
               case SwaggerUtil.DeferredArray(tpeName) =>
                 for {
                   fqListType <- safeParseClassOrInterfaceType("java.util.List")
-                  innerType  <- safeParseType(tpeName)
+                  concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
+                  innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqListType.setTypeArguments(innerType), Option.empty)
               case SwaggerUtil.DeferredMap(tpeName) =>
                 for {
                   fqMapType <- safeParseClassOrInterfaceType("java.util.Map")
-                  innerType <- safeParseType(tpeName)
+                  concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
+                  innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqMapType.setTypeArguments(STRING_TYPE, innerType), Option.empty)
             }
             (tpe, classDep) = tpeClassDep
