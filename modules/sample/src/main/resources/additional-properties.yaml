@@ -25,4 +25,15 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/FooMapValues"
-
+    BarMap:
+      type: object
+      additionalProperties:
+        type: integer
+        format: int64
+    Bar:
+      type: object
+      required:
+        - stuff
+      properties:
+        stuff:
+          $ref: "#/components/schemas/BarMap"
