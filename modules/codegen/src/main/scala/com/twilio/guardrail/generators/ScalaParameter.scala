@@ -78,9 +78,15 @@ object ScalaParameter {
             .mapN(SwaggerUtil.Resolved[L](_, None, _))
         } yield res
 
+      def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
+
       param match {
         case r: Parameter if r.isRef =>
           getRefParameterRef(r)
+            .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
+
+        case r: Parameter if paramHasRefSchema(r) =>
+          getSimpleRef(r.getSchema)
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
 
         case x: Parameter if x.isInBody =>
