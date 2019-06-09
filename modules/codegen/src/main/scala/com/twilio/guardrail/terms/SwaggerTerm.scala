@@ -3,6 +3,8 @@ package terms
 
 import cats.data.{ NonEmptyList, NonEmptyMap }
 import cats.free.Free
+import cats.data.State
+import cats.implicits._
 import cats.kernel.Order
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
@@ -141,10 +143,13 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
   }
 
   /** Temporary hack method to adapt to open-api v3 spec */
-  private def extractParamsFromRequestBody(requestBody: RequestBody): List[Parameter] =
-    Option(requestBody.getContent())
+  private def extractParamsFromRequestBody(requestBody: RequestBody): List[Parameter] = {
+    type HashCode            = Int
+    type Count               = Int
+    type ParameterCountState = (Count, Map[HashCode, Count])
+    val ((maxCount, instances), ps) = Option(requestBody.getContent())
       .fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala))
-      .flatMap { mt =>
+      .flatMap({ mt =>
         val requiredFields = Option(mt.getSchema).flatMap(x => Option(x.getRequired)).fold(Set.empty[String])(_.asScala.toSet)
 
         Option(mt.getSchema.getProperties).map(_.asScala.toList).getOrElse(List.empty).map {
@@ -170,7 +175,26 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
             p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
             p
         }
+      })
+      .traverse[State[ParameterCountState, ?], Parameter] { p =>
+        State[ParameterCountState, Parameter]({
+          case (maxCount, instances) =>
+            val updated = instances.updated(p.hashCode, instances.getOrElse(p.hashCode, 0) + 1)
+            ((Math.max(maxCount, updated.values.max), updated), p)
+        })
       }
+      .runEmpty
+      .value
+    ps.distinct.map { p =>
+      instances.get(p.hashCode).foreach { count =>
+        // FIXME: Regardless of what the specification says, if a parameter does not appear across all media types, mark it as optional
+        if (count != maxCount) {
+          p.setRequired(false)
+        }
+      }
+      p
+    }
+  }
 
   private val parameters: List[Parameter] = {
     val p = Option(operation.getParameters)
