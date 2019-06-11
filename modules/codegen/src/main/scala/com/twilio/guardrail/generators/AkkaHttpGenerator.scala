@@ -187,6 +187,13 @@ object AkkaHttpGenerator {
             }
 
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
+
+            def discardEntity: Directive0 = extractMaterializer.flatMap { implicit mat =>
+              extractRequest.flatMap { req =>
+                req.discardEntityBytes().future
+                Directive.Empty
+              }
+            }
           }
         """
         Target.pure(Some((q"AkkaHttpImplicits", defn)))
