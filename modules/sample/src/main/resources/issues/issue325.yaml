@@ -1,0 +1,31 @@
+swagger: "2.0"
+info:
+  title: "Issue 325 (Swagger)"
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+paths:
+  /test:
+    post:
+      operationId: testMultipleContentTypes
+      consumes:
+        - multipart/form-data
+        - application/x-www-form-urlencoded
+      parameters:
+      - name: foo
+        in: formData
+        required: true
+        type: string
+      - name: bar
+        in: formData
+        required: true
+        type: integer
+        format: int32
+      - name: baz
+        in: formData
+        type: integer
+        format: int32
+      responses:
+        '200': {}
+        '500': {}
