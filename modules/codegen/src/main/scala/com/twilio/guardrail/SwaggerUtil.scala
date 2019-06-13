@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses._
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
@@ -429,6 +430,30 @@ object SwaggerUtil {
       })
       .map(_.toMap)
   }
+
+  def copyOperation(operation: Operation): Operation =
+    new Operation()
+      .tags(operation.getTags)
+      .summary(operation.getSummary)
+      .description(operation.getDescription)
+      .externalDocs(operation.getExternalDocs)
+      .operationId(operation.getOperationId)
+      .parameters(operation.getParameters)
+      .requestBody(operation.getRequestBody)
+      .responses(operation.getResponses)
+      .callbacks(operation.getCallbacks)
+      .deprecated(operation.getDeprecated)
+      .security(operation.getSecurity)
+      .servers(operation.getServers)
+      .extensions(operation.getExtensions)
+
+  def copyRequestBody(requestBody: RequestBody): RequestBody =
+    new RequestBody()
+      .description(requestBody.getDescription)
+      .content(requestBody.getContent)
+      .required(requestBody.getRequired)
+      .$ref(requestBody.get$ref())
+      .extensions(requestBody.getExtensions)
 
   object paths {
     import atto._, Atto._

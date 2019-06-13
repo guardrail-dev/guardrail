@@ -1,43 +1,37 @@
 package support
-import java.util
 
-import com.twilio.guardrail.Common._
-import com.twilio.guardrail.shims._
+import com.twilio.guardrail.languages.LA
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
+import java.util
 
 trait SwaggerSpecRunner {
 
   import _root_.io.swagger.v3.oas.models._
   import cats.arrow.FunctionK
-  import cats.data.NonEmptyList
-  import cats.implicits._
   import com.twilio.guardrail._
-  import com.twilio.guardrail.languages.ScalaLanguage
   import com.twilio.guardrail.terms.framework.FrameworkTerms
   import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
-  import scala.collection.JavaConverters._
-  import java.net.URI
 
-  def runSwaggerSpec(
+  def runSwaggerSpec[L <: LA](
       spec: String
-  ): (Context, FunctionK[CodegenApplication[ScalaLanguage, ?], Target]) => (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) = {
+  ): (Context, FunctionK[CodegenApplication[L, ?], Target]) => (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
     runSwagger(new OpenAPIParser().readContents(spec, new util.LinkedList(), parseOpts).getOpenAPI) _
   }
 
-  def runSwagger(swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[ScalaLanguage, ?], Target])(
-      implicit F: FrameworkTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
-      Sc: ScalaTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]],
-      Sw: SwaggerTerms[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]]
-  ): (ProtocolDefinitions[ScalaLanguage], Clients[ScalaLanguage], Servers[ScalaLanguage]) = {
+  def runSwagger[L <: LA](swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
+      implicit F: FrameworkTerms[L, CodegenApplication[L, ?]],
+      Sc: ScalaTerms[L, CodegenApplication[L, ?]],
+      Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
+  ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     import F._
     import Sw._
 
-    val (proto, CodegenDefinitions(clients, Nil, Nil)) = Target.unsafeExtract(
+    val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs)) = Target.unsafeExtract(
       Common
-        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+        .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Client,
           context,
           swagger
@@ -45,9 +39,9 @@ trait SwaggerSpecRunner {
         .foldMap(framework)
     )
 
-    val (_, CodegenDefinitions(Nil, servers, Nil)) = Target.unsafeExtract(
+    val (_, CodegenDefinitions(Nil, servers, serverSupportDefs)) = Target.unsafeExtract(
       Common
-        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+        .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Server,
           context,
           swagger
@@ -55,7 +49,7 @@ trait SwaggerSpecRunner {
         .foldMap(framework)
     )
 
-    (proto, Clients(clients, Nil), Servers(servers, Nil))
+    (proto, Clients(clients, clientSupportDefs), Servers(servers, serverSupportDefs))
   }
 
 }

@@ -7,13 +7,18 @@ import cats.implicits._
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
-import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 
 class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
-  def extractOperations(paths: List[(String, PathItem)], globalSecurityRequirements: Option[SecurityRequirements]): Free[F, List[RouteMeta]] =
-    Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths, globalSecurityRequirements))
+  def extractCommonRequestBodies(components: Option[Components]): Free[F, Map[String, RequestBody]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractCommonRequestBodies(components))
+
+  def extractOperations(paths: List[(String, PathItem)],
+                        commonRequestBodies: Map[String, RequestBody],
+                        globalSecurityRequirements: Option[SecurityRequirements]): Free[F, List[RouteMeta]] =
+    Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements))
 
   def extractApiKeySecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, ApiKeySecurityScheme[L]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe))

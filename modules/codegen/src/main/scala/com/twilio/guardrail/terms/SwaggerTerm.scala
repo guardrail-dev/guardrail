@@ -8,7 +8,7 @@ import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import io.swagger.v3.oas.models.{ Operation, PathItem }
+import io.swagger.v3.oas.models.{ Components, Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
@@ -205,7 +205,10 @@ case class OpenIdConnectSecurityScheme[L <: LA](url: URI, tpe: Option[L#Type])  
 case class OAuth2SecurityScheme[L <: LA](flows: OAuthFlows, tpe: Option[L#Type])                     extends SecurityScheme[L]
 
 sealed trait SwaggerTerm[L <: LA, T]
-case class ExtractOperations[L <: LA](paths: List[(String, PathItem)], globalSecurityRequirements: Option[SecurityRequirements])
+case class ExtractCommonRequestBodies[L <: LA](components: Option[Components]) extends SwaggerTerm[L, Map[String, RequestBody]]
+case class ExtractOperations[L <: LA](paths: List[(String, PathItem)],
+                                      commonRequestBodies: Map[String, RequestBody],
+                                      globalSecurityRequirements: Option[SecurityRequirements])
     extends SwaggerTerm[L, List[RouteMeta]]
 case class ExtractApiKeySecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])
     extends SwaggerTerm[L, ApiKeySecurityScheme[L]]

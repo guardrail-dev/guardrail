@@ -59,7 +59,8 @@ object Common {
 
       paths                      = swagger.getPathsOpt()
       globalSecurityRequirements = Option(swagger.getSecurity).flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
-      routes           <- extractOperations(paths, globalSecurityRequirements)
+      requestBodies    <- extractCommonRequestBodies(Option(swagger.getComponents))
+      routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
@@ -80,7 +81,7 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, swagger, frameworkImports)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, swagger, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions)
         case CodegenTarget.Models =>

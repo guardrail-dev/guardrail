@@ -3,11 +3,11 @@ package generators
 
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.{ CustomTypeName, PackageName, SecurityOptional }
+import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
-import io.swagger.v3.oas.models.parameters.Parameter
-import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import java.net.URI
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -26,24 +26,48 @@ object SwaggerGenerator {
     }
 
     def apply[T](term: SwaggerTerm[L, T]): Target[T] = term match {
-      case ExtractOperations(paths, globalSecurityRequirements) =>
+      case ExtractCommonRequestBodies(components) =>
+        Target.pure(components.flatMap(c => Option(c.getRequestBodies)).fold(Map.empty[String, RequestBody])(_.asScala.toMap))
+
+      case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
         for {
           _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
-          routes <- paths.traverse {
+          routes <- paths.traverse({
             case (pathStr, path) =>
               for {
-
                 operationMap <- Target.fromOption(Option(path.readOperationsMap()), "No operations defined")
-              } yield {
-                operationMap.asScala.toList.map {
+                operationRoutes <- operationMap.asScala.toList.traverse({
                   case (httpMethod, operation) =>
                     val securityRequirements = Option(operation.getSecurity)
                       .flatMap(SecurityRequirements(_, SecurityOptional(operation), SecurityRequirements.Local))
                       .orElse(globalSecurityRequirements)
-                    RouteMeta(pathStr, httpMethod, operation, securityRequirements)
-                }
-              }
-          }
+
+                    // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
+                    // requestBodies, so let's manually fix that up here.
+                    val updatedOperation = Option(operation.getRequestBody)
+                      .flatMap(rb => Option(rb.get$ref))
+                      .flatMap(rbref => Option(rbref.split("/")).map(_.toList))
+                      .fold(Target.pure(operation))({
+                        case refName @ "#" :: "components" :: "requestBodies" :: name :: Nil =>
+                          commonRequestBodies
+                            .get(name)
+                            .fold(
+                              Target.raiseError[Operation](s"Unable to resolve reference to '$refName'")
+                            )({ commonRequestBody =>
+                              Target.pure(
+                                SwaggerUtil
+                                  .copyOperation(operation)
+                                  .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
+                              )
+                            })
+                        case x =>
+                          Target.raiseError[Operation](s"Invalid request body $$ref name '$x'")
+                      })
+
+                    updatedOperation.map(op => RouteMeta(pathStr, httpMethod, op, securityRequirements))
+                })
+              } yield operationRoutes
+          })
         } yield routes.flatten
 
       case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
