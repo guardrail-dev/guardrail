@@ -693,12 +693,14 @@ object JacksonGenerator {
               case SwaggerUtil.DeferredArray(tpeName) =>
                 for {
                   fqListType <- safeParseClassOrInterfaceType("java.util.List")
-                  innerType  <- safeParseType(tpeName)
+                  concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
+                  innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqListType.setTypeArguments(innerType), Option.empty)
               case SwaggerUtil.DeferredMap(tpeName) =>
                 for {
                   fqMapType <- safeParseClassOrInterfaceType("java.util.Map")
-                  innerType <- safeParseType(tpeName)
+                  concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
+                  innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqMapType.setTypeArguments(STRING_TYPE, innerType), Option.empty)
             }
             (tpe, classDep) = tpeClassDep
@@ -748,10 +750,13 @@ object JacksonGenerator {
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), s"Unresolved reference ${tpeName}").flatten
             case SwaggerUtil.DeferredArray(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"Array<${tpe}>")), s"Unresolved reference ${tpeName}").flatten
+              Target
+                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"java.util.List<${tpe}>")), s"Unresolved reference ${tpeName}")
+                .flatten
             case SwaggerUtil.DeferredMap(tpeName) =>
               Target
-                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"Array<Map<String, ${tpe}>>")), s"Unresolved reference ${tpeName}")
+                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"java.util.List<java.util.Map<String, ${tpe}>>")),
+                            s"Unresolved reference ${tpeName}")
                 .flatten
           }
         } yield result

@@ -141,10 +141,11 @@ object SwaggerUtil {
     } yield CustomTypeName(v, prefixes)
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    def apply[T <: Schema[_]](model: T)(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
+        import Fw._
         log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
@@ -162,6 +163,20 @@ object SwaggerUtil {
                 case x: Deferred[L]      => embedArray(x)
                 case x: DeferredArray[L] => embedArray(x)
                 case x: DeferredMap[L]   => embedArray(x)
+              }
+            } yield res
+          case map: MapSchema =>
+            for {
+              rec <- Option(map.getAdditionalProperties)
+                .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None)))({
+                  case _: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None))
+                  case s: Schema[_]         => propMeta[L, F](s)
+                })
+              res <- rec match {
+                case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
+                case x: DeferredMap[L]       => embedMap(x)
+                case x: DeferredArray[L]     => embedMap(x)
+                case x: Deferred[L]          => embedMap(x)
               }
             } yield res
           case impl: Schema[_] =>
