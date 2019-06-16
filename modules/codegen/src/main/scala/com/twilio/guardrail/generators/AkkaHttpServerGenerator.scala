@@ -504,36 +504,35 @@ object AkkaHttpServerGenerator {
             }
 
             ..${unmarshallers};
+            val ${Pat.Var(referenceAccumulator)} = new AtomicReference(List.empty[File])
+            implicit val MultipartFormDataUnmarshaller: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
+              implicitly[FromRequestUnmarshaller[Multipart.FormData]].flatMap { implicit executionContext => implicit mat => formData =>
+                val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
+                  results <- formData.parts
+                    .mapConcat({ part =>
+                      if (${fieldNames}.contains(part.name)) part :: Nil
+                      else {
+                        part.entity.discardBytes()
+                        Nil
+                      }
+                    }).mapAsync(1)(${Term.Block(List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases))))})
+                      .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
+                  } yield {
+                    results.toList.sequence.map({ successes =>
+                      ..${grabHeads}
 
-            (extractExecutionContext.flatMap { implicit executionContext =>
-              extractMaterializer.flatMap { implicit mat =>
-                val ${Pat.Var(referenceAccumulator)} = new AtomicReference(List.empty[File])
-                ${trackFileStuff(q"entity(as[Multipart.FormData])")}.flatMap { formData =>
-                  val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
-                    results <- formData.parts
-                      .mapConcat({ part =>
-                        if (${fieldNames}.contains(part.name)) part :: Nil
-                        else {
-                          part.entity.discardBytes()
-                          Nil
-                        }
-                      }).mapAsync(1)(${Term.Block(List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases))))})
-                        .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
-                    } yield {
-                      results.toList.sequence.map({ successes =>
-                        ..${grabHeads}
+                      ${optionalTermPatterns.map(_.toTerm) match {
+          case term :: Nil => q"Tuple1(${term})"
+          case xs          => q"(..${xs})"
+        }}
+                    })
+                  }
 
-                        ${optionalTermPatterns.map(_.toTerm) match {
-            case term :: Nil => q"Tuple1(${term})"
-            case xs          => q"(..${xs})"
-          }}
-                      })
-                    }
-
-                  onSuccess(collectedPartsF)
-                }
+                collectedPartsF
               }
-            }).flatMap(_.fold({
+            (
+              ${trackFileStuff(q"entity(as(MultipartFormDataUnmarshaller))")}
+            ).flatMap(_.fold({
               case RejectionError(rej) => reject(rej)
               case t => throw t
             }, ${Term.PartialFunction(
