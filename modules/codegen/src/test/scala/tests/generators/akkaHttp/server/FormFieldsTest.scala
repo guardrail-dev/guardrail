@@ -119,69 +119,66 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                 case (v1, v2, v3, v4) =>
                   putFooParts.baz((v1, v2, v3, v4))
               })
-              extractExecutionContext.flatMap { implicit executionContext =>
-                extractMaterializer.flatMap { implicit mat =>
-                  val fileReferences = new AtomicReference(List.empty[File])
-                  (extractSettings.flatMap {
-                    settings => handleExceptions(ExceptionHandler({
-                      case EntityStreamSizeException(limit, contentLength) =>
-                        fileReferences.get().foreach(_.delete())
-                        val summary = contentLength match {
-                          case Some(cl) =>
-                            s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
-                          case None =>
-                            s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
-                        }
-                        val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
-                        val status = StatusCodes.RequestEntityTooLarge
-                        val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
-                        complete(HttpResponse(status, entity = msg))
-                      case e: Throwable =>
-                        fileReferences.get().foreach(_.delete())
-                        throw e
-                    }))
-                  } & handleRejections { (rejections: scala.collection.immutable.Seq[Rejection]) =>
-                    fileReferences.get().foreach(_.delete())
-                    None
-                  } & mapResponse { resp =>
-                    fileReferences.get().foreach(_.delete())
-                    resp
-                  } & entity(as[Multipart.FormData])).flatMap { formData =>
-                    val collectedPartsF: Future[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, String)])]] = for (results <- formData.parts.mapConcat {
-                      part => if (Set[String]("foo", "bar", "baz").contains(part.name)) part :: Nil else {
-                        part.entity.discardBytes()
-                        Nil
-                      }
-                    }.mapAsync(1) {
-                      part => part.name match {
-                        case "foo" =>
-                          SafeUnmarshaller(UnmarshalfooPart).apply(part)
-                        case "bar" =>
-                          SafeUnmarshaller(UnmarshalbarPart).apply(part)
-                        case "baz" =>
-                          SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, UnmarshalbazPart)(_.value._1)).apply(part)
-                        case _ =>
-                          SafeUnmarshaller(implicitly[Unmarshaller[Multipart.FormData.BodyPart, Unit]].map(putFooParts.IgnoredPart.apply(_))).apply(part)
-                      }
-                    }.toMat(Sink.seq[Either[Throwable, putFooParts.Part]])(Keep.right).run()) yield {
-                      results.toList.sequence.map { successes =>
-                        val fooO = successes.collectFirst({
-                          case putFooParts.foo(v1) => v1
-                        })
-                        val barO = successes.collectFirst({
-                          case putFooParts.bar(v1) => v1
-                        })
-                        val bazO = successes.collectFirst({
-                          case putFooParts.baz((v1, v2, v3, v4)) =>
-                            (v1, v2, v3, v4)
-                        })
-                        (fooO, barO, bazO)
-                      }
-                    }
-                    onSuccess(collectedPartsF)
+              val fileReferences = new AtomicReference(List.empty[File])
+              implicit val MultipartFormDataUnmarshaller: FromRequestUnmarshaller[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, String)])]] = implicitly[FromRequestUnmarshaller[Multipart.FormData]].flatMap { implicit executionContext => implicit mat => formData =>
+                val collectedPartsF: Future[Either[Throwable, (Option[String], Option[Long], Option[(File, Option[String], ContentType, String)])]] = for (results <- formData.parts.mapConcat {
+                  part => if (Set[String]("foo", "bar", "baz").contains(part.name)) part :: Nil else {
+                    part.entity.discardBytes()
+                    Nil
+                  }
+                }.mapAsync(1) {
+                  part => part.name match {
+                    case "foo" =>
+                      SafeUnmarshaller(UnmarshalfooPart).apply(part)
+                    case "bar" =>
+                      SafeUnmarshaller(UnmarshalbarPart).apply(part)
+                    case "baz" =>
+                      SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, UnmarshalbazPart)(_.value._1)).apply(part)
+                    case _ =>
+                      SafeUnmarshaller(implicitly[Unmarshaller[Multipart.FormData.BodyPart, Unit]].map(putFooParts.IgnoredPart.apply(_))).apply(part)
+                  }
+                }.toMat(Sink.seq[Either[Throwable, putFooParts.Part]])(Keep.right).run()) yield {
+                  results.toList.sequence.map { successes =>
+                    val fooO = successes.collectFirst({
+                      case putFooParts.foo(v1) => v1
+                    })
+                    val barO = successes.collectFirst({
+                      case putFooParts.bar(v1) => v1
+                    })
+                    val bazO = successes.collectFirst({
+                      case putFooParts.baz((v1, v2, v3, v4)) =>
+                        (v1, v2, v3, v4)
+                    })
+                    (fooO, barO, bazO)
                   }
                 }
-              }.flatMap(_.fold({
+                collectedPartsF
+              }
+              (handleExceptions(ExceptionHandler({
+                case e: Throwable =>
+                  fileReferences.get().foreach(_.delete())
+                  throw e
+              })) & extractSettings.flatMap {
+                settings => handleRejections { (rejections: scala.collection.immutable.Seq[Rejection]) =>
+                  fileReferences.get().foreach(_.delete())
+                  rejections.collectFirst({
+                    case MalformedRequestContentRejection(msg, EntityStreamSizeException(limit, contentLength)) =>
+                      val summary = contentLength match {
+                        case Some(cl) =>
+                          s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
+                        case None =>
+                          s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
+                      }
+                      val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
+                      val status = StatusCodes.RequestEntityTooLarge
+                      val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
+                      complete(HttpResponse(status, entity = msg))
+                  })
+                }
+              } & mapResponse { resp =>
+                fileReferences.get().foreach(_.delete())
+                resp
+              } & entity(as(Unmarshaller.firstOf(MultipartFormDataUnmarshaller)))).flatMap(_.fold({
                 case RejectionError(rej) =>
                   reject(rej)
                 case t =>

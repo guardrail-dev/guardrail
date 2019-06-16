@@ -33,7 +33,7 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
           }
         )
       override def emptyConsumes(
-        respond: Resource.emptyConsumesResponse.type
+          respond: Resource.emptyConsumesResponse.type
       )(foo: String): Future[Resource.emptyConsumesResponse] =
         Future.successful(respond.OK)
     })
@@ -57,10 +57,17 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
     }
 
     Post("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes))),
-        Multipart.FormData.BodyPart.Strict("bar", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("5".getBytes)))
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo",
+                                               HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`),
+                                                                 ByteString.fromArray("foo".getBytes))),
+            Multipart.FormData.BodyPart
+              .Strict("bar", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("5".getBytes)))
+          )
+          .toEntity
+      ) ~> route ~> check {
       status should equal(StatusCodes.OK)
     }
 
@@ -74,9 +81,14 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
     }
 
     Put("/test")
-      .withEntity(Multipart.FormData(
-        Multipart.FormData.BodyPart.Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes)))
-      ).toEntity) ~> route ~> check {
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart
+              .Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes)))
+          )
+          .toEntity
+      ) ~> route ~> check {
       status should equal(StatusCodes.OK)
     }
   }
