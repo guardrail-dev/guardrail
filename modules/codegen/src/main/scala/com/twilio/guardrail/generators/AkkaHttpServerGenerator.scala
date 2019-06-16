@@ -331,7 +331,7 @@ object AkkaHttpServerGenerator {
                   val isFile: Boolean = rawParameter.isFile
                   val (isOptional, realType): (Boolean, Type) = argType match {
                     case t"Option[$x]" => (true, x)
-                    case x             => (false, x)
+                    case x             => (!rawParameter.required, x)
                   }
                   val (unmarshaller, caseMatch, grabHead) = isFile match {
                     case true =>
@@ -545,18 +545,21 @@ object AkkaHttpServerGenerator {
                   })
 
                 ${params
-                .filterNot(_.isFile)
-                .map({ param =>
-                  val (realType, getFunc) = param.argType match {
-                    case t"Option[$x]"   => (x, q"get")
-                    case t"Iterable[$x]" => (x, q"getAll")
-                    case x               => (x, q"get")
+                .map(
+                  param =>
+                    if (param.isFile) {
+                      q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
+                    } else {
+                      val (realType, getFunc) = param.argType match {
+                        case t"Option[$x]"   => (x, q"get")
+                        case t"Iterable[$x]" => (x, q"getAll")
+                        case x               => (x, q"get")
+                      }
+                      q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
                   }
-                  q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
-                }) match {
-                case Nil           => q"Future.successful(Right(()))"
-                case term :: Nil   => q"${term}.map(v1 => Right(Tuple1(v1)))"
-                case term :: terms => q"(..${term +: terms}).mapN(${Term.Name(s"Tuple${terms.length + 1}")}.apply).map(Right.apply)"
+                ) match {
+                case NonEmptyList(term, Nil)   => q"${term}.map(v1 => Right(Tuple1(v1)))"
+                case NonEmptyList(term, terms) => q"(..${term +: terms}).mapN(${Term.Name(s"Tuple${terms.length + 1}")}.apply).map(Right.apply)"
               }}
               }
           """), Option(unmarshallerTerm))
