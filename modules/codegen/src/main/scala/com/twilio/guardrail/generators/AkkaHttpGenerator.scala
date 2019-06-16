@@ -148,9 +148,8 @@ object AkkaHttpGenerator {
               ev.apply(entity).map[Either[Throwable, U]](Right(_)).recover({ case t => Left(t) })
             }
 
-            def StaticUnmarshaller[T](value: T)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { _ => part =>
-              part.entity.discardBytes()
-              Future.successful[T](value)
+            def StaticUnmarshaller[T](value: T)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { implicit ec => part =>
+              part.entity.discardBytes().future.map(_ => value)
             }
 
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())
