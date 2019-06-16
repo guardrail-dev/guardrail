@@ -32,6 +32,10 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
             respond.InternalServerError
           }
         )
+      override def emptyConsumes(
+        respond: Resource.emptyConsumesResponse.type
+      )(foo: String): Future[Resource.emptyConsumesResponse] =
+        Future.successful(respond.OK)
     })
 
     Post("/test") ~> route ~> check {
@@ -56,6 +60,22 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
       .withEntity(Multipart.FormData(
         Multipart.FormData.BodyPart.Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes))),
         Multipart.FormData.BodyPart.Strict("bar", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("5".getBytes)))
+      ).toEntity) ~> route ~> check {
+      status should equal(StatusCodes.OK)
+    }
+
+    Put("/test")
+      .withEntity(ContentType.apply(MediaTypes.`application/x-www-form-urlencoded`, () => HttpCharsets.`UTF-8`), "foo=foo".getBytes) ~> route ~> check {
+      rejection match {
+        case UnsupportedRequestContentTypeRejection(supportedContentTypes) =>
+          supportedContentTypes.size should equal(1)
+          supportedContentTypes.head.matches(ContentType(MediaTypes.`multipart/form-data`)) should equal(true)
+      }
+    }
+
+    Put("/test")
+      .withEntity(Multipart.FormData(
+        Multipart.FormData.BodyPart.Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes)))
       ).toEntity) ~> route ~> check {
       status should equal(StatusCodes.OK)
     }
