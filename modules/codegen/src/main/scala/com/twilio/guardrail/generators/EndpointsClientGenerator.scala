@@ -85,9 +85,11 @@ object EndpointsClientGenerator {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
                 val lifter: (Term.Name, RawParameterName) => Term =
                   param match {
-                    case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
-                    case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
-                    case _                            => liftTerm _
+                    case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
+                    case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
+                    case param"$_: Iterable[$tpe]"      => liftIterable _
+                    case param"$_: Iterable[$tpe] = $_" => liftIterable _
+                    case _                              => liftTerm _
                   }
                 a :+ lifter(paramName, argName)
             }
