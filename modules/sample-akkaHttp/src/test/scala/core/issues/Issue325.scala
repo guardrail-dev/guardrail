@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.util.ByteString
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
@@ -48,6 +49,14 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
     Post("/test")
       .withEntity(ContentType.apply(MediaTypes.`application/x-www-form-urlencoded`, () => HttpCharsets.`UTF-8`), "foo=foo&bar=5".getBytes) ~> route ~> check {
+      status should equal(StatusCodes.OK)
+    }
+
+    Post("/test")
+      .withEntity(Multipart.FormData(
+        Multipart.FormData.BodyPart.Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes))),
+        Multipart.FormData.BodyPart.Strict("bar", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("5".getBytes)))
+      ).toEntity) ~> route ~> check {
       status should equal(StatusCodes.OK)
     }
   }
