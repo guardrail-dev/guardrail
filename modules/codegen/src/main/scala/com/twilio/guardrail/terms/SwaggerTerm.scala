@@ -147,6 +147,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
     type HashCode            = Int
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
+    val contentTypes = Option(requestBody.getContent()).toList.flatMap(_.keySet.asScala.toList)
     val ((maxCount, instances), ps) = Option(requestBody.getContent())
       .fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala))
       .flatMap({ mt =>
@@ -173,6 +174,11 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
 
             p.setRequired(isRequired)
             p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
+
+            if (Option(schema.getType()).exists(_ == "file") && contentTypes.contains("application/x-www-form-urlencoded")) {
+              p.setRequired(false)
+            }
+
             p
         }
       })
