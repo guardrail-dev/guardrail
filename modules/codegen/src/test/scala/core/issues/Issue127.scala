@@ -140,7 +140,12 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
                     onSuccess(collectedPartsF)
                   }
                 }
-              }.flatMap(_.fold(t => throw t, {
+              }.flatMap(_.fold({
+                case RejectionError(rej) =>
+                  reject(rej)
+                case t =>
+                  throw t
+              }, {
                 case Tuple1(fileO) =>
                   val maybe: Either[Rejection, Tuple1[(File, Option[String], ContentType)]] = for (file <- fileO.toRight(MissingFormFieldRejection("file"))) yield {
                     Tuple1(file)

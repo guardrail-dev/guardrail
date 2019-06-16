@@ -99,14 +99,20 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                 part => {
                   val json: Unmarshaller[Multipart.FormData.BodyPart, String] = MFDBPviaFSU(jsonEntityUnmarshaller[String])
                   val string: Unmarshaller[Multipart.FormData.BodyPart, String] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                  Unmarshaller.firstOf(json, string).apply(part).map(putFooParts.foo.apply)
+                  Unmarshaller.firstOf(json, string).apply(part).map(putFooParts.foo.apply).recoverWith({
+                    case ex =>
+                      Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                  })
                 }
               }
               val UnmarshalbarPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller { implicit executionContext =>
                 part => {
                   val json: Unmarshaller[Multipart.FormData.BodyPart, Long] = MFDBPviaFSU(jsonEntityUnmarshaller[Long])
                   val string: Unmarshaller[Multipart.FormData.BodyPart, Long] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                  Unmarshaller.firstOf(json, string).apply(part).map(putFooParts.bar.apply)
+                  Unmarshaller.firstOf(json, string).apply(part).map(putFooParts.bar.apply).recoverWith({
+                    case ex =>
+                      Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                  })
                 }
               }
               val UnmarshalbazPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile[Id]("SHA-512", handler.putFooMapFileField(_, _, _)).map({
@@ -175,7 +181,12 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                     onSuccess(collectedPartsF)
                   }
                 }
-              }.flatMap(_.fold(t => throw t, {
+              }.flatMap(_.fold({
+                case RejectionError(rej) =>
+                  reject(rej)
+                case t =>
+                  throw t
+              }, {
                 case (fooO, barO, bazO) =>
                   val maybe: Either[Rejection, (String, Long, (File, Option[String], ContentType, String))] = for (foo <- fooO.toRight(MissingFormFieldRejection("foo")); bar <- barO.toRight(MissingFormFieldRejection("bar")); baz <- bazO.toRight(MissingFormFieldRejection("baz"))) yield {
                     (foo, bar, baz)

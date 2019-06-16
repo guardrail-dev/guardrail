@@ -373,7 +373,12 @@ object AkkaHttpServerGenerator {
                       .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
                           val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
                           val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                          Unmarshaller.firstOf(json, string).apply(part).map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                          Unmarshaller.firstOf(json, string)
+                            .apply(part)
+                            .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                            .recoverWith {
+                              case ex => Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                            }
                         }
                       """,
                     Case(argName.toLit, None, q"""
@@ -528,7 +533,10 @@ object AkkaHttpServerGenerator {
                   onSuccess(collectedPartsF)
                 }
               }
-            }).flatMap(_.fold(t => throw t, ${Term.PartialFunction(
+            }).flatMap(_.fold({
+              case RejectionError(rej) => reject(rej)
+              case t => throw t
+            }, ${Term.PartialFunction(
             List(
               Case(
                 optionalTuple,
