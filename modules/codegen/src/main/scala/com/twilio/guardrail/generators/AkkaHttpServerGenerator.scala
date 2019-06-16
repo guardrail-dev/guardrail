@@ -462,25 +462,25 @@ object AkkaHttpServerGenerator {
            ),
            entityDirective => q"""
           (
-            extractSettings.flatMap({ settings =>
-              handleExceptions(ExceptionHandler {
-                case EntityStreamSizeException(limit, contentLength) ⇒
-                  ${referenceAccumulator}.get().foreach(_.delete())
-                  val summary = contentLength match {
-                    case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
-                    case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
-                  }
-                  val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
-                  val status = StatusCodes.RequestEntityTooLarge
-                  val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
-                  complete(HttpResponse(status, entity = msg))
-                case e: Throwable =>
-                  ${referenceAccumulator}.get().foreach(_.delete())
-                  throw e
+            handleExceptions(ExceptionHandler {
+              case e: Throwable =>
+                ${referenceAccumulator}.get().foreach(_.delete())
+                throw e
+            }) & extractSettings.flatMap({ settings =>
+              handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
+                ${referenceAccumulator}.get().foreach(_.delete())
+                rejections.collectFirst {
+                  case MalformedRequestContentRejection(msg, EntityStreamSizeException(limit, contentLength)) =>
+                    val summary = contentLength match {
+                      case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
+                      case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
+                    }
+                    val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
+                    val status = StatusCodes.RequestEntityTooLarge
+                    val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
+                    complete(HttpResponse(status, entity = msg))
+                }
               })
-            }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
-              ${referenceAccumulator}.get().foreach(_.delete())
-              None
             }) & mapResponse({ resp =>
               ${referenceAccumulator}.get().foreach(_.delete())
               resp
