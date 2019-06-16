@@ -296,16 +296,12 @@ object AkkaHttpServerGenerator {
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
-    def formToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
-      directivesFromParams(
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty))"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
-      ) _
+    def formToAkka(consumes: List[RouteMeta.ContentType], operationId: String)(params: List[ScalaParameter[ScalaLanguage]]): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
+      for {
+        _ <- if (params.exists(_.isFile) && ! consumes.contains(RouteMeta.MultipartFormData)) { Target.log.warning("type: file detected, automatically enabling multipart/form-data handling").apply } else { Target.pure(()) }
+        result <- {
 
-    def asyncFormToAkka(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[(Option[Term], List[Stat])] = { params =>
-      class Binding(value: String) {
+      class Binding(val value: String) {
         def toPat: Pat        = if (value.nonEmpty && ('A'.to('Z').contains(value(0)))) toTerm else toVar
         def toVar: Pat.Var    = Pat.Var(toTerm)
         def toTerm: Term.Name = Term.Name(value)
@@ -314,6 +310,8 @@ object AkkaHttpServerGenerator {
         override def toString(): String = s"Binding($value)"
       }
       val hasFile              = params.exists(_.isFile)
+      val urlencoded = consumes.contains(RouteMeta.UrlencodedFormData)
+      val multipart = consumes.contains(RouteMeta.MultipartFormData)
       val referenceAccumulator = q"fileReferences"
       (for {
         params <- NonEmptyList.fromList(params)
@@ -491,9 +489,9 @@ object AkkaHttpServerGenerator {
           """)
         } else (List.empty[Stat], term => term)
 
-        val directive: Term = (
-          q"""
-          ({
+        val (multipartHandlers, multipartUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.contains(RouteMeta.MultipartFormData)) {
+          val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
+          (q"""
             object ${partsTerm} {
               ..${List(
             _trait,
@@ -503,7 +501,7 @@ object AkkaHttpServerGenerator {
 
             ..${unmarshallers};
             val ${Pat.Var(referenceAccumulator)} = new AtomicReference(List.empty[File])
-            implicit val MultipartFormDataUnmarshaller: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
+            implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
               implicitly[FromRequestUnmarshaller[Multipart.FormData]].flatMap { implicit executionContext => implicit mat => formData =>
                 val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
                   results <- formData.parts
@@ -528,8 +526,45 @@ object AkkaHttpServerGenerator {
 
                 collectedPartsF
               }
+
+          """.stats, Option(unmarshallerTerm))
+        } else (List.empty, None)
+
+        val (formfieldHandlers, formfieldUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.contains(RouteMeta.UrlencodedFormData)) {
+          val unmarshallerTerm = q"FormDataUnmarshaller"
+          (List(q"""
+            implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
+              implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
+                def unmarshalField[A: Decoder](name: String, value: String) =
+                  Unmarshaller.firstOf(jsonDecoderUnmarshaller[A]).apply(value).recoverWith({
+                    case ex =>
+                      Future.failed(RejectionError(MalformedFormFieldRejection(name, ex.getMessage, Some(ex))))
+                  })
+
+                ${
+                  params.filterNot(_.isFile).map({ param =>
+                    val (realType, getFunc) = param.argType match {
+                      case t"Option[$x]"   => (x, q"get")
+                      case t"Iterable[$x]" => (x, q"getAll")
+                      case x               => (x, q"get")
+                    }
+                    q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
+                  }) match {
+                    case Nil           => q"Future.successful(Right(()))"
+                    case term :: Nil   => q"${term}.map(v1 => Right(Tuple1(v1)))"
+                    case term :: terms => q"(..${term +: terms}).mapN(${Term.Name(s"Tuple${terms.length + 1}")}.apply).map(Right.apply)"
+                  }
+                }
+              }
+          """), Option(unmarshallerTerm))
+        } else (List.empty, None)
+
+        val directive: Term = (
+          q"""
+          ({
+            ..${multipartHandlers ++ formfieldHandlers}
             (
-              ${trackFileStuff(q"entity(as(MultipartFormDataUnmarshaller))")}
+              ${trackFileStuff(q"entity(as(Unmarshaller.firstOf(..${(multipartUnmarshallerTerm ++ formfieldUnmarshallerTerm).toList})))")}
             ).flatMap(_.fold({
               case RejectionError(rej) => reject(rej)
               case t => throw t
@@ -558,6 +593,7 @@ object AkkaHttpServerGenerator {
 
         (directive, handlerDefinitions)
       }).fold(Target.pure((Option.empty[Term], List.empty[Stat])))({ case (v1, v2) => Target.pure((Option(v1), v2)) })
+    } } yield result
     }
 
     case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
@@ -603,7 +639,7 @@ object AkkaHttpServerGenerator {
         akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
         akkaBody   <- bodyToAkka(operationId, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile) || consumes.contains(RouteMeta.MultipartFormData)
-        akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
+        akkaForm_ <- formToAkka(consumes, operationId)(formArgs)
         (akkaForm, handlerDefinitions) = akkaForm_
         akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
       } yield {
