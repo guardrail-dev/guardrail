@@ -319,7 +319,7 @@ object AkkaHttpServerGenerator {
         params <- NonEmptyList.fromList(params)
       } yield {
         val partsTerm = Term.Name(s"${operationId}Parts")
-        val value = params
+        val (multipartContainers, unmarshallers, matchers, termPatterns, optionalTermPatterns, unpacks, termTypes, grabHeads) = params
           .map({
             case rawParameter @ ScalaParameter(a, param, paramName, argName, argType) =>
               val containerName    = new Binding(paramName.value)
@@ -400,12 +400,10 @@ object AkkaHttpServerGenerator {
                 enumerator""" ${binding.toVar} <- ${collected.toTerm}.toRight(MissingFormFieldRejection(${argName.toLit})) """
               }
 
-              (partContainer, unmarshaller, caseMatch, (binding, collected), unpacker, argType, grabHead)
+              (partContainer, unmarshaller, caseMatch, binding, collected, unpacker, argType, grabHead)
           })
-          .unzip7
+          .unzip8
 
-        val (partContainers, unmarshallers, matchers, _terms, unpacks, termTypes, grabHeads) = value
-        val (termPatterns, optionalTermPatterns)                                             = _terms.unzip
         val optionalTuple = optionalTermPatterns match {
           case binding :: Nil => p"Tuple1(${binding.toPat})"
           case xs             => p"(..${xs.map(_.toPat)})"
@@ -500,7 +498,7 @@ object AkkaHttpServerGenerator {
               ..${List(
             _trait,
             ignoredPart
-          ) ++ partContainers}
+          ) ++ multipartContainers}
             }
 
             ..${unmarshallers};
