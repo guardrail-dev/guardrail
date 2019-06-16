@@ -24,7 +24,7 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
     val route = Resource.routes(new Handler {
       override def testMultipleContentTypes(
           respond: Resource.testMultipleContentTypesResponse.type
-      )(foo: String, bar: Int, baz: Option[Int]): Future[Resource.testMultipleContentTypesResponse] =
+      )(foo: String, bar: Int, baz: Option[Int], file: Option[(java.io.File, Option[String], ContentType)]): Future[Resource.testMultipleContentTypesResponse] =
         Future.successful(
           if (foo == foo && bar == 5 && baz.forall(_ == 10)) {
             respond.OK
@@ -32,6 +32,8 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
             respond.InternalServerError
           }
         )
+      override def testMultipleContentTypesMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): java.io.File =
+        java.io.File.createTempFile("guardrail-issue-325", "dat")
       override def emptyConsumes(
           respond: Resource.emptyConsumesResponse.type
       )(foo: String): Future[Resource.emptyConsumesResponse] =

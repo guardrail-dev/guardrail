@@ -26,6 +26,10 @@ paths:
         in: formData
         type: integer
         format: int32
+      - name: file
+        in: formData
+        type: file
+        required: true
       responses:
         '200': {}
         '500': {}
