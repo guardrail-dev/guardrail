@@ -143,13 +143,15 @@ object EndpointsClientGenerator {
             else (None, None)
 
           val (formAlgebra, formArgument): (Option[Term], Option[Term]) = {
-            (formDataParams.map(_ =>
-              if (consumes.contains(RouteMeta.MultipartFormData)) {
-                q"multipartFormDataRequest"
-              } else {
-                q"formDataRequest[List[(String, String)]]()"
-              }
-            ), formDataParams)
+            (formDataParams.map(
+               _ =>
+                 if (consumes.contains(RouteMeta.MultipartFormData)) {
+                   q"multipartFormDataRequest"
+                 } else {
+                   q"formDataRequest[List[(String, String)]]()"
+               }
+             ),
+             formDataParams)
           }
 
           val (tracingExpr, httpClientName) =
