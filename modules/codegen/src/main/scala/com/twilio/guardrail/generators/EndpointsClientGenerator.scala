@@ -143,29 +143,13 @@ object EndpointsClientGenerator {
             else (None, None)
 
           val (formAlgebra, formArgument): (Option[Term], Option[Term]) = {
-            if (consumes.contains(RouteMeta.MultipartFormData)) {
-              (formDataParams.map(_ => q"multipartFormDataRequest"), formDataParams)
-            } else {
-              NonEmptyList
-                .fromList(formArgs)
-                .fold((Option.empty[Term], Option.empty[Term])) { formDataParams =>
-                  val algebra = q"""formDataRequest[List[(String, String)]]()"""
-                  NonEmptyList
-                    .fromList(formArgs)
-                    .fold[(Option[Term], Option[Term])]((Some(algebra), Some(q"List.empty"))) { formDataParams =>
-                      val pairs = formDataParams.map { x =>
-                        val k = x.argName.toLit
-                        val v = x.paramName
-                        if (x.required) {
-                          q"Some((${k}, Formatter.show(${v})))"
-                        } else {
-                          q"${v}.map { v => (${k}, Formatter.show(v)) }"
-                        }
-                      }
-                      (Some(algebra), Some(q"List(..${pairs.toList}).flatten"))
-                    }
-                }
-            }
+            (formDataParams.map(_ =>
+              if (consumes.contains(RouteMeta.MultipartFormData)) {
+                q"multipartFormDataRequest"
+              } else {
+                q"formDataRequest[List[(String, String)]]()"
+              }
+            ), formDataParams)
           }
 
           val (tracingExpr, httpClientName) =
