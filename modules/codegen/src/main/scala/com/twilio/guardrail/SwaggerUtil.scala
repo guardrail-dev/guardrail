@@ -250,7 +250,7 @@ object SwaggerUtil {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
           (typeName, format) match {
-            case ("string", fmt @ Some("uuid"))   => uuidType().map(log(fmt, _))
+            case ("string", fmt @ Some("uuid"))   => uuidType()
             case ("string", Some("password"))     => stringType(None)
             case ("string", Some("date"))         => dateType()
             case ("string", Some("date-time"))    => dateTimeType()
