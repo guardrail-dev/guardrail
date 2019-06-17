@@ -104,6 +104,13 @@ class DropwizardShowerTest extends FreeSpec with Matchers {
       val url = new URL(urlStr)
       shower.show(url) shouldBe urlStr
     }
+
+    "UUID" in {
+      assert(shower.canShow(classOf[java.util.UUID]))
+      val str = "c7cb2c94-0bd2-4cb3-a0f2-eaef5024955b"
+      val uuid = java.util.UUID.fromString(str)
+      shower.show(uuid) shouldBe str
+    }
   }
 
   "Shower should be able to show for registered custom types" - {
