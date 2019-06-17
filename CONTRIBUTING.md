@@ -37,41 +37,29 @@ Adding a new swagger spec
 Adding new specifications is accomplished by:
 
  - creating a file in `modules/sample/src/main/resources`
- - adding an entry in `runExample` defined in `build.sbt`. The available flags are largely undocumented, so [reading the parser](https://github.com/blast-hardcheese/guardrail/blob/26f1ad483e5a26c82f79b9d24a8aa9b87e820f72/modules/codegen/src/main/scala/com/twilio/guardrail/core/CoreTermInterp.scala#L76-L111) is necessary.
+ - adding an entry in `exampleCases` defined in `build.sbt`. The available flags are largely undocumented, so [reading the parser](https://github.com/twilio/guardrail/blob/master/modules/codegen/src/main/scala/com/twilio/guardrail/core/CoreTermInterp.scala#L67-L91) is necessary.
 
 ```scala
-lazy val runExample: TaskKey[Unit] = taskKey[Unit]("Run with example args")
-
-fullRunTask(
-  runExample,
-  Test,
-  "com.twilio.guardrail.CLI",
-  """
-  --defaults --import support.PositiveLong
-  --client --specPath modules/sample/src/main/resources/petstore.json --outputPath modules/sample/src/main/scala --packageName clients.http4s --framework http4s
-
-  --client --specPath modules/sample/src/main/resources/edgecases/defaults.yaml --outputPath modules/sample/src/main/scala --packageName edgecases.defaults
-  --client --specPath modules/sample/src/main/resources/custom-header-type.yaml --outputPath modules/sample/src/main/scala --packageName tests.customTypes.customHeader
-""".replaceAllLiterally("\n", " ").split(' ').filter(_.nonEmpty): _*
-)
+val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
+  (sampleResource("additional-properties.yaml"), "additionalProperties", false, List.empty),
+  (sampleResource("alias.yaml"), "alias", false, List.empty),
 ```
 
-- `--specPath` has to point to the newly added specification file
-- `--outputPath` must point to `modules/sample/src/main/scala`
-- `--packageName` a unique, semantic name for your generated files. Good names:
-   - `issues.issue42`
-   - `frameworks.akka.fileUploader`
+- First argument has to point to the newly added specification file. `sampleResource` looks up the specification in `modules/sample/src/main/resources`
+- Second argument defines what package to put the specification into (For regression tests, `issues.issue1234`)
+- Third argument is whether "tracing" is enabled
+- Fourth argument is a list of additional CLI flags to specify
 
 Adding tests
 ------------
 
-Define your tests in `./modules/sample/src/test/scala` make sure to use
+Define your tests in `./modules/sample-*/src/test/scala` make sure to use
 imports corresponding the previously defined `packageName`
 
 Running the tests
 -----------------
 
-Use the `example` command inside of an SBT session to run code generation and execute the tests
+Use the `runtimeSuite` command inside of an SBT session to run code generation and execute the tests
 
 
 Useful commands inside sbt console

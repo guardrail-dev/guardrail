@@ -31,9 +31,4 @@ Build tool plugins
 Contributors
 ============
 
-- [blast-hardcheese](https://github.com/blast-hardcheese)
-- [conniec](https://github.com/conniec)
-- [kelnos](https://github.com/kelnos)
-- [andrew-domino](https://github.com/andrew-domino)
-- [sullis](https://github.com/sullis)
-- [stanislav](https://github.com/stanislav)
+We used to have a list of contributors here, but [github's Contributors page](https://github.com/twilio/guardrail/graphs/contributors) is much more accurate. Thanks to those who contributed before the project was open sourced!
