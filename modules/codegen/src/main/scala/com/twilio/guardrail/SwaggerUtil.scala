@@ -627,6 +627,7 @@ object SwaggerUtil {
                   case t"Int"            => Right(p"IntVar(${Pat.Var(paramName)})")
                   case t"Long"           => Right(p"LongVar(${Pat.Var(paramName)})")
                   case t"String"         => Right(Pat.Var(paramName))
+                  case t"java.util.UUID" => Right(p"UUIDVar(${Pat.Var(paramName)})")
                   case Type.Name(tpe)    =>
                     Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
                   case Type.Select(_, Type.Name(tpe)) =>

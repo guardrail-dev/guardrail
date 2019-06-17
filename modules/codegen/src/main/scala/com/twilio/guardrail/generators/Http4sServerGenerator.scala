@@ -570,6 +570,7 @@ object Http4sServerGenerator {
           case t"Int"                              => None
           case t"Long"                             => None
           case t"String"                           => None
+          case t"java.util.UUID"                   => None
           // Attempt to provide useful extractor names
           case tpe@Type.Name(name)                 => Some(name -> tpe)
           case tpe@Type.Select(_, Type.Name(name)) => Some(name -> tpe)
