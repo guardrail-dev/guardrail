@@ -565,23 +565,30 @@ object Http4sServerGenerator {
     def generatePathParamExtractors(pathArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
       pathArgs
         .map(_.argType)
-        .filterNot(x => List("Int", "Long", "String").contains(x.toString))
         .flatMap({
-          case Type.Name(tpe)                 => Some(tpe)
-          case Type.Select(_, Type.Name(tpe)) => Some(tpe)
-          case tpe                            => None
+          // Strip out provided type extractors (see dsl/src/main/scala/org/http4s/dsl/impl/Path.scala)
+          case t"Int"                              => None
+          case t"Long"                             => None
+          case t"String"                           => None
+          // Attempt to provide useful extractor names
+          case tpe@Type.Name(name)                 => Some(name -> tpe)
+          case tpe@Type.Select(_, Type.Name(name)) => Some(name -> tpe)
+          // Give up for non-primitive type and rely on backtick-escaping
+          case tpe                                 => Some(tpe.toString -> tpe)
         })
-        .distinct
-        .map(tpe => q"""
-          object ${Term.Name(s"${tpe}Var")} {
-            def unapply(str: String): Option[${Type.Name(tpe)}] = {
-              if (!str.isEmpty)
-                Json.fromString(str).as[${Type.Name(tpe)}].toOption
-              else
-                None
+        .toMap
+        .map({ case (name, tpe) =>
+          q"""
+            object ${Term.Name(s"${name}Var")} {
+              def unapply(str: String): Option[${tpe}] = {
+                if (!str.isEmpty)
+                  Json.fromString(str).as[${tpe}].toOption
+                else
+                  None
+              }
             }
-          }
-        """)
+          """
+        }).toList
 
     def generateQueryParamMatchers(operationId: String, qsArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
       qsArgs

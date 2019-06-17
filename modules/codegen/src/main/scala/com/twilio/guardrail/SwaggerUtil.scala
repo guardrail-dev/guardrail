@@ -624,19 +624,16 @@ object SwaggerUtil {
             case (ScalaParameter(_, param, paramName, argName, argType), base) =>
               base.fold[Either[String, Pat]] {
                 argType match {
-                  case t"String"     => Right(Pat.Var(paramName))
-                  case t"Double"     => Right(p"DoubleVar($paramName)")
-                  case t"BigDecimal" => Right(p"BigDecimalVar(${Pat.Var(paramName)})")
-                  case t"Int"        => Right(p"IntVar(${Pat.Var(paramName)})")
-                  case t"Long"       => Right(p"LongVar(${Pat.Var(paramName)})")
-                  case t"BigInt"     => Right(p"BigIntVar(${Pat.Var(paramName)})")
-                  case Type.Name(tpe) =>
+                  case t"Int"            => Right(p"IntVar(${Pat.Var(paramName)})")
+                  case t"Long"           => Right(p"LongVar(${Pat.Var(paramName)})")
+                  case t"String"         => Right(Pat.Var(paramName))
+                  case Type.Name(tpe)    =>
                     Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
                   case Type.Select(_, Type.Name(tpe)) =>
                     Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
                   case tpe =>
-                    println(s"Error: Unsure how to map ${tpe} into an extractor")
-                    Left(s"Unsure how to map ${tpe} into an extractor")
+                    println(s"Doing our best turning ${tpe} into an extractor")
+                    Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
                 }
               } { _ =>
                 //todo add support for regex segment
