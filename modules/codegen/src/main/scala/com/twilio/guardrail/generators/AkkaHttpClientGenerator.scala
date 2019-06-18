@@ -101,11 +101,11 @@ object AkkaHttpClientGenerator {
             }
             Some(q"List(..$args)")
           } else {
-            def liftTerm(tParamName: Term, tName: RawParameterName) =
+            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"List((${tName.toLit}, Formatter.show($tParamName)))"
 
             def liftIterable(tParamName: Term, tName: RawParameterName) =
-              q"$tParamName.toList.map((${tName.toLit}, _))"
+              q"$tParamName.toList.map(x => (${tName.toLit}, Formatter.show(x)))"
 
             def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
               val lifter = tpe match {
@@ -119,9 +119,11 @@ object AkkaHttpClientGenerator {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
                 val lifter: (Term.Name, RawParameterName) => Term =
                   param match {
-                    case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
-                    case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
-                    case _                            => liftTerm _
+                    case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
+                    case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
+                    case param"$_: Iterable[$tpe]"      => liftIterable _
+                    case param"$_: Iterable[$tpe] = $_" => liftIterable _
+                    case x                              => liftTerm _
                   }
                 a :+ lifter(paramName, argName)
             }

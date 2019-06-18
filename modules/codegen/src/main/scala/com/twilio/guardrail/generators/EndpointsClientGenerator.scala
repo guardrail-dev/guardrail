@@ -85,9 +85,11 @@ object EndpointsClientGenerator {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
                 val lifter: (Term.Name, RawParameterName) => Term =
                   param match {
-                    case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
-                    case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
-                    case _                            => liftTerm _
+                    case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
+                    case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
+                    case param"$_: Iterable[$tpe]"      => liftIterable _
+                    case param"$_: Iterable[$tpe] = $_" => liftIterable _
+                    case _                              => liftTerm _
                   }
                 a :+ lifter(paramName, argName)
             }
@@ -141,29 +143,15 @@ object EndpointsClientGenerator {
             else (None, None)
 
           val (formAlgebra, formArgument): (Option[Term], Option[Term]) = {
-            if (consumes.contains(RouteMeta.MultipartFormData)) {
-              (formDataParams.map(_ => q"multipartFormDataRequest"), formDataParams)
-            } else {
-              NonEmptyList
-                .fromList(formArgs)
-                .fold((Option.empty[Term], Option.empty[Term])) { formDataParams =>
-                  val algebra = q"""formDataRequest[List[(String, String)]]()"""
-                  NonEmptyList
-                    .fromList(formArgs)
-                    .fold[(Option[Term], Option[Term])]((Some(algebra), Some(q"List.empty"))) { formDataParams =>
-                      val pairs = formDataParams.map { x =>
-                        val k = x.argName.toLit
-                        val v = x.paramName
-                        if (x.required) {
-                          q"Some((${k}, Formatter.show(${v})))"
-                        } else {
-                          q"${v}.map { v => (${k}, Formatter.show(v)) }"
-                        }
-                      }
-                      (Some(algebra), Some(q"List(..${pairs.toList}).flatten"))
-                    }
-                }
-            }
+            (formDataParams.map(
+               _ =>
+                 if (consumes.contains(RouteMeta.MultipartFormData)) {
+                   q"multipartFormDataRequest"
+                 } else {
+                   q"formDataRequest[List[(String, String)]]()"
+               }
+             ),
+             formDataParams)
           }
 
           val (tracingExpr, httpClientName) =

@@ -1,12 +1,9 @@
 package core.issues
 
-import cats.instances.future._
+import io.circe._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
-import scala.concurrent.Future
-import io.circe._
-import _root_.jawn.IncompleteParseException
 
 /** Changes
   *
@@ -21,11 +18,9 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
   test("http4s server request body validation") {
     import cats.effect.IO
     import issues.issue148.server.http4s.definitions._
-    import issues.issue148.server.http4s.{ CreateFooResponse, GetFooResponse, Handler, Resource, UpdateFooResponse }
+    import issues.issue148.server.http4s._
     import org.http4s._
     import org.http4s.client.Client
-    import org.http4s.client.UnexpectedStatus
-    import org.http4s.client.blaze._
     import org.http4s.headers._
     import org.http4s.implicits._
     import org.http4s.multipart._
@@ -192,17 +187,12 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
   }
 
   test("http4s client response body validation") {
-    import issues.issue148.client.http4s.{ Client, GetFooResponse }
-    import issues.issue148.client.http4s.definitions._
-    import cats.effect.IO
     import cats.data.Kleisli
+    import cats.effect.IO
+    import issues.issue148.client.http4s.Client
     import org.http4s._
     import org.http4s.client.{ Client => Http4sClient }
-    import org.http4s.client.UnexpectedStatus
-    import org.http4s.client.blaze._
     import org.http4s.headers._
-    import org.http4s.implicits._
-    import org.http4s.multipart._
 
     def jsonResponse(str: String): Http4sClient[IO] =
       Http4sClient.fromHttpApp[IO](

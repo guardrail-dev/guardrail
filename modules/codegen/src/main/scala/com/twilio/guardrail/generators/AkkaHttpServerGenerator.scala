@@ -300,7 +300,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
+        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty))"),
         arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
       ) _
 

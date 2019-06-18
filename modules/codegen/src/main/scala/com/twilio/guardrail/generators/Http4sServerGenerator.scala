@@ -214,25 +214,31 @@ object Http4sServerGenerator {
       directivesFromParams(
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(Seq(${Pat.Var(arg.paramName)}))")), arg.paramName))
+            Target.pure(
+              Param(None, Some((q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.headOption)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName)
+            )
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some((q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]))", p"Some(Seq(Right(${Pat.Var(arg.paramName)})))")),
+                Some(
+                  (q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.headOption).map(Json.fromString(_).as[$tpe])",
+                   p"Some(Right(${Pat.Var(arg.paramName)}))")
+                ),
                 arg.paramName
               )
             )
         },
         arg => {
-          case t"String" => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
+          case t"String" =>
+            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), q"${arg.paramName}.toList"))
           case tpe =>
             Target.pure(
               Param(
                 None,
                 Some(
                   (
-                    q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence)",
+                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).traverse(Json.fromString(_).as[$tpe])",
                     p"Some(Right(${Pat.Var(arg.paramName)}))"
                   )
                 ),
@@ -241,14 +247,14 @@ object Http4sServerGenerator {
             )
         },
         arg => {
-          case t"String" => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit})"))
+          case t"String" => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(_.toList)"))
           case tpe =>
             Target.pure(
               Param(
                 None,
                 Some(
                   (
-                    q"urlForm.values.get(${arg.argName.toLit}).map(_.map(Json.fromString(_).as[$tpe]).sequence).sequence",
+                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).map(Json.fromString(_).as[$tpe]).sequence.sequence",
                     p"Right(${Pat.Var(arg.paramName)})"
                   )
                 ),

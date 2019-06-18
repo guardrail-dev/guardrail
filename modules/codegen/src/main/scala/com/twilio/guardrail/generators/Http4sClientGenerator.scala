@@ -100,19 +100,29 @@ object Http4sClientGenerator {
             }
             Some(q"List(..$args)")
           } else {
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"(${tName.toLit}, $tParamName.map(Formatter.show(_)))"
-
             def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
-              q"(${tName.toLit}, Some(Formatter.show($tParamName)))"
+              q"List((${tName.toLit}, Formatter.show($tParamName)))"
+
+            def liftIterable(tParamName: Term, tName: RawParameterName) =
+              q"$tParamName.toList.map(x => (${tName.toLit}, Formatter.show(x)))"
+
+            def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
+              val lifter = tpe match {
+                case t"Iterable[$_]" => liftIterable _
+                case _               => liftTerm _
+              }
+              q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
+            }
 
             val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
               case (a, ScalaParameter(_, param, paramName, argName, _)) =>
                 val lifter: (Term.Name, RawParameterName) => Term =
                   param match {
-                    case param"$_: Option[$_]"      => liftOptionTerm _
-                    case param"$_: Option[$_] = $_" => liftOptionTerm _
-                    case _                          => liftTerm _
+                    case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
+                    case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
+                    case param"$_: Iterable[$_]"      => liftIterable _
+                    case param"$_: Iterable[$_] = $_" => liftIterable _
+                    case _                            => liftTerm _
                   }
                 a :+ lifter(paramName, argName)
             }
@@ -164,7 +174,7 @@ object Http4sClientGenerator {
             if (formDataNeedsMultipart) {
               q"""_multipart"""
             } else {
-              q"""UrlForm($formDataParams.collect({ case (n, Some(v)) => (n, v) }): _*)"""
+              q"""UrlForm($formDataParams.flatten: _*)"""
             }
           }
 
@@ -178,7 +188,7 @@ object Http4sClientGenerator {
               .filter(_ => formDataNeedsMultipart)
               .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
           val headersExpr = if (formDataNeedsMultipart) {
-            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers")
+            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
           } else {
             List(q"val allHeaders = headers ++ $headerParams")
           }
