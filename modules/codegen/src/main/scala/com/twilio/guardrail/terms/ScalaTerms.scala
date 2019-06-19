@@ -44,6 +44,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def alterMethodParameterName(param: L#MethodParameter, name: L#TermName): Free[F, L#MethodParameter] =
     Free.inject[ScalaTerm[L, ?], F](AlterMethodParameterName(param, name))
 
+  def uuidType(): Free[F, L#Type]                                        = Free.inject[ScalaTerm[L, ?], F](UUIDType())
   def dateType(): Free[F, L#Type]                                        = Free.inject[ScalaTerm[L, ?], F](DateType())
   def dateTimeType(): Free[F, L#Type]                                    = Free.inject[ScalaTerm[L, ?], F](DateTimeType())
   def stringType(format: Option[String]): Free[F, L#Type]                = Free.inject[ScalaTerm[L, ?], F](StringType(format))

@@ -85,6 +85,7 @@ object SerializationHelpers {
               register(java.time.OffsetDateTime.class, value -> value.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME));
               register(java.net.URL.class, java.net.URL::toString);
               register(java.net.URI.class, java.net.URI::toString);
+              register(java.util.UUID.class, java.util.UUID::toString);
           }
       }
     """

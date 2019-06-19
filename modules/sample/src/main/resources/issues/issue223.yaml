@@ -1,0 +1,27 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+paths:
+  /entity/{bar}:
+    delete:
+      operationId: deleteFoo
+      parameters:
+      - name: bar
+        in: path
+        type: string
+        format: uuid
+      responses:
+        '204':
+          description: No content
+definitions:
+  Kernel:
+    required:
+      - id
+    properties:
+      id:
+        type: string
+        format: uuid

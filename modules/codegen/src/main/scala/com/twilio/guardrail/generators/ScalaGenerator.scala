@@ -109,6 +109,7 @@ object ScalaGenerator {
 
       case DateType()                => Target.pure(t"java.time.LocalDate")
       case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")
+      case UUIDType()                => Target.pure(t"java.util.UUID")
       case StringType(format)        => Target.pure(format.fold(t"String")(Type.Name(_)))
       case FloatType()               => Target.pure(t"Float")
       case DoubleType()              => Target.pure(t"Double")
@@ -180,6 +181,7 @@ object ScalaGenerator {
                 implicit val showLocalDate = build[java.time.LocalDate](_.format(java.time.format.DateTimeFormatter.ISO_DATE))
                 implicit val showOffsetDateTime = build[java.time.OffsetDateTime](_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 implicit val showJavaURL = build[java.net.URI](_.toString)
+                implicit val showUUID = build[java.util.UUID](_.toString)
               }
 
               object Formatter {

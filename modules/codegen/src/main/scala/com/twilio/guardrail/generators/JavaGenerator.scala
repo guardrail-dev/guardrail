@@ -48,7 +48,7 @@ object JavaGenerator {
 
   def prettyPrintSource(source: CompilationUnit): Target[Array[Byte]] = {
     source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
-    val className = Try(source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
+    val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
     val sourceStr = source.toString
     Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
       .fold(
@@ -197,6 +197,7 @@ object JavaGenerator {
 
       case DateType()                => safeParseType("java.time.LocalDate")
       case DateTimeType()            => safeParseType("java.time.OffsetDateTime")
+      case UUIDType()                => safeParseType("java.util.UUID")
       case StringType(format)        => format.fold(Target.pure[Type](STRING_TYPE))(safeParseType)
       case FloatType()               => safeParseType("Float")
       case DoubleType()              => safeParseType("Double")

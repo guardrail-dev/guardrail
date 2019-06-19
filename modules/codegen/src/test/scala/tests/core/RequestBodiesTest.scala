@@ -4,8 +4,8 @@ import com.github.javaparser.ast.`type`.PrimitiveType
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.twilio.guardrail.generators.Java.Dropwizard
 import com.twilio.guardrail.generators.syntax.Java._
-import com.twilio.guardrail.{Clients, Context}
-import org.scalatest.{FreeSpec, Matchers}
+import com.twilio.guardrail.{ Clients, Context }
+import org.scalatest.{ FreeSpec, Matchers }
 import scala.collection.JavaConverters._
 import support.SwaggerSpecRunner
 
@@ -75,9 +75,11 @@ class RequestBodiesTest extends FreeSpec with Matchers with SwaggerSpecRunner {
     val fooMethod = cls.getMethodsByName("foo").get(0)
     fooMethod.getParameter(0).getType shouldBe PrimitiveType.doubleType
 
-    val fooCallBuilder = cls.getMembers.toList.collectFirst({
-      case cbClass: ClassOrInterfaceDeclaration if cbClass.getNameAsString == "FooCallBuilder" => cbClass
-    }).get
+    val fooCallBuilder = cls.getMembers.toList
+      .collectFirst({
+        case cbClass: ClassOrInterfaceDeclaration if cbClass.getNameAsString == "FooCallBuilder" => cbClass
+      })
+      .get
     val withCMethods = fooCallBuilder.getMethodsByName("withC").asScala
     withCMethods.length shouldBe 2
     withCMethods.foreach({
@@ -89,7 +91,7 @@ class RequestBodiesTest extends FreeSpec with Matchers with SwaggerSpecRunner {
         paramType.getTypeArguments.get.get(0).asClassOrInterfaceType.getNameAsString shouldBe "Long"
     })
 
-    val barMethod = cls.getMethodsByName("bar").get(0)
+    val barMethod          = cls.getMethodsByName("bar").get(0)
     val barMethodParamType = barMethod.getParameter(0).getType.asClassOrInterfaceType
     barMethodParamType.getNameAsString shouldBe "SomeSchema"
   }
