@@ -12,9 +12,9 @@ class StructuredLoggerSuite extends FunSuite with Matchers {
       Target.log.function("first") {
         Target.log.function("second") {
           for {
-            _ <- Target.log.info("one").apply
-            _ <- Target.log.info("two").apply
-            _ <- Target.log.info("three").apply
+            _ <- Target.log.info("one")
+            _ <- Target.log.info("two")
+            _ <- Target.log.info("three")
           } yield ()
         }
       }

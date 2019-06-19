@@ -42,10 +42,10 @@ object AkkaHttpClientGenerator {
         def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           Target.log.function("generateUrlWithParams") {
             for {
-              _    <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"Using $path and ${pathArgs.map(_.argName)}")
+              _    <- Target.log.debug(s"Using $path and ${pathArgs.map(_.argName)}")
               base <- generateUrlPathParams(path, pathArgs)
 
-              _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: $qsArgs")
+              _ <- Target.log.debug(s"QS: $qsArgs")
 
               suffix = if (path.contains("?")) {
                 Lit.String("&")
@@ -53,7 +53,7 @@ object AkkaHttpClientGenerator {
                 Lit.String("?")
               }
 
-              _ <- Target.log.debug("generateClientOperation", "generateUrlWithParams")(s"QS: ${qsArgs}")
+              _ <- Target.log.debug(s"QS: ${qsArgs}")
 
               result = NonEmptyList
                 .fromList(qsArgs)
@@ -268,12 +268,12 @@ object AkkaHttpClientGenerator {
           bodyArgs   = parameters.bodyParams
           formArgs   = parameters.formParams
 
-          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: $pathArgs")
+          _ <- Target.log.debug(s"pathArgs: $pathArgs")
 
           // Generate the url with path, query parameters
           urlWithParams <- generateUrlWithParams(pathStr, pathArgs, qsArgs)
 
-          _ <- Target.log.debug("generateClientOperation")(s"Generated: $urlWithParams")
+          _ <- Target.log.debug(s"Generated: $urlWithParams")
           // Generate FormData arguments
           formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
           // Generate header arguments

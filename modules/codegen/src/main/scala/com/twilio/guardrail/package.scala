@@ -20,27 +20,15 @@ package guardrail {
     implicit def A: Applicative[F]
     def pushLogger(value: StructuredLogger): F[Unit]
     object log {
-      class LogAdapter(f: (List[String], String) => StructuredLogger, name: String, names: Seq[String]) {
-        implicit def apply: F[Unit] = pushLogger(f(List.empty, (name +: names).mkString(" ")))
-        @deprecated("0.44.0", "Use push/pop or log.function syntax instead of specifying call path")
-        def apply(message: String): F[Unit] = pushLogger(f((name +: names).toList, message))
-      }
-
       def push(name: String): F[Unit] = pushLogger(StructuredLogger.push(name))
       def pop: F[Unit]                = pushLogger(StructuredLogger.pop)
       def function[A](name: String): F[A] => F[A] = { func =>
         (push(name) *> func) <* pop
       }
-      def debug(name: String, names: String*): LogAdapter   = new LogAdapter(StructuredLogger.debug(_, _), name, names)
-      def info(name: String, names: String*): LogAdapter    = new LogAdapter(StructuredLogger.info(_, _), name, names)
-      def warning(name: String, names: String*): LogAdapter = new LogAdapter(StructuredLogger.warning(_, _), name, names)
-      def error(name: String, names: String*): LogAdapter   = new LogAdapter(StructuredLogger.error(_, _), name, names)
-      /* FIXME: Once LogAdapter is removed, these simpler definitions can be used.
-      def debug(message: String): F[Unit] = pushLogger(StructuredLogger.debug(message))
-      def info(message: String): F[Unit] = pushLogger(StructuredLogger.info(message))
+      def debug(message: String): F[Unit]   = pushLogger(StructuredLogger.debug(message))
+      def info(message: String): F[Unit]    = pushLogger(StructuredLogger.info(message))
       def warning(message: String): F[Unit] = pushLogger(StructuredLogger.warning(message))
-      def error(message: String): F[Unit] = pushLogger(StructuredLogger.error(message))
-     */
+      def error(message: String): F[Unit]   = pushLogger(StructuredLogger.error(message))
     }
   }
 

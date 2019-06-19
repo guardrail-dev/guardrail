@@ -109,8 +109,8 @@ object CirceProtocolGenerator {
         }).map(_.map(_.asScala.toList).toList.flatten)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
-        for {
-          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+        Target.log.function(s"transformProperty")(for {
+          _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
           argName = if (needCamelSnakeConversion) name.toCamelCase else name
 
@@ -170,7 +170,7 @@ object CirceProtocolGenerator {
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue))
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators     = parents.flatMap(_.discriminators)

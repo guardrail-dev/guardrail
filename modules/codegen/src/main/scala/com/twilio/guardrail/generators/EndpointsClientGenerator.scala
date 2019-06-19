@@ -326,58 +326,60 @@ object EndpointsClientGenerator {
           )
         }
 
-        for {
-          // Placeholder for when more functions get logging
-          _ <- Target.pure(())
+        Target.log.function("generateClientOperation")(
+          for {
+            // Placeholder for when more functions get logging
+            _ <- Target.pure(())
 
-          produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
-          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+            produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+            consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
-          headerArgs = parameters.headerParams
-          pathArgs   = parameters.pathParams
-          qsArgs     = parameters.queryStringParams
-          bodyArgs   = parameters.bodyParams
-          formArgs   = parameters.formParams
+            headerArgs = parameters.headerParams
+            pathArgs   = parameters.pathParams
+            qsArgs     = parameters.queryStringParams
+            bodyArgs   = parameters.bodyParams
+            formArgs   = parameters.formParams
 
-          _ <- Target.log.debug("generateClientOperation")(s"pathArgs: $pathArgs")
+            _ <- Target.log.debug(s"pathArgs: $pathArgs")
 
-          // Generate the url with path, query parameters
-          urlWithPathParams <- SwaggerUtil.paths.generateUrlEndpointsPathExtractors(pathStr, pathArgs)
-          (pathPattern, staticQueryParams) = urlWithPathParams
+            // Generate the url with path, query parameters
+            urlWithPathParams <- SwaggerUtil.paths.generateUrlEndpointsPathExtractors(pathStr, pathArgs)
+            (pathPattern, staticQueryParams) = urlWithPathParams
 
-          // _ <- Target.log.debug("generateClientOperation")(s"Generated: $urlWithParams")
-          // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
-          // Generate header arguments
-          headerParams = generateHeaderParams(headerArgs)
+            // _ <- Target.log.debug(s"Generated: $urlWithParams")
+            // Generate FormData arguments
+            formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
+            // Generate header arguments
+            headerParams = generateHeaderParams(headerArgs)
 
-          tracingArgsPre = if (tracing)
-            List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"))
-          else List.empty
-          tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
-          else List.empty
-          extraImplicits = List.empty
-          renderedClientOperation = build(methodName,
-                                          httpMethod,
-                                          pathPattern,
-                                          formDataParams,
-                                          staticQueryParams,
-                                          headerParams,
-                                          responses,
-                                          produces,
-                                          consumes,
-                                          tracing)(
-            tracingArgsPre,
-            tracingArgsPost,
-            pathArgs,
-            qsArgs,
-            formArgs,
-            bodyArgs,
-            headerArgs,
-            extraImplicits
-          )
-        } yield renderedClientOperation
+            tracingArgsPre = if (tracing)
+              List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"))
+            else List.empty
+            tracingArgsPost = if (tracing)
+              List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
+            else List.empty
+            extraImplicits = List.empty
+            renderedClientOperation = build(methodName,
+                                            httpMethod,
+                                            pathPattern,
+                                            formDataParams,
+                                            staticQueryParams,
+                                            headerParams,
+                                            responses,
+                                            produces,
+                                            consumes,
+                                            tracing)(
+              tracingArgsPre,
+              tracingArgsPost,
+              pathArgs,
+              qsArgs,
+              formArgs,
+              bodyArgs,
+              headerArgs,
+              extraImplicits
+            )
+          } yield renderedClientOperation
+        )
       case GetImports(tracing)      => Target.pure(List.empty)
       case GetExtraImports(tracing) => Target.pure(List.empty)
       case ClientClsArgs(tracingName, serverUrls, tracing) =>
