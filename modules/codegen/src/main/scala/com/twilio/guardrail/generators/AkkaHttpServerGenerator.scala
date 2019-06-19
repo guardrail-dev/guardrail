@@ -538,7 +538,7 @@ object AkkaHttpServerGenerator {
               (List(q"""
             implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
               implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
-                def unmarshalField[A: Decoder](name: String, value: String) =
+                def unmarshalField[A: Decoder](name: String, value: String): Future[A] =
                   Unmarshaller.firstOf(jsonDecoderUnmarshaller[A]).apply(value).recoverWith({
                     case ex =>
                       Future.failed(RejectionError(MalformedFormFieldRejection(name, ex.getMessage, Some(ex))))
@@ -550,12 +550,15 @@ object AkkaHttpServerGenerator {
                     if (param.isFile) {
                       q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
                     } else {
-                      val (realType, getFunc) = param.argType match {
-                        case t"Option[$x]"   => (x, q"get")
-                        case t"Iterable[$x]" => (x, q"getAll")
-                        case x               => (x, q"get")
+                      val (realType, getFunc, transformResponse: (Term => Term)) = param.argType match {
+                        case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                        case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                        case t"Option[$x]"           => (x, q"get", (x: Term) => x)
+                        case x                       => (x, q"get", (x: Term) => x)
                       }
-                      q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
+                      transformResponse(
+                        q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
+                      )
                   }
                 ) match {
                 case NonEmptyList(term, Nil)   => q"${term}.map(v1 => Right(Tuple1(v1)))"
