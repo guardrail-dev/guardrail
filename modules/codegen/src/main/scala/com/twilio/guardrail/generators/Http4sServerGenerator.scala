@@ -567,19 +567,20 @@ object Http4sServerGenerator {
         .map(_.argType)
         .flatMap({
           // Strip out provided type extractors (see dsl/src/main/scala/org/http4s/dsl/impl/Path.scala)
-          case t"Int"                              => None
-          case t"Long"                             => None
-          case t"String"                           => None
-          case t"java.util.UUID"                   => None
+          case t"Int"            => None
+          case t"Long"           => None
+          case t"String"         => None
+          case t"java.util.UUID" => None
           // Attempt to provide useful extractor names
-          case tpe@Type.Name(name)                 => Some(name -> tpe)
-          case tpe@Type.Select(_, Type.Name(name)) => Some(name -> tpe)
+          case tpe @ Type.Name(name)                 => Some(name -> tpe)
+          case tpe @ Type.Select(_, Type.Name(name)) => Some(name -> tpe)
           // Give up for non-primitive type and rely on backtick-escaping
-          case tpe                                 => Some(tpe.toString -> tpe)
+          case tpe => Some(tpe.toString -> tpe)
         })
         .toMap
-        .map({ case (name, tpe) =>
-          q"""
+        .map({
+          case (name, tpe) =>
+            q"""
             object ${Term.Name(s"${name}Var")} {
               def unapply(str: String): Option[${tpe}] = {
                 if (!str.isEmpty)
@@ -589,7 +590,8 @@ object Http4sServerGenerator {
               }
             }
           """
-        }).toList
+        })
+        .toList
 
     def generateQueryParamMatchers(operationId: String, qsArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
       qsArgs
