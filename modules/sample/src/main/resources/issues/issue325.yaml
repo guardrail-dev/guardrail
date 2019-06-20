@@ -26,6 +26,24 @@ paths:
         in: formData
         type: integer
         format: int32
+      - name: file
+        in: formData
+        type: file
+        required: true
+      responses:
+        '200': {}
+        '500': {}
+    put:
+      operationId: emptyConsumes
+      consumes: []
+      description: >
+        Empty consumes with formData parameters should emit multipart with
+        no urlencoded handler
+      parameters:
+      - name: foo
+        in: formData
+        required: true
+        type: string
       responses:
         '200': {}
         '500': {}

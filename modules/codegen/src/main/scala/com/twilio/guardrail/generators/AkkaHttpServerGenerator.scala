@@ -296,117 +296,123 @@ object AkkaHttpServerGenerator {
         arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
       ) _
 
-    def formToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
-      directivesFromParams(
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}])"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty))"),
-        arg => tpe => Target.pure(q"formField(Symbol(${arg}).as[${tpe}].?)")
-      ) _
+    def formToAkka(consumes: List[RouteMeta.ContentType],
+                   operationId: String)(params: List[ScalaParameter[ScalaLanguage]]): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
+      for {
+        _ <- if (params.exists(_.isFile) && !consumes.contains(RouteMeta.MultipartFormData)) {
+          Target.log.warning("type: file detected, automatically enabling multipart/form-data handling").apply
+        } else { Target.pure(()) }
+        result <- {
 
-    def asyncFormToAkka(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[(Option[Term], List[Stat])] = { params =>
-      class Binding(value: String) {
-        def toPat: Pat        = if (value.nonEmpty && ('A'.to('Z').contains(value(0)))) toTerm else toVar
-        def toVar: Pat.Var    = Pat.Var(toTerm)
-        def toTerm: Term.Name = Term.Name(value)
-        def toType: Type.Name = Type.Name(value)
+          class Binding(val value: String) {
+            def toPat: Pat        = if (value.nonEmpty && ('A'.to('Z').contains(value(0)))) toTerm else toVar
+            def toVar: Pat.Var    = Pat.Var(toTerm)
+            def toTerm: Term.Name = Term.Name(value)
+            def toType: Type.Name = Type.Name(value)
 
-        override def toString(): String = s"Binding($value)"
-      }
-      (for {
-        params <- NonEmptyList.fromList(params)
-      } yield {
-        val partsTerm = Term.Name(s"${operationId}Parts")
-        val value = params
-          .map({
-            case rawParameter @ ScalaParameter(a, param, paramName, argName, argType) =>
-              val containerName    = new Binding(paramName.value)
-              val unmarshallerName = new Binding(s"Unmarshal${paramName.value}Part")
-              val binding          = new Binding(paramName.value)
-              val collected        = new Binding(s"${paramName.value}O")
+            override def toString(): String = s"Binding($value)"
+          }
+          val hasFile              = params.exists(_.isFile)
+          val urlencoded           = consumes.contains(RouteMeta.UrlencodedFormData)
+          val multipart            = consumes.contains(RouteMeta.MultipartFormData)
+          val referenceAccumulator = q"fileReferences"
+          (for {
+            params <- NonEmptyList.fromList(params)
+          } yield {
+            val partsTerm = Term.Name(s"${operationId}Parts")
+            val (multipartContainers, unmarshallers, matchers, termPatterns, optionalTermPatterns, unpacks, termTypes, grabHeads) = params
+              .map({
+                case rawParameter @ ScalaParameter(a, param, paramName, argName, argType) =>
+                  val containerName    = new Binding(paramName.value)
+                  val unmarshallerName = new Binding(s"Unmarshal${paramName.value}Part")
+                  val binding          = new Binding(paramName.value)
+                  val collected        = new Binding(s"${paramName.value}O")
 
-              val isFile: Boolean = rawParameter.isFile
-              val (isOptional, realType): (Boolean, Type) = argType match {
-                case t"Option[$x]" => (true, x)
-                case x             => (false, x)
-              }
-              val (unmarshaller, caseMatch, grabHead) = isFile match {
-                case true =>
-                  (
-                    q"""
+                  val isFile: Boolean = rawParameter.isFile
+                  val (isOptional, realType): (Boolean, Type) = argType match {
+                    case t"Option[$x]" => (true, x)
+                    case x             => (!rawParameter.required, x)
+                  }
+                  val (unmarshaller, caseMatch, grabHead) = isFile match {
+                    case true =>
+                      (
+                        q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type.Select(partsTerm, containerName.toType)}] = (
                             handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm.fold(t"Option")(Function.const(t"Id"))}](
                                 ${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
-                      .Name(s"${operationId}MapFileField")}(_, _, _)
+                          .Name(s"${operationId}MapFileField")}(_, _, _)
                               ).map({ case (v1, v2, v3, v4) =>
                                 ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
-                      .map(Function.const(q"v4"))}))
+                          .map(Function.const(q"v4"))}))
                               })
                             )
                       """,
-                    Case(
-                      argName.toLit,
-                      None,
-                      q"""
-                          SafeUnmarshaller(AccumulatingUnmarshaller(fileReferences, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
-                      """
-                    ),
-                    q"""
-                        val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
-                      List(
                         Case(
-                          Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
-                                      List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
+                          argName.toLit,
                           None,
-                          q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
-                        )
-                      )
-                    )})
+                          q"""
+                          SafeUnmarshaller(AccumulatingUnmarshaller(${referenceAccumulator}, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
                       """
-                  )
-                case false =>
-                  (
-                    q"""
+                        ),
+                        q"""
+                        val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
+                          List(
+                            Case(
+                              Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
+                                          List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
+                              None,
+                              q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
+                            )
+                          )
+                        )})
+                      """
+                      )
+                    case false =>
+                      (
+                        q"""
                         val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                      .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
+                          .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
                           val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
                           val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                          Unmarshaller.firstOf(json, string).apply(part).map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                          Unmarshaller.firstOf(json, string)
+                            .apply(part)
+                            .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                            .recoverWith {
+                              case ex => Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                            }
                         }
                       """,
-                    Case(argName.toLit, None, q"""
+                        Case(argName.toLit, None, q"""
                           SafeUnmarshaller(${unmarshallerName.toTerm}).apply(part)
                       """),
-                    q"""
+                        q"""
                         val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
-                      List(Case(Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(Pat.Var(Term.Name("v1")))), None, Term.Name("v1")))
-                    )})
+                          List(Case(Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(Pat.Var(Term.Name("v1")))), None, Term.Name("v1")))
+                        )})
                       """
-                  )
-              }
+                      )
+                  }
 
-              val partContainer = q"case class ${containerName.toType}(..${List(param"value: ${realType}")}) extends Part"
+                  val partContainer = q"case class ${containerName.toType}(..${List(param"value: ${realType}")}) extends Part"
 
-              val unpacker = if (isOptional) {
-                enumerator""" ${binding.toVar} <- Either.right[MissingFormFieldRejection, ${argType}](${collected.toTerm}) """
-              } else {
-                enumerator""" ${binding.toVar} <- ${collected.toTerm}.toRight(MissingFormFieldRejection(${argName.toLit})) """
-              }
+                  val unpacker = if (isOptional) {
+                    enumerator""" ${binding.toVar} <- Either.right[MissingFormFieldRejection, ${argType}](${collected.toTerm}) """
+                  } else {
+                    enumerator""" ${binding.toVar} <- ${collected.toTerm}.toRight(MissingFormFieldRejection(${argName.toLit})) """
+                  }
 
-              (partContainer, unmarshaller, caseMatch, (binding, collected), unpacker, argType, grabHead)
-          })
-          .unzip7
+                  (partContainer, unmarshaller, caseMatch, binding, collected, unpacker, argType, grabHead)
+              })
+              .unzip8
 
-        val (partContainers, unmarshallers, matchers, _terms, unpacks, termTypes, grabHeads) = value
-        val (termPatterns, optionalTermPatterns)                                             = _terms.unzip
-        val optionalTuple = optionalTermPatterns match {
-          case binding :: Nil => p"Tuple1(${binding.toPat})"
-          case xs             => p"(..${xs.map(_.toPat)})"
-        }
+            val optionalTuple = optionalTermPatterns match {
+              case binding :: Nil => p"Tuple1(${binding.toPat})"
+              case xs             => p"(..${xs.map(_.toPat)})"
+            }
 
-        val _trait              = q"sealed trait Part"
-        val ignoredPart         = q"case class IgnoredPart(unit: Unit) extends Part"
-        val ignoredUnmarshaller = p"""
+            val _trait              = q"sealed trait Part"
+            val ignoredPart         = q"case class IgnoredPart(unit: Unit) extends Part"
+            val ignoredUnmarshaller = p"""
           case _ =>
             SafeUnmarshaller(
             implicitly[Unmarshaller[Multipart.FormData.BodyPart, Unit]]
@@ -414,137 +420,190 @@ object AkkaHttpServerGenerator {
           ).apply(part)
         """
 
-        val fieldNames = q"""Set[String](..${params.toList.map(_.argName.toLit)})"""
-        val optionalTypes = termTypes.map({
-          case x @ t"Option[$_]" => x
-          case x                 => t"Option[$x]"
-        }) match {
-          case tpe :: Nil => t"Tuple1[${tpe}]"
-          case xs         => t"(..${xs})"
-        }
-        val unpackedTypes = termTypes match {
-          case tpe :: Nil => t"Tuple1[${tpe}]"
-          case xs         => t"(..${xs})"
-        }
-
-        val allCases: List[Case] = matchers ++ List(ignoredUnmarshaller)
-
-        val handlerDefinitions = List(
-          q"""
-          def ${Term.Name(s"${operationId}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
-          """,
-          q"""
-            def ${Term
-            .Name(s"${operationId}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
-              val dest = destFn(part.name, part.filename, part.entity.contentType)
-              val messageDigest = hashType.map(MessageDigest.getInstance(_))
-              val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
-
-              part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
-                .transform({
-                  case IOResult(_, Success(_)) =>
-                    val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
-                    (dest, part.filename, part.entity.contentType, hash)
-                  case IOResult(_, Failure(t)) =>
-                    dest.delete()
-                    throw t
-                }, { case t =>
-                  dest.delete()
-                  t
-                })
+            val fieldNames = q"""Set[String](..${params.toList.map(_.argName.toLit)})"""
+            val optionalTypes = termTypes.map({
+              case x @ t"Option[$_]" => x
+              case x                 => t"Option[$x]"
+            }) match {
+              case tpe :: Nil => t"Tuple1[${tpe}]"
+              case xs         => t"(..${xs})"
             }
-          """
-        )
+            val unpackedTypes = termTypes match {
+              case tpe :: Nil => t"Tuple1[${tpe}]"
+              case xs         => t"(..${xs})"
+            }
 
-        val directive: Term = (
-          q"""
-          ({
+            val allCases: List[Case] = matchers ++ List(ignoredUnmarshaller)
+
+            type EntityDirective = Term
+            val (handlerDefinitions, trackFileStuff): (List[Stat], EntityDirective => Term) = if (hasFile) {
+              (List(
+                 q"""
+            def ${Term.Name(s"${operationId}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
+            """,
+                 q"""
+              def ${Term
+                   .Name(s"${operationId}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
+                val dest = destFn(part.name, part.filename, part.entity.contentType)
+                val messageDigest = hashType.map(MessageDigest.getInstance(_))
+                val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
+
+                part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
+                  .transform({
+                    case IOResult(_, Success(_)) =>
+                      val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
+                      (dest, part.filename, part.entity.contentType, hash)
+                    case IOResult(_, Failure(t)) =>
+                      dest.delete()
+                      throw t
+                  }, { case t =>
+                    dest.delete()
+                    t
+                  })
+              }
+            """
+               ),
+               entityDirective => q"""
+          (
+            handleExceptions(ExceptionHandler {
+              case e: Throwable =>
+                ${referenceAccumulator}.get().foreach(_.delete())
+                throw e
+            }) & extractSettings.flatMap({ settings =>
+              handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
+                ${referenceAccumulator}.get().foreach(_.delete())
+                rejections.collectFirst {
+                  case MalformedRequestContentRejection(msg, EntityStreamSizeException(limit, contentLength)) =>
+                    val summary = contentLength match {
+                      case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
+                      case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
+                    }
+                    val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
+                    val status = StatusCodes.RequestEntityTooLarge
+                    val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
+                    complete(HttpResponse(status, entity = msg))
+                }
+              })
+            }) & mapResponse({ resp =>
+              ${referenceAccumulator}.get().foreach(_.delete())
+              resp
+            }) & ${entityDirective}
+          )
+          """)
+            } else (List.empty[Stat], term => term)
+
+            val (multipartHandlers, multipartUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.contains(RouteMeta.MultipartFormData)) {
+              val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
+              (q"""
             object ${partsTerm} {
               ..${List(
-            _trait,
-            ignoredPart
-          ) ++ partContainers}
+                _trait,
+                ignoredPart
+              ) ++ multipartContainers}
             }
 
             ..${unmarshallers};
+            val ${Pat.Var(referenceAccumulator)} = new AtomicReference(List.empty[File])
+            implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
+              implicitly[FromRequestUnmarshaller[Multipart.FormData]].flatMap { implicit executionContext => implicit mat => formData =>
+                val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
+                  results <- formData.parts
+                    .mapConcat({ part =>
+                      if (${fieldNames}.contains(part.name)) part :: Nil
+                      else {
+                        part.entity.discardBytes()
+                        Nil
+                      }
+                    }).mapAsync(1)(${Term.Block(List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases))))})
+                      .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
+                  } yield {
+                    results.toList.sequence.map({ successes =>
+                      ..${grabHeads}
 
-            (extractExecutionContext.flatMap { implicit executionContext =>
-              extractMaterializer.flatMap { implicit mat =>
-                val fileReferences = new AtomicReference(List.empty[File])
-                (
-                  extractSettings.flatMap({ settings =>
-                    handleExceptions(ExceptionHandler {
-                      case EntityStreamSizeException(limit, contentLength) ⇒
-                        fileReferences.get().foreach(_.delete())
-                        val summary = contentLength match {
-                          case Some(cl) => s"Request Content-Length of $$cl bytes exceeds the configured limit of $$limit bytes"
-                          case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
-                        }
-                        val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
-                        val status = StatusCodes.RequestEntityTooLarge
-                        val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
-                        complete(HttpResponse(status, entity = msg))
-                      case e: Throwable =>
-                        fileReferences.get().foreach(_.delete())
-                        throw e
+                      ${optionalTermPatterns.map(_.toTerm) match {
+                case term :: Nil => q"Tuple1(${term})"
+                case xs          => q"(..${xs})"
+              }}
                     })
-                  }) & handleRejections({ rejections: scala.collection.immutable.Seq[Rejection] =>
-                    fileReferences.get().foreach(_.delete())
-                    None
-                  }) & mapResponse({ resp =>
-                    fileReferences.get().foreach(_.delete())
-                    resp
-                  }) & entity(as[Multipart.FormData])
-                ).flatMap { formData =>
-                  val collectedPartsF: Future[Either[Throwable, ${optionalTypes}]] = for {
-                    results <- formData.parts
-                      .mapConcat({ part =>
-                        if (${fieldNames}.contains(part.name)) part :: Nil
-                        else {
-                          part.entity.discardBytes()
-                          Nil
-                        }
-                      }).mapAsync(1)(${Term.Block(List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases))))})
-                        .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
-                    } yield {
-                      results.toList.sequence.map({ successes =>
-                        ..${grabHeads}
+                  }
 
-                        ${optionalTermPatterns.map(_.toTerm) match {
-            case term :: Nil => q"Tuple1(${term})"
-            case xs          => q"(..${xs})"
-          }}
-                      })
-                    }
-
-                  onSuccess(collectedPartsF)
-                }
+                collectedPartsF
               }
-            }).flatMap(_.fold(t => throw t, ${Term.PartialFunction(
-            List(
-              Case(
-                optionalTuple,
-                None,
-                q"""
+
+          """.stats, Option(unmarshallerTerm))
+            } else (List.empty, None)
+
+            val (formfieldHandlers, formfieldUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.contains(RouteMeta.UrlencodedFormData)) {
+              val unmarshallerTerm = q"FormDataUnmarshaller"
+              (List(q"""
+            implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
+              implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
+                def unmarshalField[A: Decoder](name: String, value: String): Future[A] =
+                  Unmarshaller.firstOf(jsonDecoderUnmarshaller[A]).apply(value).recoverWith({
+                    case ex =>
+                      Future.failed(RejectionError(MalformedFormFieldRejection(name, ex.getMessage, Some(ex))))
+                  })
+
+                ${params
+                .map(
+                  param =>
+                    if (param.isFile) {
+                      q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
+                    } else {
+                      val (realType, getFunc, transformResponse: (Term => Term)) = param.argType match {
+                        case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                        case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                        case t"Option[$x]"           => (x, q"get", (x: Term) => x)
+                        case x                       => (x, q"get", (x: Term) => x)
+                      }
+                      transformResponse(
+                        q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
+                      )
+                  }
+                ) match {
+                case NonEmptyList(term, Nil)   => q"${term}.map(v1 => Right(Tuple1(v1)))"
+                case NonEmptyList(term, terms) => q"(..${term +: terms}).mapN(${Term.Name(s"Tuple${terms.length + 1}")}.apply).map(Right.apply)"
+              }}
+              }
+          """), Option(unmarshallerTerm))
+            } else (List.empty, None)
+
+            val directive: Term = (
+              q"""
+          ({
+            ..${multipartHandlers ++ formfieldHandlers}
+            (
+              ${trackFileStuff(q"entity(as(Unmarshaller.firstOf(..${(multipartUnmarshallerTerm ++ formfieldUnmarshallerTerm).toList})))")}
+            ).flatMap(_.fold({
+              case RejectionError(rej) => reject(rej)
+              case t => throw t
+            }, ${Term.PartialFunction(
+                List(
+                  Case(
+                    optionalTuple,
+                    None,
+                    q"""
               val maybe: Either[Rejection, ${unpackedTypes}] = for {
                 ..${unpacks}
               } yield {
                 ${termPatterns.map(_.toTerm) match {
-                  case term :: Nil => q"Tuple1(${term})"
-                  case xs          => q"(..${xs})"
-                }}
+                      case term :: Nil => q"Tuple1(${term})"
+                      case xs          => q"(..${xs})"
+                    }}
               }
               maybe.fold(reject(_), tprovide(_))
             """
-              )
-            )
-          )}))
+                  )
+                )
+              )}))
           }: Directive[${unpackedTypes}])
         """
-        )
+            )
 
-        (directive, handlerDefinitions)
-      }).fold(Target.pure((Option.empty[Term], List.empty[Stat])))({ case (v1, v2) => Target.pure((Option(v1), v2)) })
+            (directive, handlerDefinitions)
+          }).fold(Target.pure((Option.empty[Term], List.empty[Stat])))({ case (v1, v2) => Target.pure((Option(v1), v2)) })
+        }
+      } yield result
     }
 
     case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
@@ -559,6 +618,7 @@ object AkkaHttpServerGenerator {
       for {
         _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
+        consumes                                                 = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
@@ -588,8 +648,8 @@ object AkkaHttpServerGenerator {
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
         akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
         akkaBody   <- bodyToAkka(operationId, bodyArgs)
-        asyncFormProcessing = formArgs.exists(_.isFile)
-        akkaForm_ <- if (asyncFormProcessing) { asyncFormToAkka(operationId)(formArgs) } else { formToAkka(formArgs).map((_, List.empty[Defn])) }
+        asyncFormProcessing = formArgs.exists(_.isFile) || consumes.contains(RouteMeta.MultipartFormData)
+        akkaForm_ <- formToAkka(consumes, operationId)(formArgs)
         (akkaForm, handlerDefinitions) = akkaForm_
         akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
       } yield {
@@ -654,7 +714,6 @@ object AkkaHttpServerGenerator {
           )
         )
 
-        val consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
         RenderedRoute(
           fullRoute,
           q"""

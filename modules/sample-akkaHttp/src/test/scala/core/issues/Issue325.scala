@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.util.ByteString
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
@@ -23,7 +24,7 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
     val route = Resource.routes(new Handler {
       override def testMultipleContentTypes(
           respond: Resource.testMultipleContentTypesResponse.type
-      )(foo: String, bar: Int, baz: Option[Int]): Future[Resource.testMultipleContentTypesResponse] =
+      )(foo: String, bar: Int, baz: Option[Int], file: Option[(java.io.File, Option[String], ContentType)]): Future[Resource.testMultipleContentTypesResponse] =
         Future.successful(
           if (foo == foo && bar == 5 && baz.forall(_ == 10)) {
             respond.OK
@@ -31,6 +32,12 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
             respond.InternalServerError
           }
         )
+      override def testMultipleContentTypesMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): java.io.File =
+        java.io.File.createTempFile("guardrail-issue-325", "dat")
+      override def emptyConsumes(
+          respond: Resource.emptyConsumesResponse.type
+      )(foo: String): Future[Resource.emptyConsumesResponse] =
+        Future.successful(respond.OK)
     })
 
     Post("/test") ~> route ~> check {
@@ -48,6 +55,42 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
     Post("/test")
       .withEntity(ContentType.apply(MediaTypes.`application/x-www-form-urlencoded`, () => HttpCharsets.`UTF-8`), "foo=foo&bar=5".getBytes) ~> route ~> check {
+      status should equal(StatusCodes.OK)
+    }
+
+    Post("/test")
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart.Strict("foo",
+                                               HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`),
+                                                                 ByteString.fromArray("foo".getBytes))),
+            Multipart.FormData.BodyPart
+              .Strict("bar", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("5".getBytes)))
+          )
+          .toEntity
+      ) ~> route ~> check {
+      status should equal(StatusCodes.OK)
+    }
+
+    Put("/test")
+      .withEntity(ContentType.apply(MediaTypes.`application/x-www-form-urlencoded`, () => HttpCharsets.`UTF-8`), "foo=foo".getBytes) ~> route ~> check {
+      rejection match {
+        case UnsupportedRequestContentTypeRejection(supportedContentTypes) =>
+          supportedContentTypes.size should equal(1)
+          supportedContentTypes.head.matches(ContentType(MediaTypes.`multipart/form-data`)) should equal(true)
+      }
+    }
+
+    Put("/test")
+      .withEntity(
+        Multipart
+          .FormData(
+            Multipart.FormData.BodyPart
+              .Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes)))
+          )
+          .toEntity
+      ) ~> route ~> check {
       status should equal(StatusCodes.OK)
     }
   }

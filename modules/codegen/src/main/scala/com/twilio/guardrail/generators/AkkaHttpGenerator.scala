@@ -20,7 +20,7 @@ object AkkaHttpGenerator {
             q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller, FromRequestUnmarshaller, FromStringUnmarshaller}",
             q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
             q"import akka.http.scaladsl.server.Directives._",
-            q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MalformedHeaderRejection, MissingFormFieldRejection, Rejection, Route}",
+            q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MalformedFormFieldRejection, MalformedHeaderRejection, MissingFormFieldRejection, MalformedRequestContentRejection, Rejection, RejectionError, Route}",
             q"import akka.http.scaladsl.util.FastFuture",
             q"import akka.stream.{IOResult, Materializer}",
             q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
@@ -148,9 +148,8 @@ object AkkaHttpGenerator {
               ev.apply(entity).map[Either[Throwable, U]](Right(_)).recover({ case t => Left(t) })
             }
 
-            def StaticUnmarshaller[T](value: T)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { _ => part =>
-              part.entity.discardBytes()
-              Future.successful[T](value)
+            def StaticUnmarshaller[T](value: T)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, T] = Unmarshaller { implicit ec => part =>
+              part.entity.discardBytes().future.map(_ => value)
             }
 
             implicit def UnitUnmarshaller(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, Unit] = StaticUnmarshaller(())

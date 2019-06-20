@@ -84,8 +84,6 @@ class Issue260 extends FunSpec with Matchers with SwaggerSpecRunner {
 
       val hits = pattern.findAllIn(serverDefinition.toString()).length
 
-      println(serverDefinition.toString())
-
       hits shouldBe 1
     }
   }
