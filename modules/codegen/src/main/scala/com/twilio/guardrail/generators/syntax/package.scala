@@ -59,7 +59,7 @@ package object syntax {
   }
 
   implicit class RichSchema(value: Schema[_]) {
-    def showNotNull: String = showNotNullIndented(0)
+    def showNotNull: String                      = showNotNullIndented(0)
     def showNotNullIndented(indent: Int): String = ("  " * indent) + value.toString().lines.filterNot(_.contains(": null")).mkString("\n" + ("  " * indent))
   }
 }

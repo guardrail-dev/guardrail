@@ -170,15 +170,17 @@ object ScalaParameter {
       ftpe       <- fileType(None)
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
-      new ScalaParameter[L](Option(parameter.getIn),
-                            param,
-                            paramName,
-                            RawParameterName(name),
-                            declType,
-                            RawParameterType(rawType, rawFormat),
-                            required,
-                            FileHashAlgorithm(parameter),
-                            isFileType)
+      new ScalaParameter[L](
+        Option(parameter.getIn),
+        param,
+        paramName,
+        RawParameterName(name),
+        declType,
+        RawParameterType(rawType, rawFormat),
+        required,
+        FileHashAlgorithm(parameter),
+        isFileType
+      )
     })
   }
 

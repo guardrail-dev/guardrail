@@ -27,9 +27,8 @@ class Issue184Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue184.server.akkaHttp.{ Handler, Resource }
     import issues.issue184.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
-      override def deleteFoo(respond: Resource.deleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.deleteFooResponse] = {
+      override def deleteFoo(respond: Resource.deleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.deleteFooResponse] =
         Future.successful(respond.NoContent)
-      }
     })
 
     /* Correct mime type
@@ -43,7 +42,7 @@ class Issue184Suite extends FunSuite with Matchers with EitherValues with ScalaF
           )
           .toEntity
       ) ~> route ~> check {
-      response.status shouldBe(StatusCodes.NoContent)
+      response.status shouldBe (StatusCodes.NoContent)
     }
   }
 }

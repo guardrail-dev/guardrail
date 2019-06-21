@@ -220,10 +220,11 @@ object AkkaHttpServerGenerator {
     )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       for {
         directives <- params.traverse {
-          case sparam@ScalaParameter(_, param, _, argName, argType) =>
-            val unmarshaller: Type => Option[Term] = tpe => sparam.rawType.tpe match {
-              case "string" => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
-              case _        => Option.empty
+          case sparam @ ScalaParameter(_, param, _, argName, argType) =>
+            val unmarshaller: Type => Option[Term] = tpe =>
+              sparam.rawType.tpe match {
+                case "string" => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
+                case _        => Option.empty
             }
             param match {
               case param"$_: Option[Iterable[$tpe]]" =>
@@ -262,45 +263,56 @@ object AkkaHttpServerGenerator {
     def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => {
-          case t"String" => _ => Target.pure(q"headerValueByName(${arg})")
-          case tpe => um =>
-            Target.pure(
-              q"""
+          case t"String" =>
+            _ =>
+              Target.pure(q"headerValueByName(${arg})")
+          case tpe =>
+            um =>
+              Target.pure(
+                q"""
                 headerValueByName(${arg})
                   .flatMap(str =>
-                    onComplete(${um.fold[Term => Term](identity)(um => term => q"${term}(${um}, mat.executionContext, mat)").apply(q"Unmarshal(str).to[${tpe}]")})
+                    onComplete(${um
+                  .fold[Term => Term](identity)(um => term => q"${term}(${um}, mat.executionContext, mat)")
+                  .apply(q"Unmarshal(str).to[${tpe}]")})
                       .flatMap[Tuple1[${tpe}]]({
                         case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
                         case Success(x) => provide(x)
                       }))
               """
-            )
+              )
         },
         arg => tpe => _ => Target.raiseError(s"Unsupported Iterable[${arg}]"),
         arg => tpe => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
-          case t"String" => _ => Target.pure(q"optionalHeaderValueByName(${arg})")
-          case tpe => um =>
-            Target.pure(
-              q"""
+          case t"String" =>
+            _ =>
+              Target.pure(q"optionalHeaderValueByName(${arg})")
+          case tpe =>
+            um =>
+              Target.pure(
+                q"""
                 optionalHeaderValueByName(${arg})
                   .flatMap(
                     _.fold[Directive1[Option[${tpe}]]](provide(Option.empty[${tpe}]))(str =>
-                      onComplete(${um.fold[Term => Term](identity)(um => term => q"${term}(${um}, mat.executionContext, mat)").apply(q"Unmarshal(str).to[${tpe}]")})
+                      onComplete(${um
+                  .fold[Term => Term](identity)(um => term => q"${term}(${um}, mat.executionContext, mat)")
+                  .apply(q"Unmarshal(str).to[${tpe}]")})
                         .flatMap[Tuple1[Option[${tpe}]]]({
                           case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
                           case Success(x) => provide(Option(x))
                         })))
               """
-            )
+              )
         }
       ) _
 
     def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] = {
       type Unmarshaller = Term
-      type Arg = Term
+      type Arg          = Term
       val nameReceptacle: Arg => Type => Term = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
-      val param: Option[Unmarshaller] => Arg => Type => Term = _.fold[Arg => Type => Term](nameReceptacle)(um => nameReceptacle.map(_.map(term => q"${term}(${um})")))
+      val param: Option[Unmarshaller] => Arg => Type => Term =
+        _.fold[Arg => Type => Term](nameReceptacle)(um => nameReceptacle.map(_.map(term => q"${term}(${um})")))
       directivesFromParams(
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)})"),
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*)"),
@@ -400,7 +412,7 @@ object AkkaHttpServerGenerator {
                         case _        => q"MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
                       }
                       val jsonUnmarshaller = q"MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
-                      val unmarshaller = q"Unmarshaller.firstOf(${textPlainUnmarshaller}, ${jsonUnmarshaller})"
+                      val unmarshaller     = q"Unmarshaller.firstOf(${textPlainUnmarshaller}, ${jsonUnmarshaller})"
                       interpolateUnmarshaller(
                         q"""
                           Unmarshaller { implicit executionContext => part =>

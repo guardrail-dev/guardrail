@@ -315,7 +315,7 @@ object SwaggerUtil {
           } yield res
         case o: ObjectSchema =>
           for {
-            _ <- log.debug(s"Not attempting to process properties from ${o.showNotNull}")
+            _   <- log.debug(s"Not attempting to process properties from ${o.showNotNull}")
             res <- objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
           } yield res
 
