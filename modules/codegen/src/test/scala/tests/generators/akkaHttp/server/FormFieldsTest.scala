@@ -96,13 +96,13 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                 case class baz(value: (File, Option[String], ContentType, String)) extends Part
               }
               val UnmarshalfooPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller { implicit executionContext =>
-                part => MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller[String])).apply(part).map(putFooParts.foo.apply).recoverWith({
+                part => Unmarshaller.firstOf(MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[String])), MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[String]))).apply(part).map(putFooParts.foo.apply).recoverWith({
                   case ex =>
                     Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
                 })
               }
               val UnmarshalbarPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller { implicit executionContext =>
-                part => MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[Long])).apply(part).map(putFooParts.bar.apply).recoverWith({
+                part => Unmarshaller.firstOf(MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[Long])), MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[Long]))).apply(part).map(putFooParts.bar.apply).recoverWith({
                   case ex =>
                     Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
                 })

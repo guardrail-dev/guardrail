@@ -153,7 +153,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
           .toEntity
       ) ~> route ~> check {
       rejection match {
-        case MalformedFormFieldRejection("foo", message, _) => message shouldBe "Boolean"
+        case MalformedFormFieldRejection("foo", message, _) => message shouldBe "expected json value got b (line 1, column 1)"
       }
     }
 
@@ -190,7 +190,7 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
           .toEntity
       ) ~> route ~> check {
       rejection match {
-        case MalformedFormFieldRejection("bar", message, _) => message shouldBe "Boolean"
+        case MalformedFormFieldRejection("bar", message, _) => message shouldBe "expected json value got b (line 1, column 1)"
       }
     }
 
