@@ -342,9 +342,9 @@ object ProtocolGenerator {
   ): Free[F, ProtocolElems[L]] = {
     import R._
     for {
-      (deferredTpe, _) <- SwaggerUtil.modelMetaType(arr)
-      tpe              <- extractArrayType(deferredTpe, concreteTypes)
-      ret              <- typeAlias[L, F](clsName, tpe)
+      deferredTpe <- SwaggerUtil.modelMetaType(arr)
+      tpe         <- extractArrayType(deferredTpe, concreteTypes)
+      ret         <- typeAlias[L, F](clsName, tpe)
     } yield ret
   }
 
@@ -424,8 +424,7 @@ object ProtocolGenerator {
     val definitions = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
 
     for {
-      groupedHierarchies <- groupHierarchies(definitions)
-      (hierarchies, definitionsWithoutPoly) = groupedHierarchies
+      (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions)
       polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions))

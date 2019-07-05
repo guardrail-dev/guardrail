@@ -25,11 +25,12 @@ import scala.collection.JavaConverters._
 
 object SwaggerUtil {
   sealed trait ResolvedType[L <: LA]
-  case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String]) extends ResolvedType[L]
-  sealed trait LazyResolvedType[L <: LA]                                                                                                                    extends ResolvedType[L]
-  case class Deferred[L <: LA](value: String)                                                                                                               extends LazyResolvedType[L]
-  case class DeferredArray[L <: LA](value: String)                                                                                                          extends LazyResolvedType[L]
-  case class DeferredMap[L <: LA](value: String)                                                                                                            extends LazyResolvedType[L]
+  case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String])
+      extends ResolvedType[L]
+  sealed trait LazyResolvedType[L <: LA]           extends ResolvedType[L]
+  case class Deferred[L <: LA](value: String)      extends LazyResolvedType[L]
+  case class DeferredArray[L <: LA](value: String) extends LazyResolvedType[L]
+  case class DeferredMap[L <: LA](value: String)   extends LazyResolvedType[L]
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
@@ -144,7 +145,7 @@ object SwaggerUtil {
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: T
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, (ResolvedType[L], (String, Option[String]))] =
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
@@ -153,7 +154,7 @@ object SwaggerUtil {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
               ref <- getSimpleRef(ref)
-            } yield (Deferred[L](ref), ("object", None))
+            } yield Deferred[L](ref)
           case arr: ArraySchema =>
             for {
               items <- getItems(arr)
@@ -167,7 +168,7 @@ object SwaggerUtil {
                 case x: DeferredArray[L] => embedArray(x)
                 case x: DeferredMap[L]   => embedArray(x)
               }
-            } yield (res, ("array", None))
+            } yield res
           case map: MapSchema =>
             for {
               rec <- Option(map.getAdditionalProperties)
@@ -177,18 +178,18 @@ object SwaggerUtil {
                 })
               res <- rec match {
                 case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
-                case x: DeferredMap[L]       => embedMap(x)
-                case x: DeferredArray[L]     => embedMap(x)
-                case x: Deferred[L]          => embedMap(x)
+                case x: DeferredMap[L]             => embedMap(x)
+                case x: DeferredArray[L]           => embedMap(x)
+                case x: Deferred[L]                => embedMap(x)
               }
-            } yield (res, ("map", None))
+            } yield res
           case impl: Schema[_] =>
             for {
               tpeName       <- getType(impl)
               customTpeName <- customTypeName(impl)
               fmt = Option(impl.getFormat())
               tpe <- typeName[L, F](tpeName, fmt, customTpeName)
-            } yield (Resolved[L](tpe, None, None, Some(tpeName), fmt), (tpeName, fmt))
+            } yield Resolved[L](tpe, None, None, Some(tpeName), fmt)
         })
       }
   }
@@ -212,7 +213,7 @@ object SwaggerUtil {
           } yield (clsName, resolvedType)
         case (clsName, definition) =>
           for {
-            (resolved, _) <- SwaggerUtil.modelMetaType[L, F](definition)
+            resolved <- SwaggerUtil.modelMetaType[L, F](definition)
           } yield (clsName, resolved)
       }
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
@@ -323,16 +324,16 @@ object SwaggerUtil {
           getSimpleRef(ref).map(Deferred[L])
 
         case b: BooleanSchema =>
-          val rawType = "boolean"
+          val rawType   = "boolean"
           val rawFormat = Option.empty[String]
           for {
             customTpeName <- customTypeName(b)
-            res           <- (typeName[L, F](rawType, None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_)))
+            res <- (typeName[L, F](rawType, None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_)))
               .mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
           } yield res
 
         case s: StringSchema =>
-          val rawType = "string"
+          val rawType   = "string"
           val rawFormat = Option(s.getFormat())
           for {
             customTpeName <- customTypeName(s)
@@ -341,7 +342,7 @@ object SwaggerUtil {
           } yield res
 
         case d: DateSchema =>
-          val rawType = "string"
+          val rawType   = "string"
           val rawFormat = Option("date")
           for {
             customTpeName <- customTypeName(d)
@@ -349,7 +350,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case d: DateTimeSchema =>
-          val rawType = "string"
+          val rawType   = "string"
           val rawFormat = Option("date-time")
           for {
             customTpeName <- customTypeName(d)
@@ -357,7 +358,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case i: IntegerSchema =>
-          val rawType = "integer"
+          val rawType   = "integer"
           val rawFormat = Option(i.getFormat)
           for {
             customTpeName <- customTypeName(i)
@@ -365,7 +366,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case d: NumberSchema =>
-          val rawType = "number"
+          val rawType   = "number"
           val rawFormat = Option(d.getFormat)
           for {
             customTpeName <- customTypeName(d)
@@ -373,7 +374,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case p: PasswordSchema =>
-          val rawType = "string"
+          val rawType   = "string"
           val rawFormat = Option(p.getFormat)
           for {
             customTpeName <- customTypeName(p)
@@ -381,7 +382,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case f: FileSchema =>
-          val rawType = "file"
+          val rawType   = "file"
           val rawFormat = Option(f.getFormat)
           for {
             customTpeName <- customTypeName(f)
@@ -389,7 +390,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case u: UUIDSchema =>
-          val rawType = "string"
+          val rawType   = "string"
           val rawFormat = Option(u.getFormat)
           for {
             customTpeName <- customTypeName(u)

@@ -50,7 +50,7 @@ object ScalaParameter {
     import Sc._
     import Sw._
 
-    def paramMeta(param: Parameter): Free[F, (SwaggerUtil.ResolvedType[L], Option[(String, Option[String])])] = {
+    def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
       def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Option[String], p: U): Free[F, Option[L#Term]] =
         (_type, fmt) match {
           case ("string", None) =>
@@ -68,14 +68,14 @@ object ScalaParameter {
           case x => Free.pure(Option.empty[L#Term])
         }
 
-      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, (ResolvedType[L], (String, Option[String]))] =
+      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
         for {
           tpeName <- typeFetcher(param)
           fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
           customTypeName <- SwaggerUtil.customTypeName(param)
           res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
-        } yield (res, (tpeName, fmt))
+        } yield res
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
@@ -83,56 +83,37 @@ object ScalaParameter {
         case r: Parameter if r.isRef =>
           getRefParameterRef(r)
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
-            .map((_, None))
 
         case r: Parameter if paramHasRefSchema(r) =>
           getSimpleRef(r.getSchema)
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
-            .map((_, None))
 
         case x: Parameter if x.isInBody =>
           getBodyParameterSchema(x)
             .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
-            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInHeader =>
           resolveParam(x, getHeaderParameterType)
-            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInPath =>
           resolveParam(x, getPathParameterType)
-            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInQuery =>
           resolveParam(x, getQueryParameterType)
-            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInCookies =>
           resolveParam(x, getCookieParameterType)
-            .map(_.map(Option(_)))
 
         case x: Parameter if x.isInFormData =>
           resolveParam(x, getFormParameterType)
-            .map(_.map(Option(_)))
 
         case x =>
           fallbackParameterHandler(x)
-            .map((_, None))
       }
     }
 
     log.function(s"fromParameter")(for {
-      (meta, metaTypeFormat) <- paramMeta(parameter)
-      (rawType, rawFormat) <- metaTypeFormat
-        .orElse(
-          Option(parameter.getSchema())
-            .flatMap(s => Option(s.getType()).map((_, Option(s.getFormat()))))
-        )
-        .fold(
-          for {
-            _ <- log.warning("No type specified, defaulting to \"string\"")
-          } yield ("string", Option.empty[String])
-        )(tpeFormat => Free.pure[F, (String, Option[String])](tpeFormat))
+      meta                                                                     <- paramMeta(parameter)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.getRequired()).fold(false)(identity)
