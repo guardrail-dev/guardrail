@@ -26,7 +26,6 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.media.MediaType
 import java.net.URI
 import java.util
-import java.util.Locale
 import scala.collection.JavaConverters._
 
 object AsyncHttpClientClientGenerator {
