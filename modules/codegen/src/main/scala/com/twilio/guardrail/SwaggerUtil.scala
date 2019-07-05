@@ -145,11 +145,11 @@ object SwaggerUtil {
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: T
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
-        import F._
+        import Fw._
         log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
@@ -229,10 +229,10 @@ object SwaggerUtil {
       typeName: String,
       format: Option[String],
       customType: Option[String]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, L#Type] =
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
     Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
       import Sc._
-      import F._
+      import Fw._
 
       def log(fmt: Option[String], t: L#Type): L#Type = {
         fmt.foreach { fmt =>
@@ -281,9 +281,9 @@ object SwaggerUtil {
       } yield result
     }
 
-  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
     Sw.log.function("propMeta") {
-      import F._
+      import Fw._
       import Sc._
       import Sw._
 

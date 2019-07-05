@@ -27,7 +27,7 @@ object Common {
       C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
       E: EnumProtocolTerms[L, F],
-      F: FrameworkTerms[L, F],
+      Fw: FrameworkTerms[L, F],
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
@@ -35,7 +35,7 @@ object Common {
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
-    import F._
+    import Fw._
     import Sc._
     import Sw._
 
@@ -95,8 +95,8 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
-    import F._
+  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+    import Fw._
     import Sc._
 
     val pkgPath        = resolveFile(outputPath)(pkgName)
