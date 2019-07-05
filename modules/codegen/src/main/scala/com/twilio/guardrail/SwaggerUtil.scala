@@ -2,10 +2,8 @@ package com.twilio.guardrail
 
 import cats.data.NonEmptyList
 import io.swagger.v3.oas.models._
-import io.swagger.v3.oas.models.PathItem._
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.RequestBody
-import io.swagger.v3.oas.models.responses._
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
@@ -17,8 +15,6 @@ import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.RichSchema
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
-import com.twilio.guardrail.protocol.terms.Responses
-import java.util.{ Map => JMap }
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
 import scala.collection.JavaConverters._
@@ -402,58 +398,6 @@ object SwaggerUtil {
             tpe <- fallbackPropertyTypeHandler(x)
           } yield Resolved[L](tpe, None, None, None, None) // This may need to be rawType=string?
       })
-    }
-
-  /*
-    Required \ Default  || Defined  || Undefined / NULL ||
-    =====================================================
-    TRUE                || a: T = v || a: T             ||
-    FALSE / NULL        || a: T = v || a: Opt[T] = None ||
-   */
-
-  private[this] val successCodesWithEntities =
-    List(200, 201, 202, 203, 206, 226)
-  private[this] val successCodesWithoutEntities = List(204, 205)
-
-  private[this] def getBestSuccessResponse(responses: JMap[String, ApiResponse]): Option[ApiResponse] =
-    successCodesWithEntities
-      .map(_.toString)
-      .find(responses.containsKey)
-      .flatMap(code => Option(responses.get(code)))
-  private[this] def hasEmptySuccessType(responses: JMap[String, ApiResponse]): Boolean =
-    successCodesWithoutEntities.map(_.toString).exists(responses.containsKey)
-
-  def getResponseType[L <: LA, F[_]](httpMethod: HttpMethod, operation: Operation, ignoredType: L#Type)(
-      implicit Sc: ScalaTerms[L, F],
-      Sw: SwaggerTerms[L, F],
-      F: FrameworkTerms[L, F]
-  ): Free[F, ResolvedType[L]] =
-    if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
-      Option(operation.getResponses)
-        .flatMap { responses =>
-          getBestSuccessResponse(responses)
-            .flatMap[Schema[_]](resp => Option(resp.getContent).flatMap(_.values().asScala.toList.headOption).map(_.getSchema))
-            .map(propMeta[L, F](_))
-            .orElse(
-              if (hasEmptySuccessType(responses))
-                Some(Free.pure[F, ResolvedType[L]](Resolved[L](ignoredType, None, None, None, None)))
-              else None
-            )
-        }
-        .getOrElse(Free.pure(Resolved[L](ignoredType, None, None, None, None): ResolvedType[L]))
-    } else {
-      Free.pure(Resolved[L](ignoredType, None, None, None, None): ResolvedType[L])
-    }
-
-  def getResponseType[L <: LA](httpMethod: HttpMethod, responses: Responses[L], ignoredType: L#Type): Resolved[L] =
-    if (httpMethod == HttpMethod.GET || httpMethod == HttpMethod.PUT || httpMethod == HttpMethod.POST) {
-      successCodesWithEntities
-        .flatMap(code => responses.value.find(_.statusCode == code))
-        .flatMap(_.value.map(_._1))
-        .headOption
-        .fold[Resolved[L]](Resolved[L](ignoredType, None, None, None, None))(tpe => Resolved[L](tpe, None, None, None, None))
-    } else {
-      Resolved[L](ignoredType, None, None, None, None)
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],
