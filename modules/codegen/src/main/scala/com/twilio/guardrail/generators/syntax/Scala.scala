@@ -15,7 +15,7 @@ object Scala {
   implicit class RichScalaParameter(value: ScalaParameter.type) {
     import _root_.scala.meta._
     import com.twilio.guardrail.languages.ScalaLanguage
-    def fromParam(param: Term.Param, rawType: String = "string", rawFormat: Option[String] = None): ScalaParameter[ScalaLanguage] = param match {
+    def fromParam(param: Term.Param, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): ScalaParameter[ScalaLanguage] = param match {
       case param @ Term.Param(_, name, decltype, _) =>
         val tpe: Type = decltype
           .flatMap({

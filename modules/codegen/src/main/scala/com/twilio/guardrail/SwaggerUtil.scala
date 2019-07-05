@@ -25,11 +25,11 @@ import scala.collection.JavaConverters._
 
 object SwaggerUtil {
   sealed trait ResolvedType[L <: LA]
-  case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term]) extends ResolvedType[L]
-  sealed trait LazyResolvedType[L <: LA]                                                                extends ResolvedType[L]
-  case class Deferred[L <: LA](value: String)                                                           extends LazyResolvedType[L]
-  case class DeferredArray[L <: LA](value: String)                                                      extends LazyResolvedType[L]
-  case class DeferredMap[L <: LA](value: String)                                                        extends LazyResolvedType[L]
+  case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String]) extends ResolvedType[L]
+  sealed trait LazyResolvedType[L <: LA]                                                                                                                    extends ResolvedType[L]
+  case class Deferred[L <: LA](value: String)                                                                                                               extends LazyResolvedType[L]
+  case class DeferredArray[L <: LA](value: String)                                                                                                          extends LazyResolvedType[L]
+  case class DeferredMap[L <: LA](value: String)                                                                                                            extends LazyResolvedType[L]
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
@@ -46,8 +46,8 @@ object SwaggerUtil {
       ): Free[F, Option[(String, Resolved[L])]] =
         resolvedTypes
           .find(_._1 == tpeName)
-          .map(_._2.tpe)
-          .traverse(x => f(x).map(y => (clsName, Resolved[L](y, None, None))))
+          .map(_._2)
+          .traverse(x => f(x.tpe).map(tpe => (clsName, x.copy(tpe = tpe))))
 
       log.debug(s"resolve ${values.length} references") >> FlatMap[Free[F, ?]]
         .tailRecM[(List[(String, LazyResolvedType[L])], List[(String, Resolved[L])]), List[(String, Resolved[L])]](
@@ -95,42 +95,42 @@ object SwaggerUtil {
       import Sc._
       import Sw._
       log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
-        case x @ Resolved(tpe, _, default) => Free.pure(x)
+        case x @ Resolved(_, _, _, _, _) => Free.pure(x)
         case Deferred(name) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                Free.pure(Resolved[L](tpe, None, None))
+                Free.pure(Resolved[L](tpe, None, None, None, None))
               case ClassDefinition(name, tpe, cls, _, _) =>
-                widenTypeName(tpe).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(name, tpe, elems, cls, _) =>
-                widenTypeName(tpe).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).map(Resolved[L](_, None, None, Some("string"), None))
               case ADT(_, tpe, _, _) =>
-                widenTypeName(tpe).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).map(Resolved[L](_, None, None, None, None))
             }
         case DeferredArray(name) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                liftVectorType(tpe).map(Resolved[L](_, None, None))
+                liftVectorType(tpe).map(Resolved[L](_, None, None, None, None))
               case ClassDefinition(name, tpe, cls, _, _) =>
-                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(name, tpe, elems, cls, _) =>
-                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None, None, None))
               case ADT(_, tpe, _, _) =>
-                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None, None, None))
             }
         case DeferredMap(name) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                liftMapType(tpe).map(Resolved[L](_, None, None))
+                liftMapType(tpe).map(Resolved[L](_, None, None, None, None))
               case ClassDefinition(_, tpe, _, _, _) =>
-                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(_, tpe, _, _, _) =>
-                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None, None, None))
               case ADT(_, tpe, _, _) =>
-                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None))
+                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None, None, None))
             }
       })
     }
@@ -161,8 +161,8 @@ object SwaggerUtil {
               meta  <- propMeta[L, F](items)
               _     <- log.debug(s"meta: ${meta}")
               res <- meta match {
-                case Resolved(inner, dep, default) =>
-                  (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _))
+                case Resolved(inner, dep, default, _, _) =>
+                  (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _, None, None))
                 case x: Deferred[L]      => embedArray(x)
                 case x: DeferredArray[L] => embedArray(x)
                 case x: DeferredMap[L]   => embedArray(x)
@@ -171,12 +171,12 @@ object SwaggerUtil {
           case map: MapSchema =>
             for {
               rec <- Option(map.getAdditionalProperties)
-                .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None)))({
-                  case _: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None))
+                .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None, None, None)))({
+                  case _: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None, None, None))
                   case s: Schema[_]         => propMeta[L, F](s)
                 })
               res <- rec match {
-                case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
+                case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
                 case x: DeferredMap[L]       => embedMap(x)
                 case x: DeferredArray[L]     => embedMap(x)
                 case x: Deferred[L]          => embedMap(x)
@@ -188,7 +188,7 @@ object SwaggerUtil {
               customTpeName <- customTypeName(impl)
               fmt = Option(impl.getFormat())
               tpe <- typeName[L, F](tpeName, fmt, customTpeName)
-            } yield (Resolved[L](tpe, None, None), (tpeName, fmt))
+            } yield (Resolved[L](tpe, None, None, Some(tpeName), fmt), (tpeName, fmt))
         })
       }
   }
@@ -202,13 +202,13 @@ object SwaggerUtil {
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
         case (clsName, impl: Schema[_]) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
-          pureTypeName(clsName).flatMap(widenTypeName).map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None): SwaggerUtil.ResolvedType[L]))
+          pureTypeName(clsName).flatMap(widenTypeName).map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None, None, None): SwaggerUtil.ResolvedType[L]))
         case (clsName, comp: ComposedSchema) =>
           for {
             x <- pureTypeName(clsName).flatMap(widenTypeName)
             parentSimpleRef = Option(comp.getAllOf).toList.flatMap(_.asScala).headOption.flatMap(i => Option(i.get$ref).map(_.split("/").last))
             parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
-            resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None): SwaggerUtil.ResolvedType[L]
+            resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
           } yield (clsName, resolvedType)
         case (clsName, definition) =>
           for {
@@ -218,7 +218,7 @@ object SwaggerUtil {
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
     } yield
       result.map {
-        case (clsName, SwaggerUtil.Resolved(tpe, _, _)) =>
+        case (clsName, SwaggerUtil.Resolved(tpe, _, _, _, _)) =>
           PropMeta[L](clsName, tpe)
       }
   }
@@ -292,8 +292,8 @@ object SwaggerUtil {
             items <- getItems(p)
             rec   <- propMeta[L, F](items)
             res <- rec match {
-              case Resolved(inner, dep, default) =>
-                (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _): ResolvedType[L])
+              case Resolved(inner, dep, default, _, _) =>
+                (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
               case x: DeferredMap[L]   => embedArray(x)
               case x: DeferredArray[L] => embedArray(x)
               case x: Deferred[L]      => embedArray(x)
@@ -302,83 +302,104 @@ object SwaggerUtil {
         case m: MapSchema =>
           for {
             rec <- Option(m.getAdditionalProperties)
-              .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None)))({
-                case b: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None))
+              .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None, None, None)))({
+                case b: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None, None, None))
                 case s: Schema[_]         => propMeta[L, F](s)
               })
             res <- rec match {
-              case Resolved(inner, dep, _) => liftMapType(inner).map(Resolved[L](_, dep, None))
-              case x: DeferredMap[L]       => embedMap(x)
-              case x: DeferredArray[L]     => embedMap(x)
-              case x: Deferred[L]          => embedMap(x)
+              case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
+              case x: DeferredMap[L]             => embedMap(x)
+              case x: DeferredArray[L]           => embedMap(x)
+              case x: Deferred[L]                => embedMap(x)
             }
           } yield res
         case o: ObjectSchema =>
           for {
             _   <- log.debug(s"Not attempting to process properties from ${o.showNotNull}")
-            res <- objectType(None).map(Resolved[L](_, None, None)) // TODO: o.getProperties
-          } yield res
+            tpe <- objectType(None) // TODO: o.getProperties
+          } yield Resolved[L](tpe, None, None, None, None)
 
         case ref: Schema[_] if Option(ref.get$ref).isDefined =>
           getSimpleRef(ref).map(Deferred[L])
 
         case b: BooleanSchema =>
+          val rawType = "boolean"
+          val rawFormat = Option.empty[String]
           for {
             customTpeName <- customTypeName(b)
-            res           <- (typeName[L, F]("boolean", None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_))).mapN(Resolved[L](_, None, _))
+            res           <- (typeName[L, F](rawType, None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_)))
+              .mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
           } yield res
 
         case s: StringSchema =>
+          val rawType = "string"
+          val rawFormat = Option(s.getFormat())
           for {
             customTpeName <- customTypeName(s)
-            res <- (typeName[L, F]("string", Option(s.getFormat()), customTpeName), Default(s).extract[String].traverse(litString(_)))
-              .mapN(Resolved[L](_, None, _))
+            res <- (typeName[L, F](rawType, rawFormat, customTpeName), Default(s).extract[String].traverse(litString(_)))
+              .mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
           } yield res
 
         case d: DateSchema =>
+          val rawType = "string"
+          val rawFormat = Option("date")
           for {
             customTpeName <- customTypeName(d)
-            res           <- typeName[L, F]("string", Some("date"), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case d: DateTimeSchema =>
+          val rawType = "string"
+          val rawFormat = Option("date-time")
           for {
             customTpeName <- customTypeName(d)
-            res           <- typeName[L, F]("string", Some("date-time"), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case i: IntegerSchema =>
+          val rawType = "integer"
+          val rawFormat = Option(i.getFormat)
           for {
             customTpeName <- customTypeName(i)
-            res           <- typeName[L, F]("integer", Option(i.getFormat), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case d: NumberSchema =>
+          val rawType = "number"
+          val rawFormat = Option(d.getFormat)
           for {
             customTpeName <- customTypeName(d)
-            res           <- typeName[L, F]("number", Option(d.getFormat), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case p: PasswordSchema =>
+          val rawType = "string"
+          val rawFormat = Option(p.getFormat)
           for {
             customTpeName <- customTypeName(p)
-            res           <- typeName[L, F]("string", Option(p.getFormat), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case f: FileSchema =>
+          val rawType = "file"
+          val rawFormat = Option(f.getFormat)
           for {
             customTpeName <- customTypeName(f)
-            res           <- typeName[L, F]("file", Option(f.getFormat), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F]("file", rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case u: UUIDSchema =>
+          val rawType = "string"
+          val rawFormat = Option(u.getFormat)
           for {
             customTpeName <- customTypeName(u)
-            res           <- typeName[L, F]("string", Option(u.getFormat), customTpeName).map(Resolved[L](_, None, None))
-          } yield res
+            tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
 
         case x =>
-          fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None))
+          for {
+            tpe <- fallbackPropertyTypeHandler(x)
+          } yield Resolved[L](tpe, None, None, None, None) // This may need to be rawType=string?
       })
     }
 
@@ -414,13 +435,13 @@ object SwaggerUtil {
             .map(propMeta[L, F](_))
             .orElse(
               if (hasEmptySuccessType(responses))
-                Some(Free.pure[F, ResolvedType[L]](Resolved[L](ignoredType, None, None)))
+                Some(Free.pure[F, ResolvedType[L]](Resolved[L](ignoredType, None, None, None, None)))
               else None
             )
         }
-        .getOrElse(Free.pure(Resolved[L](ignoredType, None, None): ResolvedType[L]))
+        .getOrElse(Free.pure(Resolved[L](ignoredType, None, None, None, None): ResolvedType[L]))
     } else {
-      Free.pure(Resolved[L](ignoredType, None, None): ResolvedType[L])
+      Free.pure(Resolved[L](ignoredType, None, None, None, None): ResolvedType[L])
     }
 
   def getResponseType[L <: LA](httpMethod: HttpMethod, responses: Responses[L], ignoredType: L#Type): Resolved[L] =
@@ -429,9 +450,9 @@ object SwaggerUtil {
         .flatMap(code => responses.value.find(_.statusCode == code))
         .flatMap(_.value.map(_._1))
         .headOption
-        .fold[Resolved[L]](Resolved[L](ignoredType, None, None))(tpe => Resolved[L](tpe, None, None))
+        .fold[Resolved[L]](Resolved[L](ignoredType, None, None, None, None))(tpe => Resolved[L](tpe, None, None, None, None))
     } else {
-      Resolved[L](ignoredType, None, None)
+      Resolved[L](ignoredType, None, None, None, None)
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],

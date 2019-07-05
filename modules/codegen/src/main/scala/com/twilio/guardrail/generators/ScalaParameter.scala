@@ -13,7 +13,7 @@ import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 case class RawParameterName private[generators] (value: String)
-case class RawParameterType private[generators] (tpe: String, format: Option[String])
+case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
   val filterParamBy     = ScalaParameter.filterParams(parameters)
   val headerParams      = filterParamBy("header")
@@ -36,7 +36,7 @@ class ScalaParameter[L <: LA] private[generators] (
   override def toString: String =
     s"ScalaParameter($in, $param, $paramName, $argName, $argType)"
 
-  def withType(newArgType: L#Type, rawType: String = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): ScalaParameter[L] =
+  def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): ScalaParameter[L] =
     new ScalaParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
@@ -74,7 +74,7 @@ object ScalaParameter {
           fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
           customTypeName <- SwaggerUtil.customTypeName(param)
           res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
         } yield (res, (tpeName, fmt))
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
@@ -133,7 +133,7 @@ object ScalaParameter {
             _ <- log.warning("No type specified, defaulting to \"string\"")
           } yield ("string", Option.empty[String])
         )(tpeFormat => Free.pure[F, (String, Option[String])](tpeFormat))
-      SwaggerUtil.Resolved(paramType, _, baseDefaultValue) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.getRequired()).fold(false)(identity)
       declType <- if (!required) {

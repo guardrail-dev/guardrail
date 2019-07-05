@@ -223,8 +223,8 @@ object AkkaHttpServerGenerator {
           case sparam @ ScalaParameter(_, param, _, argName, argType) =>
             val unmarshaller: Type => Option[Term] = tpe =>
               sparam.rawType.tpe match {
-                case "string" => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
-                case _        => Option.empty
+                case Some("string") => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
+                case _              => Option.empty
             }
             param match {
               case param"$_: Option[Iterable[$tpe]]" =>
@@ -408,8 +408,8 @@ object AkkaHttpServerGenerator {
                       )
                     case false =>
                       val textPlainUnmarshaller = rawParameter.rawType.tpe match {
-                        case "string" => q"MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
-                        case _        => q"MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                        case Some("string") => q"MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                        case _              => q"MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
                       }
                       val jsonUnmarshaller = q"MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
                       val unmarshaller     = q"Unmarshaller.firstOf(${textPlainUnmarshaller}, ${jsonUnmarshaller})"

@@ -145,7 +145,7 @@ object CirceProtocolGenerator {
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _) =>
+            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
               (declType, classDep)
             case SwaggerUtil.Deferred(tpeName) =>
               val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -336,7 +336,7 @@ object CirceProtocolGenerator {
       case ExtractArrayType(arr, concreteTypes) =>
         for {
           result <- arr match {
-            case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+            case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
             case SwaggerUtil.DeferredArray(tpeName) =>
