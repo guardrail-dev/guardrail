@@ -213,28 +213,36 @@ object AkkaHttpServerGenerator {
     }
 
     def directivesFromParams(
-        required: Term => Type => Target[Term],
-        multi: Term => Type => Target[Term],
-        multiOpt: Term => Type => Target[Term],
-        optional: Term => Type => Target[Term]
+        required: Term => Type => Option[Term] => Target[Term],
+        multi: Term => Type => Option[Term] => Target[Term],
+        multiOpt: Term => Type => Option[Term] => Target[Term],
+        optional: Term => Type => Option[Term] => Target[Term]
     )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
       for {
         directives <- params.traverse {
-          case ScalaParameter(_, param, _, argName, argType) =>
+          case sparam @ ScalaParameter(_, param, _, argName, argType) =>
+            val unmarshaller: Type => Option[Term] = tpe =>
+              sparam.rawType.tpe match {
+                case Some("string") => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
+                case _              => Option.empty
+            }
             param match {
               case param"$_: Option[Iterable[$tpe]]" =>
-                multiOpt(argName.toLit)(tpe)
+                multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[Iterable[$tpe]] = $_" =>
-                multiOpt(argName.toLit)(tpe)
+                multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe]" =>
-                optional(argName.toLit)(tpe)
+                optional(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe] = $_" =>
-                optional(argName.toLit)(tpe)
+                optional(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Iterable[$tpe]" =>
-                multi(argName.toLit)(tpe)
+                multi(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Iterable[$tpe] = $_" =>
-                multi(argName.toLit)(tpe)
-              case _ => required(argName.toLit)(argType)
+                multi(argName.toLit)(tpe)(unmarshaller(tpe))
+              case param"$_: $tpe = $_" =>
+                required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
+              case param"$_: $tpe" =>
+                required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
             }
         }
       } yield
@@ -255,46 +263,63 @@ object AkkaHttpServerGenerator {
     def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
       directivesFromParams(
         arg => {
-          case t"String" => Target.pure(q"headerValueByName(${arg})")
+          case t"String" =>
+            _ =>
+              Target.pure(q"headerValueByName(${arg})")
           case tpe =>
-            Target.pure(
-              q"""
+            um =>
+              Target.pure(
+                q"""
                 headerValueByName(${arg})
                   .flatMap(str =>
-                    onComplete(Unmarshal(str).to[${tpe}])
+                    onComplete(${um
+                  .fold[Term => Term](identity)(um => term => q"${term}(${um}, mat.executionContext, mat)")
+                  .apply(q"Unmarshal(str).to[${tpe}]")})
                       .flatMap[Tuple1[${tpe}]]({
                         case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
                         case Success(x) => provide(x)
                       }))
               """
-            )
+              )
         },
-        arg => tpe => Target.raiseError(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => _ => Target.raiseError(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
-          case t"String" => Target.pure(q"optionalHeaderValueByName(${arg})")
+          case t"String" =>
+            _ =>
+              Target.pure(q"optionalHeaderValueByName(${arg})")
           case tpe =>
-            Target.pure(
-              q"""
+            um =>
+              Target.pure(
+                q"""
                 optionalHeaderValueByName(${arg})
                   .flatMap(
                     _.fold[Directive1[Option[${tpe}]]](provide(Option.empty[${tpe}]))(str =>
-                      onComplete(Unmarshal(str).to[${tpe}]).flatMap[Tuple1[Option[${tpe}]]]({
-                        case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
-                        case Success(x) => provide(Option(x))
-                      })))
+                      onComplete(${um
+                  .fold[Term => Term](identity)(um => term => q"${term}(${um}, mat.executionContext, mat)")
+                  .apply(q"Unmarshal(str).to[${tpe}]")})
+                        .flatMap[Tuple1[Option[${tpe}]]]({
+                          case Failure(e) => reject(MalformedHeaderRejection(${arg}, e.getMessage, Some(e)))
+                          case Success(x) => provide(Option(x))
+                        })))
               """
-            )
+              )
         }
       ) _
 
-    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
+    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] = {
+      type Unmarshaller = Term
+      type Arg          = Term
+      val nameReceptacle: Arg => Type => Term = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
+      val param: Option[Unmarshaller] => Arg => Type => Term =
+        _.fold[Arg => Type => Term](nameReceptacle)(um => nameReceptacle.map(_.map(term => q"${term}(${um})")))
       directivesFromParams(
-        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}])"),
-        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*)"),
-        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
-        arg => tpe => Target.pure(q"parameter(Symbol(${arg}).as[${tpe}].?)")
+        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)})"),
+        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*)"),
+        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
+        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.?)")
       ) _
+    }
 
     def formToAkka(consumes: List[RouteMeta.ContentType],
                    operationId: String)(params: List[ScalaParameter[ScalaLanguage]]): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
@@ -333,63 +358,75 @@ object AkkaHttpServerGenerator {
                     case t"Option[$x]" => (true, x)
                     case x             => (!rawParameter.required, x)
                   }
-                  val (unmarshaller, caseMatch, grabHead) = isFile match {
-                    case true =>
-                      (
+                  def interpolateUnmarshaller(unmarshaller: Term, liftUnmarshaller: Term => Term, patTerms: (Pat, Term)): (Defn.Val, Case, Defn.Val) =
+                    (
+                      q"""
+                          val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
+                        .Select(partsTerm, containerName.toType)}] = ${unmarshaller}
+                        """,
+                      Case(
+                        argName.toLit,
+                        None,
                         q"""
-                        val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type.Select(partsTerm, containerName.toType)}] = (
-                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${rawParameter.hashAlgorithm.fold(t"Option")(Function.const(t"Id"))}](
-                                ${rawParameter.hashAlgorithm.fold[Term](q"None")(x => Lit.String(x))}, handler.${Term
-                          .Name(s"${operationId}MapFileField")}(_, _, _)
-                              ).map({ case (v1, v2, v3, v4) =>
-                                ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
-                          .map(Function.const(q"v4"))}))
-                              })
-                            )
-                      """,
-                        Case(
-                          argName.toLit,
-                          None,
-                          q"""
-                          SafeUnmarshaller(AccumulatingUnmarshaller(${referenceAccumulator}, ${unmarshallerName.toTerm})(_.value._1)).apply(part)
-                      """
-                        ),
+                            SafeUnmarshaller(${liftUnmarshaller(unmarshallerName.toTerm)}).apply(part)
+                        """
+                      ), {
+                        val (pats, terms) = patTerms
                         q"""
-                        val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
+                          val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
                           List(
                             Case(
-                              Pat.Extract(Term.Select(partsTerm, containerName.toTerm),
-                                          List(p"((..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))}))")),
+                              Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(pats)),
                               None,
-                              q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
+                              terms
                             )
                           )
                         )})
-                      """
+                        """
+                      }
+                    )
+
+                  val (unmarshaller, caseMatch, grabHead) = isFile match {
+                    case true =>
+                      val (targetFunctor, targetHashName) = rawParameter.hashAlgorithm.fold[(Type, Term)]((t"Option", q"None"))(x => (t"Id", Lit.String(x)))
+                      interpolateUnmarshaller(
+                        q"""
+                          (
+                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${targetFunctor}](${targetHashName}, handler.${Term
+                          .Name(s"${operationId}MapFileField")}(_, _, _))
+                              .map({ case (v1, v2, v3, v4) =>
+                                ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
+                          .map(Function.const(q"v4"))}))
+                              })
+                          )
+                        """,
+                        wrapped => q"AccumulatingUnmarshaller(${referenceAccumulator}, ${wrapped})(_.value._1)",
+                        (
+                          p"(..${List(p"v1", p"v2", p"v3") ++ rawParameter.hashAlgorithm.map(Function.const(p"v4"))})",
+                          q"(..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm.map(Function.const(q"v4"))})"
+                        )
                       )
                     case false =>
-                      (
+                      val textPlainUnmarshaller = rawParameter.rawType.tpe match {
+                        case Some("string") => q"MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                        case _              => q"MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                      }
+                      val jsonUnmarshaller = q"MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                      val unmarshaller     = q"Unmarshaller.firstOf(${textPlainUnmarshaller}, ${jsonUnmarshaller})"
+                      interpolateUnmarshaller(
                         q"""
-                        val ${unmarshallerName.toVar}: Unmarshaller[Multipart.FormData.BodyPart, ${Type
-                          .Select(partsTerm, containerName.toType)}] = Unmarshaller { implicit executionContext => part =>
-                          val json: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(jsonEntityUnmarshaller[${realType}])
-                          val string: Unmarshaller[Multipart.FormData.BodyPart, ${realType}] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                          Unmarshaller.firstOf(json, string)
-                            .apply(part)
-                            .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
-                            .recoverWith {
-                              case ex => Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
-                            }
-                        }
-                      """,
-                        Case(argName.toLit, None, q"""
-                          SafeUnmarshaller(${unmarshallerName.toTerm}).apply(part)
-                      """),
-                        q"""
-                        val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
-                          List(Case(Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(Pat.Var(Term.Name("v1")))), None, Term.Name("v1")))
-                        )})
-                      """
+                          Unmarshaller { implicit executionContext => part =>
+                            ${unmarshaller}
+                              .apply(part)
+                              .map(${Term.Select(partsTerm, containerName.toTerm)}.apply)
+                              .recoverWith({
+                                case ex =>
+                                  Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                              })
+                          }
+                        """,
+                        identity,
+                        (p"v1", q"v1")
                       )
                   }
 

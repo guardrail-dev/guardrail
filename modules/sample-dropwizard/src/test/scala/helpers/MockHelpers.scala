@@ -43,7 +43,6 @@ object MockHelpers extends Assertions with MockitoSugar with ArgumentMatchersSug
       case Some(body) =>
         val responseBytes = mapper.writeValueAsBytes(body)
         val responseStr = new String(responseBytes, StandardCharsets.UTF_8)
-        println(responseStr)
         when(response.hasResponseBody) thenReturn true
         when(response.getResponseBody(any)) thenReturn responseStr
         when(response.getResponseBody) thenReturn responseStr

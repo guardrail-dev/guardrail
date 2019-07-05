@@ -293,11 +293,11 @@ object ProtocolGenerator {
 
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Schema[_])(
       implicit
-      F: FrameworkTerms[L, F],
+      Fw: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
-    import F._
+    import Fw._
     val model = abstractModel match {
       case m: ObjectSchema => Some(m)
       case m: ComposedSchema =>
@@ -322,8 +322,8 @@ object ProtocolGenerator {
 
   def plainTypeAlias[L <: LA, F[_]](
       clsName: String
-  )(implicit F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
-    import F._
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, ProtocolElems[L]] = {
+    import Fw._
     for {
       tpe <- objectType(None)
       res <- typeAlias[L, F](clsName, tpe)
@@ -424,8 +424,7 @@ object ProtocolGenerator {
     val definitions = Option(swagger.getComponents()).toList.flatMap(x => Option(x.getSchemas)).flatMap(_.asScala.toList)
 
     for {
-      groupedHierarchies <- groupHierarchies(definitions)
-      (hierarchies, definitionsWithoutPoly) = groupedHierarchies
+      (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions)
       polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions))

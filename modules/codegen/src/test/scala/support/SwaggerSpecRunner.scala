@@ -22,11 +22,11 @@ trait SwaggerSpecRunner {
   }
 
   def runSwagger[L <: LA](swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
-      implicit F: FrameworkTerms[L, CodegenApplication[L, ?]],
+      implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
-    import F._
+    import Fw._
     import Sw._
 
     val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs)) = Target.unsafeExtract(

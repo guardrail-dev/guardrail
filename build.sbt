@@ -11,7 +11,7 @@ git.useGitDescribe := true
 crossScalaVersions in ThisBuild := Seq("2.12.8")
 
 val akkaVersion       = "10.0.14"
-val catsVersion       = "1.4.0"
+val catsVersion       = "1.6.0"
 val catsEffectVersion = "1.0.0"
 val circeVersion      = "0.10.1"
 val http4sVersion     = "0.20.0"
@@ -49,6 +49,7 @@ val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
   (sampleResource("issues/issue143.yaml"), "issues.issue143", false, List.empty),
   (sampleResource("issues/issue148.yaml"), "issues.issue148", false, List.empty),
   (sampleResource("issues/issue164.yaml"), "issues.issue164", false, List.empty),
+  (sampleResource("issues/issue184.yaml"), "issues.issue184", false, List.empty),
   (sampleResource("issues/issue215.yaml"), "issues.issue215", false, List.empty),
   (sampleResource("issues/issue218.yaml"), "issues.issue218", false, List.empty),
   (sampleResource("issues/issue222.yaml"), "issues.issue222", false, List.empty),
@@ -163,6 +164,7 @@ val testDependencies = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.0"),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.10"),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
@@ -207,7 +209,10 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.typelevel"               %% "cats-free"                    % catsVersion,
       "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.0",
     ),
-    scalacOptions += "-language:higherKinds",
+    scalacOptions ++= List(
+      "-language:higherKinds",
+      "-Ywarn-unused-import",
+    ),
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
       else "releases"

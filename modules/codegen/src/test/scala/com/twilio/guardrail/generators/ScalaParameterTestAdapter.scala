@@ -4,14 +4,17 @@ import com.twilio.guardrail.languages.ScalaLanguage
 
 package object generators {
   implicit class RichScalaParameter(value: ScalaParameter[ScalaLanguage]) {
-    def withRawName(rawParameterName: String): ScalaParameter[ScalaLanguage] =
-      new ScalaParameter[ScalaLanguage](value.in,
-                                        value.param,
-                                        value.paramName,
-                                        RawParameterName(rawParameterName),
-                                        value.argType,
-                                        value.required,
-                                        value.hashAlgorithm,
-                                        value.isFile)
+    def withRawName(rawParameterName: String, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): ScalaParameter[ScalaLanguage] =
+      new ScalaParameter[ScalaLanguage](
+        value.in,
+        value.param,
+        value.paramName,
+        RawParameterName(rawParameterName),
+        value.argType,
+        RawParameterType(rawType, rawFormat),
+        value.required,
+        value.hashAlgorithm,
+        value.isFile
+      )
   }
 }

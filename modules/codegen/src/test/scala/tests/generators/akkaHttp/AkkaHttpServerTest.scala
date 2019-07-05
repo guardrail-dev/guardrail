@@ -157,7 +157,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           } ~ {
             get(path("foo" / LongNumber)(bar => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)))))
           } ~ {
-            get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus])(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))))))
+            get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus])))(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
@@ -300,7 +300,7 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           } ~ {
             get(path("foo" / LongNumber)(bar => trace("completely-custom-label")(traceBuilder => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)(traceBuilder))))))
           } ~ {
-            get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus])(status => trace("store:getOrderById")(traceBuilder => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder)))))))
+            get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus])))(status => trace("store:getOrderById")(traceBuilder => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder)))))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)

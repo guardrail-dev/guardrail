@@ -13,6 +13,7 @@ import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 case class RawParameterName private[generators] (value: String)
+case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
   val filterParamBy     = ScalaParameter.filterParams(parameters)
   val headerParams      = filterParamBy("header")
@@ -27,6 +28,7 @@ class ScalaParameter[L <: LA] private[generators] (
     val paramName: L#TermName,
     val argName: RawParameterName,
     val argType: L#Type,
+    val rawType: RawParameterType,
     val required: Boolean,
     val hashAlgorithm: Option[String],
     val isFile: Boolean
@@ -34,8 +36,8 @@ class ScalaParameter[L <: LA] private[generators] (
   override def toString: String =
     s"ScalaParameter($in, $param, $paramName, $argName, $argType)"
 
-  def withType(newArgType: L#Type): ScalaParameter[L] =
-    new ScalaParameter[L](in, param, paramName, argName, newArgType, required, hashAlgorithm, isFile)
+  def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): ScalaParameter[L] =
+    new ScalaParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
@@ -49,33 +51,30 @@ object ScalaParameter {
     import Sw._
 
     def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
-      def getDefault[U <: Parameter: Default.GetDefault](p: U): Free[F, Option[L#Term]] =
-        Option(p.getSchema.getType)
-          .flatTraverse[Free[F, ?], L#Term]({ _type =>
-            val fmt = Option(p.getSchema.getFormat)
-            (_type, fmt) match {
-              case ("string", None) =>
-                Default(p).extract[String].traverse(litString(_))
-              case ("number", Some("float")) =>
-                Default(p).extract[Float].traverse(litFloat(_))
-              case ("number", Some("double")) =>
-                Default(p).extract[Double].traverse(litDouble(_))
-              case ("integer", Some("int32")) =>
-                Default(p).extract[Int].traverse(litInt(_))
-              case ("integer", Some("int64")) =>
-                Default(p).extract[Long].traverse(litLong(_))
-              case ("boolean", None) =>
-                Default(p).extract[Boolean].traverse(litBoolean(_))
-              case x => Free.pure(Option.empty[L#Term])
-            }
-          })
+      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Option[String], p: U): Free[F, Option[L#Term]] =
+        (_type, fmt) match {
+          case ("string", None) =>
+            Default(p).extract[String].traverse(litString(_))
+          case ("number", Some("float")) =>
+            Default(p).extract[Float].traverse(litFloat(_))
+          case ("number", Some("double")) =>
+            Default(p).extract[Double].traverse(litDouble(_))
+          case ("integer", Some("int32")) =>
+            Default(p).extract[Int].traverse(litInt(_))
+          case ("integer", Some("int64")) =>
+            Default(p).extract[Long].traverse(litLong(_))
+          case ("boolean", None) =>
+            Default(p).extract[Boolean].traverse(litBoolean(_))
+          case x => Free.pure(Option.empty[L#Term])
+        }
 
       def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
         for {
-          tpeName        <- typeFetcher(param)
+          tpeName <- typeFetcher(param)
+          fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
           customTypeName <- SwaggerUtil.customTypeName(param)
-          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _))
+          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
         } yield res
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
@@ -90,7 +89,8 @@ object ScalaParameter {
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
 
         case x: Parameter if x.isInBody =>
-          getBodyParameterSchema(x).flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+          getBodyParameterSchema(x)
+            .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
 
         case x: Parameter if x.isInHeader =>
           resolveParam(x, getHeaderParameterType)
@@ -112,10 +112,9 @@ object ScalaParameter {
       }
     }
 
-    log.function(s"fromParameter(${parameter})")(for {
-      meta     <- paramMeta(parameter)
-      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-      SwaggerUtil.Resolved(paramType, _, baseDefaultValue) = resolved
+    log.function(s"fromParameter")(for {
+      meta                                                                     <- paramMeta(parameter)
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.getRequired()).fold(false)(identity)
       declType <- if (!required) {
@@ -152,7 +151,17 @@ object ScalaParameter {
       ftpe       <- fileType(None)
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
-      new ScalaParameter[L](Option(parameter.getIn), param, paramName, RawParameterName(name), declType, required, FileHashAlgorithm(parameter), isFileType)
+      new ScalaParameter[L](
+        Option(parameter.getIn),
+        param,
+        paramName,
+        RawParameterName(name),
+        declType,
+        RawParameterType(rawType, rawFormat),
+        required,
+        FileHashAlgorithm(parameter),
+        isFileType
+      )
     })
   }
 
@@ -174,6 +183,7 @@ object ScalaParameter {
                   escapedName,
                   param.argName,
                   param.argType,
+                  param.rawType,
                   param.required,
                   param.hashAlgorithm,
                   param.isFile

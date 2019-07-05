@@ -45,7 +45,7 @@ object Responses {
                 for {
                   meta     <- SwaggerUtil.propMeta[L, F](prop)
                   resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue) = resolved
+                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
                 } yield (baseType, baseDefaultValue)
               }
             } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption)) // FIXME: headOption
