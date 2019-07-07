@@ -149,7 +149,7 @@ class Issue127 extends FunSuite with Matchers with SwaggerSpecRunner {
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[Tuple1[(File, Option[String], ContentType)]])(file => complete(handler.uploadFile(uploadFileResponse)(file)))))
+            }: Directive[Tuple1[(File, Option[String], ContentType)]]).apply(file => complete(handler.uploadFile(uploadFileResponse)(file)))))
           }
         }
         sealed abstract class uploadFileResponse(val statusCode: StatusCode)

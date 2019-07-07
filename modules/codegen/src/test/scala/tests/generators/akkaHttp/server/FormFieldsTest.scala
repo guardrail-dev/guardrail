@@ -182,7 +182,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[(String, Long, (File, Option[String], ContentType, String))])((foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz)))))
+            }: Directive[(String, Long, (File, Option[String], ContentType, String))]).apply((foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz)))))
           }
         }
         sealed abstract class putFooResponse(val statusCode: StatusCode)

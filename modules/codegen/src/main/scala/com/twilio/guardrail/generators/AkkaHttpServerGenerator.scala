@@ -316,7 +316,7 @@ object AkkaHttpServerGenerator {
       directivesFromParams(
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)})"),
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*)"),
-        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty)).apply"),
+        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty))"),
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.?)")
       ) _
     }
@@ -713,7 +713,9 @@ object AkkaHttpServerGenerator {
                         acc(Term.Apply(directive, List(next)))
                     case xs =>
                       next =>
-                        acc(Term.Apply(directive, List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next))))
+                        acc(
+                          Term.Apply(Term.Select(directive, Term.Name("apply")), List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
+                        )
                   }
               }))
           val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
