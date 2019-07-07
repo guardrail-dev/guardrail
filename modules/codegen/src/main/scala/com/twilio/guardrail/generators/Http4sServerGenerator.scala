@@ -25,8 +25,8 @@ object Http4sServerGenerator {
         Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
 
       case BuildTracingFields(operation, resourceName, tracing) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+        Target.log.function("buildTracingFields")(for {
+          _ <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
           res <- if (tracing) {
             for {
               operationId <- Target.fromOption(Option(operation.getOperationId())
@@ -41,7 +41,7 @@ object Http4sServerGenerator {
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
           } else Target.pure(None)
-        } yield res
+        } yield res)
 
       case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
         for {
@@ -65,31 +65,29 @@ object Http4sServerGenerator {
         }
 
       case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"renderHandler(${handlerName}, ${methodSigs}")
+        Target.log.function("renderHandler")(for {
+          _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
         } yield q"""
           trait ${Type.Name(handlerName)}[F[_]] {
             ..${methodSigs ++ handlerDefinitions}
           }
-        """
+        """)
 
       case GetExtraRouteParams(tracing) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
+        Target.log.function("getExtraRouteParams")(for {
+          _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
           mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
           tracing <- if (tracing) {
             Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
           } else Target.pure(Option.empty)
-        } yield {
-          tracing.toList ::: List(mapRoute)
-        }
+        } yield tracing.toList ::: List(mapRoute))
 
       case GenerateSupportDefinitions(tracing, securitySchemes) =>
         Target.pure(List.empty)
 
       case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
+        Target.log.function("renderClass")(for {
+          _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
           routesParams = List(param"handler: ${Type.Name(handlerName)}[F]")
         } yield q"""
           class ${Type.Name(resourceName)}[F[_]](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
@@ -99,16 +97,18 @@ object Http4sServerGenerator {
               ..${combinedRouteTerms}
             }
           }
-        """ +: responseDefinitions
+        """ +: responseDefinitions)
 
       case GetExtraImports(tracing) =>
-        for {
-          _ <- Target.log.debug("Http4sServerGenerator", "server")(s"getExtraImports(${tracing})")
-        } yield
-          List(
-            q"import org.http4s.dsl.Http4sDsl",
-            q"import fs2.text._"
-          )
+        Target.log.function("getExtraImports")(
+          for {
+            _ <- Target.log.debug(s"Args: ${tracing}")
+          } yield
+            List(
+              q"import org.http4s.dsl.Http4sDsl",
+              q"import fs2.text._"
+            )
+        )
     }
 
     def httpMethodToHttp4s(method: HttpMethod): Target[Term.Name] = method match {
@@ -416,8 +416,8 @@ object Http4sServerGenerator {
                       parameters: ScalaParameters[ScalaLanguage],
                       responses: Responses[ScalaLanguage]): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
-      for {
-        _ <- Target.log.debug("Http4sServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+      Target.log.function("generateRoute")(for {
+        _ <- Target.log.debug(s"Args: ${resourceName}, ${basePath}, ${route}, ${tracingFields}")
         RouteMeta(path, method, operation, securityRequirements) = route
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
@@ -550,14 +550,14 @@ object Http4sServerGenerator {
             List.empty //handlerDefinitions
           )
         )
-      }
+      })
 
     def combineRouteTerms(terms: List[Case]): Target[Term] =
-      for {
-        _      <- Target.log.debug("Http4sServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
+      Target.log.function("combineRouteTerms")(for {
+        _      <- Target.log.debug(s"Args: <${terms.length} routes>")
         routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
-        _      <- routes.traverse(route => Target.log.debug("Http4sServerGenerator", "server", "combineRouteTerms")(route.toString))
-      } yield scala.meta.Term.PartialFunction(routes.toList)
+        _      <- routes.traverse(route => Target.log.debug(route.toString))
+      } yield scala.meta.Term.PartialFunction(routes.toList))
 
     def generateSupportDefinitions(route: RouteMeta, parameters: ScalaParameters[ScalaLanguage]): Target[List[Defn]] =
       for {

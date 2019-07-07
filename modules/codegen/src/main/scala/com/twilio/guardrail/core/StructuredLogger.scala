@@ -35,10 +35,10 @@ object LogLevels {
 }
 
 sealed trait StructuredLogEntry
-sealed case class StructuredLogBlock(history: List[String], lines: NonEmptyList[(LogLevel, String)]) extends StructuredLogEntry
-sealed case class StructuredLoggerPush(next: String)                                                 extends StructuredLogEntry
-case object StructuredLoggerPop                                                                      extends StructuredLogEntry
-case object StructuredLoggerReset                                                                    extends StructuredLogEntry
+sealed case class StructuredLogBlock(lines: NonEmptyList[(LogLevel, String)]) extends StructuredLogEntry
+sealed case class StructuredLoggerPush(next: String)                          extends StructuredLogEntry
+case object StructuredLoggerPop                                               extends StructuredLogEntry
+case object StructuredLoggerReset                                             extends StructuredLogEntry
 
 case class StructuredLogger(entries: List[StructuredLogEntry])
 
@@ -62,12 +62,12 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
             (acc, newHistory :+ name)
           case ((acc, newHistory), StructuredLoggerReset) =>
             (acc, Nil)
-          case ((acc, newHistory), StructuredLogBlock(name, lines)) =>
+          case ((acc, newHistory), StructuredLogBlock(lines)) =>
             val newAcc = acc ++ lines
               .filter(_._1 >= desiredLevel)
               .map({
                 case (level, message) =>
-                  (level, NonEmptyList.fromList((name.reverse ++ newHistory.reverse).reverse).getOrElse(NonEmptyList("<root>", Nil)), message)
+                  (level, NonEmptyList.fromList(newHistory).getOrElse(NonEmptyList("<root>", Nil)), message)
               })
             (newAcc, newHistory)
         })
@@ -93,14 +93,14 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
         .mkString("\n")
   }
 
-  def debug(name: List[String], message: String): StructuredLogger =
-    StructuredLogger(StructuredLogBlock(name, (LogLevels.Debug, message).pure[NonEmptyList]).pure[List])
-  def info(name: List[String], message: String): StructuredLogger =
-    StructuredLogger(StructuredLogBlock(name, (LogLevels.Info, message).pure[NonEmptyList]).pure[List])
-  def warning(name: List[String], message: String): StructuredLogger =
-    StructuredLogger(StructuredLogBlock(name, (LogLevels.Warning, message).pure[NonEmptyList]).pure[List])
-  def error(name: List[String], message: String): StructuredLogger =
-    StructuredLogger(StructuredLogBlock(name, (LogLevels.Error, message).pure[NonEmptyList]).pure[List])
+  def debug(message: String): StructuredLogger =
+    StructuredLogger(List(StructuredLogBlock(NonEmptyList.one((LogLevels.Debug, message)))))
+  def info(message: String): StructuredLogger =
+    StructuredLogger(List(StructuredLogBlock(NonEmptyList.one((LogLevels.Info, message)))))
+  def warning(message: String): StructuredLogger =
+    StructuredLogger(List(StructuredLogBlock(NonEmptyList.one((LogLevels.Warning, message)))))
+  def error(message: String): StructuredLogger =
+    StructuredLogger(List(StructuredLogBlock(NonEmptyList.one((LogLevels.Error, message)))))
 }
 
 trait StructuredLoggerLowPriority { self: StructuredLoggerInstances =>

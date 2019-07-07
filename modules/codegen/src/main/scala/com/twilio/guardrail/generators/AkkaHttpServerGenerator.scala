@@ -97,7 +97,7 @@ object AkkaHttpServerGenerator {
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          _ <- Target.log.debug(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
           res <- if (tracing) {
             for {
               operationId <- Target.fromOption(Option(operation.getOperationId())
@@ -137,7 +137,7 @@ object AkkaHttpServerGenerator {
 
       case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"renderHandler(${handlerName}, ${methodSigs}")
+          _ <- Target.log.debug(s"renderHandler(${handlerName}, ${methodSigs}")
         } yield q"""
           trait ${Type.Name(handlerName)} {
             ..${methodSigs ++ handlerDefinitions}
@@ -146,7 +146,7 @@ object AkkaHttpServerGenerator {
 
       case GetExtraRouteParams(tracing) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraRouteParams(${tracing})")
+          _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
           res <- if (tracing) {
             Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
           } else Target.pure(List.empty)
@@ -154,7 +154,7 @@ object AkkaHttpServerGenerator {
 
       case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
+          _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
           routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
         } yield List(q"""
           object ${Term.Name(resourceName)} {
@@ -176,7 +176,7 @@ object AkkaHttpServerGenerator {
 
       case GetExtraImports(tracing) =>
         for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"getExtraImports(${tracing})")
+          _ <- Target.log.debug(s"getExtraImports(${tracing})")
         } yield {
           List(
             if (tracing) Option(q"import akka.http.scaladsl.server.Directive1") else None,
@@ -325,7 +325,7 @@ object AkkaHttpServerGenerator {
                    operationId: String)(params: List[ScalaParameter[ScalaLanguage]]): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
         _ <- if (params.exists(_.isFile) && !consumes.contains(RouteMeta.MultipartFormData)) {
-          Target.log.warning("type: file detected, automatically enabling multipart/form-data handling").apply
+          Target.log.warning("type: file detected, automatically enabling multipart/form-data handling")
         } else { Target.pure(()) }
         result <- {
 
@@ -653,7 +653,7 @@ object AkkaHttpServerGenerator {
                       responses: Responses[ScalaLanguage]): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
-        _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
         consumes                                                 = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
         operationId <- Target.fromOption(Option(operation.getOperationId())
@@ -765,11 +765,10 @@ object AkkaHttpServerGenerator {
       }
 
     def combineRouteTerms(terms: List[Term]): Target[Term] =
-      for {
-        _      <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"combineRouteTerms(<${terms.length} routes>)")
+      Target.log.function(s"combineRouteTerms(<${terms.length} routes>)")(for {
         routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
-        _      <- routes.traverse(route => Target.log.debug("AkkaHttpServerGenerator", "server", "combineRouteTerms")(route.toString))
-      } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" }
+        _      <- routes.traverse(route => Target.log.debug(route.toString))
+      } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" })
 
     def generateCodecs(operationId: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],

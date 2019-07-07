@@ -167,7 +167,7 @@ trait CLICommon {
               .leftFlatMap(
                 value =>
                   Target
-                    .pushLogger(StructuredLogger.error(Nil, s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
                     .subflatMap(_ => Either.left[Error, List[Path]](value))
               )
               <* Target.pushLogger(StructuredLogger.reset)
