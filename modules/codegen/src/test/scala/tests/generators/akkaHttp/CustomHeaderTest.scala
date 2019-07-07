@@ -60,7 +60,7 @@ class CustomHeaderTest extends FunSuite with Matchers with SwaggerSpecRunner {
                 reject(MalformedHeaderRejection("CustomHeader", e.getMessage, Some(e)))
               case Success(x) =>
                 provide(x)
-            }))(customHeader => discardEntity(complete(handler.getFoo(getFooResponse)(customHeader))))))
+            })).apply(customHeader => discardEntity(complete(handler.getFoo(getFooResponse)(customHeader))))))
           }
         }
         sealed abstract class getFooResponse(val statusCode: StatusCode)
