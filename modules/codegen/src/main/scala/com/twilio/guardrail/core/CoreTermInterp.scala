@@ -71,6 +71,8 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
                 Continue((empty :: sofar :: already, xs))
               case (sofar :: already, "--server" :: xs) =>
                 Continue((empty.copy(kind = CodegenTarget.Server) :: sofar :: already, xs))
+              case (sofar :: already, "--models" :: xs) =>
+                Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
               case (sofar :: already, "--framework" :: value :: xs) =>
                 Continue((sofar.copy(context = sofar.context.copy(framework = Some(value))) :: already, xs))
               case (sofar :: already, "--help" :: xs) =>
