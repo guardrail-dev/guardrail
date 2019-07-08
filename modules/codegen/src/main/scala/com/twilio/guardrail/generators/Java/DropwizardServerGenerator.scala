@@ -256,6 +256,7 @@ object DropwizardServerGenerator {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
         List(
+          "javax.inject.Inject",
           "javax.ws.rs.Consumes",
           "javax.ws.rs.DELETE",
           "javax.ws.rs.FormParam",
@@ -505,6 +506,7 @@ object DropwizardServerGenerator {
             .unzip
 
           val resourceConstructor = new ConstructorDeclaration(util.EnumSet.of(PUBLIC), resourceName)
+          resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
           resourceConstructor.addParameter(new Parameter(util.EnumSet.of(FINAL), handlerType, new SimpleName("handler")))
           resourceConstructor.setBody(
             new BlockStmt(
