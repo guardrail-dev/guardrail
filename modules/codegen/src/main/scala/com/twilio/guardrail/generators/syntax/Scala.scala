@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.syntax
 
 import cats.data.NonEmptyList
 import com.twilio.guardrail.{ StaticDefns, SwaggerUtil, Target }
-import com.twilio.guardrail.generators.{ RawParameterName, ScalaParameter }
+import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaParameter }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 
@@ -15,7 +15,7 @@ object Scala {
   implicit class RichScalaParameter(value: ScalaParameter.type) {
     import _root_.scala.meta._
     import com.twilio.guardrail.languages.ScalaLanguage
-    def fromParam(param: Term.Param): ScalaParameter[ScalaLanguage] = param match {
+    def fromParam(param: Term.Param, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): ScalaParameter[ScalaLanguage] = param match {
       case param @ Term.Param(_, name, decltype, _) =>
         val tpe: Type = decltype
           .flatMap({
@@ -25,7 +25,15 @@ object Scala {
             case _                   => None
           })
           .getOrElse(t"Nothing")
-        new ScalaParameter[ScalaLanguage](None, param, Term.Name(name.value), RawParameterName(name.value), tpe, true, None, false)
+        new ScalaParameter[ScalaLanguage](None,
+                                          param,
+                                          Term.Name(name.value),
+                                          RawParameterName(name.value),
+                                          tpe,
+                                          RawParameterType(rawType, rawFormat),
+                                          true,
+                                          None,
+                                          false)
     }
   }
 

@@ -96,24 +96,16 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                 case class baz(value: (File, Option[String], ContentType, String)) extends Part
               }
               val UnmarshalfooPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.foo] = Unmarshaller { implicit executionContext =>
-                part => {
-                  val json: Unmarshaller[Multipart.FormData.BodyPart, String] = MFDBPviaFSU(jsonEntityUnmarshaller[String])
-                  val string: Unmarshaller[Multipart.FormData.BodyPart, String] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                  Unmarshaller.firstOf(json, string).apply(part).map(putFooParts.foo.apply).recoverWith({
-                    case ex =>
-                      Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
-                  })
-                }
+                part => Unmarshaller.firstOf(MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[String])), MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[String]))).apply(part).map(putFooParts.foo.apply).recoverWith({
+                  case ex =>
+                    Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                })
               }
               val UnmarshalbarPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.bar] = Unmarshaller { implicit executionContext =>
-                part => {
-                  val json: Unmarshaller[Multipart.FormData.BodyPart, Long] = MFDBPviaFSU(jsonEntityUnmarshaller[Long])
-                  val string: Unmarshaller[Multipart.FormData.BodyPart, Long] = MFDBPviaFSU(BPEviaFSU(jsonDecoderUnmarshaller))
-                  Unmarshaller.firstOf(json, string).apply(part).map(putFooParts.bar.apply).recoverWith({
-                    case ex =>
-                      Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
-                  })
-                }
+                part => Unmarshaller.firstOf(MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[Long])), MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[Long]))).apply(part).map(putFooParts.bar.apply).recoverWith({
+                  case ex =>
+                    Future.failed(RejectionError(MalformedFormFieldRejection(part.name, ex.getMessage, Some(ex))))
+                })
               }
               val UnmarshalbazPart: Unmarshaller[Multipart.FormData.BodyPart, putFooParts.baz] = handler.putFooUnmarshalToFile[Id]("SHA-512", handler.putFooMapFileField(_, _, _)).map({
                 case (v1, v2, v3, v4) =>
@@ -190,7 +182,7 @@ class FormFieldsServerTest extends FunSuite with Matchers with SwaggerSpecRunner
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[(String, Long, (File, Option[String], ContentType, String))])((foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz)))))
+            }: Directive[(String, Long, (File, Option[String], ContentType, String))]).apply((foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz)))))
           }
         }
         sealed abstract class putFooResponse(val statusCode: StatusCode)

@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators
 
 import cats.data.NonEmptyList
 import java.util.Locale
+import io.swagger.v3.oas.models.media.Schema
 
 package object syntax {
   val GENERATED_CODE_COMMENT_LINES: List[String] = List(
@@ -55,5 +56,10 @@ package object syntax {
     def toSnakeCase: String = splitParts(s).mkString("_")
 
     def toDashedCase: String = splitParts(s).mkString("-")
+  }
+
+  implicit class RichSchema(value: Schema[_]) {
+    def showNotNull: String                      = showNotNullIndented(0)
+    def showNotNullIndented(indent: Int): String = ("  " * indent) + value.toString().lines.filterNot(_.contains(": null")).mkString("\n" + ("  " * indent))
   }
 }

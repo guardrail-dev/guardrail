@@ -18,6 +18,9 @@ import cats.data.OptionT
 class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
+  def multipartChunk(key: String, value: String, contentType: ContentType): Multipart.FormData.BodyPart.Strict =
+    Multipart.FormData.BodyPart.Strict(key, HttpEntity.Strict(contentType, ByteString.fromArray(value.getBytes)))
+
   test("Ensure that servers can be constructed") {
     import issues.issue325.server.akkaHttp.{ Handler, Resource }
     import issues.issue325.server.akkaHttp.definitions._
@@ -58,15 +61,39 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
       status should equal(StatusCodes.OK)
     }
 
+    // Test that text/plain can be handled
     Post("/test")
       .withEntity(
         Multipart
           .FormData(
-            Multipart.FormData.BodyPart.Strict("foo",
-                                               HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`),
-                                                                 ByteString.fromArray("foo".getBytes))),
-            Multipart.FormData.BodyPart
-              .Strict("bar", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("5".getBytes)))
+            multipartChunk("foo", "foo", ContentTypes.`text/plain(UTF-8)`),
+            multipartChunk("bar", "5", ContentTypes.`text/plain(UTF-8)`)
+          )
+          .toEntity
+      ) ~> route ~> check {
+      status should equal(StatusCodes.OK)
+    }
+
+    // Test that mixed text/plain and application/json can be handled
+    Post("/test")
+      .withEntity(
+        Multipart
+          .FormData(
+            multipartChunk("foo", "\"foo\"", ContentTypes.`application/json`),
+            multipartChunk("bar", "5", ContentTypes.`text/plain(UTF-8)`)
+          )
+          .toEntity
+      ) ~> route ~> check {
+      status should equal(StatusCodes.OK)
+    }
+
+    // Test that application/json can be handled
+    Post("/test")
+      .withEntity(
+        Multipart
+          .FormData(
+            multipartChunk("foo", "\"foo\"", ContentTypes.`application/json`),
+            multipartChunk("bar", "5", ContentTypes.`application/json`)
           )
           .toEntity
       ) ~> route ~> check {
@@ -86,8 +113,7 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
       .withEntity(
         Multipart
           .FormData(
-            Multipart.FormData.BodyPart
-              .Strict("foo", HttpEntity.Strict(ContentType(MediaTypes.`multipart/form-data`, () => HttpCharsets.`UTF-8`), ByteString.fromArray("foo".getBytes)))
+            multipartChunk("foo", "foo", ContentTypes.`text/plain(UTF-8)`)
           )
           .toEntity
       ) ~> route ~> check {

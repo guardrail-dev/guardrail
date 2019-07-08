@@ -109,8 +109,8 @@ object CirceProtocolGenerator {
         }).map(_.map(_.asScala.toList).toList.flatten)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
-        for {
-          _ <- Target.log.debug("definitions", "circe", "modelProtocolTerm")(s"Generated ProtocolParameter(${term}, ${name}, ...)")
+        Target.log.function(s"transformProperty")(for {
+          _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
           argName = if (needCamelSnakeConversion) name.toCamelCase else name
 
@@ -145,7 +145,7 @@ object CirceProtocolGenerator {
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _) =>
+            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
               (declType, classDep)
             case SwaggerUtil.Deferred(tpeName) =>
               val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -170,7 +170,7 @@ object CirceProtocolGenerator {
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue))
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators     = parents.flatMap(_.discriminators)
@@ -336,7 +336,7 @@ object CirceProtocolGenerator {
       case ExtractArrayType(arr, concreteTypes) =>
         for {
           result <- arr match {
-            case SwaggerUtil.Resolved(tpe, dep, default) => Target.pure(tpe)
+            case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
             case SwaggerUtil.DeferredArray(tpeName) =>

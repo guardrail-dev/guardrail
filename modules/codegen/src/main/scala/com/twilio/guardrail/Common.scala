@@ -12,7 +12,7 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SecurityRequirements, SecurityScheme, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
 import scala.collection.JavaConverters._
 import java.net.URI
@@ -27,7 +27,7 @@ object Common {
       C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
       E: EnumProtocolTerms[L, F],
-      F: FrameworkTerms[L, F],
+      Fw: FrameworkTerms[L, F],
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
@@ -35,7 +35,7 @@ object Common {
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
-    import F._
+    import Fw._
     import Sc._
     import Sw._
 
@@ -97,8 +97,8 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
-    import F._
+  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+    import Fw._
     import Sc._
 
     val pkgPath        = resolveFile(outputPath)(pkgName)

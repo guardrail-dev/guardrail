@@ -4,6 +4,7 @@ package generators
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
+import com.twilio.guardrail.generators.syntax.RichSchema
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
@@ -30,8 +31,8 @@ object SwaggerGenerator {
         Target.pure(components.flatMap(c => Option(c.getRequestBodies)).fold(Map.empty[String, RequestBody])(_.asScala.toMap))
 
       case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
-        for {
-          _ <- Target.log.debug("AkkaHttpServerGenerator", "server")(s"extractOperations(${paths})")
+        Target.log.function("extractOperations")(for {
+          _ <- Target.log.debug(s"Args: ${paths}")
           routes <- paths.traverse({
             case (pathStr, path) =>
               for {
@@ -68,7 +69,7 @@ object SwaggerGenerator {
                 })
               } yield operationRoutes
           })
-        } yield routes.flatten
+        } yield routes.flatten)
 
       case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
         for {
@@ -95,8 +96,8 @@ object SwaggerGenerator {
         } yield OAuth2SecurityScheme[L](flows, tpe)
 
       case GetClassName(operation, vendorPrefixes) =>
-        for {
-          _ <- Target.log.debug("SwaggerGenerator", "swagger")(s"getClassName(${operation})")
+        Target.log.function("getClassName")(for {
+          _ <- Target.log.debug(s"Args: ${operation}")
 
           pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
@@ -111,7 +112,7 @@ object SwaggerGenerator {
             .map(splitOperationParts)
             .fold(List.empty[String])(_._1)
           className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
-        } yield className
+        } yield className)
 
       case GetParameterName(parameter) =>
         Target.fromOption(Option(parameter.getName()), s"Parameter missing 'name': ${parameter}")
@@ -164,7 +165,7 @@ object SwaggerGenerator {
         Target.fromOption(
           Option(model.getType()),
           s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
-              |  ${model.toString().lines.filterNot(_.contains(": null")).mkString("\n  ")}
+              |  ${model.showNotNullIndented(1)}
               |""".stripMargin
         )
 
@@ -190,16 +191,16 @@ object SwaggerGenerator {
         Target.log.pop
 
       case LogDebug(message) =>
-        Target.log.debug(message).apply
+        Target.log.debug(message)
 
       case LogInfo(message) =>
-        Target.log.info(message).apply
+        Target.log.info(message)
 
       case LogWarning(message) =>
-        Target.log.warning(message).apply
+        Target.log.warning(message)
 
       case LogError(message) =>
-        Target.log.error(message).apply
+        Target.log.error(message)
     }
   }
 }

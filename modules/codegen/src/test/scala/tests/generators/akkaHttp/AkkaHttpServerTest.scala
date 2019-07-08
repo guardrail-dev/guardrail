@@ -151,13 +151,13 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
           {
             get(pathEndOrSingleSlash(discardEntity(complete(handler.getRoot(getRootResponse)()))))
           } ~ {
-            put(path("bar")(parameter(Symbol("bar").as[Long])(bar => discardEntity(complete(handler.putBar(putBarResponse)(bar))))))
+            put(path("bar")(parameter(Symbol("bar").as[Long]).apply(bar => discardEntity(complete(handler.putBar(putBarResponse)(bar))))))
           } ~ {
             get((pathPrefix("foo") & pathEndOrSingleSlash)(discardEntity(complete(handler.getFoo(getFooResponse)()))))
           } ~ {
-            get(path("foo" / LongNumber)(bar => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)))))
+            get(path("foo" / LongNumber).apply(bar => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)))))
           } ~ {
-            get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus])(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))))))
+            get(path("store" / "order" / LongNumber).apply(orderId => parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus]))).apply(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status))))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
@@ -292,15 +292,15 @@ class AkkaHttpServerTest extends FunSuite with Matchers with SwaggerSpecRunner {
         }
         def routes(handler: StoreHandler, trace: String => Directive1[TraceBuilder])(implicit mat: akka.stream.Materializer): Route = {
           {
-            get(pathEndOrSingleSlash(trace("store:getRoot")(traceBuilder => discardEntity(complete(handler.getRoot(getRootResponse)()(traceBuilder))))))
+            get(pathEndOrSingleSlash(trace("store:getRoot").apply(traceBuilder => discardEntity(complete(handler.getRoot(getRootResponse)()(traceBuilder))))))
           } ~ {
-            put(path("bar")(parameter(Symbol("bar").as[Long])(bar => trace("store:putBar")(traceBuilder => discardEntity(complete(handler.putBar(putBarResponse)(bar)(traceBuilder)))))))
+            put(path("bar")(parameter(Symbol("bar").as[Long]).apply(bar => trace("store:putBar").apply(traceBuilder => discardEntity(complete(handler.putBar(putBarResponse)(bar)(traceBuilder)))))))
           } ~ {
-            get((pathPrefix("foo") & pathEndOrSingleSlash)(trace("store:getFoo")(traceBuilder => discardEntity(complete(handler.getFoo(getFooResponse)()(traceBuilder))))))
+            get((pathPrefix("foo") & pathEndOrSingleSlash)(trace("store:getFoo").apply(traceBuilder => discardEntity(complete(handler.getFoo(getFooResponse)()(traceBuilder))))))
           } ~ {
-            get(path("foo" / LongNumber)(bar => trace("completely-custom-label")(traceBuilder => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)(traceBuilder))))))
+            get(path("foo" / LongNumber).apply(bar => trace("completely-custom-label").apply(traceBuilder => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)(traceBuilder))))))
           } ~ {
-            get(path("store" / "order" / LongNumber)(orderId => parameter(Symbol("status").as[OrderStatus])(status => trace("store:getOrderById")(traceBuilder => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder)))))))
+            get(path("store" / "order" / LongNumber).apply(orderId => parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus]))).apply(status => trace("store:getOrderById").apply(traceBuilder => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder)))))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
