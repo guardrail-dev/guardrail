@@ -76,16 +76,18 @@ object Common {
             clientMeta <- ClientGenerator
               .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
             Clients(clients, supportDefinitions) = clientMeta
-          } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions)
+            frameworkImplicits <- getFrameworkImplicits()
+          } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)
 
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
               .fromSwagger[L, F](context, swagger, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
-          } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions)
+            frameworkImplicits <- getFrameworkImplicits()
+          } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)
         case CodegenTarget.Models =>
-          Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty, List.empty))
+          Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty, List.empty, Option.empty))
       }
     } yield (proto, codegen)
   }
@@ -106,7 +108,8 @@ object Common {
     val dtoComponents: List[String] = definitions ++ dtoPackage
 
     val ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-    val CodegenDefinitions(clients, servers, supportDefinitions)                                         = codegen
+    val CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                     = codegen
+    val frameworkImplicitName                                                                            = frameworkImplicits.map(_._1)
 
     for {
       protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
@@ -121,9 +124,7 @@ object Common {
         extraTypes
       )
 
-      frameworkImports   <- getFrameworkImports(context.tracing)
-      frameworkImplicits <- getFrameworkImplicits()
-      frameworkImplicitName = frameworkImplicits.map(_._1)
+      frameworkImports     <- getFrameworkImports(context.tracing)
       frameworkDefinitions <- getFrameworkDefinitions(context.tracing)
 
       files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),

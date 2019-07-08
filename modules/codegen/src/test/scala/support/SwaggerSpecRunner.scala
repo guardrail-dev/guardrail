@@ -29,7 +29,7 @@ trait SwaggerSpecRunner {
     import F._
     import Sw._
 
-    val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs)) = Target.unsafeExtract(
+    val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) = Target.unsafeExtract(
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Client,
@@ -39,7 +39,7 @@ trait SwaggerSpecRunner {
         .foldMap(framework)
     )
 
-    val (_, CodegenDefinitions(Nil, servers, serverSupportDefs)) = Target.unsafeExtract(
+    val (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) = Target.unsafeExtract(
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Server,
