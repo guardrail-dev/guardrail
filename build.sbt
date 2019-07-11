@@ -328,6 +328,8 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     scalafmtOnCompile := false
   )
 
+lazy val microsite = (project in file("modules/microsite"))
+
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
 

@@ -11,13 +11,13 @@ micrositeGithubOwner := "twilio"
 micrositeGithubRepo := "guardrail"
 micrositeHighlightLanguages ++= Seq("yaml", "swagger")
 micrositeCompilingDocsTool := WithMdoc
-micrositeDataDirectory := (baseDirectory in Compile).value / "docs" / "data"
+mdocIn := baseDirectory.value / "docs"
+//micrositeDataDirectory := baseDirectory.value / "docs" / "data"
+//micrositeImgDirectory := baseDirectory.value / "docs" / "images"
 
 // micrositeCssDirectory
-// micrositeDataDirectory
 // micrositeExternalIncludesDirectory
 // micrositeExternalLayoutsDirectory
-// micrositeImgDirectory
 // micrositeJsDirectory
 // micrositePluginsDirectory
 // micrositeStaticDirectory
