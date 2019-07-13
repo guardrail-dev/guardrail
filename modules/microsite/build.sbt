@@ -1,5 +1,6 @@
 enablePlugins(MicrositesPlugin)
 micrositePushSiteWith := GitHub4s
+micrositeGithubToken := Option(System.getenv("GITHUB_TOKEN"))
 
 micrositeName := "guardrail"
 micrositeDescription := "Principled code generation from OpenAPI specifications"
