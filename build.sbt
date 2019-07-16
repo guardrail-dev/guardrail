@@ -329,6 +329,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
   )
 
 lazy val microsite = (project in file("modules/microsite"))
+  .dependsOn(codegen)
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
