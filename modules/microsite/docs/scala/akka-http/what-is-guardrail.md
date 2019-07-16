@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail: Java: What is guardrail?"
+title: "What is guardrail? - akka-http - scala - guardrail"
 ---
 
 What is guardrail?

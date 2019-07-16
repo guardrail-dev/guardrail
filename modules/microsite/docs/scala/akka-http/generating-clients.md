@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail: Java: Generating Clients"
+title: "Generating Clients - akka-http - scala - guardrail"
 ---
 
 Generating clients

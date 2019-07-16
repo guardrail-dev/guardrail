@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail: Java: Generating a Server"
+title: "Generating a Server - akka-http - scala - guardrail"
 ---
 
 Generating a Server

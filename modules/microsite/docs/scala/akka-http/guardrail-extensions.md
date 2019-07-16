@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail: Java: guardrail extensions"
+title: "guardrail extensions - akka-http - scala - guardrail"
 ---
 
 guardrail Extensions

@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail[akka-http <- scala]"
+title: "akka-http - scala - guardrail"
 ---
 
 Table of Contents

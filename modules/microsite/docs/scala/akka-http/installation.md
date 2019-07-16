@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail: Java: Installation"
+title: "Installation - akka-http - scala - guardrail"
 ---
 
 Installation
