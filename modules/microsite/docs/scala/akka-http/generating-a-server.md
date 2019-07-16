@@ -10,43 +10,17 @@ guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The
 
 The following is an example from the [akka-http](https://github.com/akka/akka-http) server generator:
 
-```scala
-// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
-// structural alterations (`F[_]` instead of `Future[_]` as the return type) the same handlers can be used with
-// different `Resource` implementations from different framework generators. This permits greater compatibility between
-// different frameworks without changing your business logic.
-trait UserHandler {
-  def createUser(respond: UserResource.createUserResponse.type)(body: User): scala.concurrent.Future[UserResource.createUserResponse]
-  def createUsersWithArrayInput(respond: UserResource.createUsersWithArrayInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithArrayInputResponse]
-  def createUsersWithListInput(respond: UserResource.createUsersWithListInputResponse.type)(body: IndexedSeq[User]): scala.concurrent.Future[UserResource.createUsersWithListInputResponse]
-  def loginUser(respond: UserResource.loginUserResponse.type)(username: String, password: String): scala.concurrent.Future[UserResource.loginUserResponse]
-  def logoutUser(respond: UserResource.logoutUserResponse.type)(): scala.concurrent.Future[UserResource.logoutUserResponse]
-  def getUserByName(respond: UserResource.getUserByNameResponse.type)(username: String): scala.concurrent.Future[UserResource.getUserByNameResponse]
-  def updateUser(respond: UserResource.updateUserResponse.type)(username: String, body: User): scala.concurrent.Future[UserResource.updateUserResponse]
-  def deleteUser(respond: UserResource.deleteUserResponse.type)(username: String): scala.concurrent.Future[UserResource.deleteUserResponse]
-}
-object UserResource {
-  def routes(handler: UserHandler)(implicit mat: akka.stream.Materializer): Route = {
-    (post & path("v2" / "user") & entity(as[User])) {
-      body => complete(handler.createUser(createUserResponse)(body))
-    } ~ (post & path("v2" / "user" / "createWithArray") & entity(as[IndexedSeq[User]])) {
-      body => complete(handler.createUsersWithArrayInput(createUsersWithArrayInputResponse)(body))
-    } ~ (post & path("v2" / "user" / "createWithList") & entity(as[IndexedSeq[User]])) {
-      body => complete(handler.createUsersWithListInput(createUsersWithListInputResponse)(body))
-    } ~ (get & path("v2" / "user" / "login") & (parameter(Symbol("username").as[String]) & parameter(Symbol("password").as[String])) & discardEntity) {
-      (username, password) => complete(handler.loginUser(loginUserResponse)(username, password))
-    } ~ (get & path("v2" / "user" / "logout") & discardEntity) {
-      complete(handler.logoutUser(logoutUserResponse)())
-    } ~ (get & path("v2" / "user" / Segment) & discardEntity) {
-      username => complete(handler.getUserByName(getUserByNameResponse)(username))
-    } ~ (put & path("v2" / "user" / Segment) & entity(as[User])) {
-      (username, body) => complete(handler.updateUser(updateUserResponse)(username, body))
-    } ~ (delete & path("v2" / "user" / Segment) & discardEntity) {
-      username => complete(handler.deleteUser(deleteUserResponse)(username))
-    }
-  }
-  ...
-}
+```scala mdoc:passthrough
+import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.docs._
+DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingAServer)("""
+    |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
+    |// structural alterations (`F[_]` instead of `Future[_]` as the return type) the same handlers can be used with
+    |// different `Resource` implementations from different framework generators. This permits greater compatibility between
+    |// different frameworks without changing your business logic.
+  """.stripMargin,
+  ""
+)
 ```
 
 As all parameters are provided as arguments to the function stubs in the trait, there's no concern of forgetting to extract a query string parameter, introducing a typo in a form parameter name, or forgetting to close the bytestream for the streaming HTTP Request.
