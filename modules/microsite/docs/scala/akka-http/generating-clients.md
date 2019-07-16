@@ -69,3 +69,6 @@ val retryingMetricsClient1: HttpRequest => Future[HttpResponse] = retryingHttpCl
 // Only track metrics for requests we didn't have to retry
 val retryingMetricsClient2: HttpRequest => Future[HttpResponse] = metricsHttpClient(retryingHttpClient(singleRequestHttpClient))
 ```
+
+<span style="float: left">[Prev: Generating a Server](generating-a-server)</span>
+<span style="float: right">[Next: guardrail Extensions](guardrail-extensions)</span>

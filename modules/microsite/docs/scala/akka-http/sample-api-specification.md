@@ -126,3 +126,6 @@ definitions:                                # All non-primitive structures are d
       line3:
         type: string
 ```
+
+<span style="float: left">[Prev: Installation](installation)</span>
+<span style="float: right">[Next: Generating a Server](generating-a-server)</span>

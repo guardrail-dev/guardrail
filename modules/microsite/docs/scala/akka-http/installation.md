@@ -19,3 +19,6 @@ If compiling with Scala < 2.12.x, you'll additionally need the `-Xexperimental` 
 ```scala
 scalacOptions += "-Xexperimental"
 ```
+
+<span style="float: left">[Prev: What is guardrail?](what-is-guardrail)</span>
+<span style="float: right">[Next: Sample API specification](sample-api-specification)</span>

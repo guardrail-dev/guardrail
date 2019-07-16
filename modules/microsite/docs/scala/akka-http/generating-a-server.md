@@ -128,3 +128,5 @@ val user: User = getUserResponse.map(_.fold(user => user)).value.futureValue.rig
 
 `futureValue` will raise the `TestFailedException` with the relevant stack trace.
 
+<span style="float: left">[Prev: Sample API specification](sample-api-specification)</span>
+<span style="float: right">[Next: Generating clients](generating-clients)</span>
