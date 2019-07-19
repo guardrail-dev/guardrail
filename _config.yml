@@ -1,0 +1,11 @@
+name: guardrail
+baseurl: ''
+description: Principled code generation from OpenAPI specifications
+highlighter: rouge
+docs: true
+collections:
+  tut:
+    output: true
+version: 0.51.0-55-gcaa0b1e
+org: com.twilio
+markdown: kramdown
