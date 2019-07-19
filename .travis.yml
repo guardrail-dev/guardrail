@@ -27,13 +27,22 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.sbt
 
-# Releasing configs taken from https://github.com/scalacenter/sbt-release-early/wiki/How-to-release-in-Travis-(CI)
+install:
+  # Jekyll configs taken from https://47deg.github.io/sbt-microsites/docs/
+  - rvm use 2.3.0 --install --fuzzy
+  - gem update --system
+  - gem install sass
+  - gem install jekyll -v 3.2.1
+
 before_install:
+  # Jekyll configs taken from https://47deg.github.io/sbt-microsites/docs/
+- export PATH=${PATH}:./vendor/bundle
+  # Releasing configs taken from https://github.com/scalacenter/sbt-release-early/wiki/How-to-release-in-Travis-(CI)
 - if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
     openssl aes-256-cbc -K $encrypted_9eb262af688a_key -iv $encrypted_9eb262af688a_iv -in travis/secrets.tar.enc -out travis/local.secrets.tar -d;
     tar xv -C travis -f travis/local.secrets.tar;
   fi
 after_success:
 - if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
-    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease;
+    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease publishMicrosite;
   fi

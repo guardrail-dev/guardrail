@@ -43,12 +43,6 @@ class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner
 
     val resource = q"""
       object Resource {
-        def discardEntity: Directive0 = extractMaterializer.flatMap { implicit mat =>
-          extractRequest.flatMap { req =>
-            req.discardEntityBytes().future
-            Directive.Empty
-          }
-        }
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
           {
             get((pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2"))(discardEntity(complete(handler.getFoo2(getFoo2Response)()))))

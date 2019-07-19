@@ -1,0 +1,21 @@
+options:
+  - title: Getting Started
+    url: ""
+
+  - title: Java
+    nested_options:
+      - title: Dropwizard
+        url: java/dropwizard/
+
+  - title: Scala
+    nested_options:
+      - title: akka-http
+        url: scala/akka-http
+
+      - title: http4s
+        url: scala/akka-http
+
+  - title: ScalaJS
+    nested_options:
+      - title: endpoints (client only)
+        url: scalajs/endpoints
