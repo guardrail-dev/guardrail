@@ -12,6 +12,7 @@ micrositeGithubOwner := "twilio"
 micrositeGithubRepo := "guardrail"
 micrositeHighlightLanguages ++= Seq("yaml", "swagger")
 micrositeCompilingDocsTool := WithMdoc
+micrositeGitterChannel := false
 mdocIn := baseDirectory.value / "docs"
 //micrositeDataDirectory := baseDirectory.value / "docs" / "data"
 //micrositeImgDirectory := baseDirectory.value / "docs" / "images"
@@ -37,7 +38,6 @@ mdocIn := baseDirectory.value / "docs"
 // micrositeGitHostingService
 // micrositeGitHostingUrl
 // micrositeGithubLinks
-// micrositeGitterChannel
 // micrositeGitterChannelUrl
 // micrositeHighlightTheme
 // micrositeHomepage
