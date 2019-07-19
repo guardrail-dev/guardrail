@@ -1,6 +1,7 @@
 package com.twilio.guardrail
 package generators
 
+import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
 import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax.RichString
@@ -71,8 +72,11 @@ object ScalaParameter {
       def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
         for {
           tpeName <- typeFetcher(param)
-          fmt = Option(param.getSchema).flatMap(s => Option(s.getFormat))
-          customTypeName <- SwaggerUtil.customTypeName(param)
+          schema = Option[Schema[_]](param.getSchema)
+          fmt    = schema.flatMap(s => Option(s.getFormat))
+          customParamTypeName  <- SwaggerUtil.customTypeName(param)
+          customSchemaTypeName <- schema.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
+          customTypeName = customSchemaTypeName.orElse(customParamTypeName)
           res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
         } yield res
