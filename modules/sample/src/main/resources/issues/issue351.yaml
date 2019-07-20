@@ -1,0 +1,13 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+definitions:
+  Baz:
+    type: object
+    properties:
+      values:
+        type: array
+        items:
+          $ref: '#/definitions/Baz'
