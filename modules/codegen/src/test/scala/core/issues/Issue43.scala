@@ -121,11 +121,11 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       companionCat.toString.replaceAll("\n", "") shouldBe
         """object Cat {
-          |  implicit val encodeCat = {
+          |  implicit val encodeCat: ObjectEncoder[Cat] = {
           |    val readOnlyKeys = Set[String]()
           |    Encoder.forProduct2("name", "huntingSkill") { (o: Cat) => (o.name, o.huntingSkill) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           |  }
-          |  implicit val decodeCat = Decoder.forProduct2("name", "huntingSkill")(Cat.apply _)
+          |  implicit val decodeCat: Decoder[Cat] = Decoder.forProduct2("name", "huntingSkill")(Cat.apply _)
           |}
           |
           |""".stripMargin.replaceAll("\n", "")
@@ -291,21 +291,21 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       companionDog.toString.replaceAll("\n", "") shouldBe
         """object Dog {
-          |  implicit val encodeDog = {
+          |  implicit val encodeDog: ObjectEncoder[Dog] = {
           |    val readOnlyKeys = Set[String]()
           |    Encoder.forProduct2("name", "packSize") { (o: Dog) => (o.name, o.packSize) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           |  }
-          |  implicit val decodeDog = Decoder.forProduct2("name", "packSize")(Dog.apply _)
+          |  implicit val decodeDog: Decoder[Dog] = Decoder.forProduct2("name", "packSize")(Dog.apply _)
           |}
           |
           |""".stripMargin.replaceAll("\n", "")
       companionPersianCat.toString.replaceAll("\n", "") shouldBe
         """object PersianCat {
-          |  implicit val encodePersianCat = {
+          |  implicit val encodePersianCat: ObjectEncoder[PersianCat] = {
           |    val readOnlyKeys = Set[String]()
           |    Encoder.forProduct3("name", "huntingSkill", "wool") { (o: PersianCat) => (o.name, o.huntingSkill, o.wool) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           |  }
-          |  implicit val decodePersianCat = Decoder.forProduct3("name", "huntingSkill", "wool")(PersianCat.apply _)
+          |  implicit val decodePersianCat: Decoder[PersianCat] = Decoder.forProduct3("name", "huntingSkill", "wool")(PersianCat.apply _)
           |}
           |
           |""".stripMargin.replaceAll("\n", "")
@@ -459,11 +459,11 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       companionPersianCat.toString.replaceAll("\n", "") shouldBe
         """object PersianCat {
-          |  implicit val encodePersianCat = {
+          |  implicit val encodePersianCat: ObjectEncoder[PersianCat] = {
           |    val readOnlyKeys = Set[String]()
           |    Encoder.forProduct1("catBreed") { (o: PersianCat) => o.catBreed }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           |  }
-          |  implicit val decodePersianCat = Decoder.forProduct1("catBreed")(PersianCat.apply _)
+          |  implicit val decodePersianCat: Decoder[PersianCat] = Decoder.forProduct1("catBreed")(PersianCat.apply _)
           |}
           |
           |""".stripMargin.replaceAll("\n", "")
@@ -559,11 +559,11 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       companionCat.toString.replaceAll("\n", "") shouldBe
         """object Cat {
-          |  implicit val encodeCat = {
+          |  implicit val encodeCat: ObjectEncoder[Cat] = {
           |    val readOnlyKeys = Set[String]()
           |    Encoder.forProduct2("wool", "catBreed") { (o: Cat) => (o.wool, o.catBreed) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           |  }
-          |  implicit val decodeCat = Decoder.forProduct2("wool", "catBreed")(Cat.apply _)
+          |  implicit val decodeCat: Decoder[Cat] = Decoder.forProduct2("wool", "catBreed")(Cat.apply _)
           |}
           |
           |""".stripMargin.replaceAll("\n", "")

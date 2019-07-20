@@ -92,11 +92,11 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Blix {
-        implicit val encodeBlix = {
+        implicit val encodeBlix: ObjectEncoder[Blix] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct1("map")((o: Blix) => o.map).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeBlix = Decoder.forProduct1("map")(Blix.apply _)
+        implicit val decodeBlix: Decoder[Blix] = Decoder.forProduct1("map")(Blix.apply _)
       }
     """
 

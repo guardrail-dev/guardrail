@@ -39,11 +39,11 @@ class ScalaTypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Baz {
-        implicit val encodeBaz = {
+        implicit val encodeBaz: ObjectEncoder[Baz] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct1("foo")((o: Baz) => o.foo).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeBaz = Decoder.forProduct1("foo")(Baz.apply _)
+        implicit val decodeBaz: Decoder[Baz] = Decoder.forProduct1("foo")(Baz.apply _)
       }
     """
 
