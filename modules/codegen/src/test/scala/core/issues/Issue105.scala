@@ -46,11 +46,11 @@ class Issue105 extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Foo {
-        implicit val encodeFoo = {
+        implicit val encodeFoo: ObjectEncoder[Foo] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct2("nonEmptyString", "positiveLong")((o: Foo) => (o.nonEmptyString, o.positiveLong) ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeFoo = Decoder.forProduct2("nonEmptyString", "positiveLong")(Foo.apply _)
+        implicit val decodeFoo: Decoder[Foo] = Decoder.forProduct2("nonEmptyString", "positiveLong")(Foo.apply _)
       }
     """
 

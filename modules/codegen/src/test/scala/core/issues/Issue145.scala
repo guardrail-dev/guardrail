@@ -50,11 +50,11 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
       val companionPet = companionForStaticDefns(staticDefnsPet)
       companionPet.toString() shouldBe q"""
         object Pet {
-          implicit val encodePet = {
+          implicit val encodePet: ObjectEncoder[Pet] = {
             val readOnlyKeys = Set[String]()
             Encoder.forProduct3("name", "underscore_name", "dash-name")((o: Pet) => (o.name, o.underscoreName, o.dashName)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-          implicit val decodePet = new Decoder[Pet] {
+          implicit val decodePet: Decoder[Pet] = new Decoder[Pet] {
             final def apply(c: HCursor): Decoder.Result[Pet] =
               for (
                 name <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];

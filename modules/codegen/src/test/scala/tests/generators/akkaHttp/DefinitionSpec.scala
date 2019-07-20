@@ -80,11 +80,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object First {
-        implicit val encodeFirst = {
+        implicit val encodeFirst: ObjectEncoder[First] = {
         val readOnlyKeys = Set[String]()
           Encoder.forProduct1("a")((o: First) => o.a).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeFirst = Decoder.forProduct1("a")(First.apply _)
+        implicit val decodeFirst: Decoder[First] = Decoder.forProduct1("a")(First.apply _)
       }
     """
 
@@ -143,11 +143,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object Fifth {
-        implicit val encodeFifth = {
+        implicit val encodeFifth: ObjectEncoder[Fifth] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct2("a_b_c_d", "b_c_d_e")((o: Fifth) => (o.aBCD, o.bCDE)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeFifth = Decoder.forProduct2("a_b_c_d", "b_c_d_e")(Fifth.apply _)
+        implicit val decodeFifth: Decoder[Fifth] = Decoder.forProduct2("a_b_c_d", "b_c_d_e")(Fifth.apply _)
       }
     """
 
@@ -168,11 +168,11 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object Sixth {
-        implicit val encodeSixth = {
+        implicit val encodeSixth: ObjectEncoder[Sixth] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct2("defval", "defval_opt")((o: Sixth) => (o.defval, o.defvalOpt)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeSixth = Decoder.forProduct2("defval", "defval_opt")(Sixth.apply _)
+        implicit val decodeSixth: Decoder[Sixth] = Decoder.forProduct2("defval", "defval_opt")(Sixth.apply _)
       }
     """
 

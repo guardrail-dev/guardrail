@@ -258,7 +258,7 @@ object CirceProtocolGenerator {
           """
         }
         Target.pure(Some(q"""
-          implicit val ${suffixClsName("encode", clsName)} = {
+          implicit val ${suffixClsName("encode", clsName)}: ObjectEncoder[${Type.Name(clsName)}] = {
             val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
             $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
@@ -314,7 +314,7 @@ object CirceProtocolGenerator {
           """
         }
         Target.pure(Some(q"""
-          implicit val ${suffixClsName("decode", clsName)} = $decVal
+          implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] = $decVal
         """))
 
       case RenderDTOStaticDefns(clsName, deps, encoder, decoder) =>

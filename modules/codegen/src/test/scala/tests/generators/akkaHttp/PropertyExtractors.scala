@@ -86,7 +86,7 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Something {
-        implicit val encodeSomething = {
+        implicit val encodeSomething: ObjectEncoder[Something] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct10(
               "boolean_value", "string_value", "long_property", "int_property", "integer_property", "float_property",
@@ -99,7 +99,7 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
             )
           ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeSomething = Decoder.forProduct10(
+        implicit val decodeSomething: Decoder[Something] = Decoder.forProduct10(
           "boolean_value", "string_value", "long_property", "int_property", "integer_property", "float_property",
           "double_property", "number_property", "untyped_property", "object_property"
           /*, "ref_property", "ref_target_property", "array_property" */

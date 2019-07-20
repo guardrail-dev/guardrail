@@ -95,11 +95,11 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Types {
-        implicit val encodeTypes = {
+        implicit val encodeTypes: ObjectEncoder[Types] = {
           val readOnlyKeys = Set[String]()
           Encoder.forProduct15("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex")((o: Types) => (o.array, o.obj, o.bool, o.string, o.date, o.date_time, o.long, o.int, o.float, o.double, o.number, o.integer, o.untyped, o.custom, o.customComplex)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeTypes = Decoder.forProduct15("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex")(Types.apply _)
+        implicit val decodeTypes: Decoder[Types] = Decoder.forProduct15("array", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex")(Types.apply _)
       }
     """
 

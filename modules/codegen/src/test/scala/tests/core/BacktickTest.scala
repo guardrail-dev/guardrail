@@ -150,11 +150,11 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
     object `dashy-class` {
-      implicit val `encodedashy-class` = {
+      implicit val `encodedashy-class`: ObjectEncoder[`dashy-class`] = {
         val readOnlyKeys = Set[String]()
         Encoder.forProduct1("dashy-param")((o: `dashy-class`) => o.dashyParam).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
       }
-      implicit val `decodedashy-class` = Decoder.forProduct1("dashy-param")(`dashy-class`.apply _)
+      implicit val `decodedashy-class`: Decoder[`dashy-class`] = Decoder.forProduct1("dashy-param")(`dashy-class`.apply _)
     }
     """
 
