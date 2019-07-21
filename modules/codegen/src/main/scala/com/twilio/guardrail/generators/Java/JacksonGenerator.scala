@@ -68,8 +68,9 @@ object JacksonGenerator {
     parentOpt.foreach({ parent =>
       val directParent = StaticJavaParser.parseClassOrInterfaceType(parent.clsName)
       val otherParents = parent.interfaces.map(StaticJavaParser.parseClassOrInterfaceType)
-      cls.setExtendedTypes(new NodeList(directParent))
-      cls.setImplementedTypes(otherParents.toNodeList)
+      val _ = cls
+        .setExtendedTypes(new NodeList(directParent))
+        .setImplementedTypes(otherParents.toNodeList)
     })
 
   private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[JavaLanguage]])(f: Type => Target[Type]): Option[Target[Type]] =
@@ -79,8 +80,8 @@ object JacksonGenerator {
       .map(f)
 
   // TODO: handle emptyToNull in the return for the getters
-  private def addParameterGetter(cls: ClassOrInterfaceDeclaration, param: ParameterTerm): Unit =
-    cls
+  private def addParameterGetter(cls: ClassOrInterfaceDeclaration, param: ParameterTerm): Unit = {
+    val _ = cls
       .addMethod(s"get${param.parameterName.unescapeIdentifier.capitalize}", PUBLIC)
       .setType(param.fieldType)
       .setBody(
@@ -90,6 +91,7 @@ object JacksonGenerator {
           )
         )
       )
+  }
 
   private def dtoConstructorBody(superCall: Expression, terms: List[ParameterTerm]): BlockStmt =
     new BlockStmt(
@@ -157,74 +159,74 @@ object JacksonGenerator {
         )
 
         val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-        constructor.addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
-        constructor.setBody(
-          new BlockStmt(
-            new NodeList(
-              new ExpressionStmt(
-                new AssignExpr(
-                  new FieldAccessExpr(new ThisExpr, "name"),
-                  new NameExpr("name"),
-                  AssignExpr.Operator.ASSIGN
+          .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ExpressionStmt(
+                  new AssignExpr(
+                    new FieldAccessExpr(new ThisExpr, "name"),
+                    new NameExpr("name"),
+                    AssignExpr.Operator.ASSIGN
+                  )
                 )
               )
             )
           )
-        )
 
         val getNameMethod = new MethodDeclaration(
           new NodeList(publicModifier),
           STRING_TYPE,
           "getName"
         )
-        getNameMethod.addMarkerAnnotation("JsonValue")
-        getNameMethod.setBody(
-          new BlockStmt(
-            new NodeList(
-              new ReturnStmt(new FieldAccessExpr(new ThisExpr, "name"))
+          .addMarkerAnnotation("JsonValue")
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ReturnStmt(new FieldAccessExpr(new ThisExpr, "name"))
+              )
             )
           )
-        )
 
         val parseMethod = new MethodDeclaration(
           new NodeList(publicModifier, staticModifier),
           enumType,
           "parse"
         )
-        parseMethod.addMarkerAnnotation("JsonCreator")
-        parseMethod.addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
-        parseMethod.setBody(
-          new BlockStmt(
-            new NodeList(
-              new ForEachStmt(
-                new VariableDeclarationExpr(new VariableDeclarator(enumType, "value"), finalModifier),
-                new MethodCallExpr("values"),
-                new BlockStmt(
-                  new NodeList(
-                    new IfStmt(
-                      new MethodCallExpr("value.name.equals", new NameExpr("name")),
-                      new ReturnStmt(new NameExpr("value")),
-                      null
+          .addMarkerAnnotation("JsonCreator")
+          .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ForEachStmt(
+                  new VariableDeclarationExpr(new VariableDeclarator(enumType, "value"), finalModifier),
+                  new MethodCallExpr("values"),
+                  new BlockStmt(
+                    new NodeList(
+                      new IfStmt(
+                        new MethodCallExpr("value.name.equals", new NameExpr("name")),
+                        new ReturnStmt(new NameExpr("value")),
+                        null
+                      )
                     )
                   )
-                )
-              ),
-              new ThrowStmt(
-                new ObjectCreationExpr(
-                  null,
-                  StaticJavaParser.parseClassOrInterfaceType("IllegalArgumentException"),
-                  new NodeList(
-                    new BinaryExpr(
-                      new BinaryExpr(new StringLiteralExpr("Name '"), new NameExpr("name"), BinaryExpr.Operator.PLUS),
-                      new StringLiteralExpr(s"' is not valid for enum '${clsName}'"),
-                      BinaryExpr.Operator.PLUS
+                ),
+                new ThrowStmt(
+                  new ObjectCreationExpr(
+                    null,
+                    StaticJavaParser.parseClassOrInterfaceType("IllegalArgumentException"),
+                    new NodeList(
+                      new BinaryExpr(
+                        new BinaryExpr(new StringLiteralExpr("Name '"), new NameExpr("name"), BinaryExpr.Operator.PLUS),
+                        new StringLiteralExpr(s"' is not valid for enum '${clsName}'"),
+                        BinaryExpr.Operator.PLUS
+                      )
                     )
                   )
                 )
               )
             )
           )
-        )
 
         val staticInitializer = new InitializerDeclaration(
           true,

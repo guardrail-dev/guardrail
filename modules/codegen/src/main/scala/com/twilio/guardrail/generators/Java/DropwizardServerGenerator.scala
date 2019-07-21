@@ -49,21 +49,21 @@ object DropwizardServerGenerator {
 
   private def findPathPrefix(routePaths: List[String]): List[String] = {
     def getHeads(sss: List[List[String]]): (List[Option[String]], List[List[String]]) =
-      (sss.map(_.headOption), sss.map(ss => ss.headOption.fold(List.empty[String])(_ => ss.tail)))
+      (sss.map(_.headOption), sss.map(_.drop(1)))
 
     def checkMatch(matching: List[String], headsToCheck: List[Option[String]], restOfHeads: List[List[String]]): List[String] =
-      headsToCheck.headOption
-        .flatMap({ firstO =>
-          firstO.map({ first =>
-            if (headsToCheck.tail.forall(_.contains(first))) {
+      headsToCheck match {
+        case Nil => matching
+        case x :: xs =>
+          x.fold(matching) { first =>
+            if (xs.forall(_.contains(first))) {
               val (nextHeads, nextRest) = getHeads(restOfHeads)
               checkMatch(matching :+ first, nextHeads, nextRest)
             } else {
               matching
             }
-          })
-        })
-        .getOrElse(matching)
+          }
+      }
 
     val splitRoutePaths             = routePaths.map(splitPathComponents)
     val (initialHeads, initialRest) = getHeads(splitRoutePaths)
@@ -128,32 +128,36 @@ object DropwizardServerGenerator {
   }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] = {
-    val cls = new ClassOrInterfaceDeclaration(new NodeList(abstractModifier), false, name)
-    cls.addField(PrimitiveType.intType, "statusCode", PRIVATE, FINAL)
+    Target.log.function("generateResponseSuperClass") {
+      for {
+        _ <- Target.log.info(s"Name: ${name}")
+        cls = new ClassOrInterfaceDeclaration(new NodeList(abstractModifier), false, name)
 
-    cls
-      .addConstructor()
-      .addParameter(new Parameter(new NodeList(finalModifier), PrimitiveType.intType, new SimpleName("statusCode")))
-      .setBody(
-        new BlockStmt(
-          new NodeList(
-            new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "statusCode"), new NameExpr("statusCode"), AssignExpr.Operator.ASSIGN))
+        _ = cls.addField(PrimitiveType.intType, "statusCode", PRIVATE, FINAL)
+
+        _ = cls
+          .addConstructor()
+          .addParameter(new Parameter(new NodeList(finalModifier), PrimitiveType.intType, new SimpleName("statusCode")))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "statusCode"), new NameExpr("statusCode"), AssignExpr.Operator.ASSIGN))
+              )
+            )
           )
-        )
-      )
 
-    cls
-      .addMethod(s"getStatusCode", PUBLIC)
-      .setType(PrimitiveType.intType)
-      .setBody(
-        new BlockStmt(
-          new NodeList(
-            new ReturnStmt(new FieldAccessExpr(new ThisExpr, "statusCode"))
+        _ = cls
+          .addMethod(s"getStatusCode", PUBLIC)
+          .setType(PrimitiveType.intType)
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ReturnStmt(new FieldAccessExpr(new ThisExpr, "statusCode"))
+              )
+            )
           )
-        )
-      )
-
-    Target.pure(cls)
+      } yield cls
+    }
   }
 
   def generateResponseClass(superClassType: ClassOrInterfaceType,
@@ -177,7 +181,7 @@ object DropwizardServerGenerator {
         })
         .fold[(List[BodyDeclaration[_ <: BodyDeclaration[_]]], BodyDeclaration[_ <: BodyDeclaration[_]])]({
           val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-          constructor.setBody(
+          val _ = constructor.setBody(
             new BlockStmt(
               new NodeList(
                 new ExpressionStmt(
