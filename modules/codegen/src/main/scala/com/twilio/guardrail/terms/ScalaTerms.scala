@@ -93,7 +93,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
     Free.inject[ScalaTerm[L, ?], F](RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName))
 
   def writePackageObject(dtoPackagePath: Path,
-                         dtoComponents: Option[List[String]],
+                         dtoComponents: Option[NonEmptyList[String]],
                          customImports: List[L#Import],
                          packageObjectImports: List[L#Import],
                          protocolImports: List[L#Import],

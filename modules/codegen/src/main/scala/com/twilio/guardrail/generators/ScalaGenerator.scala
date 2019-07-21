@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators
 
 import cats.~>
+import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
@@ -268,13 +269,15 @@ object ScalaGenerator {
         Target.pure(WriteTree(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), sourceToBytes(frameworkDefinitionsFile)))
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        dtoComponents.traverse {
-          case dtoComponents @ (dtoHead :: dtoRest) =>
-            val dtoPkg = dtoRest.init
+        dtoComponents.traverse { case dtoComponents@NonEmptyList(dtoHead, dtoRest) =>
+          for {
+            dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), "DTO Components not quite long enough")
+          } yield {
+            val dtoPkg = dtoRestNel.init
               .foldLeft[Term.Ref](Term.Name(dtoHead)) {
                 case (acc, next) => Term.Select(acc, Term.Name(next))
               }
-            val companion = Term.Name(s"${dtoComponents.last}$$")
+            val companion = Term.Name(s"${dtoRestNel.last}$$")
 
             val (_, statements) =
               packageObjectContents.partition(partitionImplicits)
@@ -286,24 +289,24 @@ object ScalaGenerator {
                 stat.copy(rhs = q"${companion}.${mirror}")
               })
 
-            Target.pure(
-              WriteTree(
-                dtoPackagePath.resolve("package.scala"),
-                sourceToBytes(source"""
-            package ${dtoPkg}
+            WriteTree(
+              dtoPackagePath.resolve("package.scala"),
+              sourceToBytes(source"""
+                package ${dtoPkg}
 
-            ..${customImports ++ packageObjectImports ++ protocolImports}
+                ..${customImports ++ packageObjectImports ++ protocolImports}
 
-            object ${companion} {
-              ..${implicits.map(_.copy(mods = List.empty))}
-            }
+                object ${companion} {
+                  ..${implicits.map(_.copy(mods = List.empty))}
+                }
 
-            package object ${Term.Name(dtoComponents.last)} {
-              ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
-            }
-            """)
+                package object ${Term.Name(dtoComponents.last)} {
+                  ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
+                }
+                """
               )
             )
+          }
         }
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {

@@ -260,7 +260,7 @@ object JavaGenerator {
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         for {
-          pkgDecl <- dtoComponents.traverse(buildPkgDecl)
+          pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
           bytes   <- pkgDecl.traverse(x => prettyPrintSource(new CompilationUnit().setPackageDeclaration(x)))
         } yield bytes.map(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), _))
 

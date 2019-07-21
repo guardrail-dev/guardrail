@@ -88,7 +88,7 @@ case class RenderFrameworkDefinitions[L <: LA](pkgPath: Path,
                                                frameworkDefinitionsName: L#TermName)
     extends ScalaTerm[L, WriteTree]
 case class WritePackageObject[L <: LA](dtoPackagePath: Path,
-                                       dtoComponents: Option[List[String]],
+                                       dtoComponents: Option[NonEmptyList[String]],
                                        customImports: List[L#Import],
                                        packageObjectImports: List[L#Import],
                                        protocolImports: List[L#Import],

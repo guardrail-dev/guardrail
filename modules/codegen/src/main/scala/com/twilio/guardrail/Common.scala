@@ -123,8 +123,8 @@ object Common {
     val CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                     = codegen
     val frameworkImplicitName                                                                            = frameworkImplicits.map(_._1)
 
-    val dtoComponents: List[String]                 = definitions ++ dtoPackage
-    val filteredDtoComponents: Option[List[String]] = if (protocolElems.nonEmpty) Some(dtoComponents) else None
+    val dtoComponents: List[String]                         = definitions ++ dtoPackage
+    val filteredDtoComponents: Option[NonEmptyList[String]] = if (protocolElems.nonEmpty) NonEmptyList.fromList(dtoComponents) else None
 
     for {
       protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
@@ -142,8 +142,8 @@ object Common {
       frameworkImports     <- getFrameworkImports(context.tracing)
       frameworkDefinitions <- getFrameworkDefinitions(context.tracing)
 
-      files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents, _)),
-                servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents, _))).mapN(_ ++ _)
+      files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _)),
+                servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _))).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({
