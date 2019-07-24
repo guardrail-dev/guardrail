@@ -45,3 +45,51 @@ components:
             some_c:
               type: number
               format: double
+    DiscrimEnum:
+      type: string
+      enum:
+        - some-value-one
+        - another-value
+        - yet-another-value
+    EnumBase:
+      type: object
+      required:
+        - polytype
+      properties:
+        polytype:
+          $ref: "#/components/schemas/DiscrimEnum"
+      discriminator:
+        propertyName: polytype
+        mapping:
+          some-value-one: EnumA
+          another-value: EnumB
+          yet-another-value: EnumC
+    EnumA:
+      allOf:
+        - $ref: "#/components/schemas/EnumBase"
+        - type: object
+          required:
+            - some_a
+          properties:
+            some_a:
+              type: integer
+              format: int32
+    EnumB:
+      allOf:
+        - $ref: "#/components/schemas/EnumBase"
+        - type: object
+          required:
+            - some_b
+          properties:
+            some_b:
+              type: string
+    EnumC:
+      allOf:
+        - $ref: "#/components/schemas/EnumBase"
+        - type: object
+          required:
+            - some_c
+          properties:
+            some_c:
+              type: number
+              format: double

@@ -1,7 +1,7 @@
 package com.twilio.guardrail.generators.syntax
 
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.comments.{ BlockComment, Comment }
 import com.github.javaparser.ast.expr.{
@@ -52,6 +52,7 @@ object Java {
         case cls: ClassOrInterfaceType if name.contains(".") =>
           (cls.getScope.asScala.fold("")(_.getName.asString + ".") + cls.getNameAsString) == name
         case cls: ClassOrInterfaceType => cls.getNameAsString == name
+        case pt: PrimitiveType         => pt.asString == name
         case _                         => false
       }
 
@@ -59,7 +60,8 @@ object Java {
       tpe match {
         case cls: ClassOrInterfaceType =>
           Some(cls.getScope.asScala.fold("")(_.getName.asString + ".") + cls.getNameAsString)
-        case _ => None
+        case pt: PrimitiveType => Option(pt.asString)
+        case _                 => None
       }
   }
 
