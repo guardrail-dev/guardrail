@@ -1,0 +1,73 @@
+swagger: '2.0'
+host: localhost:1234
+schemes:
+- http
+paths:
+  /{path}:
+    delete:
+      operationId: deleteFoo
+      parameters:
+      - name: path
+        in: path
+        type: string
+        required: true
+      - name: query
+        in: query
+        type: string
+        required: true
+      - name: form
+        in: formData
+        type: string
+        required: true
+      consumes:
+      - application/x-www-form-urlencoded
+      responses:
+        '204':
+          description: No content
+        '400':
+          description: Bad request
+    put:
+      operationId: putFoo
+      parameters:
+      - name: path
+        in: path
+        type: string
+        required: true
+      - name: query
+        in: query
+        type: string
+        required: true
+      - name: form
+        in: formData
+        type: string
+        required: true
+      consumes:
+      - multipart/form-data
+      responses:
+        '204':
+          description: No content
+        '400':
+          description: Bad request
+    patch:
+      operationId: patchFoo
+      parameters:
+      - name: path
+        in: path
+        type: string
+        required: true
+      - name: query
+        in: query
+        type: string
+        required: true
+      - name: body
+        in: body
+        schema:
+          type: string
+        required: true
+      consumes:
+      - text/plain
+      responses:
+        '204':
+          description: No content
+        '400':
+          description: Bad request
