@@ -144,18 +144,29 @@ object AkkaHttpGenerator {
               }
 
             // Translate String => Json (by either successfully parsing or string literalizing (Dangerous!))
-            final val jsonStringUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
+            final val contentRequiredUnmarshaller: FromStringUnmarshaller[String] = Unmarshaller.strict {
               case "" =>
                 throw Unmarshaller.NoContentException
               case data =>
-                jawn.parse(data).getOrElse(Json.fromString(data))
+                data
+            }
+
+            // Translate String => Json by parsing
+            final val jsonParsingUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller {
+              _ => data => jawn.parse(data).fold(FastFuture.failed, FastFuture.successful)
+            }
+
+            // Translate String => Json by treaing as a JSON literal
+            final val jsonStringyUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
+              case data =>
+                Json.fromString(data)
             }
 
             // Translate String => [A: Decoder]
-            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromStringUnmarshaller[A] = {
-              jsonStringUnmarshaller
-                .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
-            }
+            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): Unmarshaller[${jsonType}, A] =
+              Unmarshaller { _ => json =>
+                J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful)
+              }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
               Unmarshaller.strict(_ => IgnoredEntity.empty)
