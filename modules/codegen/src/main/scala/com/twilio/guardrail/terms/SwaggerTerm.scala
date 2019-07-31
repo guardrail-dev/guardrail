@@ -223,12 +223,9 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
-    ScalaParameter
-      .fromParameters(protocolElems)
-      .apply(parameters)
-      .map({ a =>
-        new ScalaParameters[L](a)
-      })
+    for {
+      a <- ScalaParameter.fromParameters(protocolElems).apply(parameters)
+    } yield new ScalaParameters[L](a)
 }
 
 sealed trait SecurityScheme[L <: LA] {
