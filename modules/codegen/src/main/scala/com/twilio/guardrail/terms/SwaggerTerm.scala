@@ -155,35 +155,36 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
     val ((maxCount, instances), ps) = Option(requestBody.getContent())
       .fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala))
       .flatMap({ mt =>
-        val requiredFields = Option(mt.getSchema).flatMap(x => Option(x.getRequired)).fold(Set.empty[String])(_.asScala.toSet)
+        for {
+          mtSchema <- Option(mt.getSchema()).toList
+          requiredFields = Option(mtSchema.getRequired).fold(Set.empty[String])(_.asScala.toSet)
+          (name, schema) <- Option(mtSchema.getProperties).fold(List.empty[(String, Schema[_])])(_.asScala.toList)
+        } yield {
+          val p = new Parameter
 
-        Option(mt.getSchema.getProperties).map(_.asScala.toList).getOrElse(List.empty).map {
-          case (name, schema) =>
-            val p = new Parameter
+          if (Option(schema.getFormat).contains("binary")) {
+            schema.setType("file")
+            schema.setFormat(null)
+          }
 
-            if (Option(schema.getFormat).contains("binary")) {
-              schema.setType("file")
-              schema.setFormat(null)
-            }
+          p.setName(name)
+          p.setIn("formData")
+          p.setSchema(schema)
 
-            p.setName(name)
-            p.setIn("formData")
-            p.setSchema(schema)
+          val isRequired: Boolean = if (requiredFields.nonEmpty) {
+            requiredFields.contains(name)
+          } else {
+            Option[java.lang.Boolean](requestBody.getRequired).fold(false)(identity)
+          }
 
-            val isRequired: Boolean = if (requiredFields.nonEmpty) {
-              requiredFields.contains(name)
-            } else {
-              Option[java.lang.Boolean](requestBody.getRequired).fold(false)(identity)
-            }
+          p.setRequired(isRequired)
+          p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
 
-            p.setRequired(isRequired)
-            p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
+          if (Option(schema.getType()).exists(_ == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
+            p.setRequired(false)
+          }
 
-            if (Option(schema.getType()).exists(_ == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
-              p.setRequired(false)
-            }
-
-            p
+          p
         }
       })
       .traverse[State[ParameterCountState, ?], Parameter] { p =>
