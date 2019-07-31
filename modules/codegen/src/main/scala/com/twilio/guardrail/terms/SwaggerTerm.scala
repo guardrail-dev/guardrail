@@ -72,11 +72,15 @@ case class SecurityRequirements(requirements: NonEmptyList[NonEmptyMap[String, S
 
 case class RouteMeta(path: String, method: HttpMethod, operation: Operation, securityRequirements: Option[SecurityRequirements]) {
 
-  private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] =
+  private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] = {
+    def unifyEntries: List[(String, MediaType)] => Option[Schema[_]] = {
+      case (contentType, mediaType) :: Nil => Option(mediaType.getSchema())
+      case (contentType, mediaType) :: xs  => Option(mediaType.getSchema())
+      case Nil                             => Option.empty
+    }
     for {
       content <- Option(requestBody.getContent())
-      mt      <- content.values().asScala.headOption
-      schema  <- Option(mt.getSchema())
+      schema  <- unifyEntries(content.entrySet().asScala.toList.map(kv => (kv.getKey(), kv.getValue())))
       tpe     <- Option(schema.getType())
     } yield {
       val p = new Parameter
@@ -94,6 +98,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
       p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
       p
     }
+  }
 
   // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#fixed-fields-8
   // RequestBody can represent either a RequestBody object or $ref.
