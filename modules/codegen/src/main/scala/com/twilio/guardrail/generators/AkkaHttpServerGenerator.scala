@@ -314,10 +314,10 @@ object AkkaHttpServerGenerator {
       ) _
     }
 
-    def formToAkka(consumes: List[RouteMeta.ContentType],
+    def formToAkka(consumes: NonEmptyList[RouteMeta.ContentType],
                    operationId: String)(params: List[ScalaParameter[ScalaLanguage]]): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
-        _ <- if (params.exists(_.isFile) && !consumes.contains(RouteMeta.MultipartFormData)) {
+        _ <- if (params.exists(_.isFile) && !consumes.exists(_ == RouteMeta.MultipartFormData)) {
           Target.log.warning("type: file detected, automatically enabling multipart/form-data handling")
         } else { Target.pure(()) }
         result <- {
@@ -331,8 +331,8 @@ object AkkaHttpServerGenerator {
             override def toString(): String = s"Binding($value)"
           }
           val hasFile              = params.exists(_.isFile)
-          val urlencoded           = consumes.contains(RouteMeta.UrlencodedFormData)
-          val multipart            = consumes.contains(RouteMeta.MultipartFormData)
+          val urlencoded           = consumes.exists(_ == RouteMeta.UrlencodedFormData)
+          val multipart            = consumes.exists(_ == RouteMeta.MultipartFormData)
           val referenceAccumulator = q"fileReferences"
           (for {
             params <- NonEmptyList.fromList(params)
@@ -522,7 +522,7 @@ object AkkaHttpServerGenerator {
           """)
             } else (List.empty[Stat], term => term)
 
-            val (multipartHandlers, multipartUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.contains(RouteMeta.MultipartFormData)) {
+            val (multipartHandlers, multipartUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.exists(_ == RouteMeta.MultipartFormData)) {
               val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
               (q"""
             object ${partsTerm} {
@@ -563,7 +563,7 @@ object AkkaHttpServerGenerator {
           """.stats, Option(unmarshallerTerm))
             } else (List.empty, None)
 
-            val (formfieldHandlers, formfieldUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.contains(RouteMeta.UrlencodedFormData)) {
+            val (formfieldHandlers, formfieldUnmarshallerTerm): (List[Stat], Option[Term.Name]) = if (consumes.exists(_ == RouteMeta.UrlencodedFormData)) {
               val unmarshallerTerm = q"FormDataUnmarshaller"
               (List(q"""
             implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
@@ -648,7 +648,9 @@ object AkkaHttpServerGenerator {
       for {
         _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
-        consumes                                                 = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        consumes = NonEmptyList
+          .fromList(operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_)))
+          .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
         operationId <- Target.fromOption(Option(operation.getOperationId())
                                            .map(splitOperationParts)
                                            .map(_._2),
@@ -678,7 +680,7 @@ object AkkaHttpServerGenerator {
         akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
         akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
         akkaBody   <- bodyToAkka(operationId, bodyArgs)
-        asyncFormProcessing = formArgs.exists(_.isFile) || consumes.contains(RouteMeta.MultipartFormData)
+        asyncFormProcessing = formArgs.exists(_.isFile) || consumes.exists(_ == RouteMeta.MultipartFormData)
         akkaForm_ <- formToAkka(consumes, operationId)(formArgs)
         (akkaForm, handlerDefinitions) = akkaForm_
         akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
@@ -766,10 +768,10 @@ object AkkaHttpServerGenerator {
     def generateCodecs(operationId: String,
                        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
                        responses: Responses[ScalaLanguage],
-                       consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+                       consumes: NonEmptyList[RouteMeta.ContentType]): List[Defn.Val] =
       generateDecoders(operationId, bodyArgs, consumes)
 
-    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: NonEmptyList[RouteMeta.ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           val (decoder, baseType) = AkkaHttpHelper.generateDecoder(argType, consumes)

@@ -5,7 +5,7 @@ import cats.data.{ NonEmptyList, NonEmptyMap }
 import cats.free.Free
 import cats.data.State
 import cats.implicits._
-import cats.kernel.Order
+import cats.Order
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
@@ -40,6 +40,7 @@ object RouteMeta {
       case "application/octet-stream"          => Some(OctetStream)
       case _                                   => None
     }
+    implicit val ContentTypeOrder = Order[String].contramap[ContentType](_.value)
   }
 }
 

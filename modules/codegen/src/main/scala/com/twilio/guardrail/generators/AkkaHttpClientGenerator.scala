@@ -155,7 +155,7 @@ object AkkaHttpClientGenerator {
                   formDataParams: Option[Term],
                   headerParams: Term,
                   responses: Responses[ScalaLanguage],
-                  produces: Seq[RouteMeta.ContentType],
+                  produces: NonEmptyList[RouteMeta.ContentType],
                   consumes: Seq[RouteMeta.ContentType],
                   tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
                                     tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
@@ -259,7 +259,9 @@ object AkkaHttpClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          produces = NonEmptyList
+            .fromList(operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_)))
+            .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
           consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
@@ -405,10 +407,10 @@ object AkkaHttpClientGenerator {
         Target.pure(NonEmptyList(Right(client), Nil))
     }
 
-    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): List[Defn.Val] =
       generateDecoders(methodName, responses, produces)
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): List[Defn.Val] =
       for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1).toList
