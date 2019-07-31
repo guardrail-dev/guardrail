@@ -12,7 +12,7 @@ import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Components, Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
-import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, Schema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, Encoding, MediaType, Schema, StringSchema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityRequirement, SecurityScheme => SwSecurityScheme }
@@ -72,12 +72,21 @@ case class SecurityRequirements(requirements: NonEmptyList[NonEmptyMap[String, S
                                 location: SecurityRequirements.Location)
 
 case class RouteMeta(path: String, method: HttpMethod, operation: Operation, securityRequirements: Option[SecurityRequirements]) {
+  object MediaType {
+    def unapply(value: MediaType): Option[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
+      val schema: Option[Schema[_]] = Option(value.getSchema)
+      val encoding                  = Option(value.getEncoding()).map(_.asScala.toMap)
+      val extensions                = Option(value.getExtensions()).map(_.asScala.toMap)
+      Option((schema, encoding, extensions))
+    }
+  }
 
   private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] = {
     def unifyEntries: List[(String, MediaType)] => Option[Schema[_]] = {
-      case (contentType, mediaType) :: Nil => Option(mediaType.getSchema())
-      case (contentType, mediaType) :: xs  => Option(mediaType.getSchema())
-      case Nil                             => Option.empty
+      case ("text/plain", MediaType(None, _, _)) :: Nil  => Option(new StringSchema())
+      case (contentType, MediaType(schema, _, _)) :: Nil => schema
+      case (contentType, MediaType(schema, _, _)) :: xs  => schema
+      case Nil                                           => Option.empty
     }
     for {
       content <- Option(requestBody.getContent())
