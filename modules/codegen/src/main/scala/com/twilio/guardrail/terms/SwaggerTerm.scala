@@ -76,11 +76,10 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
     for {
       content <- Option(requestBody.getContent())
       mt      <- content.values().asScala.headOption
-      tpe     <- Option(mt.getSchema.getType())
+      schema  <- Option(mt.getSchema())
+      tpe     <- Option(schema.getType())
     } yield {
       val p = new Parameter
-
-      val schema = mt.getSchema
 
       if (schema.getFormat == "binary") {
         schema.setType("file")
@@ -103,11 +102,10 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
     val content = for {
       content <- Option(requestBody.getContent)
       mt      <- content.values().asScala.headOption
-      ref     <- Option(mt.getSchema.get$ref())
+      schema  <- Option(mt.getSchema)
+      ref     <- Option(schema.get$ref())
     } yield {
       val p = new Parameter
-
-      val schema = mt.getSchema
 
       if (schema.getFormat == "binary") {
         schema.setType("file")
