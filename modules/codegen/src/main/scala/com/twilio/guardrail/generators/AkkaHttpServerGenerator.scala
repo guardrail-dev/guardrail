@@ -580,7 +580,7 @@ object AkkaHttpServerGenerator {
                     if (param.isFile) {
                       q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
                     } else {
-                      val (realType, getFunc, transformResponse: (Term => Term)) = param.argType match {
+                      val (realType, getFunc, transformResponse): (Type, Term.Name, (Term => Term)) = param.argType match {
                         case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
                         case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
                         case t"Option[$x]"           => (x, q"get", (x: Term) => x)
