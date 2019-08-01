@@ -44,7 +44,7 @@ object JacksonGenerator {
 
     params
       .map({
-        case ProtocolParameter(term, name, _, _, _, dataRedaction, selfDefaultValue) =>
+        case ProtocolParameter(term, name, _, _, _, _, dataRedaction, selfDefaultValue) =>
           val parameterType = if (term.getType.isOptional) {
             term.getType.containedType.unbox
           } else {
@@ -740,6 +740,8 @@ object JacksonGenerator {
             (tpe, classDep) = tpeClassDep
 
             argName = if (needCamelSnakeConversion) name.toCamelCase else name
+            rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
+
             _declDefaultPair <- Option(isRequired)
               .filterNot(_ == false)
               .fold[Target[(Type, Option[Expression])]](
@@ -758,7 +760,7 @@ object JacksonGenerator {
             (finalDeclType, finalDefaultValue) = _declDefaultPair
             term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
             dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
-          } yield ProtocolParameter[JavaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
+          } yield ProtocolParameter[JavaLanguage](term, name, dep, rawType, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
         }
 
       case RenderDTOClass(clsName, selfParams, parents) =>

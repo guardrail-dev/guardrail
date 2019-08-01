@@ -113,6 +113,7 @@ object CirceProtocolGenerator {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
           argName = if (needCamelSnakeConversion) name.toCamelCase else name
+          rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           defaultValue = property match {
             case _: MapSchema =>
@@ -170,7 +171,7 @@ object CirceProtocolGenerator {
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue))
+        } yield ProtocolParameter[ScalaLanguage](term, name, dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue))
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators     = parents.flatMap(_.discriminators)
