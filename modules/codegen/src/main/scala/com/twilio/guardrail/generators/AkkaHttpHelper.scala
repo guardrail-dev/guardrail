@@ -1,21 +1,23 @@
 package com.twilio.guardrail.generators
 
+import cats.data.NonEmptyList
 import com.twilio.guardrail.terms.RouteMeta
 import scala.meta._
 
 object AkkaHttpHelper {
-  def generateDecoder(tpe: Type, consumes: Seq[RouteMeta.ContentType]): (Term, Type) = {
+  def generateDecoder(tpe: Type, consumes: NonEmptyList[RouteMeta.ContentType]): (Term, Type) = {
     val baseType = tpe match {
       case t"Option[$x]" => x
       case x             => x
     }
-    val jsonUnmarshaller =
-      if (consumes.contains(RouteMeta.ApplicationJson) || consumes.isEmpty) { List(q"structuredJsonEntityUnmarshaller") } else { List.empty }
-    val textUnmarshaller = if (consumes.contains(RouteMeta.TextPlain)) { List(q"stringyJsonEntityUnmarshaller") } else { List.empty }
 
-    val unmarshaller = (jsonUnmarshaller ++ textUnmarshaller) match {
-      case x :: Nil => x
-      case xs       => q"Unmarshaller.firstOf(..${xs})"
+    val unmarshaller = consumes.map {
+      case RouteMeta.ApplicationJson => q"structuredJsonEntityUnmarshaller"
+      case RouteMeta.TextPlain       => q"stringyJsonEntityUnmarshaller"
+      case contentType               => throw new Exception(s"Unable to generate decoder for ${contentType}")
+    } match {
+      case NonEmptyList(x, Nil) => x
+      case xs                   => q"Unmarshaller.firstOf(..${xs.toList})"
     }
     val decoder = q""" {
       ${unmarshaller}.flatMap(_ => _ => json => io.circe.Decoder[${baseType}].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))

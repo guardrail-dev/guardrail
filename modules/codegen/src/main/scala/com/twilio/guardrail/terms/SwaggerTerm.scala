@@ -5,14 +5,14 @@ import cats.data.{ NonEmptyList, NonEmptyMap }
 import cats.free.Free
 import cats.data.State
 import cats.implicits._
-import cats.kernel.Order
+import cats.Order
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.{ Components, Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
-import io.swagger.v3.oas.models.media.{ ArraySchema, MediaType, Schema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, Encoding, MediaType, Schema, StringSchema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityRequirement, SecurityScheme => SwSecurityScheme }
@@ -40,6 +40,7 @@ object RouteMeta {
       case "application/octet-stream"          => Some(OctetStream)
       case _                                   => None
     }
+    implicit val ContentTypeOrder = Order[String].contramap[ContentType](_.value)
   }
 }
 
@@ -71,16 +72,28 @@ case class SecurityRequirements(requirements: NonEmptyList[NonEmptyMap[String, S
                                 location: SecurityRequirements.Location)
 
 case class RouteMeta(path: String, method: HttpMethod, operation: Operation, securityRequirements: Option[SecurityRequirements]) {
+  object MediaType {
+    def unapply(value: MediaType): Option[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
+      val schema: Option[Schema[_]] = Option(value.getSchema)
+      val encoding                  = Option(value.getEncoding()).map(_.asScala.toMap)
+      val extensions                = Option(value.getExtensions()).map(_.asScala.toMap)
+      Option((schema, encoding, extensions))
+    }
+  }
 
-  private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] =
+  private def extractPrimitiveFromRequestBody(requestBody: RequestBody): Option[Parameter] = {
+    def unifyEntries: List[(String, MediaType)] => Option[Schema[_]] = {
+      case ("text/plain", MediaType(None, _, _)) :: Nil  => Option(new StringSchema())
+      case (contentType, MediaType(schema, _, _)) :: Nil => schema
+      case (contentType, MediaType(schema, _, _)) :: xs  => schema
+      case Nil                                           => Option.empty
+    }
     for {
       content <- Option(requestBody.getContent())
-      mt      <- content.values().asScala.headOption
-      tpe     <- Option(mt.getSchema.getType())
+      schema  <- unifyEntries(content.entrySet().asScala.toList.map(kv => (kv.getKey(), kv.getValue())))
+      tpe     <- Option(schema.getType())
     } yield {
       val p = new Parameter
-
-      val schema = mt.getSchema
 
       if (schema.getFormat == "binary") {
         schema.setType("file")
@@ -95,6 +108,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
       p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
       p
     }
+  }
 
   // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#fixed-fields-8
   // RequestBody can represent either a RequestBody object or $ref.
@@ -103,11 +117,10 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
     val content = for {
       content <- Option(requestBody.getContent)
       mt      <- content.values().asScala.headOption
-      ref     <- Option(mt.getSchema.get$ref())
+      schema  <- Option(mt.getSchema)
+      ref     <- Option(schema.get$ref())
     } yield {
       val p = new Parameter
-
-      val schema = mt.getSchema
 
       if (schema.getFormat == "binary") {
         schema.setType("file")
@@ -152,35 +165,36 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
     val ((maxCount, instances), ps) = Option(requestBody.getContent())
       .fold(List.empty[MediaType])(x => Option(x.values()).toList.flatMap(_.asScala))
       .flatMap({ mt =>
-        val requiredFields = Option(mt.getSchema).flatMap(x => Option(x.getRequired)).fold(Set.empty[String])(_.asScala.toSet)
+        for {
+          mtSchema <- Option(mt.getSchema()).toList
+          requiredFields = Option(mtSchema.getRequired).fold(Set.empty[String])(_.asScala.toSet)
+          (name, schema) <- Option(mtSchema.getProperties).fold(List.empty[(String, Schema[_])])(_.asScala.toList)
+        } yield {
+          val p = new Parameter
 
-        Option(mt.getSchema.getProperties).map(_.asScala.toList).getOrElse(List.empty).map {
-          case (name, schema) =>
-            val p = new Parameter
+          if (Option(schema.getFormat).contains("binary")) {
+            schema.setType("file")
+            schema.setFormat(null)
+          }
 
-            if (Option(schema.getFormat).contains("binary")) {
-              schema.setType("file")
-              schema.setFormat(null)
-            }
+          p.setName(name)
+          p.setIn("formData")
+          p.setSchema(schema)
 
-            p.setName(name)
-            p.setIn("formData")
-            p.setSchema(schema)
+          val isRequired: Boolean = if (requiredFields.nonEmpty) {
+            requiredFields.contains(name)
+          } else {
+            Option[java.lang.Boolean](requestBody.getRequired).fold(false)(identity)
+          }
 
-            val isRequired: Boolean = if (requiredFields.nonEmpty) {
-              requiredFields.contains(name)
-            } else {
-              Option[java.lang.Boolean](requestBody.getRequired).fold(false)(identity)
-            }
+          p.setRequired(isRequired)
+          p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
 
-            p.setRequired(isRequired)
-            p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
+          if (Option(schema.getType()).exists(_ == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
+            p.setRequired(false)
+          }
 
-            if (Option(schema.getType()).exists(_ == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
-              p.setRequired(false)
-            }
-
-            p
+          p
         }
       })
       .traverse[State[ParameterCountState, ?], Parameter] { p =>
@@ -219,12 +233,9 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Operation, sec
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
-    ScalaParameter
-      .fromParameters(protocolElems)
-      .apply(parameters)
-      .map({ a =>
-        new ScalaParameters[L](a)
-      })
+    for {
+      a <- ScalaParameter.fromParameters(protocolElems).apply(parameters)
+    } yield new ScalaParameters[L](a)
 }
 
 sealed trait SecurityScheme[L <: LA] {
