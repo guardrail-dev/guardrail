@@ -572,8 +572,8 @@ object AkkaHttpServerGenerator {
                 val fru = q"""
                   implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
                     implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
-                      def unmarshalField[A: Decoder](name: String, value: String): Future[A] =
-                        Unmarshaller.firstOf(jsonDecoderUnmarshaller[A]).apply(value).recoverWith({
+                      def unmarshalField[A: Decoder](name: String, value: String, unmarshaller: Unmarshaller[String, io.circe.Json]): Future[A] =
+                        contentRequiredUnmarshaller.andThen(unmarshaller.andThen(jsonDecoderUnmarshaller[A])).apply(value).recoverWith({
                           case ex =>
                             Future.failed(RejectionError(MalformedFormFieldRejection(name, ex.getMessage, Some(ex))))
                         })
@@ -590,8 +590,12 @@ object AkkaHttpServerGenerator {
                           case t"Option[$x]"           => (x, q"get", (x: Term) => x)
                           case x                       => (x, q"get", (x: Term) => x)
                         }
+                        val unmarshaller = param.rawType.tpe match {
+                          case Some("string") => q"jsonStringyUnmarshaller"
+                          case _              => q"jsonParsingUnmarshaller"
+                        }
                         transformResponse(
-                          q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _))"""
+                          q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _, ${unmarshaller}))"""
                         )
                     }
                   ) match {
