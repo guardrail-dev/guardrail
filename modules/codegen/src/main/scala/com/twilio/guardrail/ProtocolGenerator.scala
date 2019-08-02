@@ -5,6 +5,7 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
+import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -28,6 +29,7 @@ case object DataRedacted extends RedactionBehaviour
 case class ProtocolParameter[L <: LA](term: L#MethodParameter,
                                       name: String,
                                       dep: Option[L#TermName],
+                                      rawType: RawParameterType,
                                       readOnlyKey: Option[String],
                                       emptyToNull: EmptyToNullBehaviour,
                                       dataRedaction: RedactionBehaviour,
