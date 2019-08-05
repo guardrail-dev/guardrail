@@ -31,3 +31,4 @@ guardrail version | http4s | circe-core | cats  | Notes
 0.34.0 ⚠          | 0.18.0 | 0.9.0      | 1.0.1 | Only clients are supported
 0.39.0            | 0.18.0 |  "         |  "    | First server release
 0.41.1            | 0.19.0 | 0.10.0     | 1.4.0 |
+0.5x.x            |  "     |  "         |  "    | For Scala 2.11, Add `io.circe:circe-java8` to your dependencies and add `"io.circe.java8.time._"` to your guardrail imports configuration.
