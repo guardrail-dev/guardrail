@@ -13,7 +13,7 @@ crossScalaVersions in ThisBuild := Seq("2.12.10")
 val akkaVersion          = "10.0.14"
 val catsVersion          = "1.6.0"
 val catsEffectVersion    = "1.0.0"
-val circeVersion         = "0.10.1"
+val circeVersion         = "0.12.1"
 val http4sVersion        = "0.20.0"
 val scalacheckVersion    = "1.14.2"
 val scalatestVersion     = "3.0.8"
@@ -262,7 +262,7 @@ lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
       "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
       "io.circe"          %% "circe-core"        % circeVersion,
       "io.circe"          %% "circe-generic"     % circeVersion,
-      "io.circe"          %% "circe-java8"       % circeVersion,
+      "io.circe"          %% "circe-jawn"        % circeVersion,
       "io.circe"          %% "circe-parser"      % circeVersion,
       "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
       "org.typelevel"     %% "cats-core"         % catsVersion
@@ -279,7 +279,6 @@ lazy val http4sSample = (project in file("modules/sample-http4s"))
       "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
       "io.circe"      %% "circe-core"          % circeVersion,
       "io.circe"      %% "circe-generic"       % circeVersion,
-      "io.circe"      %% "circe-java8"         % circeVersion,
       "io.circe"      %% "circe-parser"        % circeVersion,
       "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
       "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
@@ -301,7 +300,6 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
       "io.circe"          %%% "circe-generic"                 % circeVersion,
-      "io.circe"          %%% "circe-java8"                   % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
       "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
