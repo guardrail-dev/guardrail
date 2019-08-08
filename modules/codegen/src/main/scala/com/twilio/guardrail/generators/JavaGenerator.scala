@@ -239,7 +239,7 @@ object JavaGenerator {
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         for {
-          pkgDecl      <- buildPkgDecl(definitions)
+          pkgDecl      <- buildPkgDecl(dtoComponents)
           showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
 
           nameAndCompilationUnit = elem match {
