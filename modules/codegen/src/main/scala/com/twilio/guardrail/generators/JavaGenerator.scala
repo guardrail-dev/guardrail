@@ -182,6 +182,9 @@ object JavaGenerator {
       case ExtractTermName(term) =>
         Target.pure(term.asString)
 
+      case SelectType(typeNames) =>
+        safeParseType(typeNames.toList.mkString("."))
+
       case AlterMethodParameterName(param, name) =>
         safeParseSimpleName(name.asString.escapeIdentifier).map(
           new Parameter(
@@ -209,8 +212,10 @@ object JavaGenerator {
       case ArrayType(format)         => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList[Type](STRING_TYPE)))
       case FallbackType(tpe, format) => safeParseType(tpe)
 
-      case WidenTypeName(tpe)     => safeParseType(tpe.asString)
-      case WidenTermSelect(value) => Target.pure(value)
+      case WidenTypeName(tpe)           => safeParseType(tpe.asString)
+      case WidenTermSelect(value)       => Target.pure(value)
+      case WidenClassDefinition(value)  => Target.pure(value)
+      case WidenObjectDefinition(value) => Target.pure(value)
 
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         Target.pure(None)
@@ -322,6 +327,9 @@ object JavaGenerator {
           handlerTree <- writeServerTree(pkgPath, pkg, pkgDecl, allImports, handlerDefinition)
           serverTrees <- serverDefinitions.traverse(writeServerTree(pkgPath, pkg, pkgDecl, allImports, _))
         } yield handlerTree +: serverTrees
+
+      case WrapToObject(_, _, _) =>
+        Target.raiseError("Currently not supported for Java")
     }
   }
 }

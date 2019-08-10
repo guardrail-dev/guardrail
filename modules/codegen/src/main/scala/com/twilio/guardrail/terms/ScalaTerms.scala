@@ -7,6 +7,8 @@ import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
+import cats.data.NonEmptyList
+
 class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def vendorPrefixes(): Free[F, List[String]] = Free.inject[ScalaTerm[L, ?], F](VendorPrefixes[L]())
 
@@ -41,6 +43,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def typesEqual(a: L#Type, b: L#Type): Free[F, Boolean]             = Free.inject[ScalaTerm[L, ?], F](TypesEqual(a, b))
   def extractTypeName(tpe: L#Type): Free[F, Option[L#TypeName]]      = Free.inject[ScalaTerm[L, ?], F](ExtractTypeName(tpe))
   def extractTermName(term: L#TermName): Free[F, String]             = Free.inject[ScalaTerm[L, ?], F](ExtractTermName(term))
+  def selectType(typeNames: NonEmptyList[String]): Free[F, L#Type]   = Free.inject[ScalaTerm[L, ?], F](SelectType(typeNames))
   def alterMethodParameterName(param: L#MethodParameter, name: L#TermName): Free[F, L#MethodParameter] =
     Free.inject[ScalaTerm[L, ?], F](AlterMethodParameterName(param, name))
 
@@ -58,8 +61,10 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def arrayType(format: Option[String]): Free[F, L#Type]                 = Free.inject[ScalaTerm[L, ?], F](ArrayType(format))
   def fallbackType(tpe: String, format: Option[String]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](FallbackType(tpe, format))
 
-  def widenTypeName(tpe: L#TypeName): Free[F, L#Type]       = Free.inject[ScalaTerm[L, ?], F](WidenTypeName(tpe))
-  def widenTermSelect(value: L#TermSelect): Free[F, L#Term] = Free.inject[ScalaTerm[L, ?], F](WidenTermSelect(value))
+  def widenTypeName(tpe: L#TypeName): Free[F, L#Type]                         = Free.inject[ScalaTerm[L, ?], F](WidenTypeName(tpe))
+  def widenTermSelect(value: L#TermSelect): Free[F, L#Term]                   = Free.inject[ScalaTerm[L, ?], F](WidenTermSelect(value))
+  def widenClassDefinition(value: L#ClassDefinition): Free[F, L#Definition]   = Free.inject[ScalaTerm[L, ?], F](WidenClassDefinition(value))
+  def widenObjectDefinition(value: L#ObjectDefinition): Free[F, L#Definition] = Free.inject[ScalaTerm[L, ?], F](WidenObjectDefinition(value))
 
   def renderImplicits(pkgPath: Path,
                       pkgName: List[String],
@@ -112,6 +117,9 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                   dtoComponents: List[String],
                   server: Server[L]): Free[F, List[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
+
+  def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): Free[F, L#ObjectDefinition] =
+    Free.inject[ScalaTerm[L, ?], F](WrapToObject(name, imports, definitions))
 }
 object ScalaTerms {
   implicit def scalaTerm[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]): ScalaTerms[L, F] = new ScalaTerms[L, F]

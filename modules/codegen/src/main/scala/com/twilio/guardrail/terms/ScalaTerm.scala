@@ -5,6 +5,8 @@ import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
+import cats.data.NonEmptyList
+
 sealed trait ScalaTerm[L <: LA, T]
 
 case class VendorPrefixes[L <: LA]() extends ScalaTerm[L, List[String]]
@@ -39,6 +41,7 @@ case class TypeNamesEqual[L <: LA](a: L#TypeName, b: L#TypeName)                
 case class TypesEqual[L <: LA](a: L#Type, b: L#Type)                                            extends ScalaTerm[L, Boolean]
 case class ExtractTypeName[L <: LA](tpe: L#Type)                                                extends ScalaTerm[L, Option[L#TypeName]]
 case class ExtractTermName[L <: LA](term: L#TermName)                                           extends ScalaTerm[L, String]
+case class SelectType[L <: LA](typeNames: NonEmptyList[String])                                 extends ScalaTerm[L, L#Type]
 case class AlterMethodParameterName[L <: LA](param: L#MethodParameter, name: L#TermName)        extends ScalaTerm[L, L#MethodParameter]
 
 case class UUIDType[L <: LA]()                                        extends ScalaTerm[L, L#Type]
@@ -55,8 +58,10 @@ case class BooleanType[L <: LA](format: Option[String])               extends Sc
 case class ArrayType[L <: LA](format: Option[String])                 extends ScalaTerm[L, L#Type]
 case class FallbackType[L <: LA](tpe: String, format: Option[String]) extends ScalaTerm[L, L#Type]
 
-case class WidenTypeName[L <: LA](tpe: L#TypeName)       extends ScalaTerm[L, L#Type]
-case class WidenTermSelect[L <: LA](value: L#TermSelect) extends ScalaTerm[L, L#Term]
+case class WidenTypeName[L <: LA](tpe: L#TypeName)                   extends ScalaTerm[L, L#Type]
+case class WidenTermSelect[L <: LA](value: L#TermSelect)             extends ScalaTerm[L, L#Term]
+case class WidenClassDefinition[L <: LA](value: L#ClassDefinition)   extends ScalaTerm[L, L#Definition]
+case class WidenObjectDefinition[L <: LA](value: L#ObjectDefinition) extends ScalaTerm[L, L#Definition]
 
 case class RenderImplicits[L <: LA](pkgPath: Path,
                                     pkgName: List[String],
@@ -106,3 +111,5 @@ case class WriteServer[L <: LA](pkgPath: Path,
                                 dtoComponents: List[String],
                                 server: Server[L])
     extends ScalaTerm[L, List[WriteTree]]
+
+case class WrapToObject[L <: LA](name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) extends ScalaTerm[L, L#ObjectDefinition]

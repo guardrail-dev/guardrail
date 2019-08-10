@@ -277,20 +277,56 @@ object SwaggerUtil {
       } yield result
     }
 
-  def propMeta[L <: LA, F[_]](property: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+  def propMeta[L <: LA, F[_]](property: Schema[_])(
+      implicit Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F],
+      Fw: FrameworkTerms[L, F]
+  ): Free[F, ResolvedType[L]] = {
+    import Fw._
+    import Sw._
+    propMetaImpl(property) {
+      case o: ObjectSchema =>
+        for {
+          _ <- log.debug(
+            s"Not attempting to process properties from ${o.showNotNull}"
+          )
+          tpe <- objectType(None) // TODO: o.getProperties
+        } yield Resolved[L](tpe, None, None, None, None)
+    }
+  }
+
+  def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Schema[_])(
+      implicit Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F],
+      Fw: FrameworkTerms[L, F]
+  ): Free[F, ResolvedType[L]] = {
+    import Sc._
+    val action: Free[F, ResolvedType[L]] = Free.pure(Resolved[L](tpe, None, None, None, None))
+    propMetaImpl(property) {
+      case _: ObjectSchema =>
+        action
+      case _: ComposedSchema =>
+        action
+    }
+  }
+
+  private def propMetaImpl[L <: LA, F[_]](property: Schema[_])(
+      strategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]]
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
       import Sw._
 
-      log.debug(s"property:\n${log.schemaToString(property)}") >> (property match {
+      val baseStrategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]] = {
         case p: ArraySchema =>
           for {
             items <- getItems(p)
-            rec   <- propMeta[L, F](items)
+            rec   <- propMetaImpl[L, F](items)(strategy)
             res <- rec match {
               case Resolved(inner, dep, default, _, _) =>
-                (liftVectorType(inner), default.traverse(liftVectorTerm)).mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
+                (liftVectorType(inner), default.traverse(liftVectorTerm))
+                  .mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
               case x: DeferredMap[L]   => embedArray(x)
               case x: DeferredArray[L] => embedArray(x)
               case x: Deferred[L]      => embedArray(x)
@@ -299,22 +335,21 @@ object SwaggerUtil {
         case m: MapSchema =>
           for {
             rec <- Option(m.getAdditionalProperties)
-              .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None, None, None)))({
-                case b: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None, None, None))
-                case s: Schema[_]         => propMeta[L, F](s)
+              .fold[Free[F, ResolvedType[L]]](
+                objectType(None).map(Resolved[L](_, None, None, None, None))
+              )({
+                case b: java.lang.Boolean =>
+                  objectType(None).map(Resolved[L](_, None, None, None, None))
+                case s: Schema[_] => propMetaImpl[L, F](s)(strategy)
               })
             res <- rec match {
-              case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
-              case x: DeferredMap[L]             => embedMap(x)
-              case x: DeferredArray[L]           => embedMap(x)
-              case x: Deferred[L]                => embedMap(x)
+              case Resolved(inner, dep, _, _, _) =>
+                liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
+              case x: DeferredMap[L]   => embedMap(x)
+              case x: DeferredArray[L] => embedMap(x)
+              case x: Deferred[L]      => embedMap(x)
             }
           } yield res
-        case o: ObjectSchema =>
-          for {
-            _   <- log.debug(s"Not attempting to process properties from ${o.showNotNull}")
-            tpe <- objectType(None) // TODO: o.getProperties
-          } yield Resolved[L](tpe, None, None, None, None)
 
         case ref: Schema[_] if Option(ref.get$ref).isDefined =>
           getSimpleRef(ref).map(Deferred[L])
@@ -324,8 +359,10 @@ object SwaggerUtil {
           val rawFormat = Option.empty[String]
           for {
             customTpeName <- customTypeName(b)
-            res <- (typeName[L, F](rawType, None, customTpeName), Default(b).extract[Boolean].traverse(litBoolean(_)))
-              .mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
+            res <- (
+              typeName[L, F](rawType, None, customTpeName),
+              Default(b).extract[Boolean].traverse(litBoolean(_))
+            ).mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
           } yield res
 
         case s: StringSchema =>
@@ -333,8 +370,10 @@ object SwaggerUtil {
           val rawFormat = Option(s.getFormat())
           for {
             customTpeName <- customTypeName(s)
-            res <- (typeName[L, F](rawType, rawFormat, customTpeName), Default(s).extract[String].traverse(litString(_)))
-              .mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
+            res <- (
+              typeName[L, F](rawType, rawFormat, customTpeName),
+              Default(s).extract[String].traverse(litString(_))
+            ).mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
           } yield res
 
         case d: DateSchema =>
@@ -392,12 +431,17 @@ object SwaggerUtil {
             customTpeName <- customTypeName(u)
             tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+      }
 
+      val strategies = baseStrategy.orElse(strategy).orElse[Schema[_], Free[F, ResolvedType[L]]] {
         case x =>
           for {
             tpe <- fallbackPropertyTypeHandler(x)
           } yield Resolved[L](tpe, None, None, None, None) // This may need to be rawType=string?
-      })
+      }
+      log.debug(s"property:\n${log.schemaToString(property)}") >> strategies(
+        property
+      )
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],

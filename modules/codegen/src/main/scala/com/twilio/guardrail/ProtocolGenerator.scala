@@ -2,10 +2,13 @@ package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.oas.models.media._
+import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
+import com.twilio.guardrail.SwaggerUtil.Resolved
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.RawParameterType
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -264,33 +267,95 @@ object ProtocolGenerator {
     } yield supper
   }
 
-  private[this] def fromModel[L <: LA, F[_]](clsName: String, model: Schema[_], parents: List[SuperClass[L]], concreteTypes: List[PropMeta[L]])(
+  private[this] def fromModel[L <: LA, F[_]](clsName: NonEmptyList[String],
+                                             model: Schema[_],
+                                             parents: List[SuperClass[L]],
+                                             concreteTypes: List[PropMeta[L]],
+                                             definitions: List[(String, Schema[_])])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
+      P: PolyProtocolTerms[L, F],
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, Either[String, ProtocolElems[L]]] = {
+  ): Free[F, Either[String, ClassDefinition[L]]] = {
     import M._
     import Sc._
 
     for {
       props <- extractProperties(model)
+      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+      (params, nestedClassDefinitions) <- prepareProperties(clsName, model, concreteTypes, definitions)
+      defn                             <- renderDTOClass(clsName.last, params, parents)
+      encoder                          <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
+      decoder                          <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
+      tpe                              <- parseTypeName(clsName.last)
+      staticDefns                      <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
+      result <- if (parents.isEmpty && props.isEmpty) Free.pure[F, Either[String, ClassDefinition[L]]](Left("Entity isn't model"))
+      else {
+        val nestedClasses = nestedClassDefinitions.flatTraverse { classDefinition =>
+          for {
+            widenClass          <- widenClassDefinition(classDefinition.cls)
+            companionTerm       <- pureTermName(classDefinition.name)
+            companionDefinition <- wrapToObject(companionTerm, classDefinition.staticDefns.extraImports, classDefinition.staticDefns.definitions)
+            widenCompanion      <- widenObjectDefinition(companionDefinition)
+          } yield List(widenClass, widenCompanion)
+        }
+        nestedClasses.map { v =>
+          val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ v)
+          tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, defn, finalStaticDefns, parents))
+        }
+      }
+    } yield result
+  }
+
+  private def prepareProperties[L <: LA, F[_]](
+      clsName: NonEmptyList[String],
+      model: Schema[_],
+      concreteTypes: List[PropMeta[L]],
+      definitions: List[(String, Schema[_])]
+  )(implicit M: ModelProtocolTerms[L, F],
+    F: FrameworkTerms[L, F],
+    P: PolyProtocolTerms[L, F],
+    Sc: ScalaTerms[L, F],
+    Sw: SwaggerTerms[L, F]): Free[F, (List[ProtocolParameter[L]], List[ClassDefinition[L]])] = {
+    import F._
+    import M._
+    import Sc._
+    def processProperty(name: String, schema: Schema[_]): Free[F, Option[Either[String, ClassDefinition[L]]]] = {
+      val nestedClassName = clsName.append(name.toCamelCase.capitalize)
+      schema match {
+        case _: ObjectSchema =>
+          fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions).map(Some(_))
+        case o: ComposedSchema =>
+          for {
+            parents              <- extractParents(o, definitions, concreteTypes)
+            maybeClassDefinition <- fromModel(nestedClassName, schema, parents, concreteTypes, definitions)
+          } yield Some(maybeClassDefinition)
+        case a: ArraySchema =>
+          processProperty(name, a.getItems)
+        case _ =>
+          Free.pure(None)
+      }
+    }
+    for {
+      props <- extractProperties(model)
       requiredFields           = getRequiredFieldsRec(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      params <- props.traverse({
-        case (name, prop) =>
-          val isRequired = requiredFields.contains(name)
-          SwaggerUtil.propMeta[L, F](prop).flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
-      })
-      defn <- renderDTOClass(clsName, params, parents)
-      deps = params.flatMap(_.dep)
-      encoder     <- encodeModel(clsName, needCamelSnakeConversion, params, parents)
-      decoder     <- decodeModel(clsName, needCamelSnakeConversion, params, parents)
-      staticDefns <- renderDTOStaticDefns(clsName, List.empty, encoder, decoder)
-      tpe         <- parseTypeName(clsName)
-    } yield
-      if (parents.isEmpty && props.isEmpty) Left("Entity isn't model")
-      else tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName, _, defn, staticDefns, parents))
+      paramsAndNestedClasses <- props.traverse[Free[F, ?], (ProtocolParameter[L], Option[ClassDefinition[L]])] {
+        case (name, schema) =>
+          val typeName = clsName.append(name.toCamelCase.capitalize)
+          for {
+            tpe                  <- selectType(typeName)
+            maybeClassDefinition <- processProperty(name, schema)
+            resolvedType <- maybeClassDefinition.fold(SwaggerUtil.propMetaWithName(tpe, schema)) {
+              case Left(_)  => objectType(None).map(Resolved(_, None, None, None, None))
+              case Right(_) => SwaggerUtil.propMetaWithName(tpe, schema)
+            }
+            parameter <- transformProperty(clsName.last, needCamelSnakeConversion, concreteTypes)(name, schema, resolvedType, requiredFields.contains(name))
+          } yield (parameter, maybeClassDefinition.flatMap(_.toOption))
+      }
+      (params, nestedClassDefinitions) = paramsAndNestedClasses.unzip
+    } yield params -> nestedClassDefinitions.flatten
   }
 
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Schema[_])(
@@ -436,14 +501,14 @@ object ProtocolGenerator {
             case m: StringSchema =>
               for {
                 enum  <- fromEnum(clsName, m)
-                model <- fromModel(clsName, m, List.empty, concreteTypes)
+                model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions)
                 alias <- modelTypeAlias(clsName, m)
               } yield enum.orElse(model).getOrElse(alias)
 
             case comp: ComposedSchema =>
               for {
                 parents <- extractParents(comp, definitions, concreteTypes)
-                model   <- fromModel(clsName, comp, parents, concreteTypes)
+                model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions)
                 alias   <- modelTypeAlias(clsName, comp)
               } yield model.getOrElse(alias)
 
@@ -453,7 +518,7 @@ object ProtocolGenerator {
             case m: ObjectSchema =>
               for {
                 enum  <- fromEnum(clsName, m)
-                model <- fromModel(clsName, m, List.empty, concreteTypes)
+                model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions)
                 alias <- modelTypeAlias(clsName, m)
               } yield enum.orElse(model).getOrElse(alias)
 
