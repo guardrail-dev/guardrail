@@ -8,6 +8,9 @@ import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
+
+import cats.data.NonEmptyList
+
 import scala.meta._
 
 object ScalaGenerator {
@@ -104,6 +107,19 @@ object ScalaGenerator {
         val Term.Name(name) = term
         Target.pure(name)
 
+      case SelectType(typeNames) =>
+        val tpe   = Type.Name(typeNames.last)
+        val names = typeNames.init.map(Term.Name.apply _)
+
+        val result = names match {
+          case Nil => tpe
+          case x :: xs =>
+            val term = xs.foldLeft[Term.Ref](x)(Term.Select.apply _)
+            Type.Select(term, tpe)
+        }
+
+        Target.pure(result)
+
       case AlterMethodParameterName(param, name) =>
         Target.pure(param.copy(name = name))
 
@@ -121,8 +137,10 @@ object ScalaGenerator {
       case ArrayType(format)         => Target.pure(t"Iterable[String]")
       case FallbackType(tpe, format) => Target.pure(Type.Name(tpe))
 
-      case WidenTypeName(tpe)     => Target.pure(tpe)
-      case WidenTermSelect(value) => Target.pure(value)
+      case WidenTypeName(tpe)           => Target.pure(tpe)
+      case WidenTermSelect(value)       => Target.pure(value)
+      case WidenClassDefinition(value)  => Target.pure(value)
+      case WidenObjectDefinition(value) => Target.pure(value)
 
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =
@@ -381,6 +399,13 @@ object ScalaGenerator {
             )
           )
         )
+      case WrapToObject(name, imports, definitions) =>
+        Target.pure(q"""
+             object $name {
+                 ..$imports
+                 ..$definitions
+             }
+           """)
     }
   }
 }
