@@ -55,21 +55,21 @@ class Issue165 extends FunSuite with Matchers with SwaggerSpecRunner {
               mapRoute("getRoot", req, {
                 handler.getRoot(GetRootResponse)() flatMap {
                   case GetRootResponse.Ok =>
-                    Ok()
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
                 }  
               })
             case req @ GET -> Root / "foo" =>
               mapRoute("getFoo", req, {
                 handler.getFoo(GetFooResponse)() flatMap {
                   case GetFooResponse.Ok =>
-                    Ok()
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
                 }
               })
             case req @ GET -> Root / "foo" / "" =>
               mapRoute("getFooDir", req, {
                 handler.getFooDir(GetFooDirResponse)() flatMap {
                   case GetFooDirResponse.Ok =>
-                    Ok()
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
               }
             })
           }

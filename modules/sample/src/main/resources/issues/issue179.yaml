@@ -1,0 +1,13 @@
+swagger: '2.0'
+info:
+  title: https://github.com/twilio/guardrail/issues/179
+host: localhost:1234
+schemes:
+- http
+paths:
+  /foo:
+    get:
+      operationId: getFoo
+      responses:
+        '401':
+          description: No content
