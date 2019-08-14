@@ -304,7 +304,7 @@ object ScalaGenerator {
                WriteTree(
                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
                  sourceToBytes(source"""
-              package ${buildPkgTerm(definitions)}
+              package ${buildPkgTerm(dtoComponents)}
                 import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._;
                 ..${imports}
 

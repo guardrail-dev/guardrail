@@ -35,41 +35,42 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-// (filename, prefix, tracing)
+import com.twilio.guardrail.sbt.ExampleCase
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
-val exampleCases: List[(java.io.File, String, Boolean, List[String])] = List(
-  (sampleResource("additional-properties.yaml"), "additionalProperties", false, List.empty),
-  (sampleResource("alias.yaml"), "alias", false, List.empty),
-  (sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain", false, List.empty),
-  (sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader", false, List.empty),
-  (sampleResource("edgecases/defaults.yaml"), "edgecases.defaults", false, List.empty),
-  (sampleResource("formData.yaml"), "form", false, List.empty),
-  (sampleResource("issues/issue45.yaml"), "issues.issue45", false, List.empty),
-  (sampleResource("issues/issue121.yaml"), "issues.issue121", false, List.empty),
-  (sampleResource("issues/issue127.yaml"), "issues.issue127", false, List.empty),
-  (sampleResource("issues/issue143.yaml"), "issues.issue143", false, List.empty),
-  (sampleResource("issues/issue148.yaml"), "issues.issue148", false, List.empty),
-  (sampleResource("issues/issue164.yaml"), "issues.issue164", false, List.empty),
-  (sampleResource("issues/issue184.yaml"), "issues.issue184", false, List.empty),
-  (sampleResource("issues/issue215.yaml"), "issues.issue215", false, List.empty),
-  (sampleResource("issues/issue218.yaml"), "issues.issue218", false, List.empty),
-  (sampleResource("issues/issue222.yaml"), "issues.issue222", false, List.empty),
-  (sampleResource("issues/issue223.yaml"), "issues.issue223", false, List.empty),
-  (sampleResource("issues/issue249.yaml"), "issues.issue249", false, List.empty),
-  (sampleResource("issues/issue264.yaml"), "issues.issue264", false, List.empty),
-  (sampleResource("issues/issue325.yaml"), "issues.issue325", false, List.empty),
-  (sampleResource("issues/issue351.yaml"), "issues.issue351", false, List.empty),
-  (sampleResource("issues/issue357.yaml"), "issues.issue357", false, List.empty),
-  (sampleResource("multipart-form-data.yaml"), "multipartFormData", false, List.empty),
-  (sampleResource("petstore.json"), "examples", false, List("--import", "support.PositiveLong")),
-  (sampleResource("plain.json"), "tests.dtos", false, List.empty),
-  (sampleResource("polymorphism.yaml"), "polymorphism", false, List.empty),
-  (sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped", false, List.empty),
-  (sampleResource("raw-response.yaml"), "raw", false, List.empty),
-  (sampleResource("redaction.yaml"), "redaction", false, List.empty),
-  (sampleResource("server1.yaml"), "tracer", true, List.empty),
-  (sampleResource("server2.yaml"), "tracer", true, List.empty),
-  (sampleResource("pathological-parameters.yaml"), "pathological", false, List.empty)
+val exampleCases: List[ExampleCase] = List(
+  ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
+  ExampleCase(sampleResource("alias.yaml"), "alias"),
+  ExampleCase(sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain"),
+  ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
+  ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
+  ExampleCase(sampleResource("formData.yaml"), "form"),
+  ExampleCase(sampleResource("issues/issue45.yaml"), "issues.issue45"),
+  ExampleCase(sampleResource("issues/issue121.yaml"), "issues.issue121"),
+  ExampleCase(sampleResource("issues/issue127.yaml"), "issues.issue127"),
+  ExampleCase(sampleResource("issues/issue143.yaml"), "issues.issue143"),
+  ExampleCase(sampleResource("issues/issue148.yaml"), "issues.issue148"),
+  ExampleCase(sampleResource("issues/issue164.yaml"), "issues.issue164"),
+  ExampleCase(sampleResource("issues/issue184.yaml"), "issues.issue184"),
+  ExampleCase(sampleResource("issues/issue215.yaml"), "issues.issue215"),
+  ExampleCase(sampleResource("issues/issue218.yaml"), "issues.issue218"),
+  ExampleCase(sampleResource("issues/issue222.yaml"), "issues.issue222"),
+  ExampleCase(sampleResource("issues/issue223.yaml"), "issues.issue223"),
+  ExampleCase(sampleResource("issues/issue249.yaml"), "issues.issue249"),
+  ExampleCase(sampleResource("issues/issue264.yaml"), "issues.issue264"),
+  ExampleCase(sampleResource("issues/issue325.yaml"), "issues.issue325"),
+  ExampleCase(sampleResource("issues/issue351.yaml"), "issues.issue351"),
+  ExampleCase(sampleResource("issues/issue357.yaml"), "issues.issue357"),
+  ExampleCase(sampleResource("issues/issue364.yaml"), "issues.issue364").args("--dtoPackage", "some.thing"),
+  ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
+  ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "support.PositiveLong"),
+  ExampleCase(sampleResource("plain.json"), "tests.dtos"),
+  ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
+  ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
+  ExampleCase(sampleResource("raw-response.yaml"), "raw"),
+  ExampleCase(sampleResource("redaction.yaml"), "redaction"),
+  ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
+  ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
+  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological")
 )
 
 val exampleFrameworkSuites = Map(
@@ -85,12 +86,12 @@ val exampleFrameworkSuites = Map(
 
 def exampleArgs(language: String): List[List[String]] = exampleCases
   .foldLeft(List[List[String]](List(language)))({
-    case (acc, (path, prefix, tracing, extra)) =>
+    case (acc, ExampleCase(path, prefix, extra)) =>
       acc ++ (for {
         frameworkSuite <- exampleFrameworkSuites(language)
         (frameworkName, frameworkPackage, kinds) = frameworkSuite
         kind <- kinds
-        tracingFlag = if (tracing && language != "java") Option("--tracing") else Option.empty[String]
+        filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
       } yield
         (
           List(s"--${kind}") ++
@@ -98,7 +99,7 @@ def exampleArgs(language: String): List[List[String]] = exampleCases
             List("--outputPath", s"modules/sample-${frameworkPackage}/target/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
             List("--framework", frameworkName)
-        ) ++ tracingFlag ++ extra)
+        ) ++ filteredExtra)
   })
 
 lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
