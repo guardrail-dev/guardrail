@@ -6,6 +6,6 @@ docs: true
 collections:
   tut:
     output: true
-version: 0.53.0
+version: 0.53.1
 org: com.twilio
 markdown: kramdown
