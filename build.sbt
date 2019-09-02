@@ -21,7 +21,7 @@ val endpointsVersion     = "0.8.0"
 val ahcVersion           = "2.8.1"
 val dropwizardVersion    = "1.3.9"
 val jerseyVersion        = "2.25.1"
-val kindProjectorVersion = "0.9.10"
+val kindProjectorVersion = "0.10.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -158,7 +158,7 @@ addCommandAlias(
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
-addCompilerPlugin("org.spire-math" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
+addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
 
 publishMavenStyle := true
 
@@ -169,7 +169,7 @@ val testDependencies = Seq(
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % kindProjectorVersion),
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
   scalacOptions in ThisBuild ++= Seq(
@@ -335,7 +335,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
 lazy val microsite = (project in file("modules/microsite"))
   .dependsOn(codegen)
   .settings(
-    addCompilerPlugin("org.spire-math" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
+    addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
   )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
