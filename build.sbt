@@ -303,7 +303,7 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-java8"                   % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-M13",
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
       "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
