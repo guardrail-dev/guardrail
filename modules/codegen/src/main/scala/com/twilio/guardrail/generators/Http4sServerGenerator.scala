@@ -471,9 +471,11 @@ object Http4sServerGenerator {
               case Response(statusCodeName, valueType) =>
                 val responseTerm = Term.Name(s"${statusCodeName.value}")
                 valueType.fold[Case](
-                  p"case $responseCompanionTerm.$responseTerm => ${statusCodeName}()"
+                  p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
                 ) { _ =>
-                  p"case $responseCompanionTerm.$responseTerm(value) => ${statusCodeName}(value)(F, ${Term.Name(s"$operationId${statusCodeName}Encoder")})"
+                  val generatorName = Term.Name(s"$operationId${statusCodeName}EntityResponseGenerator")
+                  val encoderName   = Term.Name(s"$operationId${statusCodeName}Encoder")
+                  p"case $responseCompanionTerm.$responseTerm(value) => $generatorName(value)(F,$encoderName)"
                 }
             }
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
@@ -512,7 +514,7 @@ object Http4sServerGenerator {
         val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
         val fullRoute: Case =
-          p"""case req @ $fullRouteWithTracingMatcher => 
+          p"""case req @ $fullRouteWithTracingMatcher =>
              mapRoute($operationId, req, {$routeBody})
             """
 
@@ -667,13 +669,14 @@ object Http4sServerGenerator {
                        responses: Responses[ScalaLanguage],
                        consumes: Seq[RouteMeta.ContentType],
                        produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
-      generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces)
+      generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces) ++ generateResponseGenerators(operationId,
+                                                                                                                                            responses)
 
     def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(
-            q"val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId}Decoder")), t"EntityDecoder[F, $argType]")} = ${Http4sHelper.generateDecoder(argType, consumes)}"
+            q"private[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId}Decoder")), t"EntityDecoder[F, $argType]")} = ${Http4sHelper.generateDecoder(argType, consumes)}"
           )
       }
 
@@ -683,7 +686,16 @@ object Http4sServerGenerator {
         typeDefaultPair <- response.value
         (tpe, _) = typeDefaultPair
       } yield {
-        q"val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
+        q"private[this] val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
+      }
+
+    def generateResponseGenerators(operationId: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =
+      for {
+        response <- responses.value
+        if response.value.nonEmpty
+      } yield {
+        q"private[this] val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}EntityResponseGenerator"))} = ${Http4sHelper
+          .generateEntityResponseGenerator(q"org.http4s.Status.${response.statusCodeName}")}"
       }
 
     def generateTracingExtractor(operationId: String, tracingField: Term) =

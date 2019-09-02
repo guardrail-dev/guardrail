@@ -42,7 +42,7 @@ class Issue225 extends FunSuite with Matchers with SwaggerSpecRunner {
               mapRoute("getRoot", req, {
                 handler.getRoot(GetRootResponse)(response) flatMap {
                   case GetRootResponse.Ok =>
-                    Ok()
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
                 } 
               })
           }

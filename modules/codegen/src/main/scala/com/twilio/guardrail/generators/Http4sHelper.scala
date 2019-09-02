@@ -95,4 +95,11 @@ object Http4sHelper {
                 """
         case _             => q"EntityEncoder[F, String].contramap[$tpe](_.toString)"
       }
+
+  def generateEntityResponseGenerator(term: Term.Ref): Term =
+    q"""
+       new org.http4s.dsl.impl.EntityResponseGenerator[F,F] {
+          def status = $term
+       }
+     """
 }
