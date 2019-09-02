@@ -71,7 +71,7 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): Free[F, List[StrictProtocolElems[L]]] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackResolveElems(lazyElems))
   object log {
-    def schemaToString(value: Schema[_]): String = "    " + value.toString().lines.filterNot(_.contains(": null")).mkString("\n    ")
+    def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")
     def function[A](name: String): Free[F, A] => Free[F, A] = { func =>
       (push(name) *> func) <* pop
     }

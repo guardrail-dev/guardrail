@@ -174,7 +174,7 @@ object SwaggerGenerator {
         val className      = prop.getClass.getName
         Target.raiseError(
           s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
-              |  ${prop.toString().lines.filterNot(_.contains(": null")).mkString("\n  ")}
+              |  ${prop.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n  ")}
               |""".stripMargin
         )
 

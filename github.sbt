@@ -9,5 +9,5 @@ ghreleaseNotes := { tagName =>
 }
 ghreleaseTitle := { tagName =>
   val ver = tagName.stripPrefix("v")
-  IO.read(baseDirectory.value / "notes" / s"${ver}.md").lines.take(1).toList.head
+  IO.read(baseDirectory.value / "notes" / s"${ver}.md").linesIterator.take(1).toList.head
 }

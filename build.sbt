@@ -22,6 +22,7 @@ val ahcVersion           = "2.8.1"
 val dropwizardVersion    = "1.3.9"
 val jerseyVersion        = "2.25.1"
 val kindProjectorVersion = "0.10.0"
+val jaxbApiVersion       = "2.2.11"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -249,6 +250,7 @@ lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
   .settings(
     codegenSettings,
     libraryDependencies ++= Seq(
+      "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
       "com.typesafe.akka" %% "akka-http"         % akkaVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
       "io.circe"          %% "circe-core"        % circeVersion,
@@ -267,6 +269,7 @@ lazy val http4sSample = (project in file("modules/sample-http4s"))
   .settings(
     codegenSettings,
     libraryDependencies ++= Seq(
+      "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
       "io.circe"      %% "circe-core"          % circeVersion,
       "io.circe"      %% "circe-generic"       % circeVersion,
       "io.circe"      %% "circe-java8"         % circeVersion,
