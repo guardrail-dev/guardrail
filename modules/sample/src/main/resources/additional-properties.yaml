@@ -5,6 +5,22 @@ info:
 paths: {}
 components:
   schemas:
+    SimpleMap:
+      type: object
+      required:
+        - simple_obj
+        - simple_str
+      properties:
+        simple_obj:
+          type: object
+          additionalProperties:
+            type: object
+        simple_str:
+          type: object
+          additionalProperties:
+            type: string
+        just_obj:
+          type: object
     FooMapValues:
       type: object
       required:
