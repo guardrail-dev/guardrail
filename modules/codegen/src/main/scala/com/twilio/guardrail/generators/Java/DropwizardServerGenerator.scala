@@ -14,7 +14,7 @@ import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.Response
@@ -257,6 +257,7 @@ object DropwizardServerGenerator {
       case GetExtraImports(tracing) =>
         List(
           "javax.inject.Inject",
+          "javax.validation.constraints.NotNull",
           "javax.ws.rs.Consumes",
           "javax.ws.rs.DELETE",
           "javax.ws.rs.FormParam",
@@ -335,21 +336,34 @@ object DropwizardServerGenerator {
                   .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
                   .foreach(method.addAnnotation)
 
-                def addParamAnnotation(template: Parameter, annotationName: String, argName: String): Parameter = {
-                  val parameter = template.clone()
-                  parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(argName)))
+                def addParamAnnotations(param: ScalaParameter[JavaLanguage], annotationName: String): Parameter = {
+                  val parameter = param.param.clone()
+                  // NB: The order here is actually critical.  In the case where we're using multipart,
+                  // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
+                  // https://github.com/eclipse-ee4j/jersey/issues/3632
+                  if (param.required) {
+                    parameter.addMarkerAnnotation("NotNull")
+                  }
+                  parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
                   parameter
                 }
 
-                val methodParams: List[Parameter] = List(
+                def boxParameterTypes(parameter: Parameter): Parameter = {
+                  if (parameter.getType.isPrimitiveType) {
+                    parameter.setType(parameter.getType.asPrimitiveType.toBoxedType)
+                  }
+                  parameter
+                }
+
+                val methodParams: List[Parameter] = (List(
                   (parameters.pathParams, "PathParam"),
                   (parameters.headerParams, "HeaderParam"),
                   (parameters.queryStringParams, "QueryParam"),
                   (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
                 ).flatMap({
                   case (params, annotationName) =>
-                    params.map(param => addParamAnnotation(param.param, annotationName, param.argName.value))
-                }) ++ parameters.bodyParams.map(_.param)
+                    params.map(addParamAnnotations(_, annotationName))
+                }) ++ parameters.bodyParams.map(_.param)).map(boxParameterTypes)
 
                 methodParams.foreach(method.addParameter)
                 method.addParameter(
