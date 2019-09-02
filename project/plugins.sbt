@@ -20,5 +20,7 @@ addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.29")
 
 addSbtPlugin("com.47deg"  % "sbt-microsites" % "0.9.6")
 
+addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
+
 // for jdk11
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0"
