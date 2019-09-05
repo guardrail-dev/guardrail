@@ -3,7 +3,7 @@ Maven
 
 The [`twilio/guardrail-maven-plugin`](https://github.com/twilio/guardrail-maven-plugin) installation instructions can be found in that project's README.
 
-By putting the following in your `pom.xml`, generated classes for petstore and github clients and `myserver` server routes are available the next time the `compile` or `generate-sources` goals are run. The motivation for generating servers in your test sources is to facilitate [generating "real" mock downstream servers](https://github.com/twilio/guardrail/blob/master/docs/book.md#generating-test-only-real-server-mocks-for-unit-tests).
+By putting the following in your `pom.xml`, generated classes for petstore and github clients and `myserver` server routes are available the next time the `compile` or `generate-sources` goals are run. The motivation for generating servers in your test sources is to facilitate [generating "real" mock downstream servers](https://guardrail.dev/scala/akka-http/generating-a-server#generating-test-only-real-server-mocks-for-unit-tests).
 
 ```sbt
 
@@ -86,4 +86,4 @@ By putting the following in your `pom.xml`, generated classes for petstore and g
 </build>
 ```
 
-For the curious, generated sources end up in `target/generated-sources/`. These will be overwritten every time `compile` runs, so modification is not possible. If you find the generated source does not fit your needs, please see the section on [guardrail-specific extensions](https://github.com/twilio/guardrail/blob/master/docs/book.md#guardrail-extensions) in the documentation.
+For the curious, generated sources end up in `target/generated-sources/`. These will be overwritten every time `compile` runs, so modification is not possible. If you find the generated source does not fit your needs, please see the section on [guardrail-specific extensions](https://guardrail.dev/scala/akka-http/guardrail-extensions) in the documentation.
