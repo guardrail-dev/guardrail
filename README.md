@@ -6,7 +6,7 @@ guardrail is a code generation tool, capable of reading from OpenAPI/Swagger spe
 New to guardrail?
 ---
 
-Check out the [book](docs/book.md)!
+Check out the [docs](https://guardrail.dev/)!
 
 Compatible library versions are listed in [COMPATIBILITY.md](COMPATIBILITY.md)
 
