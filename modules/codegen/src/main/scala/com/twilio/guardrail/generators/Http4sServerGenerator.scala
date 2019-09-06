@@ -5,9 +5,10 @@ import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ Response, Responses }
+import com.twilio.guardrail.protocol.terms.{ Header, Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -468,14 +469,29 @@ object Http4sServerGenerator {
           .filter(_ == true)
           .fold[Term] {
             val marshallers = responses.value.map {
-              case Response(statusCodeName, valueType) =>
-                val responseTerm = Term.Name(s"${statusCodeName.value}")
-                valueType.fold[Case](
-                  p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
-                ) { _ =>
-                  val generatorName = Term.Name(s"$operationId${statusCodeName}EntityResponseGenerator")
-                  val encoderName   = Term.Name(s"$operationId${statusCodeName}Encoder")
-                  p"case $responseCompanionTerm.$responseTerm(value) => $generatorName(value)(F,$encoderName)"
+              case Response(statusCodeName, valueType, headers) =>
+                val responseTerm  = Term.Name(s"${statusCodeName.value}")
+                val respType      = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
+                val generatorName = Term.Name(s"$operationId${statusCodeName}EntityResponseGenerator")
+                val encoderName   = Term.Name(s"$operationId${statusCodeName}Encoder")
+                (valueType, headers.value) match {
+                  case (None, Nil) =>
+                    p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
+                  case (Some(_), Nil) =>
+                    p"case resp: $respType => $generatorName(resp.value)(F,$encoderName)"
+                  case (None, headersList) =>
+                    val (http4sHeaders, http4sHeadersDefinitions) = createHttp4sHeaders(headersList)
+                    p"""case resp: $respType =>
+                          ..$http4sHeadersDefinitions
+                          F.pure(Response[F](status = org.http4s.Status.$statusCodeName, headers = Headers($http4sHeaders)))
+                      """
+                  case (Some(_), headersList) =>
+                    val (http4sHeaders, http4sHeadersDefinitions) = createHttp4sHeaders(headersList)
+                    val valueTerm                                 = q"resp.value"
+                    p"""case resp: $respType =>
+                          ..$http4sHeadersDefinitions
+                          $generatorName($valueTerm, $http4sHeaders:_*)(F,$encoderName)
+                      """
                 }
             }
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
@@ -553,6 +569,20 @@ object Http4sServerGenerator {
           )
         )
       })
+
+    def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
+      val (names, definitions) = headers.map {
+        case Header(name, required, _, termName) =>
+          val nameLiteral = Lit.String(name)
+          val headerName  = Term.Name(s"${name.toCamelCase}Header")
+          val pattern     = Pat.Var(headerName)
+          val v           = if (required) q"List(Header($nameLiteral, resp.$termName))" else q"resp.$termName.map(Header($nameLiteral,_)).toList"
+          (headerName, q"val $pattern = $v")
+      }.unzip
+      val headersTerm = Term.Name("responseHeaders")
+      val allHeaders  = q"val ${Pat.Var(headersTerm)} = List(..$names).flatten"
+      (headersTerm, definitions :+ allHeaders)
+    }
 
     def combineRouteTerms(terms: List[Case]): Target[Term] =
       Target.log.function("combineRouteTerms")(for {

@@ -1,0 +1,31 @@
+openapi: 3.0.1
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  Foo:
+    type: object
+paths:
+  /foo:
+    get:
+      operationId: getFoo
+      responses:
+        '200':
+          headers:
+            X-Required-Header:
+              type: string
+              required: true
+            X-Optional-Header:
+              type: string
+          schema:
+            $ref: '#/definitions/Foo'
+        '204':
+          headers:
+            X-Required-Header:
+              type: string
+              required: true
+            X-Optional-Header:
+              type: string

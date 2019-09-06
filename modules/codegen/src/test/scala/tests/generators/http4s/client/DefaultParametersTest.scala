@@ -143,7 +143,13 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(resp) =>
-            getOrderByIdOkDecoder.decode(resp, strict = false).fold(throw _, Predef.identity).map(GetOrderByIdResponse.Ok)
+            val result = for (value <- getOrderByIdOkDecoder.decode(resp, strict = false)) yield GetOrderByIdResponse.Ok(value)
+            result.value.flatMap {
+              case Right(v) =>
+                F.pure(v)
+              case Left(e) =>
+                F.raiseError(e)
+            }
           case BadRequest(_) =>
             F.pure(GetOrderByIdResponse.BadRequest)
           case NotFound(_) =>

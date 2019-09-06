@@ -72,7 +72,8 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
-  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological")
+  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
+  ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders")
 )
 
 val exampleFrameworkSuites = Map(

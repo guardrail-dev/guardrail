@@ -6,7 +6,7 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.protocol.terms.{ Header, Responses }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -200,13 +200,71 @@ object Http4sClientGenerator {
           val reqExpr = List(
             q"val req = $reqWithBody"
           )
+
+          def buildOptionalHeaders(headers: List[Header[ScalaLanguage]]) =
+            headers.map { header =>
+              val headerName = Lit.String(header.name.toLowerCase)
+              val pattern    = Pat.Var(header.term)
+              q"val $pattern = resp.headers.get($headerName.ci).map(_.value)"
+            }
+          def buildRequiredHeaders(headers: List[Header[ScalaLanguage]]) =
+            headers.map { header =>
+              val headerName = Lit.String(header.name.toLowerCase)
+              val pattern    = Pat.Var(header.term)
+              val detail     = Lit.String(s"HTTP header '${header.name}' is not present.")
+              enumerator"""$pattern <- EitherT.fromEither[F](resp.headers.get($headerName.ci).map(_.value).toRight(ParseFailure("Missing required header.",$detail)))"""
+            }
+          def buildHeaders(headers: List[Header[ScalaLanguage]]) = {
+            val optionalValDefs = buildOptionalHeaders(headers.filterNot(_.isRequired))
+            val requiredHeaders = headers.filter(_.isRequired)
+            val forGenerators   = buildRequiredHeaders(requiredHeaders)
+            (optionalValDefs, forGenerators)
+          }
           val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
           val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            resp.value.fold[Case](
-              p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
-            ) { _ =>
-              p"case ${resp.statusCodeName}(resp) => ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, Predef.identity).map($responseCompanionTerm.$responseTerm)"
+            (resp.value, resp.headers.value) match {
+              case (None, Nil) =>
+                p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
+              case (None, headers) =>
+                val headerTerms                      = headers.map(_.term)
+                val (optionalValDefs, forGenerators) = buildHeaders(headers)
+                val body = if (forGenerators.isEmpty) {
+                  q"""
+                       ..$optionalValDefs
+                     F.pure($responseCompanionTerm.$responseTerm(..$headerTerms))
+                   """
+                } else {
+                  val allVals = optionalValDefs :+
+                    q"""
+                      val result = for {
+                        ..$forGenerators
+                    } yield $responseCompanionTerm.$responseTerm(..$headerTerms)
+                     """
+                  q"""
+                    ..$allVals
+                    result.value.flatMap {
+                      case Right(v) => F.pure(v)
+                      case Left(e) => F.raiseError(e)
+                    }
+                  """
+                }
+                p"case ${resp.statusCodeName}(resp) => $body"
+              case (Some(_), headers) =>
+                val (optionalValDefs, forGenerators) = buildHeaders(headers)
+                val all                              = Term.Name("value") :: headers.map(_.term)
+                val forComprehension                 = q"""val result = for {
+                  value <- ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false)
+                  ..$forGenerators
+                  } yield $responseCompanionTerm.$responseTerm(..$all)"""
+                val body                             = q"""
+                     ..${optionalValDefs :+ forComprehension}
+                    result.value.flatMap {
+                      case Right(v) => F.pure(v)
+                      case Left(e) => F.raiseError(e)
+                    }
+                   """
+                p"case ${resp.statusCodeName}(resp) => $body"
             }
           } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
           // Get the response type

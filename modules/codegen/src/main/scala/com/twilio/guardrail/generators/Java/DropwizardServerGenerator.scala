@@ -378,7 +378,7 @@ object DropwizardServerGenerator {
 
                       val entitySetterIfTree = NonEmptyList
                         .fromList(responses.value.collect({
-                          case Response(statusCodeName, Some(_)) => statusCodeName
+                          case Response(statusCodeName, Some(_), _) => statusCodeName
                         }))
                         .map(_.reverse.foldLeft[IfStmt](null)({
                           case (nextIfTree, statusCodeName) =>
