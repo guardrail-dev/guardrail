@@ -50,8 +50,8 @@ object ClientGenerator {
             responseClientPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
-                  operationId         <- getOperationId(operation)
-                  responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
+                  operationId         <- getOperationId(operation.get)
+                  responses           <- Responses.getResponses[L, F](operationId, operation.get, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
                   clientOp            <- generateClientOperation(className, context.tracing, securitySchemes, parameters)(route, operationId, responses)

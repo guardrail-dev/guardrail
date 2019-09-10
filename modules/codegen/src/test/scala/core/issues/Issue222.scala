@@ -75,7 +75,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
        |""".stripMargin
 
   test("Ensure case-to-case inheritance is not generated") {
-    val (ProtocolDefinitions(List(request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _, _, _), _, _, _), _, _) =
+    val (x @ ProtocolDefinitions(List(request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _, _, _), _, _, _), _, _) =
       runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val List(reqEncoder, reqDecoder) = request.staticDefns.definitions
@@ -202,6 +202,6 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   }
 
-  private def compare(t1: Tree, t2: Tree): Assertion =
+  private def compare(t1: Tree, t2: Tree)(implicit pos: org.scalactic.source.Position): Assertion =
     t1.structure shouldEqual t2.structure
 }

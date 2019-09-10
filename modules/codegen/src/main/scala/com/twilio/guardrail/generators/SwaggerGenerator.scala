@@ -3,8 +3,9 @@ package generators
 
 import cats.implicits._
 import cats.~>
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
-import com.twilio.guardrail.generators.syntax.RichSchema
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
@@ -32,44 +33,60 @@ object SwaggerGenerator {
 
       case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
         Target.log.function("extractOperations")(for {
-          _ <- Target.log.debug(s"Args: ${paths}")
-          routes <- paths.traverse({
+          _ <- Target.log.debug(s"Args: ${paths.get.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
+          routes <- paths.sequence.flatTraverse({
             case (pathStr, path) =>
               for {
-                operationMap <- Target.fromOption(Option(path.readOperationsMap()), "No operations defined")
-                operationRoutes <- operationMap.asScala.toList.traverse({
+                operationMap <- path
+                  .downField("operations", _.readOperationsMap)
+                  .toNel
+                  .raiseErrorIfEmpty("No operations defined")
+                operationRoutes <- operationMap.sequence.toList.traverse({
                   case (httpMethod, operation) =>
-                    val securityRequirements = Option(operation.getSecurity)
-                      .flatMap(SecurityRequirements(_, SecurityOptional(operation), SecurityRequirements.Local))
-                      .orElse(globalSecurityRequirements)
+                    val securityRequirements =
+                      operation
+                        .downField("security", _.getSecurity)
+                        .toNel
+                        .orHistory
+                        .fold(
+                          _ => globalSecurityRequirements,
+                          security => SecurityRequirements(security.get, SecurityOptional(operation), SecurityRequirements.Local)
+                        )
 
                     // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
                     // requestBodies, so let's manually fix that up here.
-                    val updatedOperation = Option(operation.getRequestBody)
-                      .flatMap(rb => Option(rb.get$ref))
-                      .flatMap(rbref => Option(rbref.split("/")).map(_.toList))
-                      .fold(Target.pure(operation))({
-                        case refName @ "#" :: "components" :: "requestBodies" :: name :: Nil =>
-                          commonRequestBodies
-                            .get(name)
-                            .fold(
-                              Target.raiseError[Operation](s"Unable to resolve reference to '$refName'")
-                            )({ commonRequestBody =>
-                              Target.pure(
-                                SwaggerUtil
-                                  .copyOperation(operation)
-                                  .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
-                              )
-                            })
-                        case x =>
-                          Target.raiseError[Operation](s"Invalid request body $$ref name '$x'")
-                      })
+                    val updatedOperation: Target[Tracker[Operation]] = operation
+                      .downField("body", _.getRequestBody)
+                      .flatDownField("$ref", _.get$ref)
+                      .refine[Target[Tracker[Operation]]]({ case Some(x) => (x, x.split("/").toList) })(
+                        tracker =>
+                          tracker.get match {
+                            case (rbref, "#" :: "components" :: "requestBodies" :: name :: Nil) =>
+                              commonRequestBodies
+                                .get(name)
+                                .fold[Target[Tracker[Operation]]](
+                                  Target.raiseError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
+                                )({ commonRequestBody =>
+                                  Target.pure(
+                                    operation.map(
+                                      op =>
+                                        SwaggerUtil
+                                          .copyOperation(op)
+                                          .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
+                                    )
+                                  )
+                                })
+                            case (rbref, _) =>
+                              Target.raiseError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
+                        }
+                      )
+                      .getOrElse(Target.pure(operation))
 
                     updatedOperation.map(op => RouteMeta(pathStr, httpMethod, op, securityRequirements))
                 })
               } yield operationRoutes
           })
-        } yield routes.flatten)
+        } yield routes)
 
       case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
         for {
@@ -97,7 +114,7 @@ object SwaggerGenerator {
 
       case GetClassName(operation, vendorPrefixes) =>
         Target.log.function("getClassName")(for {
-          _ <- Target.log.debug(s"Args: ${operation}")
+          _ <- Target.log.debug(s"Args: ${operation.showNotNull}")
 
           pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)

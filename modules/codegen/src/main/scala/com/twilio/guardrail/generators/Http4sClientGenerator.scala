@@ -288,8 +288,8 @@ object Http4sClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
-          produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams

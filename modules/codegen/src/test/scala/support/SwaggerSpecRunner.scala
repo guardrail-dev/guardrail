@@ -6,6 +6,7 @@ import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.arrow.FunctionK
 import com.twilio.guardrail._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import scala.meta.Tree
@@ -40,7 +41,7 @@ trait SwaggerSpecRunner extends EitherValues {
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Client,
           context,
-          swagger
+          Tracker(swagger)
         )
         .foldMap(framework)
     )
@@ -50,7 +51,7 @@ trait SwaggerSpecRunner extends EitherValues {
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Server,
           context,
-          swagger
+          Tracker(swagger)
         )
         .foldMap(framework)
     )

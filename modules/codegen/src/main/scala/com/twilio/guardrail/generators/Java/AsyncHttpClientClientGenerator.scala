@@ -453,8 +453,8 @@ object AsyncHttpClientClientGenerator {
                                    parameters,
                                    responses,
                                    securitySchemes) =>
-        val responseParentName = s"${operation.getOperationId.capitalize}Response"
-        val callBuilderName    = s"${operation.getOperationId.capitalize}CallBuilder"
+        val responseParentName = s"${operation.get.getOperationId.capitalize}Response"
+        val callBuilderName    = s"${operation.get.getOperationId.capitalize}CallBuilder"
         for {
           responseParentType <- safeParseClassOrInterfaceType(responseParentName)
           callBuilderType    <- safeParseClassOrInterfaceType(callBuilderName)
@@ -515,8 +515,8 @@ object AsyncHttpClientClientGenerator {
             (parameters.headerParams, "addHeader", false)
           )
 
-          val consumes = getBestConsumes(operation, parameters)
-          val produces = responses.value.map(resp => (resp.statusCode, getBestProduces(operation, resp))).toMap
+          val consumes = getBestConsumes(operation.get, parameters)
+          val produces = responses.value.map(resp => (resp.statusCode, getBestProduces(operation.get, resp))).toMap
 
           val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
             .flatMap({
@@ -728,7 +728,7 @@ object AsyncHttpClientClientGenerator {
                                             .flatten
                                             .getOrElse({
                                               println(
-                                                s"WARNING: no supported content type specified for ${operation.getOperationId}'s ${response.statusCode} response; falling back to application/json"
+                                                s"WARNING: no supported content type specified for ${operation.get.getOperationId}'s ${response.statusCode} response; falling back to application/json"
                                               )
                                               RouteMeta.ApplicationJson
                                             }) match {

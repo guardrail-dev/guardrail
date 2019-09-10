@@ -4,7 +4,7 @@ package generators
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
 import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
-import com.twilio.guardrail.generators.syntax.RichString
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
@@ -117,6 +117,7 @@ object ScalaParameter {
     }
 
     log.function(s"fromParameter")(for {
+      _ <- log.debug(parameter.showNotNull)
       meta                                                                     <- paramMeta(parameter)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 

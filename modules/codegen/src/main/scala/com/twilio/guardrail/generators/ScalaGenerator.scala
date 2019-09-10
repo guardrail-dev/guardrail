@@ -9,8 +9,6 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 
-import cats.data.NonEmptyList
-
 import scala.meta._
 
 object ScalaGenerator {

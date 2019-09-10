@@ -1,6 +1,5 @@
 package com.twilio.guardrail
 
-import _root_.io.swagger.v3.oas.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
@@ -8,7 +7,6 @@ import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityScheme, SwaggerTerms }
 
@@ -50,11 +48,11 @@ object ServerGenerator {
             responseServerPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
-                  operationId         <- getOperationId(operation)
-                  responses           <- Responses.getResponses(operationId, operation, protocolElems)
+                  operationId         <- getOperationId(operation.get)
+                  responses           <- Responses.getResponses(operationId, operation.get, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
-                  tracingField        <- buildTracingFields(operation, className, context.tracing)
+                  tracingField        <- buildTracingFields(operation.get, className, context.tracing)
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip

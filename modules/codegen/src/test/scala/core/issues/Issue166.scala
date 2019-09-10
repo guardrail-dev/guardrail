@@ -3,6 +3,7 @@ package tests.core.issues
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
 import org.scalatest.{ FunSuite, Matchers }
@@ -46,7 +47,7 @@ class Issue166 extends FunSuite with Matchers with SwaggerSpecRunner {
         .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
           CodegenTarget.Models,
           Context.empty,
-          new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI
+          Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI)
         )
         .foldMap(Http4s)
     )

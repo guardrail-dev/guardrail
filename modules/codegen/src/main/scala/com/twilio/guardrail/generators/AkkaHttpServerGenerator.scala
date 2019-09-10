@@ -6,6 +6,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
+import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
@@ -97,7 +98,7 @@ object AkkaHttpServerGenerator {
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         for {
-          _ <- Target.log.debug(s"buildTracingFields(${operation}, ${resourceName}, ${tracing})")
+          _ <- Target.log.debug(s"buildTracingFields(${operation.showNotNull}, ${resourceName}, ${tracing})")
           res <- if (tracing) {
             for {
               operationId <- Target.fromOption(Option(operation.getOperationId())
@@ -665,12 +666,12 @@ object AkkaHttpServerGenerator {
         _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
         consumes = NonEmptyList
-          .fromList(operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_)))
+          .fromList(operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_)))
           .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
-        operationId <- Target.fromOption(Option(operation.getOperationId())
-                                           .map(splitOperationParts)
-                                           .map(_._2),
-                                         "Missing operationId")
+        operationId <- operation.downField("operationId", _.getOperationId())
+                                           .map(_.map(splitOperationParts).map(_._2))
+                                           .raiseErrorIfEmpty("Missing operationId")
+                                           .map(_.get)
 
         // special-case file upload stuff
         formArgs = parameters.formParams.map({ x =>

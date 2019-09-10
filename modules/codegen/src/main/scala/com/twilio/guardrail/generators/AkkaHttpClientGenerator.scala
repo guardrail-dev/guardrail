@@ -309,9 +309,9 @@ object AkkaHttpClientGenerator {
           _ <- Target.pure(())
 
           produces = NonEmptyList
-            .fromList(operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_)))
+            .fromList(operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_)))
             .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
-          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams

@@ -189,9 +189,9 @@ val codegenSettings = Seq(
     "-encoding",
     "utf8"
   ) ++ (if (scalaVersion.value.startsWith("2.11.")) {
-          List("-Xexperimental", "-Xlint:_")
+          List("-Xexperimental", "-Xlint:-missing-interpolator,_")
         } else {
-          List("-Xlint:-unused,_")
+          List("-Xlint:-unused,-missing-interpolator,_")
         }),
   parallelExecution in Test := true
 )

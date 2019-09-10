@@ -8,6 +8,7 @@ import cats.implicits._
 import cats.~>
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
 import com.twilio.guardrail.Discriminator
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.syntax.RichString
@@ -23,7 +24,6 @@ import com.github.javaparser.ast.expr._
 import java.math.BigInteger
 import java.util
 import java.util.Locale
-import scala.language.existentials
 import scala.util.Try
 
 object JacksonGenerator {
@@ -721,14 +721,16 @@ object JacksonGenerator {
   object ModelProtocolTermInterp extends (ModelProtocolTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ModelProtocolTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
-        (swagger match {
-          case m: ObjectSchema => Target.pure(Option(m.getProperties))
-          case comp: ComposedSchema =>
-            Target.pure(Option(comp.getAllOf).flatMap(_.asScala.toList.lastOption).flatMap(prop => Option(prop.getProperties)))
-          case comp: Schema[_] if Option(comp.get$ref).isDefined =>
-            Target.raiseError(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
-          case _ => Target.pure(None)
-        }).map(_.map(_.asScala.toList).toList.flatten)
+        swagger
+          .refine({ case m: ObjectSchema => m })(m => Target.pure(m.downField("properties", _.getProperties()).sequence.toList))
+          .orRefine({ case c: ComposedSchema => c })(
+            comp =>
+              Target.pure(comp.downField("allOf", _.getAllOf()).sequence.lastOption.toList.flatMap(_.downField("properties", _.getProperties).sequence.toList))
+          )
+          .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
+            comp => Target.raiseError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+          )
+          .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
         Target.log.function("transformProperty") {
@@ -961,22 +963,20 @@ object JacksonGenerator {
   object PolyProtocolTermInterp extends (PolyProtocolTerm[JavaLanguage, ?] ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[JavaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
-        def allParents(model: Schema[_]): List[(String, Schema[_], List[Schema[_]])] =
-          model match {
-            case schema: ComposedSchema =>
-              Option(schema.getAllOf)
-                .map(_.asScala.toList)
-                .getOrElse(List.empty)
+        def allParents(model: Tracker[Schema[_]]): List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])] =
+          model
+            .refine({ case c: ComposedSchema => c })(
+              _.downField("allOf", _.getAllOf()).sequence
                 .flatMap({ elem =>
                   definitions
                     .collectFirst({
-                      case (clsName, e) if Option(elem.get$ref).exists(_.endsWith(s"/$clsName")) =>
+                      case (clsName, e) if elem.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName")) =>
                         (clsName, e, List.empty) :: allParents(e)
                     })
                     .getOrElse(List.empty)
                 })
-            case _ => List.empty
-          }
+            )
+            .getOrElse(List.empty)
 
         Target.pure(allParents(swagger))
 

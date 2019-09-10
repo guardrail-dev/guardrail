@@ -2,28 +2,9 @@ package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models.Operation
 import _root_.io.swagger.v3.oas.models.parameters.Parameter
-import _root_.io.swagger.v3.oas.models.{ OpenAPI, PathItem }
-import java.net.URI
 import scala.collection.JavaConverters._
 
 package object shims {
-  implicit class OpenApiExt(swagger: OpenAPI) {
-    val serverUrls: List[String] = Option(swagger.getServers).toList.flatMap(_.asScala.toList).map(_.getUrl)
-
-    def basePath(): Option[String] = {
-      val pathOpt = for {
-        list <- Option(serverUrls.filter(_ != "/")).filter(_.nonEmpty)
-        head <- list.headOption
-        path <- Option(new URI(head).getPath)
-      } yield path
-
-      pathOpt.filter(_ != "/")
-    }
-
-    def getPathsOpt(): List[(String, PathItem)] =
-      Option(swagger.getPaths).map(_.asScala.toList).getOrElse(List.empty)
-  }
-
   implicit class OperationExt(operation: Operation) {
     def consumes: Seq[String] =
       for {

@@ -420,10 +420,10 @@ object Http4sServerGenerator {
       Target.log.function("generateRoute")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${basePath}, ${route}, ${tracingFields}")
         RouteMeta(path, method, operation, securityRequirements) = route
-        operationId <- Target.fromOption(Option(operation.getOperationId())
-                                           .map(splitOperationParts)
-                                           .map(_._2),
-                                         "Missing operationId")
+        operationId <- operation.downField("operationId", _.getOperationId())
+                                           .map(_.map(splitOperationParts).map(_._2))
+                                           .raiseErrorIfEmpty("Missing operationId")
+                                           .map(_.get)
 
         formArgs   = parameters.formParams
         headerArgs = parameters.headerParams
@@ -558,8 +558,8 @@ object Http4sServerGenerator {
           )
         )
 
-        val consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
-        val produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
         val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(operationId, bodyArgs, responses, consumes, produces)
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
