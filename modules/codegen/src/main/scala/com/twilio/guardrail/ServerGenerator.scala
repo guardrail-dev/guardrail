@@ -28,7 +28,7 @@ object ServerGenerator {
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[L <: LA, F[_]](context: Context, swagger: OpenAPI, frameworkImports: List[L#Import])(
+  def fromSwagger[L <: LA, F[_]](context: Context, basePath: Option[String], frameworkImports: List[L#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],
@@ -36,8 +36,6 @@ object ServerGenerator {
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
     import Sw._
-
-    val basePath: Option[String] = swagger.basePath()
 
     for {
       extraImports       <- getExtraImports(context.tracing)
