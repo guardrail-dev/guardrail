@@ -1,11 +1,9 @@
 package tests.core.issues
 
 import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.Http4s
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.languages.ScalaLanguage
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner

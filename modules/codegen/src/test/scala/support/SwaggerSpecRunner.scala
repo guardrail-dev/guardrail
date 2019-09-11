@@ -26,9 +26,6 @@ trait SwaggerSpecRunner {
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
-    import Fw._
-    import Sw._
-
     val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) = Target.unsafeExtract(
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](

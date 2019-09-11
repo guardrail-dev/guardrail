@@ -1,7 +1,5 @@
 package tests.core.issues
 
-import cats.instances.all._
-import com.twilio.swagger._
 import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.{ Context, Server, Servers }
 import org.scalatest.{ FunSuite, Matchers }

@@ -11,10 +11,8 @@ import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumPr
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
-import scala.collection.JavaConverters._
 import java.net.URI
 
 case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: L#ClassDefinition)
