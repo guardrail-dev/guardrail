@@ -1,24 +1,22 @@
 package support
 
+import _root_.io.swagger.v3.oas.models._
 import com.twilio.guardrail.languages.LA
-import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.parser.core.models.ParseOptions
-import java.util
+import _root_.io.swagger.parser.OpenAPIParser
+import _root_.io.swagger.v3.parser.core.models.ParseOptions
+import cats.arrow.FunctionK
+import com.twilio.guardrail._
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 
 trait SwaggerSpecRunner {
-
-  import _root_.io.swagger.v3.oas.models._
-  import cats.arrow.FunctionK
-  import com.twilio.guardrail._
-  import com.twilio.guardrail.terms.framework.FrameworkTerms
-  import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 
   def runSwaggerSpec[L <: LA](
       spec: String
   ): (Context, FunctionK[CodegenApplication[L, ?], Target]) => (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
-    runSwagger(new OpenAPIParser().readContents(spec, new util.LinkedList(), parseOpts).getOpenAPI) _
+    runSwagger(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI) _
   }
 
   def runSwagger[L <: LA](swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
