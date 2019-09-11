@@ -201,70 +201,29 @@ object Http4sClientGenerator {
             q"val req = $reqWithBody"
           )
 
-          def buildOptionalHeaders(headers: List[Header[ScalaLanguage]]) =
+          def buildHeaders(headers: List[Header[ScalaLanguage]]) =
             headers.map { header =>
               val headerName = Lit.String(header.name.toLowerCase)
-              val pattern    = Pat.Var(header.term)
-              q"val $pattern = resp.headers.get($headerName.ci).map(_.value)"
+              if (header.isRequired) {
+                q"parseRequiredHeader(resp, $headerName)"
+              } else {
+                q"parseOptionalHeader(resp, $headerName)"
+              }
             }
-          def buildRequiredHeaders(headers: List[Header[ScalaLanguage]]) =
-            headers.map { header =>
-              val headerName = Lit.String(header.name.toLowerCase)
-              val pattern    = Pat.Var(header.term)
-              val detail     = Lit.String(s"HTTP header '${header.name}' is not present.")
-              enumerator"""$pattern <- EitherT.fromEither[F](resp.headers.get($headerName.ci).map(_.value).toRight(ParseFailure("Missing required header.",$detail)))"""
-            }
-          def buildHeaders(headers: List[Header[ScalaLanguage]]) = {
-            val optionalValDefs = buildOptionalHeaders(headers.filterNot(_.isRequired))
-            val requiredHeaders = headers.filter(_.isRequired)
-            val forGenerators   = buildRequiredHeaders(requiredHeaders)
-            (optionalValDefs, forGenerators)
-          }
           val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
           val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             (resp.value, resp.headers.value) match {
               case (None, Nil) =>
                 p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
-              case (None, headers) =>
-                val headerTerms                      = headers.map(_.term)
-                val (optionalValDefs, forGenerators) = buildHeaders(headers)
-                val body = if (forGenerators.isEmpty) {
-                  q"""
-                       ..$optionalValDefs
-                     F.pure($responseCompanionTerm.$responseTerm(..$headerTerms))
-                   """
-                } else {
-                  val allVals = optionalValDefs :+
-                    q"""
-                      val result = for {
-                        ..$forGenerators
-                    } yield $responseCompanionTerm.$responseTerm(..$headerTerms)
-                     """
-                  q"""
-                    ..$allVals
-                    result.value.flatMap {
-                      case Right(v) => F.pure(v)
-                      case Left(e) => F.raiseError(e)
-                    }
-                  """
+              case (maybeBody, headers) =>
+                val decodeValue = maybeBody.map { _ =>
+                  q"${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).value.flatMap(F.fromEither)"
                 }
-                p"case ${resp.statusCodeName}(resp) => $body"
-              case (Some(_), headers) =>
-                val (optionalValDefs, forGenerators) = buildHeaders(headers)
-                val all                              = Term.Name("value") :: headers.map(_.term)
-                val forComprehension                 = q"""val result = for {
-                  value <- ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false)
-                  ..$forGenerators
-                  } yield $responseCompanionTerm.$responseTerm(..$all)"""
-                val body                             = q"""
-                     ..${optionalValDefs :+ forComprehension}
-                    result.value.flatMap {
-                      case Right(v) => F.pure(v)
-                      case Left(e) => F.raiseError(e)
-                    }
-                   """
-                p"case ${resp.statusCodeName}(resp) => $body"
+                val decodeHeaders = buildHeaders(headers)
+                val mapArgs       = decodeValue.toList ++ decodeHeaders
+                val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
+                p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm)"
             }
           } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
           // Get the response type
@@ -430,7 +389,23 @@ object Http4sClientGenerator {
             class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
-             ..${supportDefinitions};
+              private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
+                F.pure(response.headers.get(header.ci).map(_.value))
+
+              private def parseRequiredHeader(response: Response[F], header: String): F[String] =
+                response.headers
+                  .get(header.ci)
+                  .map(_.value)
+                  .fold[F[String]](
+                    F.raiseError(
+                      ParseFailure(
+                        "Missing required header.",
+                        s"HTTP header '$$header' is not present."
+                      )
+                    )
+                  )(F.pure)
+
+              ..${supportDefinitions};
               ..$clientCalls
             }
           """

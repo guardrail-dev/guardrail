@@ -118,6 +118,15 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
     }"""
     val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
+
+      private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
+        F.pure(response.headers.get(header.ci).map(_.value))
+
+      private def parseRequiredHeader(response: Response[F], header: String): F[String] =
+        response.headers
+          .get(header.ci)
+          .map(_.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
+
       val getBazOkDecoder = EntityDecoder[F, String].flatMapR[io.circe.Json] {
         str => Json.fromString(str).as[io.circe.Json].fold(failure => DecodeResult.failure(InvalidMessageBodyFailure(s"Could not decode response: $$str", Some(failure))), DecodeResult.success(_))
       }
@@ -136,15 +145,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(resp) =>
-            {
-              val result = for (value <- getBazOkDecoder.decode(resp, strict = false)) yield GetBazResponse.Ok(value)
-              result.value.flatMap{
-                case Right(v) =>
-                  F.pure(v)
-                case Left(e) =>
-                  F.raiseError(e)
-              }
-            }
+            F.map(getBazOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetBazResponse.Ok)
           case resp =>
             F.raiseError(UnexpectedStatus(resp.status))
         })
