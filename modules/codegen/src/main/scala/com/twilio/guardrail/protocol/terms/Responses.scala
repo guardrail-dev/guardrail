@@ -8,7 +8,7 @@ import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import io.swagger.v3.oas.models.{ Operation, headers }
+import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.media.Schema
 import scala.collection.JavaConverters._
 

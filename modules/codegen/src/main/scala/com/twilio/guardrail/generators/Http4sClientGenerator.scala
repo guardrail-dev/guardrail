@@ -273,6 +273,24 @@ object Http4sClientGenerator {
           )
         }
 
+        def checkCompatibility(methodName: String, responses: Responses[ScalaLanguage]): Target[Unit] = {
+          val result = responses.value.flatMap { response =>
+            val size = response.value.size + response.headers.value.size
+            if (size > 22) {
+              // we have hit case class limitation
+              // https://github.com/twilio/guardrail/pull/382
+              List[Target[Unit]](
+                Target.raiseError(
+                  s"Failed to generate client for method $methodName and status code ${response.statusCode}. It's currently not possible to have more than 22 properties (payload, HTTP headers). See https://github.com/twilio/guardrail/pull/382."
+                )
+              )
+            } else {
+              List.empty[Target[Unit]]
+            }
+          }
+          result.headOption.getOrElse(Target.pure(()))
+        }
+
         Target.log.function("generateClientOperation")(for {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
@@ -304,6 +322,8 @@ object Http4sClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
+
+          _ <- checkCompatibility(methodName, responses)
 
           renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
