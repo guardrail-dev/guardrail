@@ -3,6 +3,7 @@ package generators
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
+import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -210,24 +211,33 @@ object Http4sClientGenerator {
                 }
               }
             responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
-            cases = responses.value.map { resp =>
+            cases <- responses.value.traverse[Target, Case]({ resp =>
               val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
               (resp.value, resp.headers.value) match {
                 case (None, Nil) =>
-                  p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
+                  Target.pure(p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)")
                 case (maybeBody, headers) =>
-                  val decodeValue = maybeBody.map { _ =>
-                    q"${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).value.flatMap(F.fromEither)"
+                  if (maybeBody.size + headers.size > 22) {
+                    // we have hit case class limitation
+                    // https://github.com/twilio/guardrail/pull/382
+                    Target.raiseError(
+                      s"Failed to generate client for method $methodName and status code ${resp.statusCode}. It's currently not possible to have more than 22 properties (payload, HTTP headers). See https://github.com/twilio/guardrail/pull/382."
+                    )
+                  } else {
+                    val decodeValue = maybeBody.map { _ =>
+                      q"${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).value.flatMap(F.fromEither)"
+                    }
+                    val decodeHeaders = buildHeaders(headers)
+                    val mapArgs       = decodeValue.toList ++ decodeHeaders
+                    val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
+                    Target.pure(p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm)")
                   }
-                  val decodeHeaders = buildHeaders(headers)
-                  val mapArgs       = decodeValue.toList ++ decodeHeaders
-                  val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
-                  p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm)"
               }
-            } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
+            })
+            unexpectedCase = p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
             // Get the response type
             responseTypeRef  = Type.Name(s"${methodName.capitalize}Response")
-            executeReqExpr   = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
+            executeReqExpr   = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases :+ unexpectedCase)})""")
             methodBody: Term = q"""
               {
                 ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
@@ -271,24 +281,6 @@ object Http4sClientGenerator {
             )
           }
 
-        def checkCompatibility(methodName: String, responses: Responses[ScalaLanguage]): Target[Unit] = {
-          val result = responses.value.flatMap { response =>
-            val size = response.value.size + response.headers.value.size
-            if (size > 22) {
-              // we have hit case class limitation
-              // https://github.com/twilio/guardrail/pull/382
-              List[Target[Unit]](
-                Target.raiseError(
-                  s"Failed to generate client for method $methodName and status code ${response.statusCode}. It's currently not possible to have more than 22 properties (payload, HTTP headers). See https://github.com/twilio/guardrail/pull/382."
-                )
-              )
-            } else {
-              List.empty[Target[Unit]]
-            }
-          }
-          result.headOption.getOrElse(Target.pure(()))
-        }
-
         Target.log.function("generateClientOperation")(for {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
@@ -320,8 +312,6 @@ object Http4sClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
-
-          _ <- checkCompatibility(methodName, responses)
 
           renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
