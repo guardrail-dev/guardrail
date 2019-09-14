@@ -163,115 +163,113 @@ object Http4sClientGenerator {
                                     formArgs: List[ScalaParameter[ScalaLanguage]],
                                     body: Option[ScalaParameter[ScalaLanguage]],
                                     headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
-          val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-          val defaultHeaders = param"headers: List[Header] = List.empty"
-          val safeBody: Option[(Term, Type)] =
-            body.map(sp => (sp.paramName, sp.argType))
+                                    extraImplicits: List[Term.Param]): Target[RenderedClientOperation[ScalaLanguage]] =
+          for {
+            _ <- Target.pure(())
+            implicitParams                 = Option(extraImplicits).filter(_.nonEmpty)
+            defaultHeaders                 = param"headers: List[Header] = List.empty"
+            safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
-          val formDataNeedsMultipart = consumes.contains(RouteMeta.MultipartFormData)
-          val formEntity: Option[Term] = formDataParams.map { formDataParams =>
-            if (formDataNeedsMultipart) {
-              q"""_multipart"""
-            } else {
-              q"""UrlForm($formDataParams.flatten: _*)"""
+            formDataNeedsMultipart = consumes.contains(RouteMeta.MultipartFormData)
+            formEntity: Option[Term] = formDataParams.map { formDataParams =>
+              if (formDataNeedsMultipart) {
+                q"""_multipart"""
+              } else {
+                q"""UrlForm($formDataParams.flatten: _*)"""
+              }
             }
-          }
 
-          val (tracingExpr, httpClientName) =
-            if (tracing)
+            (tracingExpr, httpClientName) = if (tracing)
               (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
             else
               (List(), q"httpClient")
-          val multipartExpr =
-            formDataParams
+            multipartExpr = formDataParams
               .filter(_ => formDataNeedsMultipart)
               .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
-          val headersExpr = if (formDataNeedsMultipart) {
-            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
-          } else {
-            List(q"val allHeaders = headers ++ $headerParams")
-          }
-          val req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
-          val reqWithBody = formEntity
-            .map(e => q"$req.withEntity($e)")
-            .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
-            .getOrElse(req)
-          val reqExpr = List(
-            q"val req = $reqWithBody"
-          )
-
-          def buildHeaders(headers: List[Header[ScalaLanguage]]) =
-            headers.map { header =>
-              val headerName = Lit.String(header.name.toLowerCase)
-              if (header.isRequired) {
-                q"parseRequiredHeader(resp, $headerName)"
-              } else {
-                q"parseOptionalHeader(resp, $headerName)"
-              }
+            headersExpr = if (formDataNeedsMultipart) {
+              List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
+            } else {
+              List(q"val allHeaders = headers ++ $headerParams")
             }
-          val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
-          val cases = responses.value.map { resp =>
-            val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            (resp.value, resp.headers.value) match {
-              case (None, Nil) =>
-                p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
-              case (maybeBody, headers) =>
-                val decodeValue = maybeBody.map { _ =>
-                  q"${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).value.flatMap(F.fromEither)"
-                }
-                val decodeHeaders = buildHeaders(headers)
-                val mapArgs       = decodeValue.toList ++ decodeHeaders
-                val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
-                p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm)"
-            }
-          } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
-          // Get the response type
-          val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
-          val executeReqExpr  = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
-          val methodBody: Term =
-            q"""
-            {
-              ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
-            }
-            """
-
-          val formParams = formArgs.map(
-            scalaParam =>
-              scalaParam.param.copy(
-                decltpe =
-                  (
-                    if (scalaParam.isFile) {
-                      if (scalaParam.required) {
-                        Some(t"(String, Stream[F, Byte])")
-                      } else {
-                        Some(t"Option[(String, Stream[F, Byte])]")
-                      }
-                    } else {
-                      scalaParam.param.decltpe
-                    }
-                  )
+            req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
+            reqWithBody = formEntity
+              .map(e => q"$req.withEntity($e)")
+              .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
+              .getOrElse(req)
+            reqExpr = List(
+              q"val req = $reqWithBody"
             )
-          )
 
-          val arglists: List[List[Term.Param]] = List(
-            Some(
-              (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                .map(_.param) ++ formParams ++ body
-                .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)) :+ defaultHeaders
-            ),
-            implicitParams
-          ).flatten
+            buildHeaders = (_: List[Header[ScalaLanguage]])
+              .map { header =>
+                val headerName = Lit.String(header.name.toLowerCase)
+                if (header.isRequired) {
+                  q"parseRequiredHeader(resp, $headerName)"
+                } else {
+                  q"parseOptionalHeader(resp, $headerName)"
+                }
+              }
+            responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+            cases = responses.value.map { resp =>
+              val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+              (resp.value, resp.headers.value) match {
+                case (None, Nil) =>
+                  p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
+                case (maybeBody, headers) =>
+                  val decodeValue = maybeBody.map { _ =>
+                    q"${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).value.flatMap(F.fromEither)"
+                  }
+                  val decodeHeaders = buildHeaders(headers)
+                  val mapArgs       = decodeValue.toList ++ decodeHeaders
+                  val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
+                  p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm)"
+              }
+            } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
+            // Get the response type
+            responseTypeRef  = Type.Name(s"${methodName.capitalize}Response")
+            executeReqExpr   = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
+            methodBody: Term = q"""
+              {
+                ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
+              }
+              """
 
-          RenderedClientOperation[ScalaLanguage](
-            q"""
-              def ${Term
-              .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
-            """,
-            generateCodecs(methodName, body, responses, produces, consumes)
-          )
-        }
+            formParams = formArgs.map(
+              scalaParam =>
+                scalaParam.param.copy(
+                  decltpe =
+                    (
+                      if (scalaParam.isFile) {
+                        if (scalaParam.required) {
+                          Some(t"(String, Stream[F, Byte])")
+                        } else {
+                          Some(t"Option[(String, Stream[F, Byte])]")
+                        }
+                      } else {
+                        scalaParam.param.decltpe
+                      }
+                    )
+              )
+            )
+
+            arglists: List[List[Term.Param]] = List(
+              Some(
+                (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
+                  .map(_.param) ++ formParams ++ body
+                  .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+                  .map(_.param)) :+ defaultHeaders
+              ),
+              implicitParams
+            ).flatten
+          } yield {
+            RenderedClientOperation[ScalaLanguage](
+              q"""
+                def ${Term
+                .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
+              """,
+              generateCodecs(methodName, body, responses, produces, consumes)
+            )
+          }
 
         def checkCompatibility(methodName: String, responses: Responses[ScalaLanguage]): Target[Unit] = {
           val result = responses.value.flatMap { response =>
@@ -325,7 +323,7 @@ object Http4sClientGenerator {
 
           _ <- checkCompatibility(methodName, responses)
 
-          renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+          renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
