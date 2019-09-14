@@ -877,7 +877,7 @@ object AsyncHttpClientClientGenerator {
         val genericTypeParam  = JavaParser.parseClassOrInterfaceType("T")
 
         val responseData = responses.value.map({
-          case Response(statusCodeName, valueType) =>
+          case Response(statusCodeName, valueType, _) =>
             val responseName: String = statusCodeName.asString
             val responseType         = JavaParser.parseClassOrInterfaceType(responseName)
             val responseLambdaName   = s"handle${responseName}"

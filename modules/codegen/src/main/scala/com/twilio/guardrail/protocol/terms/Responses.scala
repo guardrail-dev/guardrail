@@ -4,6 +4,7 @@ import cats.free.Free
 import cats.instances.list._
 import cats.syntax.traverse._
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil }
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
@@ -11,11 +12,12 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.media.Schema
 import scala.collection.JavaConverters._
 
-class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])]) {
-  override def toString: String = s"Response($statusCodeName, $statusCode, $value)"
+class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])], val headers: Headers[L]) {
+  override def toString: String = s"Response($statusCodeName, $statusCode, $value, $headers)"
 }
 object Response {
-  def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type])] = Some((value.statusCodeName, value.value.map(_._1)))
+  def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type], Headers[L])] =
+    Some((value.statusCodeName, value.value.map(_._1), value.headers))
 }
 
 class Responses[L <: LA](val value: List[Response[L]]) {
@@ -28,6 +30,7 @@ object Responses {
       Sw: SwaggerTerms[L, F]
   ): Free[F, Responses[L]] = Sw.log.function("getResponses") {
     import Fw._
+    import Sc._
     for {
       responses <- Sw.getResponses(operationId, operation)
 
@@ -46,9 +49,18 @@ object Responses {
                   meta     <- SwaggerUtil.propMeta[L, F](prop)
                   resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+
                 } yield (baseType, baseDefaultValue)
               }
-            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption)) // FIXME: headOption
+              headers <- Option(resp.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
+                case (name, header) =>
+                  for {
+                    termName   <- pureTermName(s"${name}Header".toCamelCase)
+                    typeName   <- pureTypeName("String").flatMap(widenTypeName)
+                    resultType <- if (header.getRequired) Free.pure[F, L#Type](typeName) else liftOptionalType(typeName)
+                  } yield new Header(name, header.getRequired, resultType, termName)
+              }
+            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers))) // FIXME: headOption
         })
         .sequence
     } yield new Responses[L](instances)

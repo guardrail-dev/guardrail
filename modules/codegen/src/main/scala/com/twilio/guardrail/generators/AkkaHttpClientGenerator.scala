@@ -5,7 +5,7 @@ import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
-import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.protocol.terms.{ Header, Responses }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -203,15 +203,64 @@ object AkkaHttpClientGenerator {
             .orElse(safeBody.map(_._1))
             .getOrElse(q"HttpEntity.Empty")
 
-          val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+          def buildOptionalHeaders(headers: List[Header[ScalaLanguage]]) =
+            headers.map { header =>
+              val lit = Lit.String(header.name.toLowerCase)
+              q"val ${Pat.Var(header.term)} = resp.headers.find(_.is($lit)).map(_.value())"
+            }
+          def buildRequiredHeaders(headers: List[Header[ScalaLanguage]]) =
+            headers.map { header =>
+              val lit  = Lit.String(header.name.toLowerCase)
+              val expr = q"resp.headers.find(_.is($lit)).map(_.value())"
+              val errLiteral =
+                Lit.String(s"Expected required HTTP header '${header.name}'")
+              enumerator"${Pat.Var(header.term)} <- $expr.toRight(Left(new Exception($errLiteral)))"
+            }
+          def buildHeaders(headers: List[Header[ScalaLanguage]], term: Term) = {
+            val (required, optional) = headers.partition(_.isRequired)
+
+            val optionalVals  = buildOptionalHeaders(optional)
+            val forGenerators = buildRequiredHeaders(required)
+            val body = if (forGenerators.isEmpty) {
+              q"Right($term)"
+            } else {
+              q"""for {
+                    ..$forGenerators
+                    } yield $term"""
+            }
+            (optionalVals, body)
+          }
+
+          val responseCompanionTerm =
+            Term.Name(s"${methodName.capitalize}Response")
           val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            resp.value.fold[Case](
-              p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
-            ) {
-              case (tpe, _) =>
+            (resp.value, resp.headers.value) match {
+              case (None, Nil) =>
+                p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
+              case (Some((tpe, _)), Nil) =>
                 p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
                   .Name(s"$methodName${resp.statusCodeName}Decoder")}, implicitly, implicitly).map(x => Right($responseCompanionTerm.$responseTerm(x)))"
+              case (None, headers) =>
+                val (optionalVals, body) = buildHeaders(
+                  headers,
+                  q"$responseCompanionTerm.$responseTerm(..${headers.map(_.term)})"
+                )
+                p"""case StatusCodes.${resp.statusCodeName} =>
+                     ..$optionalVals
+                     resp.discardEntityBytes().future.map(_ => $body)
+                  """
+              case (Some((tpe, _)), headers) =>
+                val (optionalVals, body) = buildHeaders(
+                  headers,
+                  q"$responseCompanionTerm.$responseTerm(..${Term
+                    .Name("x") :: headers.map(_.term)})"
+                )
+                p"""case StatusCodes.${resp.statusCodeName} =>
+                    ..$optionalVals
+                    Unmarshal(resp.entity).to[${tpe}](${Term.Name(
+                  s"$methodName${resp.statusCodeName}Decoder"
+                )}, implicitly, implicitly).map(x => $body)"""
             }
           } :+ p"case _ => FastFuture.successful(Left(Right(resp)))"
           val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")

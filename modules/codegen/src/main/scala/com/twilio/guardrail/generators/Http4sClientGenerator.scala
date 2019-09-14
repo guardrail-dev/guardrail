@@ -3,10 +3,11 @@ package generators
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
+import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.protocol.terms.{ Header, Responses }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -163,98 +164,122 @@ object Http4sClientGenerator {
                                     formArgs: List[ScalaParameter[ScalaLanguage]],
                                     body: Option[ScalaParameter[ScalaLanguage]],
                                     headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
-          val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-          val defaultHeaders = param"headers: List[Header] = List.empty"
-          val safeBody: Option[(Term, Type)] =
-            body.map(sp => (sp.paramName, sp.argType))
+                                    extraImplicits: List[Term.Param]): Target[RenderedClientOperation[ScalaLanguage]] =
+          for {
+            _ <- Target.pure(())
+            implicitParams                 = Option(extraImplicits).filter(_.nonEmpty)
+            defaultHeaders                 = param"headers: List[Header] = List.empty"
+            safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
-          val formDataNeedsMultipart = consumes.contains(RouteMeta.MultipartFormData)
-          val formEntity: Option[Term] = formDataParams.map { formDataParams =>
-            if (formDataNeedsMultipart) {
-              q"""_multipart"""
-            } else {
-              q"""UrlForm($formDataParams.flatten: _*)"""
+            formDataNeedsMultipart = consumes.contains(RouteMeta.MultipartFormData)
+            formEntity: Option[Term] = formDataParams.map { formDataParams =>
+              if (formDataNeedsMultipart) {
+                q"""_multipart"""
+              } else {
+                q"""UrlForm($formDataParams.flatten: _*)"""
+              }
             }
-          }
 
-          val (tracingExpr, httpClientName) =
-            if (tracing)
+            (tracingExpr, httpClientName) = if (tracing)
               (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
             else
               (List(), q"httpClient")
-          val multipartExpr =
-            formDataParams
+            multipartExpr = formDataParams
               .filter(_ => formDataNeedsMultipart)
               .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
-          val headersExpr = if (formDataNeedsMultipart) {
-            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
-          } else {
-            List(q"val allHeaders = headers ++ $headerParams")
-          }
-          val req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
-          val reqWithBody = formEntity
-            .map(e => q"$req.withEntity($e)")
-            .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
-            .getOrElse(req)
-          val reqExpr = List(
-            q"val req = $reqWithBody"
-          )
-          val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
-          val cases = responses.value.map { resp =>
-            val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            resp.value.fold[Case](
-              p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)"
-            ) { _ =>
-              p"case ${resp.statusCodeName}(resp) => ${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).fold(throw _, Predef.identity).map($responseCompanionTerm.$responseTerm)"
+            headersExpr = if (formDataNeedsMultipart) {
+              List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
+            } else {
+              List(q"val allHeaders = headers ++ $headerParams")
             }
-          } :+ p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
-          // Get the response type
-          val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
-          val executeReqExpr  = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases)})""")
-          val methodBody: Term =
-            q"""
-            {
-              ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
-            }
-            """
-
-          val formParams = formArgs.map(
-            scalaParam =>
-              scalaParam.param.copy(
-                decltpe =
-                  (
-                    if (scalaParam.isFile) {
-                      if (scalaParam.required) {
-                        Some(t"(String, Stream[F, Byte])")
-                      } else {
-                        Some(t"Option[(String, Stream[F, Byte])]")
-                      }
-                    } else {
-                      scalaParam.param.decltpe
-                    }
-                  )
+            req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
+            reqWithBody = formEntity
+              .map(e => q"$req.withEntity($e)")
+              .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
+              .getOrElse(req)
+            reqExpr = List(
+              q"val req = $reqWithBody"
             )
-          )
 
-          val arglists: List[List[Term.Param]] = List(
-            Some(
-              (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                .map(_.param) ++ formParams ++ body
-                .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)) :+ defaultHeaders
-            ),
-            implicitParams
-          ).flatten
+            buildHeaders = (_: List[Header[ScalaLanguage]])
+              .map { header =>
+                val headerName = Lit.String(header.name.toLowerCase)
+                if (header.isRequired) {
+                  q"parseRequiredHeader(resp, $headerName)"
+                } else {
+                  q"parseOptionalHeader(resp, $headerName)"
+                }
+              }
+            responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+            cases <- responses.value.traverse[Target, Case]({ resp =>
+              val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+              (resp.value, resp.headers.value) match {
+                case (None, Nil) =>
+                  Target.pure(p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)")
+                case (maybeBody, headers) =>
+                  if (maybeBody.size + headers.size > 22) {
+                    // we have hit case class limitation
+                    // https://github.com/twilio/guardrail/pull/382
+                    Target.raiseError(
+                      s"Failed to generate client for method $methodName and status code ${resp.statusCode}. It's currently not possible to have more than 22 properties (payload, HTTP headers). See https://github.com/twilio/guardrail/pull/382."
+                    )
+                  } else {
+                    val decodeValue = maybeBody.map { _ =>
+                      q"${Term.Name(s"$methodName${resp.statusCodeName}Decoder")}.decode(resp, strict = false).value.flatMap(F.fromEither)"
+                    }
+                    val decodeHeaders = buildHeaders(headers)
+                    val mapArgs       = decodeValue.toList ++ decodeHeaders
+                    val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
+                    Target.pure(p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm)")
+                  }
+              }
+            })
+            unexpectedCase = p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
+            // Get the response type
+            responseTypeRef  = Type.Name(s"${methodName.capitalize}Response")
+            executeReqExpr   = List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+            methodBody: Term = q"""
+              {
+                ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
+              }
+              """
 
-          RenderedClientOperation[ScalaLanguage](
-            q"""
-              def ${Term
-              .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
-            """,
-            generateCodecs(methodName, body, responses, produces, consumes)
-          )
-        }
+            formParams = formArgs.map(
+              scalaParam =>
+                scalaParam.param.copy(
+                  decltpe =
+                    (
+                      if (scalaParam.isFile) {
+                        if (scalaParam.required) {
+                          Some(t"(String, Stream[F, Byte])")
+                        } else {
+                          Some(t"Option[(String, Stream[F, Byte])]")
+                        }
+                      } else {
+                        scalaParam.param.decltpe
+                      }
+                    )
+              )
+            )
+
+            arglists: List[List[Term.Param]] = List(
+              Some(
+                (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
+                  .map(_.param) ++ formParams ++ body
+                  .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+                  .map(_.param)) :+ defaultHeaders
+              ),
+              implicitParams
+            ).flatten
+          } yield {
+            RenderedClientOperation[ScalaLanguage](
+              q"""
+                def ${Term
+                .Name(methodName)}(...${arglists}): F[$responseTypeRef] = $methodBody
+              """,
+              generateCodecs(methodName, body, responses, produces, consumes)
+            )
+          }
 
         Target.log.function("generateClientOperation")(for {
           // Placeholder for when more functions get logging
@@ -288,7 +313,7 @@ object Http4sClientGenerator {
           else List.empty
           extraImplicits = List.empty
 
-          renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+          renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
@@ -372,7 +397,23 @@ object Http4sClientGenerator {
             class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
-             ..${supportDefinitions};
+              private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
+                F.pure(response.headers.get(header.ci).map(_.value))
+
+              private def parseRequiredHeader(response: Response[F], header: String): F[String] =
+                response.headers
+                  .get(header.ci)
+                  .map(_.value)
+                  .fold[F[String]](
+                    F.raiseError(
+                      ParseFailure(
+                        "Missing required header.",
+                        s"HTTP header '$$header' is not present."
+                      )
+                    )
+                  )(F.pure)
+
+              ..${supportDefinitions};
               ..$clientCalls
             }
           """

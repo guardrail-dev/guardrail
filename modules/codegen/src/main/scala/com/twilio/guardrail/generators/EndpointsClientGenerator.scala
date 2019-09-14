@@ -190,12 +190,34 @@ object EndpointsClientGenerator {
 
           val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            resp.value.fold[Case](
-              p"case ${Lit.Int(resp.statusCode)} => Right($responseCompanionTerm.$responseTerm)"
-            ) {
-              case (tpe, _) =>
+            (resp.value, resp.headers.value) match {
+              case (None, Nil) =>
+                p"case ${Lit.Int(resp.statusCode)} => Right($responseCompanionTerm.$responseTerm)"
+              case (None, headers) =>
+                val params = headers.map { header =>
+                  val lit  = Lit.String(header.name)
+                  val expr = q"xhr.getResponseHeader($lit)"
+                  if (header.isRequired) {
+                    expr
+                  } else {
+                    q"Option($expr)"
+                  }
+                }
                 p"""case ${Lit.Int(resp.statusCode)} =>
-                  parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map($responseCompanionTerm.$responseTerm.apply _)
+                  Right($responseCompanionTerm.$responseTerm(..$params))
+                """
+              case (Some((tpe, _)), headers) =>
+                val params = Term.Name("v") :: headers.map { header =>
+                  val lit  = Lit.String(header.name)
+                  val expr = q"xhr.getResponseHeader($lit)"
+                  if (header.isRequired) {
+                    expr
+                  } else {
+                    q"Option($expr)"
+                  }
+                }
+                p"""case ${Lit.Int(resp.statusCode)} =>
+                  parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map(v => $responseCompanionTerm.$responseTerm(..$params))
                 """
             }
           } :+ p"case _ => Left(new UnknownStatusException(xhr))"

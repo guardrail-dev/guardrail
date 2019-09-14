@@ -16,19 +16,21 @@ object Http4sHelper {
 
     val (terms, foldPair) = responses.value
       .map({
-        case Response(statusCodeName, valueType) =>
+        case Response(statusCodeName, valueType, headers) =>
           val responseTerm   = Term.Name(s"${statusCodeName.value}")
           val responseName   = Type.Name(s"${statusCodeName.value}")
           val foldHandleName = Term.Name(s"handle${statusCodeName.value}")
 
-          valueType.fold[(Defn, (Term.Param, Case))]({
-            val foldParameter = param"${foldHandleName}: => A"
-            val foldCase      = p"case ${responseSuperTerm}.${responseTerm} => ${foldHandleName}"
-            (q"case object $responseTerm extends $responseSuperTemplate", (foldParameter, foldCase))
-          }) { valueType =>
-            val foldParameter = param"${foldHandleName}: ${valueType} => A"
-            val foldCase      = p"case x: ${responseSuperTerm}.${responseName} => ${foldHandleName}(x.value)"
-            (q"case class  $responseName(value: $valueType) extends $responseSuperTemplate", (foldParameter, foldCase))
+          val allParams = valueType.map(tpe => (tpe, q"value")).toList ++ headers.value.map(h => (h.tpe, h.term))
+          allParams match {
+            case Nil =>
+              val foldParameter = param"${foldHandleName}: => A"
+              val foldCase      = p"case ${responseSuperTerm}.${responseTerm} => ${foldHandleName}"
+              (q"case object $responseTerm extends $responseSuperTemplate", (foldParameter, foldCase))
+            case _ =>
+              val foldParameter = param"${foldHandleName}: (..${allParams.map(_._1)}) => A"
+              val foldCase      = p"case x: ${responseSuperTerm}.${responseName} => ${foldHandleName}(..${allParams.map(t => q"x.${t._2}")})"
+              (q"case class  $responseName(..${allParams.map(t => param"${t._2}: ${t._1}")}) extends $responseSuperTemplate", (foldParameter, foldCase))
           }
       })
       .unzip
