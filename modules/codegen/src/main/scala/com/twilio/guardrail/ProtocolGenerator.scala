@@ -188,9 +188,11 @@ object ProtocolGenerator {
       params <- props.traverse({
         case (name, prop) =>
           val isRequired = requiredFields.contains(name)
-          SwaggerUtil
-            .propMeta[L, F](prop)
-            .flatMap(transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
+          for {
+            customType   <- SwaggerUtil.customTypeName(prop)
+            resolvedType <- SwaggerUtil.propMeta[L, F](prop)
+            res          <- transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name, prop, resolvedType, isRequired, customType.isDefined)
+          } yield res
       })
       definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
       encoder     <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
@@ -239,9 +241,11 @@ object ProtocolGenerator {
             params <- props.traverse({
               case (name, prop) =>
                 val isRequired = requiredFields.contains(name)
-                SwaggerUtil
-                  .propMeta[L, F](prop)
-                  .flatMap(transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, _, isRequired))
+                for {
+                  customType   <- SwaggerUtil.customTypeName(prop)
+                  resolvedType <- SwaggerUtil.propMeta[L, F](prop)
+                  res          <- transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, resolvedType, isRequired, customType.isDefined)
+                } yield res
             })
             interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
             tpe <- parseTypeName(clsName)
@@ -351,7 +355,12 @@ object ProtocolGenerator {
               case Left(_)  => objectType(None).map(Resolved(_, None, None, None, None))
               case Right(_) => SwaggerUtil.propMetaWithName(tpe, schema)
             }
-            parameter <- transformProperty(clsName.last, needCamelSnakeConversion, concreteTypes)(name, schema, resolvedType, requiredFields.contains(name))
+            customType <- SwaggerUtil.customTypeName(schema)
+            parameter <- transformProperty(clsName.last, needCamelSnakeConversion, concreteTypes)(name,
+                                                                                                  schema,
+                                                                                                  resolvedType,
+                                                                                                  requiredFields.contains(name),
+                                                                                                  customType.isDefined)
           } yield (parameter, maybeClassDefinition.flatMap(_.toOption))
       }
       (params, nestedClassDefinitions) = paramsAndNestedClasses.unzip

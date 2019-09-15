@@ -108,7 +108,7 @@ object CirceProtocolGenerator {
           case _ => Target.pure(None)
         }).map(_.map(_.asScala.toList).toList.flatten)
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType) =>
         Target.log.function(s"transformProperty")(for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
@@ -146,6 +146,9 @@ object CirceProtocolGenerator {
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
+            case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
+              // assume that binary data are represented as a string. allow users to override.
+              (t"String", classDep)
             case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
               (declType, classDep)
             case SwaggerUtil.Deferred(tpeName) =>

@@ -15,6 +15,8 @@ class VendorExtensionTest extends FunSuite with Matchers {
   val spec: String = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
+    |produces:
+    | - application/json
     |x-scala-garbage: io.swagger.models.Swagger
     |paths:
     |  foo:

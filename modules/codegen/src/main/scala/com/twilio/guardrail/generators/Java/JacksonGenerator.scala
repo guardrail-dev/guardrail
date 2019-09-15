@@ -738,7 +738,7 @@ object JacksonGenerator {
           case _ => Target.pure(None)
         }).map(_.map(_.asScala.toList).toList.flatten)
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, _) =>
         Target.log.function("transformProperty") {
           for {
             defaultValue <- property match {

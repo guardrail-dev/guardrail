@@ -465,13 +465,15 @@ object Http4sServerGenerator {
           (pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName) ++ (http4sForm ++ http4sHeaders).map(_.handlerCallArg)
         ) ++ tracingFields.map(_.param.paramName).map(List(_))
         val handlerCall = q"handler.${Term.Name(operationId)}(...${handlerCallArgs})"
+        val isGeneric   = Http4sHelper.isDefinitionGeneric(responses)
         val responseExpr = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Term] {
             val marshallers = responses.value.map {
               case Response(statusCodeName, valueType, headers) =>
                 val responseTerm  = Term.Name(s"${statusCodeName.value}")
-                val respType      = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
+                val baseRespType  = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
+                val respType      = if (isGeneric) Type.Apply(baseRespType, List(t"F")) else baseRespType
                 val generatorName = Term.Name(s"$operationId${statusCodeName}EntityResponseGenerator")
                 val encoderName   = Term.Name(s"$operationId${statusCodeName}Encoder")
                 (valueType, headers.value) match {
@@ -558,11 +560,13 @@ object Http4sServerGenerator {
 
         val consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
         val produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(operationId, bodyArgs, responses, consumes, produces)
+        val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
           RenderedRoute(
             fullRoute,
-            q"""def ${Term.Name(operationId)}(...${params}): F[${responseType}]""",
-            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ generateCodecs(operationId, bodyArgs, responses, consumes, produces) ++ tracingFields
+            q"""def ${Term.Name(operationId)}(...${params}): F[$respType]""",
+            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ codecs ++ tracingFields
               .map(_.term)
               .map(generateTracingExtractor(operationId, _)),
             List.empty //handlerDefinitions

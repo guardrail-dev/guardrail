@@ -1,0 +1,54 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+paths:
+  /foo:
+    post:
+      operationId: foo
+      parameters:
+      - name: payload
+        in: body
+        schema:
+          type: string
+          format: binary
+        required: true
+      responses:
+        '200':
+          schema:
+            type: file
+  /fooArray:
+    post:
+      operationId: fooArray
+      parameters:
+        - name: payload
+          in: body
+          schema:
+            type: string
+            format: binary
+            x-scala-type: Array[Byte]
+          required: true
+      responses:
+        '200':
+          schema:
+            type: file
+            x-scala-type: Array[Byte]
+  /fooChunk:
+    post:
+      operationId: fooChunk
+      parameters:
+        - name: payload
+          in: body
+          schema:
+            type: string
+            format: binary
+            x-scala-type: fs2.Chunk[Byte]
+          required: true
+      responses:
+        '200':
+          schema:
+            type: file
+            x-scala-type: fs2.Chunk[Byte]
