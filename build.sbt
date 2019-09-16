@@ -223,6 +223,7 @@ lazy val codegen = (project in file("modules/codegen"))
     scalacOptions ++= List(
       "-language:higherKinds",
       "-Ywarn-unused-import",
+      "-Xlint:_,-missing-interpolator"
     ),
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"
