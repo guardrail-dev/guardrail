@@ -250,8 +250,9 @@ object SwaggerUtil {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
           (typeName, format) match {
-            case ("string", fmt @ Some("uuid"))   => uuidType()
+            case ("string", Some("uuid"))         => uuidType()
             case ("string", Some("password"))     => stringType(None)
+            case ("string", Some("email"))        => stringType(None)
             case ("string", Some("date"))         => dateType()
             case ("string", Some("date-time"))    => dateTimeType()
             case ("string", fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
@@ -431,6 +432,14 @@ object SwaggerUtil {
           val rawFormat = Option(u.getFormat)
           for {
             customTpeName <- customTypeName(u)
+            tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
+          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+
+        case e: EmailSchema =>
+          val rawType   = "string"
+          val rawFormat = Option(e.getFormat)
+          for {
+            customTpeName <- customTypeName(e)
             tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
       }

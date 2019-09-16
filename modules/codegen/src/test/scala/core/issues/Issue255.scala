@@ -20,6 +20,9 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
                            |  Foo:
                            |    type: object
                            |    properties:
+                           |      someEmail:
+                           |        type: string
+                           |        format: email
                            |      somePassword:
                            |        type: string
                            |        format: password
@@ -37,6 +40,6 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
-    c1.structure shouldBe q"case class Foo(somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[java.io.File] = None)".structure
+    c1.structure shouldBe q"case class Foo(someEmail: Option[String] = None, somePassword: Option[String] = None, someFile: Option[java.io.File] = None, someBinary: Option[java.io.File] = None)".structure
   }
 }
