@@ -5,6 +5,10 @@ info:
 host: localhost:1234
 schemes:
   - http
+consumes:
+  - application/octet-stream
+produces:
+  - application/octet-stream
 paths:
   /foo:
     post:

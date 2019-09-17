@@ -127,7 +127,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
           .get(header.ci)
           .map(_.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
 
-      private[this] val getBazOkDecoder = EntityDecoder[F, io.circe.Json]
+      private[this] val getBazOkDecoder = jsonOf[F, io.circe.Json]
       def getBar(headers: List[Header] = List.empty): F[GetBarResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))

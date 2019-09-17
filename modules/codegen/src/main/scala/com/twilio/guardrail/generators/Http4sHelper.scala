@@ -59,7 +59,7 @@ object Http4sHelper {
   }
 
   def generateDecoder(tpe: Type, consumes: Seq[RouteMeta.ContentType]): Term =
-    if (consumes.contains(RouteMeta.ApplicationJson))
+    if (consumes.contains(RouteMeta.ApplicationJson) || consumes.isEmpty)
       q"jsonOf[F, $tpe]"
     else
       tpe match {
@@ -80,7 +80,7 @@ object Http4sHelper {
       }
 
   def generateEncoder(tpe: Type, produces: Seq[RouteMeta.ContentType]): Term =
-    if (produces.contains(RouteMeta.ApplicationJson))
+    if (produces.contains(RouteMeta.ApplicationJson) || produces.isEmpty)
       q"jsonEncoderOf[F, $tpe]"
     else
       tpe match {
