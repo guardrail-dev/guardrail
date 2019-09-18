@@ -5,7 +5,9 @@ import com.twilio.guardrail.languages.LA
 import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.arrow.FunctionK
+import cats.implicits._
 import com.twilio.guardrail._
+import com.twilio.swagger.core.{ LogLevels, StructuredLogger }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
@@ -36,7 +38,7 @@ trait SwaggerSpecRunner extends EitherValues {
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
-    val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) = Target.unsafeExtract(
+    val (clientLogger, (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _))) =
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Client,
@@ -44,9 +46,12 @@ trait SwaggerSpecRunner extends EitherValues {
           Tracker(swagger)
         )
         .foldMap(framework)
-    )
+        .valueOr({ err =>
+          throw new Exception(err.toString)
+        })
+        .runEmpty
 
-    val (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) = Target.unsafeExtract(
+    val (serverLogger, (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _))) =
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Server,
@@ -54,7 +59,16 @@ trait SwaggerSpecRunner extends EitherValues {
           Tracker(swagger)
         )
         .foldMap(framework)
-    )
+        .valueOr({ err =>
+          throw new Exception(err.toString)
+        })
+        .runEmpty
+
+    implicit val logLevel = LogLevels.Debug
+    println("Client Generator logs:")
+    println(clientLogger.show)
+    println("Server Generator logs:")
+    println(serverLogger.show)
 
     (proto, Clients(clients, clientSupportDefs), Servers(servers, serverSupportDefs))
   }
