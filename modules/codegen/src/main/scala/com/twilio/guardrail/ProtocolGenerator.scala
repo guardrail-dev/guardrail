@@ -236,17 +236,8 @@ object ProtocolGenerator {
             _extendsProps <- extractProperties(_extends)
             requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
             _withProps <- concreteInterfaces.traverse(extractProperties)
-            props                    = _extendsProps ++ _withProps.flatten
-            needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-            params <- props.traverse({
-              case (name, prop) =>
-                val isRequired = requiredFields.contains(name)
-                for {
-                  customType   <- SwaggerUtil.customTypeName(prop)
-                  resolvedType <- SwaggerUtil.propMeta[L, F](prop)
-                  res          <- transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, resolvedType, isRequired, customType.isDefined)
-                } yield res
-            })
+            props = _extendsProps ++ _withProps.flatten
+            (params, _) <- prepareProperties(NonEmptyList.of(clsName), props, requiredFields, concreteTypes, definitions)
             interfacesCls = interfaces.flatMap(i => Option(i.get$ref).map(_.split("/").last))
             tpe <- parseTypeName(clsName)
 
@@ -284,11 +275,11 @@ object ProtocolGenerator {
   ): Free[F, Either[String, ClassDefinition[L]]] = {
     import M._
     import Sc._
-
     for {
       props <- extractProperties(model)
+      requiredFields           = getRequiredFieldsRec(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      (params, nestedClassDefinitions) <- prepareProperties(clsName, model, concreteTypes, definitions)
+      (params, nestedClassDefinitions) <- prepareProperties(clsName, props, requiredFields, concreteTypes, definitions)
       defn                             <- renderDTOClass(clsName.last, params, parents)
       encoder                          <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       decoder                          <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
@@ -314,7 +305,8 @@ object ProtocolGenerator {
 
   private def prepareProperties[L <: LA, F[_]](
       clsName: NonEmptyList[String],
-      model: Schema[_],
+      props: List[(String, Schema[_])],
+      requiredFields: List[String],
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Schema[_])]
   )(implicit M: ModelProtocolTerms[L, F],
@@ -341,10 +333,8 @@ object ProtocolGenerator {
           Free.pure(None)
       }
     }
+    val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
     for {
-      props <- extractProperties(model)
-      requiredFields           = getRequiredFieldsRec(model)
-      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       paramsAndNestedClasses <- props.traverse[Free[F, ?], (ProtocolParameter[L], Option[ClassDefinition[L]])] {
         case (name, schema) =>
           val typeName = clsName.append(name.toCamelCase.capitalize)
