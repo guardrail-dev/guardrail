@@ -255,4 +255,59 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
     cls.structure shouldEqual definition.structure
     cmp.structure shouldEqual companion.structure
   }
+
+  test("Inherited nested structure work") {
+    val swagger =
+      s"""
+         |swagger: "2.0"
+         |info:
+         |  title: Whatever
+         |  version: 1.0.0
+         |host: localhost:1234
+         |definitions:
+         |  First:
+         |    allOf:
+         |    - $$ref: '#/definitions/Second'
+         |  Second:
+         |    type: object
+         |    properties:
+         |      value:
+         |        type: string
+         |      nested:
+         |        type: object
+         |        properties:
+         |          value:
+         |            type: boolean
+         |""".stripMargin
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, cls, _, _) :: ClassDefinition(_, _, _, staticDefns, _) :: Nil, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+
+    val cmp = companionForStaticDefns(staticDefns)
+
+    val companion =
+      q"""
+        object Second {
+          implicit val encodeSecond: ObjectEncoder[Second] = {
+            val readOnlyKeys = Set[String]()
+            Encoder.forProduct2("value", "nested") ( (o: Second) => (o.value, o.nested) ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          }
+          implicit val decodeSecond: Decoder[Second] = Decoder.forProduct2("value", "nested")(Second.apply _)
+          case class Nested(value: Option[Boolean] = None)
+          object Nested {
+            implicit val encodeNested: ObjectEncoder[Nested] = {
+              val readOnlyKeys = Set[String]()
+              Encoder.forProduct1("value") ((o: Nested) => o.value ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            }
+            implicit val decodeNested: Decoder[Nested] = Decoder.forProduct1("value")(Nested.apply _)
+          }
+        }
+       """
+    val definition = q"""case class First(value: Option[String] = None, nested: Option[Second.Nested] = None)"""
+
+    cls.structure shouldEqual definition.structure
+    cmp.structure shouldEqual companion.structure
+  }
 }
