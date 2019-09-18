@@ -25,7 +25,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
        |paths: {}
        |definitions:
        |  Request:
-       |    description: Request fields with id
+       |    description: Request
        |    allOf:
        |      - "$$ref": "#/definitions/RequestFields"
        |      - type: object
@@ -33,14 +33,14 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
        |          id:
        |            type: string
        |  RequestFields:
-       |    description: Request fields
+       |    description: RequestFields
        |    type: object
        |    properties:
        |      state:
        |        type: integer
        |    required: [state]    
        |  Request2:
-       |    description: Request fields with id
+       |    description: Request2
        |    allOf:
        |      - "$$ref": "#/definitions/RequestFields2"
        |      - type: object
@@ -53,13 +53,13 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
        |            type: string
        |        required: [id2]        
        |  RequestFields2:
-       |    description: Request fields
+       |    description: RequestFields2
        |    type: object
        |    properties:
        |      state2:
        |        type: integer
        |  Request3:
-       |    description: Request fields with id
+       |    description: Request3
        |    allOf:
        |      - "$$ref": "#/definitions/RequestFields"
        |      - type: object
