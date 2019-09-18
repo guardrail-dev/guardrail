@@ -15,6 +15,10 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
     |  title: Whatever
     |  version: 1.0.0
     |host: localhost:1234
+    |consumes:
+    | - application/json
+    |produces:
+    | - application/json
     |paths:
     |  /foo:
     |    post:

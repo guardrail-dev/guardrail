@@ -10,7 +10,7 @@ object Http4sGenerator {
   object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
       case FileType(format) =>
-        Target.pure(format.fold[Type](t"java.io.File")(Type.Name(_)))
+        Target.pure(format.fold[Type](t"fs2.Stream[F,Byte]")(Type.Name(_)))
 
       case ObjectType(format) => Target.pure(t"io.circe.Json")
 
@@ -53,6 +53,11 @@ object Http4sGenerator {
             type TraceBuilder[F[_]] = String => org.http4s.client.Client[F] => org.http4s.client.Client[F]
 
             implicit def emptyEntityEncoder[F[_]: Sync]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
+
+            implicit def byteStreamEntityDecoder[F[_]:Sync]: EntityDecoder[F, Stream[F, Byte]] = new EntityDecoder[F,Stream[F,Byte]] {
+              override def decode(msg: Message[F], strict: Boolean): DecodeResult[F, Stream[F, Byte]] = DecodeResult.success(msg.body)
+              override def consumes: Set[MediaRange] = Set(MediaRange.`*/*`)
+            }
 
             object DoubleNumber {
               def unapply(value: String): Option[Double] = Try(value.toDouble).toOption

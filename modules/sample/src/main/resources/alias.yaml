@@ -8,6 +8,10 @@ paths:
     post:
       operationId: doFoo
       x-jvm-package: foo
+      consumes:
+        - application/json
+      produces:
+        - application/json
       parameters:
       - in: query
         name: long

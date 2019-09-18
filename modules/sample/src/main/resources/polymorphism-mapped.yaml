@@ -2,6 +2,10 @@ openapi: 3.0.1
 info:
   version: 1.0.0
 paths: {}
+produces:
+  - application/json
+consumes:
+  - application/json
 components:
   schemas:
     Base:

@@ -14,9 +14,10 @@ class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L,
       name: String,
       prop: Schema[_],
       meta: ResolvedType[L],
-      isRequired: Boolean
+      isRequired: Boolean,
+      isCustomType: Boolean
   ): Free[F, ProtocolParameter[L]] =
-    Free.inject[ModelProtocolTerm[L, ?], F](TransformProperty[L](clsName, name, prop, meta, needCamelSnakeConversion, concreteTypes, isRequired))
+    Free.inject[ModelProtocolTerm[L, ?], F](TransformProperty[L](clsName, name, prop, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType))
   def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil): Free[F, L#ClassDefinition] =
     Free.inject[ModelProtocolTerm[L, ?], F](RenderDTOClass[L](clsName, terms, parents))
   def encodeModel(clsName: String,

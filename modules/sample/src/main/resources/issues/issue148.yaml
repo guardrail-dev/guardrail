@@ -8,6 +8,8 @@ paths:
       operationId: createFoo
       consumes:
         - application/json
+      produces:
+        - application/json
       parameters:
         - in: header
           name: x-header
@@ -31,6 +33,8 @@ paths:
       operationId: updateFoo
       consumes:
         - multipart/form-data
+      produces:
+        - application/json
       parameters:
         - in: formData
           name: foo

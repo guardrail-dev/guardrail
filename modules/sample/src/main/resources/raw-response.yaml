@@ -3,6 +3,8 @@ info:
   title: Whatever
   version: 1.0.0
 host: localhost:1234
+produces:
+  - application/json
 paths:
   /foo:
     post:

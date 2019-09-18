@@ -73,7 +73,8 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
-  ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders")
+  ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
+  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("http4s")),
 )
 
 val exampleFrameworkSuites = Map(
@@ -89,10 +90,11 @@ val exampleFrameworkSuites = Map(
 
 def exampleArgs(language: String): List[List[String]] = exampleCases
   .foldLeft(List[List[String]](List(language)))({
-    case (acc, ExampleCase(path, prefix, extra)) =>
+    case (acc, ExampleCase(path, prefix, extra, onlyFrameworks)) =>
       acc ++ (for {
         frameworkSuite <- exampleFrameworkSuites(language)
         (frameworkName, frameworkPackage, kinds) = frameworkSuite
+        if onlyFrameworks.forall(_.contains(frameworkName))
         kind <- kinds
         filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
       } yield

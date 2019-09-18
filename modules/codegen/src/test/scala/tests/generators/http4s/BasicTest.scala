@@ -127,9 +127,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
           .get(header.ci)
           .map(_.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
 
-      val getBazOkDecoder = EntityDecoder[F, String].flatMapR[io.circe.Json] {
-        str => Json.fromString(str).as[io.circe.Json].fold(failure => DecodeResult.failure(InvalidMessageBodyFailure(s"Could not decode response: $$str", Some(failure))), DecodeResult.success(_))
-      }
+      private[this] val getBazOkDecoder = jsonOf[F, io.circe.Json]
       def getBar(headers: List[Header] = List.empty): F[GetBarResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))
@@ -145,7 +143,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(resp) =>
-            F.map(getBazOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetBazResponse.Ok)
+            F.map(getBazOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetBazResponse.Ok.apply)
           case resp =>
             F.raiseError(UnexpectedStatus(resp.status))
         })

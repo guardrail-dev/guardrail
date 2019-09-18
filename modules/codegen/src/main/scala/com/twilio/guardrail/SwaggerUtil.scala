@@ -278,6 +278,14 @@ object SwaggerUtil {
       } yield result
     }
 
+  def isFile(typeName: String, format: Option[String]): Boolean =
+    (typeName, format) match {
+      case ("string", Some("binary")) => true
+      case ("file", _)                => true
+      case ("binary", _)              => true
+      case _                          => false
+    }
+
   def propMeta[L <: LA, F[_]](property: Schema[_])(
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],

@@ -144,13 +144,13 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         response.headers
           .get(header.ci)
           .map(_.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
-      val getOrderByIdOkDecoder = jsonOf[F, Order]
+      private[this] val getOrderByIdOkDecoder = jsonOf[F, Order]
       def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[GetOrderByIdResponse] = {
         val allHeaders = headers ++ List[Option[Header]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case Ok(resp) =>
-            F.map(getOrderByIdOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetOrderByIdResponse.Ok)
+            F.map(getOrderByIdOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetOrderByIdResponse.Ok.apply)
           case BadRequest(_) =>
             F.pure(GetOrderByIdResponse.BadRequest)
           case NotFound(_) =>
