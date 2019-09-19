@@ -127,12 +127,13 @@ object ProtocolGenerator {
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
-    val tpeName = Option(swagger.getType).filterNot(_ == "object").getOrElse("string")
+    val _swagger = Tracker.hackyAdapt[Schema[_]](swagger, Vector.empty)
+    val tpeName  = _swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Some("string")))
 
     for {
       enum          <- extractEnum(swagger)
       customTpeName <- SwaggerUtil.customTypeName(swagger)
-      tpe           <- SwaggerUtil.typeName(tpeName, Option(swagger.getFormat()), customTpeName)
+      tpe           <- SwaggerUtil.typeName(tpeName, _swagger.downField("format", _.getFormat()), customTpeName)
       res           <- enum.traverse(validProg(_, tpe))
     } yield res
   }
@@ -259,7 +260,7 @@ object ProtocolGenerator {
             _withProps <- concreteInterfaces.traverse(extractProperties)
             props = _extendsProps ++ _withProps.flatten
             (params, _) <- prepareProperties(NonEmptyList.of(clsName), props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
-            interfacesCls = interfaces.flatMap(i => Option(i.get.get$ref).map(_.split("/").last))
+            interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
             tpe <- parseTypeName(clsName)
 
             discriminators <- (_extends :: concreteInterfaces).flatTraverse(
@@ -418,7 +419,12 @@ object ProtocolGenerator {
           raw =>
             model
               .flatTraverse(SwaggerUtil.customTypeName[L, F, ObjectSchema])
-              .flatMap(customTypeName => SwaggerUtil.typeName[L, F](raw, model.flatMap(f => Option(f.getFormat)), customTypeName))
+              .flatMap(
+                customTypeName =>
+                  SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(raw), Vector.empty),
+                                             Tracker.hackyAdapt(model.flatMap(f => Option(f.getFormat)), Vector.empty),
+                                             customTypeName)
+            )
         )
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
@@ -578,7 +584,7 @@ object ProtocolGenerator {
                 for {
                   tpeName        <- getType(x.get)
                   customTypeName <- SwaggerUtil.customTypeName(x.get)
-                  tpe            <- SwaggerUtil.typeName[L, F](tpeName, x.downField("format", _.getFormat()).get, customTypeName)
+                  tpe            <- SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(tpeName), x.history), x.downField("format", _.getFormat()), customTypeName)
                   res            <- typeAlias(clsName, tpe)
                 } yield res
             )

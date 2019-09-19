@@ -78,7 +78,10 @@ object ScalaParameter {
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- schema.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
           customTypeName = customSchemaTypeName.orElse(customParamTypeName)
-          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
+          res <- (SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty),
+                                             Tracker.hackyAdapt(Option(param.format()), Vector.empty),
+                                             customTypeName),
+                  getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
         } yield res
 

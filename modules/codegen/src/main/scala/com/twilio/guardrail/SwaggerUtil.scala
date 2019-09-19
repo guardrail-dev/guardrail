@@ -11,7 +11,7 @@ import cats.implicits._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
+import com.twilio.guardrail.extract.{ CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.RichSchema
@@ -185,7 +185,7 @@ object SwaggerUtil {
               tpeName       <- getType(impl)
               customTpeName <- customTypeName(impl)
               fmt = Option(impl.getFormat())
-              tpe <- typeName[L, F](tpeName, fmt, customTpeName)
+              tpe <- typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty), Tracker.hackyAdapt(fmt, Vector.empty), customTpeName)
             } yield Resolved[L](tpe, None, None, Some(tpeName), fmt)
         })
       }
@@ -223,8 +223,8 @@ object SwaggerUtil {
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeName[L <: LA, F[_]](
-      typeName: String,
-      format: Option[String],
+      typeName: Tracker[Option[String]],
+      format: Tracker[Option[String]],
       customType: Option[String]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
     Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
@@ -250,7 +250,7 @@ object SwaggerUtil {
       for {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
-          (typeName, format) match {
+          (typeName.get.get, format.get) match {
             case ("string", Some("uuid"))         => uuidType()
             case ("string", Some("password"))     => stringType(None)
             case ("string", Some("email"))        => stringType(None)
@@ -332,138 +332,31 @@ object SwaggerUtil {
       import Sc._
       import Sw._
 
-      val baseStrategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]] = {
-        case p: ArraySchema =>
-          for {
-            items <- getItems(p)
-            rec   <- propMetaImpl[L, F](Tracker.hackyAdapt(items, Vector.empty))(strategy)
-            res <- rec match {
-              case Resolved(inner, dep, default, _, _) =>
-                (liftVectorType(inner), default.traverse(liftVectorTerm))
-                  .mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
-              case x: DeferredMap[L]   => embedArray(x)
-              case x: DeferredArray[L] => embedArray(x)
-              case x: Deferred[L]      => embedArray(x)
-            }
-          } yield res
-        case m: MapSchema =>
-          for {
-            rec <- Option(m.getAdditionalProperties)
-              .fold[Free[F, ResolvedType[L]]](
-                objectType(None).map(Resolved[L](_, None, None, None, None))
-              )({
-                case b: java.lang.Boolean =>
-                  objectType(None).map(Resolved[L](_, None, None, None, None))
-                case s: Schema[_] => propMetaImpl[L, F](Tracker.hackyAdapt(s, Vector.empty))(strategy)
-              })
-            res <- rec match {
-              case Resolved(inner, dep, _, _, _) =>
-                liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
-              case x: DeferredMap[L]   => embedMap(x)
-              case x: DeferredArray[L] => embedMap(x)
-              case x: Deferred[L]      => embedMap(x)
-            }
-          } yield res
+      def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => Free[F, ResolvedType[L]] = { a =>
+        val rawType   = a.downField("type", _.getType())
+        val rawFormat = a.downField("format", _.getFormat())
 
-        case ref: Schema[_] if Option(ref.get$ref).isDefined =>
-          getSimpleRef(ref).map(Deferred[L])
-
-        case b: BooleanSchema =>
-          val rawType   = "boolean"
-          val rawFormat = Option.empty[String]
-          for {
-            customTpeName <- customTypeName(b)
-            res <- (
-              typeName[L, F](rawType, None, customTpeName),
-              Default(b).extract[Boolean].traverse(litBoolean(_))
-            ).mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
-          } yield res
-
-        case s: StringSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(s.getFormat())
-          for {
-            customTpeName <- customTypeName(s)
-            res <- (
-              typeName[L, F](rawType, rawFormat, customTpeName),
-              Default(s).extract[String].traverse(litString(_))
-            ).mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
-          } yield res
-
-        case d: DateSchema =>
-          val rawType   = "string"
-          val rawFormat = Option("date")
-          for {
-            customTpeName <- customTypeName(d)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case d: DateTimeSchema =>
-          val rawType   = "string"
-          val rawFormat = Option("date-time")
-          for {
-            customTpeName <- customTypeName(d)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case i: IntegerSchema =>
-          val rawType   = "integer"
-          val rawFormat = Option(i.getFormat)
-          for {
-            customTpeName <- customTypeName(i)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case d: NumberSchema =>
-          val rawType   = "number"
-          val rawFormat = Option(d.getFormat)
-          for {
-            customTpeName <- customTypeName(d)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case p: PasswordSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(p.getFormat)
-          for {
-            customTpeName <- customTypeName(p)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case f: FileSchema =>
-          val rawType   = "file"
-          val rawFormat = Option(f.getFormat)
-          for {
-            customTpeName <- customTypeName(f)
-            tpe           <- typeName[L, F]("file", rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case u: UUIDSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(u.getFormat)
-          for {
-            customTpeName <- customTypeName(u)
-            tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case e: EmailSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(e.getFormat)
-          for {
-            customTpeName <- customTypeName(e)
-            tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+        for {
+          customTpeName <- customTypeName(a)
+          tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+        } yield Resolved[L](tpe, None, None, rawType.get, rawFormat.get)
+      }
+      def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => Free[F, L#Term]): Tracker[A] => Free[F, ResolvedType[L]] = { a =>
+        val rawType   = a.downField("type", _.getType())
+        val rawFormat = a.downField("format", _.getFormat())
+        for {
+          customTpeName <- customTypeName(a)
+          res <- (
+            typeName[L, F](rawType, rawFormat, customTpeName),
+            Default(a.get).extract[B].traverse(transformLit(_))
+          ).mapN(Resolved[L](_, None, _, rawType.get, rawFormat.get))
+        } yield res
       }
 
-      val strategies = strategy.orElse(baseStrategy).orElse[Schema[_], Free[F, ResolvedType[L]]] {
-        case x =>
-          for {
-            tpe <- fallbackPropertyTypeHandler(x)
-          } yield Resolved[L](tpe, None, None, None, None) // This may need to be rawType=string?
-      }
-      log.debug(s"property:\n${log.schemaToString(property.get)}").flatMap {
+      log.debug(s"property:\n${log.schemaToString(property.get)}").flatMap { _ =>
         property
-          .refine[Free[F, ResolvedType[L]]]({ case a: ArraySchema => a })(
+          .refine[Free[F, ResolvedType[L]]](strategy)(_.get)
+          .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
                 items <- getItems(p.get)
@@ -501,95 +394,18 @@ object SwaggerUtil {
               } yield res
           )
           .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.get).map(Deferred[L]))
-          .orRefine({ case b: BooleanSchema => b })({ b =>
-            val rawType   = "boolean"
-            val rawFormat = Option.empty[String]
-            for {
-              customTpeName <- customTypeName(b)
-              res <- (
-                typeName[L, F](rawType, None, customTpeName),
-                Default(b.get).extract[Boolean].traverse(litBoolean(_))
-              ).mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
-            } yield res
-          })
-          .orRefine({ case s: StringSchema => s })({ s =>
-            val rawType   = "string"
-            val rawFormat = s.downField("format", _.getFormat()).get
-            for {
-              customTpeName <- customTypeName(s)
-              res <- (
-                typeName[L, F](rawType, rawFormat, customTpeName),
-                Default(s.get).extract[String].traverse(litString(_))
-              ).mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
-            } yield res
-          })
-          .orRefine({ case s: EmailSchema => s })({ s =>
-            val rawType   = "string"
-            val rawFormat = s.downField("format", _.getFormat()).get
-            for {
-              customTpeName <- customTypeName(s)
-              tpe <- typeName[L, F](rawType, rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case d: DateSchema => d })({ d =>
-            val rawType   = "string"
-            val rawFormat = Option("date")
-            for {
-              customTpeName <- customTypeName(d)
-              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case d: DateTimeSchema => d })({ d =>
-            val rawType   = "string"
-            val rawFormat = Option("date-time")
-            for {
-              customTpeName <- customTypeName(d)
-              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case i: IntegerSchema => i })({ i =>
-            val rawType   = "integer"
-            val rawFormat = Option(i.get.getFormat)
-            for {
-              customTpeName <- customTypeName(i)
-              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case d: NumberSchema => d })({ d =>
-            val rawType   = "number"
-            val rawFormat = Option(d.get.getFormat)
-            for {
-              customTpeName <- customTypeName(d)
-              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case p: PasswordSchema => p })({ p =>
-            val rawType   = "string"
-            val rawFormat = Option(p.get.getFormat)
-            for {
-              customTpeName <- customTypeName(p)
-              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case f: FileSchema => f })({ f =>
-            val rawType   = "file"
-            val rawFormat = Option(f.get.getFormat)
-            for {
-              customTpeName <- customTypeName(f)
-              tpe           <- typeName[L, F]("file", rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine({ case u: UUIDSchema => u })({ u =>
-            val rawType   = "string"
-            val rawFormat = Option(u.get.getFormat)
-            for {
-              customTpeName <- customTypeName(u)
-              tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
-            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-          })
-          .orRefine(strategy)(_.get)
-          .leftMap[Schema[_]](_.get)
-          .fold(x => _ => fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None, None, None)), Function.const _)
+          .orRefine({ case b: BooleanSchema => b })(buildResolve(litBoolean))
+          .orRefine({ case s: StringSchema => s })(buildResolve(litString))
+          .orRefine({ case s: EmailSchema => s })(buildResolveNoDefault)
+          .orRefine({ case d: DateSchema => d })(buildResolveNoDefault)
+          .orRefine({ case d: DateTimeSchema => d })(buildResolveNoDefault)
+          .orRefine({ case i: IntegerSchema => i })(buildResolveNoDefault)
+          .orRefine({ case d: NumberSchema => d })(buildResolveNoDefault)
+          .orRefine({ case p: PasswordSchema => p })(buildResolveNoDefault)
+          .orRefine({ case f: FileSchema => f })(buildResolveNoDefault)
+          .orRefine({ case u: UUIDSchema => u })(buildResolveNoDefault)
+          .leftMap(_.get)
+          .fold(fallbackPropertyTypeHandler(_).map(Resolved[L](_, None, None, None, None)), identity) // This may need to be rawType=string?
       }
     }
 
