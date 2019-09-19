@@ -10,8 +10,9 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import scala.meta.Tree
 import org.scalactic.Equality
+import org.scalatest.EitherValues
 
-trait SwaggerSpecRunner {
+trait SwaggerSpecRunner extends EitherValues {
   implicit def TreeEquality[A <: Tree]: Equality[A] =
     new Equality[A] {
       def areEqual(a: A, b: Any): Boolean =
@@ -57,4 +58,27 @@ trait SwaggerSpecRunner {
     (proto, Clients(clients, clientSupportDefs), Servers(servers, serverSupportDefs))
   }
 
+  def runInvalidSwaggerSpec[L <: LA](
+      spec: String
+  ): (Context, CodegenTarget, FunctionK[CodegenApplication[L, ?], Target]) => (StructuredLogger, Error) = {
+    val parseOpts = new ParseOptions
+    parseOpts.setResolve(true)
+    runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI) _
+  }
+
+  def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: FunctionK[CodegenApplication[L, ?], Target])(
+      implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
+      Sc: ScalaTerms[L, CodegenApplication[L, ?]],
+      Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
+  ): (StructuredLogger, Error) =
+    Common
+      .prepareDefinitions[L, CodegenApplication[L, ?]](
+        kind,
+        context,
+        Tracker(swagger)
+      )
+      .foldMap(framework)
+      .value
+      .runEmpty
+      .map(_.map(_.left.value))
 }
