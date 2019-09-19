@@ -243,7 +243,9 @@ object ProtocolGenerator {
                   .flatMap({
                     case (cls, tracker) =>
                       tracker
-                        .refine[Tracker[Schema[_]]]({ case x: ComposedSchema if Option(interface.get.get$ref()).exists(_.endsWith(s"/${cls}")) => x })(identity _)
+                        .refine[Tracker[Schema[_]]]({ case x: ComposedSchema if Option(interface.get.get$ref()).exists(_.endsWith(s"/${cls}")) => x })(
+                          identity _
+                        )
                         .orRefine({ case x: Schema[_] if Option(interface.get.get$ref()).exists(_.endsWith(s"/${cls}")) => x })(identity _)
                         .toOption
                   })
@@ -472,14 +474,15 @@ object ProtocolGenerator {
     def firstInHierarchy(model: Tracker[Schema[_]]): Option[ObjectSchema] =
       model
         .refine({ case x: ComposedSchema => x })({ elem =>
-            definitions.collectFirst({
+          definitions
+            .collectFirst({
               case (clsName, element) if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName"))) =>
                 element
             })
             .flatMap(
-             _.refine({ case x: ComposedSchema => x })(firstInHierarchy)
-              .orRefine({ case o: ObjectSchema => o })(x => Option(x.get))
-              .getOrElse(None)
+              _.refine({ case x: ComposedSchema => x })(firstInHierarchy)
+                .orRefine({ case o: ObjectSchema => o })(x => Option(x.get))
+                .getOrElse(None)
             )
         })
         .getOrElse(None)

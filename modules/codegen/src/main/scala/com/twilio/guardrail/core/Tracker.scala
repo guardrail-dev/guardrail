@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
 
 class Tracker[+A] private[core] (private[core] val get: A, private[core] val history: Vector[String]) {
   override def toString(): String = s"Tracker($get, $history)"
-  override def hashCode(): Int = get.hashCode // FIXME: Are two things with different histories identical?
+  override def hashCode(): Int    = get.hashCode // FIXME: Are two things with different histories identical?
 }
 
 trait LowPriorityTrackerEvidence {
@@ -20,8 +20,9 @@ trait HighPriorityTrackerEvidence extends LowPriorityTrackerEvidence {
   implicit def optionalArrayConvincer[A]: Tracker.Convincer[Option[Array[A]], List[A]]           = Tracker.Convincer(_.fold(List.empty[A])(_.toList))
   implicit def optionaljuListConvincer[A]: Tracker.Convincer[Option[java.util.List[A]], List[A]] = Tracker.Convincer(_.fold(List.empty[A])(_.asScala.toList))
   implicit def optionalListConvincer[A]: Tracker.Convincer[Option[List[A]], List[A]]             = Tracker.Convincer(_.getOrElse(List.empty[A]))
-  implicit def optionaljuCollectionConvincer[A]: Tracker.Convincer[Option[java.util.Collection[A]], List[A]] = Tracker.Convincer(_.fold(List.empty[A])(_.asScala.toList))
-  implicit def optionalOptionConvincer[A]: Tracker.Convincer[Option[Option[A]], Option[A]]       = Tracker.Convincer(_.flatten)
+  implicit def optionaljuCollectionConvincer[A]: Tracker.Convincer[Option[java.util.Collection[A]], List[A]] =
+    Tracker.Convincer(_.fold(List.empty[A])(_.asScala.toList))
+  implicit def optionalOptionConvincer[A]: Tracker.Convincer[Option[Option[A]], Option[A]] = Tracker.Convincer(_.flatten)
   implicit def optionaljuMapConvincer[K, V]: Tracker.Convincer[Option[java.util.Map[K, V]], List[(K, V)]] =
     Tracker.Convincer(_.fold(List.empty[(K, V)])(_.asScala.toList))
   implicit def optionalMapConvincer[K, V]: Tracker.Convincer[Option[Map[K, V]], List[(K, V)]] = Tracker.Convincer(_.fold(List.empty[(K, V)])(_.toList))
@@ -53,7 +54,7 @@ object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
     def apply(a: A): B
   }
 
-  def apply(swagger: OpenAPI): Tracker[OpenAPI] = new Tracker(swagger, Vector.empty)
+  def apply(swagger: OpenAPI): Tracker[OpenAPI]                    = new Tracker(swagger, Vector.empty)
   def hackyAdapt[A](value: A, history: Vector[String]): Tracker[A] = new Tracker(value, history)
 
   implicit class OptionSyntax[A](tracker: Tracker[Option[A]]) {
@@ -67,7 +68,7 @@ object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
     def flatDownField[C]: FlatDownFieldPartiallyApplied[C] = new FlatDownFieldPartiallyApplied()
     def flatExtract[F[_]: MonoidK, B](f: Tracker[A] => F[B]): F[B] =
       tracker.get.fold(MonoidK[F].empty[B])(x => f(tracker.map(_ => x)))
-    def exists(f: Tracker[A] => Boolean): Boolean          = sequence.exists(f)
+    def exists(f: Tracker[A] => Boolean): Boolean = sequence.exists(f)
   }
 
   implicit class MapishListSyntax[K, V](tracker: Tracker[List[(K, V)]]) {

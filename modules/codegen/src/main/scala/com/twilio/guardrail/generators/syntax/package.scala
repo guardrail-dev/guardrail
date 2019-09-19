@@ -16,11 +16,11 @@ package syntax {
       ("  " * indent) + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n" + ("  " * indent))
   }
 
-  class RichCollection[A, Repr](xs: IterableLike[A, Repr]){
+  class RichCollection[A, Repr](xs: IterableLike[A, Repr]) {
     def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]) = {
       val builder = cbf(xs.repr)
-      val i = xs.iterator
-      var set = Set[B]()
+      val i       = xs.iterator
+      var set     = Set[B]()
       while (i.hasNext) {
         val o = i.next
         val b = f(o)
@@ -88,9 +88,9 @@ package object syntax {
     def toDashedCase: String = splitParts(s).mkString("-")
   }
 
-  implicit def RichSchema = new RichNotNullShower[Schema[_]](_)
+  implicit def RichSchema    = new RichNotNullShower[Schema[_]](_)
   implicit def RichOperation = new RichNotNullShower[Operation](_)
-  implicit def RichPathItem = new RichNotNullShower[PathItem](_)
+  implicit def RichPathItem  = new RichNotNullShower[PathItem](_)
   implicit def RichParameter = new RichNotNullShower[Parameter](_)
 
   implicit def toRichCollection[A, Repr](xs: IterableLike[A, Repr]) = new RichCollection(xs)

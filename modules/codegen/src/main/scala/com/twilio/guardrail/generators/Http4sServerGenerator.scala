@@ -420,10 +420,11 @@ object Http4sServerGenerator {
       Target.log.function("generateRoute")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${basePath}, ${route}, ${tracingFields}")
         RouteMeta(path, method, operation, securityRequirements) = route
-        operationId <- operation.downField("operationId", _.getOperationId())
-                                           .map(_.map(splitOperationParts).map(_._2))
-                                           .raiseErrorIfEmpty("Missing operationId")
-                                           .map(_.get)
+        operationId <- operation
+          .downField("operationId", _.getOperationId())
+          .map(_.map(splitOperationParts).map(_._2))
+          .raiseErrorIfEmpty("Missing operationId")
+          .map(_.get)
 
         formArgs   = parameters.formParams
         headerArgs = parameters.headerParams

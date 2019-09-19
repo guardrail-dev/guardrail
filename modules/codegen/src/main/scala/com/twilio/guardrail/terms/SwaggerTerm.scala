@@ -90,8 +90,8 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Tracker[Operat
       case Nil                                           => Option.empty
     }
     for {
-      schema  <- unifyEntries(requestBody.downField("content", _.getContent()).sequence.map(_.map(_.get)))
-      tpe     <- Option(schema.getType())
+      schema <- unifyEntries(requestBody.downField("content", _.getContent()).sequence.map(_.map(_.get)))
+      tpe    <- Option(schema.getType())
     } yield {
       val p = new Parameter
 
@@ -164,38 +164,39 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Tracker[Operat
     val ((maxCount, instances), ps) = requestBody
       .downField("content", _.getContent())
       .sequence
-      .flatMap({ case (_, mt) =>
-        for {
-          mtSchema <- mt.downField("schema", _.getSchema()).sequence.toList
-          requiredFields = mtSchema.downField("required", _.getRequired).get.toSet
-          (name, schema) <- mtSchema.downField("properties", _.getProperties()).sequence
-        } yield {
-          val p = new Parameter
+      .flatMap({
+        case (_, mt) =>
+          for {
+            mtSchema <- mt.downField("schema", _.getSchema()).sequence.toList
+            requiredFields = mtSchema.downField("required", _.getRequired).get.toSet
+            (name, schema) <- mtSchema.downField("properties", _.getProperties()).sequence
+          } yield {
+            val p = new Parameter
 
-          if (schema.downField("format", _.getFormat).get.contains("binary")) {
-            schema.get.setType("file")
-            schema.get.setFormat(null)
+            if (schema.downField("format", _.getFormat).get.contains("binary")) {
+              schema.get.setType("file")
+              schema.get.setFormat(null)
+            }
+
+            p.setName(name)
+            p.setIn("formData")
+            p.setSchema(schema.get)
+
+            val isRequired: Boolean = if (requiredFields.nonEmpty) {
+              requiredFields.contains(name)
+            } else {
+              requestBody.downField("required", _.getRequired()).get.fold(false)(identity)
+            }
+
+            p.setRequired(isRequired)
+            p.setExtensions(schema.downField("extensions", _.getExtensions).get.toMap.asJava)
+
+            if (schema.downField("type", _.getType()).sequence.exists(_.get == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
+              p.setRequired(false)
+            }
+
+            requestBody.map(_ => p)
           }
-
-          p.setName(name)
-          p.setIn("formData")
-          p.setSchema(schema.get)
-
-          val isRequired: Boolean = if (requiredFields.nonEmpty) {
-            requiredFields.contains(name)
-          } else {
-            requestBody.downField("required", _.getRequired()).get.fold(false)(identity)
-          }
-
-          p.setRequired(isRequired)
-          p.setExtensions(schema.downField("extensions", _.getExtensions).get.toMap.asJava)
-
-          if (schema.downField("type", _.getType()).sequence.exists(_.get == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
-            p.setRequired(false)
-          }
-
-          requestBody.map(_ => p)
-        }
       })
       .traverse[State[ParameterCountState, ?], Tracker[Parameter]] { p =>
         State[ParameterCountState, Tracker[Parameter]]({
@@ -226,8 +227,7 @@ case class RouteMeta(path: String, method: HttpMethod, operation: Tracker[Operat
       (requestBody.flatExtract(extractRefParamFromRequestBody) ++
         p.sequence ++
         requestBody.flatExtract(extractParamsFromRequestBody) ++
-        requestBody.flatExtract(extractPrimitiveFromRequestBody)
-      ).toList
+        requestBody.flatExtract(extractPrimitiveFromRequestBody)).toList
     params
   }
 

@@ -668,10 +668,11 @@ object AkkaHttpServerGenerator {
         consumes = NonEmptyList
           .fromList(operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_)))
           .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
-        operationId <- operation.downField("operationId", _.getOperationId())
-                                           .map(_.map(splitOperationParts).map(_._2))
-                                           .raiseErrorIfEmpty("Missing operationId")
-                                           .map(_.get)
+        operationId <- operation
+          .downField("operationId", _.getOperationId())
+          .map(_.map(splitOperationParts).map(_._2))
+          .raiseErrorIfEmpty("Missing operationId")
+          .map(_.get)
 
         // special-case file upload stuff
         formArgs = parameters.formParams.map({ x =>
