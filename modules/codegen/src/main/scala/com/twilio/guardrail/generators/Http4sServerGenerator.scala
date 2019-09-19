@@ -6,6 +6,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax._
+import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ Header, Response, Responses }
@@ -30,15 +31,15 @@ object Http4sServerGenerator {
           _ <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
           res <- if (tracing) {
             for {
-              operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                 .map(splitOperationParts)
-                                                 .map(_._2),
-                                               "Missing operationId")
-              label <- Target.fromOption(
+              operationId <- operation
+                .downField("operationId", _.getOperationId())
+                .map(_.map(splitOperationParts(_)._2))
+                .raiseErrorIfEmpty("Missing operationId")
+              label <- Target.fromOption[Lit.String](
                 TracingLabel(operation)
                   .map(Lit.String(_))
-                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                "Missing client name"
+                  .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                s"Missing client name (${operation.showHistory})"
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -60,7 +61,7 @@ object Http4sServerGenerator {
             List(combinedRouteTerms),
             List.empty,
             methodSigs,
-            renderedRoutes.flatMap(_.supportDefinitions).groupBy(_.structure).map(_._2.head).toList, // Only unique supportDefinitions by structure
+            renderedRoutes.flatMap(_.supportDefinitions).groupBy(_.structure).flatMap(_._2.headOption).toList, // Only unique supportDefinitions by structure
             renderedRoutes.flatMap(_.handlerDefinitions)
           )
         }

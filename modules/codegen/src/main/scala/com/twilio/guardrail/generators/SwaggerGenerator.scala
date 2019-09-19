@@ -162,13 +162,14 @@ object SwaggerGenerator {
         Target.raiseError(s"Unsure how to handle ${parameter}")
 
       case GetOperationId(operation) =>
-        Target.fromOption(Option(operation.getOperationId())
-                            .map(splitOperationParts)
-                            .map(_._2),
-                          "Missing operationId")
+        operation
+          .downField("operationId", _.getOperationId())
+          .map(_.map(splitOperationParts(_)._2))
+          .raiseErrorIfEmpty("Missing operationId")
+          .map(_.get)
 
       case GetResponses(operationId, operation) =>
-        Target.fromOption(Option(operation.getResponses).map(_.asScala.toMap), s"No responses defined for ${operationId}")
+        operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.sequence)
 
       case GetSimpleRef(ref) =>
         Target.fromOption(Option(ref.get$ref).flatMap(_.split("/").lastOption), s"Unspecified $ref")

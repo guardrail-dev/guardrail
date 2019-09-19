@@ -8,6 +8,7 @@ import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
+import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server._
@@ -98,18 +99,18 @@ object AkkaHttpServerGenerator {
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         for {
-          _ <- Target.log.debug(s"buildTracingFields(${operation.showNotNull}, ${resourceName}, ${tracing})")
+          _ <- Target.log.debug(s"buildTracingFields(${operation.get.showNotNull}, ${resourceName}, ${tracing})")
           res <- if (tracing) {
             for {
-              operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                 .map(splitOperationParts)
-                                                 .map(_._2),
-                                               "Missing operationId")
-              label <- Target.fromOption(
+              operationId <- operation
+                .downField("operationId", _.getOperationId())
+                .map(_.map(splitOperationParts(_)._2))
+                .raiseErrorIfEmpty("Missing operationId")
+              label <- Target.fromOption[Lit.String](
                 TracingLabel(operation)
                   .map(Lit.String(_))
-                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                "Missing client name"
+                  .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                s"Missing client name (${operation.showHistory})"
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
           } else Target.pure(None)

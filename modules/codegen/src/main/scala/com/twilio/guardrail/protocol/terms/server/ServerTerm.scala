@@ -1,5 +1,6 @@
 package com.twilio.guardrail.protocol.terms.server
 
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
@@ -8,7 +9,8 @@ import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefini
 import io.swagger.v3.oas.models.Operation
 
 sealed trait ServerTerm[L <: LA, T]
-case class BuildTracingFields[L <: LA](operation: Operation, resourceName: List[String], tracing: Boolean) extends ServerTerm[L, Option[TracingField[L]]]
+case class BuildTracingFields[L <: LA](operation: Tracker[Operation], resourceName: List[String], tracing: Boolean)
+    extends ServerTerm[L, Option[TracingField[L]]]
 case class GenerateRoutes[L <: LA](tracing: Boolean,
                                    resourceName: String,
                                    basePath: Option[String],

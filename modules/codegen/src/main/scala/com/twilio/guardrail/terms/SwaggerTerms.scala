@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package terms
 
 import cats.InjectK
+import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.core.Tracker
@@ -49,10 +50,10 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def fallbackParameterHandler(parameter: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackParameterHandler(parameter))
 
-  def getOperationId(operation: Operation): Free[F, String] =
+  def getOperationId(operation: Tracker[Operation]): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetOperationId(operation))
 
-  def getResponses(operationId: String, operation: Operation): Free[F, Map[String, ApiResponse]] =
+  def getResponses(operationId: String, operation: Tracker[Operation]): Free[F, NonEmptyList[(String, Tracker[ApiResponse])]] =
     Free.inject[SwaggerTerm[L, ?], F](GetResponses(operationId, operation))
 
   def getSimpleRef(ref: Schema[_]): Free[F, String] =

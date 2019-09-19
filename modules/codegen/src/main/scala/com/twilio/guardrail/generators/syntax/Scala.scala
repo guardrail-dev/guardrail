@@ -4,12 +4,17 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.{ StaticDefns, SwaggerUtil, Target }
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaParameter }
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import scala.meta._
 
 object Scala {
   implicit class RichRawParameterName(parameter: RawParameterName) {
     import _root_.scala.meta._
     def toLit: Lit.String = Lit.String(parameter.value)
+  }
+
+  implicit class ScalaTracingLabel(value: TracingLabelFormatter) {
+    def toLit: Lit.String = Lit.String(s"${value.context}:${value.operationId}")
   }
 
   implicit class RichScalaParameter(value: ScalaParameter.type) {

@@ -48,11 +48,11 @@ object ServerGenerator {
             responseServerPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
-                  operationId         <- getOperationId(operation.get)
-                  responses           <- Responses.getResponses(operationId, operation.get, protocolElems)
+                  operationId         <- getOperationId(operation)
+                  responses           <- Responses.getResponses(operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
-                  tracingField        <- buildTracingFields(operation.get, className, context.tracing)
+                  tracingField        <- buildTracingFields(operation, className, context.tracing)
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
