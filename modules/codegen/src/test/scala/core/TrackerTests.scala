@@ -1,11 +1,14 @@
 package core
 
 import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
-import org.scalatest.{ FreeSpec, Matchers }
+import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.{ CodegenTarget, Context, UserError }
 import org.scalacheck.{ Arbitrary, Gen }
+import org.scalatest.{ FreeSpec, Matchers }
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+import support.SwaggerSpecRunner
 
-class TrackerTests extends FreeSpec with Matchers with ScalaCheckPropertyChecks with TrackerTestExtensions {
+class TrackerTests extends FreeSpec with Matchers with ScalaCheckPropertyChecks with TrackerTestExtensions with SwaggerSpecRunner {
   class Parent(val child1: List[Child1], val child2: Map[String, Child2]) { override def toString(): String = s"Parent($child1, $child2)" }
   class Child1(val grandchild: Option[Grandchild1]) extends Parent(grandchild.toList, Map.empty) { override def toString(): String = s"Child1($grandchild)" }
   class Child2                                      extends Parent(List.empty, Map.empty)        { override def toString(): String = s"Child2()"            }
@@ -119,6 +122,36 @@ Tracker should:
             .getOrElse(???)
         )
       }
+    }
+  }
+
+  "swagger" - {
+    "operationId" in {
+      val swagger = s"""
+        |swagger: "2.0"
+        |host: localhost:1234
+        |paths:
+        |  /foo:
+        |    get:
+        |      responses:
+        |        200:
+        |          description: Success
+        |""".stripMargin
+      val (_, UserError("Missing operationId (.paths[/foo].operations[GET].operationId)")) =
+        runInvalidSwaggerSpec(swagger)(Context.empty, CodegenTarget.Server, Http4s)
+    }
+
+    "responses" in {
+      val swagger = s"""
+        |swagger: "2.0"
+        |host: localhost:1234
+        |paths:
+        |  /foo:
+        |    get:
+        |      operationId: foo
+        |""".stripMargin
+      val (_, UserError("No responses defined for foo (.paths[/foo].operations[GET].responses)")) =
+        runInvalidSwaggerSpec(swagger)(Context.empty, CodegenTarget.Server, Http4s)
     }
   }
 }
