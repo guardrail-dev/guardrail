@@ -42,6 +42,16 @@ trait LowPrioritySyntax {
 
     def toNel: Tracker[Option[NonEmptyList[A]]] = tracker.map(NonEmptyList.fromList _)
   }
+
+  implicit class NELSyntax[A](tracker: Tracker[NonEmptyList[A]]) {
+    def foldExtract[F[_], B](f: Tracker[A] => F[B])(combine: (F[B], F[B]) => F[B]): F[B] =
+      tracker
+        .get
+        .zipWithIndex
+        .map({ case (v, i) => f(new Tracker(v, tracker.history :+ s"[${i}]")) })
+        .reduceLeft(combine)
+    def sequence: NonEmptyList[Tracker[A]] = foldExtract(v => NonEmptyList.one(v))((a, b) => a.concatNel(b))
+  }
 }
 
 object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
