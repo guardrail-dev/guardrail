@@ -9,6 +9,12 @@ import io.swagger.v3.oas.models.security.SecurityScheme
 object VendorExtension {
   trait VendorExtensible[-F] {
     def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T]
+    def contramap[B](f: B => F): VendorExtensible[B] = {
+      val chain = this
+      new VendorExtensible[B] {
+        def extract[T](from: B, key: String)(implicit T: Extractable[T]): Option[T] = chain.extract(f(from), key)
+      }
+    }
   }
 
   object VendorExtensible {
