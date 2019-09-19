@@ -8,8 +8,18 @@ import cats.arrow.FunctionK
 import com.twilio.guardrail._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import scala.meta.Tree
+import org.scalactic.Equality
 
 trait SwaggerSpecRunner {
+  implicit def TreeEquality[A <: Tree]: Equality[A] =
+    new Equality[A] {
+      def areEqual(a: A, b: Any): Boolean =
+        b match {
+          case x: Tree => a.structure == x.structure
+          case _       => false
+        }
+    }
 
   def runSwaggerSpec[L <: LA](
       spec: String
