@@ -2,7 +2,37 @@ package com.twilio.guardrail.generators
 
 import cats.data.NonEmptyList
 import java.util.Locale
+import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.parameters.Parameter
+import scala.collection.IterableLike
+import scala.collection.generic.CanBuildFrom
+import scala.language.implicitConversions
+
+package syntax {
+  class RichNotNullShower[A](value: A) {
+    def showNotNull: String = showNotNullIndented(0)
+    def showNotNullIndented(indent: Int): String =
+      ("  " * indent) + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n" + ("  " * indent))
+  }
+
+  class RichCollection[A, Repr](xs: IterableLike[A, Repr]) {
+    def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]) = {
+      val builder = cbf(xs.repr)
+      val i       = xs.iterator
+      var set     = Set[B]()
+      while (i.hasNext) {
+        val o = i.next
+        val b = f(o)
+        if (!set(b)) {
+          set += b
+          builder += o
+        }
+      }
+      builder.result
+    }
+  }
+}
 
 package object syntax {
   val GENERATED_CODE_COMMENT_LINES: List[String] = List(
@@ -58,9 +88,10 @@ package object syntax {
     def toDashedCase: String = splitParts(s).mkString("-")
   }
 
-  implicit class RichSchema(value: Schema[_]) {
-    def showNotNull: String = showNotNullIndented(0)
-    def showNotNullIndented(indent: Int): String =
-      ("  " * indent) + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n" + ("  " * indent))
-  }
+  implicit def RichSchema    = new RichNotNullShower[Schema[_]](_)
+  implicit def RichOperation = new RichNotNullShower[Operation](_)
+  implicit def RichPathItem  = new RichNotNullShower[PathItem](_)
+  implicit def RichParameter = new RichNotNullShower[Parameter](_)
+
+  implicit def toRichCollection[A, Repr](xs: IterableLike[A, Repr]) = new RichCollection(xs)
 }
