@@ -195,7 +195,7 @@ object ProtocolGenerator {
           val isRequired = requiredFields.contains(name)
           for {
             customType   <- SwaggerUtil.customTypeName(prop)
-            resolvedType <- SwaggerUtil.propMeta[L, F](prop.get)
+            resolvedType <- SwaggerUtil.propMeta[L, F](prop)
             defValue     <- defaultValue(typeName, prop.get, isRequired, definitions.map(_.map(_.get)))
             res <- transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(name,
                                                                                               prop.get,
@@ -243,10 +243,12 @@ object ProtocolGenerator {
                   .flatMap({
                     case (cls, tracker) =>
                       tracker
-                        .refine[Tracker[Schema[_]]]({ case x: ComposedSchema if Option(interface.get.get$ref()).exists(_.endsWith(s"/${cls}")) => x })(
+                        .refine[Tracker[Schema[_]]]({
+                          case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
+                        })(
                           identity _
                         )
-                        .orRefine({ case x: Schema[_] if Option(interface.get.get$ref()).exists(_.endsWith(s"/${cls}")) => x })(identity _)
+                        .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
                         .toOption
                   })
                   .headOption

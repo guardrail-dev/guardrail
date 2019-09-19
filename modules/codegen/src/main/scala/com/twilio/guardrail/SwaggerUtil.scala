@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
@@ -155,7 +156,7 @@ object SwaggerUtil {
             for {
               items <- getItems(arr)
               _     <- log.debug(s"items:\n${log.schemaToString(items)}")
-              meta  <- propMeta[L, F](items)
+              meta  <- propMeta[L, F](Tracker.hackyAdapt(items, Vector.empty))
               _     <- log.debug(s"meta: ${meta}")
               res <- meta match {
                 case Resolved(inner, dep, default, _, _) =>
@@ -170,7 +171,7 @@ object SwaggerUtil {
               rec <- Option(map.getAdditionalProperties)
                 .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None, None, None)))({
                   case _: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None, None, None))
-                  case s: Schema[_]         => propMeta[L, F](s)
+                  case s: Schema[_]         => propMeta[L, F](Tracker.hackyAdapt(s, Vector.empty))
                 })
               res <- rec match {
                 case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
@@ -286,7 +287,7 @@ object SwaggerUtil {
       case _                          => false
     }
 
-  def propMeta[L <: LA, F[_]](property: Schema[_])(
+  def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]])(
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
@@ -311,7 +312,7 @@ object SwaggerUtil {
   ): Free[F, ResolvedType[L]] = {
     import Fw._
     val action: Free[F, ResolvedType[L]] = Free.pure(Resolved[L](tpe, None, None, None, None))
-    propMetaImpl(property) {
+    propMetaImpl(Tracker.hackyAdapt(property, Vector.empty)) {
       case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
         action
       case _: ObjectSchema =>
@@ -323,7 +324,7 @@ object SwaggerUtil {
     }
   }
 
-  private def propMetaImpl[L <: LA, F[_]](property: Schema[_])(
+  private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
     Sw.log.function("propMeta") {
@@ -335,7 +336,7 @@ object SwaggerUtil {
         case p: ArraySchema =>
           for {
             items <- getItems(p)
-            rec   <- propMetaImpl[L, F](items)(strategy)
+            rec   <- propMetaImpl[L, F](Tracker.hackyAdapt(items, Vector.empty))(strategy)
             res <- rec match {
               case Resolved(inner, dep, default, _, _) =>
                 (liftVectorType(inner), default.traverse(liftVectorTerm))
@@ -353,7 +354,7 @@ object SwaggerUtil {
               )({
                 case b: java.lang.Boolean =>
                   objectType(None).map(Resolved[L](_, None, None, None, None))
-                case s: Schema[_] => propMetaImpl[L, F](s)(strategy)
+                case s: Schema[_] => propMetaImpl[L, F](Tracker.hackyAdapt(s, Vector.empty))(strategy)
               })
             res <- rec match {
               case Resolved(inner, dep, _, _, _) =>
@@ -460,9 +461,136 @@ object SwaggerUtil {
             tpe <- fallbackPropertyTypeHandler(x)
           } yield Resolved[L](tpe, None, None, None, None) // This may need to be rawType=string?
       }
-      log.debug(s"property:\n${log.schemaToString(property)}") >> strategies(
+      log.debug(s"property:\n${log.schemaToString(property.get)}").flatMap {
         property
-      )
+          .refine[Free[F, ResolvedType[L]]]({ case a: ArraySchema => a })(
+            p =>
+              for {
+                items <- getItems(p.get)
+                rec   <- propMetaImpl[L, F](Tracker.hackyAdapt(items, Vector.empty))(strategy)
+                res <- rec match {
+                  case Resolved(inner, dep, default, _, _) =>
+                    (liftVectorType(inner), default.traverse(liftVectorTerm))
+                      .mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
+                  case x: DeferredMap[L]   => embedArray(x)
+                  case x: DeferredArray[L] => embedArray(x)
+                  case x: Deferred[L]      => embedArray(x)
+                }
+              } yield res
+          )
+          .orRefine({ case m: MapSchema => m })(
+            m =>
+              for {
+                rec <- m
+                  .downField("additionalProperties", _.getAdditionalProperties)
+                  .get
+                  .fold[Free[F, ResolvedType[L]]](
+                    objectType(None).map(Resolved[L](_, None, None, None, None))
+                  )({
+                    case b: java.lang.Boolean =>
+                      objectType(None).map(Resolved[L](_, None, None, None, None))
+                    case s: Schema[_] => propMetaImpl[L, F](Tracker.hackyAdapt(s, Vector.empty))(strategy)
+                  })
+                res <- rec match {
+                  case Resolved(inner, dep, _, _, _) =>
+                    liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
+                  case x: DeferredMap[L]   => embedMap(x)
+                  case x: DeferredArray[L] => embedMap(x)
+                  case x: Deferred[L]      => embedMap(x)
+                }
+              } yield res
+          )
+          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.get).map(Deferred[L]))
+          .orRefine({ case b: BooleanSchema => b })({ b =>
+            val rawType   = "boolean"
+            val rawFormat = Option.empty[String]
+            for {
+              customTpeName <- customTypeName(b)
+              res <- (
+                typeName[L, F](rawType, None, customTpeName),
+                Default(b.get).extract[Boolean].traverse(litBoolean(_))
+              ).mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
+            } yield res
+          })
+          .orRefine({ case s: StringSchema => s })({ s =>
+            val rawType   = "string"
+            val rawFormat = s.downField("format", _.getFormat()).get
+            for {
+              customTpeName <- customTypeName(s)
+              res <- (
+                typeName[L, F](rawType, rawFormat, customTpeName),
+                Default(s.get).extract[String].traverse(litString(_))
+              ).mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
+            } yield res
+          })
+          .orRefine({ case s: EmailSchema => s })({ s =>
+            val rawType   = "string"
+            val rawFormat = s.downField("format", _.getFormat()).get
+            for {
+              customTpeName <- customTypeName(s)
+              tpe <- typeName[L, F](rawType, rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case d: DateSchema => d })({ d =>
+            val rawType   = "string"
+            val rawFormat = Option("date")
+            for {
+              customTpeName <- customTypeName(d)
+              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case d: DateTimeSchema => d })({ d =>
+            val rawType   = "string"
+            val rawFormat = Option("date-time")
+            for {
+              customTpeName <- customTypeName(d)
+              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case i: IntegerSchema => i })({ i =>
+            val rawType   = "integer"
+            val rawFormat = Option(i.get.getFormat)
+            for {
+              customTpeName <- customTypeName(i)
+              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case d: NumberSchema => d })({ d =>
+            val rawType   = "number"
+            val rawFormat = Option(d.get.getFormat)
+            for {
+              customTpeName <- customTypeName(d)
+              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case p: PasswordSchema => p })({ p =>
+            val rawType   = "string"
+            val rawFormat = Option(p.get.getFormat)
+            for {
+              customTpeName <- customTypeName(p)
+              tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case f: FileSchema => f })({ f =>
+            val rawType   = "file"
+            val rawFormat = Option(f.get.getFormat)
+            for {
+              customTpeName <- customTypeName(f)
+              tpe           <- typeName[L, F]("file", rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine({ case u: UUIDSchema => u })({ u =>
+            val rawType   = "string"
+            val rawFormat = Option(u.get.getFormat)
+            for {
+              customTpeName <- customTypeName(u)
+              tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
+            } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+          })
+          .orRefine(strategy)(_.get)
+          .leftMap[Schema[_]](_.get)
+          .fold(x => _ => fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None, None, None)), Function.const _)
+      }
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],

@@ -47,7 +47,7 @@ object Responses {
                 schema        <- Option[Schema[_]](contentValues.getSchema).toList
               } yield schema).traverse { prop =>
                 for {
-                  meta     <- SwaggerUtil.propMeta[L, F](prop)
+                  meta     <- SwaggerUtil.propMeta[L, F](Tracker.hackyAdapt(prop, Vector.empty))
                   resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                   SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
 
