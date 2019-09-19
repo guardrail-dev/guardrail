@@ -76,7 +76,7 @@ object Common {
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.get, prefixes)
-      classNamedRoutes <- routes.traverse(route => getClassName(route.operation.get, prefixes).map(_ -> route))
+      classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
         .mapValues(_.map(_._2))

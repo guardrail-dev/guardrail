@@ -114,21 +114,22 @@ object SwaggerGenerator {
 
       case GetClassName(operation, vendorPrefixes) =>
         Target.log.function("getClassName")(for {
-          _ <- Target.log.debug(s"Args: ${operation.showNotNull}")
+          _ <- Target.log.debug(s"Args: ${operation.get.showNotNull}")
 
           pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
             .orElse({
-              Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension")
-                tags.asScala
-              }
+              operation
+                .downField("tags", _.getTags)
+                .toNel
+                .sequence
+                .map { tags =>
+                  println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})")
+                  tags.get.toList
+                }
             })
-            .map(_.toList)
-          opPkg = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
+          opPkg = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).get
+          className = pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
         } yield className)
 
       case GetParameterName(parameter) =>
@@ -156,7 +157,11 @@ object SwaggerGenerator {
         parameterSchemaType(parameter)
 
       case GetRefParameterRef(parameter) =>
-        Target.fromOption(Option(parameter.get$ref).flatMap(_.split("/").lastOption), s"$$ref not defined for parameter '${parameter.getName}'")
+        parameter
+          .downField("$ref", _.get$ref())
+          .map(_.flatMap(_.split("/").lastOption))
+          .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
+          .map(_.get)
 
       case FallbackParameterHandler(parameter) =>
         Target.raiseError(s"Unsure how to handle ${parameter}")

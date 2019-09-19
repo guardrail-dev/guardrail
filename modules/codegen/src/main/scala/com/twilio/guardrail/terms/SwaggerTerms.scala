@@ -31,19 +31,19 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractOAuth2SecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, OAuth2SecurityScheme[L]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe))
 
-  def getClassName(operation: Operation, vendorPrefixes: List[String]): Free[F, List[String]] =
+  def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String]): Free[F, List[String]] =
     Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation, vendorPrefixes))
   def getParameterName(parameter: Parameter): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetParameterName(parameter))
   def getBodyParameterSchema(parameter: Parameter): Free[F, Schema[_]] =
     Free.inject[SwaggerTerm[L, ?], F](GetBodyParameterSchema(parameter))
 
-  def getHeaderParameterType(parameter: Parameter): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetHeaderParameterType(parameter))
-  def getPathParameterType(parameter: Parameter): Free[F, String]   = Free.inject[SwaggerTerm[L, ?], F](GetPathParameterType(parameter))
-  def getQueryParameterType(parameter: Parameter): Free[F, String]  = Free.inject[SwaggerTerm[L, ?], F](GetQueryParameterType(parameter))
-  def getCookieParameterType(parameter: Parameter): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetCookieParameterType(parameter))
-  def getFormParameterType(parameter: Parameter): Free[F, String]   = Free.inject[SwaggerTerm[L, ?], F](GetFormParameterType(parameter))
-  def getRefParameterRef(parameter: Parameter): Free[F, String]     = Free.inject[SwaggerTerm[L, ?], F](GetRefParameterRef(parameter))
+  def getHeaderParameterType(parameter: Parameter): Free[F, String]      = Free.inject[SwaggerTerm[L, ?], F](GetHeaderParameterType(parameter))
+  def getPathParameterType(parameter: Parameter): Free[F, String]        = Free.inject[SwaggerTerm[L, ?], F](GetPathParameterType(parameter))
+  def getQueryParameterType(parameter: Parameter): Free[F, String]       = Free.inject[SwaggerTerm[L, ?], F](GetQueryParameterType(parameter))
+  def getCookieParameterType(parameter: Parameter): Free[F, String]      = Free.inject[SwaggerTerm[L, ?], F](GetCookieParameterType(parameter))
+  def getFormParameterType(parameter: Parameter): Free[F, String]        = Free.inject[SwaggerTerm[L, ?], F](GetFormParameterType(parameter))
+  def getRefParameterRef(parameter: Tracker[Parameter]): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetRefParameterRef(parameter))
 
   def getSerializableParameterType(parameter: Parameter): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetSerializableParameterType(parameter))

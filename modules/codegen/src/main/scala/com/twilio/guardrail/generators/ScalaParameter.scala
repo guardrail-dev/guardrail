@@ -3,6 +3,7 @@ package generators
 
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
@@ -85,7 +86,7 @@ object ScalaParameter {
 
       param match {
         case r: Parameter if r.isRef =>
-          getRefParameterRef(r)
+          getRefParameterRef(Tracker.hackyAdapt(r, Vector.empty))
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
 
         case r: Parameter if paramHasRefSchema(r) =>
