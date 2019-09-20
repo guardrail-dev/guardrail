@@ -62,8 +62,19 @@ object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
     def apply(a: A): B
   }
 
-  def apply(swagger: OpenAPI): Tracker[OpenAPI]                    = new Tracker(swagger, Vector.empty)
-  def hackyAdapt[A](value: A, history: Vector[String]): Tracker[A] = new Tracker(value, history)
+  def apply(swagger: OpenAPI): Tracker[OpenAPI]                     = new Tracker(swagger, Vector.empty)
+  def hackyAdapt[A](value: A, history: Vector[String]): Tracker[A]  = new Tracker(value, history)
+  def cloneHistory[A, B](tracker: Tracker[A], value: B): Tracker[B] = new Tracker(value, tracker.history)
+
+  implicit class StringyEitherSyntax[B](tracker: Tracker[Either[String, B]]) {
+    def raiseErrorIfLeft: Target[Tracker[B]] = tracker.fold(err => Target.raiseError(s"${err.get} (${err.showHistory})"), Target.pure _)
+  }
+
+  implicit class EitherSyntax[A, B](tracker: Tracker[Either[A, B]]) {
+    def sequence: Either[A, Tracker[B]] = tracker.fold(a => Either.left(a.unwrapTracker), Either.right)
+    def fold[C](a: Tracker[A] => C, b: Tracker[B] => C): C =
+      tracker.unwrapTracker.fold(x => a(Tracker.cloneHistory(tracker, x)), x => b(Tracker.cloneHistory(tracker, x)))
+  }
 
   implicit class OptionSyntax[A](tracker: Tracker[Option[A]]) {
     def sequence: Option[Tracker[A]]                       = tracker.get.map(new Tracker(_, tracker.history))
@@ -129,6 +140,8 @@ object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
 
     @deprecated("Tracker.get will be removed once the migration has been completed. Please use the fold/traverse combinators to get values out.", "0.0.0")
     def get: A = tracker.get
+
+    def unwrapTracker: A = tracker.get
 
     @deprecated("Tracker.get will be removed once the migration has been completed. Please use the fold/traverse combinators to get values out.", "0.0.0")
     def history: Vector[String] = tracker.history
