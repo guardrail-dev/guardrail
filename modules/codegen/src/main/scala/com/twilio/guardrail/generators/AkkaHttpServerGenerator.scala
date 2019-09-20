@@ -5,6 +5,7 @@ import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
@@ -193,17 +194,19 @@ object AkkaHttpServerGenerator {
       case other              => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToAkka(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
+    def pathStrToAkka(basePath: Option[String],
+                      path: Tracker[String],
+                      pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
         if (trailingSlash)
           q"${term.copy(fun = Term.Name("pathPrefix"))} & pathEndOrSingleSlash"
         else term
 
-      ((basePath.getOrElse("") + path).stripPrefix("/") match {
+      ((basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
         case "" => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
-        case path =>
-          SwaggerUtil.paths.generateUrlAkkaPathExtractors(path, pathArgs)
+        case fullPath =>
+          SwaggerUtil.paths.generateUrlAkkaPathExtractors(Tracker.cloneHistory(path, fullPath), pathArgs)
       })
     }
 

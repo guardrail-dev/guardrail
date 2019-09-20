@@ -471,7 +471,7 @@ object SwaggerUtil {
     private[this] val variable: atto.Parser[String] = char('{') ~> many(notChar('}'))
       .map(_.mkString("")) <~ char('}')
 
-    def generateUrlPathParams[L <: LA](path: String,
+    def generateUrlPathParams[L <: LA](path: Tracker[String],
                                        pathArgs: List[ScalaParameter[L]],
                                        showLiteralPathComponent: String => L#Term,
                                        showInterpolatedPathComponent: L#TermName => L#Term,
@@ -486,11 +486,8 @@ object SwaggerUtil {
       val pattern: atto.Parser[List[Either[String, L#Term]]] = many(either(term, other).map(_.swap: Either[String, L#Term]))
 
       for {
-        parts <- pattern
-          .parseOnly(path)
-          .either
-          .fold(Target.raiseError, Target.pure)
-        result = parts
+        parts <- path.map(pattern.parseOnly(_).either).raiseErrorIfLeft
+        result = parts.get
           .map({
             case Left(part)  => showLiteralPathComponent(part)
             case Right(term) => term
@@ -548,13 +545,13 @@ object SwaggerUtil {
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
       def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         opt(leadingSlash) ~> ((segments ~ (trailingSlash ~ staticQS)) | emptyPathQS | emptyPath) <~ endOfInput
-      def runParse(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+      def runParse(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         pattern(pathArgs)
-          .parse(path)
+          .parse(path.unwrapTracker)
           .done match {
           case ParseResult.Done(input, result)         => Target.pure(result)
-          case ParseResult.Fail(input, stack, message) => Target.raiseError(s"Failed to parse URL: ${message} (unparsed: ${input})")
-          case ParseResult.Partial(k)                  => Target.raiseError(s"Unexpected parser state attempting to parse ${path}")
+          case ParseResult.Fail(input, stack, message) => Target.raiseError(s"Failed to parse URL: ${message} (unparsed: ${input}) (${path.showHistory})")
+          case ParseResult.Partial(k)                  => Target.raiseError(s"Unexpected parser state attempting to parse ${path} (${path.showHistory})")
         }
     }
 
@@ -660,7 +657,7 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
-    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
+    def generateUrlAkkaPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
       import akkaExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
@@ -689,7 +686,7 @@ object SwaggerUtil {
       } yield result.reverse
     }
 
-    def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
+    def generateUrlHttp4sPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
@@ -704,14 +701,10 @@ object SwaggerUtil {
       } yield (trailingSlashed, queryParams)
     }
 
-    def generateUrlEndpointsPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
+    def generateUrlEndpointsPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
       import endpointsExtractor._
       for {
-        (parts, (trailingSlash, queryParams)) <- pattern(pathArgs)
-          .parse(path)
-          .done
-          .either
-          .fold(Target.raiseError(_), Target.pure(_))
+        (parts, (trailingSlash, queryParams)) <- path.map(pattern(pathArgs).parseOnly(_).either).raiseErrorIfLeft.map(_.unwrapTracker)
         (directive, bindings) = parts
           .foldLeft[(Term, List[Term.Name])]((q"pathRoot", List.empty))({
             case ((acc, bindings), (termName, c)) =>

@@ -39,7 +39,7 @@ object ClientGenerator {
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       clients <- groupedRoutes.traverse({
         case (className, unsortedRoutes) =>
-          val routes     = unsortedRoutes.sortBy(r => (r.path, r.method))
+          val routes     = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
           val clientName = s"${className.lastOption.getOrElse("").capitalize}Client"
           def splitOperationParts(operationId: String): (List[String], String) = {
             val parts = operationId.split('.')

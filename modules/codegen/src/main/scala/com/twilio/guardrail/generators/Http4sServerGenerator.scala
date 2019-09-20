@@ -4,6 +4,7 @@ package generators
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
@@ -122,13 +123,13 @@ object Http4sServerGenerator {
       case other             => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToHttp4s(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
-      (basePath.getOrElse("") + path).stripPrefix("/") match {
+    def pathStrToHttp4s(basePath: Option[String], path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
+      (basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
         case "" => Target.pure((p"${Term.Name("Root")}", None))
-        case path =>
+        case finalPath =>
           for {
             pathDirective <- SwaggerUtil.paths
-              .generateUrlHttp4sPathExtractors(path, pathArgs)
+              .generateUrlHttp4sPathExtractors(Tracker.cloneHistory(path, finalPath), pathArgs)
           } yield pathDirective
       }
 

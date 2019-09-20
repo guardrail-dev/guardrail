@@ -296,7 +296,7 @@ object DropwizardServerGenerator {
           handlerType <- safeParseClassOrInterfaceType(handlerName)
         } yield {
           val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-          val commonPathPrefix   = findPathPrefix(routes.map(_._3.path))
+          val commonPathPrefix   = findPathPrefix(routes.map(_._3.path.get))
 
           val (routeMethods, handlerMethodSigs) = routes
             .map({
@@ -306,7 +306,7 @@ object DropwizardServerGenerator {
                 val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
                   .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
-                val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
+                val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
                 if (pathSuffix.nonEmpty && pathSuffix != "/") {
                   method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
                 }

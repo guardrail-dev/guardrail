@@ -71,8 +71,8 @@ case class SecurityRequirements(requirements: NonEmptyList[NonEmptyMap[String, S
                                 optionalSchemes: List[String],
                                 location: SecurityRequirements.Location)
 
-case class RouteMeta(path: String, method: HttpMethod, operation: Tracker[Operation], securityRequirements: Option[SecurityRequirements]) {
-  override def toString(): String = s"RouteMeta($path, $method, ${operation.get.showNotNull} (${operation.showHistory}), $securityRequirements)"
+case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Tracker[Operation], securityRequirements: Option[SecurityRequirements]) {
+  override def toString(): String = s"RouteMeta(${path.unwrapTracker}, $method, ${operation.get.showNotNull} (${operation.showHistory}), $securityRequirements)"
   object MediaType {
     def unapply(value: MediaType): Option[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
       val schema: Option[Schema[_]] = Option(value.getSchema)

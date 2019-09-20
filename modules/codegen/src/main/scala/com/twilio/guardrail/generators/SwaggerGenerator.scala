@@ -82,7 +82,7 @@ object SwaggerGenerator {
                       )
                       .getOrElse(Target.pure(operation))
 
-                    updatedOperation.map(op => RouteMeta(pathStr, httpMethod, op, securityRequirements))
+                    updatedOperation.map(op => RouteMeta(Tracker.cloneHistory(path, pathStr), httpMethod, op, securityRequirements))
                 })
               } yield operationRoutes
           })

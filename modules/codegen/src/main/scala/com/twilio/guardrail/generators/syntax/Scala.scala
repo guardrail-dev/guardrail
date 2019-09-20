@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators.syntax
 
 import cats.data.NonEmptyList
 import com.twilio.guardrail.{ StaticDefns, SwaggerUtil, Target }
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaParameter }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
@@ -66,7 +67,7 @@ object Scala {
     }
     """
 
-  def generateUrlPathParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+  def generateUrlPathParams(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
     SwaggerUtil.paths.generateUrlPathParams[ScalaLanguage](
       path,
       pathArgs,

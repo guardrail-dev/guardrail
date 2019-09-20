@@ -40,7 +40,7 @@ object ServerGenerator {
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>
-          val routes       = unsortedRoutes.sortBy(r => (r.path, r.method))
+          val routes       = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
           val resourceName = formatClassName(className.lastOption.getOrElse(""))
           val handlerName =
             formatHandlerName(className.lastOption.getOrElse(""))

@@ -1,15 +1,16 @@
 package tests.core
 
 import cats.data.NonEmptyList
+import com.twilio.guardrail.{ SwaggerUtil, Target }
+import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.Scala._
-import com.twilio.guardrail.{ SwaggerUtil, Target }
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 
-class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues {
+class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues with TrackerTestExtensions {
 
   val args: List[ScalaParameter[ScalaLanguage]] = List(
     ScalaParameter.fromParam(param"foo: Int = 1"),
@@ -30,7 +31,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Client $str") {
-        val gen = Target.unsafeExtract(generateUrlPathParams(str, args))
+        val gen = Target.unsafeExtract(generateUrlPathParams(Tracker(str), args))
         gen.toString shouldBe expected.toString
       }
   }
@@ -56,7 +57,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
   ).foreach {
     case (str, expected) =>
       test(s"Server ${str}") {
-        val NonEmptyList((gen, _), _) = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(str, args))
+        val NonEmptyList((gen, _), _) = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(Tracker(str), args))
         gen.toString shouldBe ((expected.toString))
       }
   }
