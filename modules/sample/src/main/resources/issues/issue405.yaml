@@ -1,0 +1,27 @@
+openapi: 3.0.0
+info:
+  title: Test Server
+  version: "1.0"
+servers:
+  - url: http://localhost:8000
+paths:
+  /v1/Foo:
+    post:
+      summary: Test resource
+      operationId: foo
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              properties:
+                Bar:
+                  type: string
+                  description: A required string parameter that should accept empty string
+                Baz:
+                  type: string
+                  description: An optional string parameter that should accept empty string
+              required:
+                - Bar
+      responses:
+        204:
+          description: Success
