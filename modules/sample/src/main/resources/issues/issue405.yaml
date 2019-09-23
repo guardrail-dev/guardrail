@@ -23,5 +23,10 @@ paths:
               required:
                 - Bar
       responses:
-        204:
-          description: Success
+        200:
+          description: Ok
+          content:
+              text/plain:
+                schema:
+                  type: string
+

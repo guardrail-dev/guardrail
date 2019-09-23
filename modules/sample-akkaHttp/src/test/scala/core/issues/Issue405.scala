@@ -31,7 +31,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
 
     val route = Resource.routes(new Handler {
       override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
-        Future.successful(respond.NoContent)
+        Future.successful(respond.OK(s"Bar is '$bar'"))
     })
 
     /* Pass empty string to required Bar param */
@@ -43,7 +43,8 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
           )
           .toEntity
       ) ~> route ~> check {
-      response.status shouldBe (StatusCodes.NoContent)
+      response.status shouldBe (StatusCodes.OK)
+      response.entity.asInstanceOf[String] shouldBe "Bar is ''"
     }
   }
 
@@ -52,10 +53,10 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.definitions._
 
     val route = Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
-        baz
-          .map(_ => Future.successful(respond.NoContent))
-          .getOrElse(Future.failed(new Exception("Baz was parsed as None")))
+      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
+        val msg = baz.map(s => s"present: '$s'").getOrElse("missing")
+        Future.successful(respond.OK(s"Baz is $msg"))
+      }
     })
 
     /* Pass empty string to required Bar param */
@@ -67,7 +68,8 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
           )
           .toEntity
       ) ~> route ~> check {
-      response.status shouldBe (StatusCodes.NoContent)
+      response.status shouldBe (StatusCodes.OK)
+      response.entity.asInstanceOf[String] shouldBe "Baz is present: ''"
     }
   }
 }
