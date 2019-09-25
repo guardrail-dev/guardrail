@@ -6,7 +6,7 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil.Resolved
-import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.generators.syntax._
@@ -86,7 +86,7 @@ object ProtocolGenerator {
         for {
           a <- values
           b <- a.refine({ case x: ComposedSchema => x })(_.downField("allOf", _.getAllOf())).toOption.toList
-          c <- b.sequence
+          c <- b.indexedDistribute
         } yield c
 
       val newRequired = acc ++ required
@@ -476,13 +476,13 @@ object ProtocolGenerator {
     * returns objects grouped into hierarchies
     */
   def groupHierarchies[L <: LA, F[_]](
-      definitions: List[(String, Tracker[Schema[_]])]
+      definitions: Mappish[List, String, Tracker[Schema[_]]]
   )(implicit Sc: ScalaTerms[L, F]): Free[F, (List[ClassParent[L]], List[(String, Tracker[Schema[_]])])] = {
 
     def firstInHierarchy(model: Tracker[Schema[_]]): Option[ObjectSchema] =
       model
         .refine({ case x: ComposedSchema => x })({ elem =>
-          definitions
+          definitions.value
             .collectFirst({
               case (clsName, element) if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName"))) =>
                 element
@@ -495,7 +495,7 @@ object ProtocolGenerator {
         })
         .getOrElse(None)
 
-    def children(cls: String): List[ClassChild[L]] = definitions.flatMap {
+    def children(cls: String): List[ClassChild[L]] = definitions.value.flatMap {
       case (clsName, comp) =>
         comp
           .refine({ case x: ComposedSchema => x })(
@@ -521,7 +521,7 @@ object ProtocolGenerator {
         .getOrElse(Free.pure[F, Option[(Discriminator[L], List[String])]](Option.empty))
         .map(_.map({ case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) }))
 
-    definitions
+    definitions.value
       .traverse({
         case (cls, model) =>
           for {
@@ -545,12 +545,11 @@ object ProtocolGenerator {
     import Sw._
 
     val definitions = swagger.downField("components", _.getComponents()).flatDownField("schemas", _.getSchemas()).sequence
-
     for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
-      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.map(_.map(_.get)))
-      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions))
+      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value.map(_.map(_.get)))
+      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
           model
@@ -558,15 +557,15 @@ object ProtocolGenerator {
               m =>
                 for {
                   enum  <- fromEnum(clsName, m.get)
-                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions)
+                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value)
                   alias <- modelTypeAlias(clsName, m.get)
                 } yield enum.orElse(model).getOrElse(alias)
             )
             .orRefine({ case c: ComposedSchema => c })(
               comp =>
                 for {
-                  parents <- extractParents(comp, definitions, concreteTypes)
-                  model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions)
+                  parents <- extractParents(comp, definitions.value, concreteTypes)
+                  model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions.value)
                   alias   <- modelTypeAlias(clsName, comp.get)
                 } yield model.getOrElse(alias)
             )
@@ -575,7 +574,7 @@ object ProtocolGenerator {
               m =>
                 for {
                   enum  <- fromEnum(clsName, m.get)
-                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions)
+                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value)
                   alias <- modelTypeAlias(clsName, m.get)
                 } yield enum.orElse(model).getOrElse(alias)
             )

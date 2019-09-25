@@ -1,7 +1,6 @@
 package com.twilio.guardrail.core
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
-import cats._
 import cats.data._
 import cats.implicits._
 import com.twilio.guardrail.Target
@@ -23,86 +22,59 @@ trait HighPriorityTrackerEvidence extends LowPriorityTrackerEvidence {
   implicit def optionaljuCollectionConvincer[A]: Tracker.Convincer[Option[java.util.Collection[A]], List[A]] =
     Tracker.Convincer(_.fold(List.empty[A])(_.asScala.toList))
   implicit def optionalOptionConvincer[A]: Tracker.Convincer[Option[Option[A]], Option[A]] = Tracker.Convincer(_.flatten)
-  implicit def optionaljuMapConvincer[K, V]: Tracker.Convincer[Option[java.util.Map[K, V]], List[(K, V)]] =
-    Tracker.Convincer(_.fold(List.empty[(K, V)])(_.asScala.toList))
-  implicit def optionalMapConvincer[K, V]: Tracker.Convincer[Option[Map[K, V]], List[(K, V)]] = Tracker.Convincer(_.fold(List.empty[(K, V)])(_.toList))
+  implicit def optionaljuMapConvincer[K, V]: Tracker.Convincer[Option[java.util.Map[K, V]], Mappish[List, K, V]] =
+    Tracker.Convincer(_.fold(Mappish(List.empty[(K, V)]))(x => Mappish(x.asScala.toList)))
+  implicit def optionalMapConvincer[K, V]: Tracker.Convincer[Option[Map[K, V]], Mappish[List, K, V]] =
+    Tracker.Convincer(_.fold(Mappish(List.empty[(K, V)]))(x => Mappish(x.toList)))
 }
 
-trait LowPrioritySyntax {
-  implicit class ListSyntax[A](tracker: Tracker[List[A]]) {
-    def exists(f: Tracker[A] => Boolean): Boolean = sequence.exists(f)
-    def sequence: List[Tracker[A]]                = extract(identity _)
-    def extract[B](f: Tracker[A] => B): List[B]   = flatExtract(a => List(f(a)))
-    def flatExtract[F[_]: MonoidK, B](f: Tracker[A] => F[B]): F[B] =
-      tracker.get.zipWithIndex
-        .foldLeft(MonoidK[F].empty[B]) {
-          case (acc, (x, idx)) =>
-            MonoidK[F].combineK(acc, f(new Tracker(x, tracker.history :+ s"[${idx}]")))
-        }
+trait LowestPriorityTrackerInstances {
+  implicit object distributiveTracker extends IndexedDistributive[Tracker] {
+    def indexedDistribute[G[_], A](value: Tracker[G[A]])(implicit G: IndexedFunctor[G]): G[Tracker[A]] =
+      G.map(value.unwrapTracker) {
+        case (i, a) =>
+          new Tracker(a, value.history ++ G.label(i))
+      }
+  }
 
+  implicit def trackerFunctor = new cats.Functor[Tracker] {
+    def map[A, B](fa: Tracker[A])(f: A => B): Tracker[B] = new Tracker(f(fa.unwrapTracker), fa.history)
+  }
+}
+
+trait LowPriorityTrackerSyntax extends LowestPriorityTrackerInstances {
+  implicit class ListSyntax[A](tracker: Tracker[List[A]]) {
     def toNel: Tracker[Option[NonEmptyList[A]]] = tracker.map(NonEmptyList.fromList _)
   }
 
-  implicit class NELSyntax[A](tracker: Tracker[NonEmptyList[A]]) {
-    def foldExtract[F[_], B](f: Tracker[A] => F[B])(combine: (F[B], F[B]) => F[B]): F[B] =
-      tracker.get.zipWithIndex
-        .map({ case (v, i) => f(new Tracker(v, tracker.history :+ s"[${i}]")) })
-        .reduceLeft(combine)
-    def sequence: NonEmptyList[Tracker[A]] = foldExtract(v => NonEmptyList.one(v))((a, b) => a.concatNel(b))
+  implicit class MappishSyntax[A, B](tracker: Tracker[Mappish[List, A, B]]) {
+    def toNel: Tracker[Option[Mappish[NonEmptyList, A, B]]] = tracker.map(x => NonEmptyList.fromList(x.value).map(Mappish(_)))
   }
 }
 
-object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
-  object Convincer {
-    def apply[A, B](f: A => B) = new Convincer[A, B] {
-      def apply(a: A): B = f(a)
-    }
-  }
-  sealed trait Convincer[-A, +B] {
-    def apply(a: A): B
-  }
-
-  def apply(swagger: OpenAPI): Tracker[OpenAPI]                     = new Tracker(swagger, Vector.empty)
-  def hackyAdapt[A](value: A, history: Vector[String]): Tracker[A]  = new Tracker(value, history)
-  def cloneHistory[A, B](tracker: Tracker[A], value: B): Tracker[B] = new Tracker(value, tracker.history)
-
+trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
   implicit class StringyEitherSyntax[B](tracker: Tracker[Either[String, B]]) {
     def raiseErrorIfLeft: Target[Tracker[B]] = tracker.fold(err => Target.raiseError(s"${err.get} (${err.showHistory})"), Target.pure _)
   }
 
   implicit class EitherSyntax[A, B](tracker: Tracker[Either[A, B]]) {
-    def sequence: Either[A, Tracker[B]] = tracker.fold(a => Either.left(a.unwrapTracker), Either.right)
     def fold[C](a: Tracker[A] => C, b: Tracker[B] => C): C =
       tracker.unwrapTracker.fold(x => a(Tracker.cloneHistory(tracker, x)), x => b(Tracker.cloneHistory(tracker, x)))
   }
 
   implicit class OptionSyntax[A](tracker: Tracker[Option[A]]) {
-    def sequence: Option[Tracker[A]]                       = tracker.get.map(new Tracker(_, tracker.history))
     def orHistory: Either[Vector[String], Tracker[A]]      = tracker.sequence.toRight(tracker.history)
     def raiseErrorIfEmpty(err: String): Target[Tracker[A]] = Target.fromOption(tracker.sequence, s"${err} (${tracker.showHistory})")
     class FlatDownFieldPartiallyApplied[C](val dummy: Boolean = true) {
-      def apply[B](label: String, f: A => B)(implicit ev: Convincer[Option[B], C]): Tracker[C] =
+      def apply[B](label: String, f: A => B)(implicit ev: Tracker.Convincer[Option[B], C]): Tracker[C] =
         new Tracker(ev(tracker.get.flatMap(x => Option(f(x)))), tracker.history :+ s".${label}")
     }
     def flatDownField[C]: FlatDownFieldPartiallyApplied[C] = new FlatDownFieldPartiallyApplied()
-    def flatExtract[F[_]: MonoidK, B](f: Tracker[A] => F[B]): F[B] =
-      tracker.get.fold(MonoidK[F].empty[B])(x => f(tracker.map(_ => x)))
-    def exists(f: Tracker[A] => Boolean): Boolean = sequence.exists(f)
   }
 
-  implicit class MapishListSyntax[K, V](tracker: Tracker[List[(K, V)]]) {
-    def foldExtract[F[_], B](zero: F[B])(combine: (F[B], F[B]) => F[B])(f: (K, Tracker[V]) => F[B]): F[B] =
-      tracker.get
-        .foldLeft(zero) {
-          case (acc, (k, v)) =>
-            combine(acc, f(k, new Tracker(v, tracker.history :+ s"[${k}]")))
-        }
-    def sequence: List[(K, Tracker[V])] = foldExtract(List.empty[(K, Tracker[V])])(_ ++ _)((k, v) => List(k -> v))
-  }
-
-  implicit class MapishNELSyntax[K, V](tracker: Tracker[NonEmptyList[(K, V)]]) {
+  implicit class MapishNELSyntax[K, V](tracker: Tracker[Mappish[NonEmptyList, K, V]]) {
     def foldExtract[F[_], B](f: (K, Tracker[V]) => F[B])(combine: (F[B], F[B]) => F[B]): F[B] =
-      tracker.get
+      tracker.unwrapTracker.value
         .map({ case (k, v) => f(k, new Tracker(v, tracker.history :+ s"[${k}]")) })
         .reduceLeft(combine)
     def sequence: NonEmptyList[(K, Tracker[V])] = foldExtract((k, v) => NonEmptyList.one((k, v)))((a, b) => a.concatNel(b))
@@ -129,12 +101,10 @@ object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
 
   implicit class Syntax[A](tracker: Tracker[A]) {
     class DownFieldPartiallyApplied[C](val dummy: Boolean = true) {
-      def apply[B](label: String, f: A => B)(implicit ev: Convincer[Option[B], C]): Tracker[C] =
+      def apply[B](label: String, f: A => B)(implicit ev: Tracker.Convincer[Option[B], C]): Tracker[C] =
         new Tracker(ev(Option(f(tracker.get))), tracker.history :+ s".${label}")
     }
     def downField[C]: DownFieldPartiallyApplied[C] = new DownFieldPartiallyApplied()
-
-    def map[B](f: A => B): Tracker[B] = new Tracker(f(tracker.get), tracker.history)
 
     def showHistory: String = tracker.history.mkString("")
 
@@ -146,4 +116,19 @@ object Tracker extends HighPriorityTrackerEvidence with LowPrioritySyntax {
     @deprecated("Tracker.get will be removed once the migration has been completed. Please use the fold/traverse combinators to get values out.", "0.0.0")
     def history: Vector[String] = tracker.history
   }
+}
+
+object Tracker extends HighPriorityTrackerEvidence with HighPriorityTrackerSyntax {
+  object Convincer {
+    def apply[A, B](f: A => B) = new Convincer[A, B] {
+      def apply(a: A): B = f(a)
+    }
+  }
+  sealed trait Convincer[-A, +B] {
+    def apply(a: A): B
+  }
+
+  def apply(swagger: OpenAPI): Tracker[OpenAPI]                     = new Tracker(swagger, Vector.empty)
+  def hackyAdapt[A](value: A, history: Vector[String]): Tracker[A]  = new Tracker(value, history)
+  def cloneHistory[A, B](tracker: Tracker[A], value: B): Tracker[B] = new Tracker(value, tracker.history)
 }

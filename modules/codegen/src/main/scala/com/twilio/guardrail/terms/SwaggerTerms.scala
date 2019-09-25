@@ -5,7 +5,7 @@ import cats.InjectK
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
@@ -17,7 +17,7 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractCommonRequestBodies(components: Option[Components]): Free[F, Map[String, RequestBody]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractCommonRequestBodies(components))
 
-  def extractOperations(paths: Tracker[List[(String, PathItem)]],
+  def extractOperations(paths: Tracker[Mappish[List, String, PathItem]],
                         commonRequestBodies: Map[String, RequestBody],
                         globalSecurityRequirements: Option[SecurityRequirements]): Free[F, List[RouteMeta]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements))

@@ -1,8 +1,10 @@
 package core
 
 import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
+// import com.twilio.guardrail.core.implicits.IndexedDistributiveSyntax
 import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.{ CodegenTarget, Context, UserError }
+import cats.instances.all._
 import org.scalacheck.{ Arbitrary, Gen }
 import org.scalatest.{ FreeSpec, Matchers }
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
@@ -56,17 +58,17 @@ Tracker should:
         // Assumption here is that HashMap -> List sort order is stable. Note that foo and bar have been reversed, but it's still consistent.
         // This is necessary, as swagger-parser represents many ordered structures as Map internally.
         // We eagerly convert to List[(K, V)] to ensure order is not lost.
-        assert(Tracker(Holder[java.util.Map[String, Int]](xs)).downField("value", _.value).get === List(("bar", 2), ("foo", 1)))
+        assert(Tracker(Holder[java.util.Map[String, Int]](xs)).downField("value", _.value).get.value === List(("bar", 2), ("foo", 1)))
       }
       "Map" in {
-        assert(Tracker(Holder(Map("foo" -> 1, "bar" -> 2))).downField("value", _.value).get === List(("foo", 1), ("bar", 2)))
+        assert(Tracker(Holder(Map("foo" -> 1, "bar" -> 2))).downField("value", _.value).get.value === List(("foo", 1), ("bar", 2)))
       }
       "Paths" in {
         import _root_.io.swagger.v3.oas.models.{ PathItem, Paths }
         val xs = new Paths
         val x  = new PathItem
         List(("/foo", x)).foreach((xs.put _).tupled)
-        assert(Tracker(Holder[Paths](xs)).downField("value", _.value).get === List(("/foo" -> x)))
+        assert(Tracker(Holder[Paths](xs)).downField("value", _.value).get.value === List(("/foo" -> x)))
       }
       "Fallback" in {
         assert(Tracker(Holder(Holder(5L))).downField("value", _.value).get === Option(Holder(5L)))
@@ -91,6 +93,7 @@ Tracker should:
             Tracker(parent)
               .downField("child2", _.child2)
               .sequence
+              .value
               .foreach({ case (k, v) => assert(pattern(k) === v.showHistory) })
           }
         }

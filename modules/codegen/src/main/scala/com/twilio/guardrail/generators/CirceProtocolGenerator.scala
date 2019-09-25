@@ -98,11 +98,11 @@ object CirceProtocolGenerator {
       case ExtractProperties(swagger) =>
         swagger
           .refine[Target[List[(String, Tracker[Schema[_]])]]]({ case o: ObjectSchema => o })(
-            m => Target.pure(m.downField("properties", _.getProperties).sequence)
+            m => Target.pure(m.downField("properties", _.getProperties).sequence.value)
           )
           .orRefine({ case c: ComposedSchema => c })({ comp =>
             val extractedProps =
-              comp.downField("allOf", _.getAllOf()).sequence.flatMap(_.downField("properties", _.getProperties).sequence)
+              comp.downField("allOf", _.getAllOf()).indexedDistribute.flatMap(_.downField("properties", _.getProperties).sequence.value)
             Target.pure(extractedProps)
           })
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
@@ -381,7 +381,7 @@ object CirceProtocolGenerator {
       case ExtractSuperClass(swagger, definitions) =>
         def allParents: Tracker[Schema[_]] => Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
           _.refine[Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]]({ case x: ComposedSchema => x })(
-            _.downField("allOf", _.getAllOf()).sequence match {
+            _.downField("allOf", _.getAllOf()).indexedDistribute match {
               case head :: tail =>
                 definitions
                   .collectFirst({

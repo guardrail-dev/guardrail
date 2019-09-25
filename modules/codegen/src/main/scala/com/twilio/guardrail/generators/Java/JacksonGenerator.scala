@@ -722,10 +722,17 @@ object JacksonGenerator {
     def apply[T](term: ModelProtocolTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         swagger
-          .refine({ case m: ObjectSchema => m })(m => Target.pure(m.downField("properties", _.getProperties()).sequence.toList))
+          .refine({ case m: ObjectSchema => m })(m => Target.pure(m.downField("properties", _.getProperties()).sequence.value))
           .orRefine({ case c: ComposedSchema => c })(
             comp =>
-              Target.pure(comp.downField("allOf", _.getAllOf()).sequence.lastOption.toList.flatMap(_.downField("properties", _.getProperties).sequence.toList))
+              Target.pure(
+                comp
+                  .downField("allOf", _.getAllOf())
+                  .indexedDistribute
+                  .lastOption
+                  .toList
+                  .flatMap(_.downField("properties", _.getProperties).sequence.value.toList)
+            )
           )
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
             comp => Target.raiseError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
@@ -966,7 +973,7 @@ object JacksonGenerator {
         def allParents(model: Tracker[Schema[_]]): List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])] =
           model
             .refine({ case c: ComposedSchema => c })(
-              _.downField("allOf", _.getAllOf()).sequence
+              _.downField("allOf", _.getAllOf()).indexedDistribute
                 .flatMap({ elem =>
                   definitions
                     .collectFirst({

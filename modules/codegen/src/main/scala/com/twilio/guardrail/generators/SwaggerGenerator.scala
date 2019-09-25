@@ -33,8 +33,8 @@ object SwaggerGenerator {
 
       case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
         Target.log.function("extractOperations")(for {
-          _ <- Target.log.debug(s"Args: ${paths.get.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
-          routes <- paths.sequence.flatTraverse({
+          _ <- Target.log.debug(s"Args: ${paths.get.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
+          routes <- paths.sequence.value.flatTraverse({
             case (pathStr, path) =>
               for {
                 operationMap <- path

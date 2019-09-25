@@ -6,7 +6,7 @@ import cats.free.Free
 import cats.data.State
 import cats.implicits._
 import cats.Order
-import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
@@ -90,7 +90,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       case Nil                                           => Option.empty
     }
     for {
-      schema <- unifyEntries(requestBody.downField("content", _.getContent()).sequence.map(_.map(_.get)))
+      schema <- unifyEntries(requestBody.downField("content", _.getContent()).sequence.value.map(_.map(_.get)))
       tpe    <- Option(schema.getType())
     } yield {
       val p = new Parameter
@@ -115,7 +115,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   // (these are both represented in the same RequestBody class)
   private def extractRefParamFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
     val content = for {
-      (_, mt) <- requestBody.downField("content", _.getContent()).sequence.headOption
+      (_, mt) <- requestBody.downField("content", _.getContent()).sequence.value.headOption
       schema  <- mt.downField("schema", _.getSchema()).sequence
       ref     <- schema.downField("$ref", _.get$ref()).sequence
     } yield {
@@ -160,16 +160,17 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
     val contentTypes: List[RouteMeta.ContentType] =
-      requestBody.downField("content", _.getContent()).sequence.map(_._1).flatMap(RouteMeta.ContentType.unapply)
+      requestBody.downField("content", _.getContent()).sequence.value.map(_._1).flatMap(RouteMeta.ContentType.unapply)
     val ((maxCount, instances), ps) = requestBody
       .downField("content", _.getContent())
       .sequence
+      .value
       .flatMap({
         case (_, mt) =>
           for {
             mtSchema <- mt.downField("schema", _.getSchema()).sequence.toList
             requiredFields = mtSchema.downField("required", _.getRequired).get.toSet
-            (name, schema) <- mtSchema.downField("properties", _.getProperties()).sequence
+            (name, schema) <- mtSchema.downField("properties", _.getProperties()).sequence.value
           } yield {
             val p = new Parameter
 
@@ -189,7 +190,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             }
 
             p.setRequired(isRequired)
-            p.setExtensions(schema.downField("extensions", _.getExtensions).get.toMap.asJava)
+            p.setExtensions(schema.unwrapTracker.getExtensions)
 
             if (schema.downField("type", _.getType()).sequence.exists(_.get == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
               p.setRequired(false)
@@ -222,12 +223,12 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   private val parameters: List[Tracker[Parameter]] = {
     val p = operation.downField("parameters", _.getParameters())
 
-    val requestBody = operation.downField("requestBody", _.getRequestBody())
+    val requestBody = operation.downField("requestBody", _.getRequestBody()).map(_.toList)
     val params: List[Tracker[Parameter]] =
-      (requestBody.flatExtract(extractRefParamFromRequestBody) ++
-        p.sequence ++
+      requestBody.flatExtract(extractRefParamFromRequestBody(_).toList) ++
+        p.indexedDistribute ++
         requestBody.flatExtract(extractParamsFromRequestBody) ++
-        requestBody.flatExtract(extractPrimitiveFromRequestBody)).toList
+        requestBody.flatExtract(extractPrimitiveFromRequestBody(_).toList)
     params
   }
 
@@ -249,7 +250,7 @@ case class OAuth2SecurityScheme[L <: LA](flows: OAuthFlows, tpe: Option[L#Type])
 
 sealed trait SwaggerTerm[L <: LA, T]
 case class ExtractCommonRequestBodies[L <: LA](components: Option[Components]) extends SwaggerTerm[L, Map[String, RequestBody]]
-case class ExtractOperations[L <: LA](paths: Tracker[List[(String, PathItem)]],
+case class ExtractOperations[L <: LA](paths: Tracker[Mappish[List, String, PathItem]],
                                       commonRequestBodies: Map[String, RequestBody],
                                       globalSecurityRequirements: Option[SecurityRequirements])
     extends SwaggerTerm[L, List[RouteMeta]]
