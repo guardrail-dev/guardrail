@@ -64,11 +64,14 @@ trait SwaggerSpecRunner extends EitherValues {
         })
         .runEmpty
 
+    // FIXME: In lieu of https://github.com/scalatest/scalatest/issues/405,
+    // figure out a way to use https://stackoverflow.com/a/7219813 to only println
+    // if a bracketed test fails.
     implicit val logLevel = LogLevels.Debug
-    println("Client Generator logs:")
-    println(clientLogger.show)
-    println("Server Generator logs:")
-    println(serverLogger.show)
+//  println("Client Generator logs:")
+//  println(clientLogger.show)
+//  println("Server Generator logs:")
+//  println(serverLogger.show)
 
     (proto, Clients(clients, clientSupportDefs), Servers(servers, serverSupportDefs))
   }
