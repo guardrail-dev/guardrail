@@ -2,6 +2,8 @@ package com.twilio.guardrail.core
 
 import cats.{ Eval, Foldable, Functor }
 
+// Effectively Nested[F, (K, ?), V]
+// With some thought, this may just be expressible via a type alias
 class Mappish[F[_], K, V](val value: F[(K, V)])
 
 object Mappish {
