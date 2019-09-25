@@ -18,7 +18,7 @@ addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.2")
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.28")
 
-addSbtPlugin("com.47deg"  % "sbt-microsites" % "0.9.4")
+addSbtPlugin("com.47deg"  % "sbt-microsites" % "0.9.6")
 
 // for jdk11
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0"
