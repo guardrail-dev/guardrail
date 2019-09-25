@@ -88,7 +88,7 @@ Tracker should:
         }
 
         "map" in {
-          def pattern(name: String) = s".child2[${name}]"
+          def pattern(name: String) = s".child2.${name}"
           forAll { parent: Parent =>
             Tracker(parent)
               .downField("child2", _.child2)
@@ -140,7 +140,7 @@ Tracker should:
         |        200:
         |          description: Success
         |""".stripMargin
-      val (_, UserError("Missing operationId (.paths[/foo].operations[GET].operationId)")) =
+      val (_, UserError("Missing operationId (.paths./foo.operations.GET.operationId)")) =
         runInvalidSwaggerSpec(swagger)(Context.empty, CodegenTarget.Server, Http4s)
     }
 
@@ -153,7 +153,7 @@ Tracker should:
         |    get:
         |      operationId: foo
         |""".stripMargin
-      val (_, UserError("No responses defined for foo (.paths[/foo].operations[GET].responses)")) =
+      val (_, UserError("No responses defined for foo (.paths./foo.operations.GET.responses)")) =
         runInvalidSwaggerSpec(swagger)(Context.empty, CodegenTarget.Server, Http4s)
     }
   }
