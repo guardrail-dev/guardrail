@@ -177,7 +177,7 @@ object SwaggerGenerator {
           .map(_.get)
 
       case GetResponses(operationId, operation) =>
-        operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.sequence)
+        operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.indexedCosequence.value)
 
       case GetSimpleRef(ref) =>
         Target.fromOption(Option(ref.get$ref).flatMap(_.split("/").lastOption), s"Unspecified $ref")

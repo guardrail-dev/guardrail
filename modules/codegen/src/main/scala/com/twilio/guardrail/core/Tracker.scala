@@ -72,14 +72,6 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
     def flatDownField[C]: FlatDownFieldPartiallyApplied[C] = new FlatDownFieldPartiallyApplied()
   }
 
-  implicit class MapishNELSyntax[K, V](tracker: Tracker[Mappish[NonEmptyList, K, V]]) {
-    def foldExtract[F[_], B](f: (K, Tracker[V]) => F[B])(combine: (F[B], F[B]) => F[B]): F[B] =
-      tracker.unwrapTracker.value
-        .map({ case (k, v) => f(k, new Tracker(v, tracker.history :+ s"[${k}]")) })
-        .reduceLeft(combine)
-    def sequence: NonEmptyList[(K, Tracker[V])] = foldExtract((k, v) => NonEmptyList.one((k, v)))((a, b) => a.concatNel(b))
-  }
-
   implicit class RefineSyntax[A](tracker: Tracker[A]) {
     class RefinePartiallyApplied[C](val dummy: Boolean = true) {
       def apply[B1](r: PartialFunction[A, B1])(f: Tracker[B1] => C): Either[Tracker[A], C] =
