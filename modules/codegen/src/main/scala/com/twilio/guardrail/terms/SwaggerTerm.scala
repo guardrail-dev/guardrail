@@ -7,6 +7,7 @@ import cats.data.State
 import cats.implicits._
 import cats.Order
 import com.twilio.guardrail.core.{ Mappish, Tracker }
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
@@ -90,7 +91,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       case Nil                                           => Option.empty
     }
     for {
-      schema <- unifyEntries(requestBody.downField("content", _.getContent()).sequence.value.map(_.map(_.get)))
+      schema <- unifyEntries(requestBody.downField("content", _.getContent()).indexedCosequence.value.map(_.map(_.get)))
       tpe    <- Option(schema.getType())
     } yield {
       val p = new Parameter
@@ -115,9 +116,9 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   // (these are both represented in the same RequestBody class)
   private def extractRefParamFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
     val content = for {
-      (_, mt) <- requestBody.downField("content", _.getContent()).sequence.value.headOption
-      schema  <- mt.downField("schema", _.getSchema()).sequence
-      ref     <- schema.downField("$ref", _.get$ref()).sequence
+      (_, mt) <- requestBody.downField("content", _.getContent()).indexedCosequence.value.headOption
+      schema  <- mt.downField("schema", _.getSchema()).indexedCosequence
+      ref     <- schema.downField("$ref", _.get$ref()).indexedCosequence
     } yield {
       val p = new Parameter
 
@@ -137,7 +138,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       Tracker.hackyAdapt(p, requestBody.history)
     }
 
-    val ref = requestBody.downField("$ref", _.get$ref()).sequence.map { x =>
+    val ref = requestBody.downField("$ref", _.get$ref()).cotraverse { x =>
       val p = new Parameter
 
       p.setIn("body")
@@ -160,17 +161,17 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
     val contentTypes: List[RouteMeta.ContentType] =
-      requestBody.downField("content", _.getContent()).sequence.value.map(_._1).flatMap(RouteMeta.ContentType.unapply)
+      requestBody.downField("content", _.getContent()).indexedCosequence.value.map(_._1).flatMap(RouteMeta.ContentType.unapply)
     val ((maxCount, instances), ps) = requestBody
       .downField("content", _.getContent())
-      .sequence
+      .indexedCosequence
       .value
       .flatMap({
         case (_, mt) =>
           for {
-            mtSchema <- mt.downField("schema", _.getSchema()).sequence.toList
+            mtSchema <- mt.downField("schema", _.getSchema()).indexedCosequence.toList
             requiredFields = mtSchema.downField("required", _.getRequired).get.toSet
-            (name, schema) <- mtSchema.downField("properties", _.getProperties()).sequence.value
+            (name, schema) <- mtSchema.downField("properties", _.getProperties()).indexedCosequence.value
           } yield {
             val p = new Parameter
 
@@ -192,7 +193,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             p.setRequired(isRequired)
             p.setExtensions(schema.unwrapTracker.getExtensions)
 
-            if (schema.downField("type", _.getType()).sequence.exists(_.get == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
+            if (schema.downField("type", _.getType()).indexedCosequence.exists(_.get == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
               p.setRequired(false)
             }
 

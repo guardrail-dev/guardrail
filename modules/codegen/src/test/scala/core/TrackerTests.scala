@@ -1,7 +1,7 @@
 package core
 
 import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
-// import com.twilio.guardrail.core.implicits.IndexedDistributiveSyntax
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.{ CodegenTarget, Context, UserError }
 import cats.instances.all._
@@ -81,7 +81,7 @@ Tracker should:
           forAll { parent: Parent =>
             Tracker(parent)
               .downField("child1", _.child1)
-              .extract(_.downField("grandchild", _.grandchild).sequence)
+              .cotraverse(_.downField("grandchild", _.grandchild).indexedCosequence)
               .zipWithIndex
               .foreach({ case (x, i) => x.foreach(x => assert(pattern(i) === x.showHistory)) })
           }
@@ -92,7 +92,7 @@ Tracker should:
           forAll { parent: Parent =>
             Tracker(parent)
               .downField("child2", _.child2)
-              .sequence
+              .indexedCosequence
               .value
               .foreach({ case (k, v) => assert(pattern(k) === v.showHistory) })
           }

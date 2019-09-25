@@ -18,16 +18,10 @@ trait IndexedDistributiveImplicits {
   implicit class IndexedDistributiveSyntax[G[_]: Functor: IndexedFunctor: Foldable, F[_]: IndexedDistributive, A](value: F[G[A]]) {
     def indexedDistribute: G[F[A]]                                        = IndexedDistributive[F].indexedDistribute(value)
     def cotraverse[B](f: F[A] => B): G[B]                                 = IndexedDistributive.cotraverse(value)(f)
-    def cosequence: G[F[A]]                                               = cotraverse(identity)
+    def indexedCosequence: G[F[A]]                                        = cotraverse(identity)
     def flatCotraverse[B](f: F[A] => G[B])(implicit ev: FlatMap[G]): G[B] = ev.flatten(IndexedDistributive.cotraverse(value)(f))
     def flatExtract[B](f: F[A] => G[B])(implicit G: MonoidK[G]): G[B]     = value.cotraverse(f).foldLeft(G.empty[B])(G.combineK)
     def exists(f: F[A] => Boolean): Boolean                               = value.indexedDistribute.foldLeft(false) { case (acc, n) => acc || f(n) }
-
-    @deprecated("Please use cotraverse", "0.0.0")
-    def extract[B](f: F[A] => B): G[B] = value.cotraverse(f)
-
-    @deprecated("Please use cosequence or distribute", "0.0.0")
-    def sequence: G[F[A]] = extract(identity)
   }
 
   // These don't belong here, but they intersect a lot with the usage of IndexedDistributive

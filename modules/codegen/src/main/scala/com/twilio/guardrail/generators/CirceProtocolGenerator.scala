@@ -6,6 +6,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -98,11 +99,11 @@ object CirceProtocolGenerator {
       case ExtractProperties(swagger) =>
         swagger
           .refine[Target[List[(String, Tracker[Schema[_]])]]]({ case o: ObjectSchema => o })(
-            m => Target.pure(m.downField("properties", _.getProperties).sequence.value)
+            m => Target.pure(m.downField("properties", _.getProperties).indexedCosequence.value)
           )
           .orRefine({ case c: ComposedSchema => c })({ comp =>
             val extractedProps =
-              comp.downField("allOf", _.getAllOf()).indexedDistribute.flatMap(_.downField("properties", _.getProperties).sequence.value)
+              comp.downField("allOf", _.getAllOf()).indexedDistribute.flatMap(_.downField("properties", _.getProperties).indexedCosequence.value)
             Target.pure(extractedProps)
           })
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(

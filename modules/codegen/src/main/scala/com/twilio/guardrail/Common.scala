@@ -62,7 +62,7 @@ object Common {
       )
       basePath = swagger
         .downField("servers", _.getServers)
-        .extract(_.downField("url", _.getUrl))
+        .cotraverse(_.downField("url", _.getUrl))
         .headOption
         .flatMap(_.get)
         .flatMap(url => Option(new URI(url).getPath))

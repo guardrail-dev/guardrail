@@ -63,8 +63,8 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
   }
 
   implicit class OptionSyntax[A](tracker: Tracker[Option[A]]) {
-    def orHistory: Either[Vector[String], Tracker[A]]      = tracker.sequence.toRight(tracker.history)
-    def raiseErrorIfEmpty(err: String): Target[Tracker[A]] = Target.fromOption(tracker.sequence, s"${err} (${tracker.showHistory})")
+    def orHistory: Either[Vector[String], Tracker[A]]      = tracker.indexedCosequence.toRight(tracker.history)
+    def raiseErrorIfEmpty(err: String): Target[Tracker[A]] = Target.fromOption(tracker.indexedCosequence, s"${err} (${tracker.showHistory})")
     class FlatDownFieldPartiallyApplied[C](val dummy: Boolean = true) {
       def apply[B](label: String, f: A => B)(implicit ev: Tracker.Convincer[Option[B], C]): Tracker[C] =
         new Tracker(ev(tracker.get.flatMap(x => Option(f(x)))), tracker.history :+ s".${label}")

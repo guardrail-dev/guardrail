@@ -9,6 +9,7 @@ import cats.~>
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
 import com.twilio.guardrail.Discriminator
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.syntax.RichString
@@ -722,7 +723,7 @@ object JacksonGenerator {
     def apply[T](term: ModelProtocolTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         swagger
-          .refine({ case m: ObjectSchema => m })(m => Target.pure(m.downField("properties", _.getProperties()).sequence.value))
+          .refine({ case m: ObjectSchema => m })(m => Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value))
           .orRefine({ case c: ComposedSchema => c })(
             comp =>
               Target.pure(
@@ -731,7 +732,7 @@ object JacksonGenerator {
                   .indexedDistribute
                   .lastOption
                   .toList
-                  .flatMap(_.downField("properties", _.getProperties).sequence.value.toList)
+                  .flatMap(_.downField("properties", _.getProperties).indexedCosequence.value.toList)
             )
           )
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(

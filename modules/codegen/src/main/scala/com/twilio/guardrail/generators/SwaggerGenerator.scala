@@ -4,6 +4,7 @@ package generators
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
@@ -34,14 +35,14 @@ object SwaggerGenerator {
       case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
         Target.log.function("extractOperations")(for {
           _ <- Target.log.debug(s"Args: ${paths.get.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
-          routes <- paths.sequence.value.flatTraverse({
+          routes <- paths.indexedCosequence.value.flatTraverse({
             case (pathStr, path) =>
               for {
                 operationMap <- path
                   .downField("operations", _.readOperationsMap)
                   .toNel
                   .raiseErrorIfEmpty("No operations defined")
-                operationRoutes <- operationMap.sequence.toList.traverse({
+                operationRoutes <- operationMap.indexedCosequence.value.toList.traverse({
                   case (httpMethod, operation) =>
                     val securityRequirements =
                       operation
@@ -122,7 +123,7 @@ object SwaggerGenerator {
               operation
                 .downField("tags", _.getTags)
                 .toNel
-                .sequence
+                .indexedCosequence
                 .map { tags =>
                   println(
                     s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})"

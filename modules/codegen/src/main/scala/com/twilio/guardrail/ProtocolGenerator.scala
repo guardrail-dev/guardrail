@@ -7,6 +7,7 @@ import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil.Resolved
 import com.twilio.guardrail.core.{ Mappish, Tracker }
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.generators.syntax._
@@ -363,7 +364,7 @@ object ProtocolGenerator {
               maybeClassDefinition <- fromModel(nestedClassName, schema, parents, concreteTypes, definitions)
             } yield Some(maybeClassDefinition)
         )
-        .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).sequence.flatTraverse(processProperty(name, _)))
+        .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
         .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
           s => fromEnum(nestedClassName.last, s.get).map(Some(_))
         )
@@ -544,7 +545,7 @@ object ProtocolGenerator {
     import S._
     import Sw._
 
-    val definitions = swagger.downField("components", _.getComponents()).flatDownField("schemas", _.getSchemas()).sequence
+    val definitions = swagger.downField("components", _.getComponents()).flatDownField("schemas", _.getSchemas()).indexedCosequence
     for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
