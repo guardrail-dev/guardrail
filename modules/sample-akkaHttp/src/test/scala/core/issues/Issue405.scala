@@ -56,4 +56,38 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
       responseAs[String] shouldBe "\"Baz is present: ''\""
     }
   }
+
+  test("Omitting a required parameter should still reject the request") {
+    import issues.issue405.server.akkaHttp.{ Handler, Resource }
+    import issues.issue405.server.akkaHttp.definitions._
+
+    val route = Route.seal(Resource.routes(new Handler {
+      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
+        Future.successful(respond.OK(s"Bar is '$bar'"))
+    }))
+
+    /* Pass empty string to required Bar param */
+    Post("/v1/Foo", FormData()) ~> route ~> check {
+      response.status shouldBe (StatusCodes.BadRequest)
+      responseAs[String] shouldBe "Request failed with MissingFormFieldRejection(Bar)"
+    }
+  }
+
+  test("Omitting an optional parameter should still pass None to the endpoint") {
+    import issues.issue405.server.akkaHttp.{ Handler, Resource }
+    import issues.issue405.server.akkaHttp.definitions._
+
+    val route = Route.seal(Resource.routes(new Handler {
+      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
+        val msg = baz.map(s => s"present: '$s'").getOrElse("missing")
+        Future.successful(respond.OK(s"Baz is $msg"))
+      }
+    }))
+
+    /* Pass empty string to required Bar param */
+    Post("/v1/Foo", FormData(Map("Bar" -> "yo"))) ~> route ~> check {
+      response.status shouldBe (StatusCodes.OK)
+      responseAs[String] shouldBe "\"Baz is missing\""
+    }
+  }
 }
