@@ -1,11 +1,11 @@
 package core.issues
 
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.{RejectionHandler, Route}
+import akka.http.scaladsl.server.{ RejectionHandler, Route }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{EitherValues, FunSuite, Matchers}
+import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import akka.http.scaladsl.model.FormData
 import akka.http.scaladsl.server.Directives.complete
 
@@ -19,9 +19,13 @@ import scala.concurrent.Future
 class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
-  implicit val rejectionHandler: RejectionHandler = RejectionHandler.newBuilder().handle { case rej =>
-    complete(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, s"Request failed with $rej")))
-  }.result()
+  implicit val rejectionHandler: RejectionHandler = RejectionHandler
+    .newBuilder()
+    .handle {
+      case rej =>
+        complete(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, s"Request failed with $rej")))
+    }
+    .result()
 
   test("Empty string for a required form param should parse as empty string") {
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
