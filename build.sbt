@@ -335,7 +335,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
       "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
       "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
       "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
-			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
+      "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     crossPaths := false,  // strangely needed to get the JUnit tests to run at all
