@@ -120,13 +120,13 @@ trait CLICommon {
             println(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
             fallback
           case UnparseableArgument(name, message) =>
-            println(s"${AnsiColor.RED}Unparseable argument: --$name, $message")
+            println(s"${AnsiColor.RED}Unparseable argument: --$name, $message${AnsiColor.RESET}")
             fallback
           case RuntimeFailure(message) =>
-            println(s"${AnsiColor.RED}Error: $message")
+            println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             fallback
           case UserError(message) =>
-            println(s"${AnsiColor.RED}Error: $message")
+            println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             unsafePrintHelp()
             fallback
         },
