@@ -20,6 +20,8 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def litBoolean(value: Boolean): Free[F, L#Term]      = Free.inject[ScalaTerm[L, ?], F](LitBoolean(value))
   def liftOptionalType(value: L#Type): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](LiftOptionalType(value))
   def liftOptionalTerm(value: L#Term): Free[F, L#Term] = Free.inject[ScalaTerm[L, ?], F](LiftOptionalTerm(value))
+  def emptyArray: Free[F, L#Term]                      = Free.inject[ScalaTerm[L, ?], F](EmptyArray())
+  def emptyMap: Free[F, L#Term]                        = Free.inject[ScalaTerm[L, ?], F](EmptyMap())
   def emptyOptionalTerm(): Free[F, L#Term]             = Free.inject[ScalaTerm[L, ?], F](EmptyOptionalTerm())
   def liftVectorType(value: L#Type): Free[F, L#Type]   = Free.inject[ScalaTerm[L, ?], F](LiftVectorType(value))
   def liftVectorTerm(value: L#Term): Free[F, L#Term]   = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
@@ -44,6 +46,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def extractTypeName(tpe: L#Type): Free[F, Option[L#TypeName]]      = Free.inject[ScalaTerm[L, ?], F](ExtractTypeName(tpe))
   def extractTermName(term: L#TermName): Free[F, String]             = Free.inject[ScalaTerm[L, ?], F](ExtractTermName(term))
   def selectType(typeNames: NonEmptyList[String]): Free[F, L#Type]   = Free.inject[ScalaTerm[L, ?], F](SelectType(typeNames))
+  def selectTerm(termNames: NonEmptyList[String]): Free[F, L#Term]   = Free.inject[ScalaTerm[L, ?], F](SelectTerm(termNames))
   def alterMethodParameterName(param: L#MethodParameter, name: L#TermName): Free[F, L#MethodParameter] =
     Free.inject[ScalaTerm[L, ?], F](AlterMethodParameterName(param, name))
 

@@ -18,8 +18,11 @@ case class DeferredMap[L <: LA](name: String)   extends LazyProtocolElems[L]
 
 sealed trait StrictProtocolElems[L <: LA]                 extends ProtocolElems[L]
 case class RandomType[L <: LA](name: String, tpe: L#Type) extends StrictProtocolElems[L]
+
+sealed trait NestedProtocolElems[L <: LA] extends StrictProtocolElems[L]
+
 case class ClassDefinition[L <: LA](name: String, tpe: L#TypeName, cls: L#ClassDefinition, staticDefns: StaticDefns[L], parents: List[SuperClass[L]] = Nil)
-    extends StrictProtocolElems[L]
+    extends NestedProtocolElems[L]
 
 case class ADT[L <: LA](name: String, tpe: L#TypeName, trt: L#Trait, staticDefns: StaticDefns[L]) extends StrictProtocolElems[L]
 
@@ -29,7 +32,7 @@ case class EnumDefinition[L <: LA](
     elems: List[(String, L#TermName, L#TermSelect)],
     cls: L#ClassDefinition,
     staticDefns: StaticDefns[L]
-) extends StrictProtocolElems[L]
+) extends NestedProtocolElems[L]
 
 object ProtocolElems {
   def resolve[L <: LA, F[_]](elems: List[ProtocolElems[L]], limit: Int = 10)(implicit Sc: ScalaTerms[L, F],

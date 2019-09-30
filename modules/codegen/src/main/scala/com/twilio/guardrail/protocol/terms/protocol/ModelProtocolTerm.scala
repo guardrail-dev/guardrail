@@ -14,7 +14,8 @@ case class TransformProperty[L <: LA](clsName: String,
                                       needCamelSnakeConversion: Boolean,
                                       concreteTypes: List[PropMeta[L]],
                                       isRequired: Boolean,
-                                      isCustomType: Boolean)
+                                      isCustomType: Boolean,
+                                      defaultValue: Option[L#Term])
     extends ModelProtocolTerm[L, ProtocolParameter[L]]
 case class RenderDTOClass[L <: LA](clsName: String, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil)
     extends ModelProtocolTerm[L, L#ClassDefinition]

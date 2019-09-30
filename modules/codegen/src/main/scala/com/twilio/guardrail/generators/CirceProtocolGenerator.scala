@@ -5,7 +5,7 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.extract.{ DataRedaction, Default, EmptyValueIsNull }
+import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -108,33 +108,12 @@ object CirceProtocolGenerator {
           case _ => Target.pure(None)
         }).map(_.map(_.asScala.toList).toList.flatten)
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
         Target.log.function(s"transformProperty")(for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
           argName = if (needCamelSnakeConversion) name.toCamelCase else name
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
-
-          defaultValue = property match {
-            case _: MapSchema =>
-              Option(q"Map.empty")
-            case _: ArraySchema =>
-              Option(q"IndexedSeq.empty")
-            case p: BooleanSchema =>
-              Default(p).extract[Boolean].map(Lit.Boolean(_))
-            case p: NumberSchema if p.getFormat == "double" =>
-              Default(p).extract[Double].map(Lit.Double(_))
-            case p: NumberSchema if p.getFormat == "float" =>
-              Default(p).extract[Float].map(Lit.Float(_))
-            case p: IntegerSchema if p.getFormat == "int32" =>
-              Default(p).extract[Int].map(Lit.Int(_))
-            case p: IntegerSchema if p.getFormat == "int64" =>
-              Default(p).extract[Long].map(Lit.Long(_))
-            case p: StringSchema =>
-              Default(p).extract[String].map(Lit.String(_))
-            case _ =>
-              None
-          }
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
           emptyToNull = (property match {

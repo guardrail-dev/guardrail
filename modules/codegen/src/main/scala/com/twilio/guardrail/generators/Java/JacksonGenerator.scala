@@ -5,11 +5,10 @@ package Java
 import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.instances.map
 import cats.~>
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
 import com.twilio.guardrail.Discriminator
-import com.twilio.guardrail.extract.{ DataRedaction, Default, EmptyValueIsNull }
+import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
@@ -117,13 +116,6 @@ object JacksonGenerator {
             )
       ).toNodeList
     )
-
-  private val HASH_MAP_TYPE_DIAMONDED = JavaParser
-    .parseClassOrInterfaceType("java.util.HashMap")
-    .setTypeArguments(new NodeList[Type])
-  private val ARRAY_LIST_TYPE_DIAMONDED = JavaParser
-    .parseClassOrInterfaceType("java.util.ArrayList")
-    .setTypeArguments(new NodeList[Type])
 
   object EnumProtocolTermInterp extends (EnumProtocolTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: EnumProtocolTerm[JavaLanguage, T]): Target[T] = term match {
@@ -738,41 +730,17 @@ object JacksonGenerator {
           case _ => Target.pure(None)
         }).map(_.map(_.asScala.toList).toList.flatten)
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, _) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
         Target.log.function("transformProperty") {
+          val readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
+          val emptyToNull = (property match {
+            case d: DateSchema      => EmptyValueIsNull(d)
+            case dt: DateTimeSchema => EmptyValueIsNull(dt)
+            case s: StringSchema    => EmptyValueIsNull(s)
+            case _                  => None
+          }).getOrElse(EmptyIsEmpty)
+          val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
           for {
-            defaultValue <- property match {
-              case _: MapSchema =>
-                Target.pure(Option(new ObjectCreationExpr(null, HASH_MAP_TYPE_DIAMONDED, new NodeList())).map(x => x: Expression))
-              case _: ArraySchema =>
-                Target.pure(Option(new ObjectCreationExpr(null, ARRAY_LIST_TYPE_DIAMONDED, new NodeList())).map(x => x: Expression))
-              case p: BooleanSchema =>
-                Default(p).extract[Boolean].traverse(x => Target.pure(new BooleanLiteralExpr(x)))
-              case p: NumberSchema if p.getFormat == "double" =>
-                Default(p).extract[Double].traverse(x => Target.pure(new DoubleLiteralExpr(x)))
-              case p: NumberSchema if p.getFormat == "float" =>
-                Default(p).extract[Float].traverse(x => Target.pure(new DoubleLiteralExpr(x)))
-              case p: IntegerSchema if p.getFormat == "int32" =>
-                Default(p).extract[Int].traverse(x => Target.pure(new IntegerLiteralExpr(x)))
-              case p: IntegerSchema if p.getFormat == "int64" =>
-                Default(p).extract[Long].traverse(x => Target.pure(new LongLiteralExpr(x)))
-              case p: StringSchema =>
-                Default(p)
-                  .extract[String]
-                  .traverse(x => Target.fromOption(Try(new StringLiteralExpr(x)).toOption, s"Default string literal for '${p.getTitle}' is null"))
-              case _ =>
-                Target.pure(None)
-            }
-
-            readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-            emptyToNull = (property match {
-              case d: DateSchema      => EmptyValueIsNull(d)
-              case dt: DateTimeSchema => EmptyValueIsNull(dt)
-              case s: StringSchema    => EmptyValueIsNull(s)
-              case _                  => None
-            }).getOrElse(EmptyIsEmpty)
-            dataRedaction = DataRedaction(property).getOrElse(DataVisible)
-
             tpeClassDep <- meta match {
               case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
                 Target.pure((declType, classDep))
@@ -800,6 +768,12 @@ object JacksonGenerator {
             argName = if (needCamelSnakeConversion) name.toCamelCase else name
             rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
+            expressionDefaultValue <- defaultValue match {
+              case Some(e: Expression) => Target.pure(Some(e))
+              case Some(_) =>
+                Target.log.warning(s"Can't generate default value for class $clsName and property $name.").map(_ => None)
+              case None => Target.pure(None)
+            }
             _declDefaultPair <- Option(isRequired)
               .filterNot(_ == false)
               .fold[Target[(Type, Option[Expression])]](
@@ -807,14 +781,14 @@ object JacksonGenerator {
                   safeParseType(s"Optional<${tpe}>"),
                   Target.pure(
                     Option(
-                      defaultValue
+                      expressionDefaultValue
                         .fold(
                           new MethodCallExpr(new NameExpr(s"Optional"), "empty"): Expression
                         )(t => optionalOfExpr(t))
                     )
                   )
                 ).mapN((_, _))
-              )(Function.const(Target.pure((tpe, defaultValue))) _)
+              )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
             (finalDeclType, finalDefaultValue) = _declDefaultPair
             term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
             dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
