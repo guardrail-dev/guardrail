@@ -115,7 +115,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     }
 
     it("should generate right case class") {
-      clsCat.structure shouldBe q"""case class Cat(name: String, huntingSkill: String = "lazy") extends Pet""".structure
+      clsCat.structure shouldBe q"""case class Cat(name: String, huntingSkill: Cat.HuntingSkill = Cat.HuntingSkill.Lazy) extends Pet""".structure
     }
 
     it("should generate right companion object") {
@@ -126,6 +126,25 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
           |    Encoder.forProduct2("name", "huntingSkill") { (o: Cat) => (o.name, o.huntingSkill) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           |  }
           |  implicit val decodeCat: Decoder[Cat] = Decoder.forProduct2("name", "huntingSkill")(Cat.apply _)
+          |  sealed abstract class HuntingSkill(val value: String) { override def toString: String = value.toString }
+          |  object HuntingSkill {
+          |    object members {
+          |      case object Clueless extends HuntingSkill("clueless")
+          |      case object Lazy extends HuntingSkill("lazy")
+          |      case object Adventurous extends HuntingSkill("adventurous")
+          |      case object Aggressive extends HuntingSkill("aggressive")
+          |    }
+          |    val Clueless: HuntingSkill = members.Clueless
+          |    val Lazy: HuntingSkill = members.Lazy
+          |    val Adventurous: HuntingSkill = members.Adventurous
+          |    val Aggressive: HuntingSkill = members.Aggressive
+          |    val values = Vector(Clueless, Lazy, Adventurous, Aggressive)
+          |    implicit val encodeHuntingSkill: Encoder[HuntingSkill] = Encoder[String].contramap(_.value)
+          |    implicit val decodeHuntingSkill: Decoder[HuntingSkill] = Decoder[String].emap(value => parse(value).toRight(s"$value not a member of HuntingSkill"))
+          |    implicit val addPathHuntingSkill: AddPath[HuntingSkill] = AddPath.build(_.value)
+          |    implicit val showHuntingSkill: Show[HuntingSkill] = Show.build(_.value)
+          |    def parse(value: String): Option[HuntingSkill] = values.find(_.value == value)
+          |  }
           |}
           |
           |""".stripMargin.replaceAll("\n", "")
@@ -284,8 +303,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     }
 
     it("should generate right case class") {
+      println(clsPersianCat.syntax)
       clsDog.structure shouldBe q"""case class Dog(name: String, packSize: Int = 0) extends Pet""".structure
-      clsPersianCat.structure shouldBe q"""case class PersianCat(name: String, huntingSkill: String = "lazy", wool: Option[Int] = Option(10)) extends Cat""".structure
+      clsPersianCat.structure shouldBe q"""case class PersianCat(name: String, huntingSkill: Cat.HuntingSkill = Cat.HuntingSkill.Lazy, wool: Option[Int] = Option(10)) extends Cat""".structure
     }
 
     it("should generate right companion object") {

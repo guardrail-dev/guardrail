@@ -19,6 +19,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
 import java.util.Locale
+
+import com.github.javaparser.JavaParser
 import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
 import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
 import org.eclipse.jface.text.Document
@@ -107,9 +109,25 @@ object JavaGenerator {
       case LiftOptionalType(value) => safeParseClassOrInterfaceType(s"java.util.Optional").map(_.setTypeArguments(new NodeList(value)))
       case LiftOptionalTerm(value) => buildMethodCall("java.util.Optional.ofNullable", Some(value))
       case EmptyOptionalTerm()     => buildMethodCall("java.util.Optional.empty")
-      case LiftVectorType(value)   => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
-      case LiftVectorTerm(value)   => buildMethodCall("java.util.Collections.singletonList", Some(value))
-      case LiftMapType(value)      => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
+      case EmptyArray() =>
+        Target.pure(
+          new ObjectCreationExpr(null,
+                                 JavaParser
+                                   .parseClassOrInterfaceType("java.util.ArrayList")
+                                   .setTypeArguments(new NodeList[Type]),
+                                 new NodeList())
+        )
+      case EmptyMap() =>
+        Target.pure(
+          new ObjectCreationExpr(null,
+                                 JavaParser
+                                   .parseClassOrInterfaceType("java.util.HashMap")
+                                   .setTypeArguments(new NodeList[Type]),
+                                 new NodeList())
+        )
+      case LiftVectorType(value) => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
+      case LiftVectorTerm(value) => buildMethodCall("java.util.Collections.singletonList", Some(value))
+      case LiftMapType(value)    => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
         defaultValue match {
@@ -184,6 +202,9 @@ object JavaGenerator {
 
       case SelectType(typeNames) =>
         safeParseType(typeNames.toList.mkString("."))
+
+      case SelectTerm(termNames) =>
+        safeParseExpression[Expression](termNames.toList.mkString(".")).map(v => v: Node)
 
       case AlterMethodParameterName(param, name) =>
         safeParseSimpleName(name.asString.escapeIdentifier).map(

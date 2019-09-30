@@ -318,6 +318,8 @@ object SwaggerUtil {
         objectType(None).map(Resolved[L](_, None, None, None, None))
       case _: ComposedSchema =>
         action
+      case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) =>
+        action
     }
   }
 
@@ -452,7 +454,7 @@ object SwaggerUtil {
           } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
       }
 
-      val strategies = baseStrategy.orElse(strategy).orElse[Schema[_], Free[F, ResolvedType[L]]] {
+      val strategies = strategy.orElse(baseStrategy).orElse[Schema[_], Free[F, ResolvedType[L]]] {
         case x =>
           for {
             tpe <- fallbackPropertyTypeHandler(x)

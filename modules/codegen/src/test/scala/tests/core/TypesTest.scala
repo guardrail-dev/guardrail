@@ -76,6 +76,12 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       |          properties:
       |            prop1:
       |              type: string
+      |      requiredArray:
+      |        type: array
+      |        items:
+      |          type: string
+      |    required:
+      |      - requiredArray
       |""".stripMargin
     val (
       ProtocolDefinitions(ClassDefinition(_, _, cls, staticDefns, _) :: Nil, _, _, _),
@@ -86,8 +92,8 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val definition = q"""
       case class Types(
-        array: Option[IndexedSeq[Boolean]] = Option(IndexedSeq.empty),
-        map: Option[Map[String, Boolean]] = Option(Map.empty),
+        array: Option[IndexedSeq[Boolean]] = None,
+        map: Option[Map[String, Boolean]] = None,
         obj: Option[io.circe.Json] = None,
         bool: Option[Boolean] = None,
         string: Option[String] = None,
@@ -103,7 +109,8 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
         custom: Option[Foo] = None,
         customComplex: Option[Foo[Bar]] = None,
         nested: Option[Types.Nested] = None,
-        nestedArray: Option[IndexedSeq[Types.NestedArray]] = Option(IndexedSeq.empty),
+        nestedArray: Option[IndexedSeq[Types.NestedArray]] = None,
+        requiredArray: IndexedSeq[String] = IndexedSeq.empty
       )
     """
 
@@ -111,9 +118,9 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       object Types {
         implicit val encodeTypes: ObjectEncoder[Types] = {
           val readOnlyKeys = Set[String]()
-          Encoder.forProduct18("array", "map", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex", "nested", "nestedArray")((o: Types) => (o.array, o.map, o.obj, o.bool, o.string, o.date, o.date_time, o.long, o.int, o.float, o.double, o.number, o.integer, o.untyped, o.custom, o.customComplex, o.nested, o.nestedArray)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.forProduct19("array", "map", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex", "nested", "nestedArray", "requiredArray") ( (o: Types) => (o.array, o.map, o.obj, o.bool, o.string, o.date, o.date_time, o.long, o.int, o.float, o.double, o.number, o.integer, o.untyped, o.custom, o.customComplex, o.nested, o.nestedArray, o.requiredArray) ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeTypes: Decoder[Types] = Decoder.forProduct18("array", "map", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex", "nested", "nestedArray")(Types.apply _)
+        implicit val decodeTypes: Decoder[Types] = Decoder.forProduct19("array", "map", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex", "nested", "nestedArray", "requiredArray")(Types.apply _)
 
         case class Nested(prop1: Option[String] = None)
         object Nested {

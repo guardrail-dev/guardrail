@@ -39,6 +39,8 @@ object ScalaGenerator {
       case LiftOptionalType(value) => Target.pure(t"Option[${value}]")
       case LiftOptionalTerm(value) => Target.pure(q"Option(${value})")
       case EmptyOptionalTerm()     => Target.pure(q"None")
+      case EmptyArray()            => Target.pure(q"IndexedSeq.empty")
+      case EmptyMap()              => Target.pure(q"Map.empty")
       case LiftVectorType(value)   => Target.pure(t"IndexedSeq[${value}]")
       case LiftVectorTerm(value)   => Target.pure(q"IndexedSeq(${value})")
       case LiftMapType(value)      => Target.pure(t"Map[String, ${value}]")
@@ -118,6 +120,12 @@ object ScalaGenerator {
             Type.Select(term, tpe)
         }
 
+        Target.pure(result)
+
+      case SelectTerm(termNames) =>
+        val result = termNames.tail.foldLeft[Term](Term.Name(termNames.head)) {
+          case (current, next) => Term.Select(current, Term.Name(next))
+        }
         Target.pure(result)
 
       case AlterMethodParameterName(param, name) =>
@@ -322,6 +330,7 @@ object ScalaGenerator {
                  sourceToBytes(source"""
               package ${buildPkgTerm(dtoComponents)}
                 ..${imports}
+                import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._;
                 $cls
                 ${companionForStaticDefns(staticDefns)}
               """)
