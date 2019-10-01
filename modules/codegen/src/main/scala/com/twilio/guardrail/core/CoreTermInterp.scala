@@ -26,6 +26,7 @@ object CoreTermInterp {
 }
 
 case class CoreTermInterp[L <: LA](defaultFramework: String,
+                                   handleModules: NonEmptyList[String] => CoreTarget[CodegenApplication[L, ?] ~> Target],
                                    frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
                                    handleImport: String => Either[Error, L#Import])
     extends (CoreTerm[L, ?] ~> CoreTarget) {
@@ -38,11 +39,20 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
     case ExtractGenerator(context, vendorDefaultFramework) =>
       CoreTarget.log.function("extractGenerator") {
         for {
-          _             <- CoreTarget.log.debug("Looking up framework")
-          frameworkName <- CoreTarget.fromOption(context.framework.orElse(vendorDefaultFramework), NoFramework)
-          framework     <- CoreTarget.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
-          _             <- CoreTarget.log.debug(s"Found: $framework")
-        } yield framework
+          _ <- CoreTarget.log.debug("Looking up framework")
+          framework <- NonEmptyList
+            .fromList(context.modules)
+            .toRight(context.framework)
+            .bitraverse(
+              ctxFramework =>
+                for {
+                  frameworkName <- CoreTarget.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
+                  framework     <- CoreTarget.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
+                  _             <- CoreTarget.log.debug(s"Found: $framework")
+                } yield framework,
+              handleModules
+            )
+        } yield framework.merge
       }
 
     case ValidateArgs(parsed) =>
@@ -106,6 +116,8 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
                   Continue((sofar.copy(dtoPackage = value.trim.split('.').to[List]) :: already, xs))
                 case (sofar :: already, "--import" :: value :: xs) =>
                   Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
+                case (sofar :: already, "--module" :: value :: xs) =>
+                  Continue((sofar.copy(context = sofar.context.copy(modules = sofar.context.modules :+ value)) :: already, xs))
                 case (_, unknown) =>
                   debug("Unknown argument") >> Bail(UnknownArguments(unknown))
               }

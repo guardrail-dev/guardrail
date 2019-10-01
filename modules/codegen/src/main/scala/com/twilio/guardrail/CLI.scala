@@ -29,6 +29,7 @@ object CLICommon {
     |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
     |   --tracing                                              : Pass through tracing context to all requests
     |   --framework <framework name>                           : Use one of the pre-composed frameworks
+    |   --module <module name>                                 : Explicitly select libraries to satisfy composition requirements
     |
     |Examples:
     |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
@@ -130,6 +131,15 @@ trait CLICommon {
             println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             unsafePrintHelp()
             fallback
+          case UnconsumedModules(modules) =>
+            println(s"${AnsiColor.RED}Error: Unconsumed modules: ${modules.mkString(", ")}${AnsiColor.RESET}")
+            fallback
+          case MissingModule(section) =>
+            println(s"${AnsiColor.RED}Error: Missing module ${section}${AnsiColor.RESET}")
+            fallback
+          case ModuleConflict(section) =>
+            println(s"${AnsiColor.RED}Error: Too many modules specified for ${section}${AnsiColor.RESET}")
+            fallback
         },
         identity
       )
@@ -180,10 +190,11 @@ trait CLICommon {
 
 object CLI extends CLICommon {
   import com.twilio.guardrail.generators.{ AkkaHttp, Endpoints, Http4s }
-  import com.twilio.guardrail.generators.Java
+  import com.twilio.guardrail.generators.{ Java, JavaModule, ScalaModule }
   import scala.meta._
   val scalaInterpreter = CoreTermInterp[ScalaLanguage](
-    "akka-http", {
+    "akka-http",
+    ScalaModule.extract, {
       case "akka-http" => AkkaHttp
       case "endpoints" => Endpoints
       case "http4s"    => Http4s
@@ -193,7 +204,8 @@ object CLI extends CLICommon {
   )
 
   val javaInterpreter = CoreTermInterp[JavaLanguage](
-    "dropwizard", {
+    "dropwizard",
+    JavaModule.extract, {
       case "dropwizard" => Java.Dropwizard
     }, { str =>
       import com.github.javaparser.JavaParser
