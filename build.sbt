@@ -64,6 +64,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue351.yaml"), "issues.issue351"),
   ExampleCase(sampleResource("issues/issue357.yaml"), "issues.issue357"),
   ExampleCase(sampleResource("issues/issue364.yaml"), "issues.issue364").args("--dtoPackage", "some.thing"),
+  ExampleCase(sampleResource("issues/issue405.yaml"), "issues.issue405"),
   ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
   ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "support.PositiveLong"),
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),

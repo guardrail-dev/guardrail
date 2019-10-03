@@ -578,7 +578,7 @@ object AkkaHttpServerGenerator {
                   implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
                     implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
                       def unmarshalField[A: Decoder](name: String, value: String, unmarshaller: Unmarshaller[String, io.circe.Json]): Future[A] =
-                        contentRequiredUnmarshaller.andThen(unmarshaller.andThen(jsonDecoderUnmarshaller[A])).apply(value).recoverWith({
+                        unmarshaller.andThen(jsonDecoderUnmarshaller[A]).apply(value).recoverWith({
                           case ex =>
                             Future.failed(RejectionError(MalformedFormFieldRejection(name, ex.getMessage, Some(ex))))
                         })
