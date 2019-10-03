@@ -28,6 +28,7 @@ object CLICommon {
     |  Optional:
     |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
     |   --tracing                                              : Pass through tracing context to all requests
+    |   --framework <framework name>                           : Use one of the pre-composed frameworks
     |
     |Examples:
     |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:
