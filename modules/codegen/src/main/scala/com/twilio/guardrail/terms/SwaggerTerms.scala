@@ -2,8 +2,10 @@ package com.twilio.guardrail
 package terms
 
 import cats.InjectK
+import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
+import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
@@ -15,7 +17,7 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractCommonRequestBodies(components: Option[Components]): Free[F, Map[String, RequestBody]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractCommonRequestBodies(components))
 
-  def extractOperations(paths: List[(String, PathItem)],
+  def extractOperations(paths: Tracker[Mappish[List, String, PathItem]],
                         commonRequestBodies: Map[String, RequestBody],
                         globalSecurityRequirements: Option[SecurityRequirements]): Free[F, List[RouteMeta]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements))
@@ -29,29 +31,29 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractOAuth2SecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, OAuth2SecurityScheme[L]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe))
 
-  def getClassName(operation: Operation, vendorPrefixes: List[String]): Free[F, List[String]] =
+  def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String]): Free[F, List[String]] =
     Free.inject[SwaggerTerm[L, ?], F](GetClassName(operation, vendorPrefixes))
   def getParameterName(parameter: Parameter): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetParameterName(parameter))
   def getBodyParameterSchema(parameter: Parameter): Free[F, Schema[_]] =
     Free.inject[SwaggerTerm[L, ?], F](GetBodyParameterSchema(parameter))
 
-  def getHeaderParameterType(parameter: Parameter): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetHeaderParameterType(parameter))
-  def getPathParameterType(parameter: Parameter): Free[F, String]   = Free.inject[SwaggerTerm[L, ?], F](GetPathParameterType(parameter))
-  def getQueryParameterType(parameter: Parameter): Free[F, String]  = Free.inject[SwaggerTerm[L, ?], F](GetQueryParameterType(parameter))
-  def getCookieParameterType(parameter: Parameter): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetCookieParameterType(parameter))
-  def getFormParameterType(parameter: Parameter): Free[F, String]   = Free.inject[SwaggerTerm[L, ?], F](GetFormParameterType(parameter))
-  def getRefParameterRef(parameter: Parameter): Free[F, String]     = Free.inject[SwaggerTerm[L, ?], F](GetRefParameterRef(parameter))
+  def getHeaderParameterType(parameter: Parameter): Free[F, String]      = Free.inject[SwaggerTerm[L, ?], F](GetHeaderParameterType(parameter))
+  def getPathParameterType(parameter: Parameter): Free[F, String]        = Free.inject[SwaggerTerm[L, ?], F](GetPathParameterType(parameter))
+  def getQueryParameterType(parameter: Parameter): Free[F, String]       = Free.inject[SwaggerTerm[L, ?], F](GetQueryParameterType(parameter))
+  def getCookieParameterType(parameter: Parameter): Free[F, String]      = Free.inject[SwaggerTerm[L, ?], F](GetCookieParameterType(parameter))
+  def getFormParameterType(parameter: Parameter): Free[F, String]        = Free.inject[SwaggerTerm[L, ?], F](GetFormParameterType(parameter))
+  def getRefParameterRef(parameter: Tracker[Parameter]): Free[F, String] = Free.inject[SwaggerTerm[L, ?], F](GetRefParameterRef(parameter))
 
   def getSerializableParameterType(parameter: Parameter): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetSerializableParameterType(parameter))
   def fallbackParameterHandler(parameter: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackParameterHandler(parameter))
 
-  def getOperationId(operation: Operation): Free[F, String] =
+  def getOperationId(operation: Tracker[Operation]): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetOperationId(operation))
 
-  def getResponses(operationId: String, operation: Operation): Free[F, Map[String, ApiResponse]] =
+  def getResponses(operationId: String, operation: Tracker[Operation]): Free[F, NonEmptyList[(String, Tracker[ApiResponse])]] =
     Free.inject[SwaggerTerm[L, ?], F](GetResponses(operationId, operation))
 
   def getSimpleRef(ref: Schema[_]): Free[F, String] =

@@ -1,6 +1,5 @@
 package com.twilio.guardrail
 
-import _root_.io.swagger.v3.oas.models._
 import cats.free.Free
 import cats.instances.all._
 import cats.syntax.all._
@@ -8,7 +7,6 @@ import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityScheme, SwaggerTerms }
 
@@ -28,7 +26,7 @@ object ServerGenerator {
   def formatClassName(str: String): String   = s"${str.capitalize}Resource"
   def formatHandlerName(str: String): String = s"${str.capitalize}Handler"
 
-  def fromSwagger[L <: LA, F[_]](context: Context, swagger: OpenAPI, frameworkImports: List[L#Import])(
+  def fromSwagger[L <: LA, F[_]](context: Context, basePath: Option[String], frameworkImports: List[L#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],
@@ -37,14 +35,12 @@ object ServerGenerator {
     import S._
     import Sw._
 
-    val basePath: Option[String] = swagger.basePath()
-
     for {
       extraImports       <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>
-          val routes       = unsortedRoutes.sortBy(r => (r.path, r.method))
+          val routes       = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
           val resourceName = formatClassName(className.lastOption.getOrElse(""))
           val handlerName =
             formatHandlerName(className.lastOption.getOrElse(""))

@@ -4,7 +4,6 @@ import java.util
 
 import com.twilio.guardrail.extract.VendorExtension
 import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
 import org.scalatest.{ FunSuite, Matchers }
 

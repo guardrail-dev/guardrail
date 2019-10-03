@@ -15,6 +15,7 @@ val catsVersion          = "1.6.0"
 val catsEffectVersion    = "1.0.0"
 val circeVersion         = "0.10.1"
 val http4sVersion        = "0.20.0"
+val scalacheckVersion    = "1.14.0"
 val scalatestVersion     = "3.0.8"
 val javaparserVersion    = "3.7.1"
 val endpointsVersion     = "0.8.0"
@@ -168,7 +169,8 @@ addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cro
 publishMavenStyle := true
 
 val testDependencies = Seq(
-  "org.scalatest" %% "scalatest" % scalatestVersion % Test
+  "org.scalatest" %% "scalatest" % scalatestVersion % Test,
+  "org.scalacheck" %% "scalacheck" % scalacheckVersion % Test
 )
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
@@ -187,9 +189,9 @@ val codegenSettings = Seq(
     "-encoding",
     "utf8"
   ) ++ (if (scalaVersion.value.startsWith("2.11.")) {
-          List("-Xexperimental", "-Xlint:_")
+          List("-Xexperimental", "-Xlint:-missing-interpolator,_")
         } else {
-          List("-Xlint:-unused,_")
+          List("-Xlint:-unused,-missing-interpolator,_")
         }),
   parallelExecution in Test := true
 )
@@ -221,6 +223,7 @@ lazy val codegen = (project in file("modules/codegen"))
     scalacOptions ++= List(
       "-language:higherKinds",
       "-Ywarn-unused-import",
+      "-Xlint:_,-missing-interpolator"
     ),
     bintrayRepository := {
       if (isSnapshot.value) "snapshots"

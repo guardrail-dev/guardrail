@@ -5,10 +5,17 @@ import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.{ CookieParameter, Parameter }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.SecurityScheme
+import com.twilio.guardrail.core.Tracker
 
 object VendorExtension {
   trait VendorExtensible[-F] {
     def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T]
+    def contramap[B](f: B => F): VendorExtensible[B] = {
+      val chain = this
+      new VendorExtensible[B] {
+        def extract[T](from: B, key: String)(implicit T: Extractable[T]): Option[T] = chain.extract(f(from), key)
+      }
+    }
   }
 
   object VendorExtensible {
@@ -69,6 +76,9 @@ object VendorExtension {
 
     implicit val defaultVendorExtensibleSecurityScheme: VendorExtensible[SecurityScheme] =
       build[SecurityScheme](m => key => Option(m.getExtensions).map(_.get(key)))
+
+    implicit def trackerAdapter[A](implicit ev: VendorExtensible[A]): VendorExtensible[Tracker[A]] =
+      ev.contramap[Tracker[A]](_.get)
   }
 
   case class VendorExtensibleAdapter[F](from: F) extends AnyVal {

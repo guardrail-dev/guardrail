@@ -2,6 +2,7 @@ package com.twilio.guardrail.protocol.terms.server
 
 import cats.InjectK
 import cats.free.Free
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
@@ -10,7 +11,7 @@ import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefini
 import io.swagger.v3.oas.models.Operation
 
 class ServerTerms[L <: LA, F[_]](implicit I: InjectK[ServerTerm[L, ?], F]) {
-  def buildTracingFields(operation: Operation, resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField[L]]] =
+  def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Free[F, Option[TracingField[L]]] =
     Free.inject[ServerTerm[L, ?], F](BuildTracingFields(operation, resourceName, tracing))
   def generateRoutes(tracing: Boolean,
                      resourceName: String,

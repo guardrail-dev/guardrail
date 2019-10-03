@@ -4,8 +4,10 @@ package generators
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax._
+import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ Header, Response, Responses }
@@ -30,15 +32,15 @@ object Http4sServerGenerator {
           _ <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
           res <- if (tracing) {
             for {
-              operationId <- Target.fromOption(Option(operation.getOperationId())
-                                                 .map(splitOperationParts)
-                                                 .map(_._2),
-                                               "Missing operationId")
-              label <- Target.fromOption(
+              operationId <- operation
+                .downField("operationId", _.getOperationId())
+                .map(_.map(splitOperationParts(_)._2))
+                .raiseErrorIfEmpty("Missing operationId")
+              label <- Target.fromOption[Lit.String](
                 TracingLabel(operation)
                   .map(Lit.String(_))
-                  .orElse(resourceName.lastOption.map(clientName => Lit.String(s"${clientName}:${operationId}"))),
-                "Missing client name"
+                  .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                s"Missing client name (${operation.showHistory})"
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -60,7 +62,7 @@ object Http4sServerGenerator {
             List(combinedRouteTerms),
             List.empty,
             methodSigs,
-            renderedRoutes.flatMap(_.supportDefinitions).groupBy(_.structure).map(_._2.head).toList, // Only unique supportDefinitions by structure
+            renderedRoutes.flatMap(_.supportDefinitions).groupBy(_.structure).flatMap(_._2.headOption).toList, // Only unique supportDefinitions by structure
             renderedRoutes.flatMap(_.handlerDefinitions)
           )
         }
@@ -121,13 +123,13 @@ object Http4sServerGenerator {
       case other             => Target.raiseError(s"Unknown method: ${other}")
     }
 
-    def pathStrToHttp4s(basePath: Option[String], path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
-      (basePath.getOrElse("") + path).stripPrefix("/") match {
+    def pathStrToHttp4s(basePath: Option[String], path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
+      (basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
         case "" => Target.pure((p"${Term.Name("Root")}", None))
-        case path =>
+        case finalPath =>
           for {
             pathDirective <- SwaggerUtil.paths
-              .generateUrlHttp4sPathExtractors(path, pathArgs)
+              .generateUrlHttp4sPathExtractors(Tracker.cloneHistory(path, finalPath), pathArgs)
           } yield pathDirective
       }
 
@@ -420,10 +422,11 @@ object Http4sServerGenerator {
       Target.log.function("generateRoute")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${basePath}, ${route}, ${tracingFields}")
         RouteMeta(path, method, operation, securityRequirements) = route
-        operationId <- Target.fromOption(Option(operation.getOperationId())
-                                           .map(splitOperationParts)
-                                           .map(_._2),
-                                         "Missing operationId")
+        operationId <- operation
+          .downField("operationId", _.getOperationId())
+          .map(_.map(splitOperationParts).map(_._2))
+          .raiseErrorIfEmpty("Missing operationId")
+          .map(_.get)
 
         formArgs   = parameters.formParams
         headerArgs = parameters.headerParams
@@ -558,8 +561,8 @@ object Http4sServerGenerator {
           )
         )
 
-        val consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
-        val produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
         val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(operationId, bodyArgs, responses, consumes, produces)
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(

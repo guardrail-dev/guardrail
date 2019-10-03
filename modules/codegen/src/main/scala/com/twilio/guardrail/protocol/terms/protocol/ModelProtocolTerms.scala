@@ -4,11 +4,12 @@ import io.swagger.v3.oas.models.media.Schema
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]) {
-  def extractProperties(swagger: Schema[_]): Free[F, List[(String, Schema[_])]] =
+  def extractProperties(swagger: Tracker[Schema[_]]): Free[F, List[(String, Tracker[Schema[_]])]] =
     Free.inject[ModelProtocolTerm[L, ?], F](ExtractProperties[L](swagger))
   def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta[L]])(
       name: String,

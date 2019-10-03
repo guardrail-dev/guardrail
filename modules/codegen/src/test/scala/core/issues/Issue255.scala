@@ -1,7 +1,7 @@
 package core.issues
 
 import com.twilio.guardrail.generators.Http4s
-import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions, RandomType }
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 

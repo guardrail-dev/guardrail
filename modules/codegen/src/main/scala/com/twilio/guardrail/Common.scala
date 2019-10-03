@@ -5,16 +5,15 @@ import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
 import cats.Id
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.SecurityOptional
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
-import scala.collection.JavaConverters._
 import java.net.URI
 
 case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: L#ClassDefinition)
@@ -22,7 +21,7 @@ case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Imp
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
-  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: OpenAPI)(
+  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI])(
       implicit
       C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
@@ -43,26 +42,40 @@ object Common {
       proto <- ProtocolGenerator.fromSwagger[L, F](swagger)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
 
-      serverUrls = Option(swagger.getServers)
-        .map(_.asScala.toList)
-        .map(_.flatMap({ x =>
-          Option(x.getUrl())
-            .map({ x =>
-              val uri    = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
-              val scheme = Option(uri.getScheme).orElse(Option(uri.getHost).filterNot(_.isEmpty).map(_ => "http")).getOrElse(null) // Only force a scheme if we have a host, falling back to null as required by URI
-              new URI(scheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
-            })
-            .filterNot(_.toString().isEmpty)
-        }))
-        .flatMap(NonEmptyList.fromList(_))
-      basePath = swagger.basePath()
+      serverUrls = NonEmptyList.fromList(
+        swagger
+          .downField("servers", _.getServers)
+          .flatExtract(
+            server =>
+              server
+                .downField("url", _.getUrl)
+                .get
+                .map({ x =>
+                  val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
+                  @SuppressWarnings(Array("org.wartremover.warts.Null"))
+                  val scheme = Option(uri.getScheme).orElse(Option(uri.getHost).filterNot(_.isEmpty).map(_ => "http")).getOrElse(null) // Only force a scheme if we have a host, falling back to null as required by URI
+                  new URI(scheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
+                })
+                .filterNot(_.toString().isEmpty)
+                .toList
+          )
+      )
+      basePath = swagger
+        .downField("servers", _.getServers)
+        .cotraverse(_.downField("url", _.getUrl))
+        .headOption
+        .flatMap(_.get)
+        .flatMap(url => Option(new URI(url).getPath))
+        .filter(_ != "/")
 
-      paths                      = swagger.getPathsOpt()
-      globalSecurityRequirements = Option(swagger.getSecurity).flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
-      requestBodies    <- extractCommonRequestBodies(Option(swagger.getComponents))
+      paths = swagger.downField("paths", _.getPaths)
+      globalSecurityRequirements = NonEmptyList
+        .fromList(swagger.downField("security", _.getSecurity).get)
+        .flatMap(SecurityRequirements(_, SecurityOptional(swagger.get), SecurityRequirements.Global))
+      requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents).get)
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()
-      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger, prefixes)
+      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.get, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)
@@ -82,7 +95,7 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, swagger, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)

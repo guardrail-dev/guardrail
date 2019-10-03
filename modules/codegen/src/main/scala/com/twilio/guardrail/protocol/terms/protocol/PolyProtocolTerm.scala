@@ -3,6 +3,7 @@ package com.twilio.guardrail.protocol.terms.protocol
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.{ Discriminator, ProtocolParameter, StaticDefns, SuperClass }
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
 
@@ -11,8 +12,8 @@ import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
   */
 sealed trait PolyProtocolTerm[L <: LA, T]
 
-case class ExtractSuperClass[L <: LA](swagger: ComposedSchema, definitions: List[(String, Schema[_])])
-    extends PolyProtocolTerm[L, List[(String, Schema[_], List[Schema[_]])]]
+case class ExtractSuperClass[L <: LA](swagger: Tracker[ComposedSchema], definitions: List[(String, Tracker[Schema[_]])])
+    extends PolyProtocolTerm[L, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]
 
 case class RenderSealedTrait[L <: LA](className: String,
                                       params: List[ProtocolParameter[L]],
@@ -34,7 +35,8 @@ case class RenderADTStaticDefns[L <: LA](clsName: String,
     extends PolyProtocolTerm[L, StaticDefns[L]]
 
 class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?], F]) {
-  def extractSuperClass(swagger: ComposedSchema, definitions: List[(String, Schema[_])]): Free[F, List[(String, Schema[_], List[Schema[_]])]] =
+  def extractSuperClass(swagger: Tracker[ComposedSchema],
+                        definitions: List[(String, Tracker[Schema[_]])]): Free[F, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
     Free.inject[PolyProtocolTerm[L, ?], F](ExtractSuperClass(swagger, definitions))
   def renderSealedTrait(
       className: String,

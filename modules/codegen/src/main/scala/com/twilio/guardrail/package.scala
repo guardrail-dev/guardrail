@@ -46,6 +46,7 @@ package guardrail {
     def raiseException[T](x: String): Target[T] = EitherT.fromEither(Left(RuntimeFailure(x)))
     def fromOption[T](x: Option[T], default: => String): Target[T] =
       EitherT.fromOption(x, UserError(default))
+    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
     def unsafeExtract[T](x: Target[T]): T =
       x.valueOr({ err =>
           throw new Exception(err.toString)
@@ -63,6 +64,7 @@ package guardrail {
     @deprecated("Use raiseError instead", "v0.41.2")
     def error[T](x: Error): CoreTarget[T]      = EitherT.fromEither(Left(x))
     def raiseError[T](x: Error): CoreTarget[T] = EitherT.fromEither(Left(x))
+    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
     def unsafeExtract[T](x: CoreTarget[T]): T =
       x.valueOr({ err =>
           throw new Exception(err.toString)

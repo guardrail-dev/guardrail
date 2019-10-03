@@ -296,7 +296,7 @@ object DropwizardServerGenerator {
           handlerType <- safeParseClassOrInterfaceType(handlerName)
         } yield {
           val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-          val commonPathPrefix   = findPathPrefix(routes.map(_._3.path))
+          val commonPathPrefix   = findPathPrefix(routes.map(_._3.path.get))
 
           val (routeMethods, handlerMethodSigs) = routes
             .map({
@@ -306,12 +306,12 @@ object DropwizardServerGenerator {
                 val method = new MethodDeclaration(util.EnumSet.of(PUBLIC), new VoidType, operationId)
                   .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
-                val pathSuffix = splitPathComponents(path).drop(commonPathPrefix.length).mkString("/", "/", "")
+                val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
                 if (pathSuffix.nonEmpty && pathSuffix != "/") {
                   method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
                 }
 
-                val consumes = getBestConsumes(operation.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
+                val consumes = getBestConsumes(operation.get.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
                   .orElse({
                     if (parameters.formParams.nonEmpty) {
                       if (parameters.formParams.exists(_.isFile)) {
@@ -330,8 +330,8 @@ object DropwizardServerGenerator {
                   .foreach(method.addAnnotation)
 
                 val successResponses =
-                  operation.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
-                val produces = getBestProduces(operation.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
+                  operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
+                val produces = getBestProduces(operation.get.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
                 produces
                   .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
                   .foreach(method.addAnnotation)

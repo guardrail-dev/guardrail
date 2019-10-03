@@ -4,6 +4,7 @@ package generators
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -40,14 +41,16 @@ object Http4sClientGenerator {
                                    parameters,
                                    responses,
                                    securitySchemes) =>
-        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+        def generateUrlWithParams(path: Tracker[String],
+                                  pathArgs: List[ScalaParameter[ScalaLanguage]],
+                                  qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           Target.log.function("generateUrlWithParams")(for {
-            _    <- Target.log.debug(s"Using ${path} and ${pathArgs.map(_.argName)}")
+            _    <- Target.log.debug(s"Using ${path.get} and ${pathArgs.map(_.argName)}")
             base <- generateUrlPathParams(path, pathArgs)
 
             _ <- Target.log.debug(s"QS: ${qsArgs}")
 
-            suffix = if (path.contains("?")) {
+            suffix = if (path.unwrapTracker.contains("?")) {
               Lit.String("&")
             } else {
               Lit.String("?")
@@ -288,8 +291,8 @@ object Http4sClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
-          produces = operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams

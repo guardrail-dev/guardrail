@@ -3,6 +3,7 @@ package generators
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.protocol.terms.{ Header, Responses }
@@ -39,15 +40,17 @@ object AkkaHttpClientGenerator {
                                    parameters,
                                    responses,
                                    securitySchemes) =>
-        def generateUrlWithParams(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]], qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+        def generateUrlWithParams(path: Tracker[String],
+                                  pathArgs: List[ScalaParameter[ScalaLanguage]],
+                                  qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
           Target.log.function("generateUrlWithParams") {
             for {
-              _    <- Target.log.debug(s"Using $path and ${pathArgs.map(_.argName)}")
+              _    <- Target.log.debug(s"Using ${path.unwrapTracker} and ${pathArgs.map(_.argName)}")
               base <- generateUrlPathParams(path, pathArgs)
 
               _ <- Target.log.debug(s"QS: $qsArgs")
 
-              suffix = if (path.contains("?")) {
+              suffix = if (path.unwrapTracker.contains("?")) {
                 Lit.String("&")
               } else {
                 Lit.String("?")
@@ -309,9 +312,9 @@ object AkkaHttpClientGenerator {
           _ <- Target.pure(())
 
           produces = NonEmptyList
-            .fromList(operation.produces.toList.flatMap(RouteMeta.ContentType.unapply(_)))
+            .fromList(operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_)))
             .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
-          consumes = operation.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams

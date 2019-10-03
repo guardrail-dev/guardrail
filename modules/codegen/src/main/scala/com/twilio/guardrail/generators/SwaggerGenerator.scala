@@ -3,8 +3,10 @@ package generators
 
 import cats.implicits._
 import cats.~>
+import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
-import com.twilio.guardrail.generators.syntax.RichSchema
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
@@ -32,44 +34,60 @@ object SwaggerGenerator {
 
       case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
         Target.log.function("extractOperations")(for {
-          _ <- Target.log.debug(s"Args: ${paths}")
-          routes <- paths.traverse({
+          _ <- Target.log.debug(s"Args: ${paths.get.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
+          routes <- paths.indexedCosequence.value.flatTraverse({
             case (pathStr, path) =>
               for {
-                operationMap <- Target.fromOption(Option(path.readOperationsMap()), "No operations defined")
-                operationRoutes <- operationMap.asScala.toList.traverse({
+                operationMap <- path
+                  .downField("operations", _.readOperationsMap)
+                  .toNel
+                  .raiseErrorIfEmpty("No operations defined")
+                operationRoutes <- operationMap.indexedCosequence.value.toList.traverse({
                   case (httpMethod, operation) =>
-                    val securityRequirements = Option(operation.getSecurity)
-                      .flatMap(SecurityRequirements(_, SecurityOptional(operation), SecurityRequirements.Local))
-                      .orElse(globalSecurityRequirements)
+                    val securityRequirements =
+                      operation
+                        .downField("security", _.getSecurity)
+                        .toNel
+                        .orHistory
+                        .fold(
+                          _ => globalSecurityRequirements,
+                          security => SecurityRequirements(security.get, SecurityOptional(operation), SecurityRequirements.Local)
+                        )
 
                     // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
                     // requestBodies, so let's manually fix that up here.
-                    val updatedOperation = Option(operation.getRequestBody)
-                      .flatMap(rb => Option(rb.get$ref))
-                      .flatMap(rbref => Option(rbref.split("/")).map(_.toList))
-                      .fold(Target.pure(operation))({
-                        case refName @ "#" :: "components" :: "requestBodies" :: name :: Nil =>
-                          commonRequestBodies
-                            .get(name)
-                            .fold(
-                              Target.raiseError[Operation](s"Unable to resolve reference to '$refName'")
-                            )({ commonRequestBody =>
-                              Target.pure(
-                                SwaggerUtil
-                                  .copyOperation(operation)
-                                  .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
-                              )
-                            })
-                        case x =>
-                          Target.raiseError[Operation](s"Invalid request body $$ref name '$x'")
-                      })
+                    val updatedOperation: Target[Tracker[Operation]] = operation
+                      .downField("body", _.getRequestBody)
+                      .flatDownField("$ref", _.get$ref)
+                      .refine[Target[Tracker[Operation]]]({ case Some(x) => (x, x.split("/").toList) })(
+                        tracker =>
+                          tracker.get match {
+                            case (rbref, "#" :: "components" :: "requestBodies" :: name :: Nil) =>
+                              commonRequestBodies
+                                .get(name)
+                                .fold[Target[Tracker[Operation]]](
+                                  Target.raiseError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
+                                )({ commonRequestBody =>
+                                  Target.pure(
+                                    operation.map(
+                                      op =>
+                                        SwaggerUtil
+                                          .copyOperation(op)
+                                          .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
+                                    )
+                                  )
+                                })
+                            case (rbref, _) =>
+                              Target.raiseError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
+                        }
+                      )
+                      .getOrElse(Target.pure(operation))
 
-                    updatedOperation.map(op => RouteMeta(pathStr, httpMethod, op, securityRequirements))
+                    updatedOperation.map(op => RouteMeta(Tracker.cloneHistory(path, pathStr), httpMethod, op, securityRequirements))
                 })
               } yield operationRoutes
           })
-        } yield routes.flatten)
+        } yield routes)
 
       case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
         for {
@@ -97,21 +115,24 @@ object SwaggerGenerator {
 
       case GetClassName(operation, vendorPrefixes) =>
         Target.log.function("getClassName")(for {
-          _ <- Target.log.debug(s"Args: ${operation}")
+          _ <- Target.log.debug(s"Args: ${operation.get.showNotNull}")
 
           pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
             .orElse({
-              Option(operation.getTags).map { tags =>
-                println(s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension")
-                tags.asScala
-              }
+              operation
+                .downField("tags", _.getTags)
+                .toNel
+                .indexedCosequence
+                .map { tags =>
+                  println(
+                    s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})"
+                  )
+                  tags.get.toList
+                }
             })
-            .map(_.toList)
-          opPkg = Option(operation.getOperationId())
-            .map(splitOperationParts)
-            .fold(List.empty[String])(_._1)
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg)
+          opPkg     = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).get
+          className = pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
         } yield className)
 
       case GetParameterName(parameter) =>
@@ -139,19 +160,24 @@ object SwaggerGenerator {
         parameterSchemaType(parameter)
 
       case GetRefParameterRef(parameter) =>
-        Target.fromOption(Option(parameter.get$ref).flatMap(_.split("/").lastOption), s"$$ref not defined for parameter '${parameter.getName}'")
+        parameter
+          .downField("$ref", _.get$ref())
+          .map(_.flatMap(_.split("/").lastOption))
+          .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
+          .map(_.get)
 
       case FallbackParameterHandler(parameter) =>
         Target.raiseError(s"Unsure how to handle ${parameter}")
 
       case GetOperationId(operation) =>
-        Target.fromOption(Option(operation.getOperationId())
-                            .map(splitOperationParts)
-                            .map(_._2),
-                          "Missing operationId")
+        operation
+          .downField("operationId", _.getOperationId())
+          .map(_.map(splitOperationParts(_)._2))
+          .raiseErrorIfEmpty("Missing operationId")
+          .map(_.get)
 
       case GetResponses(operationId, operation) =>
-        Target.fromOption(Option(operation.getResponses).map(_.asScala.toMap), s"No responses defined for ${operationId}")
+        operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.indexedCosequence.value)
 
       case GetSimpleRef(ref) =>
         Target.fromOption(Option(ref.get$ref).flatMap(_.split("/").lastOption), s"Unspecified $ref")

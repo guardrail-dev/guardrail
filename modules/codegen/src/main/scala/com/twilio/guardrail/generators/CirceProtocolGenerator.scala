@@ -5,13 +5,14 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
+import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import scala.collection.JavaConverters._
 import scala.meta._
-import scala.language.existentials
 
 object CirceProtocolGenerator {
   def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
@@ -96,17 +97,20 @@ object CirceProtocolGenerator {
   object ModelProtocolTermInterp extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
-        (swagger match {
-          case m: ObjectSchema => Target.pure(Option(m.getProperties))
-          case comp: ComposedSchema =>
+        swagger
+          .refine[Target[List[(String, Tracker[Schema[_]])]]]({ case o: ObjectSchema => o })(
+            m => Target.pure(m.downField("properties", _.getProperties).indexedCosequence.value)
+          )
+          .orRefine({ case c: ComposedSchema => c })({ comp =>
             val extractedProps =
-              Option(comp.getAllOf()).toList.flatMap(_.asScala.toList).flatMap(e => Option(e.getProperties).map(_.asScala.toMap))
-            val mergedProps = extractedProps.fold(Map.empty)(_ ++ _)
-            Target.pure(Option(mergedProps.asJava))
-          case comp: Schema[_] if Option(comp.get$ref).isDefined =>
-            Target.raiseError(s"Attempted to extractProperties for a ${comp.getClass()}, unsure what to do here")
-          case _ => Target.pure(None)
-        }).map(_.map(_.asScala.toList).toList.flatten)
+              comp.downField("allOf", _.getAllOf()).indexedDistribute.flatMap(_.downField("properties", _.getProperties).indexedCosequence.value)
+            Target.pure(extractedProps)
+          })
+          .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
+            comp => Target.raiseError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+          )
+          .getOrElse(Target.pure(List.empty))
+          .map(_.toList)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
         Target.log.function(s"transformProperty")(for {
@@ -376,22 +380,20 @@ object CirceProtocolGenerator {
   object PolyProtocolTermInterp extends (PolyProtocolTerm[ScalaLanguage, ?] ~> Target) {
     override def apply[A](fa: PolyProtocolTerm[ScalaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
-        def allParents(model: Schema[_]): Target[List[(String, Schema[_], List[Schema[_]])]] =
-          model match {
-            case elem: ComposedSchema =>
-              Option(elem.getAllOf).map(_.asScala.toList).getOrElse(List.empty) match {
-                case head :: tail =>
-                  definitions
-                    .collectFirst({
-                      case (clsName, e) if Option(head.get$ref).exists(_.endsWith(s"/$clsName")) =>
-                        val thisParent = (clsName, e, tail)
-                        allParents(e).map(otherParents => thisParent :: otherParents)
-                    })
-                    .getOrElse(Target.raiseError(s"Reference ${head.get$ref()} not found among definitions"))
-                case _ => Target.pure(List.empty)
-              }
-            case _ => Target.pure(List.empty)
-          }
+        def allParents: Tracker[Schema[_]] => Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
+          _.refine[Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]]({ case x: ComposedSchema => x })(
+            _.downField("allOf", _.getAllOf()).indexedDistribute match {
+              case head :: tail =>
+                definitions
+                  .collectFirst({
+                    case (clsName, e) if head.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName")) =>
+                      val thisParent = (clsName, e, tail)
+                      allParents(e).map(otherParents => thisParent :: otherParents)
+                  })
+                  .getOrElse(Target.raiseError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
+              case _ => Target.pure(List.empty)
+            }
+          ).getOrElse(Target.pure(List.empty))
         allParents(swagger)
 
       case RenderADTStaticDefns(clsName, discriminator, encoder, decoder) =>

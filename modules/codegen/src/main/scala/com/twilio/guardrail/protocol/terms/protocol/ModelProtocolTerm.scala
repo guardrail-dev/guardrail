@@ -2,11 +2,12 @@ package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.v3.oas.models.media.Schema
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
 
 sealed trait ModelProtocolTerm[L <: LA, T]
-case class ExtractProperties[L <: LA](swagger: Schema[_]) extends ModelProtocolTerm[L, List[(String, Schema[_])]]
+case class ExtractProperties[L <: LA](swagger: Tracker[Schema[_]]) extends ModelProtocolTerm[L, List[(String, Tracker[Schema[_]])]]
 case class TransformProperty[L <: LA](clsName: String,
                                       name: String,
                                       prop: Schema[_],

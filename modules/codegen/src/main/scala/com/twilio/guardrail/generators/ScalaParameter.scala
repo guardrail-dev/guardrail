@@ -3,8 +3,9 @@ package generators
 
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
-import com.twilio.guardrail.generators.syntax.RichString
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
@@ -77,7 +78,10 @@ object ScalaParameter {
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- schema.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
           customTypeName = customSchemaTypeName.orElse(customParamTypeName)
-          res <- (SwaggerUtil.typeName[L, F](tpeName, Option(param.format()), customTypeName), getDefault(tpeName, fmt, param))
+          res <- (SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty),
+                                             Tracker.hackyAdapt(Option(param.format()), Vector.empty),
+                                             customTypeName),
+                  getDefault(tpeName, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
         } yield res
 
@@ -85,7 +89,7 @@ object ScalaParameter {
 
       param match {
         case r: Parameter if r.isRef =>
-          getRefParameterRef(r)
+          getRefParameterRef(Tracker.hackyAdapt(r, Vector.empty))
             .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
 
         case r: Parameter if paramHasRefSchema(r) =>
@@ -117,6 +121,7 @@ object ScalaParameter {
     }
 
     log.function(s"fromParameter")(for {
+      _                                                                        <- log.debug(parameter.showNotNull)
       meta                                                                     <- paramMeta(parameter)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 

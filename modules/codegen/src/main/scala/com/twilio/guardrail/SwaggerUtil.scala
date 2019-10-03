@@ -8,9 +8,10 @@ import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ CustomTypeName, Default, VendorExtension }
+import com.twilio.guardrail.extract.{ CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.RichSchema
@@ -155,7 +156,7 @@ object SwaggerUtil {
             for {
               items <- getItems(arr)
               _     <- log.debug(s"items:\n${log.schemaToString(items)}")
-              meta  <- propMeta[L, F](items)
+              meta  <- propMeta[L, F](Tracker.hackyAdapt(items, Vector.empty))
               _     <- log.debug(s"meta: ${meta}")
               res <- meta match {
                 case Resolved(inner, dep, default, _, _) =>
@@ -170,7 +171,7 @@ object SwaggerUtil {
               rec <- Option(map.getAdditionalProperties)
                 .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None, None, None)))({
                   case _: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None, None, None))
-                  case s: Schema[_]         => propMeta[L, F](s)
+                  case s: Schema[_]         => propMeta[L, F](Tracker.hackyAdapt(s, Vector.empty))
                 })
               res <- rec match {
                 case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
@@ -184,7 +185,7 @@ object SwaggerUtil {
               tpeName       <- getType(impl)
               customTpeName <- customTypeName(impl)
               fmt = Option(impl.getFormat())
-              tpe <- typeName[L, F](tpeName, fmt, customTpeName)
+              tpe <- typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty), Tracker.hackyAdapt(fmt, Vector.empty), customTpeName)
             } yield Resolved[L](tpe, None, None, Some(tpeName), fmt)
         })
       }
@@ -222,8 +223,8 @@ object SwaggerUtil {
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def typeName[L <: LA, F[_]](
-      typeName: String,
-      format: Option[String],
+      typeName: Tracker[Option[String]],
+      format: Tracker[Option[String]],
       customType: Option[String]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
     Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
@@ -233,7 +234,7 @@ object SwaggerUtil {
       def log(fmt: Option[String], t: L#Type): L#Type = {
         fmt.foreach { fmt =>
           println(
-            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${typeName}', falling back to $t. Please switch definitions to x-scala-type for custom types"
+            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${typeName.unwrapTracker}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${typeName.showHistory})"
           )
         }
 
@@ -249,7 +250,7 @@ object SwaggerUtil {
       for {
         customTpe <- customType.flatTraverse(liftCustomType _)
         result <- customTpe.fold({
-          (typeName, format) match {
+          (typeName.get.get, format.get) match {
             case ("string", Some("uuid"))         => uuidType()
             case ("string", Some("password"))     => stringType(None)
             case ("string", Some("email"))        => stringType(None)
@@ -286,7 +287,7 @@ object SwaggerUtil {
       case _                          => false
     }
 
-  def propMeta[L <: LA, F[_]](property: Schema[_])(
+  def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]])(
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
@@ -311,7 +312,7 @@ object SwaggerUtil {
   ): Free[F, ResolvedType[L]] = {
     import Fw._
     val action: Free[F, ResolvedType[L]] = Free.pure(Resolved[L](tpe, None, None, None, None))
-    propMetaImpl(property) {
+    propMetaImpl(Tracker.hackyAdapt(property, Vector.empty)) {
       case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
         action
       case _: ObjectSchema =>
@@ -323,7 +324,7 @@ object SwaggerUtil {
     }
   }
 
-  private def propMetaImpl[L <: LA, F[_]](property: Schema[_])(
+  private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
     Sw.log.function("propMeta") {
@@ -331,138 +332,81 @@ object SwaggerUtil {
       import Sc._
       import Sw._
 
-      val baseStrategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]] = {
-        case p: ArraySchema =>
-          for {
-            items <- getItems(p)
-            rec   <- propMetaImpl[L, F](items)(strategy)
-            res <- rec match {
-              case Resolved(inner, dep, default, _, _) =>
-                (liftVectorType(inner), default.traverse(liftVectorTerm))
-                  .mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
-              case x: DeferredMap[L]   => embedArray(x)
-              case x: DeferredArray[L] => embedArray(x)
-              case x: Deferred[L]      => embedArray(x)
-            }
-          } yield res
-        case m: MapSchema =>
-          for {
-            rec <- Option(m.getAdditionalProperties)
-              .fold[Free[F, ResolvedType[L]]](
-                objectType(None).map(Resolved[L](_, None, None, None, None))
-              )({
-                case b: java.lang.Boolean =>
-                  objectType(None).map(Resolved[L](_, None, None, None, None))
-                case s: Schema[_] => propMetaImpl[L, F](s)(strategy)
-              })
-            res <- rec match {
-              case Resolved(inner, dep, _, _, _) =>
-                liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
-              case x: DeferredMap[L]   => embedMap(x)
-              case x: DeferredArray[L] => embedMap(x)
-              case x: Deferred[L]      => embedMap(x)
-            }
-          } yield res
+      def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => Free[F, ResolvedType[L]] = { a =>
+        val rawType   = a.downField("type", _.getType())
+        val rawFormat = a.downField("format", _.getFormat())
 
-        case ref: Schema[_] if Option(ref.get$ref).isDefined =>
-          getSimpleRef(ref).map(Deferred[L])
-
-        case b: BooleanSchema =>
-          val rawType   = "boolean"
-          val rawFormat = Option.empty[String]
-          for {
-            customTpeName <- customTypeName(b)
-            res <- (
-              typeName[L, F](rawType, None, customTpeName),
-              Default(b).extract[Boolean].traverse(litBoolean(_))
-            ).mapN(Resolved[L](_, None, _, Some(rawType), rawFormat))
-          } yield res
-
-        case s: StringSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(s.getFormat())
-          for {
-            customTpeName <- customTypeName(s)
-            res <- (
-              typeName[L, F](rawType, rawFormat, customTpeName),
-              Default(s).extract[String].traverse(litString(_))
-            ).mapN(Resolved[L](_, None, _, Option(rawType), rawFormat))
-          } yield res
-
-        case d: DateSchema =>
-          val rawType   = "string"
-          val rawFormat = Option("date")
-          for {
-            customTpeName <- customTypeName(d)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case d: DateTimeSchema =>
-          val rawType   = "string"
-          val rawFormat = Option("date-time")
-          for {
-            customTpeName <- customTypeName(d)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case i: IntegerSchema =>
-          val rawType   = "integer"
-          val rawFormat = Option(i.getFormat)
-          for {
-            customTpeName <- customTypeName(i)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case d: NumberSchema =>
-          val rawType   = "number"
-          val rawFormat = Option(d.getFormat)
-          for {
-            customTpeName <- customTypeName(d)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case p: PasswordSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(p.getFormat)
-          for {
-            customTpeName <- customTypeName(p)
-            tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case f: FileSchema =>
-          val rawType   = "file"
-          val rawFormat = Option(f.getFormat)
-          for {
-            customTpeName <- customTypeName(f)
-            tpe           <- typeName[L, F]("file", rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case u: UUIDSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(u.getFormat)
-          for {
-            customTpeName <- customTypeName(u)
-            tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
-
-        case e: EmailSchema =>
-          val rawType   = "string"
-          val rawFormat = Option(e.getFormat)
-          for {
-            customTpeName <- customTypeName(e)
-            tpe           <- typeName[L, F]("string", rawFormat, customTpeName)
-          } yield Resolved[L](tpe, None, None, Option(rawType), rawFormat)
+        for {
+          customTpeName <- customTypeName(a)
+          tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
+        } yield Resolved[L](tpe, None, None, rawType.get, rawFormat.get)
+      }
+      def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => Free[F, L#Term]): Tracker[A] => Free[F, ResolvedType[L]] = { a =>
+        val rawType   = a.downField("type", _.getType())
+        val rawFormat = a.downField("format", _.getFormat())
+        for {
+          customTpeName <- customTypeName(a)
+          res <- (
+            typeName[L, F](rawType, rawFormat, customTpeName),
+            Default(a.get).extract[B].traverse(transformLit(_))
+          ).mapN(Resolved[L](_, None, _, rawType.get, rawFormat.get))
+        } yield res
       }
 
-      val strategies = strategy.orElse(baseStrategy).orElse[Schema[_], Free[F, ResolvedType[L]]] {
-        case x =>
-          for {
-            tpe <- fallbackPropertyTypeHandler(x)
-          } yield Resolved[L](tpe, None, None, None, None) // This may need to be rawType=string?
-      }
-      log.debug(s"property:\n${log.schemaToString(property)}") >> strategies(
+      log.debug(s"property:\n${log.schemaToString(property.get)}").flatMap { _ =>
         property
-      )
+          .refine[Free[F, ResolvedType[L]]](strategy)(_.get)
+          .orRefine({ case a: ArraySchema => a })(
+            p =>
+              for {
+                items <- getItems(p.get)
+                rec   <- propMetaImpl[L, F](Tracker.hackyAdapt(items, Vector.empty))(strategy)
+                res <- rec match {
+                  case Resolved(inner, dep, default, _, _) =>
+                    (liftVectorType(inner), default.traverse(liftVectorTerm))
+                      .mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
+                  case x: DeferredMap[L]   => embedArray(x)
+                  case x: DeferredArray[L] => embedArray(x)
+                  case x: Deferred[L]      => embedArray(x)
+                }
+              } yield res
+          )
+          .orRefine({ case m: MapSchema => m })(
+            m =>
+              for {
+                rec <- m
+                  .downField("additionalProperties", _.getAdditionalProperties)
+                  .get
+                  .fold[Free[F, ResolvedType[L]]](
+                    objectType(None).map(Resolved[L](_, None, None, None, None))
+                  )({
+                    case b: java.lang.Boolean =>
+                      objectType(None).map(Resolved[L](_, None, None, None, None))
+                    case s: Schema[_] => propMetaImpl[L, F](Tracker.hackyAdapt(s, Vector.empty))(strategy)
+                  })
+                res <- rec match {
+                  case Resolved(inner, dep, _, _, _) =>
+                    liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
+                  case x: DeferredMap[L]   => embedMap(x)
+                  case x: DeferredArray[L] => embedMap(x)
+                  case x: Deferred[L]      => embedMap(x)
+                }
+              } yield res
+          )
+          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.get).map(Deferred[L]))
+          .orRefine({ case b: BooleanSchema => b })(buildResolve(litBoolean))
+          .orRefine({ case s: StringSchema => s })(buildResolve(litString))
+          .orRefine({ case s: EmailSchema => s })(buildResolveNoDefault)
+          .orRefine({ case d: DateSchema => d })(buildResolveNoDefault)
+          .orRefine({ case d: DateTimeSchema => d })(buildResolveNoDefault)
+          .orRefine({ case i: IntegerSchema => i })(buildResolveNoDefault)
+          .orRefine({ case d: NumberSchema => d })(buildResolveNoDefault)
+          .orRefine({ case p: PasswordSchema => p })(buildResolveNoDefault)
+          .orRefine({ case f: FileSchema => f })(buildResolveNoDefault)
+          .orRefine({ case u: UUIDSchema => u })(buildResolveNoDefault)
+          .leftMap(_.get)
+          .fold(fallbackPropertyTypeHandler(_).map(Resolved[L](_, None, None, None, None)), identity) // This may need to be rawType=string?
+      }
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],
@@ -527,7 +471,7 @@ object SwaggerUtil {
     private[this] val variable: atto.Parser[String] = char('{') ~> many(notChar('}'))
       .map(_.mkString("")) <~ char('}')
 
-    def generateUrlPathParams[L <: LA](path: String,
+    def generateUrlPathParams[L <: LA](path: Tracker[String],
                                        pathArgs: List[ScalaParameter[L]],
                                        showLiteralPathComponent: String => L#Term,
                                        showInterpolatedPathComponent: L#TermName => L#Term,
@@ -542,11 +486,8 @@ object SwaggerUtil {
       val pattern: atto.Parser[List[Either[String, L#Term]]] = many(either(term, other).map(_.swap: Either[String, L#Term]))
 
       for {
-        parts <- pattern
-          .parseOnly(path)
-          .either
-          .fold(Target.raiseError, Target.pure)
-        result = parts
+        parts <- path.map(pattern.parseOnly(_).either).raiseErrorIfLeft
+        result = parts.get
           .map({
             case Left(part)  => showLiteralPathComponent(part)
             case Right(term) => term
@@ -604,13 +545,13 @@ object SwaggerUtil {
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
       def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         opt(leadingSlash) ~> ((segments ~ (trailingSlash ~ staticQS)) | emptyPathQS | emptyPath) <~ endOfInput
-      def runParse(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+      def runParse(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         pattern(pathArgs)
-          .parse(path)
+          .parse(path.unwrapTracker)
           .done match {
           case ParseResult.Done(input, result)         => Target.pure(result)
-          case ParseResult.Fail(input, stack, message) => Target.raiseError(s"Failed to parse URL: ${message} (unparsed: ${input})")
-          case ParseResult.Partial(k)                  => Target.raiseError(s"Unexpected parser state attempting to parse ${path}")
+          case ParseResult.Fail(input, stack, message) => Target.raiseError(s"Failed to parse URL: ${message} (unparsed: ${input}) (${path.showHistory})")
+          case ParseResult.Partial(k)                  => Target.raiseError(s"Unexpected parser state attempting to parse ${path} (${path.showHistory})")
         }
     }
 
@@ -716,7 +657,7 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
-    def generateUrlAkkaPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
+    def generateUrlAkkaPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
       import akkaExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
@@ -745,7 +686,7 @@ object SwaggerUtil {
       } yield result.reverse
     }
 
-    def generateUrlHttp4sPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
+    def generateUrlHttp4sPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
@@ -760,14 +701,10 @@ object SwaggerUtil {
       } yield (trailingSlashed, queryParams)
     }
 
-    def generateUrlEndpointsPathExtractors(path: String, pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
+    def generateUrlEndpointsPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
       import endpointsExtractor._
       for {
-        (parts, (trailingSlash, queryParams)) <- pattern(pathArgs)
-          .parse(path)
-          .done
-          .either
-          .fold(Target.raiseError(_), Target.pure(_))
+        (parts, (trailingSlash, queryParams)) <- path.map(pattern(pathArgs).parseOnly(_).either).raiseErrorIfLeft.map(_.unwrapTracker)
         (directive, bindings) = parts
           .foldLeft[(Term, List[Term.Name])]((q"pathRoot", List.empty))({
             case ((acc, bindings), (termName, c)) =>
