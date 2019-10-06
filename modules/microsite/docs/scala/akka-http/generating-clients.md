@@ -12,31 +12,17 @@ By generating minimal clients that only have enough business knowledge to map do
 
 The following is an example from the [akka-http](https://github.com/akka/akka-http) client generator:
 
-```scala
-// Two constructors are provided, one accepting the `httpClient`,
-// `ExecutionContext`, and `Materializer` implicitly, the other accepting
-// an explicit `httpClient`, but still accepting the `ExecutionContext` and
-// `Materializer` as implicits.
-object UserClient {
-  def apply(host: String = "http://petstore.swagger.io")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer): UserClient =
-    new UserClient(host = host)(httpClient = httpClient, ec = ec, mat = mat)
-  def httpClient(httpClient: HttpRequest => Future[HttpResponse], host: String = "http://petstore.swagger.io")(implicit ec: ExecutionContext, mat: Materializer): UserClient =
-    new UserClient(host = host)(httpClient = httpClient, ec = ec, mat = mat)
-}
-class UserClient(host: String = "http://petstore.swagger.io")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
-  val basePath: String = "/v2"
-  def createUser(body: User, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = {
-    val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
-    makeRequest(HttpMethods.POST, host + basePath + "/user", allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => wrap[IgnoredEntity](httpClient, req))
-  }
-  def createUsersWithArrayInput(body: IndexedSeq[User], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = ...
-  def createUsersWithListInput(body: IndexedSeq[User], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = ...
-  def loginUser(username: String, password: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], String] = ...
-  def logoutUser(headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = ...
-  def getUserByName(username: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], User] = ...
-  def updateUser(username: String, body: User, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = ...
-  def deleteUser(username: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], IgnoredEntity] = ...
-}
+```scala mdoc:passthrough
+import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.docs._
+DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingClients)(
+  """|// Two constructors are provided, one accepting the `httpClient`,
+     |// `ExecutionContext`, and `Materializer` implicitly, the other accepting
+     |// an explicit `httpClient`, but still accepting the `ExecutionContext` and
+     |// `Materializer` as implicits.
+  """.stripMargin,
+  ""
+)
 ```
 
 Separation of protocol-concerns from API-level concerns
