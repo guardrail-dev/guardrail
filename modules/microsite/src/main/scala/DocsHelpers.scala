@@ -23,7 +23,10 @@ object DocsHelpers {
 
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>
-        val (_, codegenDefinitions) = Target.unsafeExtract(Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Server, Context.empty, openAPI).foldMap(generator))
+        val (_, codegenDefinitions) = Target.unsafeExtract(
+          Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
+            .foldMap(generator)
+        )
         val server = codegenDefinitions.servers.head
         val q"object ${oname} { ..${stats} }" = server.serverDefinitions.head
         val routeStats = stats.collectFirst({ case line@q"def routes(...$_): $_ = $_" => line }).toList
