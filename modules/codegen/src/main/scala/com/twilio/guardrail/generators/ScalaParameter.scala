@@ -135,7 +135,7 @@ object ScalaParameter {
       enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(Free.pure[F, L#Term] _)) { tpe =>
         protocolElems
           .flatTraverse({
-            case x @ EnumDefinition(_, _tpeName, _, _, _) =>
+            case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
               for {
                 areEqual <- typeNamesEqual(tpe, _tpeName)
               } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]

@@ -144,7 +144,7 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
             swagger =>
               try {
                 (for {
-                  defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, Tracker(swagger))
+                  defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, Tracker(swagger), pkgName ++ ("definitions" :: dtoPackage))
                   (proto, codegen) = defs
                   result <- Common
                     .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)

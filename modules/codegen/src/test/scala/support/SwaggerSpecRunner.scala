@@ -43,7 +43,8 @@ trait SwaggerSpecRunner extends EitherValues {
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Client,
           context,
-          Tracker(swagger)
+          Tracker(swagger),
+          List.empty
         )
         .foldMap(framework)
         .valueOr({ err =>
@@ -56,7 +57,8 @@ trait SwaggerSpecRunner extends EitherValues {
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Server,
           context,
-          Tracker(swagger)
+          Tracker(swagger),
+          List.empty
         )
         .foldMap(framework)
         .valueOr({ err =>
@@ -93,7 +95,8 @@ trait SwaggerSpecRunner extends EitherValues {
       .prepareDefinitions[L, CodegenApplication[L, ?]](
         kind,
         context,
-        Tracker(swagger)
+        Tracker(swagger),
+        List.empty
       )
       .foldMap(framework)
       .value

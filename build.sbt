@@ -70,7 +70,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
-  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested"),
+  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(Set("akka", "http4s")),
   ExampleCase(sampleResource("raw-response.yaml"), "raw"),
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),

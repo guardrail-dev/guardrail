@@ -81,9 +81,10 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(nameCat, tpeCat, clsCat, staticDefnsCat, catParents) :: ClassDefinition(nameDog, tpeDog, _, _, _) :: ADT(
+        ClassDefinition(nameCat, tpeCat, fullTypeCat, clsCat, staticDefnsCat, catParents) :: ClassDefinition(nameDog, tpeDog, _, _, _, _) :: ADT(
           namePet,
           tpePet,
+          fullTpePet,
           trtPet,
           staticDefns
         ) :: Nil,
@@ -263,9 +264,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(namePersianCat, tpePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
-          :: ClassDefinition(nameDog, tpeDog, clsDog, staticDefnsDog, dogParents)
-          :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, trtCat, staticDefnsCat) :: Nil,
+        ClassDefinition(namePersianCat, tpePersianCat, fullTypePersioanCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
+          :: ClassDefinition(nameDog, tpeDog, fullTypeDog, clsDog, staticDefnsDog, dogParents)
+          :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
         _
@@ -406,7 +407,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
       |    - type: object""".stripMargin
 
     val (
-      ProtocolDefinitions(ClassDefinition(cls, _, defCls, _, _) :: ADT(_, _, _, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(cls, _, _, defCls, _, _) :: ADT(_, _, _, _, _) :: Nil, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -459,9 +460,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(nameDog, tpeDog, clsDog, staticDefnsDog, dogParents)
-          :: ClassDefinition(namePersianCat, tpePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
-          :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, trtCat, staticDefnsCat) :: Nil,
+        ClassDefinition(nameDog, tpeDog, fullTypeDog, clsDog, staticDefnsDog, dogParents)
+          :: ClassDefinition(namePersianCat, tpePersianCat, fullTypePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
+          :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
         _
@@ -559,8 +560,8 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(nameCat, tpeCat, clsCat, staticDefnsCat, catParents)
-          :: ADT(namePet, tpePet, trtPet, staticDefnsPet) :: ADT(nameMammal, tpeMammal, trtMammal, staticDefnsMammal) :: Nil,
+        ClassDefinition(nameCat, tpeCat, fullTypeCat, clsCat, staticDefnsCat, catParents)
+          :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameMammal, tpeMammal, fullTypeMammal, trtMammal, staticDefnsMammal) :: Nil,
         _,
         _,
         _

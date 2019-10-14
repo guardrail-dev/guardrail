@@ -139,7 +139,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Ensure dtos are generated with escapes") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -175,7 +175,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Ensure enums are generated with escapes") {
     val (
-      ProtocolDefinitions(_ :: EnumDefinition(_, _, _, cls, staticDefns) :: _, _, _, _),
+      ProtocolDefinitions(_ :: EnumDefinition(_, _, _, _, cls, staticDefns) :: _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

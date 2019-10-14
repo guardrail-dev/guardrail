@@ -99,36 +99,36 @@ object SwaggerUtil {
             .flatMap {
               case RandomType(name, tpe) =>
                 Free.pure(Resolved[L](tpe, None, None, None, None))
-              case ClassDefinition(name, tpe, cls, _, _) =>
-                widenTypeName(tpe).map(Resolved[L](_, None, None, None, None))
-              case EnumDefinition(name, tpe, elems, cls, _) =>
-                widenTypeName(tpe).map(Resolved[L](_, None, None, Some("string"), None))
-              case ADT(_, tpe, _, _) =>
-                widenTypeName(tpe).map(Resolved[L](_, None, None, None, None))
+              case ClassDefinition(name, _, fullType, cls, _, _) =>
+                Free.pure(Resolved[L](fullType, None, None, None, None))
+              case EnumDefinition(name, _, fullType, elems, cls, _) =>
+                Free.pure(Resolved[L](fullType, None, None, Some("string"), None))
+              case ADT(_, _, fullType, _, _) =>
+                Free.pure(Resolved[L](fullType, None, None, None, None))
             }
         case DeferredArray(name) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
                 liftVectorType(tpe).map(Resolved[L](_, None, None, None, None))
-              case ClassDefinition(name, tpe, cls, _, _) =>
-                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None, None, None))
-              case EnumDefinition(name, tpe, elems, cls, _) =>
-                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None, None, None))
-              case ADT(_, tpe, _, _) =>
-                widenTypeName(tpe).flatMap(liftVectorType).map(Resolved[L](_, None, None, None, None))
+              case ClassDefinition(name, _, fullType, cls, _, _) =>
+                liftVectorType(fullType).map(Resolved[L](_, None, None, None, None))
+              case EnumDefinition(name, _, fullType, elems, cls, _) =>
+                liftVectorType(fullType).map(Resolved[L](_, None, None, None, None))
+              case ADT(_, _, fullType, _, _) =>
+                liftVectorType(fullType).map(Resolved[L](_, None, None, None, None))
             }
         case DeferredMap(name) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
                 liftMapType(tpe).map(Resolved[L](_, None, None, None, None))
-              case ClassDefinition(_, tpe, _, _, _) =>
-                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None, None, None))
-              case EnumDefinition(_, tpe, _, _, _) =>
-                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None, None, None))
-              case ADT(_, tpe, _, _) =>
-                widenTypeName(tpe).flatMap(liftMapType).map(Resolved[L](_, None, None, None, None))
+              case ClassDefinition(_, _, fullType, _, _, _) =>
+                liftMapType(fullType).map(Resolved[L](_, None, None, None, None))
+              case EnumDefinition(_, _, fullType, _, _, _) =>
+                liftMapType(fullType).map(Resolved[L](_, None, None, None, None))
+              case ADT(_, _, fullType, _, _) =>
+                liftMapType(fullType).map(Resolved[L](_, None, None, None, None))
             }
       })
     }

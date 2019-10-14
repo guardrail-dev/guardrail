@@ -21,14 +21,20 @@ case class RandomType[L <: LA](name: String, tpe: L#Type) extends StrictProtocol
 
 sealed trait NestedProtocolElems[L <: LA] extends StrictProtocolElems[L]
 
-case class ClassDefinition[L <: LA](name: String, tpe: L#TypeName, cls: L#ClassDefinition, staticDefns: StaticDefns[L], parents: List[SuperClass[L]] = Nil)
+case class ClassDefinition[L <: LA](name: String,
+                                    tpe: L#TypeName,
+                                    fullType: L#Type,
+                                    cls: L#ClassDefinition,
+                                    staticDefns: StaticDefns[L],
+                                    parents: List[SuperClass[L]] = Nil)
     extends NestedProtocolElems[L]
 
-case class ADT[L <: LA](name: String, tpe: L#TypeName, trt: L#Trait, staticDefns: StaticDefns[L]) extends StrictProtocolElems[L]
+case class ADT[L <: LA](name: String, tpe: L#TypeName, fullType: L#Type, trt: L#Trait, staticDefns: StaticDefns[L]) extends StrictProtocolElems[L]
 
 case class EnumDefinition[L <: LA](
     name: String,
     tpe: L#TypeName,
+    fullType: L#Type,
     elems: List[(String, L#TermName, L#TermSelect)],
     cls: L#ClassDefinition,
     staticDefns: StaticDefns[L]
@@ -57,11 +63,11 @@ object ProtocolElems {
                         .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
                           case RandomType(name, tpe) =>
                             Free.pure(RandomType[L](name, tpe))
-                          case ClassDefinition(name, tpe, cls, _, _) =>
+                          case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
-                          case EnumDefinition(name, tpe, elems, cls, _) =>
+                          case EnumDefinition(name, tpe, _, elems, cls, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
-                          case ADT(name, tpe, _, _) =>
+                          case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
                         })
                     case d @ DeferredArray(name) =>
@@ -70,11 +76,11 @@ object ProtocolElems {
                         .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
                           case RandomType(name, tpe) =>
                             liftVectorType(tpe).map(RandomType[L](name, _))
-                          case ClassDefinition(name, tpe, cls, _, _) =>
+                          case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                          case EnumDefinition(name, tpe, elems, cls, _) =>
+                          case EnumDefinition(name, tpe, _, elems, cls, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                          case ADT(name, tpe, _, _) =>
+                          case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
                         })
                     case d @ DeferredMap(name) =>
@@ -83,11 +89,11 @@ object ProtocolElems {
                         .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
                           case RandomType(name, tpe) =>
                             liftMapType(tpe).map(RandomType[L](name, _))
-                          case ClassDefinition(name, tpe, cls, _, _) =>
+                          case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                          case EnumDefinition(name, tpe, elems, cls, _) =>
+                          case EnumDefinition(name, tpe, _, elems, cls, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
-                          case ADT(name, tpe, _, _) =>
+                          case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType).map(RandomType[L](name, _))
                         })
                   })

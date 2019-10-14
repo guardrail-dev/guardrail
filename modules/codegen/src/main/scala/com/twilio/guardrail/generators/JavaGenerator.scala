@@ -269,7 +269,7 @@ object JavaGenerator {
           showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
 
           nameAndCompilationUnit = elem match {
-            case EnumDefinition(_, _, _, cls, staticDefns) =>
+            case EnumDefinition(_, _, _, _, cls, staticDefns) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)
@@ -280,7 +280,7 @@ object JavaGenerator {
               cu.addType(clsCopy)
               Option((cls.getName.getIdentifier, cu))
 
-            case ClassDefinition(_, _, cls, staticDefns, _) =>
+            case ClassDefinition(_, _, _, cls, staticDefns, _) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)
@@ -290,7 +290,7 @@ object JavaGenerator {
               cu.addType(clsCopy)
               Option((cls.getName.getIdentifier, cu))
 
-            case ADT(name, tpe, trt, staticDefns) =>
+            case ADT(name, tpe, _, trt, staticDefns) =>
               val cu = new CompilationUnit()
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)

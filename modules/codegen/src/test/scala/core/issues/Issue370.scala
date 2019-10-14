@@ -50,7 +50,7 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Test nested enum definition") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, c1, s, _) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, c1, s, _) :: _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)

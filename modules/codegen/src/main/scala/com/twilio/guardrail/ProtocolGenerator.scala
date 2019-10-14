@@ -102,12 +102,13 @@ object ProtocolGenerator {
 
   private[this] def fromEnum[L <: LA, F[_]](
       clsName: String,
-      swagger: Schema[_]
+      swagger: Schema[_],
+      dtoPackage: List[String]
   )(implicit E: EnumProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Either[String, EnumDefinition[L]]] = {
     import E._
     import Sc._
 
-    def validProg(enum: List[String], tpe: L#Type): Free[F, EnumDefinition[L]] =
+    def validProg(enum: List[String], tpe: L#Type, fullType: L#Type): Free[F, EnumDefinition[L]] =
       for {
         elems <- enum.traverse { elem =>
           for {
@@ -124,7 +125,7 @@ object ProtocolGenerator {
         defn        <- renderClass(clsName, tpe, elems)
         staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
         classType   <- pureTypeName(clsName)
-      } yield EnumDefinition[L](clsName, classType, elems, defn, staticDefns)
+      } yield EnumDefinition[L](clsName, classType, fullType, elems, defn, staticDefns)
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
@@ -135,7 +136,8 @@ object ProtocolGenerator {
       enum          <- extractEnum(swagger)
       customTpeName <- SwaggerUtil.customTypeName(swagger)
       tpe           <- SwaggerUtil.typeName(tpeName, _swagger.downField("format", _.getFormat()), customTpeName)
-      res           <- enum.traverse(validProg(_, tpe))
+      fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
+      res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
   }
 
@@ -164,7 +166,8 @@ object ProtocolGenerator {
   private[this] def fromPoly[L <: LA, F[_]](
       hierarchy: ClassParent[L],
       concreteTypes: List[PropMeta[L]],
-      definitions: List[(String, Tracker[Schema[_]])]
+      definitions: List[(String, Tracker[Schema[_]])],
+      dtoPackage: List[String]
   )(implicit F: FrameworkTerms[L, F],
     P: PolyProtocolTerms[L, F],
     E: EnumProtocolTerms[L, F],
@@ -186,7 +189,7 @@ object ProtocolGenerator {
 
     for {
       parents <- hierarchy.model
-        .refine[Free[F, List[SuperClass[L]]]]({ case c: ComposedSchema => c })(extractParents(_, definitions, concreteTypes))
+        .refine[Free[F, List[SuperClass[L]]]]({ case c: ComposedSchema => c })(extractParents(_, definitions, concreteTypes, dtoPackage))
         .getOrElse(Free.pure[F, List[SuperClass[L]]](Nil))
       props <- extractProperties(hierarchy.model)
       requiredFields           = hierarchy.required ::: hierarchy.children.flatMap(_.required)
@@ -212,17 +215,22 @@ object ProtocolGenerator {
       decoder     <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
       staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)
       tpe         <- pureTypeName(hierarchy.name)
+      fullType    <- selectType(NonEmptyList.fromList(dtoPackage :+ hierarchy.name).getOrElse(NonEmptyList.of(hierarchy.name)))
     } yield {
       ADT[L](
         name = hierarchy.name,
         tpe = tpe,
+        fullType = fullType,
         trt = definition,
         staticDefns = staticDefns
       )
     }
   }
 
-  def extractParents[L <: LA, F[_]](elem: Tracker[ComposedSchema], definitions: List[(String, Tracker[Schema[_]])], concreteTypes: List[PropMeta[L]])(
+  def extractParents[L <: LA, F[_]](elem: Tracker[ComposedSchema],
+                                    definitions: List[(String, Tracker[Schema[_]])],
+                                    concreteTypes: List[PropMeta[L]],
+                                    dtoPackage: List[String])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, F],
@@ -266,7 +274,13 @@ object ProtocolGenerator {
             requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
             _withProps <- concreteInterfaces.traverse(extractProperties)
             props = _extendsProps ++ _withProps.flatten
-            (params, _) <- prepareProperties(NonEmptyList.of(clsName), classMapping, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
+            (params, _) <- prepareProperties(NonEmptyList.of(clsName),
+                                             classMapping,
+                                             props.map(_.map(_.get)),
+                                             requiredFields,
+                                             concreteTypes,
+                                             definitions,
+                                             dtoPackage)
             interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
             tpe <- parseTypeName(clsName)
 
@@ -295,7 +309,8 @@ object ProtocolGenerator {
                                              model: Tracker[Schema[_]],
                                              parents: List[SuperClass[L]],
                                              concreteTypes: List[PropMeta[L]],
-                                             definitions: List[(String, Tracker[Schema[_]])])(
+                                             definitions: List[(String, Tracker[Schema[_]])],
+                                             dtoPackage: List[String])(
       implicit M: ModelProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, F],
@@ -310,11 +325,12 @@ object ProtocolGenerator {
       props <- extractProperties(model)
       requiredFields           = getRequiredFieldsRec(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      (params, nestedDefinitions) <- prepareProperties(clsName, Map.empty, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
+      (params, nestedDefinitions) <- prepareProperties(clsName, Map.empty, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions, dtoPackage)
       defn                        <- renderDTOClass(clsName.last, params, parents)
       encoder                     <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       decoder                     <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       tpe                         <- parseTypeName(clsName.last)
+      fullType                    <- selectType(NonEmptyList.fromList(dtoPackage ++ clsName.toList).head)
       staticDefns                 <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
       result <- if (parents.isEmpty && props.isEmpty) Free.pure[F, Either[String, ClassDefinition[L]]](Left("Entity isn't model"))
       else {
@@ -336,7 +352,7 @@ object ProtocolGenerator {
         }
         nestedClasses.map { v =>
           val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ v)
-          tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, defn, finalStaticDefns, parents))
+          tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, fullType, defn, finalStaticDefns, parents))
         }
       }
     } yield result
@@ -348,7 +364,8 @@ object ProtocolGenerator {
       props: List[(String, Schema[_])],
       requiredFields: List[String],
       concreteTypes: List[PropMeta[L]],
-      definitions: List[(String, Tracker[Schema[_]])]
+      definitions: List[(String, Tracker[Schema[_]])],
+      dtoPackage: List[String],
   )(implicit M: ModelProtocolTerms[L, F],
     F: FrameworkTerms[L, F],
     E: EnumProtocolTerms[L, F],
@@ -364,19 +381,19 @@ object ProtocolGenerator {
       val nestedClassName = getClsName(name).append(name.toCamelCase.capitalize)
       schema
         .refine[Free[F, Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
-          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions).map(Some(_))
+          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage).map(Some(_))
         )
         .orRefine({ case o: ComposedSchema => o })(
           o =>
             for {
-              parents              <- extractParents(o, definitions, concreteTypes)
-              maybeClassDefinition <- fromModel(nestedClassName, schema, parents, concreteTypes, definitions)
+              parents              <- extractParents(o, definitions, concreteTypes, dtoPackage)
+              maybeClassDefinition <- fromModel(nestedClassName, schema, parents, concreteTypes, definitions, dtoPackage)
             } yield Some(maybeClassDefinition)
         )
         .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
         .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
           s => {
-            fromEnum(nestedClassName.last, s.get).map(Some(_))
+            fromEnum(nestedClassName.last, s.get, dtoPackage).map(Some(_))
           }
         )
         .getOrElse(Free.pure[F, Option[Either[String, NestedProtocolElems[L]]]](Option.empty))
@@ -543,7 +560,7 @@ object ProtocolGenerator {
       .map(_.partitionEither[ClassParent[L], (String, Tracker[Schema[_]])](identity))
   }
 
-  def fromSwagger[L <: LA, F[_]](swagger: Tracker[OpenAPI])(
+  def fromSwagger[L <: LA, F[_]](swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit E: EnumProtocolTerms[L, F],
       M: ModelProtocolTerms[L, F],
       R: ArrayProtocolTerms[L, F],
@@ -561,23 +578,23 @@ object ProtocolGenerator {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value.map(_.map(_.get)))
-      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value))
+      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
           model
             .refine({ case m: StringSchema => m })(
               m =>
                 for {
-                  enum  <- fromEnum(clsName, m.get)
-                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value)
+                  enum  <- fromEnum(clsName, m.get, dtoPackage)
+                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage)
                   alias <- modelTypeAlias(clsName, m.get)
                 } yield enum.orElse(model).getOrElse(alias)
             )
             .orRefine({ case c: ComposedSchema => c })(
               comp =>
                 for {
-                  parents <- extractParents(comp, definitions.value, concreteTypes)
-                  model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions.value)
+                  parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage)
+                  model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions.value, dtoPackage)
                   alias   <- modelTypeAlias(clsName, comp.get)
                 } yield model.getOrElse(alias)
             )
@@ -585,8 +602,8 @@ object ProtocolGenerator {
             .orRefine({ case o: ObjectSchema => o })(
               m =>
                 for {
-                  enum  <- fromEnum(clsName, m.get)
-                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value)
+                  enum  <- fromEnum(clsName, m.get, dtoPackage)
+                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage)
                   alias <- modelTypeAlias(clsName, m.get)
                 } yield enum.orElse(model).getOrElse(alias)
             )

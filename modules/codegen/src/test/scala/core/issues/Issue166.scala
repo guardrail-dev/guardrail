@@ -47,13 +47,14 @@ class Issue166 extends FunSuite with Matchers with SwaggerSpecRunner {
         .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
           CodegenTarget.Models,
           Context.empty,
-          Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI)
+          Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
+          List.empty
         )
         .foldMap(Http4s)
     )
 
-    val ProtocolDefinitions(ClassDefinition(_, _, cls, _, _) :: Nil, _, _, _) = proto
-    val CodegenDefinitions(Nil, Nil, Nil, None)                               = codegen
+    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _) = proto
+    val CodegenDefinitions(Nil, Nil, Nil, None)                                  = codegen
 
     val definition = q"""
       case class Blix(map: String)
