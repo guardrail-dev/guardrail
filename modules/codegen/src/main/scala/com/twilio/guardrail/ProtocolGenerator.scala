@@ -375,9 +375,7 @@ object ProtocolGenerator {
         )
         .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
         .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
-          s => {
-            fromEnum(nestedClassName.last, s.get).map(Some(_))
-          }
+          s => fromEnum(nestedClassName.last, s.get).map(Some(_))
         )
         .getOrElse(Free.pure[F, Option[Either[String, NestedProtocolElems[L]]]](Option.empty))
     }
