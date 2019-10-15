@@ -256,7 +256,7 @@ object ProtocolGenerator {
                   })
                   .headOption
             )
-          val concreteInterfaces = concreteInterfacesWithClass.map(_._2)
+          val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
           val classMapping = (for {
             (cls, schema) <- concreteInterfacesWithClass
             name          <- schema.get.getProperties.keySet().asScala.toList
