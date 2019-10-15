@@ -352,8 +352,7 @@ object CirceProtocolGenerator {
       case PackageObjectImports() =>
         Target.pure(
           List(
-            q"import java.time._",
-            q"import io.circe.java8.time._"
+            q"import java.time._"
           )
         )
 

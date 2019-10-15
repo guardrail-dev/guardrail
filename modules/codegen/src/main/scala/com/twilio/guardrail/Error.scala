@@ -10,6 +10,9 @@ case object NoFramework                                       extends Error
 case object PrintHelp                                         extends Error
 case class RuntimeFailure(message: String)                    extends Error
 case class UserError(message: String)                         extends Error
+case class UnconsumedModules(modules: List[String])           extends Error
+case class MissingModule(section: String)                     extends Error
+case class ModuleConflict(section: String)                    extends Error
 object Error {
   case class ArgName(value: String) extends AnyVal
 }
