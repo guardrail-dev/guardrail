@@ -253,7 +253,7 @@ object ProtocolGenerator {
           val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
           val classMapping = (for {
             (cls, schema) <- concreteInterfacesWithClass
-            name          <- schema.get.getProperties.keySet().asScala.toList
+            (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
           } yield (name, cls)).toMap
           for {
             _extendsProps <- extractProperties(_extends)
