@@ -238,24 +238,18 @@ object ProtocolGenerator {
       a <- extractSuperClass(elem, definitions)
       supper <- a.flatTraverse {
         case (clsName, _extends, interfaces) =>
-          val concreteInterfacesWithClass = interfaces
-            .flatMap(
-              interface =>
-                definitions
-                  .flatMap({
-                    case (cls, tracker) =>
-                      val result = tracker
-                        .refine[Tracker[Schema[_]]]({
-                          case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
-                        })(
-                          identity _
-                        )
-                        .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
-                        .toOption
-                      result.map(cls -> _)
-                  })
-                  .headOption
-            )
+          val concreteInterfacesWithClass = for {
+            interface      <- interfaces
+            (cls, tracker) <- definitions
+            result <- tracker
+              .refine[Tracker[Schema[_]]]({
+                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
+              })(
+                identity _
+              )
+              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
+              .toOption
+          } yield (cls -> result)
           val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
           val classMapping = (for {
             (cls, schema) <- concreteInterfacesWithClass
