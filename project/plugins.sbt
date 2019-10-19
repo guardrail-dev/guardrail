@@ -1,7 +1,5 @@
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.10")
 
-addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.3.4")
-
 addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.5")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
