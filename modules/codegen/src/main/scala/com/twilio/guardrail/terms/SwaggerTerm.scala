@@ -166,8 +166,12 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       .downField("content", _.getContent())
       .indexedCosequence
       .value
-      .flatMap({
-        case (_, mt) =>
+      .collect {
+        case (RouteMeta.ContentType(t), mt) if t == RouteMeta.UrlencodedFormData || t == RouteMeta.MultipartFormData =>
+          mt
+      }
+      .flatMap(
+        mt =>
           for {
             mtSchema <- mt.downField("schema", _.getSchema()).indexedCosequence.toList
             requiredFields = mtSchema.downField("required", _.getRequired).get.toSet
@@ -198,8 +202,8 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             }
 
             requestBody.map(_ => p)
-          }
-      })
+        }
+      )
       .traverse[State[ParameterCountState, ?], Tracker[Parameter]] { p =>
         State[ParameterCountState, Tracker[Parameter]]({
           case (maxCount, instances) =>
