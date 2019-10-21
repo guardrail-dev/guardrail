@@ -11,7 +11,6 @@ import org.scalatest.time.SpanSugar._
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe._
-import _root_.jawn.IncompleteParseException
 import cats.implicits._
 import cats.data.OptionT
 

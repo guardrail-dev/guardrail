@@ -11,7 +11,6 @@ import org.scalatest.time.SpanSugar._
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.Future
 import io.circe._
-import _root_.jawn.IncompleteParseException
 
 class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)

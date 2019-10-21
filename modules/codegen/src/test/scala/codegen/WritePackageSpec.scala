@@ -84,14 +84,15 @@ class WritePackageSpec extends FunSuite with Matchers {
       List.empty
     )
 
-    import com.twilio.guardrail.generators.AkkaHttp
+    import com.twilio.guardrail.generators.{ AkkaHttp, ScalaModule }
     val result: List[WriteTree] = CoreTarget
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
           .foldMap(
             CoreTermInterp[ScalaLanguage](
-              "akka-http", {
+              "akka-http",
+              ScalaModule.extract, {
                 case "akka-http" => AkkaHttp
               }, {
                 _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
@@ -145,14 +146,15 @@ class WritePackageSpec extends FunSuite with Matchers {
       List.empty
     )
 
-    import com.twilio.guardrail.generators.AkkaHttp
+    import com.twilio.guardrail.generators.{ AkkaHttp, ScalaModule }
     val result: List[WriteTree] = CoreTarget
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
           .foldMap(
             CoreTermInterp[ScalaLanguage](
-              "akka-http", {
+              "akka-http",
+              ScalaModule.extract, {
                 case "akka-http" => AkkaHttp
               }, {
                 _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))

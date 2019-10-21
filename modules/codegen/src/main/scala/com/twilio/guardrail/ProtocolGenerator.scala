@@ -246,41 +246,29 @@ object ProtocolGenerator {
       a <- extractSuperClass(elem, definitions)
       supper <- a.flatTraverse {
         case (clsName, _extends, interfaces) =>
-          val concreteInterfacesWithClass = interfaces
-            .flatMap(
-              interface =>
-                definitions
-                  .flatMap({
-                    case (cls, tracker) =>
-                      val result = tracker
-                        .refine[Tracker[Schema[_]]]({
-                          case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
-                        })(
-                          identity _
-                        )
-                        .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
-                        .toOption
-                      result.map(cls -> _)
-                  })
-                  .headOption
-            )
-          val concreteInterfaces = concreteInterfacesWithClass.map(_._2)
+          val concreteInterfacesWithClass = for {
+            interface      <- interfaces
+            (cls, tracker) <- definitions
+            result <- tracker
+              .refine[Tracker[Schema[_]]]({
+                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
+              })(
+                identity _
+              )
+              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
+              .toOption
+          } yield (cls -> result)
+          val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
           val classMapping = (for {
             (cls, schema) <- concreteInterfacesWithClass
-            name          <- schema.get.getProperties.keySet().asScala.toList
+            (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
           } yield (name, cls)).toMap
           for {
             _extendsProps <- extractProperties(_extends)
             requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
             _withProps <- concreteInterfaces.traverse(extractProperties)
             props = _extendsProps ++ _withProps.flatten
-            (params, _) <- prepareProperties(NonEmptyList.of(clsName),
-                                             classMapping,
-                                             props.map(_.map(_.get)),
-                                             requiredFields,
-                                             concreteTypes,
-                                             definitions,
-                                             dtoPackage)
+            (params, _) <- prepareProperties(NonEmptyList.of(clsName), classMapping, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
             interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
             tpe <- parseTypeName(clsName)
 
