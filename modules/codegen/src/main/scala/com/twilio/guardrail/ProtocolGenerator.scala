@@ -238,29 +238,29 @@ object ProtocolGenerator {
       a <- extractSuperClass(elem, definitions)
       supper <- a.flatTraverse {
         case (clsName, _extends, interfaces) =>
-          val concreteInterfaces = interfaces
-            .flatMap(
-              interface =>
-                definitions
-                  .flatMap({
-                    case (cls, tracker) =>
-                      tracker
-                        .refine[Tracker[Schema[_]]]({
-                          case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
-                        })(
-                          identity _
-                        )
-                        .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
-                        .toOption
-                  })
-                  .headOption
-            )
+          val concreteInterfacesWithClass = for {
+            interface      <- interfaces
+            (cls, tracker) <- definitions
+            result <- tracker
+              .refine[Tracker[Schema[_]]]({
+                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
+              })(
+                identity _
+              )
+              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
+              .toOption
+          } yield (cls -> result)
+          val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
+          val classMapping = (for {
+            (cls, schema) <- concreteInterfacesWithClass
+            (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
+          } yield (name, cls)).toMap
           for {
             _extendsProps <- extractProperties(_extends)
             requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
             _withProps <- concreteInterfaces.traverse(extractProperties)
             props = _extendsProps ++ _withProps.flatten
-            (params, _) <- prepareProperties(NonEmptyList.of(clsName), props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
+            (params, _) <- prepareProperties(NonEmptyList.of(clsName), classMapping, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
             interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
             tpe <- parseTypeName(clsName)
 
@@ -304,7 +304,7 @@ object ProtocolGenerator {
       props <- extractProperties(model)
       requiredFields           = getRequiredFieldsRec(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      (params, nestedDefinitions) <- prepareProperties(clsName, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
+      (params, nestedDefinitions) <- prepareProperties(clsName, Map.empty, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions)
       defn                        <- renderDTOClass(clsName.last, params, parents)
       encoder                     <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       decoder                     <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
@@ -338,6 +338,7 @@ object ProtocolGenerator {
 
   private def prepareProperties[L <: LA, F[_]](
       clsName: NonEmptyList[String],
+      propertyToTypeLookup: Map[String, String],
       props: List[(String, Schema[_])],
       requiredFields: List[String],
       concreteTypes: List[PropMeta[L]],
@@ -351,8 +352,10 @@ object ProtocolGenerator {
     import F._
     import M._
     import Sc._
+    def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
+
     def processProperty(name: String, schema: Tracker[Schema[_]]): Free[F, Option[Either[String, NestedProtocolElems[L]]]] = {
-      val nestedClassName = clsName.append(name.toCamelCase.capitalize)
+      val nestedClassName = getClsName(name).append(name.toCamelCase.capitalize)
       schema
         .refine[Free[F, Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
           _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions).map(Some(_))
@@ -374,7 +377,7 @@ object ProtocolGenerator {
     for {
       paramsAndNestedDefinitions <- props.traverse[Free[F, ?], (ProtocolParameter[L], Option[NestedProtocolElems[L]])] {
         case (name, schema) =>
-          val typeName = clsName.append(name.toCamelCase.capitalize)
+          val typeName = getClsName(name).append(name.toCamelCase.capitalize)
           for {
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, Tracker.hackyAdapt(schema, Vector.empty))
@@ -385,12 +388,12 @@ object ProtocolGenerator {
             customType <- SwaggerUtil.customTypeName(schema)
             isRequired = requiredFields.contains(name)
             defValue <- defaultValue(typeName, schema, isRequired, definitions.map(_.map(_.get)))
-            parameter <- transformProperty(clsName.last, needCamelSnakeConversion, concreteTypes)(name,
-                                                                                                  schema,
-                                                                                                  resolvedType,
-                                                                                                  isRequired,
-                                                                                                  customType.isDefined,
-                                                                                                  defValue)
+            parameter <- transformProperty(getClsName(name).last, needCamelSnakeConversion, concreteTypes)(name,
+                                                                                                           schema,
+                                                                                                           resolvedType,
+                                                                                                           isRequired,
+                                                                                                           customType.isDefined,
+                                                                                                           defValue)
           } yield (parameter, maybeNestedDefinition.flatMap(_.toOption))
       }
       (params, nestedDefinitions) = paramsAndNestedDefinitions.unzip

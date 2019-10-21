@@ -1,0 +1,45 @@
+swagger: '2.0'
+info:
+  title: Polymorphism nested example
+  version: 1.0.0
+produces:
+  - application/json
+paths:
+  /fo:
+    get:
+      operationId: getPet
+      responses:
+        200:
+          description: Return the details about the pet
+          schema:
+            $ref: '#/definitions/TestResponse'
+definitions:
+  TestResponse:
+    allOf:
+      - $ref: '#/definitions/A'
+      - $ref: '#/definitions/B'
+      - $ref: '#/definitions/C'
+  A:
+    type: object
+    properties:
+      enum1:
+        type: string
+        enum:
+          - A
+          - B
+  B:
+    type: object
+    properties:
+      enum2:
+        type: string
+        enum:
+          - C
+          - D
+  C:
+    type: object
+    properties:
+      obj:
+        type: object
+        properties:
+          value:
+            type: string

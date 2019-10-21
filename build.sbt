@@ -13,7 +13,7 @@ crossScalaVersions in ThisBuild := Seq("2.12.10")
 val akkaVersion          = "10.0.14"
 val catsVersion          = "1.6.0"
 val catsEffectVersion    = "1.0.0"
-val circeVersion         = "0.10.1"
+val circeVersion         = "0.12.1"
 val http4sVersion        = "0.20.0"
 val scalacheckVersion    = "1.14.2"
 val scalatestVersion     = "3.0.8"
@@ -70,6 +70,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
+  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(Set("akka-http", "endpoints", "http4s")),
   ExampleCase(sampleResource("raw-response.yaml"), "raw"),
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
@@ -262,7 +263,7 @@ lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
       "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
       "io.circe"          %% "circe-core"        % circeVersion,
       "io.circe"          %% "circe-generic"     % circeVersion,
-      "io.circe"          %% "circe-java8"       % circeVersion,
+      "io.circe"          %% "circe-jawn"        % circeVersion,
       "io.circe"          %% "circe-parser"      % circeVersion,
       "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
       "org.typelevel"     %% "cats-core"         % catsVersion
@@ -279,7 +280,6 @@ lazy val http4sSample = (project in file("modules/sample-http4s"))
       "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
       "io.circe"      %% "circe-core"          % circeVersion,
       "io.circe"      %% "circe-generic"       % circeVersion,
-      "io.circe"      %% "circe-java8"         % circeVersion,
       "io.circe"      %% "circe-parser"        % circeVersion,
       "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
       "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
@@ -301,9 +301,8 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
       "io.circe"          %%% "circe-generic"                 % circeVersion,
-      "io.circe"          %%% "circe-java8"                   % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-M13",
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
       "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
@@ -335,7 +334,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
       "org.mockito"                %% "mockito-scala"          % "1.2.0"            % Test,
       "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
       "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
-			"org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
+      "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     crossPaths := false,  // strangely needed to get the JUnit tests to run at all

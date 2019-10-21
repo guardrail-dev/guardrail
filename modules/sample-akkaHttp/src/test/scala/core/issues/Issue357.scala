@@ -1,6 +1,5 @@
 package core.issues
 
-import _root_.jawn.IncompleteParseException
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server._
