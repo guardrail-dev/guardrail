@@ -216,9 +216,10 @@ object Http4sClientGenerator {
             responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
             cases <- responses.value.traverse[Target, Case]({ resp =>
               val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+              val statusCode   = Term.Select(p"org.http4s.Status", resp.statusCodeName)
               (resp.value, resp.headers.value) match {
                 case (None, Nil) =>
-                  Target.pure(p"case ${resp.statusCodeName}(_) => F.pure($responseCompanionTerm.$responseTerm)")
+                  Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm)")
                 case (maybeBody, headers) =>
                   if (maybeBody.size + headers.size > 22) {
                     // we have hit case class limitation
@@ -233,7 +234,7 @@ object Http4sClientGenerator {
                     val decodeHeaders = buildHeaders(headers)
                     val mapArgs       = decodeValue.toList ++ decodeHeaders
                     val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
-                    Target.pure(p"case ${resp.statusCodeName}(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply)")
+                    Target.pure(p"case $statusCode(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply)")
                   }
               }
             })
@@ -331,7 +332,7 @@ object Http4sClientGenerator {
           )
         } yield renderedClientOperation)
 
-      case GetImports(tracing) => Target.pure(List(q"import org.http4s.Status._"))
+      case GetImports(tracing) => Target.pure(List.empty)
 
       case GetExtraImports(tracing) => Target.pure(List.empty)
 
