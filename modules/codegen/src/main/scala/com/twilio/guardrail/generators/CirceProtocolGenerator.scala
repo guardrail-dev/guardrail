@@ -381,7 +381,7 @@ object CirceProtocolGenerator {
       case ExtractSuperClass(swagger, definitions) =>
         def allParents: Tracker[Schema[_]] => Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
           _.refine[Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]]({ case x: ComposedSchema => x })(
-            _.downField("allOf", _.getAllOf()).indexedDistribute match {
+            _.downField("allOf", _.getAllOf()).indexedDistribute.filter(_.downField("$ref", _.get$ref()).unwrapTracker.nonEmpty) match {
               case head :: tail =>
                 definitions
                   .collectFirst({
