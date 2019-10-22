@@ -8,7 +8,6 @@ import scala.collection.JavaConverters._
 
 class Tracker[+A] private[core] (private[core] val get: A, private[core] val history: Vector[String]) {
   override def toString(): String = s"Tracker($get, $history)"
-  override def hashCode(): Int    = get.hashCode // FIXME: Are two things with different histories identical?
 }
 
 trait LowPriorityTrackerEvidence {
