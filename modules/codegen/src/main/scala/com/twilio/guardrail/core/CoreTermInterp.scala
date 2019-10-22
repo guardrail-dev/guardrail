@@ -2,28 +2,12 @@ package com.twilio.guardrail
 package core
 
 import cats.data.{ NonEmptyList, State }
-import cats.free.Free
 import cats.implicits._
 import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
-import java.nio.file.{ Files, Paths }
-import java.util
-import scala.util.Try
+import java.nio.file.Paths
 import scala.util.control.NonFatal
-
-object CoreTermInterp {
-  def filterUnchanged[F[_]](trees: List[WriteTree]): Free[F, List[WriteTree]] =
-    Free.pure[F, List[WriteTree]](
-      trees.filter({
-        case WriteTree(path, contents) =>
-          Try(path.toFile.length())
-            .filter(_ == contents.length)
-            .flatMap(_ => Try(!util.Arrays.equals(Files.readAllBytes(path), contents)))
-            .getOrElse(true)
-      })
-    )
-}
 
 case class CoreTermInterp[L <: LA](defaultFramework: String,
                                    handleModules: NonEmptyList[String] => CoreTarget[CodegenApplication[L, ?] ~> Target],
@@ -160,8 +144,7 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
                   (proto, codegen) = defs
                   result <- Common
                     .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
-                  filteredResult <- CoreTermInterp.filterUnchanged(result)
-                } yield filteredResult).foldMap(targetInterpreter)
+                } yield result).foldMap(targetInterpreter)
               } catch {
                 case NonFatal(ex) =>
                   val stackTrace =

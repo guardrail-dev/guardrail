@@ -6,13 +6,17 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{ Files, Path, StandardOpenOption }
 import scala.io.AnsiColor
 
+sealed trait WriteTreeState
+case object FileAbsent    extends WriteTreeState
+case object FileDifferent extends WriteTreeState
+case object FileIdentical extends WriteTreeState
 case class WriteTree(path: Path, contents: Array[Byte])
 object WriteTree {
   val unsafeWriteTreeLogged: WriteTree => Writer[List[String], Path] = {
     case WriteTree(path, data) =>
-      Files.createDirectories(path.getParent)
+      val _ = Files.createDirectories(path.getParent)
       for {
-        _ <- if (Files.exists(path)) {
+        writeState <- if (Files.exists(path)) {
           val exists: Array[Byte] = Files.readAllBytes(path)
           val diffIdx: Option[Int] =
             exists
@@ -23,7 +27,7 @@ object WriteTree {
               .orElse(Some(Math.max(exists.length, data.length)))
               .filterNot(Function.const(data.length == exists.length))
 
-          diffIdx.traverse { diffIdx =>
+          diffIdx.fold[Writer[List[String], WriteTreeState]](Writer.value(FileIdentical))({ diffIdx =>
             val existSample = new String(exists, UTF_8)
               .slice(Math.max(diffIdx - 10, diffIdx), Math.max(diffIdx - 10, diffIdx) + 50)
               .replace("\n", "\\n")
@@ -37,10 +41,15 @@ object WriteTree {
             |
             |  Existing file: $existSample
             |  New file     : $newSample
-            |""".stripMargin))
-          }
-        } else Writer(List.empty[String], Option.empty[Unit])
-      } yield Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            |""".stripMargin)) >> Writer.value(FileDifferent)
+          })
+        } else Writer.value[List[String], WriteTreeState](FileAbsent)
+      } yield
+        writeState match {
+          case FileAbsent    => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+          case FileDifferent => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+          case FileIdentical => path
+        }
   }
 
   val unsafeWriteTree: WriteTree => Path =
