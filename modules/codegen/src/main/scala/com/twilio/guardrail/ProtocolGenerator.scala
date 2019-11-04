@@ -268,7 +268,13 @@ object ProtocolGenerator {
             requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
             _withProps <- concreteInterfaces.traverse(extractProperties)
             props = _extendsProps ++ _withProps.flatten
-            (params, _) <- prepareProperties(NonEmptyList.of(clsName), classMapping, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions, dtoPackage)
+            (params, _) <- prepareProperties(NonEmptyList.of(clsName),
+                                             classMapping,
+                                             props.map(_.map(_.get)),
+                                             requiredFields,
+                                             concreteTypes,
+                                             definitions,
+                                             dtoPackage)
             interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
             tpe <- parseTypeName(clsName)
 
