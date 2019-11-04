@@ -3,6 +3,12 @@ package com.twilio.guardrail.core
 import cats.{ Eval, FlatMap, Foldable, Functor, MonoidK }
 import cats.implicits._
 
+/** IndexedDistributive, heavily inspired by Data.Distributive, but exposing an index into the structure being walked
+  *
+  *  val result: List[(String, Tracker[Foo])] =
+  *    IndexedDistributive[Tracker[List[(String, HasFoo)]]]
+  *      .cotraverse(value)(_.downField("foo"), _.getFoo)
+  */
 trait IndexedDistributive[F[_]] {
   def indexedDistribute[G[_], A](value: F[G[A]])(implicit G: IndexedFunctor[G]): G[F[A]]
 }

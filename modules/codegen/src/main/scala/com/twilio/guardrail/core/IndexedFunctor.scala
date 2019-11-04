@@ -2,6 +2,10 @@ package com.twilio.guardrail.core
 
 import cats.data._
 
+/** IndexedFunctor, similar to Functor except exposing an index during map.
+  *
+  *  Additionally, label(i: I): Option[String] may convert the exposed index into a string
+  */
 trait IndexedFunctor[F[_]] {
   type I
   def map[A, B](fa: F[A])(f: (I, A) => B): F[B]

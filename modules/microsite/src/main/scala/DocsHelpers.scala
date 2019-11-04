@@ -5,6 +5,7 @@ import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.AkkaHttp
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
@@ -18,7 +19,7 @@ object DocsHelpers {
   def renderScalaSnippet(generator: FunctionK[CodegenApplication[ScalaLanguage, ?], Target], identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
-    val openAPI = new OpenAPIParser().readLocation(sampleSpec, new java.util.LinkedList(), parseOpts).getOpenAPI
+    val openAPI = Tracker(new OpenAPIParser().readLocation(sampleSpec, new java.util.LinkedList(), parseOpts).getOpenAPI)
 
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>

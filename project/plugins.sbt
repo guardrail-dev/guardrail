@@ -4,7 +4,7 @@ addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.5")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.4.3")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.0")
 
 addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "1.5.1")
 

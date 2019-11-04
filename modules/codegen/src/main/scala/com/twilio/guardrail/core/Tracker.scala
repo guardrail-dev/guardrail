@@ -6,9 +6,28 @@ import cats.implicits._
 import com.twilio.guardrail.Target
 import scala.collection.JavaConverters._
 
+/**
+  * Tracker is a class to marshal access into potentially nullable fields in Java classes,
+  * while maintaining a human-readable history of which properties were accessed.
+  *
+  * Tracker heavily utilizes syntax from IndexedFunctor and IndexedDistributive.
+  * These classes are similar to Functor and Traversable, except they expose the
+  * index into the structure they are walking over. This is used to automatically
+  * build the history while walking structures.
+  *
+  * val tracker:        Tracker[        OpenAPI  ] = Tracker(openAPI)
+  * val servers:        Tracker[List[   Server  ]] = tracker.downField("servers", _.getServers)
+  * val firstServer:    Tracker[Option[ Server  ]] = tracker.map(_.headOption)
+  * val firstServerUrl: Tracker[Option[ String  ]] = firstServer.flatDownField("url", _.getUrl)
+  *
+  * val trackedUrl:     Tracker[Option[ URL     ]] = firstServerUrl.map(_.map(new URL(_)))
+  *
+  * // Examples of extracting:
+  * val firstServerUrl:         Option[ URL     ]  = trackedUrl.unwrapTracker  // Throw away history
+  * val firstServerUrl:         Target[ URL     ]  = trackedUrl.raiseErrorIfEmpty("No Server URL found!")  // Append history to the end of the error message
+  */
 class Tracker[+A] private[core] (private[core] val get: A, private[core] val history: Vector[String]) {
   override def toString(): String = s"Tracker($get, $history)"
-  override def hashCode(): Int    = get.hashCode // FIXME: Are two things with different histories identical?
 }
 
 trait LowPriorityTrackerEvidence {
