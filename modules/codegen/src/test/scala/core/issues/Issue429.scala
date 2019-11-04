@@ -22,7 +22,7 @@ class Issue429 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Test correct escaping of numbers used as identifiers") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
