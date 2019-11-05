@@ -149,11 +149,11 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         val allHeaders = headers ++ List[Option[Header]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
-          case org.http4s.Status.Ok(resp) =>
+          case _root_.org.http4s.Status.Ok(resp) =>
             F.map(getOrderByIdOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetOrderByIdResponse.Ok.apply)
-          case org.http4s.Status.BadRequest(_) =>
+          case _root_.org.http4s.Status.BadRequest(_) =>
             F.pure(GetOrderByIdResponse.BadRequest)
-          case org.http4s.Status.NotFound(_) =>
+          case _root_.org.http4s.Status.NotFound(_) =>
             F.pure(GetOrderByIdResponse.NotFound)
           case resp => F.raiseError(UnexpectedStatus(resp.status))
         })
@@ -162,9 +162,9 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
-          case org.http4s.Status.BadRequest(_) =>
+          case _root_.org.http4s.Status.BadRequest(_) =>
             F.pure(DeleteOrderResponse.BadRequest)
-          case org.http4s.Status.NotFound(_) =>
+          case _root_.org.http4s.Status.NotFound(_) =>
             F.pure(DeleteOrderResponse.NotFound)
           case resp => F.raiseError(UnexpectedStatus(resp.status))
         })

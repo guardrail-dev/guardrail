@@ -216,7 +216,7 @@ object Http4sClientGenerator {
             responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
             cases <- responses.value.traverse[Target, Case]({ resp =>
               val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-              val statusCode   = Term.Select(p"org.http4s.Status", resp.statusCodeName)
+              val statusCode   = Term.Select(p"_root_.org.http4s.Status", resp.statusCodeName)
               (resp.value, resp.headers.value) match {
                 case (None, Nil) =>
                   Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm)")
