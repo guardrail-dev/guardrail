@@ -26,14 +26,15 @@ trait SwaggerSpecRunner extends EitherValues {
     }
 
   def runSwaggerSpec[L <: LA](
-      spec: String
+      spec: String,
+      dtoPackage: List[String] = List.empty
   ): (Context, FunctionK[CodegenApplication[L, ?], Target]) => (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
-    runSwagger(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI) _
+    runSwagger(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI, dtoPackage) _
   }
 
-  def runSwagger[L <: LA](swagger: OpenAPI)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
+  def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
       implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
@@ -44,7 +45,7 @@ trait SwaggerSpecRunner extends EitherValues {
           CodegenTarget.Client,
           context,
           Tracker(swagger),
-          List.empty
+          dtoPackage
         )
         .foldMap(framework)
         .valueOr({ err =>
