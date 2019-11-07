@@ -142,7 +142,7 @@ object Http4sGenerator {
           case "508" => Target.pure((508, q"LoopDetected"))
           case "510" => Target.pure((510, q"NotExtended"))
           case "511" => Target.pure((511, q"NetworkAuthenticationRequired"))
-          case _     => Target.raiseError(s"Unknown HTTP type: ${key}")
+          case _     => Target.raiseError(s"Unknown HTTP status code: ${key}")
         }
 
     }
