@@ -88,7 +88,7 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)
+      case class Foo(conflicting_name: scala.Option[String] = scala.None, ConflictingName: scala.Option[String] = scala.None)
     """
     val companion  = q"""
       object Foo {

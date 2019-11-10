@@ -72,14 +72,14 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val definition = q"""
       case class Something(
-        booleanValue: Option[Boolean] = None, stringValue: Option[String] = None,
-        longProperty: Option[Long] = None, intProperty: Option[Int] = None,
-        integerProperty: Option[BigInt] = None, floatProperty: Option[Float] = None,
-        doubleProperty: Option[Double] = None, numberProperty: Option[BigDecimal] = None,
-        untypedProperty: Option[io.circe.Json] = None,
-        objectProperty: Option[io.circe.Json] = None
-        /*, refProperty: Option[ref_target_property] = None, refTargetProperty: Option[String] = None,
-        arrayProperty: Option[IndexedSeq[ref_target_property]] = Option(IndexedSeq.empty)
+        booleanValue: scala.Option[Boolean] = scala.None, stringValue: scala.Option[String] = scala.None,
+        longProperty: scala.Option[Long] = scala.None, intProperty: scala.Option[Int] = scala.None,
+        integerProperty: scala.Option[BigInt] = scala.None, floatProperty: scala.Option[Float] = scala.None,
+        doubleProperty: scala.Option[Double] = scala.None, numberProperty: scala.Option[BigDecimal] = scala.None,
+        untypedProperty: scala.Option[io.circe.Json] = scala.None,
+        objectProperty: scala.Option[io.circe.Json] = scala.None
+        /*, refProperty: scala.Option[ref_target_property] = scala.None, refTargetProperty: scala.Option[String] = scala.None,
+        arrayProperty: scala.Option[IndexedSeq[ref_target_property]] = scala.Option(IndexedSeq.empty)
         */
       )
     """

@@ -121,7 +121,7 @@ class BigObjectSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class BigObject(v1: Option[Int] = None, v2: Option[Int] = None, v3: Option[Int] = None, v4: Option[Int] = None, v5: Option[Int] = None, v6: Option[Int] = None, v7: Option[Int] = None, v8: Option[Int] = None, v9: Option[Int] = None, v10: Option[Int] = None, v11: Option[Int] = None, v12: Option[Int] = None, v13: Option[Int] = None, v14: Option[Int] = None, v15: Option[Int] = None, v16: Option[Int] = None, v17: Option[Int] = None, v18: Option[Int] = None, v19: Option[Int] = None, v20: Option[Int] = None, v21: Option[Int] = None, v22: Option[Int] = None, v23: Option[Int] = None, v24: Option[Int] = None, v25: Option[Int] = None, v26: Option[Int] = None, v27: Option[Int] = None, v28: Option[Int] = None, v29: Option[Int] = None, v30: Option[Int] = None)
+      case class BigObject(v1: scala.Option[Int] = scala.None, v2: scala.Option[Int] = scala.None, v3: scala.Option[Int] = scala.None, v4: scala.Option[Int] = scala.None, v5: scala.Option[Int] = scala.None, v6: scala.Option[Int] = scala.None, v7: scala.Option[Int] = scala.None, v8: scala.Option[Int] = scala.None, v9: scala.Option[Int] = scala.None, v10: scala.Option[Int] = scala.None, v11: scala.Option[Int] = scala.None, v12: scala.Option[Int] = scala.None, v13: scala.Option[Int] = scala.None, v14: scala.Option[Int] = scala.None, v15: scala.Option[Int] = scala.None, v16: scala.Option[Int] = scala.None, v17: scala.Option[Int] = scala.None, v18: scala.Option[Int] = scala.None, v19: scala.Option[Int] = scala.None, v20: scala.Option[Int] = scala.None, v21: scala.Option[Int] = scala.None, v22: scala.Option[Int] = scala.None, v23: scala.Option[Int] = scala.None, v24: scala.Option[Int] = scala.None, v25: scala.Option[Int] = scala.None, v26: scala.Option[Int] = scala.None, v27: scala.Option[Int] = scala.None, v28: scala.Option[Int] = scala.None, v29: scala.Option[Int] = scala.None, v30: scala.Option[Int] = scala.None)
     """
     val companion  = q"""
       object BigObject {
@@ -131,36 +131,36 @@ class BigObjectSpec extends FunSuite with Matchers with SwaggerSpecRunner {
         }
         implicit val decodeBigObject: Decoder[BigObject] = new Decoder[BigObject] {
           final def apply(c: HCursor): Decoder.Result[BigObject] = for {
-            v1 <- c.downField("v1").as[Option[Int]]
-            v2 <- c.downField("v2").as[Option[Int]]
-            v3 <- c.downField("v3").as[Option[Int]]
-            v4 <- c.downField("v4").as[Option[Int]]
-            v5 <- c.downField("v5").as[Option[Int]]
-            v6 <- c.downField("v6").as[Option[Int]]
-            v7 <- c.downField("v7").as[Option[Int]]
-            v8 <- c.downField("v8").as[Option[Int]]
-            v9 <- c.downField("v9").as[Option[Int]]
-            v10 <- c.downField("v10").as[Option[Int]]
-            v11 <- c.downField("v11").as[Option[Int]]
-            v12 <- c.downField("v12").as[Option[Int]]
-            v13 <- c.downField("v13").as[Option[Int]]
-            v14 <- c.downField("v14").as[Option[Int]]
-            v15 <- c.downField("v15").as[Option[Int]]
-            v16 <- c.downField("v16").as[Option[Int]]
-            v17 <- c.downField("v17").as[Option[Int]]
-            v18 <- c.downField("v18").as[Option[Int]]
-            v19 <- c.downField("v19").as[Option[Int]]
-            v20 <- c.downField("v20").as[Option[Int]]
-            v21 <- c.downField("v21").as[Option[Int]]
-            v22 <- c.downField("v22").as[Option[Int]]
-            v23 <- c.downField("v23").as[Option[Int]]
-            v24 <- c.downField("v24").as[Option[Int]]
-            v25 <- c.downField("v25").as[Option[Int]]
-            v26 <- c.downField("v26").as[Option[Int]]
-            v27 <- c.downField("v27").as[Option[Int]]
-            v28 <- c.downField("v28").as[Option[Int]]
-            v29 <- c.downField("v29").as[Option[Int]]
-            v30 <- c.downField("v30").as[Option[Int]]
+            v1 <- c.downField("v1").as[scala.Option[Int]]
+            v2 <- c.downField("v2").as[scala.Option[Int]]
+            v3 <- c.downField("v3").as[scala.Option[Int]]
+            v4 <- c.downField("v4").as[scala.Option[Int]]
+            v5 <- c.downField("v5").as[scala.Option[Int]]
+            v6 <- c.downField("v6").as[scala.Option[Int]]
+            v7 <- c.downField("v7").as[scala.Option[Int]]
+            v8 <- c.downField("v8").as[scala.Option[Int]]
+            v9 <- c.downField("v9").as[scala.Option[Int]]
+            v10 <- c.downField("v10").as[scala.Option[Int]]
+            v11 <- c.downField("v11").as[scala.Option[Int]]
+            v12 <- c.downField("v12").as[scala.Option[Int]]
+            v13 <- c.downField("v13").as[scala.Option[Int]]
+            v14 <- c.downField("v14").as[scala.Option[Int]]
+            v15 <- c.downField("v15").as[scala.Option[Int]]
+            v16 <- c.downField("v16").as[scala.Option[Int]]
+            v17 <- c.downField("v17").as[scala.Option[Int]]
+            v18 <- c.downField("v18").as[scala.Option[Int]]
+            v19 <- c.downField("v19").as[scala.Option[Int]]
+            v20 <- c.downField("v20").as[scala.Option[Int]]
+            v21 <- c.downField("v21").as[scala.Option[Int]]
+            v22 <- c.downField("v22").as[scala.Option[Int]]
+            v23 <- c.downField("v23").as[scala.Option[Int]]
+            v24 <- c.downField("v24").as[scala.Option[Int]]
+            v25 <- c.downField("v25").as[scala.Option[Int]]
+            v26 <- c.downField("v26").as[scala.Option[Int]]
+            v27 <- c.downField("v27").as[scala.Option[Int]]
+            v28 <- c.downField("v28").as[scala.Option[Int]]
+            v29 <- c.downField("v29").as[scala.Option[Int]]
+            v30 <- c.downField("v30").as[scala.Option[Int]]
           } yield BigObject(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30)
         }
       }

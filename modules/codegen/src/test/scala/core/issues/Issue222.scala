@@ -82,7 +82,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestTpe = t"""Request"""
 
-    val expectedRequestCls = q"""case class Request(state: BigInt, id: Option[String] = None)"""
+    val expectedRequestCls = q"""case class Request(state: BigInt, id: scala.Option[String] = scala.None)"""
 
     val expectedRequestEncoder =
       q"""
@@ -132,7 +132,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestTpe = t"""Request2"""
 
-    val expectedRequestCls = q"""case class Request2(state2: Option[BigInt] = None, id: Option[String] = None, id2: String)"""
+    val expectedRequestCls = q"""case class Request2(state2: scala.Option[BigInt] = scala.None, id: scala.Option[String] = scala.None, id2: String)"""
 
     val expectedRequestEncoder =
       q"""
@@ -152,7 +152,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
     compare(reqDecoder, expectedRequestDecoder)
 
     val expectedFieldsTpe = t"""RequestFields2"""
-    val expectedFieldsCls = q"""case class RequestFields2(state2: Option[BigInt] = None)"""
+    val expectedFieldsCls = q"""case class RequestFields2(state2: scala.Option[BigInt] = scala.None)"""
 
     val List(fieldsEncoder, fieldsDecoder) = requestFields.staticDefns.definitions
 
@@ -181,7 +181,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestTpe = t"""Request3"""
 
-    val expectedRequestCls = q"""case class Request3(state: BigInt, state2: Option[BigInt] = None, id: Option[String] = None, id2: String)"""
+    val expectedRequestCls = q"""case class Request3(state: BigInt, state2: scala.Option[BigInt] = scala.None, id: scala.Option[String] = scala.None, id2: String)"""
 
     val expectedRequestEncoder =
       q"""

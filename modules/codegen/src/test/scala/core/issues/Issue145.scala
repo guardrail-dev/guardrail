@@ -57,9 +57,9 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
           implicit val decodePet: Decoder[Pet] = new Decoder[Pet] {
             final def apply(c: HCursor): Decoder.Result[Pet] =
               for (
-                name <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];
-                underscoreName <- c.downField("underscore_name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]];
-                dashName <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]
+                name <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[scala.Option[CustomThing]];
+                underscoreName <- c.downField("underscore_name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[scala.Option[CustomThing]];
+                dashName <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[scala.Option[CustomThing]]
               ) yield Pet(name, underscoreName, dashName)
           }
         }""".toString()

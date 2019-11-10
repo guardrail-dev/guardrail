@@ -80,7 +80,7 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
             implicit val showValue: Show[Value] = Show.build(_.value)
             def parse(value: String): Option[Value] = values.find(_.value == value)
           }
-          case class Nested(value: Option[Foo.Nested.Value] = Option(Foo.Nested.Value.C))
+          case class Nested(value: scala.Option[Foo.Nested.Value] = scala.Option(Foo.Nested.Value.C))
           object Nested {
             implicit val encodeNested: ObjectEncoder[Nested] = {
               val readOnlyKeys = Set[String]()
@@ -106,7 +106,7 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
         }
        """
 
-    c1.structure shouldEqual q"case class Foo(value: Option[Foo.Value] = Option(Foo.Value.A), value2: Baz = Baz.X, nested: Option[Foo.Nested] = None)".structure
+    c1.structure shouldEqual q"case class Foo(value: scala.Option[Foo.Value] = scala.Option(Foo.Value.A), value2: Baz = Baz.X, nested: scala.Option[Foo.Nested] = scala.None)".structure
     companion.structure shouldEqual cmp.structure
   }
 }

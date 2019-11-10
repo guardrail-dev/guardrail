@@ -33,8 +33,8 @@ class Issue420 extends FunSuite with Matchers with SwaggerSpecRunner {
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
-    cmp(bar.cls, q"case class Bar(id: Option[String] = None)")
-    cmp(foo.cls, q"case class Foo(id: Option[String] = None, otherId: Option[String] = None)")
+    cmp(bar.cls, q"case class Bar(id: scala.Option[String] = scala.None)")
+    cmp(foo.cls, q"case class Foo(id: scala.Option[String] = scala.None, otherId: scala.Option[String] = scala.None)")
   }
 
   private def cmp(l: Tree, r: Tree): Unit =

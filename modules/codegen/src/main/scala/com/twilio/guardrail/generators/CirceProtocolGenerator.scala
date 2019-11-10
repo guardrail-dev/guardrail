@@ -143,17 +143,17 @@ object CirceProtocolGenerator {
             case SwaggerUtil.DeferredArray(tpeName) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"IndexedSeq[$innerType]", Option.empty)
+              (t"scala.collection.IndexedSeq[$innerType]", Option.empty)
             case SwaggerUtil.DeferredMap(tpeName) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"Map[String, $innerType]", Option.empty)
+              (t"scala.collection.immutable.Map[String, $innerType]", Option.empty)
           }
 
           (finalDeclType, finalDefaultValue) = Option(isRequired)
             .filterNot(_ == false)
             .fold[(Type, Option[Term])](
-              (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+              (t"scala.Option[${tpe}]", Some(defaultValue.fold[Term](q"scala.None")(t => q"scala.Option($t)")))
             )(Function.const((tpe, defaultValue)) _)
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name

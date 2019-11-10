@@ -74,7 +74,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 
     val definition = q"""
-      case class propRef(param: Option[Long] = None, array: Option[IndexedSeq[Long]] = None, arrayArray: Option[IndexedSeq[IndexedSeq[Long]]] = None)
+      case class propRef(param: scala.Option[Long] = scala.None, array: scala.Option[IndexedSeq[Long]] = scala.None, arrayArray: scala.Option[IndexedSeq[IndexedSeq[Long]]] = scala.None)
     """
 
     val companion = q"""

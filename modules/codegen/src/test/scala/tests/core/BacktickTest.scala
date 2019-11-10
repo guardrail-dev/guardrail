@@ -146,7 +146,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-    case class `dashy-class`(dashyParam: Option[Long] = None)
+    case class `dashy-class`(dashyParam: scala.Option[Long] = scala.None)
     """
     val companion  = q"""
     object `dashy-class` {

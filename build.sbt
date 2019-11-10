@@ -68,6 +68,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
   ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "support.PositiveLong"),
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
+  ExampleCase(sampleResource("fqns.yaml"), "tests.fqns").frameworks(Set("http4s")),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
   ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(Set("akka-http", "endpoints", "http4s")),

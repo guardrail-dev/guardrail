@@ -1,0 +1,20 @@
+swagger: '2.0'
+info:
+  title: Polymorphism nested example
+  version: 1.0.0
+produces:
+  - application/json
+paths:
+  /foo:
+    get:
+      operationId: getPet
+      responses:
+        200:
+          description: Return the details about the pet
+          schema:
+            $ref: '#/definitions/Option'
+definitions:
+  Option:
+    properties:
+      value:
+        type: number

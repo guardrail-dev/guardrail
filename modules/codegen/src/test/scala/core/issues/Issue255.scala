@@ -45,11 +45,11 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val expected =
       q"""
-        case class Foo(someEmail: Option[String] = None,
-                       somePassword: Option[String] = None,
-                       someFile: Option[String] = None,
-                       someBinary: Option[String] = None,
-                       someCustomBinary: Option[custom.Bytes] = None)
+        case class Foo(someEmail: scala.Option[String] = scala.None,
+                       somePassword: scala.Option[String] = scala.None,
+                       someFile: scala.Option[String] = scala.None,
+                       someBinary: scala.Option[String] = scala.None,
+                       someCustomBinary: scala.Option[custom.Bytes] = scala.None)
        """
     c1.structure shouldBe expected.structure
   }

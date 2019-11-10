@@ -34,7 +34,7 @@ class ScalaTypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Baz(foo: Option[com.twilio.foo.bar.Baz] = None)
+      case class Baz(foo: scala.Option[com.twilio.foo.bar.Baz] = scala.None)
     """
 
     val companion = q"""

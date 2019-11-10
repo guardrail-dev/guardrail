@@ -92,24 +92,24 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val definition = q"""
       case class Types(
-        array: Option[IndexedSeq[Boolean]] = None,
-        map: Option[Map[String, Boolean]] = None,
-        obj: Option[io.circe.Json] = None,
-        bool: Option[Boolean] = None,
-        string: Option[String] = None,
-        date: Option[java.time.LocalDate] = None,
-        date_time: Option[java.time.OffsetDateTime] = None,
-        long: Option[Long] = None,
-        int: Option[Int] = None,
-        float: Option[Float] = None,
-        double: Option[Double] = None,
-        number: Option[BigDecimal] = None,
-        integer: Option[BigInt] = None,
-        untyped: Option[io.circe.Json] = None,
-        custom: Option[Foo] = None,
-        customComplex: Option[Foo[Bar]] = None,
-        nested: Option[Types.Nested] = None,
-        nestedArray: Option[IndexedSeq[Types.NestedArray]] = None,
+        array: scala.Option[IndexedSeq[Boolean]] = scala.None,
+        map: scala.Option[Map[String, Boolean]] = scala.None,
+        obj: scala.Option[io.circe.Json] = scala.None,
+        bool: scala.Option[Boolean] = scala.None,
+        string: scala.Option[String] = scala.None,
+        date: scala.Option[java.time.LocalDate] = scala.None,
+        date_time: scala.Option[java.time.OffsetDateTime] = scala.None,
+        long: scala.Option[Long] = scala.None,
+        int: scala.Option[Int] = scala.None,
+        float: scala.Option[Float] = scala.None,
+        double: scala.Option[Double] = scala.None,
+        number: scala.Option[BigDecimal] = scala.None,
+        integer: scala.Option[BigInt] = scala.None,
+        untyped: scala.Option[io.circe.Json] = scala.None,
+        custom: scala.Option[Foo] = scala.None,
+        customComplex: scala.Option[Foo[Bar]] = scala.None,
+        nested: scala.Option[Types.Nested] = scala.None,
+        nestedArray: scala.Option[IndexedSeq[Types.NestedArray]] = scala.None,
         requiredArray: IndexedSeq[String] = IndexedSeq.empty
       )
     """
@@ -122,7 +122,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
         }
         implicit val decodeTypes: Decoder[Types] = Decoder.forProduct19("array", "map", "obj", "bool", "string", "date", "date_time", "long", "int", "float", "double", "number", "integer", "untyped", "custom", "customComplex", "nested", "nestedArray", "requiredArray")(Types.apply _)
 
-        case class Nested(prop1: Option[String] = None)
+        case class Nested(prop1: scala.Option[String] = scala.None)
         object Nested {
           implicit val encodeNested: ObjectEncoder[Nested] = {
             val readOnlyKeys = Set[String]()
@@ -131,7 +131,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           implicit val decodeNested: Decoder[Nested] = Decoder.forProduct1("prop1")(Nested.apply _)
         }
 
-        case class NestedArray(prop1: Option[String] = None)
+        case class NestedArray(prop1: scala.Option[String] = scala.None)
         object NestedArray {
           implicit val encodeNestedArray: ObjectEncoder[NestedArray] = {
             val readOnlyKeys = Set[String]()
@@ -179,7 +179,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
-    val definition = q"""case class Types(composed: Option[Types.Composed] = None)"""
+    val definition = q"""case class Types(composed: scala.Option[Types.Composed] = scala.None)"""
 
     val companion = q"""
       object Types {
@@ -188,7 +188,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           Encoder.forProduct1("composed")((o: Types) => o.composed).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeTypes: Decoder[Types] = Decoder.forProduct1("composed")(Types.apply _)
-        case class Composed(string: Option[String] = None, int: Option[Int] = None)
+        case class Composed(string: scala.Option[String] = scala.None, int: scala.Option[Int] = scala.None)
         object Composed {
           implicit val encodeComposed: ObjectEncoder[Composed] = {
             val readOnlyKeys = Set[String]()
@@ -231,7 +231,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
-    val definition = q"""case class First(Second: Option[First.Second] = None)"""
+    val definition = q"""case class First(Second: scala.Option[First.Second] = scala.None)"""
 
     val companion = q"""
        object First {
@@ -240,14 +240,14 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
            Encoder.forProduct1("Second")((o: First) => o.Second).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
          }
          implicit val decodeFirst: Decoder[First] = Decoder.forProduct1("Second")(First.apply _)
-         case class Second(Third: Option[First.Second.Third] = None)
+         case class Second(Third: scala.Option[First.Second.Third] = scala.None)
          object Second {
            implicit val encodeSecond: ObjectEncoder[Second] = {
              val readOnlyKeys = Set[String]()
              Encoder.forProduct1("Third")((o: Second) => o.Third).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
            }
            implicit val decodeSecond: Decoder[Second] = Decoder.forProduct1("Third")(Second.apply _)
-           case class Third(Fourth: Option[String] = None)
+           case class Third(Fourth: scala.Option[String] = scala.None)
            object Third {
              implicit val encodeThird: ObjectEncoder[Third] = {
                val readOnlyKeys = Set[String]()
@@ -302,7 +302,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
             Encoder.forProduct2("value", "nested") ( (o: Second) => (o.value, o.nested) ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeSecond: Decoder[Second] = Decoder.forProduct2("value", "nested")(Second.apply _)
-          case class Nested(value: Option[Boolean] = None)
+          case class Nested(value: scala.Option[Boolean] = scala.None)
           object Nested {
             implicit val encodeNested: ObjectEncoder[Nested] = {
               val readOnlyKeys = Set[String]()
@@ -312,7 +312,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           }
         }
        """
-    val definition = q"""case class First(value: Option[String] = None, nested: Option[Second.Nested] = None)"""
+    val definition = q"""case class First(value: scala.Option[String] = scala.None, nested: scala.Option[Second.Nested] = scala.None)"""
 
     cls.structure shouldEqual definition.structure
     cmp.structure shouldEqual companion.structure

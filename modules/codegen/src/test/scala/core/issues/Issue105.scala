@@ -39,7 +39,7 @@ class Issue105 extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Foo(nonEmptyString: Option[String Refined NonEmpty] = None, positiveLong: Option[Long Refined Positive] = None)
+      case class Foo(nonEmptyString: scala.Option[String Refined NonEmpty] = scala.None, positiveLong: scala.Option[Long Refined Positive] = scala.None)
     """
 
     val companion = q"""

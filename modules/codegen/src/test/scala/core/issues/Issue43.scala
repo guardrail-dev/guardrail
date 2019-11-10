@@ -305,7 +305,7 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right case class") {
       println(clsPersianCat.syntax)
       clsDog.structure shouldBe q"""case class Dog(name: String, packSize: Int = 0) extends Pet""".structure
-      clsPersianCat.structure shouldBe q"""case class PersianCat(name: String, huntingSkill: Cat.HuntingSkill = Cat.HuntingSkill.Lazy, wool: Option[Int] = Option(10)) extends Cat""".structure
+      clsPersianCat.structure shouldBe q"""case class PersianCat(name: String, huntingSkill: Cat.HuntingSkill = Cat.HuntingSkill.Lazy, wool: scala.Option[Int] = scala.Option(10)) extends Cat""".structure
     }
 
     it("should generate right companion object") {

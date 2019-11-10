@@ -76,7 +76,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class First(a: Option[Int] = None)
+      case class First(a: scala.Option[Int] = scala.None)
     """
     val companion  = q"""
       object First {
@@ -139,7 +139,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Fifth(aBCD: Option[Int] = None, bCDE: Option[Int] = None)
+      case class Fifth(aBCD: scala.Option[Int] = scala.None, bCDE: scala.Option[Int] = scala.None)
     """
     val companion  = q"""
       object Fifth {
@@ -164,7 +164,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))
+      case class Sixth(defval: Int = 1, defvalOpt: scala.Option[Long] = scala.Option(2L))
     """
     val companion  = q"""
       object Sixth {
