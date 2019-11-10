@@ -8,9 +8,25 @@ paths:
   /foo:
     get:
       operationId: getPet
+      parameters:
+        - name: Status
+          in: formData
+          type: string
+        - name: a
+          in: body
+          schema:
+            $ref: '#/definitions/Option'
+        - name: b
+          in: body
+          schema:
+            $ref: '#/definitions/List'
+        - name: c
+          in: body
+          schema:
+            $ref: '#/definitions/IndexedSeq'
       responses:
         200:
-          description: Return the details about the pet
+          description: "adasd"
           schema:
             $ref: '#/definitions/Option'
 definitions:
@@ -18,3 +34,12 @@ definitions:
     properties:
       value:
         type: number
+  List:
+    properties:
+      value:
+        type: number
+  IndexedSeq:
+    properties:
+      value:
+        type: number
+      

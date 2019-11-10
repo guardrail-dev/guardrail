@@ -119,7 +119,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
     val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
 
-      private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
+      private def parseOptionalHeader(response: Response[F], header: String): F[scala.Option[String]] =
         F.pure(response.headers.get(header.ci).map(_.value))
 
       private def parseRequiredHeader(response: Response[F], header: String): F[String] =
@@ -129,7 +129,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
       private[this] val getBazOkDecoder = jsonOf[F, io.circe.Json]
       def getBar(headers: List[Header] = List.empty): F[GetBarResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(_) =>
@@ -139,7 +139,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def getBaz(headers: List[Header] = List.empty): F[GetBazResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(resp) =>
@@ -149,7 +149,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def postFoo(headers: List[Header] = List.empty): F[PostFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(_) =>
@@ -159,7 +159,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def getFoo(headers: List[Header] = List.empty): F[GetFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(_) =>
@@ -169,7 +169,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def putFoo(headers: List[Header] = List.empty): F[PutFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(_) =>
@@ -179,7 +179,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def patchFoo(headers: List[Header] = List.empty): F[PatchFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(_) =>
@@ -189,7 +189,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def deleteFoo(headers: List[Header] = List.empty): F[DeleteFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
+        val allHeaders = headers ++ List[scala.Option[Header]]().flatten
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case org.http4s.Status.Ok(_) =>

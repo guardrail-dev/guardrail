@@ -149,7 +149,7 @@ object Http4sClientGenerator {
               }
               a :+ lifter(paramName, argName)
           }
-          q"List[Option[Header]](..$args).flatten"
+          q"List[scala.Option[Header]](..$args).flatten"
         }
 
         def build(methodName: String,
@@ -404,7 +404,7 @@ object Http4sClientGenerator {
             class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
-              private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
+              private def parseOptionalHeader(response: Response[F], header: String): F[scala.Option[String]] =
                 F.pure(response.headers.get(header.ci).map(_.value))
 
               private def parseRequiredHeader(response: Response[F], header: String): F[String] =
