@@ -398,7 +398,7 @@ object ScalaGenerator {
               ..${extraImports}
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
               ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
-              import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
+
               ..${customImports}
               ${handlerDefinition}
               ..${serverDefinitions}
