@@ -16,6 +16,7 @@ import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, 
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
+import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.Response
 import com.twilio.guardrail.protocol.terms.server._
@@ -191,7 +192,7 @@ object DropwizardServerGenerator {
 
           val creator = new FieldDeclaration(
             util.EnumSet.of(PUBLIC, STATIC, FINAL),
-            new VariableDeclarator(clsType, clsName, new ObjectCreationExpr(null, clsType, new NodeList))
+            new VariableDeclarator(clsType, clsName.toCamelCase, new ObjectCreationExpr(null, clsType, new NodeList))
           )
 
           (List(constructor), creator)
