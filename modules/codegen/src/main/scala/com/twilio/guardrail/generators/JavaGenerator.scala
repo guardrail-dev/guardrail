@@ -5,6 +5,7 @@ import cats.instances.list._
 import cats.instances.option._
 import cats.syntax.traverse._
 import com.github.javaparser.ast._
+import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType, ArrayType => AstArrayType }
 import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
@@ -17,10 +18,9 @@ import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util
 import java.util.Locale
 
-import com.github.javaparser.JavaParser
+import com.github.javaparser.StaticJavaParser
 import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
 import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
 import org.eclipse.jface.text.Document
@@ -112,7 +112,7 @@ object JavaGenerator {
       case EmptyArray() =>
         Target.pure(
           new ObjectCreationExpr(null,
-                                 JavaParser
+                                 StaticJavaParser
                                    .parseClassOrInterfaceType("java.util.ArrayList")
                                    .setTypeArguments(new NodeList[Type]),
                                  new NodeList())
@@ -120,7 +120,7 @@ object JavaGenerator {
       case EmptyMap() =>
         Target.pure(
           new ObjectCreationExpr(null,
-                                 JavaParser
+                                 StaticJavaParser
                                    .parseClassOrInterfaceType("java.util.HashMap")
                                    .setTypeArguments(new NodeList[Type]),
                                  new NodeList())
@@ -176,7 +176,7 @@ object JavaGenerator {
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
 
       case PureMethodParameter(nameStr, tpe, default) =>
-        safeParseSimpleName(nameStr.asString.escapeIdentifier).map(name => new Parameter(util.EnumSet.of(Modifier.FINAL), tpe, name))
+        safeParseSimpleName(nameStr.asString.escapeIdentifier).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
 
       case TypeNamesEqual(a, b) =>
         Target.pure(a.asString == b.asString)
