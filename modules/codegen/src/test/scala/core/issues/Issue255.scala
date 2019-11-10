@@ -38,7 +38,7 @@ class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Test password format generation") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, c1, _, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, c1, _, _) :: Nil, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)

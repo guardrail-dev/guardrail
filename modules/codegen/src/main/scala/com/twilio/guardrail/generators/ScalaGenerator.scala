@@ -305,7 +305,7 @@ object ScalaGenerator {
         )
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
-          case EnumDefinition(_, _, _, cls, staticDefns) =>
+          case EnumDefinition(_, _, _, _, cls, staticDefns) =>
             (List(
                WriteTree(
                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
@@ -321,7 +321,7 @@ object ScalaGenerator {
              ),
              List.empty[Stat])
 
-          case ClassDefinition(_, _, cls, staticDefns, _) =>
+          case ClassDefinition(_, _, _, cls, staticDefns, _) =>
             (List(
                WriteTree(
                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
@@ -336,7 +336,7 @@ object ScalaGenerator {
              ),
              List.empty[Stat])
 
-          case ADT(name, tpe, trt, staticDefns) =>
+          case ADT(name, tpe, _, trt, staticDefns) =>
             val polyImports: Import = q"""import cats.syntax.either._"""
 
             (

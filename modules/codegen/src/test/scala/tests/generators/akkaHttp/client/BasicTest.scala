@@ -80,7 +80,7 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Handle json subvalues") {
     val (
-      ProtocolDefinitions(_ :: ClassDefinition(_, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

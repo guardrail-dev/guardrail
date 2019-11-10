@@ -21,7 +21,7 @@ case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Imp
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
-  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI])(
+  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit
       C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
@@ -39,7 +39,7 @@ object Common {
     import Sw._
 
     for {
-      proto <- ProtocolGenerator.fromSwagger[L, F](swagger)
+      proto <- ProtocolGenerator.fromSwagger[L, F](swagger, dtoPackage)
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
 
       serverUrls = NonEmptyList.fromList(

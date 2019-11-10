@@ -37,7 +37,7 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
 
     val (
       ProtocolDefinitions(
-        ClassDefinition(namePet, tpePet, clsPet, staticDefnsPet, catParents) :: Nil,
+        ClassDefinition(namePet, tpePet, _, clsPet, staticDefnsPet, catParents) :: Nil,
         _,
         _,
         _
