@@ -13,7 +13,7 @@ scala:
 # so the release build is always delayed by a full test run unnecessarily.
 script: >
   if ( [[ "$TRAVIS_PULL_REQUEST" != "false" ]] || [[ ! -z "$TRAVIS_TAG" ]] ); then
-    sbt ++$TRAVIS_SCALA_VERSION checkFormatting scalaTestSuite; # TODO enable javaTestSuite
+    sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite
   fi
 
 matrix:
