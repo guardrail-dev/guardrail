@@ -170,7 +170,7 @@ object CirceProtocolGenerator {
 
         val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
           def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
-            case param if param.dataRedaction == DataVisible => Term.Name(param.term.name.value)
+            case param if param.dataRedaction == DataVisible => q"${Term.Name(param.term.name.value)}.toString()"
             case _                                           => Lit.String("[redacted]")
           }
 
