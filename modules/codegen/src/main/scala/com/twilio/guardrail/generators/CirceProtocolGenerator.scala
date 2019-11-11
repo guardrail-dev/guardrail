@@ -174,9 +174,7 @@ object CirceProtocolGenerator {
             case _                                           => Lit.String("[redacted]")
           }
 
-          val toStringTerms = NonEmptyList
-            .fromList(params)
-            .fold(List.empty[Term])(list => mkToStringTerm(list.head) +: list.tail.map(param => q"${Lit.String(",")} + ${mkToStringTerm(param)}"))
+          val toStringTerms = params.map(p => List(mkToStringTerm(p))).intercalate(List(Lit.String(",")))
 
           List[Defn.Def](
             q"override def toString: String = ${toStringTerms.foldLeft[Term](Lit.String(s"${clsName}("))(
