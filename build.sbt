@@ -159,6 +159,10 @@ addCommandAlias(
   "publishSonatype",
   "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
 )
+addCommandAlias(
+  "publishLocal",
+  "; package ; codegen/publishLocal"
+)
 
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
