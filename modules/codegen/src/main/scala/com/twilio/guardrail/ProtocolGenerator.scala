@@ -103,7 +103,7 @@ object ProtocolGenerator {
 
   private[this] def fromEnum[L <: LA, F[_]](
       clsName: String,
-      swagger: Schema[_],
+      swagger: Tracker[Schema[_]],
       dtoPackage: List[String]
   )(implicit E: EnumProtocolTerms[L, F], F: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Either[String, EnumDefinition[L]]] = {
     import E._
@@ -130,13 +130,12 @@ object ProtocolGenerator {
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
-    val _swagger = Tracker.hackyAdapt[Schema[_]](swagger, Vector.empty)
-    val tpeName  = _swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Some("string")))
+    val tpeName = swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Some("string")))
 
     for {
-      enum          <- extractEnum(swagger)
-      customTpeName <- SwaggerUtil.customTypeName(swagger)
-      tpe           <- SwaggerUtil.typeName(tpeName, _swagger.downField("format", _.getFormat()), customTpeName)
+      enum          <- extractEnum(swagger.get)
+      customTpeName <- SwaggerUtil.customTypeName(swagger.get)
+      tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), customTpeName)
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -387,9 +386,7 @@ object ProtocolGenerator {
         )
         .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
         .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
-          s => {
-            fromEnum(nestedClassName.last, s.get, dtoPackage).map(Some(_))
-          }
+          s => fromEnum(nestedClassName.last, s, dtoPackage).map(Some(_))
         )
         .getOrElse(Free.pure[F, Option[Either[String, NestedProtocolElems[L]]]](Option.empty))
     }
@@ -574,7 +571,7 @@ object ProtocolGenerator {
     Sw.log.function("ProtocolGenerator.fromSwagger")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
-      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value.map(_.map(_.get)))
+      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value)
       polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
@@ -582,7 +579,7 @@ object ProtocolGenerator {
             .refine({ case m: StringSchema => m })(
               m =>
                 for {
-                  enum  <- fromEnum(clsName, m.get, dtoPackage)
+                  enum  <- fromEnum(clsName, m, dtoPackage)
                   model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage)
                   alias <- modelTypeAlias(clsName, m.get)
                 } yield enum.orElse(model).getOrElse(alias)
@@ -599,7 +596,7 @@ object ProtocolGenerator {
             .orRefine({ case o: ObjectSchema => o })(
               m =>
                 for {
-                  enum  <- fromEnum(clsName, m.get, dtoPackage)
+                  enum  <- fromEnum(clsName, m, dtoPackage)
                   model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage)
                   alias <- modelTypeAlias(clsName, m.get)
                 } yield enum.orElse(model).getOrElse(alias)

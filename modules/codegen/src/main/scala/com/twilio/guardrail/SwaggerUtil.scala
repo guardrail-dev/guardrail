@@ -9,6 +9,7 @@ import cats.{ FlatMap, Foldable }
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, Extractable, VendorExtension }
@@ -194,24 +195,33 @@ object SwaggerUtil {
   def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] = new ModelMetaTypePartiallyApplied[L, F]()
 
   def extractConcreteTypes[L <: LA, F[_]](
-      definitions: List[(String, Schema[_])]
+      definitions: List[(String, Tracker[Schema[_]])]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
-        case (clsName, impl: Schema[_]) if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) =>
-          pureTypeName(clsName).flatMap(widenTypeName).map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None, None, None): SwaggerUtil.ResolvedType[L]))
-        case (clsName, comp: ComposedSchema) =>
-          for {
-            x <- pureTypeName(clsName).flatMap(widenTypeName)
-            parentSimpleRef = Option(comp.getAllOf).toList.flatMap(_.asScala).headOption.flatMap(i => Option(i.get$ref).map(_.split("/").last))
-            parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
-            resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
-          } yield (clsName, resolvedType)
-        case (clsName, definition) =>
-          for {
-            resolved <- SwaggerUtil.modelMetaType[L, F](definition)
-          } yield (clsName, resolved)
+        case (clsName, schema) =>
+          schema
+            .refine({ case impl: Schema[_] if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) => impl })(
+              impl =>
+                pureTypeName(clsName)
+                  .flatMap(widenTypeName)
+                  .map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None, None, None): SwaggerUtil.ResolvedType[L]))
+            )
+            .orRefine({ case comp: ComposedSchema => comp })(
+              comp =>
+                for {
+                  x <- pureTypeName(clsName).flatMap(widenTypeName)
+                  parentSimpleRef = comp.downField("allOf", _.getAllOf).map(_.headOption).flatDownField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last)
+                  parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
+                  resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
+                } yield (clsName, resolvedType)
+            )
+            .getOrElse(
+              for {
+                resolved <- SwaggerUtil.modelMetaType[L, F](schema.get)
+              } yield (clsName, resolved)
+            )
       }
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
     } yield
@@ -234,7 +244,7 @@ object SwaggerUtil {
       def log(fmt: Option[String], t: L#Type): L#Type = {
         fmt.foreach { fmt =>
           println(
-            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${typeName.unwrapTracker}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${typeName.showHistory})"
+            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${typeName.unwrapTracker}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${format.showHistory})"
           )
         }
 
