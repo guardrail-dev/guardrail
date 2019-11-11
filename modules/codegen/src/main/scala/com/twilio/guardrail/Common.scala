@@ -39,8 +39,8 @@ object Common {
     import Sw._
 
     for {
-      proto <- ProtocolGenerator.fromSwagger[L, F](swagger, dtoPackage)
-      ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
+      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) <- ProtocolGenerator
+        .fromSwagger[L, F](swagger, dtoPackage)
 
       serverUrls = NonEmptyList.fromList(
         swagger
@@ -118,18 +118,20 @@ object Common {
     val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
 
     val definitions: List[String]   = pkgName :+ "definitions"
-    val dtoComponents: List[String] = definitions ++ dtoPackage
 
     val ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
     val CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                     = codegen
     val frameworkImplicitName                                                                            = frameworkImplicits.map(_._1)
+
+    val dtoComponents: List[String] = definitions ++ dtoPackage
+    val filteredDtoComponents: Option[List[String]] = if (protocolElems.nonEmpty) Some(dtoComponents) else None
 
     for {
       protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
       (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
       packageObject <- writePackageObject(
         dtoPackagePath,
-        dtoComponents,
+        filteredDtoComponents,
         customImports,
         packageObjectImports,
         protocolImports,
@@ -140,8 +142,8 @@ object Common {
       frameworkImports     <- getFrameworkImports(context.tracing)
       frameworkDefinitions <- getFrameworkDefinitions(context.tracing)
 
-      files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _)),
-                servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, _))).mapN(_ ++ _)
+      files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents, _)),
+                servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents, _))).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({

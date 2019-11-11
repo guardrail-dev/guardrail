@@ -120,7 +120,7 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
         _          <- CoreTarget.log.debug("Processing arguments")
         specPath   <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
         outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
-        rawPkgName <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
+        pkgName    <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
         kind       = args.kind
         dtoPackage = args.dtoPackage
         context    = args.context
@@ -140,11 +140,9 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
             swagger =>
               try {
                 (for {
-                  pkgName <- ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]].fullyQualifyPackageName(rawPkgName)
-                  defs <- Common.prepareDefinitions[L, CodegenApplication[L, ?]](kind,
-                                                                                 context,
-                                                                                 Tracker(swagger),
-                                                                                 pkgName ++ ("definitions" :: dtoPackage))
+                  definitionsPkgName <- ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]].fullyQualifyPackageName(pkgName)
+                  defs <- Common
+                    .prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, Tracker(swagger), definitionsPkgName ++ ("definitions" :: dtoPackage))
                   (proto, codegen) = defs
                   result <- Common
                     .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)

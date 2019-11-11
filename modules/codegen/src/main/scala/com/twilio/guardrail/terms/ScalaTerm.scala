@@ -88,7 +88,7 @@ case class RenderFrameworkDefinitions[L <: LA](pkgPath: Path,
                                                frameworkDefinitionsName: L#TermName)
     extends ScalaTerm[L, WriteTree]
 case class WritePackageObject[L <: LA](dtoPackagePath: Path,
-                                       dtoComponents: List[String],
+                                       dtoComponents: Option[List[String]],
                                        customImports: List[L#Import],
                                        packageObjectImports: List[L#Import],
                                        protocolImports: List[L#Import],
@@ -106,14 +106,14 @@ case class WriteClient[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
                                 frameworkImplicitName: Option[L#TermName],
-                                dtoComponents: List[String],
+                                dtoComponents: Option[List[String]],
                                 client: Client[L])
     extends ScalaTerm[L, List[WriteTree]]
 case class WriteServer[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
                                 frameworkImplicitName: Option[L#TermName],
-                                dtoComponents: List[String],
+                                dtoComponents: Option[List[String]],
                                 server: Server[L])
     extends ScalaTerm[L, List[WriteTree]]
 

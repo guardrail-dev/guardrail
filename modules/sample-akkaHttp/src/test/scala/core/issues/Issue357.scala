@@ -18,7 +18,6 @@ class Issue357Suite extends FunSpec with Matchers with EitherValues with ScalaFu
 
   describe("akka-http server should") {
     import issues.issue357.server.akkaHttp.{ Handler, Resource }
-    import issues.issue357.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
       def deleteFoo(respond: Resource.deleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.deleteFooResponse] =
         Future.successful((path, query, form) match {
@@ -102,7 +101,6 @@ class Issue357Suite extends FunSpec with Matchers with EitherValues with ScalaFu
 
   describe("akka-http client should") {
     import issues.issue357.client.akkaHttp.{ Client, DeleteFooResponse, PatchFooResponse, PutFooResponse }
-    import issues.issue357.client.akkaHttp.definitions._
 
     object pathRE {
       def unapply(value: Uri.Path): Option[String] =

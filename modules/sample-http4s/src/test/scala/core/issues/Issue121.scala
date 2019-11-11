@@ -18,7 +18,6 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("http4s server can respond with 204") {
-    import issues.issue121.server.http4s.definitions._
     import issues.issue121.server.http4s.{ DeleteFooResponse, Handler, Resource }
 
     val route = new Resource[IO]().routes(new Handler[IO] {
@@ -45,7 +44,6 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
   test("http4s client can respond with 204") {
     import issues.issue121.client.http4s.Client
-    import issues.issue121.client.http4s.definitions._
 
     def noContentResponse: Http4sClient[IO] =
       Http4sClient.fromHttpApp[IO](Kleisli.pure(Response[IO](Status.NoContent)))

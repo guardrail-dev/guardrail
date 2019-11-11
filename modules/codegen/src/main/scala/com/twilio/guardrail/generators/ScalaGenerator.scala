@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators
 
 import cats.~>
+import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.RichString
@@ -267,25 +268,24 @@ object ScalaGenerator {
         Target.pure(WriteTree(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), sourceToBytes(frameworkDefinitionsFile)))
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        val dtoHead :: dtoRest = dtoComponents
-        val dtoPkg = dtoRest.init
-          .foldLeft[Term.Ref](Term.Name(dtoHead)) {
-            case (acc, next) => Term.Select(acc, Term.Name(next))
-          }
-        val companion = Term.Name(s"${dtoComponents.last}$$")
+        dtoComponents.traverse { case dtoComponents@(dtoHead :: dtoRest) =>
+          val dtoPkg = dtoRest.init
+            .foldLeft[Term.Ref](Term.Name(dtoHead)) {
+              case (acc, next) => Term.Select(acc, Term.Name(next))
+            }
+          val companion = Term.Name(s"${dtoComponents.last}$$")
 
-        val (_, statements) =
-          packageObjectContents.partition(partitionImplicits)
-        val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
+          val (_, statements) =
+            packageObjectContents.partition(partitionImplicits)
+          val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
 
-        val mirroredImplicits = implicits
-          .map({ stat =>
-            val List(Pat.Var(mirror)) = stat.pats
-            stat.copy(rhs = q"${companion}.${mirror}")
-          })
+          val mirroredImplicits = implicits
+            .map({ stat =>
+              val List(Pat.Var(mirror)) = stat.pats
+              stat.copy(rhs = q"${companion}.${mirror}")
+            })
 
-        Target.pure(
-          Some(
+          Target.pure(
             WriteTree(
               dtoPackagePath.resolve("package.scala"),
               sourceToBytes(source"""
@@ -303,7 +303,7 @@ object ScalaGenerator {
             """)
             )
           )
-        )
+        }
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
           case EnumDefinition(_, _, _, _, cls, staticDefns) =>
@@ -374,7 +374,7 @@ object ScalaGenerator {
               package ${buildPkgTerm(pkgName ++ pkg)}
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
               ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
-              import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
+              ..${dtoComponents.map(x => q"import ${buildPkgTerm(List("_root_") ++ x)}._")}
               ..${customImports};
               ..${imports};
               ${companionForStaticDefns(staticDefns)};
@@ -399,7 +399,7 @@ object ScalaGenerator {
               ..${extraImports}
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
               ..${frameworkImplicitName.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.${name}._")}
-              import ${buildPkgTerm(List("_root_") ++ dtoComponents)}._
+              ..${dtoComponents.map(x => q"import ${buildPkgTerm(List("_root_") ++ x)}._")}
               ..${customImports}
               ${handlerDefinition}
               ..${serverDefinitions}

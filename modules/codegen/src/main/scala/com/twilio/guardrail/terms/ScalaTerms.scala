@@ -93,7 +93,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
     Free.inject[ScalaTerm[L, ?], F](RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName))
 
   def writePackageObject(dtoPackagePath: Path,
-                         dtoComponents: List[String],
+                         dtoComponents: Option[List[String]],
                          customImports: List[L#Import],
                          packageObjectImports: List[L#Import],
                          protocolImports: List[L#Import],
@@ -113,14 +113,14 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
                   pkgName: List[String],
                   customImports: List[L#Import],
                   frameworkImplicitName: Option[L#TermName],
-                  dtoComponents: List[String],
+                  dtoComponents: Option[List[String]],
                   client: Client[L]): Free[F, List[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client))
   def writeServer(pkgPath: Path,
                   pkgName: List[String],
                   customImports: List[L#Import],
                   frameworkImplicitName: Option[L#TermName],
-                  dtoComponents: List[String],
+                  dtoComponents: Option[List[String]],
                   server: Server[L]): Free[F, List[WriteTree]] =
     Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
 
