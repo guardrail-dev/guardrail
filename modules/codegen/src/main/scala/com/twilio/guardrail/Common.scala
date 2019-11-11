@@ -117,13 +117,13 @@ object Common {
     val pkgPath        = resolveFile(outputPath)(pkgName)
     val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
 
-    val definitions: List[String]   = pkgName :+ "definitions"
+    val definitions: List[String] = pkgName :+ "definitions"
 
     val ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
     val CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                     = codegen
     val frameworkImplicitName                                                                            = frameworkImplicits.map(_._1)
 
-    val dtoComponents: List[String] = definitions ++ dtoPackage
+    val dtoComponents: List[String]                 = definitions ++ dtoPackage
     val filteredDtoComponents: Option[List[String]] = if (protocolElems.nonEmpty) Some(dtoComponents) else None
 
     for {

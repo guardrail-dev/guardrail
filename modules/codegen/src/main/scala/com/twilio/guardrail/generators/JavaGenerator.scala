@@ -125,9 +125,9 @@ object JavaGenerator {
                                    .setTypeArguments(new NodeList[Type]),
                                  new NodeList())
         )
-      case LiftVectorType(value) => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
-      case LiftVectorTerm(value) => buildMethodCall("java.util.Collections.singletonList", Some(value))
-      case LiftMapType(value)    => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
+      case LiftVectorType(value)               => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
+      case LiftVectorTerm(value)               => buildMethodCall("java.util.Collections.singletonList", Some(value))
+      case LiftMapType(value)                  => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
       case FullyQualifyPackageName(rawPkgName) => Target.pure(rawPkgName)
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here

@@ -2,8 +2,8 @@ package tests.core
 
 import com.twilio.guardrail.generators.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.{ClassDefinition, Client, Clients, Context, ProtocolDefinitions, Server, Servers}
-import org.scalatest.{FunSuite, Matchers}
+import com.twilio.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions, Server, Servers }
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -36,14 +36,12 @@ class FullyQualifiedNames extends FunSuite with Matchers with SwaggerSpecRunner 
       |            $ref: '#/definitions/User'
       |""".stripMargin
 
-
-
   test("Test that fully qualified names are used") {
     val (
-      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)),_, _,_ ),
-      Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))),_),
+      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _),
+      Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
       _
-      ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, Http4s)
+    ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, Http4s)
 
     clz.fullType shouldEqual t"_root_.com.test.User"
     client.head.toOption.get shouldEqual q"""
@@ -74,7 +72,7 @@ class FullyQualifiedNames extends FunSuite with Matchers with SwaggerSpecRunner 
           }
         }
        """
-    
+
     respObject shouldEqual q"""object GetUserResponse { case class Ok(value: _root_.com.test.User) extends GetUserResponse }"""
 
   }

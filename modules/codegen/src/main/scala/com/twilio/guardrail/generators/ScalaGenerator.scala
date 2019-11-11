@@ -29,20 +29,20 @@ object ScalaGenerator {
     def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
       case VendorPrefixes() => Target.pure(List("x-scala", "x-jvm"))
 
-      case LitString(value)        => Target.pure(Lit.String(value))
-      case LitFloat(value)         => Target.pure(Lit.Float(value))
-      case LitDouble(value)        => Target.pure(Lit.Double(value))
-      case LitInt(value)           => Target.pure(Lit.Int(value))
-      case LitLong(value)          => Target.pure(Lit.Long(value))
-      case LitBoolean(value)       => Target.pure(Lit.Boolean(value))
-      case LiftOptionalType(value) => Target.pure(t"Option[${value}]")
-      case LiftOptionalTerm(value) => Target.pure(q"Option(${value})")
-      case EmptyOptionalTerm()     => Target.pure(q"None")
-      case EmptyArray()            => Target.pure(q"IndexedSeq.empty")
-      case EmptyMap()              => Target.pure(q"Map.empty")
-      case LiftVectorType(value)   => Target.pure(t"IndexedSeq[${value}]")
-      case LiftVectorTerm(value)   => Target.pure(q"IndexedSeq(${value})")
-      case LiftMapType(value)      => Target.pure(t"Map[String, ${value}]")
+      case LitString(value)                    => Target.pure(Lit.String(value))
+      case LitFloat(value)                     => Target.pure(Lit.Float(value))
+      case LitDouble(value)                    => Target.pure(Lit.Double(value))
+      case LitInt(value)                       => Target.pure(Lit.Int(value))
+      case LitLong(value)                      => Target.pure(Lit.Long(value))
+      case LitBoolean(value)                   => Target.pure(Lit.Boolean(value))
+      case LiftOptionalType(value)             => Target.pure(t"Option[${value}]")
+      case LiftOptionalTerm(value)             => Target.pure(q"Option(${value})")
+      case EmptyOptionalTerm()                 => Target.pure(q"None")
+      case EmptyArray()                        => Target.pure(q"IndexedSeq.empty")
+      case EmptyMap()                          => Target.pure(q"Map.empty")
+      case LiftVectorType(value)               => Target.pure(t"IndexedSeq[${value}]")
+      case LiftVectorTerm(value)               => Target.pure(q"IndexedSeq(${value})")
+      case LiftMapType(value)                  => Target.pure(t"Map[String, ${value}]")
       case FullyQualifyPackageName(rawPkgName) => Target.pure("_root_" +: rawPkgName)
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
@@ -268,27 +268,28 @@ object ScalaGenerator {
         Target.pure(WriteTree(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), sourceToBytes(frameworkDefinitionsFile)))
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        dtoComponents.traverse { case dtoComponents@(dtoHead :: dtoRest) =>
-          val dtoPkg = dtoRest.init
-            .foldLeft[Term.Ref](Term.Name(dtoHead)) {
-              case (acc, next) => Term.Select(acc, Term.Name(next))
-            }
-          val companion = Term.Name(s"${dtoComponents.last}$$")
+        dtoComponents.traverse {
+          case dtoComponents @ (dtoHead :: dtoRest) =>
+            val dtoPkg = dtoRest.init
+              .foldLeft[Term.Ref](Term.Name(dtoHead)) {
+                case (acc, next) => Term.Select(acc, Term.Name(next))
+              }
+            val companion = Term.Name(s"${dtoComponents.last}$$")
 
-          val (_, statements) =
-            packageObjectContents.partition(partitionImplicits)
-          val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
+            val (_, statements) =
+              packageObjectContents.partition(partitionImplicits)
+            val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
 
-          val mirroredImplicits = implicits
-            .map({ stat =>
-              val List(Pat.Var(mirror)) = stat.pats
-              stat.copy(rhs = q"${companion}.${mirror}")
-            })
+            val mirroredImplicits = implicits
+              .map({ stat =>
+                val List(Pat.Var(mirror)) = stat.pats
+                stat.copy(rhs = q"${companion}.${mirror}")
+              })
 
-          Target.pure(
-            WriteTree(
-              dtoPackagePath.resolve("package.scala"),
-              sourceToBytes(source"""
+            Target.pure(
+              WriteTree(
+                dtoPackagePath.resolve("package.scala"),
+                sourceToBytes(source"""
             package ${dtoPkg}
 
             ..${customImports ++ packageObjectImports ++ protocolImports}
@@ -301,8 +302,8 @@ object ScalaGenerator {
               ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
             }
             """)
+              )
             )
-          )
         }
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
