@@ -42,6 +42,7 @@ object ScalaGenerator {
       case LiftVectorType(value)   => Target.pure(t"IndexedSeq[${value}]")
       case LiftVectorTerm(value)   => Target.pure(q"IndexedSeq(${value})")
       case LiftMapType(value)      => Target.pure(t"Map[String, ${value}]")
+      case FullyQualifyPackageName(rawPkgName) => Target.pure("_root_" +: rawPkgName)
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
         defaultValue match {
