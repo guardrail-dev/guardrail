@@ -133,15 +133,10 @@ artifact in (Compile, assembly) := {
 
 addArtifact(artifact in (Compile, assembly), assembly)
 
-val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
 val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
-resetSample := {
-  import scala.sys.process._
-  (List("sample") ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}"))
-    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/target/generated" !)
-}
+addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
