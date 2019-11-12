@@ -319,6 +319,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     ),
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
+      "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
       "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
       "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
