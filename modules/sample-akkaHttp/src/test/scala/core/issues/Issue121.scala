@@ -17,7 +17,6 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
   test("akka-http server can respond with 204") {
     import issues.issue121.server.akkaHttp.{ Handler, Resource }
-    import issues.issue121.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
       override def deleteFoo(respond: Resource.deleteFooResponse.type)(id: Long): Future[Resource.deleteFooResponse] =
         Future.successful(respond.NoContent)
@@ -32,7 +31,6 @@ class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
   test("akka-http client can respond with 204") {
     import issues.issue121.client.akkaHttp.Client
-    import issues.issue121.client.akkaHttp.definitions._
 
     def noContentResponse: HttpRequest => Future[HttpResponse] = _ => Future.successful(HttpResponse(204))
 

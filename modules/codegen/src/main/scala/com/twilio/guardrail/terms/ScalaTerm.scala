@@ -26,6 +26,8 @@ case class LiftVectorType[L <: LA](value: L#Type)   extends ScalaTerm[L, L#Type]
 case class LiftVectorTerm[L <: LA](value: L#Term)   extends ScalaTerm[L, L#Term]
 case class LiftMapType[L <: LA](value: L#Type)      extends ScalaTerm[L, L#Type]
 
+case class FullyQualifyPackageName[L <: LA](rawPkgName: List[String]) extends ScalaTerm[L, List[String]]
+
 case class LookupEnumDefaultValue[L <: LA](tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)])
     extends ScalaTerm[L, L#TermSelect]
 case class FormatEnumName[L <: LA](enumValue: String) extends ScalaTerm[L, String]
@@ -86,7 +88,7 @@ case class RenderFrameworkDefinitions[L <: LA](pkgPath: Path,
                                                frameworkDefinitionsName: L#TermName)
     extends ScalaTerm[L, WriteTree]
 case class WritePackageObject[L <: LA](dtoPackagePath: Path,
-                                       dtoComponents: List[String],
+                                       dtoComponents: Option[List[String]],
                                        customImports: List[L#Import],
                                        packageObjectImports: List[L#Import],
                                        protocolImports: List[L#Import],
@@ -104,14 +106,14 @@ case class WriteClient[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
                                 frameworkImplicitName: Option[L#TermName],
-                                dtoComponents: List[String],
+                                dtoComponents: Option[List[String]],
                                 client: Client[L])
     extends ScalaTerm[L, List[WriteTree]]
 case class WriteServer[L <: LA](pkgPath: Path,
                                 pkgName: List[String],
                                 customImports: List[L#Import],
                                 frameworkImplicitName: Option[L#TermName],
-                                dtoComponents: List[String],
+                                dtoComponents: Option[List[String]],
                                 server: Server[L])
     extends ScalaTerm[L, List[WriteTree]]
 

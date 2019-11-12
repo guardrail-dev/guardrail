@@ -133,15 +133,10 @@ artifact in (Compile, assembly) := {
 
 addArtifact(artifact in (Compile, assembly), assembly)
 
-val resetSample = TaskKey[Unit]("resetSample", "Reset sample module")
 val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
 val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
-resetSample := {
-  import scala.sys.process._
-  (List("sample") ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}"))
-    .foreach(sampleName => s"git clean -fdx modules/${sampleName}/target/generated" !)
-}
+addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
@@ -153,7 +148,7 @@ addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
 addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
 addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite")
 
 addCommandAlias(
@@ -324,6 +319,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     ),
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
+      "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
       "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
       "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,

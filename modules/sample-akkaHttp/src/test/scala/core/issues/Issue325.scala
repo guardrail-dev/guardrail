@@ -22,7 +22,6 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
 
   test("Ensure that servers can be constructed") {
     import issues.issue325.server.akkaHttp.{ Handler, Resource }
-    import issues.issue325.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
       override def testMultipleContentTypes(
           respond: Resource.testMultipleContentTypesResponse.type
@@ -123,7 +122,6 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
   test("Ensure that clients supply the correct arguments encoded in the expected way") {
     import akka.stream.scaladsl.Sink
     import issues.issue325.client.akkaHttp.{ Client, TestMultipleContentTypesResponse }
-    import issues.issue325.client.akkaHttp.definitions._
 
     def expectResponse(p: (String, List[Multipart.FormData.BodyPart.Strict]) => Boolean)(implicit ec: ExecutionContext): HttpRequest => Future[HttpResponse] = {
       req =>

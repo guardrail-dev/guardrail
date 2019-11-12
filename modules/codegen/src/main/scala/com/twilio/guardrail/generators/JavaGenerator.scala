@@ -125,9 +125,10 @@ object JavaGenerator {
                                    .setTypeArguments(new NodeList[Type]),
                                  new NodeList())
         )
-      case LiftVectorType(value) => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
-      case LiftVectorTerm(value) => buildMethodCall("java.util.Collections.singletonList", Some(value))
-      case LiftMapType(value)    => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
+      case LiftVectorType(value)               => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
+      case LiftVectorTerm(value)               => buildMethodCall("java.util.Collections.singletonList", Some(value))
+      case LiftMapType(value)                  => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
+      case FullyQualifyPackageName(rawPkgName) => Target.pure(rawPkgName)
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
         defaultValue match {
@@ -259,9 +260,9 @@ object JavaGenerator {
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         for {
-          pkgDecl <- buildPkgDecl(dtoComponents)
-          bytes   <- prettyPrintSource(new CompilationUnit().setPackageDeclaration(pkgDecl))
-        } yield Option(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), bytes))
+          pkgDecl <- dtoComponents.traverse(buildPkgDecl)
+          bytes   <- pkgDecl.traverse(x => prettyPrintSource(new CompilationUnit().setPackageDeclaration(x)))
+        } yield bytes.map(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), _))
 
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         for {
@@ -326,8 +327,8 @@ object JavaGenerator {
         for {
           pkgDecl             <- buildPkgDecl(pkgName ++ pkg)
           commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
-          dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
-          allImports    = imports ++ customImports :+ commonImport :+ dtoComponentsImport
+          dtoComponentsImport <- dtoComponents.traverse(x => safeParseRawImport((x :+ "*").mkString(".")))
+          allImports    = imports ++ (customImports :+ commonImport) ++ dtoComponentsImport
           clientClasses = client.map(_.merge).toList
           trees <- (clientClasses ++ responseDefinitions).traverse(writeClientTree(pkgPath, pkg, pkgDecl, allImports, _))
         } yield trees
@@ -342,8 +343,8 @@ object JavaGenerator {
           pkgDecl <- buildPkgDecl(pkgName ++ pkg)
 
           commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
-          dtoComponentsImport <- safeParseRawImport((dtoComponents :+ "*").mkString("."))
-          allImports = extraImports ++ List(commonImport, dtoComponentsImport) ++ customImports
+          dtoComponentsImport <- dtoComponents.traverse(x => safeParseRawImport((x :+ "*").mkString(".")))
+          allImports = extraImports ++ List(commonImport) ++ dtoComponentsImport ++ customImports
 
           handlerTree <- writeServerTree(pkgPath, pkg, pkgDecl, allImports, handlerDefinition)
           serverTrees <- serverDefinitions.traverse(writeServerTree(pkgPath, pkg, pkgDecl, allImports, _))

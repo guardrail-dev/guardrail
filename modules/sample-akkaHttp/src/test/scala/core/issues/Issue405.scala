@@ -29,7 +29,6 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
 
   test("Empty string for a required form param should parse as empty string") {
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
-    import issues.issue405.server.akkaHttp.definitions._
 
     val route = Route.seal(Resource.routes(new Handler {
       override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
@@ -45,7 +44,6 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
 
   test("Empty string for an optional form param should parse as empty string") {
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
-    import issues.issue405.server.akkaHttp.definitions._
 
     val route = Route.seal(Resource.routes(new Handler {
       override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
@@ -63,7 +61,6 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
 
   test("Omitting a required parameter should still reject the request") {
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
-    import issues.issue405.server.akkaHttp.definitions._
 
     val route = Route.seal(Resource.routes(new Handler {
       override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
@@ -79,7 +76,6 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
 
   test("Omitting an optional parameter should still pass None to the endpoint") {
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
-    import issues.issue405.server.akkaHttp.definitions._
 
     val route = Route.seal(Resource.routes(new Handler {
       override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
