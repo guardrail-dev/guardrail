@@ -96,6 +96,7 @@ object Http4sHelper {
     q"""
        new org.http4s.dsl.impl.EntityResponseGenerator[F,F] {
           def status = $term
+          val liftG = cats.arrow.FunctionK.id
        }
      """
 
