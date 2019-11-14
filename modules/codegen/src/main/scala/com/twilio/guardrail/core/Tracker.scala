@@ -108,6 +108,9 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
           .andThen(Right(_))
           .applyOrElse(tracker.get, (_: A) => Left(tracker))
       }, Right(_))
+
+    def orRefineFallback(f: Tracker[A] => C): C =
+      value.fold(f, identity _)
   }
 
   implicit class Syntax[A](tracker: Tracker[A]) {
