@@ -151,7 +151,7 @@ object SwaggerUtil {
         log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
           case ref: Schema[_] if Option(ref.get$ref).isDefined =>
             for {
-              ref <- getSimpleRef(ref)
+              ref <- getSimpleRef(Tracker.hackyAdapt(Option(ref), Vector.empty))
             } yield Deferred[L](ref)
           case arr: ArraySchema =>
             for {
@@ -403,7 +403,7 @@ object SwaggerUtil {
                 }
               } yield res
           )
-          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.get).map(Deferred[L]))
+          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(Deferred[L]))
           .orRefine({ case b: BooleanSchema => b })(buildResolve(litBoolean))
           .orRefine({ case s: StringSchema => s })(buildResolve(litString))
           .orRefine({ case s: EmailSchema => s })(buildResolveNoDefault)

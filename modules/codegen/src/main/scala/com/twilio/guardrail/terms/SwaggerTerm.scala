@@ -237,7 +237,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
     for {
-      a <- ScalaParameter.fromParameters(protocolElems).apply(parameters.map(_.get))
+      a <- ScalaParameter.fromParameters(protocolElems).apply(parameters)
     } yield new ScalaParameters[L](a)
 }
 
@@ -265,18 +265,18 @@ case class ExtractOAuth2SecurityScheme[L <: LA](schemeName: String, securitySche
     extends SwaggerTerm[L, OAuth2SecurityScheme[L]]
 case class GetClassName[L <: LA](operation: Tracker[Operation], vendorPrefixes: List[String]) extends SwaggerTerm[L, List[String]]
 case class GetParameterName[L <: LA](parameter: Parameter)                                    extends SwaggerTerm[L, String]
-case class GetBodyParameterSchema[L <: LA](parameter: Parameter)                              extends SwaggerTerm[L, Schema[_]]
-case class GetHeaderParameterType[L <: LA](parameter: Parameter)                              extends SwaggerTerm[L, String]
-case class GetPathParameterType[L <: LA](parameter: Parameter)                                extends SwaggerTerm[L, String]
-case class GetQueryParameterType[L <: LA](parameter: Parameter)                               extends SwaggerTerm[L, String]
-case class GetCookieParameterType[L <: LA](parameter: Parameter)                              extends SwaggerTerm[L, String]
-case class GetFormParameterType[L <: LA](parameter: Parameter)                                extends SwaggerTerm[L, String]
-case class GetSerializableParameterType[L <: LA](parameter: Parameter)                        extends SwaggerTerm[L, String]
-case class GetRefParameterRef[L <: LA](parameter: Tracker[Parameter])                         extends SwaggerTerm[L, String]
-case class FallbackParameterHandler[L <: LA](parameter: Parameter)                            extends SwaggerTerm[L, SwaggerUtil.ResolvedType[L]]
+case class GetBodyParameterSchema[L <: LA](parameter: Tracker[Parameter])                     extends SwaggerTerm[L, Schema[_]]
+case class GetHeaderParameterType[L <: LA](parameter: Tracker[Parameter])                     extends SwaggerTerm[L, Tracker[String]]
+case class GetPathParameterType[L <: LA](parameter: Tracker[Parameter])                       extends SwaggerTerm[L, Tracker[String]]
+case class GetQueryParameterType[L <: LA](parameter: Tracker[Parameter])                      extends SwaggerTerm[L, Tracker[String]]
+case class GetCookieParameterType[L <: LA](parameter: Tracker[Parameter])                     extends SwaggerTerm[L, Tracker[String]]
+case class GetFormParameterType[L <: LA](parameter: Tracker[Parameter])                       extends SwaggerTerm[L, Tracker[String]]
+case class GetSerializableParameterType[L <: LA](parameter: Tracker[Parameter])               extends SwaggerTerm[L, Tracker[String]]
+case class GetRefParameterRef[L <: LA](parameter: Tracker[Parameter])                         extends SwaggerTerm[L, Tracker[String]]
+case class FallbackParameterHandler[L <: LA](parameter: Tracker[Parameter])                   extends SwaggerTerm[L, SwaggerUtil.ResolvedType[L]]
 case class GetOperationId[L <: LA](operation: Tracker[Operation])                             extends SwaggerTerm[L, String]
 case class GetResponses[L <: LA](operationId: String, operation: Tracker[Operation])          extends SwaggerTerm[L, NonEmptyList[(String, Tracker[ApiResponse])]]
-case class GetSimpleRef[L <: LA](ref: Schema[_])                                              extends SwaggerTerm[L, String]
+case class GetSimpleRef[L <: LA](ref: Tracker[Option[Schema[_]]])                             extends SwaggerTerm[L, String]
 case class GetItems[L <: LA](arr: ArraySchema)                                                extends SwaggerTerm[L, Schema[_]]
 case class GetType[L <: LA](model: Schema[_])                                                 extends SwaggerTerm[L, String]
 case class FallbackPropertyTypeHandler[L <: LA](prop: Schema[_])                              extends SwaggerTerm[L, L#Type]
