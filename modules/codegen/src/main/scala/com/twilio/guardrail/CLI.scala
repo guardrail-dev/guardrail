@@ -208,9 +208,9 @@ object CLI extends CLICommon {
     JavaModule.extract, {
       case "dropwizard" => Java.Dropwizard
     }, { str =>
-      import com.github.javaparser.JavaParser
+      import com.github.javaparser.StaticJavaParser
       import scala.util.Try
-      Try(JavaParser.parseImport(s"import ${str};")) match {
+      Try(StaticJavaParser.parseImport(s"import ${str};")) match {
         case Success(value) => Right(value)
         case Failure(t)     => Left(UnparseableArgument("import", t.getMessage))
       }

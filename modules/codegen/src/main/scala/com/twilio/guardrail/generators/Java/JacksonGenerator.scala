@@ -16,21 +16,21 @@ import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import scala.collection.JavaConverters._
-import com.github.javaparser.JavaParser
+import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.stmt._
-import com.github.javaparser.ast.Modifier.{ ABSTRACT, FINAL, PRIVATE, PROTECTED, PUBLIC, STATIC }
+import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
+import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import java.math.BigInteger
-import java.util
 import java.util.Locale
 import scala.util.Try
 
 object JacksonGenerator {
-  private val BUILDER_TYPE        = JavaParser.parseClassOrInterfaceType("Builder")
-  private val BIG_INTEGER_FQ_TYPE = JavaParser.parseClassOrInterfaceType("java.math.BigInteger")
-  private val BIG_DECIMAL_FQ_TYPE = JavaParser.parseClassOrInterfaceType("java.math.BigDecimal")
+  private val BUILDER_TYPE        = StaticJavaParser.parseClassOrInterfaceType("Builder")
+  private val BIG_INTEGER_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigInteger")
+  private val BIG_DECIMAL_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigDecimal")
 
   private case class ParameterTerm(propertyName: String,
                                    parameterName: String,
@@ -66,8 +66,8 @@ object JacksonGenerator {
 
   private def addParents(cls: ClassOrInterfaceDeclaration, parentOpt: Option[SuperClass[JavaLanguage]]): Unit =
     parentOpt.foreach({ parent =>
-      val directParent = JavaParser.parseClassOrInterfaceType(parent.clsName)
-      val otherParents = parent.interfaces.map(JavaParser.parseClassOrInterfaceType)
+      val directParent = StaticJavaParser.parseClassOrInterfaceType(parent.clsName)
+      val otherParents = parent.interfaces.map(StaticJavaParser.parseClassOrInterfaceType)
       cls.setExtendedTypes(new NodeList(directParent))
       cls.setImplementedTypes(otherParents.toNodeList)
     })
@@ -139,7 +139,7 @@ object JacksonGenerator {
         Target.pure(None)
 
       case RenderClass(clsName, tpe, elems) =>
-        val enumType = JavaParser.parseType(clsName)
+        val enumType = StaticJavaParser.parseType(clsName)
 
         val enumDefns = elems.map {
           case (value, termName, _) =>
@@ -152,12 +152,12 @@ object JacksonGenerator {
         }
 
         val nameField = new FieldDeclaration(
-          util.EnumSet.of(PRIVATE, FINAL),
+          new NodeList(privateModifier, finalModifier),
           new VariableDeclarator(STRING_TYPE, "name")
         )
 
-        val constructor = new ConstructorDeclaration(util.EnumSet.of(PRIVATE), clsName)
-        constructor.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("name")))
+        val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
+        constructor.addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
         constructor.setBody(
           new BlockStmt(
             new NodeList(
@@ -173,7 +173,7 @@ object JacksonGenerator {
         )
 
         val getNameMethod = new MethodDeclaration(
-          util.EnumSet.of(PUBLIC),
+          new NodeList(publicModifier),
           STRING_TYPE,
           "getName"
         )
@@ -187,17 +187,17 @@ object JacksonGenerator {
         )
 
         val parseMethod = new MethodDeclaration(
-          util.EnumSet.of(PUBLIC, STATIC),
+          new NodeList(publicModifier, staticModifier),
           enumType,
           "parse"
         )
         parseMethod.addMarkerAnnotation("JsonCreator")
-        parseMethod.addParameter(new Parameter(util.EnumSet.of(FINAL), STRING_TYPE, new SimpleName("name")))
+        parseMethod.addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
         parseMethod.setBody(
           new BlockStmt(
             new NodeList(
               new ForEachStmt(
-                new VariableDeclarationExpr(new VariableDeclarator(enumType, "value"), FINAL),
+                new VariableDeclarationExpr(new VariableDeclarator(enumType, "value"), finalModifier),
                 new MethodCallExpr("values"),
                 new BlockStmt(
                   new NodeList(
@@ -212,7 +212,7 @@ object JacksonGenerator {
               new ThrowStmt(
                 new ObjectCreationExpr(
                   null,
-                  JavaParser.parseClassOrInterfaceType("IllegalArgumentException"),
+                  StaticJavaParser.parseClassOrInterfaceType("IllegalArgumentException"),
                   new NodeList(
                     new BinaryExpr(
                       new BinaryExpr(new StringLiteralExpr("Name '"), new NameExpr("name"), BinaryExpr.Operator.PLUS),
@@ -235,7 +235,7 @@ object JacksonGenerator {
                   new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
                   "register",
                   new NodeList[Expression](
-                    new ClassExpr(JavaParser.parseClassOrInterfaceType(clsName)),
+                    new ClassExpr(StaticJavaParser.parseClassOrInterfaceType(clsName)),
                     new MethodReferenceExpr(new NameExpr(clsName), null, "getName")
                   )
                 )
@@ -245,7 +245,7 @@ object JacksonGenerator {
         )
 
         val enumClass = new EnumDeclaration(
-          util.EnumSet.of(PUBLIC),
+          new NodeList(publicModifier),
           new NodeList(),
           new SimpleName(clsName),
           new NodeList(),
@@ -371,7 +371,7 @@ object JacksonGenerator {
       val (requiredTerms, optionalTerms) = sortParams(params)
       val terms                          = requiredTerms ++ optionalTerms
 
-      val dtoClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC), false, clsName)
+      val dtoClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, clsName)
       dtoClass.addAnnotation(
         new NormalAnnotationExpr(
           new Name("JsonIgnoreProperties"),
@@ -401,7 +401,7 @@ object JacksonGenerator {
         new NodeList(
           withoutDiscriminators(parentTerms ++ terms).map({
             case ParameterTerm(propertyName, parameterName, fieldType, _, _, _, _) =>
-              new Parameter(util.EnumSet.of(FINAL), fieldType, new SimpleName(parameterName))
+              new Parameter(new NodeList(finalModifier), fieldType, new SimpleName(parameterName))
                 .addAnnotation(new SingleMemberAnnotationExpr(new Name("JsonProperty"), new StringLiteralExpr(propertyName)))
           }): _*
         )
@@ -494,7 +494,7 @@ object JacksonGenerator {
         .addMethod("equals", PUBLIC)
         .setType(PrimitiveType.booleanType)
         .addMarkerAnnotation("Override")
-        .addParameter(new Parameter(util.EnumSet.of(FINAL), OBJECT_TYPE, new SimpleName("o")))
+        .addParameter(new Parameter(new NodeList(finalModifier), OBJECT_TYPE, new SimpleName("o")))
       equalsMethod.setBody(
         new BlockStmt(
           new NodeList(
@@ -518,7 +518,7 @@ object JacksonGenerator {
                                             "other",
                                             new CastExpr(dtoClassType, new NameExpr("o"))
                                           ),
-                                          FINAL)
+                                          finalModifier)
             ),
             new ReturnStmt(returnExpr)
           )
@@ -543,7 +543,7 @@ object JacksonGenerator {
         )
       )
 
-      val builderClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, STATIC), false, "Builder")
+      val builderClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, "Builder")
 
       withoutDiscriminators(parentRequiredTerms ++ requiredTerms).foreach({
         case ParameterTerm(_, parameterName, fieldType, _, _, _, _) =>
@@ -569,7 +569,7 @@ object JacksonGenerator {
         new NodeList(
           withoutDiscriminators(parentRequiredTerms ++ requiredTerms).map({
             case ParameterTerm(_, parameterName, _, parameterType, _, _, _) =>
-              new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName))
+              new Parameter(new NodeList(finalModifier), parameterType, new SimpleName(parameterName))
           }): _*
         )
       )
@@ -595,7 +595,7 @@ object JacksonGenerator {
 
       builderClass
         .addConstructor(PUBLIC)
-        .setParameters(new NodeList(new Parameter(util.EnumSet.of(FINAL), dtoClassType, new SimpleName("template"))))
+        .setParameters(new NodeList(new Parameter(new NodeList(finalModifier), dtoClassType, new SimpleName("template"))))
         .setBody(
           new BlockStmt(
             withoutDiscriminators(parentTerms ++ terms)
@@ -621,7 +621,7 @@ object JacksonGenerator {
           builderClass
             .addMethod(methodName, PUBLIC)
             .setType(BUILDER_TYPE)
-            .addParameter(new Parameter(util.EnumSet.of(FINAL), parameterType, new SimpleName(parameterName)))
+            .addParameter(new Parameter(new NodeList(finalModifier), parameterType, new SimpleName(parameterName)))
             .setBody(
               new BlockStmt(
                 new NodeList(
@@ -653,7 +653,7 @@ object JacksonGenerator {
             builderClass
               .addMethod(methodName, PUBLIC)
               .setType(BUILDER_TYPE)
-              .addParameter(new Parameter(util.EnumSet.of(FINAL), newParameterType, new SimpleName(newParameterName)))
+              .addParameter(new Parameter(new NodeList(finalModifier), newParameterType, new SimpleName(newParameterName)))
               .setBody(
                 new BlockStmt(
                   new NodeList(
@@ -703,7 +703,7 @@ object JacksonGenerator {
                 .map(term => new ExpressionStmt(requireNonNullExpr(new FieldAccessExpr(new ThisExpr, term.parameterName)))) :+ new ReturnStmt(
                 new ObjectCreationExpr(
                   null,
-                  JavaParser.parseClassOrInterfaceType(clsName),
+                  StaticJavaParser.parseClassOrInterfaceType(clsName),
                   new NodeList(
                     builderBuildTerms.map(param => new FieldAccessExpr(new ThisExpr, param.parameterName)): _*
                   )
@@ -891,7 +891,7 @@ object JacksonGenerator {
       val (requiredTerms, optionalTerms) = sortParams(params)
       val terms                          = requiredTerms ++ optionalTerms
 
-      val abstractClass = new ClassOrInterfaceDeclaration(util.EnumSet.of(PUBLIC, ABSTRACT), false, className)
+      val abstractClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, abstractModifier), false, className)
       abstractClass.addAnnotation(
         new NormalAnnotationExpr(
           new Name("JsonIgnoreProperties"),
@@ -937,7 +937,7 @@ object JacksonGenerator {
                                             .collectFirst({ case (value, elem) if elem.name == child => value })
                                             .getOrElse(child)
                                         )),
-                    new MemberValuePair("value", new ClassExpr(JavaParser.parseType(child)))
+                    new MemberValuePair("value", new ClassExpr(StaticJavaParser.parseType(child)))
                   )
               )
             ): _*
@@ -957,7 +957,7 @@ object JacksonGenerator {
         .addConstructor(PROTECTED)
         .setParameters(
           (parentTerms ++ terms)
-            .map(term => new Parameter(util.EnumSet.of(FINAL), term.fieldType, new SimpleName(term.parameterName)))
+            .map(term => new Parameter(new NodeList(finalModifier), term.fieldType, new SimpleName(term.parameterName)))
             .toNodeList
         )
         .setBody(dtoConstructorBody(superCall, requiredTerms ++ optionalTerms))
