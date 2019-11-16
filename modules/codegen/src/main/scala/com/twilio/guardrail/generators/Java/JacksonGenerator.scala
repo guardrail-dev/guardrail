@@ -178,8 +178,7 @@ object JacksonGenerator {
           new NodeList(publicModifier),
           STRING_TYPE,
           "getName"
-        )
-          .addMarkerAnnotation("JsonValue")
+        ).addMarkerAnnotation("JsonValue")
           .setBody(
             new BlockStmt(
               new NodeList(
@@ -192,8 +191,7 @@ object JacksonGenerator {
           new NodeList(publicModifier, staticModifier),
           enumType,
           "parse"
-        )
-          .addMarkerAnnotation("JsonCreator")
+        ).addMarkerAnnotation("JsonCreator")
           .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
           .setBody(
             new BlockStmt(

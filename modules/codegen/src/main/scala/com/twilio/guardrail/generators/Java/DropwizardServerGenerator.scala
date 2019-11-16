@@ -127,7 +127,7 @@ object DropwizardServerGenerator {
       )
   }
 
-  def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] = {
+  def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
     Target.log.function("generateResponseSuperClass") {
       for {
         _ <- Target.log.info(s"Name: ${name}")
@@ -158,7 +158,6 @@ object DropwizardServerGenerator {
           )
       } yield cls
     }
-  }
 
   def generateResponseClass(superClassType: ClassOrInterfaceType,
                             response: Response[JavaLanguage],
