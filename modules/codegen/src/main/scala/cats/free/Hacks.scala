@@ -43,18 +43,18 @@ object GuardrailFreeHacks {
                                     push: String => Free[F, Unit],
                                     pop: Free[F, Unit],
                                     emit: Free[F, Unit]): Free[F, A] = {
-    def next[B]: Free[F, B] => Free[F, B] = injectLogs(_, ignore, push, pop, emit)
-    value match {
+    def next[B]: Free[F, B] => Free[F, B] = {
       case Pure(a) =>
         Pure(a)
       case Suspend(a) =>
         Suspend(a)
-      case term @ FlatMapped(Suspend(a), _) if ignore contains TermName.nameOnly(a) =>
-        term
+      case FlatMapped(Suspend(a), f) if ignore contains TermName.nameOnly(a) =>
+        FlatMapped(Suspend(a), f.map(next))
       case FlatMapped(Suspend(a), f) =>
-        push(TermName(a)) *> FlatMapped(Suspend(a), f.map(x => next(x) <* emit <* pop))
+        push(TermName(a)) *> FlatMapped(Suspend(a), f.map(x => emit *> pop *> next(x)))
       case FlatMapped(c, f) =>
         FlatMapped(next(c), f.map(next))
     }
+    next(value)
   }
 }
