@@ -1,0 +1,39 @@
+openapi: 3.0.0
+info:
+  title: Test Server
+  version: "1.0"
+servers:
+  - url: http://localhost:8000
+paths:
+  /v1/Boo:
+    post:
+      summary: Test resource
+      operationId: boo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecursiveData"
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecursiveData"
+
+components:
+  schemas:
+    RecursiveData:
+      type: object
+      description: Represents a recursive nested object
+      required: [id, display_name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        display_name:
+          type: string
+        nesting:
+          $ref: "#/components/schemas/RecursiveData"
