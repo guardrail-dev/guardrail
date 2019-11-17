@@ -227,7 +227,7 @@ object SwaggerUtil {
       format: Tracker[Option[String]],
       customType: Option[String]
   )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
-    Sw.log.function(s"typeName(${typeName}, ${format}, ${customType})") {
+    Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType})") {
       import Sc._
       import Fw._
 
