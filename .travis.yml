@@ -19,7 +19,6 @@ script: >
 matrix:
   include:
   - jdk: openjdk8
-  - jdk: openjdk11
 
 # Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
 before_cache:
