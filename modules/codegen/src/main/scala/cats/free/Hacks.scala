@@ -67,7 +67,7 @@ object GuardrailFreeHacks {
           term.getClass.getSimpleName,
           term
             .toString()
-            .lines
+            .linesIterator
             .filterNot(_.contains(": null"))
             .mkString("; ")
         )
