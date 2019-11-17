@@ -1,5 +1,6 @@
 package com.twilio.guardrail.extract
 
+import com.twilio.guardrail.core.Tracker
 import io.swagger.v3.oas.models.media.{ BooleanSchema, IntegerSchema, NumberSchema, StringSchema }
 import io.swagger.v3.oas.models.parameters.Parameter
 
@@ -29,6 +30,12 @@ object Default {
 
     implicit val getDefaultQueryParameterParameter: GetDefault[Parameter] =
       build[Parameter](_.getSchema.getDefault)
+
+    implicit def proxyDefaultForTracker[A](implicit ev: GetDefault[A]): GetDefault[Tracker[A]] =
+      new GetDefault[Tracker[A]] {
+        def extract[T](from: Tracker[A])(implicit T: Extractable[T]): Option[T] =
+          ev.extract[T](from.unwrapTracker)
+      }
   }
 
   case class DefaultAdapter[F](from: F) extends AnyVal {

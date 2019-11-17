@@ -47,14 +47,14 @@ object ScalaParameter {
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Parameter => Free[F, ScalaParameter[L]] = { parameter =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => Free[F, ScalaParameter[L]] = { parameter =>
     import Fw._
     import Sc._
     import Sw._
 
-    def paramMeta(param: Parameter): Free[F, SwaggerUtil.ResolvedType[L]] = {
-      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Option[String], p: U): Free[F, Option[L#Term]] =
-        (_type, fmt) match {
+    def paramMeta(param: Tracker[Parameter]): Free[F, SwaggerUtil.ResolvedType[L]] = {
+      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): Free[F, Option[L#Term]] =
+        (_type, fmt.get) match {
           case ("string", None) =>
             Default(p).extract[String].traverse(litString(_))
           case ("number", Some("float")) =>
@@ -70,62 +70,42 @@ object ScalaParameter {
           case x => Free.pure(Option.empty[L#Term])
         }
 
-      def resolveParam(param: Parameter, typeFetcher: Parameter => Free[F, String]): Free[F, ResolvedType[L]] =
+      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => Free[F, Tracker[String]]): Free[F, ResolvedType[L]] =
         for {
           tpeName <- typeFetcher(param)
-          schema = Option[Schema[_]](param.getSchema)
-          fmt    = schema.flatMap(s => Option(s.getFormat))
+          schema = param.downField("schema", _.getSchema)
+          fmt    = schema.flatDownField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- schema.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
+          customSchemaTypeName <- schema.get.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
           customTypeName = customSchemaTypeName.orElse(customParamTypeName)
-          res <- (SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty),
-                                             Tracker.hackyAdapt(Option(param.format()), Vector.empty),
-                                             customTypeName),
-                  getDefault(tpeName, fmt, param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName), fmt))
+          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get))
         } yield res
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
-      param match {
-        case r: Parameter if r.isRef =>
-          getRefParameterRef(Tracker.hackyAdapt(r, Vector.empty))
-            .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
-
-        case r: Parameter if paramHasRefSchema(r) =>
-          getSimpleRef(r.getSchema)
-            .map(SwaggerUtil.Deferred(_): SwaggerUtil.ResolvedType[L])
-
-        case x: Parameter if x.isInBody =>
-          getBodyParameterSchema(x)
-            .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
-
-        case x: Parameter if x.isInHeader =>
-          resolveParam(x, getHeaderParameterType)
-
-        case x: Parameter if x.isInPath =>
-          resolveParam(x, getPathParameterType)
-
-        case x: Parameter if x.isInQuery =>
-          resolveParam(x, getQueryParameterType)
-
-        case x: Parameter if x.isInCookies =>
-          resolveParam(x, getCookieParameterType)
-
-        case x: Parameter if x.isInFormData =>
-          resolveParam(x, getFormParameterType)
-
-        case x =>
-          fallbackParameterHandler(x)
-      }
+      param
+        .refine[Free[F, SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(r => getRefParameterRef(r).map(_.get).map(SwaggerUtil.Deferred(_)))
+        .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(r => getSimpleRef(r.downField("schema", _.getSchema)).map(SwaggerUtil.Deferred(_)))
+        .orRefine({ case x: Parameter if x.isInBody => x })(
+          x =>
+            getBodyParameterSchema(x)
+              .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+        )
+        .orRefine({ case x: Parameter if x.isInHeader => x })(x => resolveParam(x, getHeaderParameterType))
+        .orRefine({ case x: Parameter if x.isInPath => x })(x => resolveParam(x, getPathParameterType))
+        .orRefine({ case x: Parameter if x.isInQuery => x })(x => resolveParam(x, getQueryParameterType))
+        .orRefine({ case x: Parameter if x.isInCookies => x })(x => resolveParam(x, getCookieParameterType))
+        .orRefine({ case x: Parameter if x.isInFormData => x })(x => resolveParam(x, getFormParameterType))
+        .orRefineFallback(fallbackParameterHandler(_))
     }
 
     log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.showNotNull)
+      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
       meta                                                                     <- paramMeta(parameter)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
-      required = Option[java.lang.Boolean](parameter.getRequired()).fold(false)(identity)
+      required = Option[java.lang.Boolean](parameter.get.getRequired()).fold(false)(identity)
       declType <- if (!required) {
         liftOptionalType(paramType)
       } else {
@@ -152,7 +132,7 @@ object ScalaParameter {
         Free.pure[F, Option[L#Term]](enumDefaultValue)
       }
 
-      name <- getParameterName(parameter)
+      name <- getParameterName(parameter.get)
 
       paramName <- pureTermName(name.toCamelCase)
       param     <- pureMethodParameter(paramName, declType, defaultValue)
@@ -161,14 +141,14 @@ object ScalaParameter {
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
       new ScalaParameter[L](
-        Option(parameter.getIn),
+        Option(parameter.get.getIn),
         param,
         paramName,
         RawParameterName(name),
         declType,
         RawParameterType(rawType, rawFormat),
         required,
-        FileHashAlgorithm(parameter),
+        FileHashAlgorithm(parameter.get),
         isFileType
       )
     })
@@ -176,7 +156,7 @@ object ScalaParameter {
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Parameter] => Free[F, List[ScalaParameter[L]]] = { params =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => Free[F, List[ScalaParameter[L]]] = { params =>
     import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))

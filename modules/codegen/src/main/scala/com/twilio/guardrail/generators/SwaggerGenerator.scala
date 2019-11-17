@@ -16,10 +16,10 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 object SwaggerGenerator {
-  private def parameterSchemaType(parameter: Parameter): Target[String] =
+  private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] =
     for {
-      schema <- Target.fromOption(Option(parameter.getSchema), s"Parameter '${parameter.getName}' has no schema")
-      tpe    <- Target.fromOption(Option(schema.getType), s"Parameter '${parameter.getName}' has no schema type")
+      schema <- parameter.downField("schema", _.getSchema).raiseErrorIfEmpty("Parameter has no schema")
+      tpe    <- schema.downField("type", _.getType).raiseErrorIfEmpty("Parameter has no schema type")
     } yield tpe
 
   def apply[L <: LA]() = new (SwaggerTerm[L, ?] ~> Target) {
@@ -139,7 +139,10 @@ object SwaggerGenerator {
         Target.fromOption(Option(parameter.getName()), s"Parameter missing 'name': ${parameter}")
 
       case GetBodyParameterSchema(parameter) =>
-        Target.fromOption(Option(parameter.getSchema()), s"Schema not specified for parameter '${parameter.getName}'")
+        parameter
+          .downField("schema", _.getSchema())
+          .raiseErrorIfEmpty("Schema not specified")
+          .map(_.unwrapTracker)
 
       case GetHeaderParameterType(parameter) =>
         parameterSchemaType(parameter)
@@ -164,10 +167,9 @@ object SwaggerGenerator {
           .downField("$ref", _.get$ref())
           .map(_.flatMap(_.split("/").lastOption))
           .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
-          .map(_.get)
 
       case FallbackParameterHandler(parameter) =>
-        Target.raiseError(s"Unsure how to handle ${parameter}")
+        Target.raiseError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
 
       case GetOperationId(operation) =>
         operation
@@ -180,7 +182,11 @@ object SwaggerGenerator {
         operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.indexedCosequence.value)
 
       case GetSimpleRef(ref) =>
-        Target.fromOption(Option(ref.get$ref).flatMap(_.split("/").lastOption), s"Unspecified $ref")
+        ref
+          .flatDownField("$ref", _.get$ref)
+          .map(_.flatMap(_.split("/").lastOption))
+          .raiseErrorIfEmpty(s"Unspecified $$ref")
+          .map(_.unwrapTracker)
 
       case GetItems(arr) =>
         Target.fromOption(Option(arr.getItems()), "items.type unspecified")
