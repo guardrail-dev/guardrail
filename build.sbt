@@ -153,11 +153,11 @@ addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compil
 
 addCommandAlias(
   "publishBintray",
-  "; set publishTo in codegen := (publishTo in bintray in codegen).value; codegen/publishSigned"
+  "; set publishTo in codegen := (publishTo in bintray in codegen).value; codegen/publish"
 )
 addCommandAlias(
   "publishSonatype",
-  "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publishSigned"
+  "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publish"
 )
 addCommandAlias(
   "publishLocal",
