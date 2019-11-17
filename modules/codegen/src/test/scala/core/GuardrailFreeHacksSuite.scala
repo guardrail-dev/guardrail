@@ -18,6 +18,10 @@ case class ToUpper(value: String)     extends Algebra[String]
 case class ToLower(value: String)     extends Algebra[String]
 case class Passthrough(value: String) extends Algebra[String]
 
+/** GuardrailFreeHacksSuite
+  *
+  *  For documentation, please see GuardrailFreeHacks itself.
+  */
 class GuardrailFreeHacksSuite extends FunSuite with Matchers {
   def genLogEntries(): StructuredLogger = {
     type Program[A] = EitherK[Algebra, SwaggerTerm[ScalaLanguage, ?], A]
