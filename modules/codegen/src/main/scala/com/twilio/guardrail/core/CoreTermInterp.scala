@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package core
 
 import cats.data.{ NonEmptyList, State }
+import cats.free.{ Free, GuardrailFreeHacks }
 import cats.implicits._
 import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.languages.LA
@@ -139,14 +140,18 @@ case class CoreTermInterp[L <: LA](defaultFramework: String,
           Paths.get(specPath), {
             swagger =>
               try {
-                (for {
+                val Sw = SwaggerTerms.swaggerTerm[L, CodegenApplication[L, ?]]
+                val program = for {
+                  _                  <- Sw.log.debug("Running guardrail codegen")
                   definitionsPkgName <- ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]].fullyQualifyPackageName(pkgName)
-                  defs <- Common
+                  (proto, codegen) <- Common
                     .prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, Tracker(swagger), definitionsPkgName ++ ("definitions" :: dtoPackage))
-                  (proto, codegen) = defs
                   result <- Common
                     .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
-                } yield result).foldMap(targetInterpreter)
+                } yield result
+                GuardrailFreeHacks
+                  .injectLogs(program, Set("LogPush", "LogPop", "LogDebug", "LogInfo", "LogWarning", "LogError"), Sw.log.push, Sw.log.pop, Free.pure(()))
+                  .foldMap(targetInterpreter)
               } catch {
                 case NonFatal(ex) =>
                   val stackTrace =
