@@ -74,7 +74,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
         ._1
         .foldLeft((List.empty[String], List.empty[String]))({
           case ((lastHistory, messages), (level, history, message)) =>
-            val showFullHistory = false
+            val showFullHistory = true
             def makePrefix(history: List[String]): String =
               history.foldLeft("  ") {
                 case (a, b) =>

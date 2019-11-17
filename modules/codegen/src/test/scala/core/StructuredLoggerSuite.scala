@@ -20,10 +20,9 @@ class StructuredLoggerSuite extends FunSuite with Matchers {
       }
     val logEntries = structure.value.runEmptyS
     val expected   = """
-      |   INFO    first
-      |   INFO          second: one
-      |   INFO          second: two
-      |   INFO          second: three
+      |   INFO    first second: one
+      |   INFO    first second: two
+      |   INFO    first second: three
       """.trim.stripMargin
 
     {
