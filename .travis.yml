@@ -19,7 +19,6 @@ script: >
 matrix:
   include:
   - jdk: openjdk8
-  - jdk: openjdk11
 
 # Cache configs taken from https://www.scala-sbt.org/1.0/docs/Travis-CI-with-sbt.html
 before_cache:
@@ -49,5 +48,5 @@ before_install:
   fi
 after_success:
 - if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
-    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeClose sonatypeRelease microsite/publishMicrosite;
+    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeBundleRelease microsite/publishMicrosite;
   fi
