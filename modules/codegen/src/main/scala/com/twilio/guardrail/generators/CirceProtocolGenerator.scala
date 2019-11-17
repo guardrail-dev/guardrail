@@ -170,13 +170,11 @@ object CirceProtocolGenerator {
 
         val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
           def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
-            case param if param.dataRedaction == DataVisible => Term.Name(param.term.name.value)
+            case param if param.dataRedaction == DataVisible => q"${Term.Name(param.term.name.value)}.toString()"
             case _                                           => Lit.String("[redacted]")
           }
 
-          val toStringTerms = NonEmptyList
-            .fromList(params)
-            .fold(List.empty[Term])(list => mkToStringTerm(list.head) +: list.tail.map(param => q"${Lit.String(",")} + ${mkToStringTerm(param)}"))
+          val toStringTerms = params.map(p => List(mkToStringTerm(p))).intercalate(List(Lit.String(",")))
 
           List[Defn.Def](
             q"override def toString: String = ${toStringTerms.foldLeft[Term](Lit.String(s"${clsName}("))(
@@ -259,50 +257,56 @@ object CirceProtocolGenerator {
         )
         val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
         val paramCount                = params.length
-        val decVal = if (paramCount <= 22 && !needsEmptyToNull) {
-          val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
-          q"""
-            Decoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${Term
-            .Name(clsName)}.apply _)
-          """
-        } else {
-          val (terms, enumerators): (List[Term.Name], List[Enumerator.Generator]) = params
-            .map({ param =>
-              val tpe: Type = param.term.decltpe
-                .flatMap({
-                  case tpe: Type => Some(tpe)
-                  case x =>
-                    println(s"Unsure how to map ${x.structure}, please report this bug!")
-                    None
-                })
-                .get
-              val term = Term.Name(param.term.name.value)
-              val enum = if (param.emptyToNull == EmptyIsNull) {
-                enumerator"""
-                ${Pat.Var(term)} <- c.downField(${Lit
-                  .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
+        for {
+          decVal <- if (paramCount <= 22 && !needsEmptyToNull) {
+            val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
+            Target.pure(
+              q"""
+                Decoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${Term
+                .Name(clsName)}.apply _)
               """
-              } else {
-                enumerator"""
-                ${Pat.Var(term)} <- c.downField(${Lit.String(param.name)}).as[${tpe}]
-              """
+            )
+          } else {
+            params
+              .traverse({ param =>
+                for {
+                  rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
+                  tpe <- rawTpe match {
+                    case tpe: Type => Target.pure(tpe)
+                    case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
+                  }
+                } yield {
+                  val term = Term.Name(param.term.name.value)
+                  val enum = if (param.emptyToNull == EmptyIsNull) {
+                    enumerator"""
+                  ${Pat.Var(term)} <- c.downField(${Lit
+                      .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
+                """
+                  } else {
+                    enumerator"""
+                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name)}).as[${tpe}]
+                """
+                  }
+                  (term, enum)
+                }
+              })
+              .map({ pairs =>
+                val (terms, enumerators) = pairs.unzip
+                q"""
+              new Decoder[${Type.Name(clsName)}] {
+                final def apply(c: HCursor): Decoder.Result[${Type.Name(clsName)}] =
+                  for {
+                    ..${enumerators}
+                  } yield ${Term.Name(clsName)}(..${terms})
               }
-              (term, enum)
-            })
-            .to[List]
-            .unzip
-          q"""
-          new Decoder[${Type.Name(clsName)}] {
-            final def apply(c: HCursor): Decoder.Result[${Type.Name(clsName)}] =
-              for {
-                ..${enumerators}
-              } yield ${Term.Name(clsName)}(..${terms})
+              """
+              })
           }
-          """
+        } yield {
+          Some(q"""
+            implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] = $decVal
+          """)
         }
-        Target.pure(Some(q"""
-          implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] = $decVal
-        """))
 
       case RenderDTOStaticDefns(clsName, deps, encoder, decoder) =>
         val extraImports: List[Import] = deps.map { term =>

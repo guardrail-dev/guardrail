@@ -111,6 +111,7 @@ object AsyncHttpClientClientGenerator {
     doShow(param.argType)
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private def generateBuilderMethodCall(param: ScalaParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean): Statement = {
     val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
     val argName         = param.paramName.asString
@@ -248,7 +249,7 @@ object AsyncHttpClientClientGenerator {
       ).traverse(safeParseRawImport)
     } yield {
       def addStdConstructors(cls: ClassOrInterfaceDeclaration): Unit = {
-        cls
+        val _1 = cls
           .addConstructor(PUBLIC)
           .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("message")))
           .setBody(
@@ -259,7 +260,7 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        cls
+        val _2 = cls
           .addConstructor(PUBLIC)
           .setParameters(
             new NodeList(
@@ -275,8 +276,10 @@ object AsyncHttpClientClientGenerator {
             )
           )
       }
-      def addNoSerialVersionUuid(cls: ClassOrInterfaceDeclaration): Unit =
-        cls.addSingleMemberAnnotation("SuppressWarnings", new StringLiteralExpr("serial"))
+
+      def addNoSerialVersionUuid(cls: ClassOrInterfaceDeclaration): Unit = {
+        val _ = cls.addSingleMemberAnnotation("SuppressWarnings", new StringLiteralExpr("serial"))
+      }
 
       val clientExceptionClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, abstractModifier), false, "ClientException")
         .addExtendedType("RuntimeException")
@@ -291,9 +294,9 @@ object AsyncHttpClientClientGenerator {
       val httpErrorClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, "HttpError")
         .addExtendedType("ClientException")
       addNoSerialVersionUuid(httpErrorClass)
-      httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
+      val _1 = httpErrorClass.addField(RESPONSE_TYPE, "response", PRIVATE, FINAL)
 
-      httpErrorClass
+      val _2 = httpErrorClass
         .addConstructor(PUBLIC)
         .addParameter(new Parameter(new NodeList(finalModifier), RESPONSE_TYPE, new SimpleName("response")))
         .setBody(
@@ -959,9 +962,10 @@ object AsyncHttpClientClientGenerator {
 
         innerClasses.foreach(abstractResponseClass.addMember)
 
-        val foldMethod = abstractResponseClass.addMethod("fold", PUBLIC)
-        foldMethod.addTypeParameter("T")
-        foldMethod.setType("T")
+        val foldMethod = abstractResponseClass
+          .addMethod("fold", PUBLIC)
+          .addTypeParameter("T")
+          .setType("T")
         foldMethodParameters.foreach(foldMethod.addParameter)
 
         NonEmptyList
