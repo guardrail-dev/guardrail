@@ -205,7 +205,9 @@ object CirceProtocolGenerator {
         val typeName                   = Type.Name(clsName)
         val encVal = if (paramCount == 0) {
           Option.empty[Term]
-        } else if (paramCount == 1) {
+        } else
+          /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
+        if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
             .to[List]
@@ -237,19 +239,19 @@ object CirceProtocolGenerator {
               Encoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${unapply})
             """
           )
-        } else {
-          val pairs: List[Term.Tuple] = params
-            .map(param => q"""(${Lit.String(param.name)}, a.${Term.Name(param.term.name.value)}.asJson)""")
-            .to[List]
-          Option(
-            q"""
+        } else */ {
+            val pairs: List[Term.Tuple] = params
+              .map(param => q"""(${Lit.String(param.name)}, a.${Term.Name(param.term.name.value)}.asJson)""")
+              .to[List]
+            Option(
+              q"""
               new ObjectEncoder[${Type.Name(clsName)}] {
                 final def encodeObject(a: ${Type
-              .Name(clsName)}): JsonObject = JsonObject.fromIterable(Vector(..${pairs}))
+                .Name(clsName)}): JsonObject = JsonObject.fromIterable(Vector(..${pairs}))
               }
             """
-          )
-        }
+            )
+          }
         Target.pure(encVal.map(encVal => q"""
             implicit val ${suffixClsName("encode", clsName)}: ObjectEncoder[${Type.Name(clsName)}] = {
               val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
@@ -268,7 +270,9 @@ object CirceProtocolGenerator {
         for {
           decVal <- if (paramCount == 0) {
             Target.pure(Option.empty[Term])
-          } else if (paramCount <= 22 && !needsEmptyToNull) {
+          } else
+            /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
+          if (paramCount <= 22 && !needsEmptyToNull) {
             val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
             Target.pure(
               Option(
@@ -278,34 +282,34 @@ object CirceProtocolGenerator {
                 """
               )
             )
-          } else {
-            params
-              .traverse({ param =>
-                for {
-                  rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
-                  tpe <- rawTpe match {
-                    case tpe: Type => Target.pure(tpe)
-                    case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
-                  }
-                } yield {
-                  val term = Term.Name(param.term.name.value)
-                  val enum = if (param.emptyToNull == EmptyIsNull) {
-                    enumerator"""
+          } else */ {
+              params
+                .traverse({ param =>
+                  for {
+                    rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
+                    tpe <- rawTpe match {
+                      case tpe: Type => Target.pure(tpe)
+                      case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
+                    }
+                  } yield {
+                    val term = Term.Name(param.term.name.value)
+                    val enum = if (param.emptyToNull == EmptyIsNull) {
+                      enumerator"""
                   ${Pat.Var(term)} <- c.downField(${Lit
-                      .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
+                        .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
                 """
-                  } else {
-                    enumerator"""
+                    } else {
+                      enumerator"""
                   ${Pat.Var(term)} <- c.downField(${Lit.String(param.name)}).as[${tpe}]
                 """
+                    }
+                    (term, enum)
                   }
-                  (term, enum)
-                }
-              })
-              .map({ pairs =>
-                val (terms, enumerators) = pairs.unzip
-                Option(
-                  q"""
+                })
+                .map({ pairs =>
+                  val (terms, enumerators) = pairs.unzip
+                  Option(
+                    q"""
                     new Decoder[${Type.Name(clsName)}] {
                       final def apply(c: HCursor): Decoder.Result[${Type.Name(clsName)}] =
                         for {
@@ -313,9 +317,9 @@ object CirceProtocolGenerator {
                         } yield ${Term.Name(clsName)}(..${terms})
                     }
                   """
-                )
-              })
-          }
+                  )
+                })
+            }
         } yield {
           decVal.map(decVal => q"""
               implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] = $decVal
