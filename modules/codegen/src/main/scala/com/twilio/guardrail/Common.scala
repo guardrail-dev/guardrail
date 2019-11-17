@@ -38,7 +38,7 @@ object Common {
     import Sc._
     import Sw._
 
-    for {
+    Sw.log.function("prepareDefinitions")(for {
       proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) <- ProtocolGenerator
         .fromSwagger[L, F](swagger, dtoPackage)
 
@@ -102,7 +102,7 @@ object Common {
         case CodegenTarget.Models =>
           Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty, List.empty, Option.empty))
       }
-    } yield (proto, codegen)
+    } yield (proto, codegen))
   }
 
   def writePackage[L <: LA, F[_]](proto: ProtocolDefinitions[L], codegen: CodegenDefinitions[L], context: Context)(
