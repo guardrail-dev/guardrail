@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators
 
 import cats.~>
+import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.Common.resolveFile
@@ -269,41 +270,43 @@ object ScalaGenerator {
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         dtoComponents.traverse {
-          case dtoComponents @ (dtoHead :: dtoRest) =>
-            val dtoPkg = dtoRest.init
-              .foldLeft[Term.Ref](Term.Name(dtoHead)) {
-                case (acc, next) => Term.Select(acc, Term.Name(next))
-              }
-            val companion = Term.Name(s"${dtoComponents.last}$$")
+          case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
+            for {
+              dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), "DTO Components not quite long enough")
+            } yield {
+              val dtoPkg = dtoRestNel.init
+                .foldLeft[Term.Ref](Term.Name(dtoHead)) {
+                  case (acc, next) => Term.Select(acc, Term.Name(next))
+                }
+              val companion = Term.Name(s"${dtoRestNel.last}$$")
 
-            val (_, statements) =
-              packageObjectContents.partition(partitionImplicits)
-            val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
+              val (_, statements) =
+                packageObjectContents.partition(partitionImplicits)
+              val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
 
-            val mirroredImplicits = implicits
-              .map({ stat =>
-                val List(Pat.Var(mirror)) = stat.pats
-                stat.copy(rhs = q"${companion}.${mirror}")
-              })
+              val mirroredImplicits = implicits
+                .map({ stat =>
+                  val List(Pat.Var(mirror)) = stat.pats
+                  stat.copy(rhs = q"${companion}.${mirror}")
+                })
 
-            Target.pure(
               WriteTree(
                 dtoPackagePath.resolve("package.scala"),
                 sourceToBytes(source"""
-            package ${dtoPkg}
+                package ${dtoPkg}
 
-            ..${customImports ++ packageObjectImports ++ protocolImports}
+                ..${customImports ++ packageObjectImports ++ protocolImports}
 
-            object ${companion} {
-              ..${implicits.map(_.copy(mods = List.empty))}
-            }
+                object ${companion} {
+                  ..${implicits.map(_.copy(mods = List.empty))}
+                }
 
-            package object ${Term.Name(dtoComponents.last)} {
-              ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
-            }
-            """)
+                package object ${Term.Name(dtoComponents.last)} {
+                  ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
+                }
+                """)
               )
-            )
+            }
         }
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {

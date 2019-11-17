@@ -49,7 +49,7 @@ object JavaGenerator {
   )
 
   def prettyPrintSource(source: CompilationUnit): Target[Array[Byte]] = {
-    source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
+    val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
     val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
     val sourceStr = source.toString
     Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
@@ -260,7 +260,7 @@ object JavaGenerator {
 
       case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
         for {
-          pkgDecl <- dtoComponents.traverse(buildPkgDecl)
+          pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
           bytes   <- pkgDecl.traverse(x => prettyPrintSource(new CompilationUnit().setPackageDeclaration(x)))
         } yield bytes.map(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), _))
 

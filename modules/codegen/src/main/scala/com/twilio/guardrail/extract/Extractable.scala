@@ -57,6 +57,7 @@ object Extractable {
     case x: util.List[_] => x.asScala.toList
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   private[this] def validateListItems[A](implicit cls: ClassTag[A]): PartialFunction[List[_], List[A]] = {
     case xs: List[_] if xs.forall(x => cls.runtimeClass.isAssignableFrom(x.getClass)) => xs.asInstanceOf[List[A]]
   }

@@ -596,6 +596,7 @@ object SwaggerUtil {
               .String(before)} + "(.*)" + ${Lit.String(after)} + ${Lit.String("$")})"""
         )
 
+    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
     object http4sExtractor
         extends Extractors[Pat, Term.Name](
           pathSegmentConverter = {
@@ -631,6 +632,7 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
+    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
     object endpointsExtractor
         extends Extractors[Term, Term.Name](
           pathSegmentConverter = {
