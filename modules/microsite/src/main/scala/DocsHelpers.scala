@@ -13,6 +13,7 @@ import scala.meta._
 
 sealed trait SnippetComponent
 case object GeneratingAServer extends SnippetComponent
+case object GeneratingClients extends SnippetComponent
 
 object DocsHelpers {
   def sampleSpec = "modules/microsite/docs/sample-user.json"
@@ -23,7 +24,10 @@ object DocsHelpers {
 
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>
-        val (_, codegenDefinitions) = Target.unsafeExtract(Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Server, Context.empty, openAPI).foldMap(generator))
+        val (_, codegenDefinitions) = Target.unsafeExtract(
+          Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
+            .foldMap(generator)
+        )
         val server = codegenDefinitions.servers.head
         val q"object ${oname} { ..${stats} }" = server.serverDefinitions.head
         val routeStats = stats.collectFirst({ case line@q"def routes(...$_): $_ = $_" => line }).toList
@@ -37,6 +41,39 @@ object DocsHelpers {
             }
           """.toString)
         )
+      case GeneratingClients =>
+        val (_, codegenDefinitions) = Target.unsafeExtract(
+          Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Client, Context.empty, openAPI, List("definitions"))
+            .foldMap(generator)
+        )
+        codegenDefinitions.clients match {
+          case g :: Nil =>
+            val StaticDefns(className, extraImports, definitions) = g.staticDefns
+            val o = q"object ${Term.Name(className)} { ..${definitions} }"
+            val q"""class ${name}(...${args}) {
+              ..${defns}
+            }""" = g.client.head.right.get
+            val basePath = defns.collectFirst {
+              case v@q"val basePath: String = $_" => v
+            }
+            val (firstName, firstDefn) = defns.collectFirst({
+              case q"def ${name}(...${args}): $tpe = $body" => (name, q"def ${name}(...${args}): $tpe = $body")
+            }).toList.unzip
+            val rest = defns.collect {
+              case q"def ${name}(...${args}): $tpe = $_" if ! firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
+            }
+            val matched = (basePath ++ firstDefn ++ rest).toList
+            val c = q"""class ${name}(...${args}) {
+              ..${matched}
+            }"""
+
+            List(
+              Some(o.toString),
+              Some(""),
+              Some(c.toString)
+            )
+          case _ => ???
+        }
     }
 
     println((
