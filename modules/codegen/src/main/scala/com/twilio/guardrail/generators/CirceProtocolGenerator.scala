@@ -283,28 +283,29 @@ object CirceProtocolGenerator {
               )
             )
           } else */ {
-              params
-                .traverse({ param =>
-                  for {
-                    rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
-                    tpe <- rawTpe match {
-                      case tpe: Type => Target.pure(tpe)
-                      case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
-                    }
-                  } yield {
-                    val term = Term.Name(param.term.name.value)
-                    val enum = if (param.emptyToNull == EmptyIsNull) {
-                      enumerator"""
+              params.zipWithIndex
+                .traverse({
+                  case (param, idx) =>
+                    for {
+                      rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
+                      tpe <- rawTpe match {
+                        case tpe: Type => Target.pure(tpe)
+                        case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
+                      }
+                    } yield {
+                      val term = Term.Name(s"v$idx")
+                      val enum = if (param.emptyToNull == EmptyIsNull) {
+                        enumerator"""
                   ${Pat.Var(term)} <- c.downField(${Lit
-                        .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
+                          .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
                 """
-                    } else {
-                      enumerator"""
+                      } else {
+                        enumerator"""
                   ${Pat.Var(term)} <- c.downField(${Lit.String(param.name)}).as[${tpe}]
                 """
+                      }
+                      (term, enum)
                     }
-                    (term, enum)
-                  }
                 })
                 .map({ pairs =>
                   val (terms, enumerators) = pairs.unzip
