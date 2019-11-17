@@ -81,9 +81,9 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
       object propRef {
         implicit val encodepropRef: ObjectEncoder[propRef] = {
           val readOnlyKeys = Set[String]()
-          Encoder.forProduct3("param", "array", "arrayArray")( (o: propRef) => (o.param, o.array, o.arrayArray) ).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          new ObjectEncoder[propRef] { final def encodeObject(a: propRef): JsonObject = JsonObject.fromIterable(Vector(("param", a.param.asJson), ("array", a.array.asJson), ("arrayArray", a.arrayArray.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodepropRef: Decoder[propRef] = Decoder.forProduct3("param", "array", "arrayArray")(propRef.apply _)
+        implicit val decodepropRef: Decoder[propRef] = new Decoder[propRef] { final def apply(c: HCursor): Decoder.Result[propRef] = for (v0 <- c.downField("param").as[Option[Long]]; v1 <- c.downField("array").as[Option[IndexedSeq[Long]]]; v2 <- c.downField("arrayArray").as[Option[IndexedSeq[IndexedSeq[Long]]]]) yield propRef(v0, v1, v2) }
       }
     """
 

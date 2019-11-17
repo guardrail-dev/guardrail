@@ -94,9 +94,9 @@ class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
       object Foo {
         implicit val encodeFoo: ObjectEncoder[Foo] = {
           val readOnlyKeys = Set[String]()
-          Encoder.forProduct2("conflicting_name", "ConflictingName")((o: Foo) => (o.conflicting_name, o.ConflictingName)).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          new ObjectEncoder[Foo] { final def encodeObject(a: Foo): JsonObject = JsonObject.fromIterable(Vector(("conflicting_name", a.conflicting_name.asJson), ("ConflictingName", a.ConflictingName.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeFoo: Decoder[Foo] = Decoder.forProduct2("conflicting_name", "ConflictingName")(Foo.apply _)
+        implicit val decodeFoo: Decoder[Foo] = new Decoder[Foo] { final def apply(c: HCursor): Decoder.Result[Foo] = for (v0 <- c.downField("conflicting_name").as[Option[String]]; v1 <- c.downField("ConflictingName").as[Option[String]]) yield Foo(v0, v1) }
       }
     """
 
