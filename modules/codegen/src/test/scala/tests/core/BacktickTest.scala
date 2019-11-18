@@ -149,13 +149,13 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     case class `dashy-class`(dashyParam: Option[Long] = None)
     """
     val companion  = q"""
-    object `dashy-class` {
-      implicit val `encodedashy-class`: ObjectEncoder[`dashy-class`] = {
-        val readOnlyKeys = Set[String]()
-        Encoder.forProduct1("dashy-param")((o: `dashy-class`) => o.dashyParam).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+      object `dashy-class` {
+        implicit val `encodedashy-class`: ObjectEncoder[`dashy-class`] = {
+          val readOnlyKeys = Set[String]()
+          new ObjectEncoder[`dashy-class`] { final def encodeObject(a: `dashy-class`): JsonObject = JsonObject.fromIterable(Vector(("dashy-param", a.dashyParam.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+        }
+        implicit val `decodedashy-class`: Decoder[`dashy-class`] = new Decoder[`dashy-class`] { final def apply(c: HCursor): Decoder.Result[`dashy-class`] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield `dashy-class`(v0) }
       }
-      implicit val `decodedashy-class`: Decoder[`dashy-class`] = Decoder.forProduct1("dashy-param")(`dashy-class`.apply _)
-    }
     """
 
     cls.structure should equal(definition.structure)
@@ -166,7 +166,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
     cmp.structure should equal(companion.structure)
     cmp.toString should include("`encodedashy-class`")
     cmp.toString should include("`decodedashy-class`")
-    cmp.toString should include("(`dashy-class`.apply _)")
+    cmp.toString should include("`dashy-class`(v0)")
     cmp.toString shouldNot include(".dashy-")
     cmp.toString shouldNot include("[dashy-")
     cmp.toString shouldNot include("= dashy-")
