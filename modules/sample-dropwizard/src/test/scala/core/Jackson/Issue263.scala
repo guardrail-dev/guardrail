@@ -1,8 +1,8 @@
 package core.Jackson
 
-import additionalProperties.client.dropwizard.definitions.{Foo, FooMapValues}
+import additionalProperties.client.dropwizard.definitions.{ Foo, FooMapValues }
 import java.util
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.{ FreeSpec, Matchers }
 
 class Issue263 extends FreeSpec with Matchers {
   "additionalProperties with a $ref should emit a Map" in {

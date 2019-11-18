@@ -2,10 +2,10 @@ package core.Dropwizard
 
 import alias.client.dropwizard.Shower
 import java.math
-import java.net.{URI, URL}
-import java.time.{LocalDate, OffsetDateTime}
-import org.scalatest.{FreeSpec, Matchers}
-import scala.util.{Failure, Success, Try}
+import java.net.{ URI, URL }
+import java.time.{ LocalDate, OffsetDateTime }
+import org.scalatest.{ FreeSpec, Matchers }
+import scala.util.{ Failure, Success, Try }
 
 class DropwizardShowerTest extends FreeSpec with Matchers {
   private val shower = Shower.getInstance
@@ -55,19 +55,19 @@ class DropwizardShowerTest extends FreeSpec with Matchers {
 
     "Float" in {
       assert(shower.canShow(classOf[java.lang.Float]))
-      val f: java.lang.Float = 42F
+      val f: java.lang.Float = 42f
       shower.show(f) shouldBe "42.0"
     }
 
     "Double" in {
       assert(shower.canShow(classOf[java.lang.Double]))
-      val d: java.lang.Double = 42D
+      val d: java.lang.Double = 42d
       shower.show(d) shouldBe "42.0"
     }
 
     "BigDecimal" in {
       assert(shower.canShow(classOf[math.BigDecimal]))
-      val bd: math.BigDecimal = math.BigDecimal.valueOf(42D)
+      val bd: math.BigDecimal = math.BigDecimal.valueOf(42d)
       shower.show(bd) shouldBe "42.0"
     }
 
@@ -79,14 +79,14 @@ class DropwizardShowerTest extends FreeSpec with Matchers {
 
     "LocalDate" in {
       assert(shower.canShow(classOf[LocalDate]))
-      val dateStr = "2010-04-01"
+      val dateStr         = "2010-04-01"
       val date: LocalDate = LocalDate.parse(dateStr)
       shower.show(date) shouldBe dateStr
     }
 
     "OffsetDateTime" in {
       assert(shower.canShow(classOf[OffsetDateTime]))
-      val dateTimeStr = "2010-04-01T09:42:42Z"
+      val dateTimeStr              = "2010-04-01T09:42:42Z"
       val dateTime: OffsetDateTime = OffsetDateTime.parse(dateTimeStr)
       shower.show(dateTime) shouldBe dateTimeStr
     }
@@ -94,20 +94,20 @@ class DropwizardShowerTest extends FreeSpec with Matchers {
     "URI" in {
       assert(shower.canShow(classOf[URI]))
       val uriStr = "https://example.com/"
-      val uri = new URI(uriStr)
+      val uri    = new URI(uriStr)
       shower.show(uri) shouldBe uriStr
     }
 
     "URL" in {
       assert(shower.canShow(classOf[URL]))
       val urlStr = "https://example.com/"
-      val url = new URL(urlStr)
+      val url    = new URL(urlStr)
       shower.show(url) shouldBe urlStr
     }
 
     "UUID" in {
       assert(shower.canShow(classOf[java.util.UUID]))
-      val str = "c7cb2c94-0bd2-4cb3-a0f2-eaef5024955b"
+      val str  = "c7cb2c94-0bd2-4cb3-a0f2-eaef5024955b"
       val uuid = java.util.UUID.fromString(str)
       shower.show(uuid) shouldBe str
     }
@@ -129,7 +129,7 @@ class DropwizardShowerTest extends FreeSpec with Matchers {
       assert(!shower.canShow(getClass))
       Try(shower.show(this)) match {
         case Failure(t) => t.getClass shouldBe classOf[Shower.UnshowableInstanceException]
-        case Success(_) => fail ("shower.show() should have thrown and UnshowableInstanceException")
+        case Success(_) => fail("shower.show() should have thrown and UnshowableInstanceException")
       }
     }
   }

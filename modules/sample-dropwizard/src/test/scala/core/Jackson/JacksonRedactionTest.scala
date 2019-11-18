@@ -1,6 +1,6 @@
 package core.Jackson
 
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.{ FreeSpec, Matchers }
 import redaction.client.dropwizard.definitions.Redaction
 
 class JacksonRedactionTest extends FreeSpec with Matchers {

@@ -184,7 +184,7 @@ object SwaggerUtil {
             } yield res
           case impl: Schema[_] =>
             for {
-              tpeName       <- getType(impl)
+              tpeName       <- getType(Tracker.hackyAdapt(impl, Vector.empty))
               customTpeName <- customTypeName(impl)
               fmt = Option(impl.getFormat())
               tpe <- typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty), Tracker.hackyAdapt(fmt, Vector.empty), customTpeName)

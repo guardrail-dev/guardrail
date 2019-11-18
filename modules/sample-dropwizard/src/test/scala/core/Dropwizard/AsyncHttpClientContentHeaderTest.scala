@@ -2,11 +2,11 @@ package core.Dropwizard
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import helpers.WireMockSupport
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.{ FreeSpec, Matchers }
 import tests.contentTypes.textPlain.client.dropwizard.foo.FooClient
 
 class AsyncHttpClientContentHeaderTest extends FreeSpec with Matchers with WireMockSupport {
-  private val MOCK_REQUEST_BODY = "abcd"
+  private val MOCK_REQUEST_BODY  = "abcd"
   private val MOCK_RESPONSE_BODY = "efgh"
 
   "AsyncHttpClient with text/plain" - {
@@ -25,10 +25,19 @@ class AsyncHttpClientContentHeaderTest extends FreeSpec with Matchers with WireM
       )
 
       val client = new FooClient.Builder().withBaseUrl(wireMockBaseUrl).build()
-      client.doBaz().withBody(MOCK_REQUEST_BODY).call().toCompletableFuture.get().fold(
-        { body => body shouldBe MOCK_RESPONSE_BODY; () },
-        { () => fail("Should have gotten 2xx response"); () }
-      )
+      client
+        .doBaz()
+        .withBody(MOCK_REQUEST_BODY)
+        .call()
+        .toCompletableFuture
+        .get()
+        .fold(
+          { body =>
+            body shouldBe MOCK_RESPONSE_BODY; ()
+          }, { () =>
+            fail("Should have gotten 2xx response"); ()
+          }
+        )
     }
 
     "in req body has Content-Type header set" in {
@@ -42,10 +51,16 @@ class AsyncHttpClientContentHeaderTest extends FreeSpec with Matchers with WireM
           )
       )
       val client = new FooClient.Builder().withBaseUrl(wireMockBaseUrl).build()
-      client.doFoo(MOCK_REQUEST_BODY).call().toCompletableFuture.get().fold(
-        () => (),
-        { () => fail("Should have gotten 201 response"); () }
-      )
+      client
+        .doFoo(MOCK_REQUEST_BODY)
+        .call()
+        .toCompletableFuture
+        .get()
+        .fold(
+          () => (), { () =>
+            fail("Should have gotten 201 response"); ()
+          }
+        )
     }
   }
 }

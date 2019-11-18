@@ -192,14 +192,10 @@ object SwaggerGenerator {
         Target.fromOption(Option(arr.getItems()), "items.type unspecified")
 
       case GetType(model) =>
-        val determinedType = Option(model.getType()).fold("No type definition")(s => s"type: $s")
-        val className      = model.getClass.getName
-        Target.fromOption(
-          Option(model.getType()),
-          s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
-              |  ${model.showNotNullIndented(1)}
-              |""".stripMargin
-        )
+        model
+          .downField("type", _.getType())
+          .raiseErrorIfEmpty("Unknown type")
+          .map(_.unwrapTracker)
 
       case FallbackPropertyTypeHandler(prop) =>
         val determinedType = Option(prop.getType()).fold("No type definition")(s => s"type: $s")

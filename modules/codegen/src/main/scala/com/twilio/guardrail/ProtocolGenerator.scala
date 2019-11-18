@@ -624,7 +624,7 @@ object ProtocolGenerator {
             .valueOr(
               x =>
                 for {
-                  tpeName        <- getType(x.get)
+                  tpeName        <- getType(x)
                   customTypeName <- SwaggerUtil.customTypeName(x.get)
                   tpe            <- SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(tpeName), x.history), x.downField("format", _.getFormat()), customTypeName)
                   res            <- typeAlias(clsName, tpe)

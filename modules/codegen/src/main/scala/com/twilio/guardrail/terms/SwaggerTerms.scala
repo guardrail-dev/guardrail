@@ -64,7 +64,7 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def getItems(arr: ArraySchema): Free[F, Schema[_]] =
     Free.inject[SwaggerTerm[L, ?], F](GetItems(arr))
 
-  def getType(model: Schema[_]): Free[F, String] =
+  def getType(model: Tracker[Schema[_]]): Free[F, String] =
     Free.inject[SwaggerTerm[L, ?], F](GetType(model))
 
   def fallbackPropertyTypeHandler(prop: Schema[_]): Free[F, L#Type] =
