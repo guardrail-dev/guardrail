@@ -158,7 +158,7 @@ addCommandAlias(
 )
 addCommandAlias(
   "publishSonatype",
-  "; set publishTo in codegen := (sonatypePublishTo in codegen).value; codegen/publish"
+  "; set publishTo in codegen := (sonatypePublishToBundle in codegen).value; codegen/publish"
 )
 addCommandAlias(
   "publishLocal",
