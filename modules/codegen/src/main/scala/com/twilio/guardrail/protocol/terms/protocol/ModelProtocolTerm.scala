@@ -8,16 +8,17 @@ import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
 
 sealed trait ModelProtocolTerm[L <: LA, T]
 case class ExtractProperties[L <: LA](swagger: Tracker[Schema[_]]) extends ModelProtocolTerm[L, List[(String, Tracker[Schema[_]])]]
-case class TransformProperty[L <: LA](clsName: String,
-                                      name: String,
-                                      prop: Schema[_],
-                                      meta: ResolvedType[L],
-                                      needCamelSnakeConversion: Boolean,
-                                      concreteTypes: List[PropMeta[L]],
-                                      isRequired: Boolean,
-                                      isCustomType: Boolean,
-                                      defaultValue: Option[L#Term])
-    extends ModelProtocolTerm[L, ProtocolParameter[L]]
+case class TransformProperty[L <: LA](
+    clsName: String,
+    name: String,
+    prop: Schema[_],
+    meta: ResolvedType[L],
+    needCamelSnakeConversion: Boolean,
+    concreteTypes: List[PropMeta[L]],
+    isRequired: Boolean,
+    isCustomType: Boolean,
+    defaultValue: Option[L#Term]
+) extends ModelProtocolTerm[L, ProtocolParameter[L]]
 case class RenderDTOClass[L <: LA](clsName: String, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil)
     extends ModelProtocolTerm[L, L#ClassDefinition]
 case class EncodeModel[L <: LA](clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil)

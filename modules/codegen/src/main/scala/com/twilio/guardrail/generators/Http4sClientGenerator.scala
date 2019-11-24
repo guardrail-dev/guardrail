@@ -34,16 +34,20 @@ object Http4sClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className,
-                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
-                                   methodName,
-                                   tracing,
-                                   parameters,
-                                   responses,
-                                   securitySchemes) =>
-        def generateUrlWithParams(path: Tracker[String],
-                                  pathArgs: List[ScalaParameter[ScalaLanguage]],
-                                  qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+      case GenerateClientOperation(
+          className,
+          RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+          methodName,
+          tracing,
+          parameters,
+          responses,
+          securitySchemes
+          ) =>
+        def generateUrlWithParams(
+            path: Tracker[String],
+            pathArgs: List[ScalaParameter[ScalaLanguage]],
+            qsArgs: List[ScalaParameter[ScalaLanguage]]
+        ): Target[Term] =
           Target.log.function("generateUrlWithParams")(for {
             _    <- Target.log.debug(s"Using ${path.get} and ${pathArgs.map(_.argName)}")
             base <- generateUrlPathParams(path, pathArgs)
@@ -152,22 +156,26 @@ object Http4sClientGenerator {
           q"List[Option[Header]](..$args).flatten"
         }
 
-        def build(methodName: String,
-                  httpMethod: HttpMethod,
-                  urlWithParams: Term,
-                  formDataParams: Option[Term],
-                  headerParams: Term,
-                  responses: Responses[ScalaLanguage],
-                  produces: Seq[RouteMeta.ContentType],
-                  consumes: Seq[RouteMeta.ContentType],
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
-                                    tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
-                                    pathArgs: List[ScalaParameter[ScalaLanguage]],
-                                    qsArgs: List[ScalaParameter[ScalaLanguage]],
-                                    formArgs: List[ScalaParameter[ScalaLanguage]],
-                                    body: Option[ScalaParameter[ScalaLanguage]],
-                                    headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): Target[RenderedClientOperation[ScalaLanguage]] =
+        def build(
+            methodName: String,
+            httpMethod: HttpMethod,
+            urlWithParams: Term,
+            formDataParams: Option[Term],
+            headerParams: Term,
+            responses: Responses[ScalaLanguage],
+            produces: Seq[RouteMeta.ContentType],
+            consumes: Seq[RouteMeta.ContentType],
+            tracing: Boolean
+        )(
+            tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
+            tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
+            pathArgs: List[ScalaParameter[ScalaLanguage]],
+            qsArgs: List[ScalaParameter[ScalaLanguage]],
+            formArgs: List[ScalaParameter[ScalaLanguage]],
+            body: Option[ScalaParameter[ScalaLanguage]],
+            headerArgs: List[ScalaParameter[ScalaLanguage]],
+            extraImplicits: List[Term.Param]
+        ): Target[RenderedClientOperation[ScalaLanguage]] =
           for {
             _ <- Target.pure(())
             implicitParams                 = Option(extraImplicits).filter(_.nonEmpty)
@@ -266,15 +274,15 @@ object Http4sClientGenerator {
                         scalaParam.param.decltpe
                       }
                     )
-              )
+                )
             )
 
             arglists: List[List[Term.Param]] = List(
               Some(
                 (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                  .map(_.param) ++ formParams ++ body
-                  .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                  .map(_.param)) :+ defaultHeaders
+                      .map(_.param) ++ formParams ++ body
+                      .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+                      .map(_.param)) :+ defaultHeaders
               ),
               implicitParams
             ).flatten
@@ -340,10 +348,12 @@ object Http4sClientGenerator {
         val ihc = param"implicit httpClient: Http4sClient[F]"
         val ief = param"implicit F: Async[F]"
         Target.pure(
-          List(List(formatHost(serverUrls)) ++ (if (tracing)
-                                                  Some(formatClientName(tracingName))
-                                                else None),
-               List(ief, ihc))
+          List(
+            List(formatHost(serverUrls)) ++ (if (tracing)
+                                               Some(formatClientName(tracingName))
+                                             else None),
+            List(ief, ihc)
+          )
         )
 
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
@@ -353,11 +363,13 @@ object Http4sClientGenerator {
         Target.pure(List.empty)
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
-        def extraConstructors(tracingName: Option[String],
-                              serverUrls: Option[NonEmptyList[URI]],
-                              tpe: Type.Name,
-                              ctorCall: Term.New,
-                              tracing: Boolean): List[Defn] = {
+        def extraConstructors(
+            tracingName: Option[String],
+            serverUrls: Option[NonEmptyList[URI]],
+            tpe: Type.Name,
+            ctorCall: Term.New,
+            tracing: Boolean
+        ): List[Defn] = {
           val tracingParams: List[Term.Param] = if (tracing) {
             List(formatClientName(tracingName))
           } else {
@@ -389,7 +401,7 @@ object Http4sClientGenerator {
 
         val decls: List[Defn] =
           q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}""" +:
-            extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
+              extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
         Target.pure(
           StaticDefns[ScalaLanguage](
             className = clientName,
@@ -427,11 +439,13 @@ object Http4sClientGenerator {
         Target.pure(NonEmptyList(Right(client), Nil))
     }
 
-    def generateCodecs(methodName: String,
-                       bodyArgs: Option[ScalaParameter[ScalaLanguage]],
-                       responses: Responses[ScalaLanguage],
-                       produces: Seq[RouteMeta.ContentType],
-                       consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateCodecs(
+        methodName: String,
+        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+        responses: Responses[ScalaLanguage],
+        produces: Seq[RouteMeta.ContentType],
+        consumes: Seq[RouteMeta.ContentType]
+    ): List[Defn.Val] =
       generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
 
     def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =

@@ -64,11 +64,13 @@ object JavaGenerator {
       })
   }
 
-  def writeClientTree(pkgPath: Path,
-                      pkg: List[String],
-                      pkgDecl: PackageDeclaration,
-                      imports: List[ImportDeclaration],
-                      definition: BodyDeclaration[_ <: BodyDeclaration[_]]): Target[WriteTree] =
+  def writeClientTree(
+      pkgPath: Path,
+      pkg: List[String],
+      pkgDecl: PackageDeclaration,
+      imports: List[ImportDeclaration],
+      definition: BodyDeclaration[_ <: BodyDeclaration[_]]
+  ): Target[WriteTree] =
     definition match {
       case td: TypeDeclaration[_] =>
         val cu = new CompilationUnit()
@@ -80,11 +82,13 @@ object JavaGenerator {
         Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
-  def writeServerTree(pkgPath: Path,
-                      pkg: List[String],
-                      pkgDecl: PackageDeclaration,
-                      imports: List[ImportDeclaration],
-                      definition: BodyDeclaration[_ <: BodyDeclaration[_]]): Target[WriteTree] =
+  def writeServerTree(
+      pkgPath: Path,
+      pkg: List[String],
+      pkgDecl: PackageDeclaration,
+      imports: List[ImportDeclaration],
+      definition: BodyDeclaration[_ <: BodyDeclaration[_]]
+  ): Target[WriteTree] =
     definition match {
       case td: TypeDeclaration[_] =>
         val cu = new CompilationUnit()
@@ -111,19 +115,23 @@ object JavaGenerator {
       case EmptyOptionalTerm()     => buildMethodCall("java.util.Optional.empty")
       case EmptyArray() =>
         Target.pure(
-          new ObjectCreationExpr(null,
-                                 StaticJavaParser
-                                   .parseClassOrInterfaceType("java.util.ArrayList")
-                                   .setTypeArguments(new NodeList[Type]),
-                                 new NodeList())
+          new ObjectCreationExpr(
+            null,
+            StaticJavaParser
+              .parseClassOrInterfaceType("java.util.ArrayList")
+              .setTypeArguments(new NodeList[Type]),
+            new NodeList()
+          )
         )
       case EmptyMap() =>
         Target.pure(
-          new ObjectCreationExpr(null,
-                                 StaticJavaParser
-                                   .parseClassOrInterfaceType("java.util.HashMap")
-                                   .setTypeArguments(new NodeList[Type]),
-                                 new NodeList())
+          new ObjectCreationExpr(
+            null,
+            StaticJavaParser
+              .parseClassOrInterfaceType("java.util.HashMap")
+              .setTypeArguments(new NodeList[Type]),
+            new NodeList()
+          )
         )
       case LiftVectorType(value)               => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
       case LiftVectorTerm(value)               => buildMethodCall("java.util.Collections.singletonList", Some(value))
@@ -309,21 +317,22 @@ object JavaGenerator {
             case (name, cu) =>
               prettyPrintSource(cu).map(bytes => Option((name, bytes)))
           })
-        } yield
-          nameAndBytes.fold((List.empty[WriteTree], List.empty[Statement]))({
-            case (name, bytes) =>
-              (
-                List(WriteTree(resolveFile(outputPath)(dtoComponents).resolve(s"${name}.java"), bytes)),
-                List.empty[Statement]
-              )
-          })
+        } yield nameAndBytes.fold((List.empty[WriteTree], List.empty[Statement]))({
+          case (name, bytes) =>
+            (
+              List(WriteTree(resolveFile(outputPath)(dtoComponents).resolve(s"${name}.java"), bytes)),
+              List.empty[Statement]
+            )
+        })
 
-      case WriteClient(pkgPath,
-                       pkgName,
-                       customImports,
-                       frameworkImplicitName,
-                       dtoComponents,
-                       Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
+      case WriteClient(
+          pkgPath,
+          pkgName,
+          customImports,
+          frameworkImplicitName,
+          dtoComponents,
+          Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)
+          ) =>
         for {
           pkgDecl             <- buildPkgDecl(pkgName ++ pkg)
           commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
@@ -333,12 +342,14 @@ object JavaGenerator {
           trees <- (clientClasses ++ responseDefinitions).traverse(writeClientTree(pkgPath, pkg, pkgDecl, allImports, _))
         } yield trees
 
-      case WriteServer(pkgPath,
-                       pkgName,
-                       customImports,
-                       frameworkImplicitName,
-                       dtoComponents,
-                       Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
+      case WriteServer(
+          pkgPath,
+          pkgName,
+          customImports,
+          frameworkImplicitName,
+          dtoComponents,
+          Server(pkg, extraImports, handlerDefinition, serverDefinitions)
+          ) =>
         for {
           pkgDecl <- buildPkgDecl(pkgName ++ pkg)
 

@@ -11,12 +11,14 @@ import com.twilio.guardrail.terms.{ RouteMeta, ScalaTerms, SecurityScheme, Swagg
 import java.net.URI
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
-case class Client[L <: LA](pkg: List[String],
-                           clientName: String,
-                           imports: List[L#Import],
-                           staticDefns: StaticDefns[L],
-                           client: NonEmptyList[Either[L#Trait, L#ClassDefinition]],
-                           responseDefinitions: List[L#Definition])
+case class Client[L <: LA](
+    pkg: List[String],
+    clientName: String,
+    imports: List[L#Import],
+    staticDefns: StaticDefns[L],
+    client: NonEmptyList[Either[L#Trait, L#ClassDefinition]],
+    responseDefinitions: List[L#Definition]
+)
 case class RenderedClientOperation[L <: LA](
     clientOperation: L#Definition,
     supportDefinitions: List[L#Definition]

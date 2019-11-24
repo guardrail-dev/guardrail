@@ -64,11 +64,11 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
             (acc, Nil)
           case ((acc, newHistory), StructuredLogBlock(lines)) =>
             val newAcc = acc ++ lines
-              .filter(_._1 >= desiredLevel)
-              .map({
-                case (level, message) =>
-                  (level, NonEmptyList.fromList(newHistory).getOrElse(NonEmptyList("<root>", Nil)), message)
-              })
+                    .filter(_._1 >= desiredLevel)
+                    .map({
+                      case (level, message) =>
+                        (level, NonEmptyList.fromList(newHistory).getOrElse(NonEmptyList("<root>", Nil)), message)
+                    })
             (newAcc, newHistory)
         })
         ._1
@@ -78,7 +78,11 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
             def makePrefix(history: List[String]): String =
               history.foldLeft("  ") {
                 case (a, b) =>
-                  (if (showFullHistory) { a } else { (" " * a.length) }) + " " + b
+                  (if (showFullHistory) {
+                     a
+                   } else {
+                     (" " * a.length)
+                   }) + " " + b
               }
 
             val commonPrefixLength = history.length - lastHistory.zip(history.toList).takeWhile(((_: String) == (_: String)).tupled).length

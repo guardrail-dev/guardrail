@@ -27,20 +27,24 @@ class ClientTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]) {
     Free.inject[ClientTerm[L, ?], F](GenerateResponseDefinitions[L](operationId, responses, protocolElems))
   def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): Free[F, List[SupportDefinition[L]]] =
     Free.inject[ClientTerm[L, ?], F](GenerateSupportDefinitions[L](tracing, securitySchemes))
-  def buildStaticDefns(clientName: String,
-                       tracingName: Option[String],
-                       serverUrls: Option[NonEmptyList[URI]],
-                       ctorArgs: List[List[L#MethodParameter]],
-                       tracing: Boolean): Free[F, StaticDefns[L]] =
+  def buildStaticDefns(
+      clientName: String,
+      tracingName: Option[String],
+      serverUrls: Option[NonEmptyList[URI]],
+      ctorArgs: List[List[L#MethodParameter]],
+      tracing: Boolean
+  ): Free[F, StaticDefns[L]] =
     Free.inject[ClientTerm[L, ?], F](BuildStaticDefns[L](clientName, tracingName, serverUrls, ctorArgs, tracing))
-  def buildClient(clientName: String,
-                  tracingName: Option[String],
-                  serverUrls: Option[NonEmptyList[URI]],
-                  basePath: Option[String],
-                  ctorArgs: List[List[L#MethodParameter]],
-                  clientCalls: List[L#Definition],
-                  supportDefinitions: List[L#Definition],
-                  tracing: Boolean): Free[F, NonEmptyList[Either[L#Trait, L#ClassDefinition]]] =
+  def buildClient(
+      clientName: String,
+      tracingName: Option[String],
+      serverUrls: Option[NonEmptyList[URI]],
+      basePath: Option[String],
+      ctorArgs: List[List[L#MethodParameter]],
+      clientCalls: List[L#Definition],
+      supportDefinitions: List[L#Definition],
+      tracing: Boolean
+  ): Free[F, NonEmptyList[Either[L#Trait, L#ClassDefinition]]] =
     Free.inject[ClientTerm[L, ?], F](
       BuildClient[L](clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     )

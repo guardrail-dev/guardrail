@@ -33,16 +33,20 @@ object AkkaHttpClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(_,
-                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
-                                   methodName,
-                                   tracing,
-                                   parameters,
-                                   responses,
-                                   securitySchemes) =>
-        def generateUrlWithParams(path: Tracker[String],
-                                  pathArgs: List[ScalaParameter[ScalaLanguage]],
-                                  qsArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+      case GenerateClientOperation(
+          _,
+          RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+          methodName,
+          tracing,
+          parameters,
+          responses,
+          securitySchemes
+          ) =>
+        def generateUrlWithParams(
+            path: Tracker[String],
+            pathArgs: List[ScalaParameter[ScalaLanguage]],
+            qsArgs: List[ScalaParameter[ScalaLanguage]]
+        ): Target[Term] =
           Target.log.function("generateUrlWithParams") {
             for {
               _    <- Target.log.debug(s"Using ${path.unwrapTracker} and ${pathArgs.map(_.argName)}")
@@ -152,22 +156,26 @@ object AkkaHttpClientGenerator {
           q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
         }
 
-        def build(methodName: String,
-                  httpMethod: HttpMethod,
-                  urlWithParams: Term,
-                  formDataParams: Option[Term],
-                  headerParams: Term,
-                  responses: Responses[ScalaLanguage],
-                  produces: NonEmptyList[RouteMeta.ContentType],
-                  consumes: Seq[RouteMeta.ContentType],
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
-                                    tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
-                                    pathArgs: List[ScalaParameter[ScalaLanguage]],
-                                    qsArgs: List[ScalaParameter[ScalaLanguage]],
-                                    formArgs: List[ScalaParameter[ScalaLanguage]],
-                                    body: Option[ScalaParameter[ScalaLanguage]],
-                                    headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
+        def build(
+            methodName: String,
+            httpMethod: HttpMethod,
+            urlWithParams: Term,
+            formDataParams: Option[Term],
+            headerParams: Term,
+            responses: Responses[ScalaLanguage],
+            produces: NonEmptyList[RouteMeta.ContentType],
+            consumes: Seq[RouteMeta.ContentType],
+            tracing: Boolean
+        )(
+            tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
+            tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
+            pathArgs: List[ScalaParameter[ScalaLanguage]],
+            qsArgs: List[ScalaParameter[ScalaLanguage]],
+            formArgs: List[ScalaParameter[ScalaLanguage]],
+            body: Option[ScalaParameter[ScalaLanguage]],
+            headerArgs: List[ScalaParameter[ScalaLanguage]],
+            extraImplicits: List[Term.Param]
+        ): RenderedClientOperation[ScalaLanguage] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] =
@@ -237,35 +245,35 @@ object AkkaHttpClientGenerator {
           val responseCompanionTerm =
             Term.Name(s"${methodName.capitalize}Response")
           val cases = responses.value.map { resp =>
-            val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            (resp.value, resp.headers.value) match {
-              case (None, Nil) =>
-                p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
-              case (Some((tpe, _)), Nil) =>
-                p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
-                  .Name(s"$methodName${resp.statusCodeName}Decoder")}, implicitly, implicitly).map(x => Right($responseCompanionTerm.$responseTerm(x)))"
-              case (None, headers) =>
-                val (optionalVals, body) = buildHeaders(
-                  headers,
-                  q"$responseCompanionTerm.$responseTerm(..${headers.map(_.term)})"
-                )
-                p"""case StatusCodes.${resp.statusCodeName} =>
+              val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+              (resp.value, resp.headers.value) match {
+                case (None, Nil) =>
+                  p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
+                case (Some((tpe, _)), Nil) =>
+                  p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
+                    .Name(s"$methodName${resp.statusCodeName}Decoder")}, implicitly, implicitly).map(x => Right($responseCompanionTerm.$responseTerm(x)))"
+                case (None, headers) =>
+                  val (optionalVals, body) = buildHeaders(
+                    headers,
+                    q"$responseCompanionTerm.$responseTerm(..${headers.map(_.term)})"
+                  )
+                  p"""case StatusCodes.${resp.statusCodeName} =>
                      ..$optionalVals
                      resp.discardEntityBytes().future.map(_ => $body)
                   """
-              case (Some((tpe, _)), headers) =>
-                val (optionalVals, body) = buildHeaders(
-                  headers,
-                  q"$responseCompanionTerm.$responseTerm(..${Term
-                    .Name("x") :: headers.map(_.term)})"
-                )
-                p"""case StatusCodes.${resp.statusCodeName} =>
+                case (Some((tpe, _)), headers) =>
+                  val (optionalVals, body) = buildHeaders(
+                    headers,
+                    q"$responseCompanionTerm.$responseTerm(..${Term
+                      .Name("x") :: headers.map(_.term)})"
+                  )
+                  p"""case StatusCodes.${resp.statusCodeName} =>
                     ..$optionalVals
                     Unmarshal(resp.entity).to[${tpe}](${Term.Name(
-                  s"$methodName${resp.statusCodeName}Decoder"
-                )}, implicitly, implicitly).map(x => $body)"""
-            }
-          } :+ p"case _ => FastFuture.successful(Left(Right(resp)))"
+                    s"$methodName${resp.statusCodeName}Decoder"
+                  )}, implicitly, implicitly).map(x => $body)"""
+              }
+            } :+ p"case _ => FastFuture.successful(Left(Right(resp)))"
           val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
 
           val methodBody = q"""
@@ -292,9 +300,9 @@ object AkkaHttpClientGenerator {
           val arglists: List[List[Term.Param]] = List(
             Some(
               (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                .map(_.param) ++ formArgs.map(_.param) ++ body
-                .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)) :+ defaultHeaders
+                    .map(_.param) ++ formArgs.map(_.param) ++ body
+                    .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+                    .map(_.param)) :+ defaultHeaders
             ),
             implicitParams
           ).flatten
@@ -362,10 +370,12 @@ object AkkaHttpClientGenerator {
         val iec  = param"implicit ec: ExecutionContext"
         val imat = param"implicit mat: Materializer"
         Target.pure(
-          List(List(formatHost(serverUrls)) ++ (if (tracing)
-                                                  Some(formatClientName(tracingName))
-                                                else None),
-               List(ihc, iec, imat))
+          List(
+            List(formatHost(serverUrls)) ++ (if (tracing)
+                                               Some(formatClientName(tracingName))
+                                             else None),
+            List(ihc, iec, imat)
+          )
         )
 
       case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
@@ -375,11 +385,13 @@ object AkkaHttpClientGenerator {
         Target.pure(List.empty)
 
       case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) =>
-        def extraConstructors(tracingName: Option[String],
-                              serverUrls: Option[NonEmptyList[URI]],
-                              tpe: Type.Name,
-                              ctorCall: Term.New,
-                              tracing: Boolean): List[Defn] = {
+        def extraConstructors(
+            tracingName: Option[String],
+            serverUrls: Option[NonEmptyList[URI]],
+            tpe: Type.Name,
+            ctorCall: Term.New,
+            tracing: Boolean
+        ): List[Defn] = {
           val iec  = param"implicit ec: ExecutionContext"
           val imat = param"implicit mat: Materializer"
           val tracingParams: List[Term.Param] = if (tracing) {
@@ -412,7 +424,7 @@ object AkkaHttpClientGenerator {
 
         val decls: List[Defn] =
           q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +:
-            extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
+              extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
         Target.pure(
           StaticDefns[ScalaLanguage](
             className = clientName,

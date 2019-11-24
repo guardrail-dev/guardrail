@@ -20,11 +20,10 @@ class Http4sCustomHeadersTest extends FlatSpec with Matchers with EitherValues {
       Http4sClient.fromHttpApp(
         new Resource[IO]()
           .routes(new Handler[IO] {
-            override def getFoo(respond: GetFooResponse.type)(header: String,
-                                                              longHeader: Long,
-                                                              customHeader: sdefs.Bar,
-                                                              customOptionHeader: Option[sdefs.Bar],
-                                                              missingCustomOptionHeader: Option[sdefs.Bar]): IO[GetFooResponse] =
+            override def getFoo(
+                respond: GetFooResponse.type
+            )(header: String, longHeader: Long, customHeader: sdefs.Bar, customOptionHeader: Option[sdefs.Bar], missingCustomOptionHeader: Option[sdefs.Bar])
+                : IO[GetFooResponse] =
               (header, longHeader, customHeader, customOptionHeader, missingCustomOptionHeader) match {
                 case ("foo", 5L, sdefs.Bar.V1, Some(sdefs.Bar.V2), None) => IO.pure(respond.Ok)
                 case _                                                   => IO.pure(respond.BadRequest)

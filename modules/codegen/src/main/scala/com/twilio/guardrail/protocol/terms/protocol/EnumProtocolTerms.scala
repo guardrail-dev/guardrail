@@ -17,11 +17,13 @@ class EnumProtocolTerms[L <: LA, F[_]](implicit I: InjectK[EnumProtocolTerm[L, ?
     Free.inject[EnumProtocolTerm[L, ?], F](DecodeEnum[L](clsName))
   def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]): Free[F, L#ClassDefinition] =
     Free.inject[EnumProtocolTerm[L, ?], F](RenderClass[L](clsName, tpe, elems))
-  def renderStaticDefns(clsName: String,
-                        members: Option[L#ObjectDefinition],
-                        accessors: List[L#TermName],
-                        encoder: Option[L#ValueDefinition],
-                        decoder: Option[L#ValueDefinition]): Free[F, StaticDefns[L]] =
+  def renderStaticDefns(
+      clsName: String,
+      members: Option[L#ObjectDefinition],
+      accessors: List[L#TermName],
+      encoder: Option[L#ValueDefinition],
+      decoder: Option[L#ValueDefinition]
+  ): Free[F, StaticDefns[L]] =
     Free.inject[EnumProtocolTerm[L, ?], F](RenderStaticDefns[L](clsName, members, accessors, encoder, decoder))
   def buildAccessor(clsName: String, termName: String): Free[F, L#TermSelect] =
     Free.inject[EnumProtocolTerm[L, ?], F](BuildAccessor[L](clsName, termName))

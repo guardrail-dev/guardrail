@@ -56,8 +56,9 @@ object SwaggerUtil {
             if (lazyTypes.isEmpty) {
               Free.pure(Right(resolvedTypes))
             } else {
-              def partitionEitherM[G[_], A, B, C](fa: List[A])(f: A => G[Either[B, C]])(implicit A: cats.Alternative[List],
-                                                                                        M: cats.Monad[G]): G[(List[B], List[C])] = {
+              def partitionEitherM[G[_], A, B, C](
+                  fa: List[A]
+              )(f: A => G[Either[B, C]])(implicit A: cats.Alternative[List], M: cats.Monad[G]): G[(List[B], List[C])] = {
                 import cats.instances.tuple._
 
                 implicit val mb: cats.Monoid[List[B]] = A.algebra[B]
@@ -68,7 +69,7 @@ object SwaggerUtil {
                     f(a).map {
                       case Right(c) => (A.empty[B], A.pure(c))
                       case Left(b)  => (A.pure(b), A.empty[C])
-                  }
+                    }
                 )
               }
 
@@ -224,11 +225,10 @@ object SwaggerUtil {
             )
       }
       result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
-    } yield
-      result.map {
-        case (clsName, SwaggerUtil.Resolved(tpe, _, _, _, _)) =>
-          PropMeta[L](clsName, tpe)
-      }
+    } yield result.map {
+      case (clsName, SwaggerUtil.Resolved(tpe, _, _, _, _)) =>
+        PropMeta[L](clsName, tpe)
+    }
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
@@ -419,8 +419,10 @@ object SwaggerUtil {
       }
     }
 
-  def extractSecuritySchemes[L <: LA, F[_]](swagger: OpenAPI, prefixes: List[String])(implicit Sw: SwaggerTerms[L, F],
-                                                                                      Sc: ScalaTerms[L, F]): Free[F, Map[String, SecurityScheme[L]]] = {
+  def extractSecuritySchemes[L <: LA, F[_]](
+      swagger: OpenAPI,
+      prefixes: List[String]
+  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, Map[String, SecurityScheme[L]]] = {
     import Sw._
     import Sc._
 
@@ -479,14 +481,16 @@ object SwaggerUtil {
         )(param => f(param))
 
     private[this] val variable: atto.Parser[String] = char('{') ~> many(notChar('}'))
-      .map(_.mkString("")) <~ char('}')
+            .map(_.mkString("")) <~ char('}')
 
-    def generateUrlPathParams[L <: LA](path: Tracker[String],
-                                       pathArgs: List[ScalaParameter[L]],
-                                       showLiteralPathComponent: String => L#Term,
-                                       showInterpolatedPathComponent: L#TermName => L#Term,
-                                       initialPathTerm: L#Term,
-                                       combinePathTerms: (L#Term, L#Term) => L#Term): Target[L#Term] = {
+    def generateUrlPathParams[L <: LA](
+        path: Tracker[String],
+        pathArgs: List[ScalaParameter[L]],
+        showLiteralPathComponent: String => L#Term,
+        showInterpolatedPathComponent: L#TermName => L#Term,
+        initialPathTerm: L#Term,
+        combinePathTerms: (L#Term, L#Term) => L#Term
+    ): Target[L#Term] = {
       val term: atto.Parser[L#Term] = variable.flatMap { binding =>
         lookupName(binding, pathArgs) { param =>
           ok(showInterpolatedPathComponent(param.paramName))
@@ -541,10 +545,10 @@ object SwaggerUtil {
           .map(_.toList)
 
       val qsValueOnly: Parser[(String, String)] = ok("") ~ (char('=') ~> opt(many(noneOf("&")))
-        .map(_.fold("")(_.mkString)))
+                  .map(_.fold("")(_.mkString)))
       val staticQSArg: Parser[(String, String)] = many1(noneOf("=&"))
-        .map(_.toList.mkString) ~ opt(char('=') ~> many(noneOf("&")))
-        .map(_.fold("")(_.mkString))
+          .map(_.toList.mkString) ~ opt(char('=') ~> many(noneOf("&")))
+              .map(_.fold("")(_.mkString))
       val staticQSTerm: Parser[T] =
         choice(staticQSArg, qsValueOnly).map(buildParamConstraint)
       val queryPart: Parser[T]                                               = sepBy1(staticQSTerm, char('&')).map(_.reduceLeft(joinParams))

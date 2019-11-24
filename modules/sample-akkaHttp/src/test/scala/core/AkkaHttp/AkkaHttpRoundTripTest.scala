@@ -55,10 +55,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
             Future.successful(respond.Created)
           case _ => failTest("Parameters didn't match")
         }
-      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long,
-                                                                 includeChildren: Option[Boolean],
-                                                                 status: Option[sdefs.PetStatus],
-                                                                 _apiKey: Option[String] = None)                                                          = ???
+      def deletePet(
+          respond: PetResource.deletePetResponse.type
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
       def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
@@ -67,14 +66,16 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: support.PositiveLong,
-                                                                   additionalMetadata: Option[String],
-                                                                   file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-                                                                   file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
-                                                                   file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   longValue: Long,
-                                                                   customValue: support.PositiveLong,
-                                                                   customOptionalValue: Option[support.PositiveLong]) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+          petId: support.PositiveLong,
+          additionalMetadata: Option[String],
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
+          longValue: Long,
+          customValue: support.PositiveLong,
+          customOptionalValue: Option[support.PositiveLong]
+      ) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -117,10 +118,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
         }))
 
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long,
-                                                                 includeChildren: Option[Boolean],
-                                                                 status: Option[sdefs.PetStatus],
-                                                                 _apiKey: Option[String] = None)                                                          = ???
+      def deletePet(
+          respond: PetResource.deletePetResponse.type
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
       def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
@@ -128,14 +128,16 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: support.PositiveLong,
-                                                                   additionalMetadata: Option[String],
-                                                                   file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-                                                                   file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
-                                                                   file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   longValue: Long,
-                                                                   customValue: support.PositiveLong,
-                                                                   customOptionalValue: Option[support.PositiveLong]) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+          petId: support.PositiveLong,
+          additionalMetadata: Option[String],
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
+          longValue: Long,
+          customValue: support.PositiveLong,
+          customOptionalValue: Option[support.PositiveLong]
+      ) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -164,10 +166,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
         Future.successful(respond.NotFound)
 
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long,
-                                                                 includeChildren: Option[Boolean],
-                                                                 status: Option[sdefs.PetStatus],
-                                                                 _apiKey: Option[String] = None)                                                          = ???
+      def deletePet(
+          respond: PetResource.deletePetResponse.type
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
@@ -175,14 +176,16 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: support.PositiveLong,
-                                                                   additionalMetadata: Option[String],
-                                                                   file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-                                                                   file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
-                                                                   file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   longValue: Long,
-                                                                   customValue: support.PositiveLong,
-                                                                   customOptionalValue: Option[support.PositiveLong]) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+          petId: support.PositiveLong,
+          additionalMetadata: Option[String],
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
+          longValue: Long,
+          customValue: support.PositiveLong,
+          customOptionalValue: Option[support.PositiveLong]
+      ) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -198,10 +201,12 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
     val petId: Long    = 123L
     val apiKey: String = "foobar"
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long,
-                                                                 includeChildren: Option[Boolean],
-                                                                 status: Option[sdefs.PetStatus],
-                                                                 _apiKey: Option[String] = None): Future[PetResource.deletePetResponse] =
+      def deletePet(respond: PetResource.deletePetResponse.type)(
+          _petId: Long,
+          includeChildren: Option[Boolean],
+          status: Option[sdefs.PetStatus],
+          _apiKey: Option[String] = None
+      ): Future[PetResource.deletePetResponse] =
         if (_petId == petId && _apiKey.contains(apiKey) && status.contains(sdefs.PetStatus.Pending))
           Future.successful(respond.OK)
         else Future.successful(respond.NotFound)
@@ -215,14 +220,16 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: support.PositiveLong,
-                                                                   additionalMetadata: Option[String],
-                                                                   file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-                                                                   file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
-                                                                   file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   longValue: Long,
-                                                                   customValue: support.PositiveLong,
-                                                                   customOptionalValue: Option[support.PositiveLong]) = ???
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+          petId: support.PositiveLong,
+          additionalMetadata: Option[String],
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
+          longValue: Long,
+          customValue: support.PositiveLong,
+          customOptionalValue: Option[support.PositiveLong]
+      ) = ???
     }))
 
     val petClient = PetClient.httpClient(httpClient)
@@ -243,10 +250,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
     val apiKey: String = "foobar"
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
-      def deletePet(respond: PetResource.deletePetResponse.type)(_petId: Long,
-                                                                 includeChildren: Option[Boolean],
-                                                                 status: Option[sdefs.PetStatus],
-                                                                 _apiKey: Option[String] = None)                                                          = ???
+      def deletePet(
+          respond: PetResource.deletePetResponse.type
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
       def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
@@ -255,17 +261,28 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(petId: support.PositiveLong,
-                                                                   additionalMetadata: Option[String],
-                                                                   file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
-                                                                   file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
-                                                                   file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
-                                                                   longValue: Long,
-                                                                   customValue: support.PositiveLong,
-                                                                   customOptionalValue: Option[support.PositiveLong]) = {
-        val f1Length = file.flatMap({ case (f, _, _) => if (f.exists) { Some(f.length) } else None })
-        val f2Length = if (file2._1.exists) { Some(file2._1.length) } else None
-        val f3Length = if (file3._1.exists) { Some(file3._1.length) } else None
+      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+          petId: support.PositiveLong,
+          additionalMetadata: Option[String],
+          file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
+          file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
+          file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
+          longValue: Long,
+          customValue: support.PositiveLong,
+          customOptionalValue: Option[support.PositiveLong]
+      ) = {
+        val f1Length = file.flatMap({
+          case (f, _, _) =>
+            if (f.exists) {
+              Some(f.length)
+            } else None
+        })
+        val f2Length = if (file2._1.exists) {
+          Some(file2._1.length)
+        } else None
+        val f3Length = if (file3._1.exists) {
+          Some(file3._1.length)
+        } else None
 
         assert(file3._4 == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "Empty file hash does not match")
 

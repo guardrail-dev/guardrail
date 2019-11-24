@@ -7,9 +7,11 @@ import com.twilio.guardrail.StrictProtocolElems
 import scala.meta._
 
 object Http4sHelper {
-  def generateResponseDefinitions(operationId: String,
-                                  responses: Responses[ScalaLanguage],
-                                  protocolElems: List[StrictProtocolElems[ScalaLanguage]]): List[Defn] = {
+  def generateResponseDefinitions(
+      operationId: String,
+      responses: Responses[ScalaLanguage],
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+  ): List[Defn] = {
     val isGeneric                         = isDefinitionGeneric(responses)
     val extraTypes: List[Type]            = if (isGeneric) List(t"F") else Nil
     val extraTypeParams: List[Type.Param] = if (isGeneric) List(tparam"F[_]") else Nil
@@ -36,8 +38,10 @@ object Http4sHelper {
               val responseCaseType = if (isGeneric) t"$responseSuperTerm.$responseName[F]" else t"$responseSuperTerm.$responseName"
               val foldParameter    = param"${foldHandleName}: (..${allParams.map(_._1)}) => A"
               val foldCase         = p"case x: $responseCaseType => ${foldHandleName}(..${allParams.map(t => q"x.${t._2}")})"
-              (q"case class  $responseName[..$extraTypeParams](..${allParams.map(t => param"${t._2}: ${t._1}")}) extends $responseSuperTemplate",
-               (foldParameter, foldCase))
+              (
+                q"case class  $responseName[..$extraTypeParams](..${allParams.map(t => param"${t._2}: ${t._1}")}) extends $responseSuperTemplate",
+                (foldParameter, foldCase)
+              )
           }
       })
       .unzip

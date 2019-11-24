@@ -15,12 +15,13 @@ sealed trait PolyProtocolTerm[L <: LA, T]
 case class ExtractSuperClass[L <: LA](swagger: Tracker[ComposedSchema], definitions: List[(String, Tracker[Schema[_]])])
     extends PolyProtocolTerm[L, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]
 
-case class RenderSealedTrait[L <: LA](className: String,
-                                      params: List[ProtocolParameter[L]],
-                                      discriminator: Discriminator[L],
-                                      parents: List[SuperClass[L]] = Nil,
-                                      children: List[String] = Nil)
-    extends PolyProtocolTerm[L, L#Trait]
+case class RenderSealedTrait[L <: LA](
+    className: String,
+    params: List[ProtocolParameter[L]],
+    discriminator: Discriminator[L],
+    parents: List[SuperClass[L]] = Nil,
+    children: List[String] = Nil
+) extends PolyProtocolTerm[L, L#Trait]
 
 case class EncodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], children: List[String] = Nil)
     extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
@@ -28,15 +29,18 @@ case class EncodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], 
 case class DecodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], children: List[String] = Nil)
     extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
 
-case class RenderADTStaticDefns[L <: LA](clsName: String,
-                                         discriminator: Discriminator[L],
-                                         encoder: Option[L#ValueDefinition],
-                                         decoder: Option[L#ValueDefinition])
-    extends PolyProtocolTerm[L, StaticDefns[L]]
+case class RenderADTStaticDefns[L <: LA](
+    clsName: String,
+    discriminator: Discriminator[L],
+    encoder: Option[L#ValueDefinition],
+    decoder: Option[L#ValueDefinition]
+) extends PolyProtocolTerm[L, StaticDefns[L]]
 
 class PolyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?], F]) {
-  def extractSuperClass(swagger: Tracker[ComposedSchema],
-                        definitions: List[(String, Tracker[Schema[_]])]): Free[F, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
+  def extractSuperClass(
+      swagger: Tracker[ComposedSchema],
+      definitions: List[(String, Tracker[Schema[_]])]
+  ): Free[F, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
     Free.inject[PolyProtocolTerm[L, ?], F](ExtractSuperClass(swagger, definitions))
   def renderSealedTrait(
       className: String,

@@ -277,7 +277,7 @@ object Java {
                   cu.getImports.toList,
                   clsDef
                 )
-            )
+              )
           )
     }
 }

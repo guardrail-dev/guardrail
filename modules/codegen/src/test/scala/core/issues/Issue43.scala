@@ -82,12 +82,12 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     val (
       ProtocolDefinitions(
         ClassDefinition(nameCat, tpeCat, fullTypeCat, clsCat, staticDefnsCat, catParents) :: ClassDefinition(nameDog, tpeDog, _, _, _, _) :: ADT(
-          namePet,
-          tpePet,
-          fullTpePet,
-          trtPet,
-          staticDefns
-        ) :: Nil,
+              namePet,
+              tpePet,
+              fullTpePet,
+              trtPet,
+              staticDefns
+            ) :: Nil,
         _,
         _,
         _

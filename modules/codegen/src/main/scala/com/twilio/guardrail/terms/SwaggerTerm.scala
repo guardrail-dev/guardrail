@@ -62,15 +62,17 @@ object SecurityRequirements {
             req =>
               NonEmptyMap.fromMap(
                 TreeMap(req.asScala.mapValues(_.asScala.toList).toSeq: _*)
-            )
+              )
           )
       )
     } yield SecurityRequirements(convertedReqs, optionalSchemes, location)
   }
 }
-case class SecurityRequirements(requirements: NonEmptyList[NonEmptyMap[String, SecurityScopes]],
-                                optionalSchemes: List[String],
-                                location: SecurityRequirements.Location)
+case class SecurityRequirements(
+    requirements: NonEmptyList[NonEmptyMap[String, SecurityScopes]],
+    optionalSchemes: List[String],
+    location: SecurityRequirements.Location
+)
 
 case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Tracker[Operation], securityRequirements: Option[SecurityRequirements]) {
   override def toString(): String = s"RouteMeta(${path.unwrapTracker}, $method, ${operation.get.showNotNull} (${operation.showHistory}), $securityRequirements)"
@@ -227,9 +229,9 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     val requestBody = operation.downField("requestBody", _.getRequestBody()).map(_.toList)
     val params: List[Tracker[Parameter]] =
       requestBody.flatExtract(extractRefParamFromRequestBody(_).toList) ++
-        p.indexedDistribute ++
-        requestBody.flatExtract(extractParamsFromRequestBody) ++
-        requestBody.flatExtract(extractPrimitiveFromRequestBody(_).toList)
+          p.indexedDistribute ++
+          requestBody.flatExtract(extractParamsFromRequestBody) ++
+          requestBody.flatExtract(extractPrimitiveFromRequestBody(_).toList)
     params
   }
 
@@ -251,10 +253,11 @@ case class OAuth2SecurityScheme[L <: LA](flows: OAuthFlows, tpe: Option[L#Type])
 
 sealed trait SwaggerTerm[L <: LA, T]
 case class ExtractCommonRequestBodies[L <: LA](components: Option[Components]) extends SwaggerTerm[L, Map[String, RequestBody]]
-case class ExtractOperations[L <: LA](paths: Tracker[Mappish[List, String, PathItem]],
-                                      commonRequestBodies: Map[String, RequestBody],
-                                      globalSecurityRequirements: Option[SecurityRequirements])
-    extends SwaggerTerm[L, List[RouteMeta]]
+case class ExtractOperations[L <: LA](
+    paths: Tracker[Mappish[List, String, PathItem]],
+    commonRequestBodies: Map[String, RequestBody],
+    globalSecurityRequirements: Option[SecurityRequirements]
+) extends SwaggerTerm[L, List[RouteMeta]]
 case class ExtractApiKeySecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])
     extends SwaggerTerm[L, ApiKeySecurityScheme[L]]
 case class ExtractHttpSecurityScheme[L <: LA](schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type])

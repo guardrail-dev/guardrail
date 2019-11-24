@@ -31,15 +31,17 @@ object Scala {
             case _                   => None
           })
           .getOrElse(t"Nothing")
-        new ScalaParameter[ScalaLanguage](None,
-                                          param,
-                                          Term.Name(name.value),
-                                          RawParameterName(name.value),
-                                          tpe,
-                                          RawParameterType(rawType, rawFormat),
-                                          true,
-                                          None,
-                                          false)
+        new ScalaParameter[ScalaLanguage](
+          None,
+          param,
+          Term.Name(name.value),
+          RawParameterName(name.value),
+          tpe,
+          RawParameterType(rawType, rawFormat),
+          true,
+          None,
+          false
+        )
     }
   }
 

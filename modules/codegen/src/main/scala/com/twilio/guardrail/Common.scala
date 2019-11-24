@@ -142,8 +142,10 @@ object Common {
       frameworkImports     <- getFrameworkImports(context.tracing)
       frameworkDefinitions <- getFrameworkDefinitions(context.tracing)
 
-      files <- (clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _)),
-                servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _))).mapN(_ ++ _)
+      files <- (
+        clients.flatTraverse(writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _)),
+        servers.flatTraverse(writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _))
+      ).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({
@@ -156,16 +158,15 @@ object Common {
       supportDefinitionsFiles <- supportDefinitions.traverse({
         case SupportDefinition(name, imports, defn) => renderFrameworkDefinitions(pkgPath, pkgName, imports, defn, name)
       })
-    } yield
-      (
-        protocolDefinitions ++
+    } yield (
+      protocolDefinitions ++
           packageObject.toList ++
           files ++
           implicits.toList ++
           frameworkImplicitsFile.toList ++
           frameworkDefinitionsFiles ++
           supportDefinitionsFiles
-      ).toList
+    ).toList
   }
 
   def processArgs[L <: LA, F[_]](

@@ -120,25 +120,29 @@ object AsyncHttpClientClientGenerator {
     val makeArgList: String => NodeList[Expression] = name =>
       if (param.isFile) {
         new NodeList[Expression](
-          new ObjectCreationExpr(null,
-                                 FILE_PART_TYPE,
-                                 new NodeList(
-                                   new StringLiteralExpr(param.argName.value),
-                                   new NameExpr(name)
-                                 ))
+          new ObjectCreationExpr(
+            null,
+            FILE_PART_TYPE,
+            new NodeList(
+              new StringLiteralExpr(param.argName.value),
+              new NameExpr(name)
+            )
+          )
         )
       } else if (needsMultipart) {
         new NodeList[Expression](
-          new ObjectCreationExpr(null,
-                                 STRING_PART_TYPE,
-                                 new NodeList(
-                                   new StringLiteralExpr(param.argName.value),
-                                   showParam(param, Some(name))
-                                 ))
+          new ObjectCreationExpr(
+            null,
+            STRING_PART_TYPE,
+            new NodeList(
+              new StringLiteralExpr(param.argName.value),
+              showParam(param, Some(name))
+            )
+          )
         )
       } else {
         new NodeList[Expression](new StringLiteralExpr(param.argName.value), showParam(param, Some(name)))
-    }
+      }
 
     if (isList) {
       new ForEachStmt(
@@ -163,12 +167,14 @@ object AsyncHttpClientClientGenerator {
       Option(
         new ExpressionStmt(
           wrapSetBody(
-            new ObjectCreationExpr(null,
-                                   FILE_PART_TYPE,
-                                   new NodeList(
-                                     new StringLiteralExpr(param.argName.value),
-                                     new NameExpr(param.paramName.asString)
-                                   ))
+            new ObjectCreationExpr(
+              null,
+              FILE_PART_TYPE,
+              new NodeList(
+                new StringLiteralExpr(param.argName.value),
+                new NameExpr(param.paramName.asString)
+              )
+            )
           )
         )
       )
@@ -399,8 +405,10 @@ object AsyncHttpClientClientGenerator {
                 new LambdaExpr(
                   new NodeList(new Parameter(new NodeList(finalModifier), REQUEST_TYPE, new SimpleName("request"))),
                   new ExpressionStmt(
-                    new MethodCallExpr(new MethodCallExpr(new NameExpr("client"), "executeRequest", new NodeList[Expression](new NameExpr("request"))),
-                                       "toCompletableFuture")
+                    new MethodCallExpr(
+                      new MethodCallExpr(new NameExpr("client"), "executeRequest", new NodeList[Expression](new NameExpr("request"))),
+                      "toCompletableFuture"
+                    )
                   ),
                   true
                 )
@@ -438,9 +446,9 @@ object AsyncHttpClientClientGenerator {
                       "registerModule",
                       new NodeList[Expression](new ObjectCreationExpr(null, StaticJavaParser.parseClassOrInterfaceType(name), new NodeList()))
                     )
-                )
+                  )
               ) :+
-                new ReturnStmt(new NameExpr("objectMapper")): _*
+                  new ReturnStmt(new NameExpr("objectMapper")): _*
             )
           )
         )
@@ -450,13 +458,15 @@ object AsyncHttpClientClientGenerator {
 
   object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(_,
-                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
-                                   methodName,
-                                   tracing,
-                                   parameters,
-                                   responses,
-                                   securitySchemes) =>
+      case GenerateClientOperation(
+          _,
+          RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+          methodName,
+          tracing,
+          parameters,
+          responses,
+          securitySchemes
+          ) =>
         val responseParentName = s"${operation.get.getOperationId.capitalize}Response"
         val callBuilderName    = s"${operation.get.getOperationId.capitalize}CallBuilder"
         for {
@@ -472,13 +482,13 @@ object AsyncHttpClientClientGenerator {
                 new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
                 "show",
                 new NodeList[Expression](new NameExpr(name.asString))
-            ),
+              ),
             new MethodCallExpr(new FieldAccessExpr(new ThisExpr, "baseUrl"), "toString"),
             (a, b) =>
               (a, b) match {
                 case (ae: Expression, be: Expression) => new BinaryExpr(ae, be, BinaryExpr.Operator.PLUS)
                 case _                                => a
-            }
+              }
           )
 
           pathExpr <- pathExprNode match {
@@ -493,20 +503,22 @@ object AsyncHttpClientClientGenerator {
           parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
           (
             parameters.pathParams ++
-              parameters.queryStringParams ++
-              parameters.formParams ++
-              parameters.headerParams ++
-              parameters.bodyParams
+                parameters.queryStringParams ++
+                parameters.formParams ++
+                parameters.headerParams ++
+                parameters.bodyParams
           ).filter(_.required).map(_.param).foreach(method.addParameter)
 
           val requestBuilder = new MethodCallExpr(
             new AssignExpr(
               new VariableDeclarationExpr(new VariableDeclarator(REQUEST_BUILDER_TYPE, "builder"), finalModifier),
-              new ObjectCreationExpr(null,
-                                     REQUEST_BUILDER_TYPE,
-                                     new NodeList[Expression](
-                                       new StringLiteralExpr(httpMethod.toString)
-                                     )),
+              new ObjectCreationExpr(
+                null,
+                REQUEST_BUILDER_TYPE,
+                new NodeList[Expression](
+                  new StringLiteralExpr(httpMethod.toString)
+                )
+              ),
               AssignExpr.Operator.ASSIGN
             ),
             "setUrl",
@@ -523,11 +535,11 @@ object AsyncHttpClientClientGenerator {
           val produces = responses.value.map(resp => (resp.statusCode, getBestProduces(operation.get, resp))).toMap
 
           val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
-            .flatMap({
-              case (params, name, needsMultipart) =>
-                params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
-            }) ++
-            parameters.bodyParams.flatMap(param => generateBodyMethodCall(param, consumes).map(stmt => (param, stmt)))
+              .flatMap({
+                case (params, name, needsMultipart) =>
+                  params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
+              }) ++
+                parameters.bodyParams.flatMap(param => generateBodyMethodCall(param, consumes).map(stmt => (param, stmt)))
 
           val callBuilderCreation = new ObjectCreationExpr(
             null,
@@ -543,17 +555,17 @@ object AsyncHttpClientClientGenerator {
             new BlockStmt(
               new NodeList(
                 new ExpressionStmt(requestBuilder) +:
-                  builderMethodCalls.filter(_._1.required).map(_._2) :+
-                  new ReturnStmt(callBuilderCreation): _*
+                    builderMethodCalls.filter(_._1.required).map(_._2) :+
+                    new ReturnStmt(callBuilderCreation): _*
               )
             )
           )
 
           val callBuilderFinalFields = List(
-            (REQUEST_BUILDER_TYPE, "builder"),
-            (HTTP_CLIENT_FUNCTION_TYPE, "httpClient"),
-            (OBJECT_MAPPER_TYPE, "objectMapper")
-          ) ++ (if (tracing) Option((STRING_TYPE, "clientName")) else None)
+              (REQUEST_BUILDER_TYPE, "builder"),
+              (HTTP_CLIENT_FUNCTION_TYPE, "httpClient"),
+              (OBJECT_MAPPER_TYPE, "objectMapper")
+            ) ++ (if (tracing) Option((STRING_TYPE, "clientName")) else None)
 
           val callBuilderCls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, callBuilderName)
           callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
@@ -784,9 +796,11 @@ object AsyncHttpClientClientGenerator {
                                           new BlockStmt(
                                             new NodeList(
                                               new ThrowStmt(
-                                                new ObjectCreationExpr(null,
-                                                                       MARSHALLING_EXCEPTION_TYPE,
-                                                                       new NodeList(new StringLiteralExpr("Failed to unmarshal response")))
+                                                new ObjectCreationExpr(
+                                                  null,
+                                                  MARSHALLING_EXCEPTION_TYPE,
+                                                  new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
+                                                )
                                               )
                                             )
                                           ),
@@ -818,9 +832,11 @@ object AsyncHttpClientClientGenerator {
                                         new BlockStmt(
                                           new NodeList(
                                             new ThrowStmt(
-                                              new ObjectCreationExpr(null,
-                                                                     MARSHALLING_EXCEPTION_TYPE,
-                                                                     new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e")))
+                                              new ObjectCreationExpr(
+                                                null,
+                                                MARSHALLING_EXCEPTION_TYPE,
+                                                new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                                              )
                                             )
                                           )
                                         )
@@ -829,12 +845,12 @@ object AsyncHttpClientClientGenerator {
                                     null
                                   )
                               })
-                          )
+                            )
                         ) :+ new SwitchEntry(
-                          new NodeList(),
-                          SwitchEntry.Type.BLOCK,
-                          new NodeList(new ThrowStmt(new ObjectCreationExpr(null, HTTP_ERROR_TYPE, new NodeList(new NameExpr("response")))))
-                        ): _*
+                              new NodeList(),
+                              SwitchEntry.Type.BLOCK,
+                              new NodeList(new ThrowStmt(new ObjectCreationExpr(null, HTTP_ERROR_TYPE, new NodeList(new NameExpr("response")))))
+                            ): _*
                       )
                     )
                   )
@@ -872,8 +888,8 @@ object AsyncHttpClientClientGenerator {
             "org.asynchttpclient.request.body.multipart.FilePart",
             "org.asynchttpclient.request.body.multipart.StringPart"
           ).map(safeParseRawImport) ++ List(
-            "java.util.Objects.requireNonNull"
-          ).map(safeParseRawStaticImport)).sequence
+                "java.util.Objects.requireNonNull"
+              ).map(safeParseRawStaticImport)).sequence
         }
 
       case GetExtraImports(tracing) =>
@@ -928,11 +944,13 @@ object AsyncHttpClientClientGenerator {
                   )
                 )
 
-                (functionType(vt, genericTypeParam),
-                 "apply",
-                 new NodeList[Expression](
-                   new MethodCallExpr(new EnclosedExpr(new CastExpr(responseType, new ThisExpr)), "getValue")
-                 ))
+                (
+                  functionType(vt, genericTypeParam),
+                  "apply",
+                  new NodeList[Expression](
+                    new MethodCallExpr(new EnclosedExpr(new CastExpr(responseType, new ThisExpr)), "getValue")
+                  )
+                )
             })
 
             val foldMethodParameter = new Parameter(new NodeList(finalModifier), foldMethodParamType, new SimpleName(responseLambdaName))
@@ -1224,16 +1242,16 @@ object AsyncHttpClientClientGenerator {
         val builderClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, "Builder")
         sortDefinitions(
           tracingFields ++
-            builderSetters ++
-            internalGetters ++
-            defaultBaseUrlField ++
-            List(
-              baseUrlField,
-              httpClientField,
-              objectMapperField,
-              builderConstructor,
-              buildMethod
-            )
+              builderSetters ++
+              internalGetters ++
+              defaultBaseUrlField ++
+              List(
+                baseUrlField,
+                httpClientField,
+                objectMapperField,
+                builderConstructor,
+                buildMethod
+              )
         ).foreach(builderClass.addMember)
 
         val clientFields = List(
@@ -1278,9 +1296,9 @@ object AsyncHttpClientClientGenerator {
             builderClass,
             constructor
           ) ++
-            clientCalls ++
-            clientFields ++
-            supportDefinitions
+              clientCalls ++
+              clientFields ++
+              supportDefinitions
         ).foreach(clientClass.addMember)
 
         Target.pure(NonEmptyList(Right(clientClass), Nil))

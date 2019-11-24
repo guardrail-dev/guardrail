@@ -44,12 +44,11 @@ object WriteTree {
             |""".stripMargin)) >> Writer.value(FileDifferent)
           })
         } else Writer.value[List[String], WriteTreeState](FileAbsent)
-      } yield
-        writeState match {
-          case FileAbsent    => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-          case FileDifferent => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-          case FileIdentical => path
-        }
+      } yield writeState match {
+        case FileAbsent    => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        case FileDifferent => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        case FileIdentical => path
+      }
   }
 
   val unsafeWriteTree: WriteTree => Path =

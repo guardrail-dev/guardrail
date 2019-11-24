@@ -311,10 +311,11 @@ object ScalaGenerator {
       case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
         Target.pure(elem match {
           case EnumDefinition(_, _, _, _, cls, staticDefns) =>
-            (List(
-               WriteTree(
-                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                 sourceToBytes(source"""
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                  sourceToBytes(source"""
               package ${buildPkgTerm(dtoComponents)}
                 import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._;
                 ..${imports}
@@ -322,24 +323,27 @@ object ScalaGenerator {
                 $cls
                 ${companionForStaticDefns(staticDefns)}
               """)
-               )
-             ),
-             List.empty[Stat])
+                )
+              ),
+              List.empty[Stat]
+            )
 
           case ClassDefinition(_, _, _, cls, staticDefns, _) =>
-            (List(
-               WriteTree(
-                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                 sourceToBytes(source"""
+            (
+              List(
+                WriteTree(
+                  resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                  sourceToBytes(source"""
               package ${buildPkgTerm(dtoComponents)}
                 ..${imports}
                 import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._;
                 $cls
                 ${companionForStaticDefns(staticDefns)}
               """)
-               )
-             ),
-             List.empty[Stat])
+                )
+              ),
+              List.empty[Stat]
+            )
 
           case ADT(name, tpe, _, trt, staticDefns) =>
             val polyImports: Import = q"""import cats.syntax.either._"""
@@ -364,12 +368,14 @@ object ScalaGenerator {
           case RandomType(_, _) =>
             (List.empty, List.empty)
         })
-      case WriteClient(pkgPath,
-                       pkgName,
-                       customImports,
-                       frameworkImplicitName,
-                       dtoComponents,
-                       Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)) =>
+      case WriteClient(
+          pkgPath,
+          pkgName,
+          customImports,
+          frameworkImplicitName,
+          dtoComponents,
+          Client(pkg, clientName, imports, staticDefns, client, responseDefinitions)
+          ) =>
         Target.pure(
           List(
             WriteTree(
@@ -388,12 +394,14 @@ object ScalaGenerator {
             )
           )
         )
-      case WriteServer(pkgPath,
-                       pkgName,
-                       customImports,
-                       frameworkImplicitName,
-                       dtoComponents,
-                       Server(pkg, extraImports, handlerDefinition, serverDefinitions)) =>
+      case WriteServer(
+          pkgPath,
+          pkgName,
+          customImports,
+          frameworkImplicitName,
+          dtoComponents,
+          Server(pkg, extraImports, handlerDefinition, serverDefinitions)
+          ) =>
         Target.pure(
           List(
             WriteTree(
