@@ -30,4 +30,4 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean checkFormatting testSuite
+      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage checkFormatting testSuite codegen/coverageReport
