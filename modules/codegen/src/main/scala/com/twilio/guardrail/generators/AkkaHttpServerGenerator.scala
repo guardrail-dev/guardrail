@@ -7,6 +7,7 @@ import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
+import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
@@ -258,7 +259,7 @@ object AkkaHttpServerGenerator {
       Target.pure(
         body.map {
           case ScalaParameter(_, _, _, _, argType) =>
-            q"entity(as[${argType}](${Term.Name(s"${operationId}Decoder")}))"
+            q"entity(as[${argType}](${Term.Name(s"${operationId.uncapitalized}Decoder")}))"
         }
       )
 
@@ -809,7 +810,7 @@ object AkkaHttpServerGenerator {
           val (decoder, baseType) = AkkaHttpHelper.generateDecoder(argType, consumes)
           List(
             q"""
-              val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId}Decoder")), t"FromRequestUnmarshaller[$baseType]")} = {
+              val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId.uncapitalized}Decoder")), t"FromRequestUnmarshaller[$baseType]")} = {
                 val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
                 val unmarshalEntity = ${decoder}
                 extractEntity.andThen(unmarshalEntity)

@@ -163,7 +163,7 @@ object Http4sServerGenerator {
       Target.pure(
         body.map {
           case ScalaParameter(_, _, paramName, _, _) =>
-            content => q"req.decodeWith(${Term.Name(s"${operationId}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
+            content => q"req.decodeWith(${Term.Name(s"${operationId.uncapitalized}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
         }
       )
 
@@ -718,7 +718,8 @@ object Http4sServerGenerator {
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(
-            q"private[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId}Decoder")), t"EntityDecoder[F, $argType]")} = ${Http4sHelper.generateDecoder(argType, consumes)}"
+            q"private[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId.uncapitalized}Decoder")), t"EntityDecoder[F, $argType]")} = ${Http4sHelper
+              .generateDecoder(argType, consumes)}"
           )
       }
 
