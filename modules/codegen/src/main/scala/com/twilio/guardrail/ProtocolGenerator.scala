@@ -413,11 +413,8 @@ object ProtocolGenerator {
           for {
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, Tracker.hackyAdapt(schema, Vector.empty))
-            resolvedType <- maybeNestedDefinition.fold(SwaggerUtil.propMetaWithName(tpe, schema)) {
-              case Left(_)  => objectType(None).map(Resolved(_, None, None, None, None))
-              case Right(_) => SwaggerUtil.propMetaWithName(tpe, schema)
-            }
-            customType <- SwaggerUtil.customTypeName(schema)
+            resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
+            customType            <- SwaggerUtil.customTypeName(schema)
             isRequired = requiredFields.contains(name)
             defValue <- defaultValue(typeName, schema, isRequired, definitions.map(_.map(_.get)))
             parameter <- transformProperty(getClsName(name).last, needCamelSnakeConversion, concreteTypes)(
