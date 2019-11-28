@@ -134,7 +134,7 @@ object ProtocolGenerator {
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
-    val tpeName = swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Some("string")))
+    val tpeName = swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Option("string")))
 
     for {
       enum          <- extractEnum(swagger.get)
@@ -390,18 +390,18 @@ object ProtocolGenerator {
       val nestedClassName = getClsName(name).append(name.toCamelCase.capitalize)
       schema
         .refine[Free[F, Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
-          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage).map(Some(_))
+          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage).map(Option(_))
         )
         .orRefine({ case o: ComposedSchema => o })(
           o =>
             for {
               parents              <- extractParents(o, definitions, concreteTypes, dtoPackage)
               maybeClassDefinition <- fromModel(nestedClassName, schema, parents, concreteTypes, definitions, dtoPackage)
-            } yield Some(maybeClassDefinition)
+            } yield Option(maybeClassDefinition)
         )
         .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
         .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
-          s => fromEnum(nestedClassName.last, s, dtoPackage).map(Some(_))
+          s => fromEnum(nestedClassName.last, s, dtoPackage).map(Option(_))
         )
         .getOrElse(Free.pure[F, Option[Either[String, NestedProtocolElems[L]]]](Option.empty))
     }
