@@ -52,6 +52,12 @@ else
   exit 1
 fi
 
+format_cmd="${sbt} scalafmt"
+for project in akkaHttpSample codegen dropwizardSample endpointsSample http4sSample microsite; do
+  format_cmd="${format_cmd} && ${sbt} ${project}/scalafmt && ${sbt} ${project}/test:scalafmt"
+done
+
+
 # We use this marker to indicate which commits we should act on. It's somewhat
 # unlikely that it'll conflict. Tested against BSD and GNU `base64`
 marker="$(echo "${RANDOM}" | base64)"
@@ -94,8 +100,8 @@ git commit -m "${marker} @v reverting"
 
 # Walk the whole changeset, interpolating in reformat && revert to avoid
 # merge conflicts
-git rebase "${common_root}" "${current_hash}" --onto @ \
-  -x "${sbt} codegen/scalafmt && git commit -m '${marker} @^ formatting' modules && git revert --no-edit -n @ && git commit -m '${marker} @v reverting'"
+git rebase -i "${common_root}" "${current_hash}" --onto @ \
+  -x "set -x; ${format_cmd} && git commit -m '${marker} @^ formatting' modules && git revert --no-edit -n @ && git commit -m '${marker} @v reverting'; set +x"
 
 # The very last commit may include just a lone revert of formatting changes.
 # It must be stopped.
@@ -115,5 +121,5 @@ fi
 # with the same rules (provided formatting is deterministic), we can
 # seamlessly move towards a better formatted world.
 git rebase "${format_hash}" \
-  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker}\"* ]] || (git reset @^^; git commit -C @@{1} modules) || true" \
-  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker} @^ formatting\" ]] && (git reset @^; git commit --amend -C @ modules) || true"
+  -x "set -x; [[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker}\"*              ]] || (git reset @^^; git add modules; git commit         -C @@{1} modules) || true; set +x" \
+  -x "set -x; [[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker} @^ formatting\" ]] && (git reset @^ ; git add modules; git commit --amend -C @     modules) || true; set +x"
