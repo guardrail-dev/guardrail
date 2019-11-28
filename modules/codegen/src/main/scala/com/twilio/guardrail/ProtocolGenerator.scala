@@ -337,7 +337,7 @@ object ProtocolGenerator {
       encoder                     <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       decoder                     <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       tpe                         <- parseTypeName(clsName.last)
-      fullType                    <- selectType(NonEmptyList.fromList(dtoPackage ++ clsName.toList).head)
+      fullType                    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns                 <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
       result <- if (parents.isEmpty && props.isEmpty) Free.pure[F, Either[String, ClassDefinition[L]]](Left("Entity isn't model"))
       else {
