@@ -768,9 +768,12 @@ object JacksonGenerator {
                   safeParseType(tpeName)
                 }
                 tpe.map((_, Option.empty))
-              case SwaggerUtil.DeferredArray(tpeName) =>
+              case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
                 for {
-                  fqListType <- safeParseClassOrInterfaceType("java.util.List")
+                  fqListType <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.List")) {
+                    case ci: ClassOrInterfaceType => Target.pure(ci)
+                    case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                  }
                   concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
                   innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqListType.setTypeArguments(innerType), Option.empty)
@@ -835,10 +838,16 @@ object JacksonGenerator {
             case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), s"Unresolved reference ${tpeName}").flatten
-            case SwaggerUtil.DeferredArray(tpeName) =>
-              Target
-                .fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"java.util.List<${tpe}>")), s"Unresolved reference ${tpeName}")
-                .flatten
+            case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
+              for {
+                tpe <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.List")) {
+                  case ci: ClassOrInterfaceType => Target.pure(ci)
+                  case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                }
+                res <- Target
+                  .fromOption(lookupTypeName(tpeName, concreteTypes)(t => Target.pure(tpe.setTypeArguments(t))), s"Unresolved reference ${tpeName}")
+                  .flatten
+              } yield res
             case SwaggerUtil.DeferredMap(tpeName) =>
               Target
                 .fromOption(

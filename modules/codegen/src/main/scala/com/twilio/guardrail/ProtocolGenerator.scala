@@ -651,8 +651,11 @@ object ProtocolGenerator {
         schema match {
           case _: MapSchema if isRequired =>
             emptyMap.map(Some(_))
-          case _: ArraySchema if isRequired =>
-            emptyArray.map(Some(_))
+          case arr: ArraySchema if isRequired =>
+            for {
+              customTpe <- SwaggerUtil.customArrayTypeName(arr)
+              result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => Free.pure(None))
+            } yield result
           case p: BooleanSchema =>
             Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_)))
           case p: NumberSchema if p.getFormat == "double" =>

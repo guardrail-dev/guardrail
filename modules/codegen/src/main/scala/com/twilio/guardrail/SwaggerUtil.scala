@@ -24,10 +24,10 @@ object SwaggerUtil {
   sealed trait ResolvedType[L <: LA]
   case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String])
       extends ResolvedType[L]
-  sealed trait LazyResolvedType[L <: LA]           extends ResolvedType[L]
-  case class Deferred[L <: LA](value: String)      extends LazyResolvedType[L]
-  case class DeferredArray[L <: LA](value: String) extends LazyResolvedType[L]
-  case class DeferredMap[L <: LA](value: String)   extends LazyResolvedType[L]
+  sealed trait LazyResolvedType[L <: LA]                                         extends ResolvedType[L]
+  case class Deferred[L <: LA](value: String)                                    extends LazyResolvedType[L]
+  case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type]) extends LazyResolvedType[L]
+  case class DeferredMap[L <: LA](value: String)                                 extends LazyResolvedType[L]
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
@@ -75,8 +75,8 @@ object SwaggerUtil {
               (partitionEitherM(lazyTypes) {
                 case x @ (clsName, Deferred(tpeName)) =>
                   lookupTypeName(clsName, tpeName, resolvedTypes)(Free.pure _).map(Either.fromOption(_, x))
-                case x @ (clsName, DeferredArray(tpeName)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType).map(Either.fromOption(_, x))
+                case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
                 case x @ (clsName, DeferredMap(tpeName)) =>
                   lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType).map(Either.fromOption(_, x))
               }).map({
@@ -107,17 +107,17 @@ object SwaggerUtil {
               case ADT(_, _, fullType, _, _) =>
                 Free.pure(Resolved[L](fullType, None, None, None, None))
             }
-        case DeferredArray(name) =>
+        case DeferredArray(name, containerTpe) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                liftVectorType(tpe).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
               case ClassDefinition(name, _, fullType, cls, _, _) =>
-                liftVectorType(fullType).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(name, _, fullType, elems, cls, _) =>
-                liftVectorType(fullType).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
               case ADT(_, _, fullType, _, _) =>
-                liftVectorType(fullType).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
             }
         case DeferredMap(name) =>
           resolveType(name, protocolElems)
@@ -163,16 +163,17 @@ object SwaggerUtil {
           .orRefine({ case arr: ArraySchema => arr })(
             arr =>
               for {
-                items <- getItems(arr)
-                _     <- log.debug(s"items:\n${log.schemaToString(items.unwrapTracker)}")
-                meta  <- propMeta[L, F](items)
-                _     <- log.debug(s"meta: ${meta}")
+                items     <- getItems(arr)
+                _         <- log.debug(s"items:\n${log.schemaToString(items.unwrapTracker)}")
+                meta      <- propMeta[L, F](items)
+                _         <- log.debug(s"meta: ${meta}")
+                arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(parseType))
                 res <- meta match {
                   case Resolved(inner, dep, default, _, _) =>
-                    (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _, None, None))
-                  case x: Deferred[L]      => embedArray(x)
-                  case x: DeferredArray[L] => embedArray(x)
-                  case x: DeferredMap[L]   => embedArray(x)
+                    (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm(_))).mapN(Resolved[L](_, dep, _, None, None))
+                  case x: Deferred[L]      => embedArray(x, arrayType)
+                  case x: DeferredArray[L] => embedArray(x, arrayType)
+                  case x: DeferredMap[L]   => embedArray(x, arrayType)
                 }
               } yield res
           )
@@ -386,15 +387,16 @@ object SwaggerUtil {
           .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
-                items <- getItems(p)
-                rec   <- propMetaImpl[L, F](items)(strategy)
+                items     <- getItems(p)
+                rec       <- propMetaImpl[L, F](items)(strategy)
+                arrayType <- customArrayTypeName(p).flatMap(_.flatTraverse(parseType))
                 res <- rec match {
                   case Resolved(inner, dep, default, _, _) =>
-                    (liftVectorType(inner), default.traverse(liftVectorTerm))
+                    (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
                       .mapN(Resolved[L](_, dep, _, None, None): ResolvedType[L])
-                  case x: DeferredMap[L]   => embedArray(x)
-                  case x: DeferredArray[L] => embedArray(x)
-                  case x: Deferred[L]      => embedArray(x)
+                  case x: DeferredMap[L]   => embedArray(x, arrayType)
+                  case x: DeferredArray[L] => embedArray(x, arrayType)
+                  case x: Deferred[L]      => embedArray(x, arrayType)
                 }
               } yield res
           )

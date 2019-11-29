@@ -12,20 +12,20 @@ import cats.data.NonEmptyList
 class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def vendorPrefixes(): Free[F, List[String]] = Free.inject[ScalaTerm[L, ?], F](VendorPrefixes[L]())
 
-  def litString(value: String): Free[F, L#Term]        = Free.inject[ScalaTerm[L, ?], F](LitString(value))
-  def litFloat(value: Float): Free[F, L#Term]          = Free.inject[ScalaTerm[L, ?], F](LitFloat(value))
-  def litDouble(value: Double): Free[F, L#Term]        = Free.inject[ScalaTerm[L, ?], F](LitDouble(value))
-  def litInt(value: Int): Free[F, L#Term]              = Free.inject[ScalaTerm[L, ?], F](LitInt(value))
-  def litLong(value: Long): Free[F, L#Term]            = Free.inject[ScalaTerm[L, ?], F](LitLong(value))
-  def litBoolean(value: Boolean): Free[F, L#Term]      = Free.inject[ScalaTerm[L, ?], F](LitBoolean(value))
-  def liftOptionalType(value: L#Type): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](LiftOptionalType(value))
-  def liftOptionalTerm(value: L#Term): Free[F, L#Term] = Free.inject[ScalaTerm[L, ?], F](LiftOptionalTerm(value))
-  def emptyArray: Free[F, L#Term]                      = Free.inject[ScalaTerm[L, ?], F](EmptyArray())
-  def emptyMap: Free[F, L#Term]                        = Free.inject[ScalaTerm[L, ?], F](EmptyMap())
-  def emptyOptionalTerm(): Free[F, L#Term]             = Free.inject[ScalaTerm[L, ?], F](EmptyOptionalTerm())
-  def liftVectorType(value: L#Type): Free[F, L#Type]   = Free.inject[ScalaTerm[L, ?], F](LiftVectorType(value))
-  def liftVectorTerm(value: L#Term): Free[F, L#Term]   = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
-  def liftMapType(value: L#Type): Free[F, L#Type]      = Free.inject[ScalaTerm[L, ?], F](LiftMapType(value))
+  def litString(value: String): Free[F, L#Term]                                 = Free.inject[ScalaTerm[L, ?], F](LitString(value))
+  def litFloat(value: Float): Free[F, L#Term]                                   = Free.inject[ScalaTerm[L, ?], F](LitFloat(value))
+  def litDouble(value: Double): Free[F, L#Term]                                 = Free.inject[ScalaTerm[L, ?], F](LitDouble(value))
+  def litInt(value: Int): Free[F, L#Term]                                       = Free.inject[ScalaTerm[L, ?], F](LitInt(value))
+  def litLong(value: Long): Free[F, L#Term]                                     = Free.inject[ScalaTerm[L, ?], F](LitLong(value))
+  def litBoolean(value: Boolean): Free[F, L#Term]                               = Free.inject[ScalaTerm[L, ?], F](LitBoolean(value))
+  def liftOptionalType(value: L#Type): Free[F, L#Type]                          = Free.inject[ScalaTerm[L, ?], F](LiftOptionalType(value))
+  def liftOptionalTerm(value: L#Term): Free[F, L#Term]                          = Free.inject[ScalaTerm[L, ?], F](LiftOptionalTerm(value))
+  def emptyArray: Free[F, L#Term]                                               = Free.inject[ScalaTerm[L, ?], F](EmptyArray())
+  def emptyMap: Free[F, L#Term]                                                 = Free.inject[ScalaTerm[L, ?], F](EmptyMap())
+  def emptyOptionalTerm(): Free[F, L#Term]                                      = Free.inject[ScalaTerm[L, ?], F](EmptyOptionalTerm())
+  def liftVectorType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](LiftVectorType(value, customTpe))
+  def liftVectorTerm(value: L#Term): Free[F, L#Term]                            = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
+  def liftMapType(value: L#Type): Free[F, L#Type]                               = Free.inject[ScalaTerm[L, ?], F](LiftMapType(value))
 
   def fullyQualifyPackageName(rawPkgName: List[String]): Free[F, List[String]] =
     Free.inject[ScalaTerm[L, ?], F](FullyQualifyPackageName(rawPkgName))
@@ -34,8 +34,9 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
     Free.inject[ScalaTerm[L, ?], F](LookupEnumDefaultValue(tpe, defaultValue, values))
   def formatEnumName(enumValue: String): Free[F, String] = Free.inject[ScalaTerm[L, ?], F](FormatEnumName(enumValue))
 
-  def embedArray(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedArray(tpe))
-  def embedMap(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]]   = Free.inject[ScalaTerm[L, ?], F](EmbedMap(tpe))
+  def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): Free[F, LazyResolvedType[L]] =
+    Free.inject[ScalaTerm[L, ?], F](EmbedArray(tpe, customTpe))
+  def embedMap(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedMap(tpe))
 
   def parseType(value: String): Free[F, Option[L#Type]]         = Free.inject[ScalaTerm[L, ?], F](ParseType(value))
   def parseTypeName(value: String): Free[F, Option[L#TypeName]] = Free.inject[ScalaTerm[L, ?], F](ParseTypeName(value))

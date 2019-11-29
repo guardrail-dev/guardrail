@@ -139,10 +139,10 @@ object CirceProtocolGenerator {
                 Type.Name(tpeName)
               }
               (tpe, Option.empty)
-            case SwaggerUtil.DeferredArray(tpeName) =>
+            case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"IndexedSeq[$innerType]", Option.empty)
+              (t"${containerTpe.getOrElse(t"IndexedSeq")}[$innerType]", Option.empty)
             case SwaggerUtil.DeferredMap(tpeName) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
@@ -352,8 +352,11 @@ object CirceProtocolGenerator {
             case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
-            case SwaggerUtil.DeferredArray(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[${tpe}]"), s"Unresolved reference ${tpeName}")
+            case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
+              Target.fromOption(
+                lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"IndexedSeq")}[${tpe}]"),
+                s"Unresolved reference ${tpeName}"
+              )
             case SwaggerUtil.DeferredMap(tpeName) =>
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
           }
@@ -371,7 +374,8 @@ object CirceProtocolGenerator {
           List(
             q"import io.circe._",
             q"import io.circe.syntax._",
-            q"import io.circe.generic.semiauto._"
+            q"import io.circe.generic.semiauto._",
+            q"import cats.implicits._"
           )
         )
 
