@@ -86,6 +86,14 @@ package object syntax {
     def toSnakeCase: String = splitParts(s).mkString("_")
 
     def toDashedCase: String = splitParts(s).mkString("-")
+
+    def uncapitalized: String =
+      if (s.nonEmpty) {
+        val inUnPacked              = s.toCharArray
+        val lowercaseFirstCharacter = Character.toLowerCase(inUnPacked(0))
+        new String(lowercaseFirstCharacter +: inUnPacked.tail)
+      } else s
+
   }
 
   implicit def RichSchema    = new RichNotNullShower[Schema[_]](_)
