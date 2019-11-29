@@ -15,7 +15,6 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.generators.syntax.RichSchema
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
@@ -307,15 +306,13 @@ object SwaggerUtil {
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
     import Fw._
-    import Sw._
     propMetaImpl(property) {
       case o: ObjectSchema =>
         for {
-          _ <- log.debug(
-            s"Not attempting to process properties from ${o.showNotNull}"
-          )
-          tpe <- objectType(None) // TODO: o.getProperties
-        } yield Resolved[L](tpe, None, None, None, None)
+          customTpeName <- customTypeName(o)
+          customTpe     <- customTpeName.flatTraverse(liftCustomType[L, F] _)
+          fallback      <- objectType(None)
+        } yield Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
     }
   }
 
@@ -336,8 +333,12 @@ object SwaggerUtil {
     propMetaImpl(property) {
       case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
         Free.pure(Resolved[L](tpe, None, None, None, None))
-      case _: ObjectSchema =>
-        objectType(None).map(Resolved[L](_, None, None, None, None))
+      case o: ObjectSchema =>
+        for {
+          customTpeName <- customTypeName(o)
+          customTpe     <- customTpeName.flatTraverse(liftCustomType[L, F] _)
+          fallback      <- objectType(None)
+        } yield Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
       case _: ComposedSchema =>
         Free.pure(Resolved[L](tpe, None, None, None, None))
       case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) =>
@@ -374,7 +375,7 @@ object SwaggerUtil {
         } yield res
       }
 
-      log.debug(s"property:\n${log.schemaToString(property.get)}").flatMap { _ =>
+      log.debug(s"property:\n${log.schemaToString(property.get)} (${property.get.getExtensions()})").flatMap { _ =>
         property
           .refine[Free[F, ResolvedType[L]]](strategy)(_.get)
           .orRefine({ case a: ArraySchema => a })(
@@ -425,8 +426,7 @@ object SwaggerUtil {
           .orRefine({ case p: PasswordSchema => p })(buildResolveNoDefault)
           .orRefine({ case f: FileSchema => f })(buildResolveNoDefault)
           .orRefine({ case u: UUIDSchema => u })(buildResolveNoDefault)
-          .leftMap(_.get)
-          .fold(fallbackPropertyTypeHandler(_).map(Resolved[L](_, None, None, None, None)), identity) // This may need to be rawType=string?
+          .orRefineFallback(x => fallbackPropertyTypeHandler(x.get).map(Resolved[L](_, None, None, None, None))) // This may need to be rawType=string?
       }
     }
 
