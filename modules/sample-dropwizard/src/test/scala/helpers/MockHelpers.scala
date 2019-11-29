@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture
 import javax.ws.rs.container.AsyncResponse
 import org.asynchttpclient.Response
 import org.asynchttpclient.uri.Uri
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.{ ArgumentMatchersSugar, MockitoSugar }
 import org.scalatest.Assertions
 import scala.reflect.ClassTag
 
@@ -18,11 +18,13 @@ object MockHelpers extends Assertions with MockitoSugar with ArgumentMatchersSug
   def mockAsyncResponse[T](future: CompletableFuture[T])(implicit cls: ClassTag[T]): AsyncResponse = {
     val asyncResponse = mock[AsyncResponse]
 
-    when(asyncResponse.resume(any[T])) thenAnswer[AnyRef] { response => response match {
-      case t: Throwable => future.completeExceptionally(t)
-      case other: T => future.complete(other)
-      case other => fail(s"AsyncResponse.resume expected an object of type ${cls.runtimeClass.getName}, but got ${other.getClass.getName} instead")
-    }}
+    when(asyncResponse.resume(any[T])) thenAnswer [AnyRef] { response =>
+      response match {
+        case t: Throwable => future.completeExceptionally(t)
+        case other: T     => future.complete(other)
+        case other        => fail(s"AsyncResponse.resume expected an object of type ${cls.runtimeClass.getName}, but got ${other.getClass.getName} instead")
+      }
+    }
 
     asyncResponse
   }
@@ -42,7 +44,7 @@ object MockHelpers extends Assertions with MockitoSugar with ArgumentMatchersSug
         when(response.hasResponseBody) thenReturn true
       case Some(body) =>
         val responseBytes = mapper.writeValueAsBytes(body)
-        val responseStr = new String(responseBytes, StandardCharsets.UTF_8)
+        val responseStr   = new String(responseBytes, StandardCharsets.UTF_8)
         when(response.hasResponseBody) thenReturn true
         when(response.getResponseBody(any)) thenReturn responseStr
         when(response.getResponseBody) thenReturn responseStr

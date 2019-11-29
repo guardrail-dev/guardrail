@@ -1,8 +1,8 @@
 package core.Jackson
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.scalatest.{FreeSpec, Matchers}
-import polymorphismMapped.client.dropwizard.definitions.{A, B, Base, C, DiscrimEnum, EnumA, EnumB, EnumBase, EnumC}
+import org.scalatest.{ FreeSpec, Matchers }
+import polymorphismMapped.client.dropwizard.definitions.{ A, B, Base, C, DiscrimEnum, EnumA, EnumB, EnumBase, EnumC }
 import scala.reflect.ClassTag
 
 class JacksonPolyMappingTest extends FreeSpec with Matchers {

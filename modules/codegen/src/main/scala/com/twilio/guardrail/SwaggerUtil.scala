@@ -143,37 +143,45 @@ object SwaggerUtil {
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
-        model: T
+        model: Tracker[T]
     )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
         import Fw._
-        log.debug(s"model:\n${log.schemaToString(model)}") >> (model match {
-          case ref: Schema[_] if Option(ref.get$ref).isDefined =>
+        log.debug(s"model:\n${log.schemaToString(model.get)}") >> (model
+          .refine[Free[F, ResolvedType[L]]]({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(
+            ref =>
+              for {
+                ref <- getSimpleRef(ref.map(Option(_)))
+              } yield Deferred[L](ref)
+          )
+          .orRefine({ case arr: ArraySchema => arr })(
+            arr =>
+              for {
+                items <- getItems(arr)
+                _     <- log.debug(s"items:\n${log.schemaToString(items.unwrapTracker)}")
+                meta  <- propMeta[L, F](items)
+                _     <- log.debug(s"meta: ${meta}")
+                res <- meta match {
+                  case Resolved(inner, dep, default, _, _) =>
+                    (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _, None, None))
+                  case x: Deferred[L]      => embedArray(x)
+                  case x: DeferredArray[L] => embedArray(x)
+                  case x: DeferredMap[L]   => embedArray(x)
+                }
+              } yield res
+          )
+          .orRefine({ case map: MapSchema => map })({ map =>
             for {
-              ref <- getSimpleRef(Tracker.hackyAdapt(Option(ref), Vector.empty))
-            } yield Deferred[L](ref)
-          case arr: ArraySchema =>
-            for {
-              items <- getItems(arr)
-              _     <- log.debug(s"items:\n${log.schemaToString(items)}")
-              meta  <- propMeta[L, F](Tracker.hackyAdapt(items, Vector.empty))
-              _     <- log.debug(s"meta: ${meta}")
-              res <- meta match {
-                case Resolved(inner, dep, default, _, _) =>
-                  (liftVectorType(inner), default.traverse(x => liftVectorTerm(x))).mapN(Resolved[L](_, dep, _, None, None))
-                case x: Deferred[L]      => embedArray(x)
-                case x: DeferredArray[L] => embedArray(x)
-                case x: DeferredMap[L]   => embedArray(x)
-              }
-            } yield res
-          case map: MapSchema =>
-            for {
-              rec <- Option(map.getAdditionalProperties)
-                .fold[Free[F, ResolvedType[L]]](objectType(None).map(Resolved[L](_, None, None, None, None)))({
-                  case _: java.lang.Boolean => objectType(None).map(Resolved[L](_, None, None, None, None))
-                  case s: Schema[_]         => propMeta[L, F](Tracker.hackyAdapt(s, Vector.empty))
+              rec <- map
+                .downField("additionalProperties", _.getAdditionalProperties())
+                .map(_.getOrElse(false))
+                .refine[Free[F, ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(Resolved[L](_, None, None, None, None)))
+                .orRefine({ case s: Schema[_] => s })(propMeta[L, F](_))
+                .orRefineFallback({ s =>
+                  log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
+                    .map(Resolved[L](_, None, None, None, None))
                 })
               res <- rec match {
                 case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
@@ -182,14 +190,16 @@ object SwaggerUtil {
                 case x: Deferred[L]                => embedMap(x)
               }
             } yield res
-          case impl: Schema[_] =>
-            for {
-              tpeName       <- getType(impl)
-              customTpeName <- customTypeName(impl)
-              fmt = Option(impl.getFormat())
-              tpe <- typeName[L, F](Tracker.hackyAdapt(Option(tpeName), Vector.empty), Tracker.hackyAdapt(fmt, Vector.empty), customTpeName)
-            } yield Resolved[L](tpe, None, None, Some(tpeName), fmt)
-        })
+          })
+          .orRefineFallback(
+            impl =>
+              for {
+                tpeName       <- getType(impl)
+                customTpeName <- customTypeName(impl)
+                fmt = impl.downField("format", _.getFormat())
+                tpe <- typeName[L, F](tpeName.map(Option(_)), fmt, customTpeName)
+              } yield Resolved[L](tpe, None, None, Some(tpeName.get), fmt.get)
+          ))
       }
   }
 
@@ -220,7 +230,7 @@ object SwaggerUtil {
             )
             .getOrElse(
               for {
-                resolved <- SwaggerUtil.modelMetaType[L, F](schema.get)
+                resolved <- SwaggerUtil.modelMetaType[L, F](schema)
               } yield (clsName, resolved)
             )
       }
@@ -250,37 +260,31 @@ object SwaggerUtil {
 
         t
       }
-      def liftCustomType(s: String): Free[F, Option[L#Type]] = {
-        val tpe = s.trim
-        if (tpe.nonEmpty) {
-          parseType(tpe)
-        } else Free.pure(Option.empty[L#Type])
-      }
 
       for {
-        customTpe <- customType.flatTraverse(liftCustomType _)
+        customTpe <- customType.flatTraverse(liftCustomType[L, F] _)
         result <- customTpe.fold({
-          (typeName.get.get, format.get) match {
-            case ("string", Some("uuid"))         => uuidType()
-            case ("string", Some("password"))     => stringType(None)
-            case ("string", Some("email"))        => stringType(None)
-            case ("string", Some("date"))         => dateType()
-            case ("string", Some("date-time"))    => dateTimeType()
-            case ("string", fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
-            case ("string", fmt)                  => stringType(fmt).map(log(fmt, _))
-            case ("number", Some("float"))        => floatType()
-            case ("number", Some("double"))       => doubleType()
-            case ("number", fmt)                  => numberType(fmt).map(log(fmt, _))
-            case ("integer", Some("int32"))       => intType()
-            case ("integer", Some("int64"))       => longType()
-            case ("integer", fmt)                 => integerType(fmt).map(log(fmt, _))
-            case ("boolean", fmt)                 => booleanType(fmt).map(log(fmt, _))
-            case ("array", fmt)                   => arrayType(fmt).map(log(fmt, _))
-            case ("file", fmt) =>
+          (typeName.get, format.get) match {
+            case (Some("string"), Some("uuid"))         => uuidType()
+            case (Some("string"), Some("password"))     => stringType(None)
+            case (Some("string"), Some("email"))        => stringType(None)
+            case (Some("string"), Some("date"))         => dateType()
+            case (Some("string"), Some("date-time"))    => dateTimeType()
+            case (Some("string"), fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
+            case (Some("string"), fmt)                  => stringType(fmt).map(log(fmt, _))
+            case (Some("number"), Some("float"))        => floatType()
+            case (Some("number"), Some("double"))       => doubleType()
+            case (Some("number"), fmt)                  => numberType(fmt).map(log(fmt, _))
+            case (Some("integer"), Some("int32"))       => intType()
+            case (Some("integer"), Some("int64"))       => longType()
+            case (Some("integer"), fmt)                 => integerType(fmt).map(log(fmt, _))
+            case (Some("boolean"), fmt)                 => booleanType(fmt).map(log(fmt, _))
+            case (Some("array"), fmt)                   => arrayType(fmt).map(log(fmt, _))
+            case (Some("file"), fmt) =>
               fileType(None).map(log(fmt, _))
-            case ("binary", fmt) =>
+            case (Some("binary"), fmt) =>
               fileType(None).map(log(fmt, _))
-            case ("object", fmt) => objectType(fmt).map(log(fmt, _))
+            case (Some("object"), fmt) => objectType(fmt).map(log(fmt, _))
             case (tpe, fmt) =>
               fallbackType(tpe, fmt)
           }
@@ -315,22 +319,29 @@ object SwaggerUtil {
     }
   }
 
-  def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Schema[_])(
+  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, F]): Free[F, Option[L#Type]] = {
+    import Sc._
+    val tpe = s.trim
+    if (tpe.nonEmpty) {
+      parseType(tpe)
+    } else Free.pure(Option.empty[L#Type])
+  }
+
+  def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(
       implicit Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
     import Fw._
-    val action: Free[F, ResolvedType[L]] = Free.pure(Resolved[L](tpe, None, None, None, None))
-    propMetaImpl(Tracker.hackyAdapt(property, Vector.empty)) {
+    propMetaImpl(property) {
       case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
-        action
+        Free.pure(Resolved[L](tpe, None, None, None, None))
       case _: ObjectSchema =>
         objectType(None).map(Resolved[L](_, None, None, None, None))
       case _: ComposedSchema =>
-        action
+        Free.pure(Resolved[L](tpe, None, None, None, None))
       case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) =>
-        action
+        Free.pure(Resolved[L](tpe, None, None, None, None))
     }
   }
 
@@ -369,8 +380,8 @@ object SwaggerUtil {
           .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
-                items <- getItems(p.get)
-                rec   <- propMetaImpl[L, F](Tracker.hackyAdapt(items, Vector.empty))(strategy)
+                items <- getItems(p)
+                rec   <- propMetaImpl[L, F](items)(strategy)
                 res <- rec match {
                   case Resolved(inner, dep, default, _, _) =>
                     (liftVectorType(inner), default.traverse(liftVectorTerm))
@@ -385,14 +396,14 @@ object SwaggerUtil {
             m =>
               for {
                 rec <- m
-                  .downField("additionalProperties", _.getAdditionalProperties)
-                  .get
-                  .fold[Free[F, ResolvedType[L]]](
-                    objectType(None).map(Resolved[L](_, None, None, None, None))
-                  )({
-                    case b: java.lang.Boolean =>
-                      objectType(None).map(Resolved[L](_, None, None, None, None))
-                    case s: Schema[_] => propMetaImpl[L, F](Tracker.hackyAdapt(s, Vector.empty))(strategy)
+                  .downField("additionalProperties", _.getAdditionalProperties())
+                  .map(_.getOrElse(false))
+                  .refine[Free[F, ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(Resolved[L](_, None, None, None, None)))
+                  .orRefine({ case s: Schema[_] => s })(propMetaImpl[L, F](_)(strategy))
+                  .orRefineFallback({ s =>
+                    log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None).map(
+                      Resolved[L](_, None, None, None, None)
+                    )
                   })
                 res <- rec match {
                   case Resolved(inner, dep, _, _, _) =>
