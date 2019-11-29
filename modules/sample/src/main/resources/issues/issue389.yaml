@@ -1,0 +1,24 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+components:
+  schemas:
+    Foo:
+      type: object
+      properties:
+        customArray:
+          type: array
+          items:
+            type: object
+            x-jvm-type: Bar
+        customMap:
+          type: object
+          additionalProperties:
+            type: string
+            x-jvm-type: Bar
+    Bar:
+      type: object
+      properties:
+        a:
+          type: integer
+          format: int64
