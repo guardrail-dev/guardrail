@@ -68,53 +68,60 @@ case class WidenTermSelect[L <: LA](value: L#TermSelect)             extends Sca
 case class WidenClassDefinition[L <: LA](value: L#ClassDefinition)   extends ScalaTerm[L, L#Definition]
 case class WidenObjectDefinition[L <: LA](value: L#ObjectDefinition) extends ScalaTerm[L, L#Definition]
 
-case class RenderImplicits[L <: LA](pkgPath: Path,
-                                    pkgName: List[String],
-                                    frameworkImports: List[L#Import],
-                                    jsonImports: List[L#Import],
-                                    customImports: List[L#Import])
-    extends ScalaTerm[L, Option[WriteTree]]
-case class RenderFrameworkImplicits[L <: LA](pkgPath: Path,
-                                             pkgName: List[String],
-                                             frameworkImports: List[L#Import],
-                                             jsonImports: List[L#Import],
-                                             frameworkImplicits: L#ObjectDefinition,
-                                             frameworkImplicitName: L#TermName)
-    extends ScalaTerm[L, WriteTree]
-case class RenderFrameworkDefinitions[L <: LA](pkgPath: Path,
-                                               pkgName: List[String],
-                                               frameworkImports: List[L#Import],
-                                               frameworkDefinitions: L#ClassDefinition,
-                                               frameworkDefinitionsName: L#TermName)
-    extends ScalaTerm[L, WriteTree]
-case class WritePackageObject[L <: LA](dtoPackagePath: Path,
-                                       dtoComponents: Option[NonEmptyList[String]],
-                                       customImports: List[L#Import],
-                                       packageObjectImports: List[L#Import],
-                                       protocolImports: List[L#Import],
-                                       packageObjectContents: List[L#ValueDefinition],
-                                       extraTypes: List[L#Statement])
-    extends ScalaTerm[L, Option[WriteTree]]
-case class WriteProtocolDefinition[L <: LA](outputPath: Path,
-                                            pkgName: List[String],
-                                            definitions: List[String],
-                                            dtoComponents: List[String],
-                                            imports: List[L#Import],
-                                            elem: StrictProtocolElems[L])
-    extends ScalaTerm[L, (List[WriteTree], List[L#Statement])]
-case class WriteClient[L <: LA](pkgPath: Path,
-                                pkgName: List[String],
-                                customImports: List[L#Import],
-                                frameworkImplicitName: Option[L#TermName],
-                                dtoComponents: Option[List[String]],
-                                client: Client[L])
-    extends ScalaTerm[L, List[WriteTree]]
-case class WriteServer[L <: LA](pkgPath: Path,
-                                pkgName: List[String],
-                                customImports: List[L#Import],
-                                frameworkImplicitName: Option[L#TermName],
-                                dtoComponents: Option[List[String]],
-                                server: Server[L])
-    extends ScalaTerm[L, List[WriteTree]]
+case class RenderImplicits[L <: LA](
+    pkgPath: Path,
+    pkgName: List[String],
+    frameworkImports: List[L#Import],
+    jsonImports: List[L#Import],
+    customImports: List[L#Import]
+) extends ScalaTerm[L, Option[WriteTree]]
+case class RenderFrameworkImplicits[L <: LA](
+    pkgPath: Path,
+    pkgName: List[String],
+    frameworkImports: List[L#Import],
+    jsonImports: List[L#Import],
+    frameworkImplicits: L#ObjectDefinition,
+    frameworkImplicitName: L#TermName
+) extends ScalaTerm[L, WriteTree]
+case class RenderFrameworkDefinitions[L <: LA](
+    pkgPath: Path,
+    pkgName: List[String],
+    frameworkImports: List[L#Import],
+    frameworkDefinitions: L#ClassDefinition,
+    frameworkDefinitionsName: L#TermName
+) extends ScalaTerm[L, WriteTree]
+case class WritePackageObject[L <: LA](
+    dtoPackagePath: Path,
+    dtoComponents: Option[NonEmptyList[String]],
+    customImports: List[L#Import],
+    packageObjectImports: List[L#Import],
+    protocolImports: List[L#Import],
+    packageObjectContents: List[L#ValueDefinition],
+    extraTypes: List[L#Statement]
+) extends ScalaTerm[L, Option[WriteTree]]
+case class WriteProtocolDefinition[L <: LA](
+    outputPath: Path,
+    pkgName: List[String],
+    definitions: List[String],
+    dtoComponents: List[String],
+    imports: List[L#Import],
+    elem: StrictProtocolElems[L]
+) extends ScalaTerm[L, (List[WriteTree], List[L#Statement])]
+case class WriteClient[L <: LA](
+    pkgPath: Path,
+    pkgName: List[String],
+    customImports: List[L#Import],
+    frameworkImplicitName: Option[L#TermName],
+    dtoComponents: Option[List[String]],
+    client: Client[L]
+) extends ScalaTerm[L, List[WriteTree]]
+case class WriteServer[L <: LA](
+    pkgPath: Path,
+    pkgName: List[String],
+    customImports: List[L#Import],
+    frameworkImplicitName: Option[L#TermName],
+    dtoComponents: Option[List[String]],
+    server: Server[L]
+) extends ScalaTerm[L, List[WriteTree]]
 
 case class WrapToObject[L <: LA](name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) extends ScalaTerm[L, L#ObjectDefinition]

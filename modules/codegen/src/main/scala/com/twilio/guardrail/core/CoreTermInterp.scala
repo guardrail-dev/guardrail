@@ -10,11 +10,12 @@ import com.twilio.guardrail.terms._
 import java.nio.file.Paths
 import scala.util.control.NonFatal
 
-case class CoreTermInterp[L <: LA](defaultFramework: String,
-                                   handleModules: NonEmptyList[String] => CoreTarget[CodegenApplication[L, ?] ~> Target],
-                                   frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
-                                   handleImport: String => Either[Error, L#Import])
-    extends (CoreTerm[L, ?] ~> CoreTarget) {
+case class CoreTermInterp[L <: LA](
+    defaultFramework: String,
+    handleModules: NonEmptyList[String] => CoreTarget[CodegenApplication[L, ?] ~> Target],
+    frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
+    handleImport: String => Either[Error, L#Import]
+) extends (CoreTerm[L, ?] ~> CoreTarget) {
   def apply[T](x: CoreTerm[L, T]): CoreTarget[T] = x match {
     case GetDefaultFramework() =>
       CoreTarget.log.function("getDefaultFramework") {

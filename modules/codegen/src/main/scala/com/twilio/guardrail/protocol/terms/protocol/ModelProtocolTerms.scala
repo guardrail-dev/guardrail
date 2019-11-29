@@ -24,20 +24,26 @@ class ModelProtocolTerms[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L,
     )
   def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil): Free[F, L#ClassDefinition] =
     Free.inject[ModelProtocolTerm[L, ?], F](RenderDTOClass[L](clsName, terms, parents))
-  def encodeModel(clsName: String,
-                  needCamelSnakeConversion: Boolean,
-                  params: List[ProtocolParameter[L]],
-                  parents: List[SuperClass[L]] = Nil): Free[F, Option[L#ValueDefinition]] =
+  def encodeModel(
+      clsName: String,
+      needCamelSnakeConversion: Boolean,
+      params: List[ProtocolParameter[L]],
+      parents: List[SuperClass[L]] = Nil
+  ): Free[F, Option[L#ValueDefinition]] =
     Free.inject[ModelProtocolTerm[L, ?], F](EncodeModel[L](clsName, needCamelSnakeConversion, params, parents))
-  def decodeModel(clsName: String,
-                  needCamelSnakeConversion: Boolean,
-                  params: List[ProtocolParameter[L]],
-                  parents: List[SuperClass[L]] = Nil): Free[F, Option[L#ValueDefinition]] =
+  def decodeModel(
+      clsName: String,
+      needCamelSnakeConversion: Boolean,
+      params: List[ProtocolParameter[L]],
+      parents: List[SuperClass[L]] = Nil
+  ): Free[F, Option[L#ValueDefinition]] =
     Free.inject[ModelProtocolTerm[L, ?], F](DecodeModel[L](clsName, needCamelSnakeConversion, params, parents))
-  def renderDTOStaticDefns(clsName: String,
-                           deps: List[L#TermName],
-                           encoder: Option[L#ValueDefinition],
-                           decoder: Option[L#ValueDefinition]): Free[F, StaticDefns[L]] =
+  def renderDTOStaticDefns(
+      clsName: String,
+      deps: List[L#TermName],
+      encoder: Option[L#ValueDefinition],
+      decoder: Option[L#ValueDefinition]
+  ): Free[F, StaticDefns[L]] =
     Free.inject[ModelProtocolTerm[L, ?], F](RenderDTOStaticDefns[L](clsName, deps, encoder, decoder))
 }
 object ModelProtocolTerms {

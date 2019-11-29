@@ -13,10 +13,12 @@ import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
 import com.twilio.swagger.core.StructuredLogger
 
 package guardrail {
-  case class CodegenDefinitions[L <: LA](clients: List[Client[L]],
-                                         servers: List[Server[L]],
-                                         supportDefinitions: List[SupportDefinition[L]],
-                                         frameworksImplicits: Option[(L#TermName, L#ObjectDefinition)])
+  case class CodegenDefinitions[L <: LA](
+      clients: List[Client[L]],
+      servers: List[Server[L]],
+      supportDefinitions: List[SupportDefinition[L]],
+      frameworksImplicits: Option[(L#TermName, L#ObjectDefinition)]
+  )
 
   sealed trait LogAbstraction {
     type F[_]

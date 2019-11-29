@@ -21,13 +21,14 @@ case class RandomType[L <: LA](name: String, tpe: L#Type) extends StrictProtocol
 
 sealed trait NestedProtocolElems[L <: LA] extends StrictProtocolElems[L]
 
-case class ClassDefinition[L <: LA](name: String,
-                                    tpe: L#TypeName,
-                                    fullType: L#Type,
-                                    cls: L#ClassDefinition,
-                                    staticDefns: StaticDefns[L],
-                                    parents: List[SuperClass[L]] = Nil)
-    extends NestedProtocolElems[L]
+case class ClassDefinition[L <: LA](
+    name: String,
+    tpe: L#TypeName,
+    fullType: L#Type,
+    cls: L#ClassDefinition,
+    staticDefns: StaticDefns[L],
+    parents: List[SuperClass[L]] = Nil
+) extends NestedProtocolElems[L]
 
 case class ADT[L <: LA](name: String, tpe: L#TypeName, fullType: L#Type, trt: L#Trait, staticDefns: StaticDefns[L]) extends StrictProtocolElems[L]
 
@@ -41,9 +42,10 @@ case class EnumDefinition[L <: LA](
 ) extends NestedProtocolElems[L]
 
 object ProtocolElems {
-  def resolve[L <: LA, F[_]](elems: List[ProtocolElems[L]], limit: Int = 10)(implicit Sc: ScalaTerms[L, F],
-                                                                             Sw: SwaggerTerms[L, F],
-                                                                             P: ProtocolSupportTerms[L, F]): Free[F, List[StrictProtocolElems[L]]] = {
+  def resolve[L <: LA, F[_]](
+      elems: List[ProtocolElems[L]],
+      limit: Int = 10
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], P: ProtocolSupportTerms[L, F]): Free[F, List[StrictProtocolElems[L]]] = {
     import Sc._
     import Sw._
     log.function(s"resolve(${elems.length} references)")(

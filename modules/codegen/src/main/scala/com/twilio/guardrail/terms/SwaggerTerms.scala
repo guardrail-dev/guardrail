@@ -17,9 +17,11 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractCommonRequestBodies(components: Option[Components]): Free[F, Map[String, RequestBody]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractCommonRequestBodies(components))
 
-  def extractOperations(paths: Tracker[Mappish[List, String, PathItem]],
-                        commonRequestBodies: Map[String, RequestBody],
-                        globalSecurityRequirements: Option[SecurityRequirements]): Free[F, List[RouteMeta]] =
+  def extractOperations(
+      paths: Tracker[Mappish[List, String, PathItem]],
+      commonRequestBodies: Map[String, RequestBody],
+      globalSecurityRequirements: Option[SecurityRequirements]
+  ): Free[F, List[RouteMeta]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements))
 
   def extractApiKeySecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): Free[F, ApiKeySecurityScheme[L]] =

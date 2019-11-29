@@ -28,13 +28,15 @@ object EndpointsClientGenerator {
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
     def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className,
-                                   RouteMeta(pathStr, httpMethod, operation, securityRequirements),
-                                   methodName,
-                                   tracing,
-                                   parameters,
-                                   responses,
-                                   securitySchemes) =>
+      case GenerateClientOperation(
+          className,
+          RouteMeta(pathStr, httpMethod, operation, securityRequirements),
+          methodName,
+          tracing,
+          parameters,
+          responses,
+          securitySchemes
+          ) =>
         def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
             None
@@ -115,23 +117,27 @@ object EndpointsClientGenerator {
           q"scala.collection.immutable.Seq[Option[String]](..$args).flatten"
         }
 
-        def build(methodName: String,
-                  httpMethod: HttpMethod,
-                  pathPattern: Term,
-                  formDataParams: Option[Term],
-                  staticQueryParams: Option[Term],
-                  headerParams: Term,
-                  responses: Responses[ScalaLanguage],
-                  produces: Seq[RouteMeta.ContentType],
-                  consumes: Seq[RouteMeta.ContentType],
-                  tracing: Boolean)(tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
-                                    tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
-                                    pathArgs: List[ScalaParameter[ScalaLanguage]],
-                                    qsArgs: List[ScalaParameter[ScalaLanguage]],
-                                    formArgs: List[ScalaParameter[ScalaLanguage]],
-                                    bodyArgs: Option[ScalaParameter[ScalaLanguage]],
-                                    headerArgs: List[ScalaParameter[ScalaLanguage]],
-                                    extraImplicits: List[Term.Param]): RenderedClientOperation[ScalaLanguage] = {
+        def build(
+            methodName: String,
+            httpMethod: HttpMethod,
+            pathPattern: Term,
+            formDataParams: Option[Term],
+            staticQueryParams: Option[Term],
+            headerParams: Term,
+            responses: Responses[ScalaLanguage],
+            produces: Seq[RouteMeta.ContentType],
+            consumes: Seq[RouteMeta.ContentType],
+            tracing: Boolean
+        )(
+            tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
+            tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
+            pathArgs: List[ScalaParameter[ScalaLanguage]],
+            qsArgs: List[ScalaParameter[ScalaLanguage]],
+            formArgs: List[ScalaParameter[ScalaLanguage]],
+            bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+            headerArgs: List[ScalaParameter[ScalaLanguage]],
+            extraImplicits: List[Term.Param]
+        ): RenderedClientOperation[ScalaLanguage] = {
 
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
 
@@ -143,15 +149,17 @@ object EndpointsClientGenerator {
             else (None, None)
 
           val (formAlgebra, formArgument): (Option[Term], Option[Term]) = {
-            (formDataParams.map(
-               _ =>
-                 if (consumes.contains(RouteMeta.MultipartFormData)) {
-                   q"multipartFormDataRequest"
-                 } else {
-                   q"formDataRequest[List[(String, String)]]()"
-               }
-             ),
-             formDataParams)
+            (
+              formDataParams.map(
+                _ =>
+                  if (consumes.contains(RouteMeta.MultipartFormData)) {
+                    q"multipartFormDataRequest"
+                  } else {
+                    q"formDataRequest[List[(String, String)]]()"
+                  }
+              ),
+              formDataParams
+            )
           }
 
           val (tracingExpr, httpClientName) =
@@ -183,53 +191,57 @@ object EndpointsClientGenerator {
             .orElse(fallbackBodyArgument)
 
           val (tracingAlgebra, tracingArgument): (Option[Term], Option[Term]) =
-            if (tracing) { (Some(q"tracerHeader"), Some(q"Map.empty")) } else { (None, None) }
+            if (tracing) {
+              (Some(q"tracerHeader"), Some(q"Map.empty"))
+            } else {
+              (None, None)
+            }
 
           val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
           val responseCompanionType = Type.Name(s"${methodName.capitalize}Response")
 
           val cases = responses.value.map { resp =>
-            val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-            (resp.value, resp.headers.value) match {
-              case (None, Nil) =>
-                p"case ${Lit.Int(resp.statusCode)} => Right($responseCompanionTerm.$responseTerm)"
-              case (None, headers) =>
-                val params = headers.map { header =>
-                  val lit  = Lit.String(header.name)
-                  val expr = q"xhr.getResponseHeader($lit)"
-                  if (header.isRequired) {
-                    expr
-                  } else {
-                    q"Option($expr)"
+              val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+              (resp.value, resp.headers.value) match {
+                case (None, Nil) =>
+                  p"case ${Lit.Int(resp.statusCode)} => Right($responseCompanionTerm.$responseTerm)"
+                case (None, headers) =>
+                  val params = headers.map { header =>
+                    val lit  = Lit.String(header.name)
+                    val expr = q"xhr.getResponseHeader($lit)"
+                    if (header.isRequired) {
+                      expr
+                    } else {
+                      q"Option($expr)"
+                    }
                   }
-                }
-                p"""case ${Lit.Int(resp.statusCode)} =>
+                  p"""case ${Lit.Int(resp.statusCode)} =>
                   Right($responseCompanionTerm.$responseTerm(..$params))
                 """
-              case (Some((tpe, _)), headers) =>
-                val params = Term.Name("v") :: headers.map { header =>
-                  val lit  = Lit.String(header.name)
-                  val expr = q"xhr.getResponseHeader($lit)"
-                  if (header.isRequired) {
-                    expr
-                  } else {
-                    q"Option($expr)"
-                  }
-                }
-                p"""case ${Lit.Int(resp.statusCode)} =>
+                case (Some((tpe, _)), headers) =>
+                  val params = Term.Name("v") :: headers.map { header =>
+                          val lit  = Lit.String(header.name)
+                          val expr = q"xhr.getResponseHeader($lit)"
+                          if (header.isRequired) {
+                            expr
+                          } else {
+                            q"Option($expr)"
+                          }
+                        }
+                  p"""case ${Lit.Int(resp.statusCode)} =>
                   parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map(v => $responseCompanionTerm.$responseTerm(..$params))
                 """
-            }
-          } :+ p"case _ => Left(new UnknownStatusException(xhr))"
+              }
+            } :+ p"case _ => Left(new UnknownStatusException(xhr))"
 
           val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
 
           val methodParameters: List[List[Term.Param]] = List(
             Some(
               tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                .map(_.param) ++ formArgs.map(_.param) ++ bodyArgs
-                .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)
+                    .map(_.param) ++ formArgs.map(_.param) ++ bodyArgs
+                    .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+                    .map(_.param)
             ),
             implicitParams
           ).flatten
@@ -381,16 +393,18 @@ object EndpointsClientGenerator {
               List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
             else List.empty
             extraImplicits = List.empty
-            renderedClientOperation = build(methodName,
-                                            httpMethod,
-                                            pathPattern,
-                                            formDataParams,
-                                            staticQueryParams,
-                                            headerParams,
-                                            responses,
-                                            produces,
-                                            consumes,
-                                            tracing)(
+            renderedClientOperation = build(
+              methodName,
+              httpMethod,
+              pathPattern,
+              formDataParams,
+              staticQueryParams,
+              headerParams,
+              responses,
+              produces,
+              consumes,
+              tracing
+            )(
               tracingArgsPre,
               tracingArgsPost,
               pathArgs,

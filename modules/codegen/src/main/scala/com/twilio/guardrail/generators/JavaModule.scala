@@ -14,7 +14,7 @@ import cats.data.NonEmptyList
 object JavaModule extends AbstractModule[JavaLanguage] {
   def jackson: FunctionK[ModelInterpreters[JavaLanguage, ?], Target] = {
     val interpDefinitionPM
-      : FunctionK[DefinitionPM[JavaLanguage, ?], Target]                           = JacksonGenerator.ProtocolSupportTermInterp or JacksonGenerator.ModelProtocolTermInterp
+        : FunctionK[DefinitionPM[JavaLanguage, ?], Target]                         = JacksonGenerator.ProtocolSupportTermInterp or JacksonGenerator.ModelProtocolTermInterp
     val interpDefinitionPME: FunctionK[DefinitionPME[JavaLanguage, ?], Target]     = JacksonGenerator.EnumProtocolTermInterp or interpDefinitionPM
     val interpDefinitionPMEA: FunctionK[DefinitionPMEA[JavaLanguage, ?], Target]   = JacksonGenerator.ArrayProtocolTermInterp or interpDefinitionPME
     val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[JavaLanguage, ?], Target] = JacksonGenerator.PolyProtocolTermInterp or interpDefinitionPMEA

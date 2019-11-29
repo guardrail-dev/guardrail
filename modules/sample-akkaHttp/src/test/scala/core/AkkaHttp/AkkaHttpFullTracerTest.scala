@@ -34,17 +34,18 @@ class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues wi
     }
   }
 
-  def traceBuilder(parentValue: String)(implicit ec: ExecutionContext): TraceBuilder = { name => httpClient =>
-    { req =>
-      // Rudimentary testing. As we have the response object in res, we could
-      // also log error codes or other interesting metrics.
-      val before = System.currentTimeMillis
-      for {
-        res <- httpClient(req.mapHeaders(RawHeader(traceHeaderKey, parentValue) +: _))
-        after = System.currentTimeMillis
-        ()    = log(s"Request took ${after - before}ms")
-      } yield res
-    }
+  def traceBuilder(parentValue: String)(implicit ec: ExecutionContext): TraceBuilder = {
+    name => httpClient =>
+      { req =>
+        // Rudimentary testing. As we have the response object in res, we could
+        // also log error codes or other interesting metrics.
+        val before = System.currentTimeMillis
+        for {
+          res <- httpClient(req.mapHeaders(RawHeader(traceHeaderKey, parentValue) +: _))
+          after = System.currentTimeMillis
+          ()    = log(s"Request took ${after - before}ms")
+        } yield res
+      }
   }
 
   test("full tracer: passing headers through multiple levels") {

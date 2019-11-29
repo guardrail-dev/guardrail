@@ -55,9 +55,8 @@ object CirceProtocolGenerator {
       case DecodeEnum(clsName) =>
         Target.pure(Some(q"""
           implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-            Decoder[String].emap(value => parse(value).toRight(${Term.Interpolate(Term.Name("s"),
-                                                                                  List(Lit.String(""), Lit.String(s" not a member of ${clsName}")),
-                                                                                  List(Term.Name("value")))}))
+            Decoder[String].emap(value => parse(value).toRight(${Term
+          .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
         """))
 
       case RenderClass(clsName, tpe, _) =>
@@ -83,10 +82,10 @@ object CirceProtocolGenerator {
             className = clsName,
             extraImports = List.empty[Import],
             definitions = members.to[List] ++
-              terms ++
-              List(Some(values), encoder, decoder).flatten ++
-              implicits ++
-              List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)")
+                  terms ++
+                  List(Some(values), encoder, decoder).flatten ++
+                  implicits ++
+                  List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)")
           )
         )
       case BuildAccessor(clsName, termName) =>
@@ -162,7 +161,11 @@ object CirceProtocolGenerator {
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators     = parents.flatMap(_.discriminators)
         val discriminatorNames = discriminators.map(_.propertyName).toSet
-        val parentOpt          = if (parents.exists(s => s.discriminators.nonEmpty)) { parents.headOption } else { None }
+        val parentOpt = if (parents.exists(s => s.discriminators.nonEmpty)) {
+          parents.headOption
+        } else {
+          None
+        }
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
           param => discriminatorNames.contains(param.term.name.value)
         )
@@ -189,7 +192,7 @@ object CirceProtocolGenerator {
           .fold(q"""case class ${Type.Name(clsName)}(..${terms}) { ..$toStringMethod }""")(
             parent =>
               q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces
-                .map(a => init"${Type.Name(a)}(...$Nil)")} { ..$toStringMethod }"}"""
+                    .map(a => init"${Type.Name(a)}(...$Nil)")} { ..$toStringMethod }"}"""
           )
 
         Target.pure(code)

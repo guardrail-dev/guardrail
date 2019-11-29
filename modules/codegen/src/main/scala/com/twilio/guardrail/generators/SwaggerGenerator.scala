@@ -79,7 +79,7 @@ object SwaggerGenerator {
                                 })
                             case (rbref, _) =>
                               Target.raiseError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
-                        }
+                          }
                       )
                       .getOrElse(Target.pure(operation))
 

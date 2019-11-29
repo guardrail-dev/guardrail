@@ -8,7 +8,7 @@ import cats.arrow.FunctionK
 object ScalaModule extends AbstractModule[ScalaLanguage] {
   def circe: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
     val interpDefinitionPM
-      : FunctionK[DefinitionPM[ScalaLanguage, ?], Target]                           = CirceProtocolGenerator.ProtocolSupportTermInterp or CirceProtocolGenerator.ModelProtocolTermInterp
+        : FunctionK[DefinitionPM[ScalaLanguage, ?], Target]                         = CirceProtocolGenerator.ProtocolSupportTermInterp or CirceProtocolGenerator.ModelProtocolTermInterp
     val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
     val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
     val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
@@ -59,10 +59,12 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
   def extract(modules: NonEmptyList[String]): CoreTarget[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
     (for {
       protocolGenerator <- popModule("json", ("circe-java8", circeJava8), ("circe", circe))
-      interpFramework <- popModule("framework",
-                                   ("akka-http", akkaHttp(protocolGenerator)),
-                                   ("http4s", http4s(protocolGenerator)),
-                                   ("endpoints", endpoints(protocolGenerator)))
+      interpFramework <- popModule(
+        "framework",
+        ("akka-http", akkaHttp(protocolGenerator)),
+        ("http4s", http4s(protocolGenerator)),
+        ("endpoints", endpoints(protocolGenerator))
+      )
       parser             = SwaggerGenerator[ScalaLanguage] or interpFramework
       codegenApplication = ScalaGenerator.ScalaInterp or parser
     } yield codegenApplication).runA(modules.toList.toSet)

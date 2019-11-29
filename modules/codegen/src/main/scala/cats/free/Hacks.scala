@@ -89,11 +89,13 @@ object GuardrailFreeHacks {
     def nameOnly[F[_], A](value: F[A])(implicit ev: TermName[F]): String = ev.extract(value)._1
   }
 
-  def injectLogs[F[_]: TermName, A](value: Free[F, A],
-                                    ignore: Set[String],
-                                    push: String => Free[F, Unit],
-                                    pop: Free[F, Unit],
-                                    emit: Free[F, Unit]): Free[F, A] = {
+  def injectLogs[F[_]: TermName, A](
+      value: Free[F, A],
+      ignore: Set[String],
+      push: String => Free[F, Unit],
+      pop: Free[F, Unit],
+      emit: Free[F, Unit]
+  ): Free[F, A] = {
     def next[B]: Free[F, B] => Free[F, B] = {
       case Pure(a) =>
         Pure(a)

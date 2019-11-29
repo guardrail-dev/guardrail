@@ -96,9 +96,11 @@ object DropwizardServerGenerator {
       .orElse(parameters.bodyParams.map(_ => RouteMeta.ApplicationJson))
   }
 
-  private def getBestProduces(contentTypes: List[RouteMeta.ContentType],
-                              responses: List[ApiResponse],
-                              protocolElems: List[StrictProtocolElems[JavaLanguage]]): Option[RouteMeta.ContentType] = {
+  private def getBestProduces(
+      contentTypes: List[RouteMeta.ContentType],
+      responses: List[ApiResponse],
+      protocolElems: List[StrictProtocolElems[JavaLanguage]]
+  ): Option[RouteMeta.ContentType] = {
     val priorityOrder = NonEmptyList.of(
       RouteMeta.ApplicationJson,
       RouteMeta.TextPlain,
@@ -159,9 +161,11 @@ object DropwizardServerGenerator {
       } yield cls
     }
 
-  def generateResponseClass(superClassType: ClassOrInterfaceType,
-                            response: Response[JavaLanguage],
-                            errorEntityFallbackType: Option[Type]): Target[(ClassOrInterfaceDeclaration, BodyDeclaration[_ <: BodyDeclaration[_]])] = {
+  def generateResponseClass(
+      superClassType: ClassOrInterfaceType,
+      response: Response[JavaLanguage],
+      errorEntityFallbackType: Option[Type]
+  ): Target[(ClassOrInterfaceDeclaration, BodyDeclaration[_ <: BodyDeclaration[_]])] = {
     val clsName = response.statusCodeName.asString
     for {
       clsType <- safeParseClassOrInterfaceType(clsName)
@@ -419,20 +423,24 @@ object DropwizardServerGenerator {
                                 new VariableDeclarator(
                                   RESPONSE_BUILDER_TYPE,
                                   "builder",
-                                  new MethodCallExpr(new NameExpr("Response"),
-                                                     "status",
-                                                     new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode")))
+                                  new MethodCallExpr(
+                                    new NameExpr("Response"),
+                                    "status",
+                                    new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode"))
+                                  )
                                 ),
                                 finalModifier
                               )
                             )
                           ) ++ entitySetterIfTree ++ List(
-                            new ExpressionStmt(
-                              new MethodCallExpr(new NameExpr("asyncResponse"),
-                                                 "resume",
-                                                 new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build")))
-                            )
-                          )
+                                new ExpressionStmt(
+                                  new MethodCallExpr(
+                                    new NameExpr("asyncResponse"),
+                                    "resume",
+                                    new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
+                                  )
+                                )
+                              )
                         ).toNodeList
                       )
                     })({ _ =>
@@ -479,12 +487,14 @@ object DropwizardServerGenerator {
                                 new NameExpr("asyncResponse"),
                                 "resume",
                                 new NodeList[Expression](
-                                  new MethodCallExpr(new MethodCallExpr(
-                                                       new NameExpr("Response"),
-                                                       "status",
-                                                       new NodeList[Expression](new IntegerLiteralExpr(500))
-                                                     ),
-                                                     "build")
+                                  new MethodCallExpr(
+                                    new MethodCallExpr(
+                                      new NameExpr("Response"),
+                                      "status",
+                                      new NodeList[Expression](new IntegerLiteralExpr(500))
+                                    ),
+                                    "build"
+                                  )
                                 )
                               )
                             )
@@ -594,8 +604,10 @@ object DropwizardServerGenerator {
           def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
             val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
               .addAnnotation(
-                new SingleMemberAnnotationExpr(new Name("Target"),
-                                               new ArrayInitializerExpr(new NodeList(new FieldAccessExpr(new NameExpr("ElementType"), "METHOD"))))
+                new SingleMemberAnnotationExpr(
+                  new Name("Target"),
+                  new ArrayInitializerExpr(new NodeList(new FieldAccessExpr(new NameExpr("ElementType"), "METHOD")))
+                )
               )
               .addAnnotation(new SingleMemberAnnotationExpr(new Name("Retention"), new FieldAccessExpr(new NameExpr("RetentionPolicy"), "RUNTIME")))
               .addAnnotation(new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr(name)))
@@ -612,8 +624,8 @@ object DropwizardServerGenerator {
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         safeParseSimpleName(className) >>
-          safeParseSimpleName(handlerName) >>
-          Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
+            safeParseSimpleName(handlerName) >>
+            Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
 
       case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
         val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
@@ -622,10 +634,12 @@ object DropwizardServerGenerator {
     }
 
     // Lift this function out of RenderClass above to work around a 2.11.x compiler syntax bug
-    private def doRenderClass(className: String,
-                              classAnnotations: List[AnnotationExpr],
-                              supportDefinitions: List[BodyDeclaration[_ <: BodyDeclaration[_]]],
-                              combinedRouteTerms: List[Node]): ClassOrInterfaceDeclaration = {
+    private def doRenderClass(
+        className: String,
+        classAnnotations: List[AnnotationExpr],
+        supportDefinitions: List[BodyDeclaration[_ <: BodyDeclaration[_]]],
+        combinedRouteTerms: List[Node]
+    ): ClassOrInterfaceDeclaration = {
       val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, className)
       classAnnotations.foreach(cls.addAnnotation)
       sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
