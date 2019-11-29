@@ -144,7 +144,7 @@ object ScalaGenerator {
       case IntegerType(format)       => Target.pure(t"BigInt")
       case BooleanType(format)       => Target.pure(t"Boolean")
       case ArrayType(format)         => Target.pure(t"Iterable[String]")
-      case FallbackType(tpe, format) => Target.pure(Type.Name(tpe))
+      case FallbackType(tpe, format) => Target.fromOption(tpe, "Missing type").map(Type.Name(_))
 
       case WidenTypeName(tpe)           => Target.pure(tpe)
       case WidenTermSelect(value)       => Target.pure(value)

@@ -264,27 +264,27 @@ object SwaggerUtil {
       for {
         customTpe <- customType.flatTraverse(liftCustomType[L, F] _)
         result <- customTpe.fold({
-          (typeName.get.get, format.get) match {
-            case ("string", Some("uuid"))         => uuidType()
-            case ("string", Some("password"))     => stringType(None)
-            case ("string", Some("email"))        => stringType(None)
-            case ("string", Some("date"))         => dateType()
-            case ("string", Some("date-time"))    => dateTimeType()
-            case ("string", fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
-            case ("string", fmt)                  => stringType(fmt).map(log(fmt, _))
-            case ("number", Some("float"))        => floatType()
-            case ("number", Some("double"))       => doubleType()
-            case ("number", fmt)                  => numberType(fmt).map(log(fmt, _))
-            case ("integer", Some("int32"))       => intType()
-            case ("integer", Some("int64"))       => longType()
-            case ("integer", fmt)                 => integerType(fmt).map(log(fmt, _))
-            case ("boolean", fmt)                 => booleanType(fmt).map(log(fmt, _))
-            case ("array", fmt)                   => arrayType(fmt).map(log(fmt, _))
-            case ("file", fmt) =>
+          (typeName.get, format.get) match {
+            case (Some("string"), Some("uuid"))         => uuidType()
+            case (Some("string"), Some("password"))     => stringType(None)
+            case (Some("string"), Some("email"))        => stringType(None)
+            case (Some("string"), Some("date"))         => dateType()
+            case (Some("string"), Some("date-time"))    => dateTimeType()
+            case (Some("string"), fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
+            case (Some("string"), fmt)                  => stringType(fmt).map(log(fmt, _))
+            case (Some("number"), Some("float"))        => floatType()
+            case (Some("number"), Some("double"))       => doubleType()
+            case (Some("number"), fmt)                  => numberType(fmt).map(log(fmt, _))
+            case (Some("integer"), Some("int32"))       => intType()
+            case (Some("integer"), Some("int64"))       => longType()
+            case (Some("integer"), fmt)                 => integerType(fmt).map(log(fmt, _))
+            case (Some("boolean"), fmt)                 => booleanType(fmt).map(log(fmt, _))
+            case (Some("array"), fmt)                   => arrayType(fmt).map(log(fmt, _))
+            case (Some("file"), fmt) =>
               fileType(None).map(log(fmt, _))
-            case ("binary", fmt) =>
+            case (Some("binary"), fmt) =>
               fileType(None).map(log(fmt, _))
-            case ("object", fmt) => objectType(fmt).map(log(fmt, _))
+            case (Some("object"), fmt) => objectType(fmt).map(log(fmt, _))
             case (tpe, fmt) =>
               fallbackType(tpe, fmt)
           }
