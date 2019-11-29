@@ -5,10 +5,8 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.SwaggerUtil.Resolved
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
-import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
@@ -381,7 +379,6 @@ object ProtocolGenerator {
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, (List[ProtocolParameter[L]], List[NestedProtocolElems[L]])] = {
-    import F._
     import M._
     import Sc._
     def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
