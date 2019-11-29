@@ -260,15 +260,9 @@ object SwaggerUtil {
 
         t
       }
-      def liftCustomType(s: String): Free[F, Option[L#Type]] = {
-        val tpe = s.trim
-        if (tpe.nonEmpty) {
-          parseType(tpe)
-        } else Free.pure(Option.empty[L#Type])
-      }
 
       for {
-        customTpe <- customType.flatTraverse(liftCustomType _)
+        customTpe <- customType.flatTraverse(liftCustomType[L, F] _)
         result <- customTpe.fold({
           (typeName.get.get, format.get) match {
             case ("string", Some("uuid"))         => uuidType()
@@ -323,6 +317,14 @@ object SwaggerUtil {
           tpe <- objectType(None) // TODO: o.getProperties
         } yield Resolved[L](tpe, None, None, None, None)
     }
+  }
+
+  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, F]): Free[F, Option[L#Type]] = {
+    import Sc._
+    val tpe = s.trim
+    if (tpe.nonEmpty) {
+      parseType(tpe)
+    } else Free.pure(Option.empty[L#Type])
   }
 
   def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(
