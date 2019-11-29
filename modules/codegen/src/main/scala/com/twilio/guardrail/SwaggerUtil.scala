@@ -333,16 +333,15 @@ object SwaggerUtil {
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
     import Fw._
-    val action: Free[F, ResolvedType[L]] = Free.pure(Resolved[L](tpe, None, None, None, None))
     propMetaImpl(property) {
       case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
-        action
+        Free.pure(Resolved[L](tpe, None, None, None, None))
       case _: ObjectSchema =>
         objectType(None).map(Resolved[L](_, None, None, None, None))
       case _: ComposedSchema =>
-        action
+        Free.pure(Resolved[L](tpe, None, None, None, None))
       case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) =>
-        action
+        Free.pure(Resolved[L](tpe, None, None, None, None))
     }
   }
 
