@@ -12,7 +12,7 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ CustomTypeName, Default, Extractable, VendorExtension }
+import com.twilio.guardrail.extract.{ CustomArrayTypeName, CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
@@ -139,6 +139,11 @@ object SwaggerUtil {
     for {
       prefixes <- S.vendorPrefixes()
     } yield CustomTypeName(v, prefixes)
+
+  def customArrayTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
+    for {
+      prefixes <- S.vendorPrefixes()
+    } yield CustomArrayTypeName(v, prefixes)
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
