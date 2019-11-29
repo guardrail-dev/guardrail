@@ -15,7 +15,6 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
-import com.twilio.guardrail.generators.syntax.RichSchema
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
@@ -376,7 +375,7 @@ object SwaggerUtil {
         } yield res
       }
 
-      log.debug(s"property:\n${log.schemaToString(property.get)}").flatMap { _ =>
+      log.debug(s"property:\n${log.schemaToString(property.get)} (${property.get.getExtensions()})").flatMap { _ =>
         property
           .refine[Free[F, ResolvedType[L]]](strategy)(_.get)
           .orRefine({ case a: ArraySchema => a })(
@@ -427,8 +426,7 @@ object SwaggerUtil {
           .orRefine({ case p: PasswordSchema => p })(buildResolveNoDefault)
           .orRefine({ case f: FileSchema => f })(buildResolveNoDefault)
           .orRefine({ case u: UUIDSchema => u })(buildResolveNoDefault)
-          .leftMap(_.get)
-          .fold(fallbackPropertyTypeHandler(_).map(Resolved[L](_, None, None, None, None)), identity) // This may need to be rawType=string?
+          .orRefineFallback(x => fallbackPropertyTypeHandler(x.get).map(Resolved[L](_, None, None, None, None))) // This may need to be rawType=string?
       }
     }
 
