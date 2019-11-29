@@ -142,7 +142,6 @@ object SwaggerGenerator {
         parameter
           .downField("schema", _.getSchema())
           .raiseErrorIfEmpty("Schema not specified")
-          .map(_.unwrapTracker)
 
       case GetHeaderParameterType(parameter) =>
         parameterSchemaType(parameter)
@@ -189,13 +188,14 @@ object SwaggerGenerator {
           .map(_.unwrapTracker)
 
       case GetItems(arr) =>
-        Target.fromOption(Option(arr.getItems()), "items.type unspecified")
+        arr
+          .downField("items", _.getItems())
+          .raiseErrorIfEmpty("Unspecified items")
 
       case GetType(model) =>
         model
           .downField("type", _.getType())
           .raiseErrorIfEmpty("Unknown type")
-          .map(_.unwrapTracker)
 
       case FallbackPropertyTypeHandler(prop) =>
         val determinedType = Option(prop.getType()).fold("No type definition")(s => s"type: $s")

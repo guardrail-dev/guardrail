@@ -138,7 +138,7 @@ object ProtocolGenerator {
 
     for {
       enum          <- extractEnum(swagger.get)
-      customTpeName <- SwaggerUtil.customTypeName(swagger.get)
+      customTpeName <- SwaggerUtil.customTypeName(swagger)
       tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), customTpeName)
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
       res           <- enum.traverse(validProg(_, tpe, fullType))
@@ -281,7 +281,7 @@ object ProtocolGenerator {
             (params, _) <- prepareProperties(
               NonEmptyList.of(clsName),
               classMapping,
-              props.map(_.map(_.get)),
+              props,
               requiredFields,
               concreteTypes,
               definitions,
@@ -332,7 +332,7 @@ object ProtocolGenerator {
       props <- extractProperties(model)
       requiredFields           = getRequiredFieldsRec(model)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
-      (params, nestedDefinitions) <- prepareProperties(clsName, Map.empty, props.map(_.map(_.get)), requiredFields, concreteTypes, definitions, dtoPackage)
+      (params, nestedDefinitions) <- prepareProperties(clsName, Map.empty, props, requiredFields, concreteTypes, definitions, dtoPackage)
       defn                        <- renderDTOClass(clsName.last, params, parents)
       encoder                     <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
       decoder                     <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
@@ -368,7 +368,7 @@ object ProtocolGenerator {
   private def prepareProperties[L <: LA, F[_]](
       clsName: NonEmptyList[String],
       propertyToTypeLookup: Map[String, String],
-      props: List[(String, Schema[_])],
+      props: List[(String, Tracker[Schema[_]])],
       requiredFields: List[String],
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Tracker[Schema[_]])],
@@ -412,14 +412,14 @@ object ProtocolGenerator {
           val typeName = getClsName(name).append(name.toCamelCase.capitalize)
           for {
             tpe                   <- selectType(typeName)
-            maybeNestedDefinition <- processProperty(name, Tracker.hackyAdapt(schema, Vector.empty))
+            maybeNestedDefinition <- processProperty(name, schema)
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
-            customType            <- SwaggerUtil.customTypeName(schema)
+            customType            <- SwaggerUtil.customTypeName(schema.get)
             isRequired = requiredFields.contains(name)
-            defValue <- defaultValue(typeName, schema, isRequired, definitions.map(_.map(_.get)))
+            defValue <- defaultValue(typeName, schema.get, isRequired, definitions.map(_.map(_.get)))
             parameter <- transformProperty(getClsName(name).last, needCamelSnakeConversion, concreteTypes)(
               name,
-              schema,
+              schema.get,
               resolvedType,
               isRequired,
               customType.isDefined,
@@ -480,7 +480,7 @@ object ProtocolGenerator {
   def typeAlias[L <: LA, F[_]](clsName: String, tpe: L#Type): Free[F, ProtocolElems[L]] =
     Free.pure(RandomType[L](clsName, tpe))
 
-  def fromArray[L <: LA, F[_]](clsName: String, arr: ArraySchema, concreteTypes: List[PropMeta[L]])(
+  def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]])(
       implicit R: ArrayProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
@@ -609,7 +609,7 @@ object ProtocolGenerator {
                   alias   <- modelTypeAlias(clsName, comp.get)
                 } yield model.getOrElse(alias)
             )
-            .orRefine({ case a: ArraySchema => a })(arr => fromArray(clsName, arr.get, concreteTypes))
+            .orRefine({ case a: ArraySchema => a })(arr => fromArray(clsName, arr, concreteTypes))
             .orRefine({ case o: ObjectSchema => o })(
               m =>
                 for {
@@ -623,7 +623,7 @@ object ProtocolGenerator {
                 for {
                   tpeName        <- getType(x)
                   customTypeName <- SwaggerUtil.customTypeName(x.get)
-                  tpe            <- SwaggerUtil.typeName[L, F](Tracker.hackyAdapt(Option(tpeName), x.history), x.downField("format", _.getFormat()), customTypeName)
+                  tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
                   res            <- typeAlias(clsName, tpe)
                 } yield res
             )
