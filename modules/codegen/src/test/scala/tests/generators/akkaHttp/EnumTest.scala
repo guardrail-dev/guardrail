@@ -84,6 +84,7 @@ class EnumTest extends FunSuite with Matchers with SwaggerSpecRunner {
       implicit val showBar: Show[Bar] = Show.build(_.value)
 
       def parse(value: String): Option[Bar] = values.find(_.value == value)
+      implicit val order: cats.Order[Bar] = cats.Order.by[Bar, Int](values.indexOf)
     }
     """
 
