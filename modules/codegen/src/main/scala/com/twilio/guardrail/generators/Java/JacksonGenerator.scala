@@ -795,10 +795,10 @@ object JacksonGenerator {
             expressionDefaultValue <- defaultValue match {
               case Some(e: Expression) => Target.pure(Some(e))
               case Some(_) =>
-                Target.log.warning(s"Can't generate default value for class $clsName and property $name.").map(_ => None)
+                Target.log.warning(s"Can't generate default value for class $clsName and property $name.") >> Target.pure(None)
               case None => Target.pure(None)
             }
-            _declDefaultPair <- Option(isRequired)
+            (finalDeclType, finalDefaultValue) <- Option(isRequired)
               .filterNot(_ == false)
               .fold[Target[(Type, Option[Expression])]](
                 (
@@ -813,7 +813,6 @@ object JacksonGenerator {
                   )
                 ).mapN((_, _))
               )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
-            (finalDeclType, finalDefaultValue) = _declDefaultPair
             term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
             dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
           } yield ProtocolParameter[JavaLanguage](term, name, dep, rawType, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
