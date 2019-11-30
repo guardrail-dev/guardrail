@@ -240,31 +240,24 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   }
 
   private val parameters: List[Tracker[Parameter]] = {
-    val p = operation.downField("parameters", _.getParameters())
+    operation.downField("parameters", _.getParameters()).indexedDistribute ++
+      operation
+        .downField("requestBody", _.getRequestBody())
+        .map(_.toList)
+        .flatExtract({ requestBody =>
+          val content  = requestBody.downField("content", _.getContent()).indexedCosequence
+          val required = requestBody.downField("required", _.getRequired())
 
-    val requestBody = operation.downField("requestBody", _.getRequestBody()).map(_.toList)
-    val params: List[Tracker[Parameter]] =
-      requestBody.flatExtract(
-        requestBody =>
-          extractRefParamFromRequestBody(
+          val refParam = extractRefParamFromRequestBody(
             requestBody.downField("$ref", _.get$ref()),
-            requestBody.downField("content", _.getContent()).indexedCosequence,
+            content,
             requestBody.downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions()),
-            requestBody.downField("required", _.getRequired())
-          ).toList
-      ) ++
-          p.indexedDistribute ++
-          requestBody.flatExtract(
-            requestBody =>
-              extractParamsFromRequestBody(
-                requestBody.downField("content", _.getContent()).indexedCosequence,
-                requestBody.downField("required", _.getRequired())
-              ) ++ extractPrimitiveFromRequestBody(
-                    requestBody.downField("content", _.getContent()).indexedCosequence,
-                    requestBody.downField("required", _.getRequired())
-                  )
+            required
           )
-    params
+          val params    = extractParamsFromRequestBody(content, required)
+          val primitive = extractPrimitiveFromRequestBody(content, required)
+          refParam.toList ++ params ++ primitive.toList
+        })
   }
 
   def getParameters[L <: LA, F[_]](
