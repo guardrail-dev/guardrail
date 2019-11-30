@@ -85,7 +85,10 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     }
   }
 
-  private def extractPrimitiveFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
+  private def extractPrimitiveFromRequestBody(
+      fields: Mappish[List, String, Tracker[MediaType]],
+      required: Tracker[Option[Boolean]]
+  ): Option[Tracker[Parameter]] = {
     // FIXME: Just taking the head here isn't super great
     def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
       _.flatMap({
@@ -98,7 +101,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             .orRefineFallback(_ => None)
       }).headOption
     for {
-      schema <- unifyEntries(requestBody.downField("content", _.getContent()).indexedCosequence.value)
+      schema <- unifyEntries(fields.value)
       tpe    <- schema.downField("type", _.getType()).indexedDistribute // TODO: Why is this here?
     } yield {
 
@@ -112,19 +115,27 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       p.setIn("body")
       p.setName("body")
       p.setSchema(schema.get)
-      p.setRequired(requestBody.get.getRequired)
+      required.get.foreach(x => p.setRequired(x))
 
-      p.setExtensions(Option(schema.get.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
-      Tracker.hackyAdapt(p, schema.history)
+      schema
+        .downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions())
+        .get
+        .foreach(x => p.setExtensions(x))
+      schema.map(_ => p)
     }
   }
 
   // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#fixed-fields-8
   // RequestBody can represent either a RequestBody object or $ref.
   // (these are both represented in the same RequestBody class)
-  private def extractRefParamFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
+  private def extractRefParamFromRequestBody(
+      ref: Tracker[Option[String]],
+      fields: Mappish[List, String, com.twilio.guardrail.core.Tracker[io.swagger.v3.oas.models.media.MediaType]],
+      extensions: Tracker[Option[java.util.Map[String, Object]]],
+      required: Tracker[Option[Boolean]]
+  ): Option[Tracker[Parameter]] = {
     val content = for {
-      (_, mt) <- requestBody.downField("content", _.getContent()).indexedCosequence.value.headOption
+      (_, mt) <- fields.value.headOption
       schema  <- mt.downField("schema", _.getSchema()).indexedCosequence
       ref     <- schema.downField("$ref", _.get$ref()).indexedCosequence
     } yield {
@@ -140,39 +151,39 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       p.setSchema(schema.get)
       p.set$ref(ref.get)
 
-      p.setRequired(requestBody.get.getRequired)
+      required.get.foreach(x => p.setRequired(x))
 
-      p.setExtensions(Option(schema.get.getExtensions()).getOrElse(new java.util.HashMap[String, Object]()))
-      Tracker.hackyAdapt(p, requestBody.history)
+      extensions.get.foreach(x => p.setExtensions(x))
+      ref.map(_ => p)
     }
 
-    val ref = requestBody.downField("$ref", _.get$ref()).cotraverse { x =>
+    val refParam = ref.cotraverse { x =>
       val p = new Parameter
 
       p.setIn("body")
       p.setName("body")
       p.set$ref(x.get)
 
-      p.setRequired(requestBody.get.getRequired)
+      required.get.foreach(x => p.setRequired(x))
 
-      p.setExtensions(Option(requestBody.get.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
+      extensions.get.foreach(x => p.setExtensions(x))
 
-      Tracker.hackyAdapt(p, x.history)
+      ref.map(_ => p)
     }
 
-    content.orElse(ref)
+    content.orElse(refParam)
   }
 
   /** Temporary hack method to adapt to open-api v3 spec */
   private def extractParamsFromRequestBody(
-      requestBody: Mappish[List, String, com.twilio.guardrail.core.Tracker[io.swagger.v3.oas.models.media.MediaType]],
+      fields: Mappish[List, String, com.twilio.guardrail.core.Tracker[io.swagger.v3.oas.models.media.MediaType]],
       required: Tracker[Option[Boolean]]
   ): List[Tracker[Parameter]] = {
     type HashCode            = Int
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
-    val contentTypes: List[RouteMeta.ContentType] = requestBody.value.collect({ case (RouteMeta.ContentType(ct), _) => ct })
-    val ((maxCount, instances), ps) = requestBody.value
+    val contentTypes: List[RouteMeta.ContentType] = fields.value.collect({ case (RouteMeta.ContentType(ct), _) => ct })
+    val ((maxCount, instances), ps) = fields.value
       .flatMap({
         case (_, mt) =>
           for {
@@ -233,16 +244,26 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
     val requestBody = operation.downField("requestBody", _.getRequestBody()).map(_.toList)
     val params: List[Tracker[Parameter]] =
-      requestBody.flatExtract(extractRefParamFromRequestBody(_).toList) ++
+      requestBody.flatExtract(
+        requestBody =>
+          extractRefParamFromRequestBody(
+            requestBody.downField("$ref", _.get$ref()),
+            requestBody.downField("content", _.getContent()).indexedCosequence,
+            requestBody.downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions()),
+            requestBody.downField("required", _.getRequired())
+          ).toList
+      ) ++
           p.indexedDistribute ++
           requestBody.flatExtract(
             requestBody =>
               extractParamsFromRequestBody(
                 requestBody.downField("content", _.getContent()).indexedCosequence,
                 requestBody.downField("required", _.getRequired())
-              )
-          ) ++
-          requestBody.flatExtract(extractPrimitiveFromRequestBody(_).toList)
+              ) ++ extractPrimitiveFromRequestBody(
+                    requestBody.downField("content", _.getContent()).indexedCosequence,
+                    requestBody.downField("required", _.getRequired())
+                  )
+          )
     params
   }
 

@@ -144,6 +144,5 @@ object Tracker extends HighPriorityTrackerEvidence with HighPriorityTrackerSynta
   }
 
   def apply(swagger: OpenAPI): Tracker[OpenAPI]                     = new Tracker(swagger, Vector.empty)
-  def hackyAdapt[A](value: A, history: Vector[String]): Tracker[A]  = new Tracker(value, history)
   def cloneHistory[A, B](tracker: Tracker[A], value: B): Tracker[B] = new Tracker(value, tracker.history)
 }
