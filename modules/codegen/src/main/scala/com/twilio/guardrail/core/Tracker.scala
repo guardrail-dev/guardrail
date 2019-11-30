@@ -95,7 +95,7 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
   implicit class RefineSyntax[A](tracker: Tracker[A]) {
     class RefinePartiallyApplied[C](val dummy: Boolean = true) {
       def apply[B1](r: PartialFunction[A, B1])(f: Tracker[B1] => C): Either[Tracker[A], C] =
-        r.andThen(value => f(tracker.map(_ => value)))
+        r.andThen(value => f(Tracker.cloneHistory(tracker, value)))
           .andThen(Right(_))
           .applyOrElse(tracker.get, (_: A) => Left(tracker))
     }
@@ -105,7 +105,7 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
   implicit class RefineEitherSyntax[A, C](value: Either[Tracker[A], C]) {
     def orRefine[B1](r: PartialFunction[A, B1])(f: Tracker[B1] => C): Either[Tracker[A], C] =
       value.fold({ tracker =>
-        r.andThen(value => f(tracker.map(_ => value)))
+        r.andThen(value => f(Tracker.cloneHistory(tracker, value)))
           .andThen(Right(_))
           .applyOrElse(tracker.get, (_: A) => Left(tracker))
       }, Right(_))

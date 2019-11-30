@@ -95,7 +95,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
         case (contentType, mediaType) =>
           mediaType
             .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == "text/plain" => mt })(
-              x => Option(x.map(_ => new StringSchema()))
+              x => Option(Tracker.cloneHistory(x, new StringSchema()))
             )
             .orRefine({ case mt @ MediaType(schema, _, _) => schema })(_.indexedDistribute)
             .orRefineFallback(_ => None)
@@ -121,7 +121,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
         .downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions())
         .get
         .foreach(x => p.setExtensions(x))
-      schema.map(_ => p)
+      Tracker.cloneHistory(schema, p)
     }
   }
 
@@ -154,7 +154,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       required.get.foreach(x => p.setRequired(x))
 
       extensions.get.foreach(x => p.setExtensions(x))
-      ref.map(_ => p)
+      Tracker.cloneHistory(ref, p)
     }
 
     val refParam = ref.cotraverse { x =>
@@ -168,7 +168,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
       extensions.get.foreach(x => p.setExtensions(x))
 
-      ref.map(_ => p)
+      Tracker.cloneHistory(ref, p)
     }
 
     content.orElse(refParam)
@@ -215,7 +215,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
               p.setRequired(false)
             }
 
-            mt.map(_ => p)
+            Tracker.cloneHistory(mt, p)
           }
       })
       .traverse[State[ParameterCountState, ?], Tracker[Parameter]] { p =>
