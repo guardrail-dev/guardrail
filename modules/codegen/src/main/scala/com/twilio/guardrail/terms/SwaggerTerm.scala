@@ -164,16 +164,15 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   }
 
   /** Temporary hack method to adapt to open-api v3 spec */
-  private def extractParamsFromRequestBody(requestBody: Tracker[RequestBody]): List[Tracker[Parameter]] = {
+  private def extractParamsFromRequestBody(
+      requestBody: Mappish[List, String, com.twilio.guardrail.core.Tracker[io.swagger.v3.oas.models.media.MediaType]],
+      required: Tracker[Option[Boolean]]
+  ): List[Tracker[Parameter]] = {
     type HashCode            = Int
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
-    val contentTypes: List[RouteMeta.ContentType] =
-      requestBody.downField("content", _.getContent()).indexedCosequence.value.map(_._1).flatMap(RouteMeta.ContentType.unapply)
-    val ((maxCount, instances), ps) = requestBody
-      .downField("content", _.getContent())
-      .indexedCosequence
-      .value
+    val contentTypes: List[RouteMeta.ContentType] = requestBody.value.collect({ case (RouteMeta.ContentType(ct), _) => ct })
+    val ((maxCount, instances), ps) = requestBody.value
       .flatMap({
         case (_, mt) =>
           for {
@@ -195,7 +194,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             val isRequired: Boolean = if (requiredFields.nonEmpty) {
               requiredFields.contains(name)
             } else {
-              requestBody.downField("required", _.getRequired()).get.fold(false)(identity)
+              required.get.getOrElse(false)
             }
 
             p.setRequired(isRequired)
@@ -205,7 +204,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
               p.setRequired(false)
             }
 
-            requestBody.map(_ => p)
+            mt.map(_ => p)
           }
       })
       .traverse[State[ParameterCountState, ?], Tracker[Parameter]] { p =>
@@ -236,7 +235,13 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     val params: List[Tracker[Parameter]] =
       requestBody.flatExtract(extractRefParamFromRequestBody(_).toList) ++
           p.indexedDistribute ++
-          requestBody.flatExtract(extractParamsFromRequestBody) ++
+          requestBody.flatExtract(
+            requestBody =>
+              extractParamsFromRequestBody(
+                requestBody.downField("content", _.getContent()).indexedCosequence,
+                requestBody.downField("required", _.getRequired())
+              )
+          ) ++
           requestBody.flatExtract(extractPrimitiveFromRequestBody(_).toList)
     params
   }
