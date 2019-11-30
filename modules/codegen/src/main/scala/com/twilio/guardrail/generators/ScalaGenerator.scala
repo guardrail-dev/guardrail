@@ -39,10 +39,10 @@ object ScalaGenerator {
       case LiftOptionalType(value)             => Target.pure(t"Option[${value}]")
       case LiftOptionalTerm(value)             => Target.pure(q"Option(${value})")
       case EmptyOptionalTerm()                 => Target.pure(q"None")
-      case EmptyArray()                        => Target.pure(q"IndexedSeq.empty")
+      case EmptyArray()                        => Target.pure(q"Vector.empty")
       case EmptyMap()                          => Target.pure(q"Map.empty")
-      case LiftVectorType(value, customTpe)    => Target.pure(t"${customTpe.getOrElse(t"IndexedSeq")}[${value}]")
-      case LiftVectorTerm(value)               => Target.pure(q"IndexedSeq(${value})")
+      case LiftVectorType(value, customTpe)    => Target.pure(t"${customTpe.getOrElse(t"Vector")}[${value}]")
+      case LiftVectorTerm(value)               => Target.pure(q"Vector(${value})")
       case LiftMapType(value)                  => Target.pure(t"Map[String, ${value}]")
       case FullyQualifyPackageName(rawPkgName) => Target.pure("_root_" +: rawPkgName)
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {

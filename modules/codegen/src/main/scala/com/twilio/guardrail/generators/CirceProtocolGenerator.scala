@@ -142,7 +142,7 @@ object CirceProtocolGenerator {
             case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"${containerTpe.getOrElse(t"IndexedSeq")}[$innerType]", Option.empty)
+              (t"${containerTpe.getOrElse(t"Vector")}[$innerType]", Option.empty)
             case SwaggerUtil.DeferredMap(tpeName) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
@@ -354,11 +354,11 @@ object CirceProtocolGenerator {
               Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
             case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               Target.fromOption(
-                lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"IndexedSeq")}[${tpe}]"),
+                lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"Vector")}[${tpe}]"),
                 s"Unresolved reference ${tpeName}"
               )
             case SwaggerUtil.DeferredMap(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"IndexedSeq[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(tpe => t"Vector[Map[String, ${tpe}]]"), s"Unresolved reference ${tpeName}")
           }
         } yield result
     }

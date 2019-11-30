@@ -33,7 +33,7 @@ class Issue61 extends FunSuite with Matchers with SwaggerSpecRunner {
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    tpe.structure shouldBe t"IndexedSeq[String]".structure
+    tpe.structure shouldBe t"Vector[String]".structure
   }
 
   test("Generate primitive type aliases") {

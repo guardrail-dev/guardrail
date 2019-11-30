@@ -27,18 +27,18 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Placeholder until property testing
-  val id: Option[Long]              = None
-  val categoryId: Option[Long]      = None
-  val categoryName: Option[String]  = None
-  val name: String                  = ""
-  val photoUrls: IndexedSeq[String] = IndexedSeq.empty
-  val tag1id: Option[Long]          = None
-  val tag1name: Option[String]      = None
-  val tag2id: Option[Long]          = None
-  val tag2name: Option[String]      = None
-  val tag3id: Option[Long]          = None
-  val tag3name: Option[String]      = None
-  val petStatus: Option[String]     = Some("pending")
+  val id: Option[Long]             = None
+  val categoryId: Option[Long]     = None
+  val categoryName: Option[String] = None
+  val name: String                 = ""
+  val photoUrls: Vector[String]    = Vector.empty
+  val tag1id: Option[Long]         = None
+  val tag1name: Option[String]     = None
+  val tag2id: Option[Long]         = None
+  val tag2name: Option[String]     = None
+  val tag3id: Option[Long]         = None
+  val tag3name: Option[String]     = None
+  val petStatus: Option[String]    = Some("pending")
 
   test("round-trip: definition query, unit response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
@@ -100,9 +100,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def findPetsByStatusEnum(
           respond: PetResource.findPetsByStatusEnumResponse.type
       )(_status: sdefs.PetStatus): Future[PetResource.findPetsByStatusEnumResponse] =
-        Future.successful(petStatus.fold(IndexedSeq.empty[sdefs.Pet])({ value =>
+        Future.successful(petStatus.fold(Vector.empty[sdefs.Pet])({ value =>
           if (_status.value == value) {
-            IndexedSeq(
+            Vector(
               sdefs.Pet(
                 id = id,
                 category = Some(sdefs.Category(categoryId, categoryName)),

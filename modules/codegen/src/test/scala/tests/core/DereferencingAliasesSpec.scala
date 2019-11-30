@@ -74,7 +74,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 
     val definition = q"""
-      case class propRef(param: Option[Long] = None, array: Option[IndexedSeq[Long]] = None, arrayArray: Option[IndexedSeq[IndexedSeq[Long]]] = None)
+      case class propRef(param: Option[Long] = None, array: Option[Vector[Long]] = None, arrayArray: Option[Vector[Vector[Long]]] = None)
     """
 
     val companion = q"""
@@ -83,7 +83,7 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
           val readOnlyKeys = Set[String]()
           new ObjectEncoder[propRef] { final def encodeObject(a: propRef): JsonObject = JsonObject.fromIterable(Vector(("param", a.param.asJson), ("array", a.array.asJson), ("arrayArray", a.arrayArray.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodepropRef: Decoder[propRef] = new Decoder[propRef] { final def apply(c: HCursor): Decoder.Result[propRef] = for (v0 <- c.downField("param").as[Option[Long]]; v1 <- c.downField("array").as[Option[IndexedSeq[Long]]]; v2 <- c.downField("arrayArray").as[Option[IndexedSeq[IndexedSeq[Long]]]]) yield propRef(v0, v1, v2) }
+        implicit val decodepropRef: Decoder[propRef] = new Decoder[propRef] { final def apply(c: HCursor): Decoder.Result[propRef] = for (v0 <- c.downField("param").as[Option[Long]]; v1 <- c.downField("array").as[Option[Vector[Long]]]; v2 <- c.downField("arrayArray").as[Option[Vector[Vector[Long]]]]) yield propRef(v0, v1, v2) }
       }
     """
 
@@ -108,13 +108,13 @@ class DereferencingAliasesSpec extends FunSuite with Matchers with SwaggerSpecRu
           }))
         }
         val doFooOKDecoder = {
-          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[IndexedSeq[IndexedSeq[Long]]].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[Vector[Vector[Long]]].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
         }
         def doFoo(long: Option[Long] = None, body: Option[propRef] = None, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], DoFooResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.POST, host + basePath + "/foo" + "?" + Formatter.addArg("long", long), allHeaders, body, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              Unmarshal(resp.entity).to[IndexedSeq[IndexedSeq[Long]]](doFooOKDecoder, implicitly, implicitly).map(x => Right(DoFooResponse.OK(x)))
+              Unmarshal(resp.entity).to[Vector[Vector[Long]]](doFooOKDecoder, implicitly, implicitly).map(x => Right(DoFooResponse.OK(x)))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
