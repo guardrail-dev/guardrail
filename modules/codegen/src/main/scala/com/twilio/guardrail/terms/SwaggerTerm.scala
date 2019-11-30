@@ -86,30 +86,36 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   }
 
   private def extractPrimitiveFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
-    def unifyEntries: List[(String, MediaType)] => Option[Schema[_]] = {
-      case ("text/plain", MediaType(None, _, _)) :: Nil  => Option(new StringSchema())
-      case (contentType, MediaType(schema, _, _)) :: Nil => schema
-      case (contentType, MediaType(schema, _, _)) :: xs  => schema // FIXME: Just taking the head here isn't super great
-      case Nil                                           => Option.empty
-    }
+    // FIXME: Just taking the head here isn't super great
+    def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
+      _.flatMap({
+        case (contentType, mediaType) =>
+          mediaType
+            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == "text/plain" => mt })(
+              x => Option(x.map(_ => new StringSchema()))
+            )
+            .orRefine({ case mt @ MediaType(schema, _, _) => schema })(_.indexedDistribute)
+            .orRefineFallback(_ => None)
+      }).headOption
     for {
-      schema <- unifyEntries(requestBody.downField("content", _.getContent()).indexedCosequence.value.map(_.map(_.get)))
-      tpe    <- Option(schema.getType())
+      schema <- unifyEntries(requestBody.downField("content", _.getContent()).indexedCosequence.value)
+      tpe    <- schema.downField("type", _.getType()).indexedDistribute // TODO: Why is this here?
     } yield {
+
       val p = new Parameter
 
-      if (schema.getFormat == "binary") {
-        schema.setType("file")
-        schema.setFormat(null)
+      if (schema.get.getFormat == "binary") {
+        schema.get.setType("file")
+        schema.get.setFormat(null)
       }
 
       p.setIn("body")
       p.setName("body")
-      p.setSchema(schema)
+      p.setSchema(schema.get)
       p.setRequired(requestBody.get.getRequired)
 
-      p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
-      Tracker.hackyAdapt(p, requestBody.history)
+      p.setExtensions(Option(schema.get.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
+      Tracker.hackyAdapt(p, schema.history)
     }
   }
 
@@ -151,7 +157,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
       p.setExtensions(Option(requestBody.get.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
 
-      Tracker.hackyAdapt(p, requestBody.history)
+      Tracker.hackyAdapt(p, x.history)
     }
 
     content.orElse(ref)
