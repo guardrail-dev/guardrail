@@ -8,6 +8,7 @@ components:
       required:
         - customArray
         - refArray
+        - refMap
       properties:
         customArray:
           type: array
@@ -17,6 +18,8 @@ components:
             x-jvm-type: Bar
         refArray:
           $ref: '#/components/schemas/Baz'
+        refMap:
+          $ref: '#/components/schemas/Blix'
     Bar:
       type: object
       required:
@@ -30,3 +33,15 @@ components:
       x-scala-array-type: cats.data.NonEmptyList
       items:
         $ref: '#/components/schemas/Bar'
+    Blix:
+      type: object
+      x-scala-map-type: cats.data.NonEmptyMap
+      additionalProperties:
+        type: string
+        x-scala-type: Enum
+    Enum:
+      type: string
+      enum:
+        - a
+        - b
+        - c
