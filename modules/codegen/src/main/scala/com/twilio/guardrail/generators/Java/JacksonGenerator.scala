@@ -777,9 +777,12 @@ object JacksonGenerator {
                   concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
                   innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqListType.setTypeArguments(innerType), Option.empty)
-              case SwaggerUtil.DeferredMap(tpeName) =>
+              case SwaggerUtil.DeferredMap(tpeName, containerTpe) =>
                 for {
-                  fqMapType <- safeParseClassOrInterfaceType("java.util.Map")
+                  fqMapType <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.Map")) {
+                    case ci: ClassOrInterfaceType => Target.pure(ci)
+                    case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                  }
                   concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
                   innerType <- concreteType.getOrElse(safeParseType(tpeName))
                 } yield (fqMapType.setTypeArguments(STRING_TYPE, innerType), Option.empty)
@@ -848,13 +851,19 @@ object JacksonGenerator {
                   .fromOption(lookupTypeName(tpeName, concreteTypes)(t => Target.pure(tpe.setTypeArguments(t))), s"Unresolved reference ${tpeName}")
                   .flatten
               } yield res
-            case SwaggerUtil.DeferredMap(tpeName) =>
-              Target
-                .fromOption(
-                  lookupTypeName(tpeName, concreteTypes)(tpe => safeParseType(s"java.util.List<java.util.Map<String, ${tpe}>>")),
-                  s"Unresolved reference ${tpeName}"
-                )
-                .flatten
+            case SwaggerUtil.DeferredMap(tpeName, containerTpe) =>
+              for {
+                tpe <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.Map")) {
+                  case ci: ClassOrInterfaceType => Target.pure(ci)
+                  case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                }
+                res <- Target
+                  .fromOption(
+                    lookupTypeName(tpeName, concreteTypes)(t => safeParseType("java.util.List<${tpe}<String, ${t}>>")),
+                    s"Unresolved reference ${tpeName}"
+                  )
+                  .flatten
+              } yield res
           }
         } yield result
     }

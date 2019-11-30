@@ -24,7 +24,7 @@ case class EmptyMap[L <: LA]()                                               ext
 case class EmptyOptionalTerm[L <: LA]()                                      extends ScalaTerm[L, L#Term]
 case class LiftVectorType[L <: LA](value: L#Type, customTpe: Option[L#Type]) extends ScalaTerm[L, L#Type]
 case class LiftVectorTerm[L <: LA](value: L#Term)                            extends ScalaTerm[L, L#Term]
-case class LiftMapType[L <: LA](value: L#Type)                               extends ScalaTerm[L, L#Type]
+case class LiftMapType[L <: LA](value: L#Type, customTpe: Option[L#Type])    extends ScalaTerm[L, L#Type]
 
 case class FullyQualifyPackageName[L <: LA](rawPkgName: List[String]) extends ScalaTerm[L, List[String]]
 
@@ -33,7 +33,7 @@ case class LookupEnumDefaultValue[L <: LA](tpe: L#TypeName, defaultValue: L#Term
 case class FormatEnumName[L <: LA](enumValue: String) extends ScalaTerm[L, String]
 
 case class EmbedArray[L <: LA](tpe: LazyResolvedType[L], customTpe: Option[L#Type]) extends ScalaTerm[L, LazyResolvedType[L]]
-case class EmbedMap[L <: LA](tpe: LazyResolvedType[L])                              extends ScalaTerm[L, LazyResolvedType[L]]
+case class EmbedMap[L <: LA](tpe: LazyResolvedType[L], customTpe: Option[L#Type])   extends ScalaTerm[L, LazyResolvedType[L]]
 
 case class ParseType[L <: LA](value: String)     extends ScalaTerm[L, Option[L#Type]]
 case class ParseTypeName[L <: LA](value: String) extends ScalaTerm[L, Option[L#TypeName]]

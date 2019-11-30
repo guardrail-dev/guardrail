@@ -14,7 +14,7 @@ sealed trait ProtocolElems[L <: LA] { def name: String }
 sealed trait LazyProtocolElems[L <: LA]                                    extends ProtocolElems[L]
 case class Deferred[L <: LA](name: String)                                 extends LazyProtocolElems[L]
 case class DeferredArray[L <: LA](name: String, customTpe: Option[L#Type]) extends LazyProtocolElems[L]
-case class DeferredMap[L <: LA](name: String)                              extends LazyProtocolElems[L]
+case class DeferredMap[L <: LA](name: String, customTpe: Option[L#Type])   extends LazyProtocolElems[L]
 
 sealed trait StrictProtocolElems[L <: LA]                 extends ProtocolElems[L]
 case class RandomType[L <: LA](name: String, tpe: L#Type) extends StrictProtocolElems[L]
@@ -85,12 +85,12 @@ object ProtocolElems {
                           case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType(_, customTpe)).map(RandomType[L](name, _))
                         })
-                    case d @ DeferredMap(name) =>
+                    case d @ DeferredMap(name, customTpe) =>
                       strictElems
                         .find(_.name == name)
                         .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
                           case RandomType(name, tpe) =>
-                            liftMapType(tpe).map(RandomType[L](name, _))
+                            liftMapType(tpe, customTpe).map(RandomType[L](name, _))
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).flatMap(liftMapType(_, customTpe)).map(RandomType[L](name, _))
                           case EnumDefinition(name, tpe, _, elems, cls, _) =>

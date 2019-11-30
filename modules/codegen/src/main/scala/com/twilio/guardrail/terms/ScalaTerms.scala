@@ -25,7 +25,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def emptyOptionalTerm(): Free[F, L#Term]                                      = Free.inject[ScalaTerm[L, ?], F](EmptyOptionalTerm())
   def liftVectorType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](LiftVectorType(value, customTpe))
   def liftVectorTerm(value: L#Term): Free[F, L#Term]                            = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
-  def liftMapType(value: L#Type): Free[F, L#Type]                               = Free.inject[ScalaTerm[L, ?], F](LiftMapType(value))
+  def liftMapType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type]    = Free.inject[ScalaTerm[L, ?], F](LiftMapType(value, customTpe))
 
   def fullyQualifyPackageName(rawPkgName: List[String]): Free[F, List[String]] =
     Free.inject[ScalaTerm[L, ?], F](FullyQualifyPackageName(rawPkgName))
@@ -36,7 +36,7 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
 
   def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): Free[F, LazyResolvedType[L]] =
     Free.inject[ScalaTerm[L, ?], F](EmbedArray(tpe, customTpe))
-  def embedMap(tpe: LazyResolvedType[L]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedMap(tpe))
+  def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedMap(tpe, customTpe))
 
   def parseType(value: String): Free[F, Option[L#Type]]         = Free.inject[ScalaTerm[L, ?], F](ParseType(value))
   def parseTypeName(value: String): Free[F, Option[L#TypeName]] = Free.inject[ScalaTerm[L, ?], F](ParseTypeName(value))

@@ -12,7 +12,7 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.extract.{ CustomArrayTypeName, CustomTypeName, Default, Extractable, VendorExtension }
+import com.twilio.guardrail.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
@@ -27,7 +27,7 @@ object SwaggerUtil {
   sealed trait LazyResolvedType[L <: LA]                                         extends ResolvedType[L]
   case class Deferred[L <: LA](value: String)                                    extends LazyResolvedType[L]
   case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type]) extends LazyResolvedType[L]
-  case class DeferredMap[L <: LA](value: String)                                 extends LazyResolvedType[L]
+  case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])   extends LazyResolvedType[L]
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
@@ -77,8 +77,8 @@ object SwaggerUtil {
                   lookupTypeName(clsName, tpeName, resolvedTypes)(Free.pure _).map(Either.fromOption(_, x))
                 case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
                   lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
-                case x @ (clsName, DeferredMap(tpeName)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType).map(Either.fromOption(_, x))
+                case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType(_, containerTpe)).map(Either.fromOption(_, x))
               }).map({
                 case (newLazyTypes, newResolvedTypes) =>
                   Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
@@ -119,17 +119,17 @@ object SwaggerUtil {
               case ADT(_, _, fullType, _, _) =>
                 liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
             }
-        case DeferredMap(name) =>
+        case DeferredMap(name, containerTpe) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                liftMapType(tpe).map(Resolved[L](_, None, None, None, None))
+                liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
               case ClassDefinition(_, _, fullType, _, _, _) =>
-                liftMapType(fullType).map(Resolved[L](_, None, None, None, None))
+                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(_, _, fullType, _, _, _) =>
-                liftMapType(fullType).map(Resolved[L](_, None, None, None, None))
+                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
               case ADT(_, _, fullType, _, _) =>
-                liftMapType(fullType).map(Resolved[L](_, None, None, None, None))
+                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
             }
       })
     }
@@ -144,6 +144,11 @@ object SwaggerUtil {
     for {
       prefixes <- S.vendorPrefixes()
     } yield CustomArrayTypeName(v, prefixes)
+
+  def customMapTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
+    for {
+      prefixes <- S.vendorPrefixes()
+    } yield CustomMapTypeName(v, prefixes)
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
@@ -188,11 +193,12 @@ object SwaggerUtil {
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(Resolved[L](_, None, None, None, None))
                 })
+              mapType <- customMapTypeName(map).flatMap(_.flatTraverse(parseType))
               res <- rec match {
-                case Resolved(inner, dep, _, _, _) => liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
-                case x: DeferredMap[L]             => embedMap(x)
-                case x: DeferredArray[L]           => embedMap(x)
-                case x: Deferred[L]                => embedMap(x)
+                case Resolved(inner, dep, _, _, _) => liftMapType(inner, mapType).map(Resolved[L](_, dep, None, None, None))
+                case x: DeferredMap[L]             => embedMap(x, mapType)
+                case x: DeferredArray[L]           => embedMap(x, mapType)
+                case x: Deferred[L]                => embedMap(x, mapType)
               }
             } yield res
           })
@@ -413,12 +419,13 @@ object SwaggerUtil {
                       Resolved[L](_, None, None, None, None)
                     )
                   })
+                mapType <- customArrayTypeName(m).flatMap(_.flatTraverse(parseType))
                 res <- rec match {
                   case Resolved(inner, dep, _, _, _) =>
-                    liftMapType(inner).map(Resolved[L](_, dep, None, None, None))
-                  case x: DeferredMap[L]   => embedMap(x)
-                  case x: DeferredArray[L] => embedMap(x)
-                  case x: Deferred[L]      => embedMap(x)
+                    liftMapType(inner, mapType).map(Resolved[L](_, dep, None, None, None))
+                  case x: DeferredMap[L]   => embedMap(x, mapType)
+                  case x: DeferredArray[L] => embedMap(x, mapType)
+                  case x: Deferred[L]      => embedMap(x, mapType)
                 }
               } yield res
           )
