@@ -135,6 +135,12 @@ object Java {
     )
   )
 
+  def optionalOfNullableExpr(param: Expression): Expression = new MethodCallExpr(
+    new NameExpr("Optional"),
+    "ofNullable",
+    new NodeList[Expression](param)
+  )
+
   val GENERATED_CODE_COMMENT: Comment = new BlockComment(GENERATED_CODE_COMMENT_LINES.mkString("\n * ", "\n * ", "\n"))
 
   // from https://en.wikipedia.org/wiki/List_of_Java_keywords
