@@ -13,6 +13,7 @@ micrositeGithubRepo := "guardrail"
 micrositeHighlightLanguages ++= Seq("yaml", "swagger")
 micrositeCompilingDocsTool := WithMdoc
 micrositeGitterChannel := false
+micrositeAnalyticsToken := "UA-154175369-1"
 mdocIn := baseDirectory.value / "docs"
 //micrositeDataDirectory := baseDirectory.value / "docs" / "data"
 //micrositeImgDirectory := baseDirectory.value / "docs" / "images"
@@ -24,7 +25,6 @@ mdocIn := baseDirectory.value / "docs"
 // micrositePluginsDirectory
 // micrositeStaticDirectory
 
-// micrositeAnalyticsToken
 // micrositeBaseUrl
 // micrositeCDNDirectives
 // micrositeConfig
