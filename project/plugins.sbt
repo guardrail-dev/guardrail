@@ -6,7 +6,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.0")
 
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.0")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.2.1")
 
 addSbtPlugin("io.crashbox" % "sbt-gpg" % "0.2.1")
 
@@ -18,7 +18,7 @@ addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.3")
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.31")
 
-addSbtPlugin("com.47deg"  % "sbt-microsites" % "0.9.7")
+addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.0.2")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
 

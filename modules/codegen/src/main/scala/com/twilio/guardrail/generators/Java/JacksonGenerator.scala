@@ -564,7 +564,7 @@ object JacksonGenerator {
           )(
             dv =>
               if (fieldType.isOptional) {
-                optionalOfExpr(dv)
+                optionalOfNullableExpr(dv)
               } else {
                 dv
               }
@@ -640,7 +640,7 @@ object JacksonGenerator {
                         case (_: PrimitiveType, _) => new NameExpr(parameterName)
                         case (ft, pt) if ft.isOptional && pt.isPrimitiveType =>
                           new MethodCallExpr(new NameExpr("Optional"), "of", new NodeList[Expression](new NameExpr(parameterName)))
-                        case (ft, _) if ft.isOptional => optionalOfExpr(new NameExpr(parameterName))
+                        case (ft, _) if ft.isOptional => optionalOfNullableExpr(new NameExpr(parameterName))
                         case _                        => requireNonNullExpr(parameterName)
                       },
                       AssignExpr.Operator.ASSIGN
