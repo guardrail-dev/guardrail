@@ -369,6 +369,7 @@ object CirceProtocolGenerator {
       case ProtocolImports() =>
         Target.pure(
           List(
+            q"import cats.syntax.either._",
             q"import io.circe._",
             q"import io.circe.syntax._",
             q"import io.circe.generic.semiauto._"
