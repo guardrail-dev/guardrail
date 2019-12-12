@@ -1,8 +1,7 @@
 package com.twilio.guardrail.protocol.terms
 
 import cats.free.Free
-import cats.instances.list._
-import cats.syntax.traverse._
+import cats.implicits._
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax._
@@ -42,12 +41,11 @@ object Responses {
                   httpCode <- lookupStatusCode(key)
                   (statusCode, statusCodeName) = httpCode
                   valueTypes <- (for {
-                    content       <- Option(resp.get.getContent).toList
-                    contentValues <- Option(content.values()).toList.flatMap(_.asScala) // FIXME: values() ignores Content-Types in the keys
-                    schema        <- Option[Schema[_]](contentValues.getSchema).toList
+                    (_, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
+                    schema       <- content.downField("schema", _.getSchema()).indexedDistribute.toList
                   } yield schema).traverse { prop =>
                     for {
-                      meta     <- SwaggerUtil.propMeta[L, F](Tracker.hackyAdapt(prop, Vector.empty))
+                      meta     <- SwaggerUtil.propMeta[L, F](prop)
                       resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                       SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
 

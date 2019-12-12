@@ -85,40 +85,57 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     }
   }
 
-  private def extractPrimitiveFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
-    def unifyEntries: List[(String, MediaType)] => Option[Schema[_]] = {
-      case ("text/plain", MediaType(None, _, _)) :: Nil  => Option(new StringSchema())
-      case (contentType, MediaType(schema, _, _)) :: Nil => schema
-      case (contentType, MediaType(schema, _, _)) :: xs  => schema // FIXME: Just taking the head here isn't super great
-      case Nil                                           => Option.empty
-    }
+  private def extractPrimitiveFromRequestBody(
+      fields: Mappish[List, String, Tracker[MediaType]],
+      required: Tracker[Option[Boolean]]
+  ): Option[Tracker[Parameter]] = {
+    // FIXME: Just taking the head here isn't super great
+    def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
+      _.flatMap({
+        case (contentType, mediaType) =>
+          mediaType
+            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == "text/plain" => mt })(
+              x => Option(Tracker.cloneHistory(x, new StringSchema()))
+            )
+            .orRefine({ case mt @ MediaType(schema, _, _) => schema })(_.indexedDistribute)
+            .orRefineFallback(_ => None)
+      }).headOption
     for {
-      schema <- unifyEntries(requestBody.downField("content", _.getContent()).indexedCosequence.value.map(_.map(_.get)))
-      tpe    <- Option(schema.getType())
+      schema <- unifyEntries(fields.value)
+      tpe    <- schema.downField("type", _.getType()).indexedDistribute // TODO: Why is this here?
     } yield {
+
       val p = new Parameter
 
-      if (schema.getFormat == "binary") {
-        schema.setType("file")
-        schema.setFormat(null)
+      if (schema.get.getFormat == "binary") {
+        schema.get.setType("file")
+        schema.get.setFormat(null)
       }
 
       p.setIn("body")
       p.setName("body")
-      p.setSchema(schema)
-      p.setRequired(requestBody.get.getRequired)
+      p.setSchema(schema.get)
+      required.get.foreach(x => p.setRequired(x))
 
-      p.setExtensions(Option(schema.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
-      Tracker.hackyAdapt(p, requestBody.history)
+      schema
+        .downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions())
+        .get
+        .foreach(x => p.setExtensions(x))
+      Tracker.cloneHistory(schema, p)
     }
   }
 
   // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#fixed-fields-8
   // RequestBody can represent either a RequestBody object or $ref.
   // (these are both represented in the same RequestBody class)
-  private def extractRefParamFromRequestBody(requestBody: Tracker[RequestBody]): Option[Tracker[Parameter]] = {
+  private def extractRefParamFromRequestBody(
+      ref: Tracker[Option[String]],
+      fields: Mappish[List, String, com.twilio.guardrail.core.Tracker[io.swagger.v3.oas.models.media.MediaType]],
+      extensions: Tracker[Option[java.util.Map[String, Object]]],
+      required: Tracker[Option[Boolean]]
+  ): Option[Tracker[Parameter]] = {
     val content = for {
-      (_, mt) <- requestBody.downField("content", _.getContent()).indexedCosequence.value.headOption
+      (_, mt) <- fields.value.headOption
       schema  <- mt.downField("schema", _.getSchema()).indexedCosequence
       ref     <- schema.downField("$ref", _.get$ref()).indexedCosequence
     } yield {
@@ -134,40 +151,39 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       p.setSchema(schema.get)
       p.set$ref(ref.get)
 
-      p.setRequired(requestBody.get.getRequired)
+      required.get.foreach(x => p.setRequired(x))
 
-      p.setExtensions(Option(schema.get.getExtensions()).getOrElse(new java.util.HashMap[String, Object]()))
-      Tracker.hackyAdapt(p, requestBody.history)
+      extensions.get.foreach(x => p.setExtensions(x))
+      Tracker.cloneHistory(ref, p)
     }
 
-    val ref = requestBody.downField("$ref", _.get$ref()).cotraverse { x =>
+    val refParam = ref.cotraverse { x =>
       val p = new Parameter
 
       p.setIn("body")
       p.setName("body")
       p.set$ref(x.get)
 
-      p.setRequired(requestBody.get.getRequired)
+      required.get.foreach(x => p.setRequired(x))
 
-      p.setExtensions(Option(requestBody.get.getExtensions).getOrElse(new java.util.HashMap[String, Object]()))
+      extensions.get.foreach(x => p.setExtensions(x))
 
-      Tracker.hackyAdapt(p, requestBody.history)
+      Tracker.cloneHistory(ref, p)
     }
 
-    content.orElse(ref)
+    content.orElse(refParam)
   }
 
   /** Temporary hack method to adapt to open-api v3 spec */
-  private def extractParamsFromRequestBody(requestBody: Tracker[RequestBody]): List[Tracker[Parameter]] = {
+  private def extractParamsFromRequestBody(
+      fields: Mappish[List, String, com.twilio.guardrail.core.Tracker[io.swagger.v3.oas.models.media.MediaType]],
+      required: Tracker[Option[Boolean]]
+  ): List[Tracker[Parameter]] = {
     type HashCode            = Int
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
-    val contentTypes: List[RouteMeta.ContentType] =
-      requestBody.downField("content", _.getContent()).indexedCosequence.value.map(_._1).flatMap(RouteMeta.ContentType.unapply)
-    val ((maxCount, instances), ps) = requestBody
-      .downField("content", _.getContent())
-      .indexedCosequence
-      .value
+    val contentTypes: List[RouteMeta.ContentType] = fields.value.collect({ case (RouteMeta.ContentType(ct), _) => ct })
+    val ((maxCount, instances), ps) = fields.value
       .flatMap({
         case (_, mt) =>
           for {
@@ -189,7 +205,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             val isRequired: Boolean = if (requiredFields.nonEmpty) {
               requiredFields.contains(name)
             } else {
-              requestBody.downField("required", _.getRequired()).get.fold(false)(identity)
+              required.get.getOrElse(false)
             }
 
             p.setRequired(isRequired)
@@ -199,7 +215,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
               p.setRequired(false)
             }
 
-            requestBody.map(_ => p)
+            Tracker.cloneHistory(mt, p)
           }
       })
       .traverse[State[ParameterCountState, ?], Tracker[Parameter]] { p =>
@@ -224,15 +240,24 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   }
 
   private val parameters: List[Tracker[Parameter]] = {
-    val p = operation.downField("parameters", _.getParameters())
+    operation.downField("parameters", _.getParameters()).indexedDistribute ++
+      operation
+        .downField("requestBody", _.getRequestBody())
+        .map(_.toList)
+        .flatExtract({ requestBody =>
+          val content  = requestBody.downField("content", _.getContent()).indexedCosequence
+          val required = requestBody.downField("required", _.getRequired())
 
-    val requestBody = operation.downField("requestBody", _.getRequestBody()).map(_.toList)
-    val params: List[Tracker[Parameter]] =
-      requestBody.flatExtract(extractRefParamFromRequestBody(_).toList) ++
-          p.indexedDistribute ++
-          requestBody.flatExtract(extractParamsFromRequestBody) ++
-          requestBody.flatExtract(extractPrimitiveFromRequestBody(_).toList)
-    params
+          val refParam = extractRefParamFromRequestBody(
+            requestBody.downField("$ref", _.get$ref()),
+            content,
+            requestBody.downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions()),
+            required
+          )
+          val params    = extractParamsFromRequestBody(content, required)
+          val primitive = extractPrimitiveFromRequestBody(content, required)
+          refParam.toList ++ params ++ primitive.toList
+        })
   }
 
   def getParameters[L <: LA, F[_]](

@@ -20,18 +20,18 @@ import support.PositiveLong
 class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
 
   // Placeholder until property testing
-  val id: Option[Long]              = None
-  val categoryId: Option[Long]      = None
-  val categoryName: Option[String]  = None
-  val name: String                  = ""
-  val photoUrls: IndexedSeq[String] = IndexedSeq.empty
-  val tag1id: Option[Long]          = None
-  val tag1name: Option[String]      = None
-  val tag2id: Option[Long]          = None
-  val tag2name: Option[String]      = None
-  val tag3id: Option[Long]          = None
-  val tag3name: Option[String]      = None
-  val petStatus: Option[String]     = Some("pending")
+  val id: Option[Long]             = None
+  val categoryId: Option[Long]     = None
+  val categoryName: Option[String] = None
+  val name: String                 = ""
+  val photoUrls: Vector[String]    = Vector.empty
+  val tag1id: Option[Long]         = None
+  val tag1name: Option[String]     = None
+  val tag2id: Option[Long]         = None
+  val tag2name: Option[String]     = None
+  val tag3id: Option[Long]         = None
+  val tag3name: Option[String]     = None
+  val petStatus: Option[String]    = Some("pending")
 
   test("round-trip: definition query, unit response") {
     val httpService = new PetResource().routes(new PetHandler[IO] {
@@ -91,9 +91,9 @@ class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
       def findPetsByStatusEnum(
           respond: FindPetsByStatusEnumResponse.type
       )(_status: sdefs.definitions.PetStatus): IO[sdefs.pet.FindPetsByStatusEnumResponse] =
-        IO.pure(petStatus.fold(IndexedSeq.empty[sdefs.definitions.Pet])({ value =>
+        IO.pure(petStatus.fold(Vector.empty[sdefs.definitions.Pet])({ value =>
             if (_status.value == value) {
-              IndexedSeq(
+              Vector(
                 sdefs.definitions.Pet(
                   id = id,
                   category = Some(sdefs.definitions.Category(categoryId, categoryName)),

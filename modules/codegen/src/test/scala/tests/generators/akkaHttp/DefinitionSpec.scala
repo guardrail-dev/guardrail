@@ -123,6 +123,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
       implicit val showThird: Show[Third] = Show.build(_.value)
 
       def parse(value: String): Option[Third] = values.find(_.value == value)
+      implicit val order: cats.Order[Third] = cats.Order.by[Third, Int](values.indexOf)
     }
     """
 
