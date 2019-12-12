@@ -22,6 +22,12 @@ package object extract {
   def CustomTypeName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
     extractFromNames[F, String](v, vendorPrefixes.map(_ + "-type"))
 
+  def CustomArrayTypeName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
+    extractFromNames[F, String](v, vendorPrefixes.map(_ + "-array-type"))
+
+  def CustomMapTypeName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
+    extractFromNames[F, String](v, vendorPrefixes.map(_ + "-map-type"))
+
   def TracingLabel[F: VendorExtension.VendorExtensible](v: F): Option[String] =
     extractWithFallback[F, String](v, "x-tracing-label", "x-scala-tracing-label")
 

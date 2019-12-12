@@ -92,7 +92,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val definition = q"""
       case class Types(
-        array: Option[IndexedSeq[Boolean]] = None,
+        array: Option[Vector[Boolean]] = None,
         map: Option[Map[String, Boolean]] = None,
         obj: Option[io.circe.Json] = None,
         bool: Option[Boolean] = None,
@@ -109,8 +109,8 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
         custom: Option[Foo] = None,
         customComplex: Option[Foo[Bar]] = None,
         nested: Option[Types.Nested] = None,
-        nestedArray: Option[IndexedSeq[Types.NestedArray]] = None,
-        requiredArray: IndexedSeq[String] = IndexedSeq.empty
+        nestedArray: Option[Vector[Types.NestedArray]] = None,
+        requiredArray: Vector[String] = Vector.empty
       )
     """
 
@@ -120,7 +120,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
           val readOnlyKeys = Set[String]()
           new ObjectEncoder[Types] { final def encodeObject(a: Types): JsonObject = JsonObject.fromIterable(Vector(("array", a.array.asJson), ("map", a.map.asJson), ("obj", a.obj.asJson), ("bool", a.bool.asJson), ("string", a.string.asJson), ("date", a.date.asJson), ("date_time", a.date_time.asJson), ("long", a.long.asJson), ("int", a.int.asJson), ("float", a.float.asJson), ("double", a.double.asJson), ("number", a.number.asJson), ("integer", a.integer.asJson), ("untyped", a.untyped.asJson), ("custom", a.custom.asJson), ("customComplex", a.customComplex.asJson), ("nested", a.nested.asJson), ("nestedArray", a.nestedArray.asJson), ("requiredArray", a.requiredArray.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeTypes: Decoder[Types] = new Decoder[Types] { final def apply(c: HCursor): Decoder.Result[Types] = for (v0 <- c.downField("array").as[Option[IndexedSeq[Boolean]]]; v1 <- c.downField("map").as[Option[Map[String, Boolean]]]; v2 <- c.downField("obj").as[Option[io.circe.Json]]; v3 <- c.downField("bool").as[Option[Boolean]]; v4 <- c.downField("string").as[Option[String]]; v5 <- c.downField("date").as[Option[java.time.LocalDate]]; v6 <- c.downField("date_time").as[Option[java.time.OffsetDateTime]]; v7 <- c.downField("long").as[Option[Long]]; v8 <- c.downField("int").as[Option[Int]]; v9 <- c.downField("float").as[Option[Float]]; v10 <- c.downField("double").as[Option[Double]]; v11 <- c.downField("number").as[Option[BigDecimal]]; v12 <- c.downField("integer").as[Option[BigInt]]; v13 <- c.downField("untyped").as[Option[io.circe.Json]]; v14 <- c.downField("custom").as[Option[Foo]]; v15 <- c.downField("customComplex").as[Option[Foo[Bar]]]; v16 <- c.downField("nested").as[Option[Types.Nested]]; v17 <- c.downField("nestedArray").as[Option[IndexedSeq[Types.NestedArray]]]; v18 <- c.downField("requiredArray").as[IndexedSeq[String]]) yield Types(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) }
+        implicit val decodeTypes: Decoder[Types] = new Decoder[Types] { final def apply(c: HCursor): Decoder.Result[Types] = for (v0 <- c.downField("array").as[Option[Vector[Boolean]]]; v1 <- c.downField("map").as[Option[Map[String, Boolean]]]; v2 <- c.downField("obj").as[Option[io.circe.Json]]; v3 <- c.downField("bool").as[Option[Boolean]]; v4 <- c.downField("string").as[Option[String]]; v5 <- c.downField("date").as[Option[java.time.LocalDate]]; v6 <- c.downField("date_time").as[Option[java.time.OffsetDateTime]]; v7 <- c.downField("long").as[Option[Long]]; v8 <- c.downField("int").as[Option[Int]]; v9 <- c.downField("float").as[Option[Float]]; v10 <- c.downField("double").as[Option[Double]]; v11 <- c.downField("number").as[Option[BigDecimal]]; v12 <- c.downField("integer").as[Option[BigInt]]; v13 <- c.downField("untyped").as[Option[io.circe.Json]]; v14 <- c.downField("custom").as[Option[Foo]]; v15 <- c.downField("customComplex").as[Option[Foo[Bar]]]; v16 <- c.downField("nested").as[Option[Types.Nested]]; v17 <- c.downField("nestedArray").as[Option[Vector[Types.NestedArray]]]; v18 <- c.downField("requiredArray").as[Vector[String]]) yield Types(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) }
         case class Nested(prop1: Option[String] = None)
         object Nested {
           implicit val encodeNested: ObjectEncoder[Nested] = {

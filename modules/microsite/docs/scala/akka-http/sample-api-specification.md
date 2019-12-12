@@ -77,7 +77,7 @@ definitions:                                # All non-primitive structures are d
   User:                                     # This identifies a symbolic structure name. Not all names are
                                             # translated into classes when rendered, depending on whether they
                                             # identify classes with structure, or defer to standard classes
-                                            # like `IndexedSeq` for `type: array`.
+                                            # like `Vector` for `type: array`.
 
     type: object                            # will generate a `User` case class in the `definitions` package
 
@@ -104,7 +104,7 @@ definitions:                                # All non-primitive structures are d
                                             # marshallers and unmarshallers maintain this mapping for you though,
                                             # so no chance of protocol violations.
 
-        $ref: '#/definitions/UserAddresses' # Ensures that the type of `userAddress` will be `IndexedSeq[UserAddress]`
+        $ref: '#/definitions/UserAddresses' # Ensures that the type of `userAddress` will be `Vector[UserAddress]`
 
   UserAddresses:
     type: array
