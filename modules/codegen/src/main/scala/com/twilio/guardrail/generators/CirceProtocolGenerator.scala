@@ -85,7 +85,10 @@ object CirceProtocolGenerator {
                   terms ++
                   List(Some(values), encoder, decoder).flatten ++
                   implicits ++
-                  List(q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)")
+                  List(
+                    q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)",
+                    q"implicit val order: cats.Order[${Type.Name(clsName)}] = cats.Order.by[${Type.Name(clsName)}, Int](values.indexOf)"
+                  )
           )
         )
       case BuildAccessor(clsName, termName) =>

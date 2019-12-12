@@ -43,6 +43,7 @@ class Issue429 extends FunSuite with Matchers with SwaggerSpecRunner {
         implicit val addPathStatusCode: AddPath[StatusCode] = AddPath.build(_.value)
         implicit val showStatusCode: Show[StatusCode] = Show.build(_.value)
         def parse(value: String): Option[StatusCode] = values.find(_.value == value)
+        implicit val order: cats.Order[StatusCode] = cats.Order.by[StatusCode, Int](values.indexOf)
       }
       """
 
