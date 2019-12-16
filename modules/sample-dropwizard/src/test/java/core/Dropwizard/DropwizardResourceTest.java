@@ -19,9 +19,12 @@ import javax.ws.rs.client.Entity;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,6 +54,8 @@ public class DropwizardResourceTest {
 
     @Before
     public void setup() {
+        reset(userHandler);
+
         when(userHandler.getUserByName(anyString())).thenReturn(completedFuture(GetUserByNameResponse.NotFound));
         when(userHandler.getUserByName(eq(" "))).thenReturn(completedFuture(GetUserByNameResponse.BadRequest));
         when(userHandler.getUserByName(eq(USERNAME))).thenReturn(completedFuture(GetUserByNameResponse.Ok(USER)));
@@ -81,6 +86,18 @@ public class DropwizardResourceTest {
     public void testCreateUser() {
         assertThat(resources.target("/v2/user").request().post(Entity.json(USER)).getStatus()).isEqualTo(200);
         verify(userHandler).createUser(USER);
+    }
+
+    @Test
+    public void testMissingBodyCreateUser() {
+        assertThat(resources
+                .target("/v2/user")
+                .request()
+                .build("POST")
+                .invoke()
+                .getStatus()
+        ).isEqualTo(422);
+        verify(userHandler, never()).createUser(any());
     }
 
     @Test
