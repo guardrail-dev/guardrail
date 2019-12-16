@@ -202,6 +202,7 @@ class BacktickTest extends FunSuite with Matchers with SwaggerSpecRunner {
       implicit val `addPathdashy-enum`: AddPath[`dashy-enum`] = AddPath.build(_.value)
       implicit val `showdashy-enum`: Show[`dashy-enum`] = Show.build(_.value)
       def parse(value: String): Option[`dashy-enum`] = values.find(_.value == value)
+      implicit val order: cats.Order[`dashy-enum`] = cats.Order.by[`dashy-enum`, Int](values.indexOf)
     }
     """
 

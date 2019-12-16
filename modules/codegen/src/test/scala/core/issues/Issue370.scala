@@ -79,6 +79,7 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
             implicit val addPathValue: AddPath[Value] = AddPath.build(_.value)
             implicit val showValue: Show[Value] = Show.build(_.value)
             def parse(value: String): Option[Value] = values.find(_.value == value)
+            implicit val order: cats.Order[Value] = cats.Order.by[Value, Int](values.indexOf)
           }
           case class Nested(value: Option[Foo.Nested.Value] = Option(Foo.Nested.Value.C))
           object Nested {
@@ -101,6 +102,7 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
               implicit val addPathValue: AddPath[Value] = AddPath.build(_.value)
               implicit val showValue: Show[Value] = Show.build(_.value)
               def parse(value: String): Option[Value] = values.find(_.value == value)
+              implicit val order: cats.Order[Value] = cats.Order.by[Value, Int](values.indexOf)
             }
           }
         }

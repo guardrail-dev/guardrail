@@ -114,15 +114,15 @@ object JavaGenerator {
       case LiftOptionalTerm(value) => buildMethodCall("java.util.Optional.ofNullable", Some(value))
       case EmptyOptionalTerm()     => buildMethodCall("java.util.Optional.empty")
       case EmptyArray() =>
-        Target.pure(
+        for {
+          cls <- safeParseClassOrInterfaceType("java.util.ArrayList")
+        } yield {
           new ObjectCreationExpr(
             null,
-            StaticJavaParser
-              .parseClassOrInterfaceType("java.util.ArrayList")
-              .setTypeArguments(new NodeList[Type]),
+            cls.setTypeArguments(new NodeList[Type]),
             new NodeList()
           )
-        )
+        }
       case EmptyMap() =>
         Target.pure(
           new ObjectCreationExpr(
@@ -133,9 +133,21 @@ object JavaGenerator {
             new NodeList()
           )
         )
-      case LiftVectorType(value)               => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList(value)))
-      case LiftVectorTerm(value)               => buildMethodCall("java.util.Collections.singletonList", Some(value))
-      case LiftMapType(value)                  => safeParseClassOrInterfaceType("java.util.Map").map(_.setTypeArguments(STRING_TYPE, value))
+      case LiftVectorType(value, customTpe) =>
+        customTpe
+          .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.List").map(identity))({
+            case t: ClassOrInterfaceType => Target.pure(t)
+            case x                       => Target.raiseError(s"Unsure how to map $x")
+          })
+          .map(_.setTypeArguments(new NodeList(value)))
+      case LiftVectorTerm(value) => buildMethodCall("java.util.Collections.singletonList", Some(value))
+      case LiftMapType(value, customTpe) =>
+        customTpe
+          .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.Map").map(identity))({
+            case t: ClassOrInterfaceType => Target.pure(t)
+            case x                       => Target.raiseError(s"Unsure how to map $x")
+          })
+          .map(_.setTypeArguments(STRING_TYPE, value))
       case FullyQualifyPackageName(rawPkgName) => Target.pure(rawPkgName)
       case LookupEnumDefaultValue(tpe, defaultValue, values) => {
         // FIXME: Is there a better way to do this? There's a gap of coverage here
@@ -149,21 +161,21 @@ object JavaGenerator {
         }
       }
       case FormatEnumName(enumValue) => Target.pure(enumValue.toSnakeCase.toUpperCase(Locale.US))
-      case EmbedArray(tpe) =>
+      case EmbedArray(tpe, containerTpe) =>
         tpe match {
           case SwaggerUtil.Deferred(tpe) =>
-            Target.pure(SwaggerUtil.DeferredArray(tpe))
-          case SwaggerUtil.DeferredArray(_) =>
+            Target.pure(SwaggerUtil.DeferredArray(tpe, containerTpe))
+          case SwaggerUtil.DeferredArray(_, _) =>
             Target.raiseError("FIXME: Got an Array of Arrays, currently not supported")
-          case SwaggerUtil.DeferredMap(_) =>
+          case SwaggerUtil.DeferredMap(_, _) =>
             Target.raiseError("FIXME: Got an Array of Maps, currently not supported")
         }
-      case EmbedMap(tpe) =>
+      case EmbedMap(tpe, containerTpe) =>
         tpe match {
-          case SwaggerUtil.Deferred(inner) => Target.pure(SwaggerUtil.DeferredMap(inner))
-          case SwaggerUtil.DeferredMap(_) =>
+          case SwaggerUtil.Deferred(inner) => Target.pure(SwaggerUtil.DeferredMap(inner, containerTpe))
+          case SwaggerUtil.DeferredMap(_, _) =>
             Target.raiseError("FIXME: Got a map of maps, currently not supported")
-          case SwaggerUtil.DeferredArray(_) =>
+          case SwaggerUtil.DeferredArray(_, _) =>
             Target.raiseError("FIXME: Got a map of arrays, currently not supported")
         }
       case ParseType(tpe) =>

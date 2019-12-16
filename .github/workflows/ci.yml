@@ -16,7 +16,7 @@ jobs:
         java: [ '1.8.0', '11.0.x', '13.0.x' ]
         scala: [ '2.12.10' ]
     steps:
-    - uses: actions/checkout@v1.2.0
+    - uses: actions/checkout@v2
     - name: Set up JDK
       uses: actions/setup-java@v1.2.0
       with:
@@ -30,4 +30,4 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} checkFormatting testSuite
+      run:  sbt ++${{ matrix.scala }} clean checkFormatting testSuite

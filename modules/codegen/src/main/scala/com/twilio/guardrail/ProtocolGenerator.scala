@@ -428,38 +428,36 @@ object ProtocolGenerator {
     } yield params -> nestedDefinitions.flatten
   }
 
-  def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Schema[_])(
+  def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Tracker[Schema[_]])(
       implicit
       Fw: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, ProtocolElems[L]] = {
     import Fw._
-    val model = abstractModel match {
-      case m: ObjectSchema => Some(m)
-      case m: ComposedSchema =>
-        m.getAllOf.asScala.toList.get(1).flatMap {
-          case m: ObjectSchema => Some(m)
-          case _               => None
-        }
-      case _ => None
-    }
+    val model: Option[Tracker[ObjectSchema]] = abstractModel
+      .refine[Option[Tracker[ObjectSchema]]]({ case m: ObjectSchema => m })(x => Option(x))
+      .orRefine({ case m: ComposedSchema => m })(
+        _.downField("allOf", _.getAllOf()).indexedCosequence
+          .get(1)
+          .flatMap(
+            _.refine({ case o: ObjectSchema => o })(Option.apply)
+              .orRefineFallback(_ => None)
+          )
+      )
+      .orRefineFallback(_ => None)
     for {
-      tpe <- model
-        .flatMap(model => Option(model.getType))
-        .fold[Free[F, L#Type]](objectType(None))(
-          raw =>
-            model
-              .flatTraverse(SwaggerUtil.customTypeName[L, F, ObjectSchema])
-              .flatMap(
-                customTypeName =>
-                  SwaggerUtil.typeName[L, F](
-                    Tracker.hackyAdapt(Option(raw), Vector.empty),
-                    Tracker.hackyAdapt(model.flatMap(f => Option(f.getFormat)), Vector.empty),
-                    customTypeName
-                  )
-              )
-        )
+      tpe <- model.fold[Free[F, L#Type]](objectType(None)) { m =>
+        val raw = m.downField("type", _.getType())
+        for {
+          tpeName <- SwaggerUtil.customTypeName[L, F, Tracker[ObjectSchema]](m)
+          res <- SwaggerUtil.typeName[L, F](
+            raw,
+            m.downField("format", _.getFormat()),
+            tpeName
+          )
+        } yield res
+      }
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
   }
@@ -595,7 +593,7 @@ object ProtocolGenerator {
                 for {
                   enum  <- fromEnum(clsName, m, dtoPackage)
                   model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage)
-                  alias <- modelTypeAlias(clsName, m.get)
+                  alias <- modelTypeAlias(clsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
             )
             .orRefine({ case c: ComposedSchema => c })(
@@ -603,7 +601,7 @@ object ProtocolGenerator {
                 for {
                   parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage)
                   model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions.value, dtoPackage)
-                  alias   <- modelTypeAlias(clsName, comp.get)
+                  alias   <- modelTypeAlias(clsName, comp)
                 } yield model.getOrElse(alias)
             )
             .orRefine({ case a: ArraySchema => a })(arr => fromArray(clsName, arr, concreteTypes))
@@ -612,7 +610,7 @@ object ProtocolGenerator {
                 for {
                   enum  <- fromEnum(clsName, m, dtoPackage)
                   model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage)
-                  alias <- modelTypeAlias(clsName, m.get)
+                  alias <- modelTypeAlias(clsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
             )
             .valueOr(
@@ -649,10 +647,16 @@ object ProtocolGenerator {
           .getOrElse(Free.pure(None))
       case None =>
         schema match {
-          case _: MapSchema if isRequired =>
-            emptyMap.map(Some(_))
-          case _: ArraySchema if isRequired =>
-            emptyArray.map(Some(_))
+          case map: MapSchema if isRequired =>
+            for {
+              customTpe <- SwaggerUtil.customMapTypeName(map)
+              result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => Free.pure(None))
+            } yield result
+          case arr: ArraySchema if isRequired =>
+            for {
+              customTpe <- SwaggerUtil.customArrayTypeName(arr)
+              result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => Free.pure(None))
+            } yield result
           case p: BooleanSchema =>
             Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_)))
           case p: NumberSchema if p.getFormat == "double" =>
