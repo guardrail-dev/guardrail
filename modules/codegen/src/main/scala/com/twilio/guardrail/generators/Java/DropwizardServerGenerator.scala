@@ -344,17 +344,18 @@ object DropwizardServerGenerator {
                   .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
                   .foreach(method.addAnnotation)
 
-                def addParamAnnotations(param: ScalaParameter[JavaLanguage], annotationName: String): Parameter = {
-                  val parameter = param.param.clone()
-                  // NB: The order here is actually critical.  In the case where we're using multipart,
-                  // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
-                  // https://github.com/eclipse-ee4j/jersey/issues/3632
+                def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
                   if (param.required) {
-                    parameter.addMarkerAnnotation("NotNull")
+                    // NB: The order here is actually critical.  In the case where we're using multipart,
+                    // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
+                    // https://github.com/eclipse-ee4j/jersey/issues/3632
+                    parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
                   }
-                  parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
                   parameter
                 }
+
+                def addParamAnnotation(parameter: Parameter, param: ScalaParameter[JavaLanguage], annotationName: String): Parameter =
+                  parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
                 def boxParameterTypes(parameter: Parameter): Parameter = {
                   if (parameter.getType.isPrimitiveType) {
@@ -363,15 +364,24 @@ object DropwizardServerGenerator {
                   parameter
                 }
 
-                val methodParams: List[Parameter] = (List(
+                val annotatedMethodParams: List[Parameter] = List(
                   (parameters.pathParams, "PathParam"),
                   (parameters.headerParams, "HeaderParam"),
                   (parameters.queryStringParams, "QueryParam"),
                   (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
                 ).flatMap({
                   case (params, annotationName) =>
-                    params.map(addParamAnnotations(_, annotationName))
-                }) ++ parameters.bodyParams.map(_.param)).map(boxParameterTypes)
+                    params.map({ param =>
+                      val parameter = param.param.clone()
+                      val annotated = addParamAnnotation(parameter, param, annotationName)
+                      addValidationAnnotations(annotated, param)
+                    })
+                })
+
+                val bareMethodParams: List[Parameter] = parameters.bodyParams.toList
+                  .map(param => addValidationAnnotations(param.param.clone(), param))
+
+                val methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
 
                 methodParams.foreach(method.addParameter)
                 method.addParameter(
