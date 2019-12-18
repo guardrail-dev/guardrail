@@ -3,6 +3,8 @@ package com.twilio.guardrail.generators.syntax
 import com.twilio.guardrail.generators.syntax.Java._
 import org.scalatest.{ FreeSpec, Matchers }
 import scala.util.Random
+import scala.util.{ Failure, Try }
+import com.github.javaparser.StaticJavaParser
 
 object JavaSyntaxTest {
   val TEST_RESERVED_WORDS = List(
@@ -80,6 +82,20 @@ class JavaSyntaxTest extends FreeSpec with Matchers {
             escaped shouldBe word
           }
         })
+    }
+  }
+
+  "safeParse should" - {
+    "Produce a useful error string for a known error" in {
+      val Failure(e) = Try(StaticJavaParser.parseName("com.twilio.dashy-package-name.MyClass"))
+      val result     = formatException("my prefix")(e)
+      result shouldBe """my prefix: Unexpected "-" at character 17 (valid: <EOF>)"""
+    }
+
+    "Produce a useful error string for a custom complex error" in {
+      val Failure(e) = Try(StaticJavaParser.parseClassOrInterfaceType(" }"))
+      val result     = formatException("my prefix")(e)
+      result shouldBe """my prefix: Unexpected "}" at character 2 (valid: "enum", "strictfp", "yield", "requires", "to", "with", "open", "opens", "uses", "module", "exports", "provides", "transitive", <IDENTIFIER>)"""
     }
   }
 }
