@@ -83,9 +83,12 @@ object Java {
             problem.getCause.asScala
               .flatMap({
                 case cause: com.github.javaparser.ParseException =>
-                  val nextToken = cause.currentToken.next
-                  val image     = nextToken.image
-                  Option(s"""Unexpected "${image}" at character ${nextToken.beginColumn}""")
+                  for {
+                    token       <- Option(cause.currentToken)
+                    nextToken   <- Option(token.next)
+                    image       <- Option(nextToken.image)
+                    beginColumn <- Option(nextToken.beginColumn)
+                  } yield s"""Unexpected "${image}" at character ${beginColumn}"""
                 case _ => Option.empty
               })
               .getOrElse(problem.getMessage())
