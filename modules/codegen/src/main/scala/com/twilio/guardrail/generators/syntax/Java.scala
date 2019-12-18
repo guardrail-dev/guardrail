@@ -73,45 +73,46 @@ object Java {
     def toList(implicit cls: ClassTag[T]): List[T] = nl.iterator.asScala.toList
   }
 
+  def formatException[T <: Throwable](prefix: String): T => String = {
+    case t: com.github.javaparser.ParseProblemException =>
+      val problems     = t.getProblems().asScala.toVector
+      val msgSeparator = if (problems.length > 1) "\n" else " "
+      val msgs = problems
+        .map(
+          problem =>
+            problem.getCause.asScala
+              .flatMap({
+                case cause: com.github.javaparser.ParseException =>
+                  val nextToken = cause.currentToken.next
+                  val image     = nextToken.image
+                  Option(s"""Unexpected "${image}" at character ${nextToken.beginColumn}""")
+                case _ => Option.empty
+              })
+              .getOrElse(problem.getMessage())
+        )
+      val msg = msgs match {
+        case Vector()    => "\n" + t.getMessage()
+        case Vector(msg) => msg
+        case rest =>
+          rest.zipWithIndex
+            .map({
+              case (msg, idx) =>
+                s"""Problem ${idx + 1}:
+                  |  ${msg.trim.split("\n").mkString("\n  ")}
+                  |""".stripMargin
+            })
+            .mkString("\n")
+      }
+      s"${prefix}:${msgSeparator}${msg}"
+    case t =>
+      s"${prefix}: ${t.getMessage}"
+  }
+
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] =
     Target.log.function(s"${log}: ${s}") {
       Try(parser(s)) match {
         case Success(value) => Target.pure(value)
-        case Failure(t) =>
-          t match {
-            case t: com.github.javaparser.ParseProblemException =>
-              val problems     = t.getProblems().asScala.toVector
-              val msgSeparator = if (problems.length > 1) "\n" else " "
-              val msgs = problems
-                .map(
-                  problem =>
-                    problem.getCause.asScala
-                      .flatMap({
-                        case cause: com.github.javaparser.ParseException =>
-                          val nextToken = cause.currentToken.next
-                          val image     = nextToken.image
-                          Option(s"""Unexpected "${image}" at character ${nextToken.beginColumn}""")
-                        case _ => Option.empty
-                      })
-                      .getOrElse(problem.getMessage())
-                )
-              val msg = msgs match {
-                case Vector()    => "\n" + t.getMessage()
-                case Vector(msg) => msg
-                case rest =>
-                  rest.zipWithIndex
-                    .map({
-                      case (msg, idx) =>
-                        s"""Problem ${idx + 1}:
-                          |  ${msg.trim.split("\n").mkString("\n  ")}
-                          |""".stripMargin
-                    })
-                    .mkString("\n")
-              }
-              Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}:${msgSeparator}${msg}")
-            case t =>
-              Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}")
-          }
+        case Failure(t)     => Target.raiseError(formatException(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}")(t))
       }
     }
 
