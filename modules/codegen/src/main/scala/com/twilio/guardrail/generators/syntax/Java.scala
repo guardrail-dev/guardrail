@@ -1,5 +1,6 @@
 package com.twilio.guardrail.generators.syntax
 
+import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.body._
@@ -83,12 +84,14 @@ object Java {
             problem.getCause.asScala
               .flatMap({
                 case cause: com.github.javaparser.ParseException =>
+                  val tokenImage = cause.tokenImage.toVector
+                  val expected   = Option(cause.expectedTokenSequences).map(_.toVector.flatMap(_.toVector)).orEmpty.flatMap(idx => tokenImage.get(idx))
                   for {
                     token       <- Option(cause.currentToken)
                     nextToken   <- Option(token.next)
                     image       <- Option(nextToken.image)
                     beginColumn <- Option(nextToken.beginColumn)
-                  } yield s"""Unexpected "${image}" at character ${beginColumn}"""
+                  } yield s"""Unexpected "${image}" at character ${beginColumn} (valid: ${expected.mkString(", ")})"""
                 case _ => Option.empty
               })
               .getOrElse(problem.getMessage())
