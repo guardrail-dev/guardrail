@@ -77,7 +77,40 @@ object Java {
     Target.log.function(s"${log}: ${s}") {
       Try(parser(s)) match {
         case Success(value) => Target.pure(value)
-        case Failure(t)     => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}")
+        case Failure(t) =>
+          t match {
+            case t: com.github.javaparser.ParseProblemException =>
+              val problems     = t.getProblems().asScala.toVector
+              val msgSeparator = if (problems.length > 1) "\n" else " "
+              val msg = problems.zipWithIndex
+                .map({
+                  case (problem, idx) =>
+                    val fallback =
+                      if (problems.length == 0) {
+                        // Not much we can do here, just return the stack trace
+                        "\n" + t.getMessage()
+                      } else if (problems.length == 1) {
+                        "\n" + problem.getMessage().trim.split("\n").mkString("\n  ")
+                      } else {
+                        s"""Problem ${idx + 1}:
+                        |  ${problem.getMessage().trim.split("\n").mkString("\n  ")}
+                        |""".stripMargin
+                      }
+                    problem.getCause.asScala
+                      .flatMap({
+                        case cause: com.github.javaparser.ParseException =>
+                          val nextToken = cause.currentToken.next
+                          val image     = nextToken.image
+                          Option(s"""Unexpected "${image}" at character ${nextToken.beginColumn}""")
+                        case _ => Option.empty
+                      })
+                      .getOrElse(fallback)
+                })
+                .mkString("\n")
+              Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}:${msgSeparator}${msg}")
+            case t =>
+              Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}")
+          }
       }
     }
 
