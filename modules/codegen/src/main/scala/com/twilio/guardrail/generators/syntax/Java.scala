@@ -82,20 +82,9 @@ object Java {
             case t: com.github.javaparser.ParseProblemException =>
               val problems     = t.getProblems().asScala.toVector
               val msgSeparator = if (problems.length > 1) "\n" else " "
-              val msg = problems.zipWithIndex
-                .map({
-                  case (problem, idx) =>
-                    val fallback =
-                      if (problems.length == 0) {
-                        // Not much we can do here, just return the stack trace
-                        "\n" + t.getMessage()
-                      } else if (problems.length == 1) {
-                        "\n" + problem.getMessage().trim.split("\n").mkString("\n  ")
-                      } else {
-                        s"""Problem ${idx + 1}:
-                        |  ${problem.getMessage().trim.split("\n").mkString("\n  ")}
-                        |""".stripMargin
-                      }
+              val msgs = problems
+                .map(
+                  problem =>
                     problem.getCause.asScala
                       .flatMap({
                         case cause: com.github.javaparser.ParseException =>
@@ -104,9 +93,21 @@ object Java {
                           Option(s"""Unexpected "${image}" at character ${nextToken.beginColumn}""")
                         case _ => Option.empty
                       })
-                      .getOrElse(fallback)
-                })
-                .mkString("\n")
+                      .getOrElse(problem.getMessage())
+                )
+              val msg = msgs match {
+                case Vector()    => "\n" + t.getMessage()
+                case Vector(msg) => msg
+                case rest =>
+                  rest.zipWithIndex
+                    .map({
+                      case (msg, idx) =>
+                        s"""Problem ${idx + 1}:
+                          |  ${msg.trim.split("\n").mkString("\n  ")}
+                          |""".stripMargin
+                    })
+                    .mkString("\n")
+              }
               Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}:${msgSeparator}${msg}")
             case t =>
               Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}")
