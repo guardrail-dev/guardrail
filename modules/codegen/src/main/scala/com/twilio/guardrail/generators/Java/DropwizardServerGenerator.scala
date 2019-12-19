@@ -23,8 +23,8 @@ import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
 import io.swagger.v3.oas.models.responses.ApiResponse
-
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
 
@@ -43,6 +43,15 @@ object DropwizardServerGenerator {
   private val RESPONSE_TYPE         = StaticJavaParser.parseClassOrInterfaceType("Response")
   private val RESPONSE_BUILDER_TYPE = StaticJavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
+
+  private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.InstantParam")
+  private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetDateTimeParam")
+  private val ZONED_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.ZonedDateTimeParam")
+  private val LOCAL_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalDateTimeParam")
+  private val LOCAL_DATE_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalDateParam")
+  private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalTimeParam")
+  private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
+  private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
 
   private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
   private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
@@ -286,6 +295,7 @@ object DropwizardServerGenerator {
           "java.util.Optional",
           "java.util.concurrent.CompletionStage",
           "org.glassfish.jersey.media.multipart.FormDataParam",
+          "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory"
         ).traverse(safeParseRawImport)
@@ -344,6 +354,35 @@ object DropwizardServerGenerator {
                   .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
                   .foreach(method.addAnnotation)
 
+                def transformJsr310Params(parameter: Parameter): Parameter = {
+                  val isOptional = parameter.getType.isOptional
+                  val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
+
+                  def transform(to: Type): Parameter = {
+                    parameter.setType(if (isOptional) optionalType(to) else to)
+                    if (!isOptional) {
+                      parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                    }
+                    parameter
+                  }
+
+                  tpe match {
+                    case cls: ClassOrInterfaceType if cls.getScope.asScala.forall(_.asString == "java.time") =>
+                      cls.getNameAsString match {
+                        case "Instant"        => transform(INSTANT_PARAM_TYPE)
+                        case "OffsetDateTime" => transform(OFFSET_DATE_TIME_PARAM_TYPE)
+                        case "ZonedDateTime"  => transform(ZONED_DATE_TIME_PARAM_TYPE)
+                        case "LocalDateTime"  => transform(LOCAL_DATE_TIME_PARAM_TYPE)
+                        case "LocalDate"      => transform(LOCAL_DATE_PARAM_TYPE)
+                        case "LocalTime"      => transform(LOCAL_TIME_PARAM_TYPE)
+                        case "OffsetTime"     => transform(OFFSET_TIME_PARAM_TYPE)
+                        case "Duration"       => transform(DURATION_PARAM_TYPE)
+                        case _                => parameter
+                      }
+                    case _ => parameter
+                  }
+                }
+
                 def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
                   if (param.required) {
                     // NB: The order here is actually critical.  In the case where we're using multipart,
@@ -372,14 +411,19 @@ object DropwizardServerGenerator {
                 ).flatMap({
                   case (params, annotationName) =>
                     params.map({ param =>
-                      val parameter = param.param.clone()
-                      val annotated = addParamAnnotation(parameter, param, annotationName)
-                      addValidationAnnotations(annotated, param)
+                      val parameter       = param.param.clone()
+                      val annotated       = addParamAnnotation(parameter, param, annotationName)
+                      val dateTransformed = transformJsr310Params(annotated)
+                      addValidationAnnotations(dateTransformed, param)
                     })
                 })
 
                 val bareMethodParams: List[Parameter] = parameters.bodyParams.toList
-                  .map(param => addValidationAnnotations(param.param.clone(), param))
+                  .map({ param =>
+                    val parameter       = param.param.clone()
+                    val dateTransformed = transformJsr310Params(parameter)
+                    addValidationAnnotations(dateTransformed, param)
+                  })
 
                 val methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
 
@@ -517,10 +561,28 @@ object DropwizardServerGenerator {
                   true
                 )
 
+                def transformHandlerArg(parameter: Parameter): Expression = {
+                  val isOptional = parameter.getType.isOptional
+                  val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
+                  if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
+                    if (isOptional) {
+                      new MethodCallExpr(
+                        parameter.getNameAsExpression,
+                        "map",
+                        new NodeList[Expression](new MethodReferenceExpr(new NameExpr(typeName), new NodeList, "get"))
+                      )
+                    } else {
+                      new MethodCallExpr(parameter.getNameAsExpression, "get")
+                    }
+                  } else {
+                    parameter.getNameAsExpression
+                  }
+                }
+
                 val handlerCall = new MethodCallExpr(
                   new FieldAccessExpr(new ThisExpr, "handler"),
                   operationId,
-                  new NodeList[Expression](methodParams.map(param => new NameExpr(param.getName.asString)): _*)
+                  new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
                 )
 
                 method.setBody(
