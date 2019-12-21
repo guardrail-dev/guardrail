@@ -626,7 +626,7 @@ object Http4sServerGenerator {
           // Give up for non-primitive type and rely on backtick-escaping
           case tpe => Some(tpe.toString -> tpe)
         })
-        .toMap
+        .distinctBy(_._1)
         .map({
           case (name, tpe) =>
             q"""
@@ -640,11 +640,10 @@ object Http4sServerGenerator {
             }
           """
         })
-        .toList
 
-    def generateQueryParamMatchers(operationId: String, qsArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] =
-      qsArgs
-        .flatMap {
+    def generateQueryParamMatchers(operationId: String, qsArgs: List[ScalaParameter[ScalaLanguage]]): List[Defn] = {
+      val (decoders, matchers) = qsArgs
+        .traverse({
           case ScalaParameter(_, param, _, argName, argType) =>
             val (queryParamMatcher, elemType) = param match {
               case param"$_: Option[Iterable[$tpe]]" =>
@@ -666,11 +665,17 @@ object Http4sServerGenerator {
                   }
                  """, tpe)
               case param"$_: Option[$tpe]" =>
-                (q"""object ${Term
-                  .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""", tpe)
+                (
+                  q"""object ${Term
+                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
+                  tpe
+                )
               case param"$_: Option[$tpe] = $_" =>
-                (q"""object ${Term
-                  .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""", tpe)
+                (
+                  q"""object ${Term
+                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
+                  tpe
+                )
               case param"$_: Iterable[$tpe]" =>
                 (q"""
                    object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
@@ -686,21 +691,27 @@ object Http4sServerGenerator {
                    }
                  """, tpe)
               case _ =>
-                (q"""object ${Term
-                  .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""", argType)
+                (
+                  q"""object ${Term
+                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
+                  argType
+                )
             }
             if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.toString())) {
               val queryParamDecoder = q"""
-                implicit val ${Pat.Var(Term.Name(s"${argName.value}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
+                implicit val ${Pat.Var(Term.Name(s"${elemType.toString()}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
                     Json.fromString(value.value).as[$elemType]
                       .leftMap(t => ParseFailure("Query decoding failed", t.getMessage))
                       .toValidatedNel
               """
-              List(queryParamMatcher, queryParamDecoder)
+              (List((elemType, queryParamDecoder)), queryParamMatcher)
             } else {
-              List(queryParamMatcher)
+              (List.empty, queryParamMatcher)
             }
-        }
+        })
+
+      decoders.distinctBy(_._1.toString()).map(_._2) ++ matchers
+    }
 
     def generateCodecs(
         operationId: String,
