@@ -2,7 +2,7 @@ package com.twilio.guardrail
 package core
 
 import cats.data.{ NonEmptyList, State }
-import cats.free.{ Free, GuardrailFreeHacks }
+// Issue #496: Injected StructuredLogger too slow import cats.free.{ Free, GuardrailFreeHacks }
 import cats.implicits._
 import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.languages.LA
@@ -150,8 +150,9 @@ case class CoreTermInterp[L <: LA](
                   result <- Common
                     .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
                 } yield result
-                GuardrailFreeHacks
-                  .injectLogs(program, Set("LogPush", "LogPop", "LogDebug", "LogInfo", "LogWarning", "LogError"), Sw.log.push, Sw.log.pop, Free.pure(()))
+                // Issue #496: Injected StructuredLogger too slow
+                // GuardrailFreeHacks.injectLogs(program, Set("LogPush", "LogPop", "LogDebug", "LogInfo", "LogWarning", "LogError"), Sw.log.push, Sw.log.pop, Free.pure(()))
+                program
                   .foldMap(targetInterpreter)
               } catch {
                 case NonFatal(ex) =>
