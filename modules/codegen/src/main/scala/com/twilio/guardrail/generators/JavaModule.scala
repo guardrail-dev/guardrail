@@ -12,6 +12,8 @@ import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 
 object JavaModule extends AbstractModule[JavaLanguage] {
+  implicit val coreTargetMonad: cats.Monad[CoreTarget] = cats.data.EitherT.catsDataMonadErrorForEitherT[cats.Id, Error]
+
   def jackson: FunctionK[ModelInterpreters[JavaLanguage, ?], Target] = {
     val interpDefinitionPM
         : FunctionK[DefinitionPM[JavaLanguage, ?], Target]                         = JacksonGenerator.ProtocolSupportTermInterp or JacksonGenerator.ModelProtocolTermInterp

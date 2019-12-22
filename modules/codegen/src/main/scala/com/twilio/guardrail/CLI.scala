@@ -96,7 +96,7 @@ trait CLICommon {
 
     val fallback = List.empty[Path]
     import CLICommon.unsafePrintHelp
-    val (logger, paths) = result
+    val /*(logger,*/ paths /*)*/ = result
       .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
@@ -143,9 +143,8 @@ trait CLICommon {
         },
         identity
       )
-      .runEmpty
 
-    println(logger.show)
+    // println(logger.show)
   }
 
   def runLanguages(
