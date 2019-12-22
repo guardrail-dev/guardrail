@@ -166,7 +166,7 @@ trait CLICommon {
         }).map(_.toList)
     })
 
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
+  def guardrailRunner: Map[String, NonEmptyList[Args]] => CoreTarget[List[java.nio.file.Path]] = { tasks =>
     runLanguages(tasks)
       .flatMap(
         _.flatTraverse(
