@@ -3,6 +3,7 @@ package generators
 
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
+import cats.implicits._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
@@ -175,7 +176,7 @@ object AkkaHttpClientGenerator {
             body: Option[ScalaParameter[ScalaLanguage]],
             headerArgs: List[ScalaParameter[ScalaLanguage]],
             extraImplicits: List[Term.Param]
-        ): RenderedClientOperation[ScalaLanguage] = {
+        ): Target[RenderedClientOperation[ScalaLanguage]] = {
           val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
           val defaultHeaders = param"headers: List[HttpHeader] = Nil"
           val fallbackHttpBody: Option[(Term, Type)] =
@@ -184,12 +185,10 @@ object AkkaHttpClientGenerator {
             else None
           val textPlainBody: Option[Term] =
             if (consumes.contains(RouteMeta.TextPlain))
-              body.map(
-                sp =>
-                  q"TextPlain(${if (sp.required) sp.paramName
-                  else q"""${sp.paramName}.getOrElse("")"""})"
-              )
-            else None
+              body.map { sp =>
+                val inner = if (sp.required) sp.paramName else q"${sp.paramName}.getOrElse(${Lit.String("")})"
+                q"TextPlain(${inner})"
+              } else None
           val safeBody: Option[(Term, Type)] =
             body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
@@ -307,11 +306,13 @@ object AkkaHttpClientGenerator {
             implicitParams
           ).flatten
 
-          RenderedClientOperation[ScalaLanguage](
+          for {
+            codecs <- generateCodecs(methodName, responses, produces)
+          } yield RenderedClientOperation[ScalaLanguage](
             q"""
               def ${Term.Name(methodName)}(...${arglists}): EitherT[Future, Either[Throwable, HttpResponse], $responseTypeRef] = $methodBody
             """,
-            generateCodecs(methodName, responses, produces)
+            codecs
           )
         }
 
@@ -348,7 +349,7 @@ object AkkaHttpClientGenerator {
             List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
-          renderedClientOperation = build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+          renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
             tracingArgsPre,
             tracingArgsPost,
             pathArgs,
@@ -471,15 +472,18 @@ object AkkaHttpClientGenerator {
         Target.pure(NonEmptyList(Right(client), Nil))
     }
 
-    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): Target[List[Defn.Val]] =
       generateDecoders(methodName, responses, produces)
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): List[Defn.Val] =
-      for {
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): Target[List[Defn.Val]] =
+      (for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1).toList
-        (decoder, baseType) = AkkaHttpHelper.generateDecoder(tpe, produces)
-      } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
+      } yield {
+        for {
+          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces)
+        } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
+      }).sequence
   }
 
 }

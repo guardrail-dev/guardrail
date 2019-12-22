@@ -9,7 +9,6 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.media.Schema
 import scala.collection.JavaConverters._
 
 class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])], val headers: Headers[L]) {

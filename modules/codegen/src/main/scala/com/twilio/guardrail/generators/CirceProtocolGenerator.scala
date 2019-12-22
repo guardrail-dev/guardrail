@@ -2,7 +2,6 @@ package com.twilio.guardrail
 package generators
 
 import _root_.io.swagger.v3.oas.models.media._
-import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
 import com.twilio.guardrail.core.Tracker
