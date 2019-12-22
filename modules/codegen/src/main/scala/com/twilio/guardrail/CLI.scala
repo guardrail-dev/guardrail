@@ -178,9 +178,10 @@ trait CLICommon {
                 value =>
                   Target
                     .pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .toEitherT
                     .subflatMap(_ => Either.left[Error, List[Path]](value))
               )
-              <* Target.pushLogger(StructuredLogger.reset)
+              <* Target.pushLogger(StructuredLogger.reset).toEitherT
         )
       )
       .map(_.distinct)

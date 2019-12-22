@@ -18,7 +18,7 @@ object ReadSwagger {
           Option(new OpenAPIParser().readLocation(rs.path.toAbsolutePath.toString, new util.LinkedList(), opts).getOpenAPI),
           UserError(s"Spec file ${rs.path} is incorrectly formatted.")
         )
-        .flatMap(rs.next)
+        .flatMap(rs.next(_).toEitherT)
     } else {
       CoreTarget.raiseError(UserError(s"Spec file ${rs.path} does not exist."))
     }
