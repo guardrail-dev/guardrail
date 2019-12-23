@@ -40,7 +40,9 @@ sealed case class StructuredLoggerPush(next: String)                            
 case object StructuredLoggerPop                                                 extends StructuredLogEntry
 case object StructuredLoggerReset                                               extends StructuredLogEntry
 
-case class StructuredLogger(entries: Vector[StructuredLogEntry])
+case class StructuredLogger(entries: Vector[StructuredLogEntry]) {
+  def concat(other: StructuredLogger): StructuredLogger = StructuredLogger(entries ++ other.entries)
+}
 
 object StructuredLogger extends StructuredLoggerInstances {
   def push(next: String): StructuredLogger = StructuredLogger(StructuredLoggerPush(next).pure[Vector])
