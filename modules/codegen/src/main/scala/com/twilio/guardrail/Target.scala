@@ -31,7 +31,6 @@ object Target extends LogAbstraction {
     x.valueOr({ err =>
       throw new Exception(err.toString)
     })
-  // .runEmptyA
 
   implicit val targetInstances = new MonadError[Target, Error] with Traverse[Target] {
     def pure[A](x: A): Target[A] = Target.A.pure(x)
