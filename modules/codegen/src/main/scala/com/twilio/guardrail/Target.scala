@@ -38,12 +38,12 @@ object Target extends LogAbstraction {
 
     def handleErrorWith[A](fa: Target[A])(f: Error => Target[A]): Target[A] = fa match {
       case fa @ TargetValue(_, _) => fa
-      case TargetError(err, la)    => f(err) // TODO: Integrate la into f(err)'s StructuredLogger
+      case TargetError(err, la)   => f(err).prependLog(la)
     }
     def raiseError[A](e: Error): Target[A] = new TargetError(e, emptyLogger)
 
     def flatMap[A, B](fa: Target[A])(f: A => Target[B]): Target[B] = fa match {
-      case TargetValue(a, la)   => f(a)  // TODO: Integrate la into f(a)'s StructuredLogger
+      case TargetValue(a, la)   => f(a).prependLog(la)
       case TargetError(err, la) => new TargetError(err, la)
     }
     def tailRecM[A, B](a: A)(f: A => Target[Either[A, B]]): Target[B] =
@@ -52,7 +52,7 @@ object Target extends LogAbstraction {
           new TargetError(err, la)
         case TargetValue(e, la) =>
           e match {
-            case Left(b)  => tailRecM(b)(f)  // TODO: Integrate la into this result
+            case Left(b)  => tailRecM(b)(f).prependLog(la)
             case Right(a) => new TargetValue(a, la)
           }
       }
@@ -78,6 +78,7 @@ sealed abstract class Target[A] {
   def map[B](f: A => B): Target[B]
   def flatMap[B](f: A => Target[B]): Target[B]
   def recover[AA >: A](f: Error => AA): Target[AA]
+  def prependLog(l: StructuredLogger): Target[A]
 }
 
 object TargetValue {
@@ -88,8 +89,9 @@ class TargetValue[A](val value: A, val logger: StructuredLogger) extends Target[
   def valueOr[AA >: A](fallback: Error => AA): AA  = value
   def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.right[Error](cats.Monad[cats.Id].pure(value))
   def map[B](f: A => B): Target[B]                 = new TargetValue(f(value), logger)
-  def flatMap[B](f: A => Target[B]): Target[B]     = f(value) // TODO: Incorporate logger into f(value)
+  def flatMap[B](f: A => Target[B]): Target[B]     = f(value).prependLog(logger)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(value, logger)
+  def prependLog(l: StructuredLogger)              = new TargetValue(value, l.concat(logger))
 }
 
 object TargetError {
@@ -102,4 +104,5 @@ class TargetError[A](val error: Error, val logger: StructuredLogger) extends Tar
   def map[B](f: A => B): Target[B]                 = new TargetError(error, logger)
   def flatMap[B](f: A => Target[B]): Target[B]     = new TargetError(error, logger)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(f(error), logger)
+  def prependLog(l: StructuredLogger)              = new TargetError(error, l.concat(logger))
 }
