@@ -78,9 +78,11 @@ sealed abstract class Target[A] {
   def flatMap[B](f: A => Target[B]): Target[B]
   def recover[AA >: A](f: Error => AA): Target[AA]
 }
+
 object TargetValue {
   def unapply[A](x: TargetValue[A]): Option[A] = Some(x.value)
 }
+
 class TargetValue[A](val value: A) extends Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA  = value
   def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.right[Error](cats.Monad[cats.Id].pure(value))
@@ -88,9 +90,11 @@ class TargetValue[A](val value: A) extends Target[A] {
   def flatMap[B](f: A => Target[B]): Target[B]     = f(value)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(value)
 }
+
 object TargetError {
   def unapply[A](x: TargetError[A]): Option[Error] = Some(x.error)
 }
+
 class TargetError[A](val error: Error) extends Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA  = fallback(error)
   def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.left[A](cats.Monad[cats.Id].pure(error))
