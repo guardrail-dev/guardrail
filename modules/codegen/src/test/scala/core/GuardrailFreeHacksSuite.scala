@@ -23,7 +23,6 @@ case class Passthrough(value: String) extends Algebra[String]
   *  For documentation, please see GuardrailFreeHacks itself.
   */
 class GuardrailFreeHacksSuite extends FunSuite with Matchers {
-  /*
   def genLogEntries(): StructuredLogger = {
     type Program[A] = EitherK[Algebra, SwaggerTerm[ScalaLanguage, ?], A]
     val Sw = SwaggerTerms.swaggerTerm[ScalaLanguage, Program]
@@ -82,8 +81,7 @@ class GuardrailFreeHacksSuite extends FunSuite with Matchers {
     GuardrailFreeHacks
       .injectLogs(program, ignoredTerms, Sw.log.push, Sw.log.pop, Free.pure(()))
       .foldMap(interp or SwaggerGenerator.apply[ScalaLanguage])
-      .value
-      .runEmptyS
+      .logger
   }
 
   test("Nested function calls work (DEBUG)") {
@@ -171,5 +169,4 @@ class GuardrailFreeHacksSuite extends FunSuite with Matchers {
     implicit val logLevel = LogLevels.Silent
     genLogEntries().show should ===(expected)
   }
- */
 }

@@ -72,6 +72,7 @@ object Target extends LogAbstraction {
 }
 
 sealed abstract class Target[A] {
+  def logger: StructuredLogger
   def valueOr[AA >: A](fallback: Error => AA): AA
   def toEitherT: EitherT[cats.Id, Error, A]
   def map[B](f: A => B): Target[B]
