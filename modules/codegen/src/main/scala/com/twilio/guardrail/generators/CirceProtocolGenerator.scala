@@ -250,7 +250,7 @@ object CirceProtocolGenerator {
               .to[List]
             Option(
               q"""
-              new ObjectEncoder[${Type.Name(clsName)}] {
+              new Encoder.AsObject[${Type.Name(clsName)}] {
                 final def encodeObject(a: ${Type
                 .Name(clsName)}): JsonObject = JsonObject.fromIterable(Vector(..${pairs}))
               }
@@ -258,7 +258,7 @@ object CirceProtocolGenerator {
             )
           }
         Target.pure(encVal.map(encVal => q"""
-            implicit val ${suffixClsName("encode", clsName)}: ObjectEncoder[${Type.Name(clsName)}] = {
+            implicit val ${suffixClsName("encode", clsName)}: Encoder.AsObject[${Type.Name(clsName)}] = {
               val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
               $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }

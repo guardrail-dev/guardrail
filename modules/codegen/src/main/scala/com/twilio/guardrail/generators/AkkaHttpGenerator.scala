@@ -73,7 +73,7 @@ object AkkaHttpGenerator {
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${jsonType}] =
               Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
-                HttpEntity(MediaTypes.`application/json`, printer.pretty(json))
+                HttpEntity(MediaTypes.`application/json`, printer.print(json))
               }
 
             // Translate [A: Encoder] => HttpEntity
