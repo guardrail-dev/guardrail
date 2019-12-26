@@ -94,7 +94,8 @@ val exampleFrameworkSuites = Map(
     ("http4s", "http4s", List("client", "server"))
   ),
   "java" -> List(
-    ("dropwizard", "dropwizard", List("client", "server"))
+    ("dropwizard", "dropwizard", List("client", "server")),
+    ("spring-mvc", "springMvc", List("client", "server"))
   )
 )
 
@@ -117,7 +118,7 @@ def exampleArgs(language: String): List[List[String]] = exampleCases
         ) ++ filteredExtra)
   })
 
-lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
+lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run java generator with example args")
 fullRunTask(
   runJavaExample,
   Test,
@@ -349,6 +350,33 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     crossPaths := false,  // strangely needed to get the JUnit tests to run at all
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
+lazy val springMvcSample = (project in file("modules/sample-springMvc"))
+  .settings(
+    codegenSettings,
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    libraryDependencies ++= Seq(
+      "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
+      "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
+      "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
+      "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
+      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
+      "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
+      "junit"                      %  "junit"                  % "4.12"             % Test,
+      "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
+      "org.mockito"                %% "mockito-scala"          % "1.7.1"            % Test,
+      "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
+      "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+      "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
+    ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+    crossPaths := false,
     skip in publish := true,
     scalafmtOnCompile := false
   )
