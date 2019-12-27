@@ -307,7 +307,7 @@ case class GetResponses[L <: LA](operationId: String, operation: Tracker[Operati
 case class GetSimpleRef[L <: LA](ref: Tracker[Option[Schema[_]]])                             extends SwaggerTerm[L, String]
 case class GetItems[L <: LA](arr: Tracker[ArraySchema])                                       extends SwaggerTerm[L, Tracker[Schema[_]]]
 case class GetType[L <: LA](model: Tracker[Schema[_]])                                        extends SwaggerTerm[L, Tracker[String]]
-case class FallbackPropertyTypeHandler[L <: LA](prop: Schema[_])                              extends SwaggerTerm[L, L#Type]
+case class FallbackPropertyTypeHandler[L <: LA](prop: Tracker[Schema[_]])                     extends SwaggerTerm[L, L#Type]
 case class ResolveType[L <: LA](name: String, protocolElems: List[StrictProtocolElems[L]])    extends SwaggerTerm[L, StrictProtocolElems[L]]
 case class FallbackResolveElems[L <: LA](lazyElems: List[LazyProtocolElems[L]])               extends SwaggerTerm[L, List[StrictProtocolElems[L]]]
 case class LogPush[L <: LA](name: String)                                                     extends SwaggerTerm[L, Unit]
