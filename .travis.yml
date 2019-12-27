@@ -12,8 +12,10 @@ scala:
 # Travis doesn't know it's safe to do a relase build (tag build) at the same time as the safety net master build,
 # so the release build is always delayed by a full test run unnecessarily.
 script: >
-  if ( [[ "$TRAVIS_PULL_REQUEST" != "false" ]] || [[ ! -z "$TRAVIS_TAG" ]] ); then
-    sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite
+  if [[ "$TRAVIS_PULL_REQUEST_BRANCH" = "microsite-fix" && "$TRAVIS_PULL_REQUEST_SLUG" = "blast-hardcheese/guardrail" ]]; then
+    sbt microsite/publishMicrosite;
+  elif ( [[ "$TRAVIS_PULL_REQUEST" != "false" ]] || [[ ! -z "$TRAVIS_TAG" ]] ); then
+    sbt ++$TRAVIS_SCALA_VERSION checkFormatting testSuite;
   fi
 
 matrix:
@@ -55,5 +57,5 @@ before_script:
 
 after_success:
 - if [ $TRAVIS_PULL_REQUEST = 'false' ] && [[ "$TRAVIS_TAG" = v* ]]; then
-    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeBundleRelease microsite/makeMicrosite microsite/publishMicrosite;
+    sbt ++$TRAVIS_SCALA_VERSION codegen/clean publishBintray codegen/bintrayRelease publishSonatype sonatypeBundleRelease microsite/publishMicrosite;
   fi
