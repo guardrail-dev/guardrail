@@ -440,7 +440,7 @@ object SwaggerUtil {
           .orRefine({ case p: PasswordSchema => p })(buildResolveNoDefault)
           .orRefine({ case f: FileSchema => f })(buildResolveNoDefault)
           .orRefine({ case u: UUIDSchema => u })(buildResolveNoDefault)
-          .orRefineFallback(x => fallbackPropertyTypeHandler(x.get).map(Resolved[L](_, None, None, None, None))) // This may need to be rawType=string?
+          .orRefineFallback(x => fallbackPropertyTypeHandler(x).map(Resolved[L](_, None, None, None, None))) // This may need to be rawType=string?
       }
     }
 
