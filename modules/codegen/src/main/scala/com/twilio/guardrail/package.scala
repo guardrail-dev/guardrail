@@ -52,7 +52,7 @@ package guardrail {
       x.valueOr({ err =>
         throw new Exception(err.toString)
       })
-    //.runEmptyA
+      .runEmptyA
   }
 }
 
@@ -75,8 +75,8 @@ package object guardrail {
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
   type Logger[T]     = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
-  type CoreTarget[A] = EitherT[Id, Error, A]
+  type CoreTarget[A] = EitherT[Logger, Error, A]
 
   // Likely can be removed in future versions of scala or cats? -Ypartial-unification seems to get confused here -- possibly higher arity issues?
-  // implicit val loggerMonad: cats.Monad[Logger] = cats.data.IndexedStateT.catsDataMonadForIndexedStateT[cats.Id, StructuredLogger]
+  implicit val loggerMonad: cats.Monad[Logger] = cats.data.IndexedStateT.catsDataMonadForIndexedStateT[cats.Id, StructuredLogger]
 }

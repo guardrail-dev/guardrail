@@ -5,6 +5,8 @@ import cats.{ Applicative, MonadError }
 import cats.data.EitherT
 import cats.Traverse
 import cats.Eval
+import cats.data.IndexedStateT
+import cats.implicits._
 
 object Target extends LogAbstraction {
   val emptyLogger = cats.kernel.Monoid[StructuredLogger].empty
@@ -74,7 +76,7 @@ object Target extends LogAbstraction {
 sealed abstract class Target[A] {
   def logger: StructuredLogger
   def valueOr[AA >: A](fallback: Error => AA): AA
-  def toEitherT: EitherT[cats.Id, Error, A]
+  def toEitherT: EitherT[Logger, Error, A]
   def map[B](f: A => B): Target[B]
   def flatMap[B](f: A => Target[B]): Target[B]
   def recover[AA >: A](f: Error => AA): Target[AA]
@@ -87,7 +89,7 @@ object TargetValue {
 
 class TargetValue[A](val value: A, val logger: StructuredLogger) extends Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA  = value
-  def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.right[Error](cats.Monad[cats.Id].pure(value))
+  def toEitherT: EitherT[Logger, Error, A]        = EitherT.right[Error](IndexedStateT.set[cats.Id, StructuredLogger, StructuredLogger](logger) *> cats.Monad[Logger].pure(value))
   def map[B](f: A => B): Target[B]                 = new TargetValue(f(value), logger)
   def flatMap[B](f: A => Target[B]): Target[B]     = f(value).prependLog(logger)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(value, logger)
@@ -100,7 +102,7 @@ object TargetError {
 
 class TargetError[A](val error: Error, val logger: StructuredLogger) extends Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA  = fallback(error)
-  def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.left[A](cats.Monad[cats.Id].pure(error))
+  def toEitherT: EitherT[Logger, Error, A]         = EitherT.left[A](IndexedStateT.set[cats.Id, StructuredLogger, StructuredLogger](logger) *> cats.Monad[Logger].pure(error))
   def map[B](f: A => B): Target[B]                 = new TargetError(error, logger)
   def flatMap[B](f: A => Target[B]): Target[B]     = new TargetError(error, logger)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(f(error), logger)
