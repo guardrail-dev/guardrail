@@ -1,3 +1,15 @@
+Migrating to 0.55.0
+===================
+
+0.55.0 may contain breaking changes for Scala clients and servers
+-----------------------------------------------------------
+
+The Scala type for OpenAPI's `type: array` has been changed from `IndexedSeq` to `Vector`.
+
+This change was made as `IndexedSeq` has no instances for cats typeclasses, as it is not a real datatype.
+
+To aide migrations, adding `x-scala-array-type: IndexedSeq` to definitions and parameters alongside `type: array` will change the generated type back to what it was before, permitting consumers to upgrade when they have time or to choose different implementations (`List`, `NonEmtyVector`, `Chain`, etc) to provide different semantics.
+
 Migrating to 0.49.0
 ===================
 
