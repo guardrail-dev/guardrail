@@ -20,7 +20,7 @@ package guardrail {
       frameworksImplicits: Option[(L#TermName, L#ObjectDefinition)]
   )
 
-  sealed trait LogAbstraction {
+  trait LogAbstraction {
     type F[_]
     implicit def A: Applicative[F]
     def pushLogger(value: StructuredLogger): F[Unit]
@@ -37,29 +37,10 @@ package guardrail {
     }
   }
 
-  object Target extends LogAbstraction {
-    type F[A] = Target[A]
-    val A                                                 = Applicative[Target]
-    def pushLogger(value: StructuredLogger): Target[Unit] = EitherT.right(IndexedStateT.modify(_ |+| value))
-    def pure[T](x: T): Target[T]                          = A.pure(x)
-    @deprecated("Use raiseError instead", "v0.41.2")
-    def error[T](x: String): Target[T]          = raiseError(x)
-    def raiseError[T](x: String): Target[T]     = EitherT.fromEither(Left(UserError(x)))
-    def raiseException[T](x: String): Target[T] = EitherT.fromEither(Left(RuntimeFailure(x)))
-    def fromOption[T](x: Option[T], default: => String): Target[T] =
-      EitherT.fromOption(x, UserError(default))
-    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
-    def unsafeExtract[T](x: Target[T]): T =
-      x.valueOr({ err =>
-          throw new Exception(err.toString)
-        })
-        .runEmptyA
-  }
-
   object CoreTarget extends LogAbstraction {
     type F[A] = CoreTarget[A]
     val A                                                     = Applicative[CoreTarget]
-    def pushLogger(value: StructuredLogger): CoreTarget[Unit] = EitherT.right(IndexedStateT.modify(_ |+| value))
+    def pushLogger(value: StructuredLogger): CoreTarget[Unit] = EitherT.pure(()) // IndexedStateT.modify(_ |+| value))
     def pure[T](x: T): CoreTarget[T]                          = x.pure[CoreTarget]
     def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] =
       EitherT.fromOption(x, default)
@@ -69,9 +50,9 @@ package guardrail {
     @SuppressWarnings(Array("org.wartremover.warts.Throw"))
     def unsafeExtract[T](x: CoreTarget[T]): T =
       x.valueOr({ err =>
-          throw new Exception(err.toString)
-        })
-        .runEmptyA
+        throw new Exception(err.toString)
+      })
+    //.runEmptyA
   }
 }
 
@@ -94,9 +75,8 @@ package object guardrail {
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
   type Logger[T]     = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
-  type Target[A]     = EitherT[Logger, Error, A]
-  type CoreTarget[A] = EitherT[Logger, Error, A]
+  type CoreTarget[A] = EitherT[Id, Error, A]
 
   // Likely can be removed in future versions of scala or cats? -Ypartial-unification seems to get confused here -- possibly higher arity issues?
-  implicit val loggerMonad: cats.Monad[Logger] = cats.data.IndexedStateT.catsDataMonadForIndexedStateT[cats.Id, StructuredLogger]
+  // implicit val loggerMonad: cats.Monad[Logger] = cats.data.IndexedStateT.catsDataMonadForIndexedStateT[cats.Id, StructuredLogger]
 }

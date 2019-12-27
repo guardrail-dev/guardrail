@@ -6,6 +6,8 @@ import cats.data.NonEmptyList
 import cats.arrow.FunctionK
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
+  implicit val coreTargetMonad: cats.Monad[CoreTarget] = cats.data.EitherT.catsDataMonadErrorForEitherT[cats.Id, Error]
+
   def circe: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
     val interpDefinitionPM
         : FunctionK[DefinitionPM[ScalaLanguage, ?], Target]                         = CirceProtocolGenerator.ProtocolSupportTermInterp or CirceProtocolGenerator.ModelProtocolTermInterp

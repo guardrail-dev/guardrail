@@ -96,7 +96,7 @@ trait CLICommon {
 
     val fallback = List.empty[Path]
     import CLICommon.unsafePrintHelp
-    val (logger, paths) = result
+    val /*(logger,*/ paths /*)*/ = result
       .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
@@ -143,9 +143,8 @@ trait CLICommon {
         },
         identity
       )
-      .runEmpty
 
-    println(logger.show)
+    // println(logger.show)
   }
 
   def runLanguages(
@@ -167,7 +166,7 @@ trait CLICommon {
         }).map(_.toList)
     })
 
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
+  def guardrailRunner: Map[String, NonEmptyList[Args]] => CoreTarget[List[java.nio.file.Path]] = { tasks =>
     runLanguages(tasks)
       .flatMap(
         _.flatTraverse(
@@ -179,9 +178,10 @@ trait CLICommon {
                 value =>
                   Target
                     .pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}"))
+                    .toEitherT
                     .subflatMap(_ => Either.left[Error, List[Path]](value))
               )
-              <* Target.pushLogger(StructuredLogger.reset)
+              <* Target.pushLogger(StructuredLogger.reset).toEitherT
         )
       )
       .map(_.distinct)
