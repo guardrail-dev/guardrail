@@ -67,7 +67,7 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def getType(model: Tracker[Schema[_]]): Free[F, Tracker[String]] =
     Free.inject[SwaggerTerm[L, ?], F](GetType(model))
 
-  def fallbackPropertyTypeHandler(prop: Schema[_]): Free[F, L#Type] =
+  def fallbackPropertyTypeHandler(prop: Tracker[Schema[_]]): Free[F, L#Type] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackPropertyTypeHandler(prop))
 
   def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]): Free[F, StrictProtocolElems[L]] =
