@@ -40,19 +40,11 @@ object SpringMvcServerGenerator {
     }) + "_VALUE"
   }
 
-  private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("AsyncResponse")
-  private val RESPONSE_TYPE         = StaticJavaParser.parseClassOrInterfaceType("Response")
+  private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
+  private val ASYNC_RESPONSE_ERASED_TYPE   = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<>")
+  private val RESPONSE_TYPE         = StaticJavaParser.parseClassOrInterfaceType("ResponseEntity")
   private val RESPONSE_BUILDER_TYPE = StaticJavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
-
-  private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.InstantParam")
-  private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetDateTimeParam")
-  private val ZONED_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.ZonedDateTimeParam")
-  private val LOCAL_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalDateTimeParam")
-  private val LOCAL_DATE_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalDateParam")
-  private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalTimeParam")
-  private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
-  private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
 
   private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
   private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
@@ -278,12 +270,14 @@ object SpringMvcServerGenerator {
           "javax.validation.constraints.NotNull",
           "java.util.Optional",
           "java.util.concurrent.CompletionStage",
-          "org.glassfish.jersey.media.multipart.FormDataParam",
           "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory",
           "org.springframework.web.bind.annotation.*",
-          "org.springframework.http.MediaType"
+          "org.springframework.http.MediaType",
+          "org.springframework.http.ResponseEntity",
+          "org.springframework.format.annotation.DateTimeFormat",
+          "org.springframework.web.context.request.async.DeferredResult",
         ).traverse(safeParseRawImport)
 
       case BuildTracingFields(operation, resourceName, tracing) =>
@@ -311,7 +305,7 @@ object SpringMvcServerGenerator {
                 val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length)
                   .mkString("/", "/", "")
 
-                val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, operationId)
+                val method = new MethodDeclaration(new NodeList(publicModifier), ASYNC_RESPONSE_TYPE, operationId)
                 val nodeList = new NodeList[MemberValuePair]()
                 if (pathSuffix.nonEmpty && pathSuffix != "/") {
                   nodeList.addLast(new MemberValuePair("path", new StringLiteralExpr(pathSuffix)))
@@ -355,25 +349,30 @@ object SpringMvcServerGenerator {
                   val isOptional = parameter.getType.isOptional
                   val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
-                  def transform(to: Type): Parameter = {
-                    parameter.setType(if (isOptional) optionalType(to) else to)
-                    if (!isOptional) {
+                  def transform(dateTimeFormat: String): Parameter = {
+                    if (isOptional) {
                       parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                     }
+                    parameter.getAnnotations.addLast(new NormalAnnotationExpr(
+                      new Name("DateTimeFormat"), new NodeList(new MemberValuePair(
+                        "iso",
+                        new FieldAccessExpr(new NameExpr("DateTimeFormat.ISO"), dateTimeFormat)
+                      ))
+                    ))
                     parameter
                   }
 
                   tpe match {
                     case cls: ClassOrInterfaceType if cls.getScope.asScala.forall(_.asString == "java.time") =>
                       cls.getNameAsString match {
-                        case "Instant"        => transform(INSTANT_PARAM_TYPE)
-                        case "OffsetDateTime" => transform(OFFSET_DATE_TIME_PARAM_TYPE)
-                        case "ZonedDateTime"  => transform(ZONED_DATE_TIME_PARAM_TYPE)
-                        case "LocalDateTime"  => transform(LOCAL_DATE_TIME_PARAM_TYPE)
-                        case "LocalDate"      => transform(LOCAL_DATE_PARAM_TYPE)
-                        case "LocalTime"      => transform(LOCAL_TIME_PARAM_TYPE)
-                        case "OffsetTime"     => transform(OFFSET_TIME_PARAM_TYPE)
-                        case "Duration"       => transform(DURATION_PARAM_TYPE)
+                        case "Instant"        => parameter
+                        case "OffsetDateTime" => transform("DATE_TIME")
+                        case "ZonedDateTime"  => transform("DATE_TIME")
+                        case "LocalDateTime"  => transform("DATE_TIME")
+                        case "LocalDate"      => transform("DATE")
+                        case "LocalTime"      => transform("TIME")
+                        case "OffsetTime"     => transform("TIME")
+                        case "Duration"       => parameter
                         case _                => parameter
                       }
                     case _ => parameter
@@ -401,10 +400,10 @@ object SpringMvcServerGenerator {
                 }
 
                 val annotatedMethodParams: List[Parameter] = List(
-                  (parameters.pathParams, "PathParam"),
-                  (parameters.headerParams, "HeaderParam"),
-                  (parameters.queryStringParams, "QueryParam"),
-                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
+                  (parameters.pathParams, "PathVariable"),
+                  (parameters.headerParams, "RequestHeader"),
+                  (parameters.queryStringParams, "RequestParam"),
+                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "RequestParam" else "ModelAttribute")
                 ).flatMap({
                   case (params, annotationName) =>
                     params.map({ param =>
@@ -425,9 +424,6 @@ object SpringMvcServerGenerator {
                 val methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
 
                 methodParams.foreach(method.addParameter)
-                method.addParameter(
-                  new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
-                )
 
                 val (responseName, responseType, resultResumeBody) =
                   ServerRawResponse(operation)
@@ -486,8 +482,8 @@ object SpringMvcServerGenerator {
                           ) ++ entitySetterIfTree ++ List(
                                 new ExpressionStmt(
                                   new MethodCallExpr(
-                                    new NameExpr("asyncResponse"),
-                                    "resume",
+                                    new NameExpr("response"),
+                                    "setResult",
                                     new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
                                   )
                                 )
@@ -501,8 +497,8 @@ object SpringMvcServerGenerator {
                         new NodeList(
                           new ExpressionStmt(
                             new MethodCallExpr(
-                              new NameExpr("asyncResponse"),
-                              "resume",
+                              new NameExpr("response"),
+                              "setResult",
                               new NodeList[Expression](new NameExpr("result"))
                             )
                           )
@@ -535,8 +531,8 @@ object SpringMvcServerGenerator {
                             ),
                             new ExpressionStmt(
                               new MethodCallExpr(
-                                new NameExpr("asyncResponse"),
-                                "resume",
+                                new NameExpr("response"),
+                                "setResult",
                                 new NodeList[Expression](
                                   new MethodCallExpr(
                                     new MethodCallExpr(
@@ -585,7 +581,12 @@ object SpringMvcServerGenerator {
                 method.setBody(
                   new BlockStmt(
                     new NodeList(
-                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
+                      new ExpressionStmt(new VariableDeclarationExpr(
+                        new VariableDeclarator(ASYNC_RESPONSE_TYPE, "response",
+                          new ObjectCreationExpr(null, ASYNC_RESPONSE_ERASED_TYPE, new NodeList)))),
+                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete",
+                        new NodeList[Expression](whenCompleteLambda))),
+                      new ReturnStmt("response")
                     )
                   )
                 )
