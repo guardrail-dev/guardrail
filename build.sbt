@@ -25,6 +25,7 @@ val dropwizardVersion    = "1.3.9"
 val jerseyVersion        = "2.25.1"
 val kindProjectorVersion = "0.10.3"
 val jaxbApiVersion       = "2.2.11"
+val springBootVersion    = "2.2.1.RELEASE"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -362,17 +363,18 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
     ),
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
-      "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
-      "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
-      "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
-      "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
-      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
-      "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-      "junit"                      %  "junit"                  % "4.12"             % Test,
-      "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-      "org.mockito"                %% "mockito-scala"          % "1.7.1"            % Test,
-      "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
-      "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+      "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
+      "javax.xml.bind"             %  "jaxb-api"                 % jaxbApiVersion, // for jdk11
+      "io.dropwizard"              %  "dropwizard-core"          % dropwizardVersion,
+      "io.dropwizard"              %  "dropwizard-forms"         % dropwizardVersion,
+      "org.asynchttpclient"        %  "async-http-client"        % ahcVersion,
+      "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
+      "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
+      "junit"                      %  "junit"                    % "4.12"             % Test,
+      "com.novocode"               %  "junit-interface"          % "0.11"             % Test,
+      "org.mockito"                %% "mockito-scala"            % "1.7.1"            % Test,
+      "com.github.tomakehurst"     %  "wiremock"                 % "1.57"             % Test,
+      "io.dropwizard"              %  "dropwizard-testing"       % dropwizardVersion  % Test,
       "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",

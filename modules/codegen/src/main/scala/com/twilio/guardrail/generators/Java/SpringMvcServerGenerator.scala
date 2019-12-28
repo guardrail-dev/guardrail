@@ -8,14 +8,14 @@ import cats.syntax.traverse._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.{ Node, NodeList }
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
+import com.github.javaparser.ast.{Node, NodeList}
+import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, VoidType}
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
+import com.twilio.guardrail.{ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target}
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.{ScalaParameter, ScalaParameters}
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.Response
@@ -23,6 +23,7 @@ import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
 import io.swagger.v3.oas.models.responses.ApiResponse
+
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
@@ -30,13 +31,13 @@ import scala.util.Try
 
 object SpringMvcServerGenerator {
   private implicit class ContentTypeExt(val ct: RouteMeta.ContentType) extends AnyVal {
-    def toJaxRsAnnotationName: String = ct match {
+    def toSpringMediaType: String = (ct match {
       case RouteMeta.ApplicationJson    => "APPLICATION_JSON"
       case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
       case RouteMeta.MultipartFormData  => "MULTIPART_FORM_DATA"
       case RouteMeta.TextPlain          => "TEXT_PLAIN"
       case RouteMeta.OctetStream        => "APPLICATION_OCTET_STREAM"
-    }
+    }) + "_VALUE"
   }
 
   private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("AsyncResponse")
@@ -275,29 +276,14 @@ object SpringMvcServerGenerator {
         List(
           "javax.inject.Inject",
           "javax.validation.constraints.NotNull",
-          "javax.ws.rs.Consumes",
-          "javax.ws.rs.DELETE",
-          "javax.ws.rs.FormParam",
-          "javax.ws.rs.GET",
-          "javax.ws.rs.HEAD",
-          "javax.ws.rs.HeaderParam",
-          "javax.ws.rs.OPTIONS",
-          "javax.ws.rs.POST",
-          "javax.ws.rs.PUT",
-          "javax.ws.rs.Path",
-          "javax.ws.rs.PathParam",
-          "javax.ws.rs.Produces",
-          "javax.ws.rs.QueryParam",
-          "javax.ws.rs.container.AsyncResponse",
-          "javax.ws.rs.container.Suspended",
-          "javax.ws.rs.core.MediaType",
-          "javax.ws.rs.core.Response",
           "java.util.Optional",
           "java.util.concurrent.CompletionStage",
           "org.glassfish.jersey.media.multipart.FormDataParam",
           "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
           "org.slf4j.Logger",
-          "org.slf4j.LoggerFactory"
+          "org.slf4j.LoggerFactory",
+          "org.springframework.web.bind.annotation.*",
+          "org.springframework.http.MediaType"
         ).traverse(safeParseRawImport)
 
       case BuildTracingFields(operation, resourceName, tracing) =>
@@ -321,12 +307,14 @@ object SpringMvcServerGenerator {
               case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation, securityRequirements), parameters, responses) =>
                 parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
-                val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, operationId)
-                  .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
+                val httpMethodAnnotationName = s"${httpMethod.toString.toLowerCase.capitalize}Mapping"
+                val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length)
+                  .mkString("/", "/", "")
 
-                val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
+                val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, operationId)
+                val nodeList = new NodeList[MemberValuePair]()
                 if (pathSuffix.nonEmpty && pathSuffix != "/") {
-                  method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
+                  nodeList.addLast(new MemberValuePair("path", new StringLiteralExpr(pathSuffix)))
                 }
 
                 val consumes = getBestConsumes(operation.get.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
@@ -343,16 +331,25 @@ object SpringMvcServerGenerator {
                       None
                     }
                   })
+
                 consumes
-                  .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
-                  .foreach(method.addAnnotation)
+                  .map(c => new MemberValuePair("consumes", new FieldAccessExpr(new NameExpr("MediaType"), c.toSpringMediaType)))
+                  .foreach(nodeList.addLast)
 
                 val successResponses =
                   operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
                 val produces = getBestProduces(operation.get.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
                 produces
-                  .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
-                  .foreach(method.addAnnotation)
+                  .map(c => new MemberValuePair("produces", new FieldAccessExpr(new NameExpr("MediaType"), c.toSpringMediaType)))
+                  .foreach(nodeList.addLast)
+
+                if (!nodeList.isEmpty) {
+                  method.addAnnotation(new NormalAnnotationExpr(
+                    new Name(httpMethodAnnotationName), nodeList
+                  ))
+                } else {
+                  method.addAnnotation(new MarkerAnnotationExpr(new Name(httpMethodAnnotationName)))
+                }
 
                 def transformJsr310Params(parameter: Parameter): Parameter = {
                   val isOptional = parameter.getType.isOptional
@@ -617,7 +614,8 @@ object SpringMvcServerGenerator {
           )
 
           val annotations = List(
-            new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
+            new MarkerAnnotationExpr(new Name("RestController")),
+            new SingleMemberAnnotationExpr(new Name("RequestMapping"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
           )
 
           val supportDefinitions = List[BodyDeclaration[_ <: BodyDeclaration[_]]](
