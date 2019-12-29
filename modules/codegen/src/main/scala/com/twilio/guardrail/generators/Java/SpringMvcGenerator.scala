@@ -3,9 +3,17 @@ package com.twilio.guardrail.generators.Java
 import cats.~>
 import com.github.javaparser.ast.expr.Name
 import com.twilio.guardrail.Target
-import com.twilio.guardrail.generators.syntax.Java.{safeParseName, safeParseType}
+import com.twilio.guardrail.generators.syntax.Java.{ safeParseName, safeParseType }
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.terms.framework.{FileType, FrameworkTerm, GetFrameworkDefinitions, GetFrameworkImplicits, GetFrameworkImports, LookupStatusCode, ObjectType}
+import com.twilio.guardrail.terms.framework.{
+  FileType,
+  FrameworkTerm,
+  GetFrameworkDefinitions,
+  GetFrameworkImplicits,
+  GetFrameworkImports,
+  LookupStatusCode,
+  ObjectType
+}
 
 object SpringMvcGenerator {
   object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {

@@ -8,14 +8,14 @@ import cats.syntax.traverse._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.{Node, NodeList}
-import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, VoidType}
+import com.github.javaparser.ast.{ Node, NodeList }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target}
+import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ScalaParameter, ScalaParameters}
+import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.Response
@@ -31,20 +31,21 @@ import scala.util.Try
 
 object SpringMvcServerGenerator {
   private implicit class ContentTypeExt(val ct: RouteMeta.ContentType) extends AnyVal {
-    def toSpringMediaType: String = (ct match {
-      case RouteMeta.ApplicationJson    => "APPLICATION_JSON"
-      case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
-      case RouteMeta.MultipartFormData  => "MULTIPART_FORM_DATA"
-      case RouteMeta.TextPlain          => "TEXT_PLAIN"
-      case RouteMeta.OctetStream        => "APPLICATION_OCTET_STREAM"
-    }) + "_VALUE"
+    def toSpringMediaType: String =
+      (ct match {
+        case RouteMeta.ApplicationJson    => "APPLICATION_JSON"
+        case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
+        case RouteMeta.MultipartFormData  => "MULTIPART_FORM_DATA"
+        case RouteMeta.TextPlain          => "TEXT_PLAIN"
+        case RouteMeta.OctetStream        => "APPLICATION_OCTET_STREAM"
+      }) + "_VALUE"
   }
 
-  private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
-  private val ASYNC_RESPONSE_ERASED_TYPE   = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<>")
-  private val RESPONSE_TYPE         = StaticJavaParser.parseClassOrInterfaceType("ResponseEntity")
-  private val RESPONSE_BUILDER_TYPE = StaticJavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
-  private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
+  private val ASYNC_RESPONSE_TYPE        = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
+  private val ASYNC_RESPONSE_ERASED_TYPE = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<>")
+  private val RESPONSE_TYPE              = StaticJavaParser.parseClassOrInterfaceType("ResponseEntity")
+  private val RESPONSE_BUILDER_TYPE      = StaticJavaParser.parseClassOrInterfaceType("ResponseEntity.BodyBuilder")
+  private val LOGGER_TYPE                = StaticJavaParser.parseClassOrInterfaceType("Logger")
 
   private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
   private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
@@ -266,18 +267,18 @@ object SpringMvcServerGenerator {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
         List(
-          "javax.inject.Inject",
-          "javax.validation.constraints.NotNull",
           "java.util.Optional",
           "java.util.concurrent.CompletionStage",
+          "javax.validation.constraints.NotNull",
           "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory",
-          "org.springframework.web.bind.annotation.*",
+          "org.springframework.beans.factory.annotation.Autowired",
+          "org.springframework.format.annotation.DateTimeFormat",
           "org.springframework.http.MediaType",
           "org.springframework.http.ResponseEntity",
-          "org.springframework.format.annotation.DateTimeFormat",
-          "org.springframework.web.context.request.async.DeferredResult",
+          "org.springframework.web.bind.annotation.*",
+          "org.springframework.web.context.request.async.DeferredResult"
         ).traverse(safeParseRawImport)
 
       case BuildTracingFields(operation, resourceName, tracing) =>
@@ -302,10 +303,11 @@ object SpringMvcServerGenerator {
                 parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
                 val httpMethodAnnotationName = s"${httpMethod.toString.toLowerCase.capitalize}Mapping"
-                val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length)
+                val pathSuffix = splitPathComponents(path.unwrapTracker)
+                  .drop(commonPathPrefix.length)
                   .mkString("/", "/", "")
 
-                val method = new MethodDeclaration(new NodeList(publicModifier), ASYNC_RESPONSE_TYPE, operationId)
+                val method   = new MethodDeclaration(new NodeList(publicModifier), ASYNC_RESPONSE_TYPE, operationId)
                 val nodeList = new NodeList[MemberValuePair]()
                 if (pathSuffix.nonEmpty && pathSuffix != "/") {
                   nodeList.addLast(new MemberValuePair("path", new StringLiteralExpr(pathSuffix)))
@@ -338,9 +340,12 @@ object SpringMvcServerGenerator {
                   .foreach(nodeList.addLast)
 
                 if (!nodeList.isEmpty) {
-                  method.addAnnotation(new NormalAnnotationExpr(
-                    new Name(httpMethodAnnotationName), nodeList
-                  ))
+                  method.addAnnotation(
+                    new NormalAnnotationExpr(
+                      new Name(httpMethodAnnotationName),
+                      nodeList
+                    )
+                  )
                 } else {
                   method.addAnnotation(new MarkerAnnotationExpr(new Name(httpMethodAnnotationName)))
                 }
@@ -353,12 +358,17 @@ object SpringMvcServerGenerator {
                     if (isOptional) {
                       parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                     }
-                    parameter.getAnnotations.addLast(new NormalAnnotationExpr(
-                      new Name("DateTimeFormat"), new NodeList(new MemberValuePair(
-                        "iso",
-                        new FieldAccessExpr(new NameExpr("DateTimeFormat.ISO"), dateTimeFormat)
-                      ))
-                    ))
+                    parameter.getAnnotations.addLast(
+                      new NormalAnnotationExpr(
+                        new Name("DateTimeFormat"),
+                        new NodeList(
+                          new MemberValuePair(
+                            "iso",
+                            new FieldAccessExpr(new NameExpr("DateTimeFormat.ISO"), dateTimeFormat)
+                          )
+                        )
+                      )
+                    )
                     parameter
                   }
 
@@ -445,7 +455,7 @@ object SpringMvcServerGenerator {
                                   new ExpressionStmt(
                                     new MethodCallExpr(
                                       new NameExpr("builder"),
-                                      "entity",
+                                      "body",
                                       new NodeList[Expression](
                                         new MethodCallExpr(
                                           new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
@@ -471,7 +481,7 @@ object SpringMvcServerGenerator {
                                   RESPONSE_BUILDER_TYPE,
                                   "builder",
                                   new MethodCallExpr(
-                                    new NameExpr("Response"),
+                                    new NameExpr("ResponseEntity"),
                                     "status",
                                     new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode"))
                                   )
@@ -536,7 +546,7 @@ object SpringMvcServerGenerator {
                                 new NodeList[Expression](
                                   new MethodCallExpr(
                                     new MethodCallExpr(
-                                      new NameExpr("Response"),
+                                      new NameExpr("ResponseEntity"),
                                       "status",
                                       new NodeList[Expression](new IntegerLiteralExpr(500))
                                     ),
@@ -554,23 +564,8 @@ object SpringMvcServerGenerator {
                   true
                 )
 
-                def transformHandlerArg(parameter: Parameter): Expression = {
-                  val isOptional = parameter.getType.isOptional
-                  val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
-                  if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
-                    if (isOptional) {
-                      new MethodCallExpr(
-                        parameter.getNameAsExpression,
-                        "map",
-                        new NodeList[Expression](new MethodReferenceExpr(new NameExpr(typeName), new NodeList, "get"))
-                      )
-                    } else {
-                      new MethodCallExpr(parameter.getNameAsExpression, "get")
-                    }
-                  } else {
-                    parameter.getNameAsExpression
-                  }
-                }
+                def transformHandlerArg(parameter: Parameter): Expression =
+                  parameter.getNameAsExpression
 
                 val handlerCall = new MethodCallExpr(
                   new FieldAccessExpr(new ThisExpr, "handler"),
@@ -581,11 +576,12 @@ object SpringMvcServerGenerator {
                 method.setBody(
                   new BlockStmt(
                     new NodeList(
-                      new ExpressionStmt(new VariableDeclarationExpr(
-                        new VariableDeclarator(ASYNC_RESPONSE_TYPE, "response",
-                          new ObjectCreationExpr(null, ASYNC_RESPONSE_ERASED_TYPE, new NodeList)))),
-                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete",
-                        new NodeList[Expression](whenCompleteLambda))),
+                      new ExpressionStmt(
+                        new VariableDeclarationExpr(
+                          new VariableDeclarator(ASYNC_RESPONSE_TYPE, "response", new ObjectCreationExpr(null, ASYNC_RESPONSE_ERASED_TYPE, new NodeList))
+                        )
+                      ),
+                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda))),
                       new ReturnStmt("response")
                     )
                   )
@@ -604,7 +600,7 @@ object SpringMvcServerGenerator {
             .unzip
 
           val resourceConstructor = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
-          resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
+          resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Autowired")))
           resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
           resourceConstructor.setBody(
             new BlockStmt(
@@ -659,39 +655,7 @@ object SpringMvcServerGenerator {
         }
 
       case GenerateSupportDefinitions(tracing, securitySchemes) =>
-        for {
-          annotationImports <- List(
-            "java.lang.annotation.ElementType",
-            "java.lang.annotation.Retention",
-            "java.lang.annotation.RetentionPolicy",
-            "java.lang.annotation.Target",
-            "javax.ws.rs.HttpMethod"
-          ).traverse(safeParseRawImport)
-
-          shower <- SerializationHelpers.showerSupportDef
-
-          jersey <- SerializationHelpers.guardrailJerseySupportDef
-        } yield {
-          def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
-            val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
-              .addAnnotation(
-                new SingleMemberAnnotationExpr(
-                  new Name("Target"),
-                  new ArrayInitializerExpr(new NodeList(new FieldAccessExpr(new NameExpr("ElementType"), "METHOD")))
-                )
-              )
-              .addAnnotation(new SingleMemberAnnotationExpr(new Name("Retention"), new FieldAccessExpr(new NameExpr("RetentionPolicy"), "RUNTIME")))
-              .addAnnotation(new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr(name)))
-            SupportDefinition[JavaLanguage](new Name(name), annotationImports, annotationDecl)
-          }
-
-          List(
-            shower,
-            jersey,
-            httpMethodAnnotation("PATCH"),
-            httpMethodAnnotation("TRACE")
-          )
-        }
+        Target.pure(List.empty) // unsure what to put here
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         safeParseSimpleName(className) >>

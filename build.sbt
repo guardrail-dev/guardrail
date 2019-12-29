@@ -364,9 +364,7 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
       "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
-      "javax.xml.bind"             %  "jaxb-api"                 % jaxbApiVersion, // for jdk11
-      "io.dropwizard"              %  "dropwizard-core"          % dropwizardVersion,
-      "io.dropwizard"              %  "dropwizard-forms"         % dropwizardVersion,
+      "org.hibernate"              %  "hibernate-validator"      % "5.4.3.Final",     // tbd 6 version does not have @UnwrapValidatedValue
       "org.asynchttpclient"        %  "async-http-client"        % ahcVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
@@ -374,8 +372,6 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
       "com.novocode"               %  "junit-interface"          % "0.11"             % Test,
       "org.mockito"                %% "mockito-scala"            % "1.7.1"            % Test,
       "com.github.tomakehurst"     %  "wiremock"                 % "1.57"             % Test,
-      "io.dropwizard"              %  "dropwizard-testing"       % dropwizardVersion  % Test,
-      "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     crossPaths := false,
