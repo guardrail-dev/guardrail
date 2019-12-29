@@ -520,13 +520,14 @@ object SpringMvcServerGenerator {
                     (
                       "Response",
                       RESPONSE_TYPE,
-                      new NodeList(new ExpressionStmt(
-                        new MethodCallExpr(
-                          new NameExpr("response"),
-                          "setResult",
-                          new NodeList[Expression](new NameExpr("result"))
+                      new NodeList(
+                        new ExpressionStmt(
+                          new MethodCallExpr(
+                            new NameExpr("response"),
+                            "setResult",
+                            new NodeList[Expression](new NameExpr("result"))
+                          )
                         )
-                      )
                       )
                     )
                   })
@@ -672,8 +673,7 @@ object SpringMvcServerGenerator {
       case GenerateSupportDefinitions(tracing, securitySchemes) => {
         for {
           shower <- SerializationHelpers.showerSupportDef
-        }
-        yield List(shower)
+        } yield List(shower)
       }
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
