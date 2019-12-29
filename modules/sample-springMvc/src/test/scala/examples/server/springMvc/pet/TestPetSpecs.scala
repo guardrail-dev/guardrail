@@ -12,7 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.TestContextManager
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{asyncDispatch, get}
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{asyncDispatch, get, post}
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{request, status}
 
@@ -44,5 +44,22 @@ class TestPetSpecs extends FreeSpec with Matchers  {
       assertTrue(content.contains("cat"))
       assertTrue(content.contains("mouse"))
     }
+
+    "update pet with form" in {
+      val mvcResult = mvc
+        .perform(
+          post("/v2/pet/1")
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+        )
+        .andExpect(request.asyncStarted)
+        .andReturn
+
+      mvc.perform(asyncDispatch(mvcResult)).andDo(print()).andExpect(status.isOk)
+
+      val content = mvcResult.getResponse.getContentAsString
+      assertTrue(content.contains("cat"))
+      assertTrue(content.contains("mouse"))
+    }
+
   }
 }
