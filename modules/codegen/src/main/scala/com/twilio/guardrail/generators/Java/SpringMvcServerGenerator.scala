@@ -17,8 +17,8 @@ import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, 
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
-import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.Response
+import com.twilio.guardrail.languages.{ JavaLanguage, LA }
+import com.twilio.guardrail.protocol.terms.{ Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
@@ -275,6 +275,7 @@ object SpringMvcServerGenerator {
           "org.slf4j.LoggerFactory",
           "org.springframework.beans.factory.annotation.Autowired",
           "org.springframework.format.annotation.DateTimeFormat",
+          "org.springframework.http.HttpStatus",
           "org.springframework.http.MediaType",
           "org.springframework.http.ResponseEntity",
           "org.springframework.web.bind.annotation.*",
@@ -391,9 +392,6 @@ object SpringMvcServerGenerator {
 
                 def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
                   if (param.required) {
-                    // NB: The order here is actually critical.  In the case where we're using multipart,
-                    // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
-                    // https://github.com/eclipse-ee4j/jersey/issues/3632
                     parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
                   }
                   parameter
@@ -432,89 +430,106 @@ object SpringMvcServerGenerator {
                   })
 
                 val methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
-
                 methodParams.foreach(method.addParameter)
 
-                val (responseName, responseType, resultResumeBody) =
-                  ServerRawResponse(operation)
-                    .filter(_ == true)
-                    .fold({
-                      val responseName = s"${handlerName}.${operationId.capitalize}Response"
+                val hasServerRawResponse: Option[Boolean] = ServerRawResponse(operation).filter(_ == true)
 
-                      val entitySetterIfTree = NonEmptyList
-                        .fromList(responses.value.collect({
-                          case Response(statusCodeName, Some(_), _) => statusCodeName
-                        }))
-                        .map(_.reverse.foldLeft[IfStmt](null)({
-                          case (nextIfTree, statusCodeName) =>
-                            val responseSubclassType = StaticJavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
-                            new IfStmt(
-                              new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
-                              new BlockStmt(
-                                new NodeList(
-                                  new ExpressionStmt(
-                                    new MethodCallExpr(
-                                      new NameExpr("builder"),
-                                      "body",
-                                      new NodeList[Expression](
-                                        new MethodCallExpr(
-                                          new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
-                                          "getEntityBody"
+                val (responseName, responseType, resultResumeBody) =
+                  hasServerRawResponse.fold({
+                    val responseName = s"${handlerName}.${operationId.capitalize}Response"
+                    val responseType = StaticJavaParser.parseClassOrInterfaceType(responseName)
+                    val entitySetterIfTree = NonEmptyList
+                      .fromList(responses.value.collect({
+                        case Response(statusCodeName, Some(_), _) => statusCodeName
+                      }))
+                      .map(_.reverse.foldLeft[IfStmt](null)({
+                        case (nextIfTree, statusCodeName) =>
+                          val responseSubclassType = StaticJavaParser.parseClassOrInterfaceType(
+                            s"$responseName.$statusCodeName"
+                          )
+                          new IfStmt(
+                            new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                            new BlockStmt(
+                              new NodeList(
+                                new ExpressionStmt(
+                                  new MethodCallExpr(
+                                    new NameExpr("response"),
+                                    "setResult",
+                                    new NodeList[Expression](
+                                      new MethodCallExpr(
+                                        new NameExpr("builder"),
+                                        "body",
+                                        new NodeList[Expression](
+                                          new MethodCallExpr(
+                                            new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                                            "getEntityBody"
+                                          )
                                         )
                                       )
                                     )
                                   )
                                 )
-                              ),
-                              nextIfTree
-                            )
-                        }))
-
-                      (
-                        responseName,
-                        StaticJavaParser.parseClassOrInterfaceType(responseName),
-                        (
-                          List[Statement](
-                            new ExpressionStmt(
-                              new VariableDeclarationExpr(
-                                new VariableDeclarator(
-                                  RESPONSE_BUILDER_TYPE,
-                                  "builder",
-                                  new MethodCallExpr(
-                                    new NameExpr("ResponseEntity"),
-                                    "status",
-                                    new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode"))
-                                  )
-                                ),
-                                finalModifier
                               )
-                            )
-                          ) ++ entitySetterIfTree ++ List(
-                                new ExpressionStmt(
-                                  new MethodCallExpr(
-                                    new NameExpr("response"),
-                                    "setResult",
-                                    new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
-                                  )
-                                )
-                              )
-                        ).toNodeList
-                      )
-                    })({ _ =>
-                      (
-                        "Response",
-                        RESPONSE_TYPE,
-                        new NodeList(
-                          new ExpressionStmt(
-                            new MethodCallExpr(
-                              new NameExpr("response"),
-                              "setResult",
-                              new NodeList[Expression](new NameExpr("result"))
-                            )
+                            ),
+                            nextIfTree
                           )
+                      }))
+
+                    val finalizeBody =
+                      new ExpressionStmt(
+                        new MethodCallExpr(
+                          new NameExpr("response"),
+                          "setResult",
+                          new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
                         )
                       )
-                    })
+
+                    val settingBody: Statement = entitySetterIfTree match {
+                      case Some(ifStmt: IfStmt) =>
+                        ifStmt.setElseStmt(
+                          new BlockStmt(
+                            new NodeList[Statement](finalizeBody)
+                          )
+                        )
+                        ifStmt
+                      case None => finalizeBody
+                    }
+
+                    (
+                      responseName,
+                      responseType,
+                      List[Statement](
+                        new ExpressionStmt(
+                          new VariableDeclarationExpr(
+                            new VariableDeclarator(
+                              RESPONSE_BUILDER_TYPE,
+                              "builder",
+                              new MethodCallExpr(
+                                new NameExpr("ResponseEntity"),
+                                "status",
+                                new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode"))
+                              )
+                            ),
+                            finalModifier
+                          )
+                        ),
+                        settingBody
+                      ).toNodeList
+                    )
+                  })({ _ =>
+                    (
+                      "Response",
+                      RESPONSE_TYPE,
+                      new NodeList(new ExpressionStmt(
+                        new MethodCallExpr(
+                          new NameExpr("response"),
+                          "setResult",
+                          new NodeList[Expression](new NameExpr("result"))
+                        )
+                      )
+                      )
+                    )
+                  })
 
                 val whenCompleteLambda = new LambdaExpr(
                   new NodeList(
@@ -542,13 +557,13 @@ object SpringMvcServerGenerator {
                             new ExpressionStmt(
                               new MethodCallExpr(
                                 new NameExpr("response"),
-                                "setResult",
+                                "setErrorResult",
                                 new NodeList[Expression](
                                   new MethodCallExpr(
                                     new MethodCallExpr(
                                       new NameExpr("ResponseEntity"),
                                       "status",
-                                      new NodeList[Expression](new IntegerLiteralExpr(500))
+                                      new NodeList[Expression](new FieldAccessExpr(new NameExpr("HttpStatus"), "INTERNAL_SERVER_ERROR"))
                                     ),
                                     "build"
                                   )
@@ -654,8 +669,12 @@ object SpringMvcServerGenerator {
           abstractResponseClass :: Nil
         }
 
-      case GenerateSupportDefinitions(tracing, securitySchemes) =>
-        Target.pure(List.empty) // unsure what to put here
+      case GenerateSupportDefinitions(tracing, securitySchemes) => {
+        for {
+          shower <- SerializationHelpers.showerSupportDef
+        }
+        yield List(shower)
+      }
 
       case RenderClass(className, handlerName, classAnnotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
         safeParseSimpleName(className) >>

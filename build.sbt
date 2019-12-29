@@ -371,7 +371,7 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
       "junit"                      %  "junit"                    % "4.12"             % Test,
       "com.novocode"               %  "junit-interface"          % "0.11"             % Test,
       "org.mockito"                %% "mockito-scala"            % "1.7.1"            % Test,
-      "com.github.tomakehurst"     %  "wiremock"                 % "1.57"             % Test,
+      "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     crossPaths := false,
