@@ -16,8 +16,8 @@ val catsEffectVersion    = "1.0.0"
 val circeVersion         = "0.12.1"
 val http4sVersion        = "0.20.0"
 val scalacheckVersion    = "1.14.3"
-val scalatestVersion     = "3.1.0"
-val javaparserVersion    = "3.15.7"
+val scalatestVersion     = "3.0.8"
+val javaparserVersion    = "3.15.8"
 val endpointsVersion     = "0.8.0"
 val ahcVersion           = "2.8.1"
 val dropwizardVersion    = "1.3.9"
@@ -44,6 +44,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("alias.yaml"), "alias"),
   ExampleCase(sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain"),
   ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
+  ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
   ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
   ExampleCase(sampleResource("formData.yaml"), "form"),
   ExampleCase(sampleResource("issues/issue45.yaml"), "issues.issue45"),
@@ -70,6 +71,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue455.yaml"), "issues.issue455"),
   ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
   ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "support.PositiveLong"),
+  ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "support.PositiveLong"),
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
@@ -216,7 +218,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.19.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.3.600",
-      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.16",
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.17",
       "org.tpolecat"                %% "atto-core"                    % "0.6.3",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,

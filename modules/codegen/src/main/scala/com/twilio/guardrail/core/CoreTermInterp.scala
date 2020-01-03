@@ -2,7 +2,7 @@ package com.twilio.guardrail
 package core
 
 import cats.data.{ NonEmptyList, State }
-import cats.free.{ Free, GuardrailFreeHacks }
+// Issue #496: Injected StructuredLogger too slow import cats.free.{ Free, GuardrailFreeHacks }
 import cats.implicits._
 import cats.{ FlatMap, ~> }
 import com.twilio.guardrail.languages.LA
@@ -19,7 +19,7 @@ case class CoreTermInterp[L <: LA](
   def apply[T](x: CoreTerm[L, T]): CoreTarget[T] = x match {
     case GetDefaultFramework() =>
       CoreTarget.log.function("getDefaultFramework") {
-        Target.log.debug(s"Providing ${defaultFramework}") >> CoreTarget.pure(Some(defaultFramework))
+        CoreTarget.log.debug(s"Providing ${defaultFramework}") >> CoreTarget.pure(Some(defaultFramework))
       }
 
     case ExtractGenerator(context, vendorDefaultFramework) =>
@@ -60,7 +60,7 @@ case class CoreTermInterp[L <: LA](
       type To   = List[Args]
       val start: From = (List.empty[Args], args.toList)
       import CoreTarget.log.debug
-      Target.log.function("parseArgs") {
+      CoreTarget.log.function("parseArgs") {
         FlatMap[CoreTarget].tailRecM[From, To](start)({
           case pair @ (sofar, rest) =>
             val empty = sofar
@@ -118,7 +118,7 @@ case class CoreTermInterp[L <: LA](
         case x: Parsed.Error      => Left(x)
         case Parsed.Success(tree) => Right(tree)
       }
-      Target.log.function("processArgSet")(for {
+      CoreTarget.log.function("processArgSet")(for {
         _          <- CoreTarget.log.debug("Processing arguments")
         specPath   <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
         outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
@@ -150,8 +150,9 @@ case class CoreTermInterp[L <: LA](
                   result <- Common
                     .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
                 } yield result
-                GuardrailFreeHacks
-                  .injectLogs(program, Set("LogPush", "LogPop", "LogDebug", "LogInfo", "LogWarning", "LogError"), Sw.log.push, Sw.log.pop, Free.pure(()))
+                // Issue #496: Injected StructuredLogger too slow
+                // GuardrailFreeHacks.injectLogs(program, Set("LogPush", "LogPop", "LogDebug", "LogInfo", "LogWarning", "LogError"), Sw.log.push, Sw.log.pop, Free.pure(()))
+                program
                   .foldMap(targetInterpreter)
               } catch {
                 case NonFatal(ex) =>

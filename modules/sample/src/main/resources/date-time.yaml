@@ -1,0 +1,34 @@
+openapi: 3.0.2
+info:
+  title: Date/time tests
+  version: 1.0.0
+paths:
+  /foo:
+    get:
+      x-jvm-package: dateTime
+      operationId: getSomething
+      parameters:
+        - name: dateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: optionalDateTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: optionalDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        204: {}

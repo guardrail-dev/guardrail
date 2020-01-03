@@ -1,5 +1,6 @@
 package com.twilio.guardrail.generators.syntax
 
+import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.body._
@@ -73,11 +74,51 @@ object Java {
     def toList(implicit cls: ClassTag[T]): List[T] = nl.iterator.asScala.toList
   }
 
+  def formatException[T <: Throwable](prefix: String): T => String = {
+    case t: com.github.javaparser.ParseProblemException =>
+      val problems     = t.getProblems().asScala.toVector
+      val msgSeparator = if (problems.length > 1) "\n" else " "
+      val msgs = problems
+        .map(
+          problem =>
+            problem.getCause.asScala
+              .flatMap({
+                case cause: com.github.javaparser.ParseException =>
+                  val tokenImage = cause.tokenImage.toVector
+                  val expected   = Option(cause.expectedTokenSequences).map(_.toVector.flatMap(_.toVector)).orEmpty.flatMap(idx => tokenImage.get(idx))
+                  for {
+                    token       <- Option(cause.currentToken)
+                    nextToken   <- Option(token.next)
+                    image       <- Option(nextToken.image)
+                    beginColumn <- Option(nextToken.beginColumn)
+                  } yield s"""Unexpected "${image}" at character ${beginColumn} (valid: ${expected.mkString(", ")})"""
+                case _ => Option.empty
+              })
+              .getOrElse(problem.getMessage())
+        )
+      val msg = msgs match {
+        case Vector()    => "\n" + t.getMessage()
+        case Vector(msg) => msg
+        case rest =>
+          rest.zipWithIndex
+            .map({
+              case (msg, idx) =>
+                s"""Problem ${idx + 1}:
+                  |  ${msg.trim.split("\n").mkString("\n  ")}
+                  |""".stripMargin
+            })
+            .mkString("\n")
+      }
+      s"${prefix}:${msgSeparator}${msg}"
+    case t =>
+      s"${prefix}: ${t.getMessage}"
+  }
+
   private[this] def safeParse[T](log: String)(parser: String => T, s: String)(implicit cls: ClassTag[T]): Target[T] =
     Target.log.function(s"${log}: ${s}") {
       Try(parser(s)) match {
         case Success(value) => Target.pure(value)
-        case Failure(t)     => Target.raiseError(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}: ${t.getMessage}")
+        case Failure(t)     => Target.raiseError(formatException(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}")(t))
       }
     }
 

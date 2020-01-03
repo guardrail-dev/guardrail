@@ -94,36 +94,13 @@ object SerializationHelpers {
   def guardrailJerseySupportDef: Target[SupportDefinition[JavaLanguage]] = loadSupportDefinitionFromString(
     "GuardrailJerseySupport",
     """
+      import io.dropwizard.jersey.params.AbstractParam;
       import io.dropwizard.setup.Bootstrap;
       import io.dropwizard.setup.Environment;
-      import org.glassfish.hk2.api.Factory;
-      import org.glassfish.hk2.api.InjectionResolver;
-      import org.glassfish.hk2.api.ServiceLocator;
-      import org.glassfish.hk2.api.TypeLiteral;
       import org.glassfish.hk2.utilities.binding.AbstractBinder;
-      import org.glassfish.jersey.internal.inject.ExtractorException;
-      import org.glassfish.jersey.server.ParamException;
-      import org.glassfish.jersey.server.internal.inject.AbstractContainerRequestValueFactory;
-      import org.glassfish.jersey.server.internal.inject.AbstractValueFactoryProvider;
-      import org.glassfish.jersey.server.internal.inject.MultivaluedParameterExtractor;
-      import org.glassfish.jersey.server.internal.inject.MultivaluedParameterExtractorProvider;
-      import org.glassfish.jersey.server.internal.inject.ParamInjectionResolver;
-      import org.glassfish.jersey.server.model.Parameter;
 
-      import javax.inject.Inject;
-      import javax.inject.Singleton;
-      import javax.ws.rs.FormParam;
-      import javax.ws.rs.HeaderParam;
-      import javax.ws.rs.ProcessingException;
-      import javax.ws.rs.QueryParam;
-      import javax.ws.rs.WebApplicationException;
-      import javax.ws.rs.core.Form;
-      import javax.ws.rs.core.MultivaluedHashMap;
-      import javax.ws.rs.core.MultivaluedMap;
-      import javax.ws.rs.ext.ParamConverter;
-      import javax.ws.rs.ext.ParamConverterProvider;
-      import java.lang.annotation.Annotation;
-      import java.lang.reflect.Type;
+      import javax.annotation.Nullable;
+      import javax.ws.rs.BadRequestException;
       import java.time.Duration;
       import java.time.Instant;
       import java.time.LocalDate;
@@ -132,294 +109,170 @@ object SerializationHelpers {
       import java.time.OffsetDateTime;
       import java.time.OffsetTime;
       import java.time.ZonedDateTime;
-      import java.time.format.DateTimeFormatter;
-      import java.time.temporal.TemporalAccessor;
-      import java.util.Collections;
-      import java.util.HashMap;
-      import java.util.Map;
-      import java.util.Optional;
-      import java.util.function.Function;
+      import java.util.Objects;
 
       public class GuardrailJerseySupport {
           public static class Jsr310 {
-              private static class ParameterExtractor<T> implements MultivaluedParameterExtractor<T> {
-                  private final String name;
-                  private final ParamConverter<T> converter;
+              public abstract static class GuardrailAbstractParam<T> extends AbstractParam<T> {
+                  private final T value;
 
-                  ParameterExtractor(final String name, final ParamConverter<T> converter) {
-                      this.name = name;
-                      this.converter = converter;
+                  @SuppressWarnings("unused")
+                  protected GuardrailAbstractParam(@Nullable final String input) {
+                      this(input, "Parameter");
+                  }
+
+                  protected GuardrailAbstractParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                      try {
+                          this.value = realParse(input);
+                      } catch (final Exception e) {
+                          throw new BadRequestException(String.format("%s is invalid: %s", parameterName, input));
+                      }
                   }
 
                   @Override
-                  public String getName() {
-                      return this.name;
-                  }
-
-                  @Override
-                  public String getDefaultValueString() {
+                  protected T parse(@Nullable final String input) {
                       return null;
                   }
 
+                  protected abstract T realParse(@Nullable final String input) throws Exception;
+
                   @Override
-                  public T extract(final MultivaluedMap<String, String> parameters) {
-                      final Optional<String> value = Optional.ofNullable(parameters.getFirst(getName()));
-                      try {
-                          return value.map(converter::fromString).orElse(null);
-                      } catch (final WebApplicationException | ProcessingException ex) {
-                          throw ex;
-                      } catch (final Exception ex) {
-                          throw new ExtractorException(ex);
-                      }
-                  }
-              }
-
-              private static class ParamFactoryProviders {
-                  private static abstract class BaseParamFactoryProvider extends AbstractValueFactoryProvider {
-                      @Inject
-                      BaseParamFactoryProvider(final MultivaluedParameterExtractorProvider mpep,
-                                               final ServiceLocator locator,
-                                               final Parameter.Source source) {
-                          super(mpep, locator, source);
-                      }
-
-                      @Override
-                      protected Factory<?> createValueFactory(final Parameter parameter) {
-                          return Optional.ofNullable(parameter.getSourceName())
-                                  .filter(name -> !name.isEmpty())
-                                  .flatMap(name -> buildExtractor(parameter.getRawType(), name))
-                                  .map(extractor -> buildFactory(extractor, !parameter.isEncoded()))
-                                  .orElse(null);
-                      }
-
-                      private Optional<MultivaluedParameterExtractor<?>> buildExtractor(final Class<?> cls, final String name) {
-                          return Optional.ofNullable(PARAM_CONVERTERS.get(cls))
-                                  .map(conv -> new ParameterExtractor<>(name, conv));
-                      }
-
-                      protected abstract AbstractContainerRequestValueFactory<?> buildFactory(final MultivaluedParameterExtractor<?> extractor, final boolean decode);
-                  }
-
-                  private static class QueryParamFactoryProvider extends BaseParamFactoryProvider {
-                      protected QueryParamFactoryProvider(MultivaluedParameterExtractorProvider mpep, ServiceLocator locator, Parameter.Source source) {
-                          super(mpep, locator, source);
-                      }
-
-                      @Override
-                      protected AbstractContainerRequestValueFactory<?> buildFactory(final MultivaluedParameterExtractor<?> extractor, final boolean decode) {
-                          return new ValueFactories.QueryParamValueFactory(extractor, decode);
-                      }
-                  }
-
-                  private static class FormParamFactoryProvider extends BaseParamFactoryProvider {
-                      protected FormParamFactoryProvider(MultivaluedParameterExtractorProvider mpep, ServiceLocator locator, Parameter.Source source) {
-                          super(mpep, locator, source);
-                      }
-
-                      @Override
-                      protected AbstractContainerRequestValueFactory<?> buildFactory(final MultivaluedParameterExtractor<?> extractor, final boolean decode) {
-                          return new ValueFactories.FormParamValueFactory(extractor);
-                      }
-                  }
-
-                  private static class HeaderParamFactoryProvider extends BaseParamFactoryProvider {
-                      protected HeaderParamFactoryProvider(MultivaluedParameterExtractorProvider mpep, ServiceLocator locator, Parameter.Source source) {
-                          super(mpep, locator, source);
-                      }
-
-                      @Override
-                      protected AbstractContainerRequestValueFactory<?> buildFactory(final MultivaluedParameterExtractor<?> extractor, final boolean decode) {
-                          return new ValueFactories.HeaderParamValueFactory(extractor);
-                      }
-                  }
-              }
-
-              private static class ValueFactories {
-                  private static class QueryParamValueFactory extends AbstractContainerRequestValueFactory<Object> {
-                      private final MultivaluedParameterExtractor<?> extractor;
-                      private final boolean decode;
-
-                      QueryParamValueFactory(final MultivaluedParameterExtractor<?> extractor, final boolean decode) {
-                          this.extractor = extractor;
-                          this.decode = decode;
-                      }
-
-                      @Override
-                      public Object provide() {
-                          try {
-                              return this.extractor.extract(getContainerRequest().getUriInfo().getQueryParameters(decode));
-                          } catch (final ProcessingException e) {
-                              throw new ParamException.QueryParamException(e.getCause(), this.extractor.getName(), this.extractor.getDefaultValueString());
-                          }
-                      }
-                  }
-
-                  private static class FormParamValueFactory extends AbstractContainerRequestValueFactory<Object> {
-                      private final MultivaluedParameterExtractor<?> extractor;
-
-                      FormParamValueFactory(final MultivaluedParameterExtractor<?> extractor) {
-                          this.extractor = extractor;
-                      }
-
-                      @Override
-                      public Object provide() {
-                          try {
-                              getContainerRequest().bufferEntity();
-                              final Form form = getContainerRequest().readEntity(Form.class);
-                              return extractor.extract(form.asMap());
-                          } catch (final ProcessingException e) {
-                              throw new ParamException.FormParamException(e.getCause(), this.extractor.getName(), this.extractor.getDefaultValueString());
-                          }
-                      }
-                  }
-
-                  private static class HeaderParamValueFactory extends AbstractContainerRequestValueFactory<Object> {
-                      private final MultivaluedParameterExtractor<?> extractor;
-
-                      HeaderParamValueFactory(final MultivaluedParameterExtractor<?> extractor) {
-                          this.extractor = extractor;
-                      }
-
-                      @Override
-                      public Object provide() {
-                          try {
-                              return extractor.extract(getContainerRequest().getHeaders());
-                          } catch (final ProcessingException e) {
-                              throw new ParamException.HeaderParamException(e.getCause(), this.extractor.getName(), this.extractor.getDefaultValueString());
-                          }
-                      }
-                  }
-              }
-
-              private static class ParamInjectionResolvers {
-                  private static class QueryParamInjectionResolver extends ParamInjectionResolver<QueryParam> {
-                      public QueryParamInjectionResolver() {
-                          super(ParamFactoryProviders.QueryParamFactoryProvider.class);
-                      }
-                  }
-
-                  private static class FormParamInjectionResolver extends ParamInjectionResolver<FormParam> {
-                      public FormParamInjectionResolver() {
-                          super(ParamFactoryProviders.FormParamFactoryProvider.class);
-                      }
-                  }
-
-                  private static class HeaderParamInjectionResolver extends ParamInjectionResolver<HeaderParam> {
-                      public HeaderParamInjectionResolver() {
-                          super(ParamFactoryProviders.HeaderParamFactoryProvider.class);
-                      }
-                  }
-              }
-
-              private static class Jsr310ParamConverter<T extends TemporalAccessor> implements ParamConverter<T> {
-                  private final Function<String, T> parser;
-                  private final DateTimeFormatter formatter;
-
-                  Jsr310ParamConverter(final Function<String, T> parser, final DateTimeFormatter formatter) {
-                      this.parser = parser;
-                      this.formatter = formatter;
+                  public T get() {
+                      return this.value;
                   }
 
                   @Override
-                  public T fromString(final String value) {
-                      return parser.apply(value);
+                  public boolean equals(final Object obj) {
+                      if (this == obj) {
+                          return true;
+                      } else if (getClass() != obj.getClass()) {
+                          return false;
+                      } else {
+                          return this.value.equals(((GuardrailAbstractParam<?>) obj).value);
+                      }
                   }
 
                   @Override
-                  public String toString(final T value) {
-                      return formatter.format(value);
-                  }
-              }
-
-              private static class Jsr310DurationParamConverter implements ParamConverter<Duration> {
-                  @Override
-                  public Duration fromString(final String value) {
-                      return Duration.parse(value);
+                  public int hashCode() {
+                      return Objects.hashCode(this.value);
                   }
 
                   @Override
-                  public String toString(final Duration value) {
-                      return value.toString();
+                  public String toString() {
+                      return this.value != null ? this.value.toString() : "(null)";
                   }
               }
 
-              private static final Map<Class<?>, ParamConverter<?>> PARAM_CONVERTERS;
+              @SuppressWarnings("unused")
+              public static class InstantParam extends GuardrailAbstractParam<Instant> {
+                  public InstantParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
 
-              static {
-                  final Map<Class<?>, ParamConverter<?>> paramConverters = new HashMap<>();
-                  paramConverters.put(Instant.class, new Jsr310ParamConverter<>(
-                          Instant::parse,
-                          DateTimeFormatter.ISO_INSTANT
-                  ));
-                  paramConverters.put(OffsetDateTime.class, new Jsr310ParamConverter<>(
-                          OffsetDateTime::parse,
-                          DateTimeFormatter.ISO_OFFSET_DATE_TIME
-                  ));
-                  paramConverters.put(ZonedDateTime.class, new Jsr310ParamConverter<>(
-                          ZonedDateTime::parse,
-                          DateTimeFormatter.ISO_ZONED_DATE_TIME
-                  ));
-                  paramConverters.put(LocalDateTime.class, new Jsr310ParamConverter<>(
-                          LocalDateTime::parse,
-                          DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                  ));
-                  paramConverters.put(LocalDate.class, new Jsr310ParamConverter<>(
-                          LocalDate::parse,
-                          DateTimeFormatter.ISO_LOCAL_DATE
-                  ));
-                  paramConverters.put(LocalTime.class, new Jsr310ParamConverter<>(
-                          LocalTime::parse,
-                          DateTimeFormatter.ISO_TIME
-                  ));
-                  paramConverters.put(OffsetTime.class, new Jsr310ParamConverter<>(
-                          OffsetTime::parse,
-                          DateTimeFormatter.ISO_OFFSET_TIME
-                  ));
-                  paramConverters.put(Duration.class, new Jsr310DurationParamConverter());
-                  PARAM_CONVERTERS = Collections.unmodifiableMap(paramConverters);
-              }
-
-              private static class ParamConvertersProvider implements ParamConverterProvider {
                   @Override
-                  @SuppressWarnings("unchecked")
-                  public <T> ParamConverter<T> getConverter(final Class<T> rawType, final Type genericType, final Annotation[] annotations) {
-                      return (ParamConverter<T>) PARAM_CONVERTERS.get(rawType);
+                  protected Instant realParse(final String input) {
+                      return Instant.parse(input);
                   }
               }
 
+              @SuppressWarnings("unused")
+              public static class OffsetDateTimeParam extends GuardrailAbstractParam<OffsetDateTime> {
+                  public OffsetDateTimeParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected OffsetDateTime realParse(final String input) {
+                      return OffsetDateTime.parse(input);
+                  }
+              }
+
+              @SuppressWarnings("unused")
+              public static class ZonedDateTimeParam extends GuardrailAbstractParam<ZonedDateTime> {
+                  public ZonedDateTimeParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected ZonedDateTime realParse(final String input) {
+                      return ZonedDateTime.parse(input);
+                  }
+              }
+
+              @SuppressWarnings("unused")
+              public static class LocalDateTimeParam extends GuardrailAbstractParam<LocalDateTime> {
+                  public LocalDateTimeParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected LocalDateTime realParse(final String input) {
+                      return LocalDateTime.parse(input);
+                  }
+              }
+
+              @SuppressWarnings("unused")
+              public static class LocalDateParam extends GuardrailAbstractParam<LocalDate> {
+                  public LocalDateParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected LocalDate realParse(final String input) {
+                      return LocalDate.parse(input);
+                  }
+              }
+
+              @SuppressWarnings("unused")
+              public static class LocalTimeParam extends GuardrailAbstractParam<LocalTime> {
+                  public LocalTimeParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected LocalTime realParse(final String input) {
+                      return LocalTime.parse(input);
+                  }
+              }
+
+              @SuppressWarnings("unused")
+              public static class OffsetTimeParam extends GuardrailAbstractParam<OffsetTime> {
+                  public OffsetTimeParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected OffsetTime realParse(final String input) {
+                      return OffsetTime.parse(input);
+                  }
+              }
+
+              @SuppressWarnings("unused")
+              public static class DurationParam extends GuardrailAbstractParam<Duration> {
+                  public DurationParam(@Nullable final String input, final String parameterName) {
+                      super(input, parameterName);
+                  }
+
+                  @Override
+                  protected Duration realParse(final String input) {
+                      return Duration.parse(input);
+                  }
+              }
+
+              @Deprecated
               public static class Binder extends AbstractBinder {
                   @Override
-                  protected void configure() {
-                      bind(ParamInjectionResolvers.QueryParamInjectionResolver.class)
-                              .to(new TypeLiteral<InjectionResolver<QueryParam>>() {
-                              })
-                              .in(Singleton.class);
-
-                      bind(ParamInjectionResolvers.FormParamInjectionResolver.class)
-                              .to(new TypeLiteral<InjectionResolver<FormParam>>() {
-                              })
-                              .in(Singleton.class);
-
-                      bind(ParamInjectionResolvers.HeaderParamInjectionResolver.class)
-                              .to(new TypeLiteral<InjectionResolver<HeaderParam>>() {
-                              })
-                              .in(Singleton.class);
-
-                      bind(ParamConvertersProvider.class)
-                              .to(ParamConverterProvider.class)
-                              .in(Singleton.class);
-                  }
+                  protected void configure() {}
               }
 
+              @Deprecated
               public static class Bundle implements io.dropwizard.Bundle {
                   @Override
-                  public void initialize(final Bootstrap<?> bootstrap) {
-                  }
+                  public void initialize(final Bootstrap<?> bootstrap) {}
 
                   @Override
-                  public void run(final Environment environment) {
-                      environment.jersey().register(new Binder());
-                  }
+                  public void run(final Environment environment) {}
               }
           }
 

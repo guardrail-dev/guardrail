@@ -134,6 +134,30 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
         build tool plugins or at the CLI.
       </td>
     </tr>
+    <tr>
+      <td nowrap><code>x-scala-array-type</code>, <code>x-java-array-type</code></td>
+      <td>string</td>
+      <td nowrap>definitions, parameters</td>
+      <td>
+        Override the generated array type from `Vector` to some custom type.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-scala-map-type</code>, <code>x-java-map-type</code></td>
+      <td>string</td>
+      <td nowrap>definitions, parameters</td>
+      <td>
+        Override the generated array type from `Map` to some custom type.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
+      </td>
+    </tr>
   </tbody>
 </table>
 

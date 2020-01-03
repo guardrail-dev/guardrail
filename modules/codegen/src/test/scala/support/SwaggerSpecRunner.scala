@@ -39,7 +39,7 @@ trait SwaggerSpecRunner extends EitherValues {
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
-    val (clientLogger, (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _))) =
+    val /*(clientLogger,*/ (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Client,
@@ -51,9 +51,9 @@ trait SwaggerSpecRunner extends EitherValues {
         .valueOr({ err =>
           throw new Exception(err.toString)
         })
-        .runEmpty
+    //.runEmpty
 
-    val (serverLogger, (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _))) =
+    val /*(serverLogger,*/ (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) =
       Common
         .prepareDefinitions[L, CodegenApplication[L, ?]](
           CodegenTarget.Server,
@@ -65,7 +65,7 @@ trait SwaggerSpecRunner extends EitherValues {
         .valueOr({ err =>
           throw new Exception(err.toString)
         })
-        .runEmpty
+    //.runEmpty
 
     // FIXME: In lieu of https://github.com/scalatest/scalatest/issues/405,
     // figure out a way to use https://stackoverflow.com/a/7219813 to only println
@@ -92,15 +92,21 @@ trait SwaggerSpecRunner extends EitherValues {
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (StructuredLogger, Error) =
-    Common
-      .prepareDefinitions[L, CodegenApplication[L, ?]](
-        kind,
-        context,
-        Tracker(swagger),
-        List.empty
-      )
-      .foldMap(framework)
-      .value
-      .runEmpty
-      .map(_.map(_.left.value))
+    (
+      StructuredLogger(Vector.empty),
+      Common
+        .prepareDefinitions[L, CodegenApplication[L, ?]](
+          kind,
+          context,
+          Tracker(swagger),
+          List.empty
+        )
+        .foldMap(framework) match {
+        case TargetError(err) => err
+        case _                => ???
+      }
+    )
+  //.value
+  //.runEmpty
+  //.map(_.map(_.left.value))
 }

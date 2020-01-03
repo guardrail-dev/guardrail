@@ -198,10 +198,10 @@ object SwaggerGenerator {
           .raiseErrorIfEmpty("Unknown type")
 
       case FallbackPropertyTypeHandler(prop) =>
-        val determinedType = Option(prop.getType()).fold("No type definition")(s => s"type: $s")
-        val className      = prop.getClass.getName
+        val determinedType = prop.downField("type", _.getType()).fold("No type definition")(s => s"type: ${s.unwrapTracker}")
+        val className      = prop.unwrapTracker.getClass.getName
         Target.raiseError(
-          s"""|Unknown type for the following structure (${determinedType}, class: ${className}):
+          s"""|Unknown type for the following structure (${determinedType}, class: ${className}, ${prop.showHistory}):
               |  ${prop.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n  ")}
               |""".stripMargin
         )
