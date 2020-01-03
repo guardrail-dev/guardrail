@@ -1,7 +1,7 @@
 package com.twilio.guardrail.generators.Java
 
 import cats.~>
-import com.twilio.guardrail.generators.Java.AsyncHttpClientClientGenerator.ClientTermInterp
+import com.twilio.guardrail.generators.Java.SpringMvcClientGenerator.ClientTermInterp
 import com.twilio.guardrail.generators.Java.SpringMvcGenerator.FrameworkInterp
 import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator.ServerTermInterp
 import com.twilio.guardrail.generators.Java.JacksonGenerator.{

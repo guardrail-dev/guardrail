@@ -279,7 +279,8 @@ object SpringMvcServerGenerator {
           "org.springframework.http.MediaType",
           "org.springframework.http.ResponseEntity",
           "org.springframework.web.bind.annotation.*",
-          "org.springframework.web.context.request.async.DeferredResult"
+          "org.springframework.web.context.request.async.DeferredResult",
+          "org.springframework.web.multipart.MultipartFile"
         ).traverse(safeParseRawImport)
 
       case BuildTracingFields(operation, resourceName, tracing) =>

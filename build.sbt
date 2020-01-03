@@ -96,7 +96,7 @@ val exampleFrameworkSuites = Map(
   ),
   "java" -> List(
     ("dropwizard", "dropwizard", List("client", "server")),
-    ("spring-mvc", "springMvc", List("client", "server"))
+    ("spring-mvc", "springMvc", List("server"))
   )
 )
 
