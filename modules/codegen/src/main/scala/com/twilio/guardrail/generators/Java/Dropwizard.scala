@@ -33,7 +33,7 @@ object Dropwizard extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
 
   val interpFrameworkC: FrameworkC[JavaLanguage, ?] ~> Target     = ClientTermInterp or interpModel
   val interpFrameworkCS: FrameworkCS[JavaLanguage, ?] ~> Target   = ServerTermInterp or interpFrameworkC
-  val interpFrameworkCSF: FrameworkCSF[JavaLanguage, ?] ~> Target = SpringMvcGenerator.FrameworkInterp or interpFrameworkCS
+  val interpFrameworkCSF: FrameworkCSF[JavaLanguage, ?] ~> Target = FrameworkInterp or interpFrameworkCS
 
   val interpFramework: ClientServerTerms[JavaLanguage, ?] ~> Target = interpFrameworkCSF
 
