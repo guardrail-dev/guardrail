@@ -401,6 +401,9 @@ object SpringMvcServerGenerator {
                 def addParamAnnotation(parameter: Parameter, param: ScalaParameter[JavaLanguage], annotationName: String): Parameter =
                   parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
+                def addParamMarkerAnnotation(parameter: Parameter, param: ScalaParameter[JavaLanguage], annotationName: String): Parameter =
+                  parameter.addAnnotation(new MarkerAnnotationExpr(new Name(annotationName)))
+
                 def boxParameterTypes(parameter: Parameter): Parameter = {
                   if (parameter.getType.isPrimitiveType) {
                     parameter.setType(parameter.getType.asPrimitiveType.toBoxedType)
@@ -426,7 +429,8 @@ object SpringMvcServerGenerator {
                 val bareMethodParams: List[Parameter] = parameters.bodyParams.toList
                   .map({ param =>
                     val parameter       = param.param.clone()
-                    val dateTransformed = transformJsr310Params(parameter)
+                    val annotated       = addParamMarkerAnnotation(parameter, param, "RequestBody")
+                    val dateTransformed = transformJsr310Params(annotated)
                     addValidationAnnotations(dateTransformed, param)
                   })
 
