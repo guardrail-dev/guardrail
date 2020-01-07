@@ -1,13 +1,12 @@
 package examples.server.springMvc.pet
 
 import java.util
-import java.util.concurrent.{CompletableFuture, CompletionStage}
+import java.util.concurrent.CompletableFuture
 
 import examples.server.springMvc.definitions.{ApiResponse, Pet}
 import examples.server.springMvc.pet.PetHandler.{FindPetsByStatusResponse, FindPetsByTagsResponse}
 import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
-import org.mockito.stubbing.ScalaFirstStubbing
 import org.mockito.{ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, Matchers}
 import org.springframework.beans.factory.annotation.Autowired
