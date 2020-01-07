@@ -4,7 +4,7 @@ import java.util
 import java.util.concurrent.CompletableFuture
 
 import examples.server.springMvc.definitions.{ApiResponse, Pet}
-import examples.server.springMvc.pet.PetHandler.{FindPetsByStatusResponse, FindPetsByTagsResponse}
+import examples.server.springMvc.pet.PetHandler.{FindPetsByStatusEnumResponse, FindPetsByStatusResponse, FindPetsByTagsResponse}
 import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar}
@@ -64,6 +64,15 @@ class BaselineSpecs extends FreeSpec with Matchers with BeforeAndAfterAll with M
       val content = mvcResult.getResponse.getContentAsString
       assertTrue(content.contains("cat"))
       assertTrue(content.contains("mouse"))
+    }
+
+    "required param missing" in {
+      mvc
+        .perform(
+          get("/v2/pet/findByStatus")
+            .accept(MediaType.APPLICATION_JSON)
+        )
+        .andExpect(status.is4xxClientError())
     }
 
     "query params (list)" in {
