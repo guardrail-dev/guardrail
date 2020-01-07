@@ -364,11 +364,8 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
       "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
-      "org.asynchttpclient"        %  "async-http-client"        % ahcVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-      "junit"                      %  "junit"                    % "4.12"             % Test,
-      "com.novocode"               %  "junit-interface"          % "0.11"             % Test,
       "org.mockito"                %% "mockito-scala"            % "1.7.1"            % Test,
       "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
     ),
