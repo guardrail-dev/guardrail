@@ -364,7 +364,6 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
       "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
-      "org.hibernate"              %  "hibernate-validator"      % "5.4.3.Final",     // tbd 6 version does not have @UnwrapValidatedValue
       "org.asynchttpclient"        %  "async-http-client"        % ahcVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,

@@ -270,7 +270,6 @@ object SpringMvcServerGenerator {
           "java.util.Optional",
           "java.util.concurrent.CompletionStage",
           "javax.validation.constraints.NotNull",
-          "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
           "org.slf4j.Logger",
           "org.slf4j.LoggerFactory",
           "org.springframework.beans.factory.annotation.Autowired",
@@ -357,9 +356,6 @@ object SpringMvcServerGenerator {
                   val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
                   def transform(dateTimeFormat: String): Parameter = {
-                    if (isOptional) {
-                      parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
-                    }
                     parameter.getAnnotations.addLast(
                       new NormalAnnotationExpr(
                         new Name("DateTimeFormat"),
