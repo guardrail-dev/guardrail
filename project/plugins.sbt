@@ -16,7 +16,7 @@ addSbtPlugin("ohnosequences" % "sbt-github-release" % "0.7.0")
 
 addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.3")
 
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.31")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.32")
 
 addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.0.2")
 
