@@ -4,20 +4,21 @@ package generators
 import com.twilio.guardrail.languages.ScalaLanguage
 import cats.data.NonEmptyList
 import cats.arrow.FunctionK
+import com.twilio.guardrail.circe.CirceVersion
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
   implicit val coreTargetMonad: cats.Monad[CoreTarget] = cats.data.EitherT.catsDataMonadErrorForEitherT[cats.Id, Error]
 
-  def circe: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
+  def circe(circeVersion: CirceVersion): FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
     val interpDefinitionPM
-        : FunctionK[DefinitionPM[ScalaLanguage, ?], Target]                         = CirceProtocolGenerator.ProtocolSupportTermInterp or CirceProtocolGenerator.ModelProtocolTermInterp
+    : FunctionK[DefinitionPM[ScalaLanguage, ?], Target]                         = CirceProtocolGenerator.ProtocolSupportTermInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(circeVersion)
     val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
     val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
     val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
     interpDefinitionPMEAP
   }
 
-  def circeJava8: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
+  def circeJava8(circeVersion: CirceVersion): FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
     import com.twilio.guardrail.protocol.terms.protocol.{ PackageObjectImports, ProtocolSupportTerm }
     val java8timeCirceInterp = new FunctionK[ProtocolSupportTerm[ScalaLanguage, ?], Target] {
       import scala.meta._
@@ -30,7 +31,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       }
     }
 
-    val interpDefinitionPM: FunctionK[DefinitionPM[ScalaLanguage, ?], Target]       = java8timeCirceInterp or CirceProtocolGenerator.ModelProtocolTermInterp
+    val interpDefinitionPM: FunctionK[DefinitionPM[ScalaLanguage, ?], Target]       = java8timeCirceInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(circeVersion)
     val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
     val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
     val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
@@ -40,7 +41,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
   def akkaHttp(interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
     val interpFrameworkC: FunctionK[FrameworkC[ScalaLanguage, ?], Target]     = AkkaHttpClientGenerator.ClientTermInterp or interpModel
     val interpFrameworkCS: FunctionK[FrameworkCS[ScalaLanguage, ?], Target]   = AkkaHttpServerGenerator.ServerTermInterp or interpFrameworkC
-    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = AkkaHttpGenerator.FrameworkInterp or interpFrameworkCS
+    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = new AkkaHttpGenerator.FrameworkInterp or interpFrameworkCS
     interpFrameworkCSF
   }
 
@@ -60,7 +61,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
 
   def extract(modules: NonEmptyList[String]): CoreTarget[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
     (for {
-      protocolGenerator <- popModule("json", ("circe-java8", circeJava8), ("circe", circe))
+      protocolGenerator <- popModule("json", ("circe-java8", circeJava8(CirceVersion.V011)), ("circe-0.11", circe(CirceVersion.V011)), ("circe-0.12", circe(CirceVersion.V012)))
       interpFramework <- popModule(
         "framework",
         ("akka-http", akkaHttp(protocolGenerator)),
