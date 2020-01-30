@@ -11,7 +11,9 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
 
   def circe(circeVersion: CirceVersion): FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
     val interpDefinitionPM
-    : FunctionK[DefinitionPM[ScalaLanguage, ?], Target]                         = CirceProtocolGenerator.ProtocolSupportTermInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(circeVersion)
+        : FunctionK[DefinitionPM[ScalaLanguage, ?], Target] = CirceProtocolGenerator.ProtocolSupportTermInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(
+            circeVersion
+          )
     val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
     val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
     val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
@@ -31,7 +33,9 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       }
     }
 
-    val interpDefinitionPM: FunctionK[DefinitionPM[ScalaLanguage, ?], Target]       = java8timeCirceInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(circeVersion)
+    val interpDefinitionPM: FunctionK[DefinitionPM[ScalaLanguage, ?], Target] = java8timeCirceInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(
+            circeVersion
+          )
     val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
     val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
     val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
@@ -61,7 +65,12 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
 
   def extract(modules: NonEmptyList[String]): CoreTarget[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
     (for {
-      protocolGenerator <- popModule("json", ("circe-java8", circeJava8(CirceVersion.V011)), ("circe-0.11", circe(CirceVersion.V011)), ("circe-0.12", circe(CirceVersion.V012)))
+      protocolGenerator <- popModule(
+        "json",
+        ("circe-java8", circeJava8(CirceVersion.V011)),
+        ("circe-0.11", circe(CirceVersion.V011)),
+        ("circe-0.12", circe(CirceVersion.V012))
+      )
       interpFramework <- popModule(
         "framework",
         ("akka-http", akkaHttp(protocolGenerator)),
