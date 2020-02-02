@@ -1,4 +1,4 @@
-guardrail [![Build Status](https://travis-ci.org/twilio/guardrail.svg?branch=master)](https://travis-ci.org/twilio/guardrail)
+guardrail [![Build Status](https://travis-ci.com/twilio/guardrail.svg?branch=master)](https://travis-ci.com/twilio/guardrail)
 ===
 
 guardrail is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating Scala source code, primarily targeting the akka-http and http4s web frameworks, using circe for JSON encoding/decoding.
