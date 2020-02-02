@@ -374,7 +374,7 @@ object JavaGenerator {
         } yield handlerTree +: serverTrees
 
       case WrapToObject(_, _, _) =>
-        Target.raiseError("Currently not supported for Java")
+        Target.pure(Option.empty) // Unnecessary in Java, due to static members
     }
   }
 }
