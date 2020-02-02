@@ -16,7 +16,8 @@ val catsEffectVersion    = "1.0.0"
 val circeVersion         = "0.12.1"
 val http4sVersion        = "0.20.0"
 val scalacheckVersion    = "1.14.3"
-val scalatestVersion     = "3.0.8"
+val scalatestVersion     = "3.1.0"
+val scalatestPlusVersion = "3.1.0.0-RC2"
 val javaparserVersion    = "3.15.9"
 val endpointsVersion     = "0.8.0"
 val ahcVersion           = "2.8.1"
@@ -176,7 +177,8 @@ publishMavenStyle := true
 
 val testDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalatestVersion % Test,
-  "org.scalacheck" %% "scalacheck" % scalacheckVersion % Test
+  "org.scalacheck" %% "scalacheck" % scalacheckVersion % Test,
+  "org.scalatestplus" %% "scalatestplus-scalacheck" % scalatestPlusVersion % Test
 )
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
