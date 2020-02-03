@@ -42,14 +42,20 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     interpDefinitionPMEAP
   }
 
-  def akkaHttp(interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
+  def akkaHttp(
+      circeVersion: CirceVersion,
+      interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]
+  ): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
     val interpFrameworkC: FunctionK[FrameworkC[ScalaLanguage, ?], Target]     = AkkaHttpClientGenerator.ClientTermInterp or interpModel
     val interpFrameworkCS: FunctionK[FrameworkCS[ScalaLanguage, ?], Target]   = AkkaHttpServerGenerator.ServerTermInterp or interpFrameworkC
-    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = new AkkaHttpGenerator.FrameworkInterp or interpFrameworkCS
+    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = new AkkaHttpGenerator.FrameworkInterp(circeVersion) or interpFrameworkCS
     interpFrameworkCSF
   }
 
-  def endpoints(interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
+  def endpoints(
+      circeVersion: CirceVersion,
+      interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]
+  ): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
     val interpFrameworkC: FunctionK[FrameworkC[ScalaLanguage, ?], Target]     = EndpointsClientGenerator.ClientTermInterp or interpModel
     val interpFrameworkCS: FunctionK[FrameworkCS[ScalaLanguage, ?], Target]   = EndpointsServerGenerator.ServerTermInterp or interpFrameworkC
     val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = EndpointsGenerator.FrameworkInterp or interpFrameworkCS
@@ -65,17 +71,17 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
 
   def extract(modules: NonEmptyList[String]): CoreTarget[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
     (for {
-      protocolGenerator <- popModule(
+      (circeVersion, protocolGenerator) <- popModule(
         "json",
-        ("circe-java8", circeJava8(CirceVersion.V011)),
-        ("circe-0.11", circe(CirceVersion.V011)),
-        ("circe-0.12", circe(CirceVersion.V012))
+        ("circe-java8", (CirceVersion.V011, circeJava8(CirceVersion.V011))),
+        ("circe-0.11", (CirceVersion.V011, circe(CirceVersion.V011))),
+        ("circe", (CirceVersion.V012, circe(CirceVersion.V012)))
       )
       interpFramework <- popModule(
         "framework",
-        ("akka-http", akkaHttp(protocolGenerator)),
+        ("akka-http", akkaHttp(circeVersion, protocolGenerator)),
         ("http4s", http4s(protocolGenerator)),
-        ("endpoints", endpoints(protocolGenerator))
+        ("endpoints", endpoints(circeVersion, protocolGenerator))
       )
       parser             = SwaggerGenerator[ScalaLanguage] or interpFramework
       codegenApplication = ScalaGenerator.ScalaInterp or parser

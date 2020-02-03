@@ -9,7 +9,7 @@ import scala.meta._
 import com.twilio.guardrail.languages.ScalaLanguage
 
 object AkkaHttpGenerator {
-  class FrameworkInterp(circeVersion: CirceVersion = CirceVersion.V011) extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
+  class FrameworkInterp(circeVersion: CirceVersion) extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
       case FileType(format)   => Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
       case ObjectType(format) => Target.pure(t"io.circe.Json")
