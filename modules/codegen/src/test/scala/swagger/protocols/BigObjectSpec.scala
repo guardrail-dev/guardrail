@@ -125,9 +125,9 @@ class BigObjectSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object BigObject {
-        implicit val encodeBigObject: ObjectEncoder[BigObject] = {
+        implicit val encodeBigObject: Encoder.AsObject[BigObject] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[BigObject] { final def encodeObject(a: BigObject): JsonObject = JsonObject.fromIterable(Vector(("v1", a.v1.asJson), ("v2", a.v2.asJson), ("v3", a.v3.asJson), ("v4", a.v4.asJson), ("v5", a.v5.asJson), ("v6", a.v6.asJson), ("v7", a.v7.asJson), ("v8", a.v8.asJson), ("v9", a.v9.asJson), ("v10", a.v10.asJson), ("v11", a.v11.asJson), ("v12", a.v12.asJson), ("v13", a.v13.asJson), ("v14", a.v14.asJson), ("v15", a.v15.asJson), ("v16", a.v16.asJson), ("v17", a.v17.asJson), ("v18", a.v18.asJson), ("v19", a.v19.asJson), ("v20", a.v20.asJson), ("v21", a.v21.asJson), ("v22", a.v22.asJson), ("v23", a.v23.asJson), ("v24", a.v24.asJson), ("v25", a.v25.asJson), ("v26", a.v26.asJson), ("v27", a.v27.asJson), ("v28", a.v28.asJson), ("v29", a.v29.asJson), ("v30", a.v30.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[BigObject](a => JsonObject.fromIterable(Vector(("v1", a.v1.asJson), ("v2", a.v2.asJson), ("v3", a.v3.asJson), ("v4", a.v4.asJson), ("v5", a.v5.asJson), ("v6", a.v6.asJson), ("v7", a.v7.asJson), ("v8", a.v8.asJson), ("v9", a.v9.asJson), ("v10", a.v10.asJson), ("v11", a.v11.asJson), ("v12", a.v12.asJson), ("v13", a.v13.asJson), ("v14", a.v14.asJson), ("v15", a.v15.asJson), ("v16", a.v16.asJson), ("v17", a.v17.asJson), ("v18", a.v18.asJson), ("v19", a.v19.asJson), ("v20", a.v20.asJson), ("v21", a.v21.asJson), ("v22", a.v22.asJson), ("v23", a.v23.asJson), ("v24", a.v24.asJson), ("v25", a.v25.asJson), ("v26", a.v26.asJson), ("v27", a.v27.asJson), ("v28", a.v28.asJson), ("v29", a.v29.asJson), ("v30", a.v30.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeBigObject: Decoder[BigObject] = new Decoder[BigObject] {
           final def apply(c: HCursor): Decoder.Result[BigObject] = for {

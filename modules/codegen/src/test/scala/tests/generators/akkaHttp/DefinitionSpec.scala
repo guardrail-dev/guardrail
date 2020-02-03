@@ -80,9 +80,9 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object First {
-        implicit val encodeFirst: ObjectEncoder[First] = {
+        implicit val encodeFirst: Encoder.AsObject[First] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[First] { final def encodeObject(a: First): JsonObject = JsonObject.fromIterable(Vector(("a", a.a.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[First](a => JsonObject.fromIterable(Vector(("a", a.a.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeFirst: Decoder[First] = new Decoder[First] { final def apply(c: HCursor): Decoder.Result[First] = for (v0 <- c.downField("a").as[Option[Int]]) yield First(v0) }
       }
@@ -144,9 +144,9 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object Fifth {
-        implicit val encodeFifth: ObjectEncoder[Fifth] = {
+        implicit val encodeFifth: Encoder.AsObject[Fifth] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[Fifth] { final def encodeObject(a: Fifth): JsonObject = JsonObject.fromIterable(Vector(("a_b_c_d", a.aBCD.asJson), ("b_c_d_e", a.bCDE.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Fifth](a => JsonObject.fromIterable(Vector(("a_b_c_d", a.aBCD.asJson), ("b_c_d_e", a.bCDE.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeFifth: Decoder[Fifth] = new Decoder[Fifth] { final def apply(c: HCursor): Decoder.Result[Fifth] = for (v0 <- c.downField("a_b_c_d").as[Option[Int]]; v1 <- c.downField("b_c_d_e").as[Option[Int]]) yield Fifth(v0, v1) }
       }
@@ -169,9 +169,9 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object Sixth {
-        implicit val encodeSixth: ObjectEncoder[Sixth] = {
+        implicit val encodeSixth: Encoder.AsObject[Sixth] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[Sixth] { final def encodeObject(a: Sixth): JsonObject = JsonObject.fromIterable(Vector(("defval", a.defval.asJson), ("defval_opt", a.defvalOpt.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Sixth](a => JsonObject.fromIterable(Vector(("defval", a.defval.asJson), ("defval_opt", a.defvalOpt.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeSixth: Decoder[Sixth] = new Decoder[Sixth] { final def apply(c: HCursor): Decoder.Result[Sixth] = for (v0 <- c.downField("defval").as[Int]; v1 <- c.downField("defval_opt").as[Option[Long]]) yield Sixth(v0, v1) }
       }

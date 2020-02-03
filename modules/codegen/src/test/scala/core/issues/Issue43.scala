@@ -122,9 +122,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       val companion = q"""
         object Cat {
-          implicit val encodeCat: ObjectEncoder[Cat] = {
+          implicit val encodeCat: Encoder.AsObject[Cat] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[Cat] { final def encodeObject(a: Cat): JsonObject = JsonObject.fromIterable(Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[Cat](a => JsonObject.fromIterable(Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeCat: Decoder[Cat] = new Decoder[Cat] { final def apply(c: HCursor): Decoder.Result[Cat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]) yield Cat(v0, v1) }
           sealed abstract class HuntingSkill(val value: String) { override def toString: String = value.toString }
@@ -313,9 +313,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object (Dog)") {
       val companion = q"""
         object Dog {
-          implicit val encodeDog: ObjectEncoder[Dog] = {
+          implicit val encodeDog: Encoder.AsObject[Dog] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[Dog] { final def encodeObject(a: Dog): JsonObject = JsonObject.fromIterable(Vector(("name", a.name.asJson), ("packSize", a.packSize.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[Dog](a => JsonObject.fromIterable(Vector(("name", a.name.asJson), ("packSize", a.packSize.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeDog: Decoder[Dog] = new Decoder[Dog] { final def apply(c: HCursor): Decoder.Result[Dog] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("packSize").as[Int]) yield Dog(v0, v1) }
         }
@@ -326,9 +326,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object (PersianCat)") {
       val companion = q"""
         object PersianCat {
-          implicit val encodePersianCat: ObjectEncoder[PersianCat] = {
+          implicit val encodePersianCat: Encoder.AsObject[PersianCat] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[PersianCat] { final def encodeObject(a: PersianCat): JsonObject = JsonObject.fromIterable(Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[PersianCat](a => JsonObject.fromIterable(Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodePersianCat: Decoder[PersianCat] = new Decoder[PersianCat] { final def apply(c: HCursor): Decoder.Result[PersianCat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]; v2 <- c.downField("wool").as[Option[Int]]) yield PersianCat(v0, v1, v2) }
         }
@@ -484,9 +484,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       val companion = q"""
         object PersianCat {
-          implicit val encodePersianCat: ObjectEncoder[PersianCat] = {
+          implicit val encodePersianCat: Encoder.AsObject[PersianCat] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[PersianCat] { final def encodeObject(a: PersianCat): JsonObject = JsonObject.fromIterable(Vector(("catBreed", a.catBreed.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[PersianCat](a => JsonObject.fromIterable(Vector(("catBreed", a.catBreed.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodePersianCat: Decoder[PersianCat] = new Decoder[PersianCat] { final def apply(c: HCursor): Decoder.Result[PersianCat] = for (v0 <- c.downField("catBreed").as[String]) yield PersianCat(v0) }
         }
@@ -584,9 +584,9 @@ class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
     it("should generate right companion object") {
       val companion = q"""
         object Cat {
-          implicit val encodeCat: ObjectEncoder[Cat] = {
+          implicit val encodeCat: Encoder.AsObject[Cat] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[Cat] { final def encodeObject(a: Cat): JsonObject = JsonObject.fromIterable(Vector(("wool", a.wool.asJson), ("catBreed", a.catBreed.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[Cat](a => JsonObject.fromIterable(Vector(("wool", a.wool.asJson), ("catBreed", a.catBreed.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeCat: Decoder[Cat] = new Decoder[Cat] { final def apply(c: HCursor): Decoder.Result[Cat] = for (v0 <- c.downField("wool").as[Boolean]; v1 <- c.downField("catBreed").as[String]) yield Cat(v0, v1) }
         }

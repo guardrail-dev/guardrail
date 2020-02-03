@@ -92,9 +92,9 @@ class BasicTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Blix {
-        implicit val encodeBlix: ObjectEncoder[Blix] = {
+        implicit val encodeBlix: Encoder.AsObject[Blix] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[Blix] { final def encodeObject(a: Blix): JsonObject = JsonObject.fromIterable(Vector(("map", a.map.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Blix](a => JsonObject.fromIterable(Vector(("map", a.map.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeBlix: Decoder[Blix] = new Decoder[Blix] { final def apply(c: HCursor): Decoder.Result[Blix] = for (v0 <- c.downField("map").as[io.circe.Json]) yield Blix(v0) }
       }

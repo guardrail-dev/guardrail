@@ -60,9 +60,9 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
     val companion =
       q"""
         object Foo {
-          implicit val encodeFoo: ObjectEncoder[Foo] = {
+          implicit val encodeFoo: Encoder.AsObject[Foo] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[Foo] { final def encodeObject(a: Foo): JsonObject = JsonObject.fromIterable(Vector(("value", a.value.asJson), ("value2", a.value2.asJson), ("nested", a.nested.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[Foo](a => JsonObject.fromIterable(Vector(("value", a.value.asJson), ("value2", a.value2.asJson), ("nested", a.nested.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeFoo: Decoder[Foo] = new Decoder[Foo] { final def apply(c: HCursor): Decoder.Result[Foo] = for (v0 <- c.downField("value").as[Option[Foo.Value]]; v1 <- c.downField("value2").as[Baz]; v2 <- c.downField("nested").as[Option[Foo.Nested]]) yield Foo(v0, v1, v2) }
           sealed abstract class Value(val value: String) { override def toString: String = value.toString }
@@ -83,9 +83,9 @@ class Issue370 extends FunSuite with Matchers with SwaggerSpecRunner {
           }
           case class Nested(value: Option[Foo.Nested.Value] = Option(Foo.Nested.Value.C))
           object Nested {
-            implicit val encodeNested: ObjectEncoder[Nested] = {
+            implicit val encodeNested: Encoder.AsObject[Nested] = {
               val readOnlyKeys = Set[String]()
-              new ObjectEncoder[Nested] { final def encodeObject(a: Nested): JsonObject = JsonObject.fromIterable(Vector(("value", a.value.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+              Encoder.AsObject.instance[Nested](a => JsonObject.fromIterable(Vector(("value", a.value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }
             implicit val decodeNested: Decoder[Nested] = new Decoder[Nested] { final def apply(c: HCursor): Decoder.Result[Nested] = for (v0 <- c.downField("value").as[Option[Foo.Nested.Value]]) yield Nested(v0) }
             sealed abstract class Value(val value: String) { override def toString: String = value.toString }

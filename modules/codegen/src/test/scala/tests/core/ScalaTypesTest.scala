@@ -39,9 +39,9 @@ class ScalaTypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Baz {
-        implicit val encodeBaz: ObjectEncoder[Baz] = {
+        implicit val encodeBaz: Encoder.AsObject[Baz] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[Baz] { final def encodeObject(a: Baz): JsonObject = JsonObject.fromIterable(Vector(("foo", a.foo.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Baz](a => JsonObject.fromIterable(Vector(("foo", a.foo.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeBaz: Decoder[Baz] = new Decoder[Baz] { final def apply(c: HCursor): Decoder.Result[Baz] = for (v0 <- c.downField("foo").as[Option[com.twilio.foo.bar.Baz]]) yield Baz(v0) }
       }

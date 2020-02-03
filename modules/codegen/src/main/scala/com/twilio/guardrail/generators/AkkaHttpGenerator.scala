@@ -2,12 +2,14 @@ package com.twilio.guardrail
 package generators
 
 import cats.arrow.FunctionK
+import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.terms.framework._
+
 import scala.meta._
 import com.twilio.guardrail.languages.ScalaLanguage
 
 object AkkaHttpGenerator {
-  object FrameworkInterp extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
+  class FrameworkInterp(circeVersion: CirceVersion) extends FunctionK[FrameworkTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[ScalaLanguage, T]): Target[T] = term match {
       case FileType(format)   => Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
       case ObjectType(format) => Target.pure(t"io.circe.Json")
@@ -73,7 +75,7 @@ object AkkaHttpGenerator {
                 implicit printer: Printer = Printer.noSpaces
             ): ToEntityMarshaller[${jsonType}] =
               Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
-                HttpEntity(MediaTypes.`application/json`, printer.pretty(json))
+                HttpEntity(MediaTypes.`application/json`, ${Term.Select(q"printer", circeVersion.print)}(json))
               }
 
             // Translate [A: Encoder] => HttpEntity

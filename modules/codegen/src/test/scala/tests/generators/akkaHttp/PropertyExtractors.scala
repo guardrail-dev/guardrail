@@ -86,9 +86,9 @@ class PropertyExtractors extends FunSuite with Matchers with SwaggerSpecRunner {
 
     val companion = q"""
       object Something {
-        implicit val encodeSomething: ObjectEncoder[Something] = {
+        implicit val encodeSomething: Encoder.AsObject[Something] = {
           val readOnlyKeys = Set[String]()
-          new ObjectEncoder[Something] { final def encodeObject(a: Something): JsonObject = JsonObject.fromIterable(Vector(("boolean_value", a.booleanValue.asJson), ("string_value", a.stringValue.asJson), ("long_property", a.longProperty.asJson), ("int_property", a.intProperty.asJson), ("integer_property", a.integerProperty.asJson), ("float_property", a.floatProperty.asJson), ("double_property", a.doubleProperty.asJson), ("number_property", a.numberProperty.asJson), ("untyped_property", a.untypedProperty.asJson), ("object_property", a.objectProperty.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Something](a => JsonObject.fromIterable(Vector(("boolean_value", a.booleanValue.asJson), ("string_value", a.stringValue.asJson), ("long_property", a.longProperty.asJson), ("int_property", a.intProperty.asJson), ("integer_property", a.integerProperty.asJson), ("float_property", a.floatProperty.asJson), ("double_property", a.doubleProperty.asJson), ("number_property", a.numberProperty.asJson), ("untyped_property", a.untypedProperty.asJson), ("object_property", a.objectProperty.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeSomething: Decoder[Something] = new Decoder[Something] { final def apply(c: HCursor): Decoder.Result[Something] = for (v0 <- c.downField("boolean_value").as[Option[Boolean]]; v1 <- c.downField("string_value").as[Option[String]]; v2 <- c.downField("long_property").as[Option[Long]]; v3 <- c.downField("int_property").as[Option[Int]]; v4 <- c.downField("integer_property").as[Option[BigInt]]; v5 <- c.downField("float_property").as[Option[Float]]; v6 <- c.downField("double_property").as[Option[Double]]; v7 <- c.downField("number_property").as[Option[BigDecimal]]; v8 <- c.downField("untyped_property").as[Option[io.circe.Json]]; v9 <- c.downField("object_property").as[Option[io.circe.Json]]) yield Something(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9) }
       }

@@ -4,12 +4,14 @@ package generators
 import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
 import cats.~>
+import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
+
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -95,7 +97,7 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ModelProtocolTermInterp extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
+  class ModelProtocolTermInterp(circeVersion: CirceVersion) extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         swagger
@@ -250,15 +252,12 @@ object CirceProtocolGenerator {
               .to[List]
             Option(
               q"""
-              new ObjectEncoder[${Type.Name(clsName)}] {
-                final def encodeObject(a: ${Type
-                .Name(clsName)}): JsonObject = JsonObject.fromIterable(Vector(..${pairs}))
-              }
-            """
+                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable(Vector(..${pairs})))
+              """
             )
           }
         Target.pure(encVal.map(encVal => q"""
-            implicit val ${suffixClsName("encode", clsName)}: ObjectEncoder[${Type.Name(clsName)}] = {
+            implicit val ${suffixClsName("encode", clsName)}: ${circeVersion.encoderObject}[${Type.Name(clsName)}] = {
               val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
               $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }

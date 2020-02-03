@@ -50,9 +50,9 @@ class Issue145 extends FunSpec with Matchers with SwaggerSpecRunner {
       val cmp       = companionForStaticDefns(staticDefnsPet)
       val companion = q"""
         object Pet {
-          implicit val encodePet: ObjectEncoder[Pet] = {
+          implicit val encodePet: Encoder.AsObject[Pet] = {
             val readOnlyKeys = Set[String]()
-            new ObjectEncoder[Pet] { final def encodeObject(a: Pet): JsonObject = JsonObject.fromIterable(Vector(("name", a.name.asJson), ("underscore_name", a.underscoreName.asJson), ("dash-name", a.dashName.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[Pet](a => JsonObject.fromIterable(Vector(("name", a.name.asJson), ("underscore_name", a.underscoreName.asJson), ("dash-name", a.dashName.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodePet: Decoder[Pet] = new Decoder[Pet] { final def apply(c: HCursor): Decoder.Result[Pet] = for (v0 <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]; v1 <- c.downField("underscore_name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]; v2 <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[Option[CustomThing]]) yield Pet(v0, v1, v2) }
         }
