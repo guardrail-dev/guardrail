@@ -9,7 +9,6 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.Operation
-import scala.collection.JavaConverters._
 
 class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])], val headers: Headers[L]) {
   override def toString: String = s"Response($statusCodeName, $statusCode, $value, $headers)"
@@ -50,13 +49,14 @@ object Responses {
 
                     } yield (baseType, baseDefaultValue)
                   }
-                  headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
+                  headers <- resp.downField("headers", _.getHeaders).indexedDistribute.value.traverse {
                     case (name, header) =>
                       for {
-                        termName   <- pureTermName(s"${name}Header".toCamelCase)
-                        typeName   <- pureTypeName("String").flatMap(widenTypeName)
-                        resultType <- if (header.getRequired) Free.pure[F, L#Type](typeName) else liftOptionalType(typeName)
-                      } yield new Header(name, header.getRequired, resultType, termName)
+                        termName <- pureTermName(s"${name}Header".toCamelCase)
+                        typeName <- pureTypeName("String").flatMap(widenTypeName)
+                        required = header.downField("required", _.getRequired).unwrapTracker.getOrElse(false)
+                        resultType <- if (required) Free.pure[F, L#Type](typeName) else liftOptionalType(typeName)
+                      } yield new Header(name, required, resultType, termName)
                   }
                 } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers))) // FIXME: headOption
         })
