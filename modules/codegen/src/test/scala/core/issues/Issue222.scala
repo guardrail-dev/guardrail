@@ -88,7 +88,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
         implicit val encodeRequest: Encoder.AsObject[Request] = {
           val readOnlyKeys = Set[String]()
-          new Encoder.AsObject[Request] { final def encodeObject(a: Request): JsonObject = JsonObject.fromIterable(Vector(("state", a.state.asJson), ("id", a.id.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Request](a => JsonObject.fromIterable(Vector(("state", a.state.asJson), ("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
@@ -110,7 +110,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
         implicit val encodeRequestFields: Encoder.AsObject[RequestFields] = {
           val readOnlyKeys = Set[String]()
-          new Encoder.AsObject[RequestFields] { final def encodeObject(a: RequestFields): JsonObject = JsonObject.fromIterable(Vector(("state", a.state.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[RequestFields](a => JsonObject.fromIterable(Vector(("state", a.state.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedFieldsDecoder =
@@ -138,7 +138,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
         implicit val encodeRequest2: Encoder.AsObject[Request2] = {
           val readOnlyKeys = Set[String]()
-          new Encoder.AsObject[Request2] { final def encodeObject(a: Request2): JsonObject = JsonObject.fromIterable(Vector(("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Request2](a => JsonObject.fromIterable(Vector(("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
@@ -160,7 +160,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
         implicit val encodeRequestFields2: Encoder.AsObject[RequestFields2] = {
           val readOnlyKeys = Set[String]()
-          new Encoder.AsObject[RequestFields2] { final def encodeObject(a: RequestFields2): JsonObject = JsonObject.fromIterable(Vector(("state2", a.state2.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[RequestFields2](a => JsonObject.fromIterable(Vector(("state2", a.state2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedFieldsDecoder =
@@ -187,7 +187,7 @@ class Issue222 extends FunSuite with Matchers with SwaggerSpecRunner {
       q"""
         implicit val encodeRequest3: Encoder.AsObject[Request3] = {
           val readOnlyKeys = Set[String]()
-          new Encoder.AsObject[Request3] { final def encodeObject(a: Request3): JsonObject = JsonObject.fromIterable(Vector(("state", a.state.asJson), ("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson))) }.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Request3](a => JsonObject.fromIterable(Vector(("state", a.state.asJson), ("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
