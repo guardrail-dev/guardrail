@@ -252,10 +252,8 @@ object CirceProtocolGenerator {
               .to[List]
             Option(
               q"""
-              new ${Init(Type.Apply(circeVersion.encoderObject, List(Type.Name(clsName))), Name.Anonymous(), List.empty)} {
-                final def encodeObject(a: ${Type.Name(clsName)}): JsonObject = JsonObject.fromIterable(Vector(..${pairs}))
-              }
-            """
+                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable(Vector(..${pairs})))
+              """
             )
           }
         Target.pure(encVal.map(encVal => q"""
