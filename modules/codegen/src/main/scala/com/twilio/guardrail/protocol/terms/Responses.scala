@@ -32,35 +32,33 @@ object Responses {
     for {
       responses <- Sw.getResponses(operationId, operation)
 
-      instances <- responses
-        .foldLeft[List[Free[F, Response[L]]]](List.empty)({
-          case (acc, (key, resp)) =>
-            acc :+ (for {
-                  httpCode <- lookupStatusCode(key)
-                  (statusCode, statusCodeName) = httpCode
-                  valueTypes <- (for {
-                    (_, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
-                    schema       <- content.downField("schema", _.getSchema()).indexedDistribute.toList
-                  } yield schema).traverse { prop =>
-                    for {
-                      meta     <- SwaggerUtil.propMeta[L, F](prop)
-                      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-                      SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+      instances <- responses.toList.traverse {
+        case (key, resp) =>
+          for {
+            httpCode <- lookupStatusCode(key)
+            (statusCode, statusCodeName) = httpCode
+            valueTypes <- (for {
+              (_, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
+              schema       <- content.downField("schema", _.getSchema()).indexedDistribute.toList
+            } yield schema).traverse { prop =>
+              for {
+                meta     <- SwaggerUtil.propMeta[L, F](prop)
+                resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+                SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
 
-                    } yield (baseType, baseDefaultValue)
-                  }
-                  headers <- resp.downField("headers", _.getHeaders).indexedDistribute.value.traverse {
-                    case (name, header) =>
-                      for {
-                        termName <- pureTermName(s"${name}Header".toCamelCase)
-                        typeName <- pureTypeName("String").flatMap(widenTypeName)
-                        required = header.downField("required", _.getRequired).unwrapTracker.getOrElse(false)
-                        resultType <- if (required) Free.pure[F, L#Type](typeName) else liftOptionalType(typeName)
-                      } yield new Header(name, required, resultType, termName)
-                  }
-                } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers))) // FIXME: headOption
-        })
-        .sequence
+              } yield (baseType, baseDefaultValue)
+            }
+            headers <- resp.downField("headers", _.getHeaders).indexedDistribute.value.traverse {
+              case (name, header) =>
+                for {
+                  termName <- pureTermName(s"${name}Header".toCamelCase)
+                  typeName <- pureTypeName("String").flatMap(widenTypeName)
+                  required = header.downField("required", _.getRequired).unwrapTracker.getOrElse(false)
+                  resultType <- if (required) Free.pure[F, L#Type](typeName) else liftOptionalType(typeName)
+                } yield new Header(name, required, resultType, termName)
+            }
+          } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers)) // FIXME: headOption
+      }
     } yield new Responses[L](instances)
   }
 
