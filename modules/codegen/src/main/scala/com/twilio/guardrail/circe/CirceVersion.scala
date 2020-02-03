@@ -1,16 +1,18 @@
 package com.twilio.guardrail.circe
 
+import scala.meta._
+
 sealed trait CirceVersion {
-  def encoderObject: String
-  def print: String
+  def encoderObject: Type
+  def print: Term.Name
 }
 object CirceVersion {
   case object V011 extends CirceVersion {
-    def encoderObject = "ObjectEncoder"
-    def print         = "pretty"
+    def encoderObject = t"ObjectEncoder"
+    def print         = q"pretty"
   }
   case object V012 extends CirceVersion {
-    def encoderObject = "Encoder.AsObject"
-    def print         = "print"
+    def encoderObject = t"Encoder.AsObject"
+    def print         = q"print"
   }
 }
