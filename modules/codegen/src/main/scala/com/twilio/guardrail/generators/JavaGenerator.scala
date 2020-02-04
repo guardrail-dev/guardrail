@@ -306,6 +306,7 @@ object JavaGenerator {
               cu.setPackageDeclaration(pkgDecl)
               imports.foreach(cu.addImport)
               staticDefns.extraImports.foreach(cu.addImport)
+              cu.addImport(showerImport)
               val clsCopy = cls.clone()
               staticDefns.definitions.foreach(clsCopy.addMember)
               cu.addType(clsCopy)
