@@ -171,14 +171,18 @@ object AsyncHttpClientClientGenerator {
       Option(
         new ExpressionStmt(
           wrapSetBody(
-            new ObjectCreationExpr(
-              null,
-              FILE_PART_TYPE,
-              new NodeList(
-                new StringLiteralExpr(param.argName.value),
-                new NameExpr(param.paramName.asString)
+            if (contentType.contains(RouteMeta.OctetStream)) {
+              new NameExpr(param.paramName.asString)
+            } else {
+              new ObjectCreationExpr(
+                null,
+                FILE_PART_TYPE,
+                new NodeList(
+                  new StringLiteralExpr(param.argName.value),
+                  new NameExpr(param.paramName.asString)
+                )
               )
-            )
+            }
           )
         )
       )
