@@ -51,16 +51,20 @@ object AsyncHttpClientClientGenerator {
       } else {
         Option(RouteMeta.UrlencodedFormData)
       }
-    } else if (parameters.bodyParams.isDefined) {
-      val validTypes = Seq(RouteMeta.ApplicationJson, RouteMeta.TextPlain)
-      operation.consumes
-        .collectFirst({ case ContentType(value) if validTypes.contains(value) => value })
-        .orElse({
-          println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to application/json")
-          Option(RouteMeta.ApplicationJson)
-        })
     } else {
-      Option.empty
+      parameters.bodyParams.flatMap { param =>
+        val validTypes = Seq(RouteMeta.ApplicationJson, RouteMeta.TextPlain)
+        operation.consumes
+          .collectFirst({ case ContentType(value) if validTypes.contains(value) => value })
+          .orElse({
+            if (param.isFile) {
+              Option(RouteMeta.OctetStream)
+            } else {
+              println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to application/json")
+              Option(RouteMeta.ApplicationJson)
+            }
+          })
+      }
     }
 
   def getBestProduces(operation: Operation, response: Response[JavaLanguage]): Option[ContentType] = {
