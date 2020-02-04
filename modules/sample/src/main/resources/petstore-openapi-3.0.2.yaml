@@ -440,7 +440,7 @@ paths:
       description: This can only be done by the logged in user.
       operationId: createUser
       responses:
-        default:
+        200:
           description: successful operation
           content:
             application/json:
@@ -543,7 +543,7 @@ paths:
       operationId: logoutUser
       parameters: []
       responses:
-        default:
+        200:
           description: successful operation
   '/user/{username}':
     get:
@@ -590,7 +590,7 @@ paths:
           schema:
             type: string
       responses:
-        default:
+        200:
           description: successful operation
       requestBody:
         description: Update an existent user in the store
