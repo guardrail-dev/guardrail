@@ -1,9 +1,9 @@
 package core.issues
 
 import com.twilio.guardrail.generators.Http4s
-import com.twilio.guardrail.{ClassDefinition, Context, ProtocolDefinitions}
+import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import com.twilio.guardrail.languages.ScalaLanguage
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 class Issue538 extends FunSuite with Matchers with SwaggerSpecRunner {
@@ -29,15 +29,19 @@ class Issue538 extends FunSuite with Matchers with SwaggerSpecRunner {
                             |""".stripMargin
 
     val (
-      ProtocolDefinitions(List(_: ClassDefinition[ScalaLanguage], //bar
-      _: ClassDefinition[ScalaLanguage], //baz
-      foo: ClassDefinition[ScalaLanguage]),
-      _,
-      _,
-      _),
+      ProtocolDefinitions(
+        List(
+          _: ClassDefinition[ScalaLanguage], //bar
+          _: ClassDefinition[ScalaLanguage], //baz
+          foo: ClassDefinition[ScalaLanguage]
+        ),
+        _,
+        _,
+        _
+      ),
       _,
       _
-      ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     cmp(foo.cls, q"case class Foo(id: Option[String] = None)")
   }
@@ -62,21 +66,24 @@ class Issue538 extends FunSuite with Matchers with SwaggerSpecRunner {
                             |""".stripMargin
 
     val (
-      ProtocolDefinitions(List(_: ClassDefinition[ScalaLanguage], //bar
-      _: ClassDefinition[ScalaLanguage], //baz
-      foo: ClassDefinition[ScalaLanguage]),
-      _,
-      _,
-      _),
+      ProtocolDefinitions(
+        List(
+          _: ClassDefinition[ScalaLanguage], //bar
+          _: ClassDefinition[ScalaLanguage], //baz
+          foo: ClassDefinition[ScalaLanguage]
+        ),
+        _,
+        _,
+        _
+      ),
       _,
       _
-      ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     cmp(foo.cls, q"case class Foo(id: String)")
   }
 
-  private def cmp(l: Tree, r: Tree): Unit = {
+  private def cmp(l: Tree, r: Tree): Unit =
     l.structure shouldBe r.structure
-  }
 
 }
