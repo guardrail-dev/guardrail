@@ -76,7 +76,6 @@ class Issue538 extends FunSuite with Matchers with SwaggerSpecRunner {
   }
 
   private def cmp(l: Tree, r: Tree): Unit = {
-    println(l.syntax)
     l.structure shouldBe r.structure
   }
 
