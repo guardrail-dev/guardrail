@@ -3,11 +3,12 @@ package generators
 
 import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
+import cats.Eq
 import cats.~>
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
-import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
+import com.twilio.guardrail.extract.{DataRedaction, EmptyValueIsNull}
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -173,7 +174,13 @@ object CirceProtocolGenerator {
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
           param => discriminatorNames.contains(param.term.name.value)
         )
-        val terms = params.map(_.term)
+        
+        import ScalaLanguage._
+       
+        val deduplicatedParams = params.foldLeft(List.empty[ProtocolParameter[ScalaLanguage]]) { (s, a) =>
+          s.find(p => Eq.eqv(a,p)).map(_ => s).getOrElse(a :: s)
+        }
+        val terms = deduplicatedParams.map(_.term)
 
         val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
           def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {

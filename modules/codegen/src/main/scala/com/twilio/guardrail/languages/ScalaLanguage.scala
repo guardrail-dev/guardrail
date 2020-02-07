@@ -1,5 +1,9 @@
 package com.twilio.guardrail.languages
 
+import cats.Eq
+
+import scala.meta.Term
+
 class ScalaLanguage extends LanguageAbstraction {
 
   type Statement = scala.meta.Stat
@@ -36,4 +40,10 @@ class ScalaLanguage extends LanguageAbstraction {
 
   // Result
   type FileContents = scala.meta.Source
+}
+
+object ScalaLanguage {
+  implicit val eqTerm: Eq[Term] = (x: Term, y: Term) => x.syntax == y.syntax
+  implicit val eqMethodParameter: Eq[Term.Param] = (x: Term.Param, y: Term.Param) => x.syntax == y.syntax
+
 }

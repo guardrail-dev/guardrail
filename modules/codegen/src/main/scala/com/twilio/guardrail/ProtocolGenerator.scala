@@ -5,16 +5,17 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.core.{ Mappish, Tracker }
+import com.twilio.guardrail.core.{Mappish, Tracker}
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ScalaTerms, SwaggerTerms}
 import java.util.Locale
 
+import cats.Eq
 import com.twilio.guardrail.extract.Default
 
 import scala.collection.JavaConverters._
@@ -44,7 +45,21 @@ case class ProtocolParameter[L <: LA](
     dataRedaction: RedactionBehaviour,
     defaultValue: Option[L#Term]
 )
-
+object ProtocolParameter {
+  implicit def eqInstance[L <: com.twilio.guardrail.languages.LA](implicit eqTerm: Eq[L#Term], eqMethodParam: Eq[L#MethodParameter]) = new Eq[ProtocolParameter[L]] {
+    override def eqv(x: ProtocolParameter[L],
+                     y: ProtocolParameter[L]): Boolean = {
+      Eq.eqv(x.term, y.term) &&
+        x.name == y.name &&
+        x.dep == y.dep &&
+        x.rawType == y.rawType &&
+        x.readOnlyKey == y.readOnlyKey &&
+        x.emptyToNull == y.emptyToNull &&
+        x.dataRedaction == y.dataRedaction &&
+        Eq.eqv(x.defaultValue, y.defaultValue)
+    }
+  }
+}
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
 
 object Discriminator {
