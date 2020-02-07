@@ -43,7 +43,7 @@ class ScalaLanguage extends LanguageAbstraction {
 }
 
 object ScalaLanguage {
-  implicit val eqTerm: Eq[Term] = (x: Term, y: Term) => x.syntax == y.syntax
+  implicit val eqTerm: Eq[Term]                  = (x: Term, y: Term) => x.syntax == y.syntax
   implicit val eqMethodParameter: Eq[Term.Param] = (x: Term.Param, y: Term.Param) => x.syntax == y.syntax
 
 }
