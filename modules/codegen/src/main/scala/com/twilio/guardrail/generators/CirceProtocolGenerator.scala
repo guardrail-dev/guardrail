@@ -180,7 +180,7 @@ object CirceProtocolGenerator {
         val deduplicatedParams = params.foldLeft(List.empty[ProtocolParameter[ScalaLanguage]]) { (s, a) =>
           s.find(p => Eq.eqv(a, p)).map(_ => s).getOrElse(a :: s)
         }
-        val terms = deduplicatedParams.map(_.term)
+        val terms = deduplicatedParams.map(_.term).reverse // not needed but without it we break bunch of tests
 
         val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
           def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
