@@ -84,6 +84,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("http4s")),
+  ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames")
 )
 
 val exampleFrameworkSuites = Map(
