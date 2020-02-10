@@ -40,6 +40,9 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       |      date_time:
       |        type: string
       |        format: date-time
+      |      byte:
+      |        type: string
+      |        format: byte
       |      long:
       |        type: integer
       |        format: int64
@@ -99,6 +102,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
         string: Option[String] = None,
         date: Option[java.time.LocalDate] = None,
         date_time: Option[java.time.OffsetDateTime] = None,
+        byte: Option[Base64String] = None,
         long: Option[Long] = None,
         int: Option[Int] = None,
         float: Option[Float] = None,
@@ -118,9 +122,9 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       object Types {
         implicit val encodeTypes: Encoder.AsObject[Types] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Types](a => JsonObject.fromIterable(Vector(("array", a.array.asJson), ("map", a.map.asJson), ("obj", a.obj.asJson), ("bool", a.bool.asJson), ("string", a.string.asJson), ("date", a.date.asJson), ("date_time", a.date_time.asJson), ("long", a.long.asJson), ("int", a.int.asJson), ("float", a.float.asJson), ("double", a.double.asJson), ("number", a.number.asJson), ("integer", a.integer.asJson), ("untyped", a.untyped.asJson), ("custom", a.custom.asJson), ("customComplex", a.customComplex.asJson), ("nested", a.nested.asJson), ("nestedArray", a.nestedArray.asJson), ("requiredArray", a.requiredArray.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Types](a => JsonObject.fromIterable(Vector(("array", a.array.asJson), ("map", a.map.asJson), ("obj", a.obj.asJson), ("bool", a.bool.asJson), ("string", a.string.asJson), ("date", a.date.asJson), ("date_time", a.date_time.asJson), ("byte", a.byte.asJson), ("long", a.long.asJson), ("int", a.int.asJson), ("float", a.float.asJson), ("double", a.double.asJson), ("number", a.number.asJson), ("integer", a.integer.asJson), ("untyped", a.untyped.asJson), ("custom", a.custom.asJson), ("customComplex", a.customComplex.asJson), ("nested", a.nested.asJson), ("nestedArray", a.nestedArray.asJson), ("requiredArray", a.requiredArray.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeTypes: Decoder[Types] = new Decoder[Types] { final def apply(c: HCursor): Decoder.Result[Types] = for (v0 <- c.downField("array").as[Option[Vector[Boolean]]]; v1 <- c.downField("map").as[Option[Map[String, Boolean]]]; v2 <- c.downField("obj").as[Option[io.circe.Json]]; v3 <- c.downField("bool").as[Option[Boolean]]; v4 <- c.downField("string").as[Option[String]]; v5 <- c.downField("date").as[Option[java.time.LocalDate]]; v6 <- c.downField("date_time").as[Option[java.time.OffsetDateTime]]; v7 <- c.downField("long").as[Option[Long]]; v8 <- c.downField("int").as[Option[Int]]; v9 <- c.downField("float").as[Option[Float]]; v10 <- c.downField("double").as[Option[Double]]; v11 <- c.downField("number").as[Option[BigDecimal]]; v12 <- c.downField("integer").as[Option[BigInt]]; v13 <- c.downField("untyped").as[Option[io.circe.Json]]; v14 <- c.downField("custom").as[Option[Foo]]; v15 <- c.downField("customComplex").as[Option[Foo[Bar]]]; v16 <- c.downField("nested").as[Option[Types.Nested]]; v17 <- c.downField("nestedArray").as[Option[Vector[Types.NestedArray]]]; v18 <- c.downField("requiredArray").as[Vector[String]]) yield Types(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) }
+        implicit val decodeTypes: Decoder[Types] = new Decoder[Types] { final def apply(c: HCursor): Decoder.Result[Types] = for (v0 <- c.downField("array").as[Option[Vector[Boolean]]]; v1 <- c.downField("map").as[Option[Map[String, Boolean]]]; v2 <- c.downField("obj").as[Option[io.circe.Json]]; v3 <- c.downField("bool").as[Option[Boolean]]; v4 <- c.downField("string").as[Option[String]]; v5 <- c.downField("date").as[Option[java.time.LocalDate]]; v6 <- c.downField("date_time").as[Option[java.time.OffsetDateTime]]; v7 <- c.downField("byte").as[Option[Base64String]]; v8 <- c.downField("long").as[Option[Long]]; v9 <- c.downField("int").as[Option[Int]]; v10 <- c.downField("float").as[Option[Float]]; v11 <- c.downField("double").as[Option[Double]]; v12 <- c.downField("number").as[Option[BigDecimal]]; v13 <- c.downField("integer").as[Option[BigInt]]; v14 <- c.downField("untyped").as[Option[io.circe.Json]]; v15 <- c.downField("custom").as[Option[Foo]]; v16 <- c.downField("customComplex").as[Option[Foo[Bar]]]; v17 <- c.downField("nested").as[Option[Types.Nested]]; v18 <- c.downField("nestedArray").as[Option[Vector[Types.NestedArray]]]; v19 <- c.downField("requiredArray").as[Vector[String]]) yield Types(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19) }
         case class Nested(prop1: Option[String] = None)
         object Nested {
           implicit val encodeNested: Encoder.AsObject[Nested] = {

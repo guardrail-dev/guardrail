@@ -245,6 +245,18 @@ object ScalaGenerator {
                   ev.addPath(value)
                 }
               }
+
+              class Base64String(val data: Array[Byte])
+              object Base64String {
+                private[this] val encoder = java.util.Base64.getEncoder
+                implicit val encode: Encoder[Base64String] =
+                  Encoder[String].contramap[Base64String](v => new String(encoder.encode(v.data)))
+
+                private[this] val decoder = java.util.Base64.getDecoder
+                implicit val decode: Decoder[Base64String] =
+                  Decoder[String].emapTry(v => scala.util.Try(decoder.decode(v))).map(new Base64String(_))
+              }
+
             }
           """
         Target.pure(Some(WriteTree(pkgPath.resolve("Implicits.scala"), sourceToBytes(implicits))))
