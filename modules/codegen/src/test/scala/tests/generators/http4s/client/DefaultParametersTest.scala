@@ -150,12 +150,12 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case _root_.org.http4s.Status.Ok(resp) =>
-            F.map(getOrderByIdOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetOrderByIdResponse.Ok.apply)
+            F.map(getOrderByIdOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetOrderByIdResponse.Ok.apply): F[GetOrderByIdResponse]
           case _root_.org.http4s.Status.BadRequest(_) =>
-            F.pure(GetOrderByIdResponse.BadRequest)
+            F.pure(GetOrderByIdResponse.BadRequest): F[GetOrderByIdResponse]
           case _root_.org.http4s.Status.NotFound(_) =>
-            F.pure(GetOrderByIdResponse.NotFound)
-          case resp => F.raiseError(UnexpectedStatus(resp.status))
+            F.pure(GetOrderByIdResponse.NotFound): F[GetOrderByIdResponse]
+          case resp => F.raiseError[GetOrderByIdResponse](UnexpectedStatus(resp.status))
         })
       }
       def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[DeleteOrderResponse] = {
@@ -163,10 +163,10 @@ class DefaultParametersTest extends FunSuite with Matchers with SwaggerSpecRunne
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders))
         httpClient.fetch(req)({
           case _root_.org.http4s.Status.BadRequest(_) =>
-            F.pure(DeleteOrderResponse.BadRequest)
+            F.pure(DeleteOrderResponse.BadRequest): F[DeleteOrderResponse]
           case _root_.org.http4s.Status.NotFound(_) =>
-            F.pure(DeleteOrderResponse.NotFound)
-          case resp => F.raiseError(UnexpectedStatus(resp.status))
+            F.pure(DeleteOrderResponse.NotFound): F[DeleteOrderResponse]
+          case resp => F.raiseError[DeleteOrderResponse](UnexpectedStatus(resp.status))
         })
       }
     }"""

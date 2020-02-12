@@ -222,12 +222,17 @@ object Http4sClientGenerator {
                 }
               }
             responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+            isGeneric             = Http4sHelper.isDefinitionGeneric(responses)
+            baseResponseTypeRef   = Type.Name(s"${methodName.capitalize}Response")
             cases <- responses.value.traverse[Target, Case]({ resp =>
               val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
               val statusCode   = Term.Select(p"_root_.org.http4s.Status", resp.statusCodeName)
               (resp.value, resp.headers.value) match {
                 case (None, Nil) =>
-                  Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm)")
+                  if (isGeneric)
+                    Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm): F[$baseResponseTypeRef[F]]")
+                  else
+                    Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm): F[$baseResponseTypeRef]")
                 case (maybeBody, headers) =>
                   if (maybeBody.size + headers.size > 22) {
                     // we have hit case class limitation
@@ -242,15 +247,19 @@ object Http4sClientGenerator {
                     val decodeHeaders = buildHeaders(headers)
                     val mapArgs       = decodeValue.toList ++ decodeHeaders
                     val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
-                    Target.pure(p"case $statusCode(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply)")
+
+                    if (isGeneric)
+                      Target.pure(p"case $statusCode(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply): F[$baseResponseTypeRef[F]]")
+                    else
+                      Target.pure(p"case $statusCode(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply): F[$baseResponseTypeRef]")
+
                   }
               }
             })
-            unexpectedCase = p"case resp => F.raiseError(UnexpectedStatus(resp.status))"
             // Get the response type
-            isGeneric           = Http4sHelper.isDefinitionGeneric(responses)
-            baseResponseTypeRef = Type.Name(s"${methodName.capitalize}Response")
-            responseTypeRef     = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
+            unexpectedCase = if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status))"
+            else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status))"
+            responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
             executeReqExpr = if (isGeneric) List(q"""$httpClientName.run(req).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
             else List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases :+ unexpectedCase)})""")
             methodBody: Term = q"""

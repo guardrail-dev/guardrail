@@ -32,6 +32,7 @@ object Http4sGenerator {
             q"import org.http4s.implicits._",
             q"import org.http4s.EntityEncoder._",
             q"import org.http4s.EntityDecoder._",
+            q"import org.http4s.Media",
             q"import fs2.Stream",
             q"import io.circe.Json",
             q"import scala.language.higherKinds",
@@ -55,7 +56,7 @@ object Http4sGenerator {
             implicit def emptyEntityEncoder[F[_]: Sync]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
 
             implicit def byteStreamEntityDecoder[F[_]:Sync]: EntityDecoder[F, Stream[F, Byte]] = new EntityDecoder[F,Stream[F,Byte]] {
-              override def decode(msg: Message[F], strict: Boolean): DecodeResult[F, Stream[F, Byte]] = DecodeResult.success(msg.body)
+              override def decode(m: Media[F], strict: Boolean): DecodeResult[F, Stream[F, Byte]] = DecodeResult.success(m.body)
               override def consumes: Set[MediaRange] = Set(MediaRange.`*/*`)
             }
 
