@@ -11,10 +11,10 @@ git.useGitDescribe := true
 crossScalaVersions in ThisBuild := Seq("2.12.10")
 
 val akkaVersion          = "10.0.14"
-val catsVersion          = "1.6.0"
-val catsEffectVersion    = "1.0.0"
-val circeVersion         = "0.12.1"
-val http4sVersion        = "0.20.0"
+val catsVersion          = "2.1.0"
+val catsEffectVersion    = "2.1.1"
+val circeVersion         = "0.13.0"
+val http4sVersion        = "0.21.0"
 val scalacheckVersion    = "1.14.3"
 val scalatestVersion     = "3.1.0"
 val scalatestPlusVersion = "3.1.0.0-RC2"

@@ -55,9 +55,9 @@ class FullyQualifiedNames extends FunSuite with Matchers with SwaggerSpecRunner 
            val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/user/" + Formatter.addPath(id)), headers = Headers(allHeaders))
            httpClient.fetch(req)({
              case _root_.org.http4s.Status.Ok(resp) =>
-               F.map(getUserOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetUserResponse.Ok.apply)
+               F.map(getUserOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetUserResponse.Ok.apply): F[GetUserResponse]
              case resp =>
-               F.raiseError(UnexpectedStatus(resp.status))
+               F.raiseError[GetUserResponse](UnexpectedStatus(resp.status))
            })
          }
        }
