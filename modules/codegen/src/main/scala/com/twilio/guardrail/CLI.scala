@@ -54,7 +54,7 @@ trait CLICommon {
   def scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
   def javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
 
-  def main(args: Array[String]): Unit = {
+  def processArgs(args: Array[String]): CommandLineResult = {
     val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
     handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
   }
@@ -64,12 +64,12 @@ trait CLICommon {
       second: PartialFunction[String, CodegenApplication[L, ?] ~> Target]
   ): PartialFunction[String, CodegenApplication[L, ?] ~> Target] = first.orElse(second)
 
-  def handleLanguage: PartialFunction[String, Array[String] => Unit] = {
+  def handleLanguage: PartialFunction[String, Array[String] => CommandLineResult] = {
     case "java"  => run("java", _)(javaInterpreter)
     case "scala" => run("scala", _)(scalaInterpreter)
   }
 
-  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): Unit = {
+  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): CommandLineResult = {
     val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
@@ -145,6 +145,12 @@ trait CLICommon {
       )
 
     // println(logger.show)
+
+    if (paths.isEmpty) {
+      CommandLineResult.failure
+    } else {
+      CommandLineResult.success
+    }
   }
 
   def runLanguages(
@@ -216,4 +222,16 @@ object CLI extends CLICommon {
       }
     }
   )
+
+  def main(args: Array[String]): Unit = {
+    val result = processArgs(args)
+    sys.exit(result.exitStatus)
+  }
+}
+
+case class CommandLineResult(exitStatus: Int)
+
+object CommandLineResult {
+  val failure: CommandLineResult = CommandLineResult(1)
+  val success: CommandLineResult = CommandLineResult(0)
 }
