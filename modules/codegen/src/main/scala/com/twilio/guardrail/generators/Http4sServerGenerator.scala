@@ -719,17 +719,20 @@ object Http4sServerGenerator {
       * are just references to an already existing bindings.
       */
     def prepareParameters[F[_]: Traverse](parameters: F[ScalaParameter[ScalaLanguage]]): Target[F[ScalaParameter[ScalaLanguage]]] =
-      Traverse[F].traverse(parameters) { param =>
-        if (param.paramName.syntax == param.paramName.value) {
-          Target.pure(param)
-        } else {
-          // let's try to prefix it with underscore and see if it helps
-          val newName = Term.Name(s"_${param.paramName.value}")
-          Target.log.debug(s"Escaping param ${param.argName.value}").flatMap { _ =>
-            if (newName.syntax == newName.value) Target.pure(param.withParamName(newName))
-            else Target.raiseError(s"Can't escape parameter with name ${param.argName.value}.")
+      if (parameters.exists(param => param.paramName.syntax != param.paramName.value)) {
+        // let's try to prefix them all with underscore and see if it helps
+        for {
+          _ <- Target.log.debug("Found that not all parameters could be represented as unescaped terms")
+          res <- parameters.traverse[Target, ScalaParameter[ScalaLanguage]] { param =>
+            val newName = Term.Name(s"_${param.paramName.value}")
+            Target.log.debug(s"Escaping param ${param.argName.value}").flatMap { _ =>
+              if (newName.syntax == newName.value) Target.pure(param.withParamName(newName))
+              else Target.raiseError(s"Can't escape parameter with name ${param.argName.value}.")
+            }
           }
-        }
+        } yield res
+      } else {
+        Target.pure(parameters)
       }
 
     def generateCodecs(
