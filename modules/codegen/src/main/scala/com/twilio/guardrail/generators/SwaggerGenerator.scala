@@ -16,11 +16,13 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 object SwaggerGenerator {
-  private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] =
+  private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] = {
+    val parameterName: String = Option(parameter.get.getName).fold("no name")(s => s"named: ${s}")
     for {
-      schema <- parameter.downField("schema", _.getSchema).raiseErrorIfEmpty("Parameter has no schema")
-      tpe    <- schema.downField("type", _.getType).raiseErrorIfEmpty("Parameter has no schema type")
+      schema <- parameter.downField("schema", _.getSchema).raiseErrorIfEmpty(s"Parameter (${parameterName}) has no schema")
+      tpe    <- schema.downField("type", _.getType).raiseErrorIfEmpty(s"Parameter (${parameterName}) has no schema type")
     } yield tpe
+  }
 
   def apply[L <: LA]() = new (SwaggerTerm[L, ?] ~> Target) {
     def splitOperationParts(operationId: String): (List[String], String) = {
