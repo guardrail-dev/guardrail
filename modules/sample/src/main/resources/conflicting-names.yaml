@@ -1,0 +1,39 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+paths:
+  /foo/{type}:
+    post:
+      operationId: foo
+      parameters:
+        - name: type
+          in: path
+          required: true
+          type: string
+        - name: package
+          in: header
+          required: true
+          type: string
+        - name: class
+          in: query
+          required: false
+          type: string
+        - name: 42param
+          in: query
+          required: true
+          type: string
+        - name: kebab-name
+          in: query
+          required: true
+          type: string
+        - name: snake_name
+          in: query
+          required: true
+          type: string
+      responses:
+        '204':
+          description: success action

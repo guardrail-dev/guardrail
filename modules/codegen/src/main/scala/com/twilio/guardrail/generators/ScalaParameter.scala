@@ -40,6 +40,9 @@ class ScalaParameter[L <: LA] private[generators] (
 
   def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): ScalaParameter[L] =
     new ScalaParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
+
+  def withParamName(newParamName: L#TermName): ScalaParameter[L] =
+    new ScalaParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
 }
 object ScalaParameter {
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =

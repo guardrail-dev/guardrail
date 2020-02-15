@@ -4,6 +4,7 @@ package generators
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
+import cats.Traverse
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.syntax._
@@ -201,10 +202,10 @@ object Http4sServerGenerator {
     def qsToHttp4s(operationId: String): List[ScalaParameter[ScalaLanguage]] => Target[Option[Pat]] =
       params =>
         directivesFromParams(
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.paramName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.paramName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)} @ _*)"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.paramName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.paramName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
+          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)} @ _*)"),
+          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
         )(params).map {
           case Nil => Option.empty
           case x :: xs =>
@@ -432,11 +433,11 @@ object Http4sServerGenerator {
           .raiseErrorIfEmpty("Missing operationId")
           .map(_.get)
 
-        formArgs   = parameters.formParams
-        headerArgs = parameters.headerParams
-        pathArgs   = parameters.pathParams
-        qsArgs     = parameters.queryStringParams
-        bodyArgs   = parameters.bodyParams
+        formArgs   <- prepareParameters(parameters.formParams)
+        headerArgs <- prepareParameters(parameters.headerParams)
+        pathArgs   <- prepareParameters(parameters.pathParams)
+        qsArgs     <- prepareParameters(parameters.queryStringParams)
+        bodyArgs   <- prepareParameters(parameters.bodyParams)
 
         http4sMethod <- httpMethodToHttp4s(method)
         pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
@@ -712,6 +713,27 @@ object Http4sServerGenerator {
 
       decoders.distinctBy(_._1.toString()).map(_._2) ++ matchers
     }
+
+    /**
+      * It's not possible to use backticks inside pattern matching as it has different semantics: backticks inside match
+      * are just references to an already existing bindings.
+      */
+    def prepareParameters[F[_]: Traverse](parameters: F[ScalaParameter[ScalaLanguage]]): Target[F[ScalaParameter[ScalaLanguage]]] =
+      if (parameters.exists(param => param.paramName.syntax != param.paramName.value)) {
+        // let's try to prefix them all with underscore and see if it helps
+        for {
+          _ <- Target.log.debug("Found that not all parameters could be represented as unescaped terms")
+          res <- parameters.traverse[Target, ScalaParameter[ScalaLanguage]] { param =>
+            val newName = Term.Name(s"_${param.paramName.value}")
+            Target.log.debug(s"Escaping param ${param.argName.value}").flatMap { _ =>
+              if (newName.syntax == newName.value) Target.pure(param.withParamName(newName))
+              else Target.raiseError(s"Can't escape parameter with name ${param.argName.value}.")
+            }
+          }
+        } yield res
+      } else {
+        Target.pure(parameters)
+      }
 
     def generateCodecs(
         operationId: String,
