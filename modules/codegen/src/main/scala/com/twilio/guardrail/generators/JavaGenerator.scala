@@ -259,6 +259,8 @@ object JavaGenerator {
       case WidenClassDefinition(value)  => Target.pure(value)
       case WidenObjectDefinition(value) => Target.pure(value)
 
+      case CompareTerms(a, b) => Target.pure(a == b)
+
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         Target.pure(None)
 

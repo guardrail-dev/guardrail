@@ -9,13 +9,13 @@ import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.generators.syntax._
-import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import java.util.Locale
 
-import cats.Eq
+import cats.{ Applicative, Eq, Foldable }
 import com.twilio.guardrail.extract.Default
 
 import scala.collection.JavaConverters._
@@ -45,20 +45,7 @@ case class ProtocolParameter[L <: LA](
     dataRedaction: RedactionBehaviour,
     defaultValue: Option[L#Term]
 )
-object ProtocolParameter {
-  implicit def eqInstance[L <: com.twilio.guardrail.languages.LA](implicit eqTerm: Eq[L#Term], eqMethodParam: Eq[L#MethodParameter]) =
-    new Eq[ProtocolParameter[L]] {
-      override def eqv(x: ProtocolParameter[L], y: ProtocolParameter[L]): Boolean =
-        Eq.eqv(x.term, y.term) &&
-          x.name == y.name &&
-          x.dep == y.dep &&
-          x.rawType == y.rawType &&
-          x.readOnlyKey == y.readOnlyKey &&
-          x.emptyToNull == y.emptyToNull &&
-          x.dataRedaction == y.dataRedaction &&
-          Eq.eqv(x.defaultValue, y.defaultValue)
-    }
-}
+
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
 
 object Discriminator {
@@ -439,7 +426,54 @@ object ProtocolGenerator {
           } yield (parameter, maybeNestedDefinition.flatMap(_.toOption))
       }
       (params, nestedDefinitions) = paramsAndNestedDefinitions.unzip
-    } yield params -> nestedDefinitions.flatten
+      deduplicatedParams <- deduplicateParams(params)
+    } yield deduplicatedParams -> nestedDefinitions.flatten
+  }
+
+  private def deduplicateParams[L <: LA, F[_]](
+      params: List[ProtocolParameter[L]]
+  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, List[ProtocolParameter[L]]] = {
+    import Sc._
+    Foldable[List]
+      .foldLeftM[Free[F, ?], ProtocolParameter[L], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, a) =>
+        s.find(p => p.name == a.name) match {
+          case None => Free.pure(a :: s)
+          case Some(duplicate) =>
+            val comparedDefaultValues: Free[F, Boolean] = (a.defaultValue, duplicate.defaultValue) match {
+              case (Some(a), Some(b)) => compareTerms(a, b)
+              case (None, None)       => Free.pure(true)
+              case _                  => Free.pure(false)
+            }
+            comparedDefaultValues.flatMap { defaultValues =>
+              val isCompatible = a.rawType == duplicate.rawType && defaultValues
+              if (isCompatible) {
+                val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
+                val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
+                val mergedParameter = ProtocolParameter[L](
+                  a.term,
+                  a.name,
+                  a.dep,
+                  a rawType,
+                  a.readOnlyKey.orElse(duplicate.readOnlyKey),
+                  emptyToNull,
+                  redactionBehaviour,
+                  a.defaultValue
+                )
+                Free.pure(mergedParameter :: s.filter(_.name != a.name))
+              } else {
+                Sw.log
+                  .error(
+                    s"There is a mismatch for parameter ${a.name}. This parameter is defined at multiple places and those definitions are incompatible with each other. They must have the same name, type and default value."
+                  )
+                  .flatMap { _ =>
+                    // TODO how to do it properly?
+                    throw new Exception("Error")
+                  }
+              }
+            }
+        }
+      }
+      .map(_.reverse)
   }
 
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Tracker[Schema[_]])(

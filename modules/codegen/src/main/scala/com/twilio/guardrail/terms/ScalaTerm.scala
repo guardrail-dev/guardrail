@@ -68,6 +68,8 @@ case class WidenTermSelect[L <: LA](value: L#TermSelect)             extends Sca
 case class WidenClassDefinition[L <: LA](value: L#ClassDefinition)   extends ScalaTerm[L, L#Definition]
 case class WidenObjectDefinition[L <: LA](value: L#ObjectDefinition) extends ScalaTerm[L, L#Definition]
 
+case class CompareTerms[L <: LA](a: L#Term, b: L#Term) extends ScalaTerm[L, Boolean]
+
 case class RenderImplicits[L <: LA](
     pkgPath: Path,
     pkgName: List[String],

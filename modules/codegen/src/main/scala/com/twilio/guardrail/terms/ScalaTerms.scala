@@ -73,6 +73,8 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def widenClassDefinition(value: L#ClassDefinition): Free[F, L#Definition]   = Free.inject[ScalaTerm[L, ?], F](WidenClassDefinition(value))
   def widenObjectDefinition(value: L#ObjectDefinition): Free[F, L#Definition] = Free.inject[ScalaTerm[L, ?], F](WidenObjectDefinition(value))
 
+  def compareTerms(a: L#Term, b: L#Term): Free[F, Boolean] = Free.inject[ScalaTerm[L, ?], F](CompareTerms(a, b))
+
   def renderImplicits(
       pkgPath: Path,
       pkgName: List[String],

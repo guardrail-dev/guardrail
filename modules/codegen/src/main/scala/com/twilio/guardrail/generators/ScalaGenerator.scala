@@ -151,6 +151,8 @@ object ScalaGenerator {
       case WidenClassDefinition(value)  => Target.pure(value)
       case WidenObjectDefinition(value) => Target.pure(value)
 
+      case CompareTerms(a, b) => Target.pure(a.structure == b.structure)
+
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         val pkg: Term.Ref =
           pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
