@@ -188,7 +188,8 @@ object AkkaHttpClientGenerator {
               body.map { sp =>
                 val inner = if (sp.required) sp.paramName else q"${sp.paramName}.getOrElse(${Lit.String("")})"
                 q"TextPlain(${inner})"
-              } else None
+              }
+            else None
           val safeBody: Option[(Term, Type)] =
             body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
