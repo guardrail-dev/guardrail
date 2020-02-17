@@ -148,6 +148,9 @@ addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
 
+// Make "cli" not emit unhandled exceptions on exit
+fork in run := true
+
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
