@@ -247,7 +247,9 @@ object ScalaGenerator {
                 }
               }
 
-              class Base64String(val data: Array[Byte])
+              class Base64String(val data: Array[Byte]) extends AnyVal {
+                override def toString() = "Base64String(" + data.toString() + ")"
+              }
               object Base64String {
                 private[this] val encoder = java.util.Base64.getEncoder
                 implicit val encode: Encoder[Base64String] =
