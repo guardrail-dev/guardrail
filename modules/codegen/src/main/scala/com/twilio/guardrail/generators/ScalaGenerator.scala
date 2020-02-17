@@ -251,6 +251,8 @@ object ScalaGenerator {
                 override def toString() = "Base64String(" + data.toString() + ")"
               }
               object Base64String {
+                def apply(bytes: Array[Byte]): Base64String = new Base64String(bytes)
+                def unapply(value: Base64String): Option[Array[Byte]] = Some(value.data)
                 private[this] val encoder = java.util.Base64.getEncoder
                 implicit val encode: Encoder[Base64String] =
                   Encoder[String].contramap[Base64String](v => new String(encoder.encode(v.data)))
