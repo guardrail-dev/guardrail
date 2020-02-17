@@ -213,6 +213,7 @@ object CLI extends CLICommon {
     "dropwizard",
     JavaModule.extract, {
       case "dropwizard" => Java.Dropwizard
+      case "spring-mvc" => Java.SpringMvc
     }, { str =>
       import com.github.javaparser.StaticJavaParser
       import scala.util.Try

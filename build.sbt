@@ -25,6 +25,7 @@ val dropwizardVersion    = "1.3.9"
 val jerseyVersion        = "2.25.1"
 val kindProjectorVersion = "0.10.3"
 val jaxbApiVersion       = "2.2.11"
+val springBootVersion    = "2.2.1.RELEASE"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -94,7 +95,8 @@ val exampleFrameworkSuites = Map(
     ("http4s", "http4s", List("client", "server"))
   ),
   "java" -> List(
-    ("dropwizard", "dropwizard", List("client", "server"))
+    ("dropwizard", "dropwizard", List("client", "server")),
+    ("spring-mvc", "springMvc", List("server"))
   )
 )
 
@@ -117,7 +119,7 @@ def exampleArgs(language: String): List[List[String]] = exampleCases
         ) ++ filteredExtra)
   })
 
-lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator with example args")
+lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run java generator with example args")
 fullRunTask(
   runJavaExample,
   Test,
@@ -349,6 +351,26 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     crossPaths := false,  // strangely needed to get the JUnit tests to run at all
+    skip in publish := true,
+    scalafmtOnCompile := false
+  )
+
+lazy val springMvcSample = (project in file("modules/sample-springMvc"))
+  .settings(
+    codegenSettings,
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    libraryDependencies ++= Seq(
+      "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
+      "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
+      "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
+      "org.mockito"                %% "mockito-scala"            % "1.7.1"            % Test,
+      "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
+    ),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+    crossPaths := false,
     skip in publish := true,
     scalafmtOnCompile := false
   )
