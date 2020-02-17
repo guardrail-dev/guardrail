@@ -35,3 +35,17 @@ guardrail version | http4s | circe-core | cats  | cats-effect | Notes
 0.51.0            | 0.20.0 |  "         |  "    |  "          |
 0.54.0            |   "    | 0.12.1     |  "    |  "          | For Scala 2.11, use --module circe-java8
 0.55.4            | 0.21.0 | 0.13.0     | 2.1.0 | 2.1.0       |
+
+## Java
+
+### Dropwizard
+
+guardrail version | dropwizard | async-http-client |
+----------------- | ---------- | ----------------- |
+0.45.0            | 1.3.0      | 2.8.0             |
+
+### Spring MVC
+
+guardrail version | spring-boot | async-http-client |
+----------------- | ----------- | ----------------- |
+0.56.0            | 2.2.1       | 2.8.0             |
