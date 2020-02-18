@@ -216,29 +216,16 @@ object AkkaHttpServerGenerator {
       })
     }
 
-    def groupTypes: List[Type] => Type = {
-      case tpe :: Nil            => t"Tuple1[${tpe}]"
-      case xs if xs.length <= 22 => t"(..${xs})"
-      case xs                    => t"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupTypes(ys) }})"
+    def groupGeneric[A](single: A => A, combine: List[A] => A): List[A] => A = {
+      case a :: Nil              => single(a)
+      case xs if xs.length <= 22 => combine(xs)
+      case xs                    => xs.splitAt(21) match { case (xs, ys) => combine(xs :+ groupGeneric(single, combine)(ys)) }
     }
 
-    def groupTerms: List[Term] => Term = {
-      case term :: Nil           => q"Tuple1(${term})"
-      case xs if xs.length <= 22 => q"(..${xs})"
-      case xs                    => q"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupTerms(ys) }})"
-    }
-
-    def groupPats: List[Pat] => Pat = {
-      case binding :: Nil        => p"Tuple1(${binding})"
-      case xs if xs.length <= 22 => p"(..${xs})"
-      case xs                    => p"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupPats(ys) }})"
-    }
-
-    def groupDirectivePats: List[Pat] => Pat = {
-      case binding :: Nil        => binding
-      case xs if xs.length <= 22 => p"(..${xs})"
-      case xs                    => p"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupPats(ys) }})"
-    }
+    def groupTypes: List[Type] => Type       = groupGeneric[Type](a => t"Tuple1[$a]", xs => t"(..${xs})")
+    def groupTerms: List[Term] => Term       = groupGeneric[Term](a => q"Tuple1($a)", xs => q"(..${xs})")
+    def groupPats: List[Pat] => Pat          = groupGeneric[Pat](a => p"Tuple1($a)", xs => p"(..${xs})")
+    def groupDirectivePats: List[Pat] => Pat = groupGeneric[Pat](identity _, xs => p"(..${xs})")
 
     def directivesFromParams(
         required: Term => Type => Option[Term] => Target[Term],
