@@ -281,7 +281,7 @@ object SwaggerUtil {
             case (Some("string"), Some("email"))        => stringType(None)
             case (Some("string"), Some("date"))         => dateType()
             case (Some("string"), Some("date-time"))    => dateTimeType()
-            case (Some("string"), Some("byte"))         => pureTypeName("Base64String").flatMap(widenTypeName)
+            case (Some("string"), Some("byte"))         => bytesType()
             case (Some("string"), fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
             case (Some("string"), fmt)                  => stringType(fmt).map(log(fmt, _))
             case (Some("number"), Some("float"))        => floatType()

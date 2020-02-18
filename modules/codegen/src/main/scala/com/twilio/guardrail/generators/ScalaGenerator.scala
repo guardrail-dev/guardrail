@@ -132,6 +132,7 @@ object ScalaGenerator {
       case AlterMethodParameterName(param, name) =>
         Target.pure(param.copy(name = name))
 
+      case BytesType()               => Target.pure(t"Base64String")
       case DateType()                => Target.pure(t"java.time.LocalDate")
       case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")
       case UUIDType()                => Target.pure(t"java.util.UUID")
