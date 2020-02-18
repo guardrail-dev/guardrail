@@ -25,7 +25,7 @@ val dropwizardVersion    = "1.3.9"
 val jerseyVersion        = "2.25.1"
 val kindProjectorVersion = "0.10.3"
 val jaxbApiVersion       = "2.2.11"
-val springBootVersion    = "2.2.1.RELEASE"
+val springBootVersion    = "2.2.3.RELEASE"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
