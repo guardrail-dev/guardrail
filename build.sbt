@@ -93,7 +93,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
-  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(Set("akka-http", "endpoints", "http4s")),
+  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(scalaFrameworks.toSet),
   ExampleCase(sampleResource("raw-response.yaml"), "raw"),
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
@@ -102,7 +102,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
-  ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(Set("akka-http", "http4s", "endpoints")),
+  ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(scalaFrameworks.toSet),
 )
 
 def exampleArgs(language: String): List[List[String]] = exampleCases
