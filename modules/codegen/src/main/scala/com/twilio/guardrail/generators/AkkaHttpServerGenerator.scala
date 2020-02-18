@@ -216,6 +216,30 @@ object AkkaHttpServerGenerator {
       })
     }
 
+    def groupTypes: List[Type] => Type = {
+      case tpe :: Nil            => t"Tuple1[${tpe}]"
+      case xs if xs.length <= 22 => t"(..${xs})"
+      case xs                    => t"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupTypes(ys) }})"
+    }
+
+    def groupTerms: List[Term] => Term = {
+      case term :: Nil           => q"Tuple1(${term})"
+      case xs if xs.length <= 22 => q"(..${xs})"
+      case xs                    => q"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupTerms(ys) }})"
+    }
+
+    def groupPats: List[Pat] => Pat = {
+      case binding :: Nil        => p"Tuple1(${binding})"
+      case xs if xs.length <= 22 => p"(..${xs})"
+      case xs                    => p"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupPats(ys) }})"
+    }
+
+    def groupDirectivePats: List[Pat] => Pat = {
+      case binding :: Nil        => binding
+      case xs if xs.length <= 22 => p"(..${xs})"
+      case xs                    => p"(..${xs.splitAt(21) match { case (xs, ys) => xs :+ groupPats(ys) }})"
+    }
+
     def directivesFromParams(
         required: Term => Type => Option[Term] => Target[Term],
         multi: Term => Type => Option[Term] => Target[Term],
@@ -447,10 +471,7 @@ object AkkaHttpServerGenerator {
               })
               .unzip8
 
-            val optionalTuple = optionalTermPatterns match {
-              case binding :: Nil => p"Tuple1(${binding.toPat})"
-              case xs             => p"(..${xs.map(_.toPat)})"
-            }
+            val optionalTuple = groupPats(optionalTermPatterns.map(_.toPat))
 
             val _trait              = q"sealed trait Part"
             val ignoredPart         = q"case class IgnoredPart(unit: Unit) extends Part"
@@ -463,17 +484,12 @@ object AkkaHttpServerGenerator {
         """
 
             val fieldNames = q"""Set[String](..${params.toList.map(_.argName.toLit)})"""
-            val optionalTypes = termTypes.map({
+
+            val optionalTypes = groupTypes(termTypes.map({
               case x @ t"Option[$_]" => x
               case x                 => t"Option[$x]"
-            }) match {
-              case tpe :: Nil => t"Tuple1[${tpe}]"
-              case xs         => t"(..${xs})"
-            }
-            val unpackedTypes = termTypes match {
-              case tpe :: Nil => t"Tuple1[${tpe}]"
-              case xs         => t"(..${xs})"
-            }
+            }))
+            val unpackedTypes = groupTypes(termTypes)
 
             val allCases: List[Case] = matchers ++ List(ignoredUnmarshaller)
 
@@ -570,10 +586,7 @@ object AkkaHttpServerGenerator {
                           results.toList.sequence.map({ successes =>
                             ..${grabHeads}
 
-                            ${optionalTermPatterns.map(_.toTerm) match {
-                      case term :: Nil => q"Tuple1(${term})"
-                      case xs          => q"(..${xs})"
-                    }}
+                            ${groupTerms(optionalTermPatterns.map(_.toTerm))}
                           })
                         }
 
@@ -649,10 +662,7 @@ object AkkaHttpServerGenerator {
               val maybe: Either[Rejection, ${unpackedTypes}] = for {
                 ..${unpacks}
               } yield {
-                ${termPatterns.map(_.toTerm) match {
-                        case term :: Nil => q"Tuple1(${term})"
-                        case xs          => q"(..${xs})"
-                      }}
+                ${groupTerms(termPatterns.map(_.toTerm))}
               }
               maybe.fold(reject(_), tprovide(_))
             """
@@ -740,7 +750,10 @@ object AkkaHttpServerGenerator {
                     case xs =>
                       next =>
                         acc(
-                          Term.Apply(Term.Select(directive, Term.Name("apply")), List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
+                          Term.Apply(
+                            Term.Select(directive, Term.Name("apply")),
+                            List(Term.PartialFunction(List(Case(groupDirectivePats(xs.map(x => Pat.Var(x))), None, next))))
+                          )
                         )
                   }
               }))
