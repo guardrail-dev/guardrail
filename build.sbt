@@ -39,6 +39,22 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
+val exampleFrameworkSuites = Map(
+  "scala" -> List(
+    ("akka-http", "akkaHttp", List("client", "server")),
+    ("endpoints", "endpoints", List("client")),
+    ("http4s", "http4s", List("client", "server"))
+  ),
+  "java" -> List(
+    ("dropwizard", "dropwizard", List("client", "server")),
+    ("spring-mvc", "springMvc", List("server"))
+  )
+)
+
+
+val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
+val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
+
 import com.twilio.guardrail.sbt.ExampleCase
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
 val exampleCases: List[ExampleCase] = List(
@@ -89,18 +105,6 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(Set("akka-http", "http4s", "endpoints")),
 )
 
-val exampleFrameworkSuites = Map(
-  "scala" -> List(
-    ("akka-http", "akkaHttp", List("client", "server")),
-    ("endpoints", "endpoints", List("client")),
-    ("http4s", "http4s", List("client", "server"))
-  ),
-  "java" -> List(
-    ("dropwizard", "dropwizard", List("client", "server")),
-    ("spring-mvc", "springMvc", List("server"))
-  )
-)
-
 def exampleArgs(language: String): List[List[String]] = exampleCases
   .foldLeft(List[List[String]](List(language)))({
     case (acc, ExampleCase(path, prefix, extra, onlyFrameworks)) =>
@@ -142,9 +146,6 @@ artifact in (Compile, assembly) := {
 }
 
 addArtifact(artifact in (Compile, assembly), assembly)
-
-val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
-val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
 
