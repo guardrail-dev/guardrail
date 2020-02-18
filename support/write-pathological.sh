@@ -53,6 +53,10 @@ for c in $(seq "$min" "$max"); do
         in: header
         required: true
         type: string
+      - name: f${i}
+        in: formData
+        required: true
+        type: string
 !
   done
 

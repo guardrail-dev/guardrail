@@ -33,6 +33,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f1
+        in: formData
+        required: true
+        type: string
       - name: p2
         in: path
         required: true
@@ -43,6 +47,10 @@ paths:
         type: string
       - name: h2
         in: header
+        required: true
+        type: string
+      - name: f2
+        in: formData
         required: true
         type: string
       - name: p3
@@ -57,6 +65,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f3
+        in: formData
+        required: true
+        type: string
       - name: p4
         in: path
         required: true
@@ -67,6 +79,10 @@ paths:
         type: string
       - name: h4
         in: header
+        required: true
+        type: string
+      - name: f4
+        in: formData
         required: true
         type: string
       - name: p5
@@ -81,6 +97,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f5
+        in: formData
+        required: true
+        type: string
       - name: p6
         in: path
         required: true
@@ -91,6 +111,10 @@ paths:
         type: string
       - name: h6
         in: header
+        required: true
+        type: string
+      - name: f6
+        in: formData
         required: true
         type: string
       - name: p7
@@ -105,6 +129,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f7
+        in: formData
+        required: true
+        type: string
       - name: p8
         in: path
         required: true
@@ -115,6 +143,10 @@ paths:
         type: string
       - name: h8
         in: header
+        required: true
+        type: string
+      - name: f8
+        in: formData
         required: true
         type: string
       - name: p9
@@ -129,6 +161,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f9
+        in: formData
+        required: true
+        type: string
       - name: p10
         in: path
         required: true
@@ -139,6 +175,10 @@ paths:
         type: string
       - name: h10
         in: header
+        required: true
+        type: string
+      - name: f10
+        in: formData
         required: true
         type: string
       - name: p11
@@ -153,6 +193,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f11
+        in: formData
+        required: true
+        type: string
       - name: p12
         in: path
         required: true
@@ -163,6 +207,10 @@ paths:
         type: string
       - name: h12
         in: header
+        required: true
+        type: string
+      - name: f12
+        in: formData
         required: true
         type: string
       - name: p13
@@ -177,6 +225,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f13
+        in: formData
+        required: true
+        type: string
       - name: p14
         in: path
         required: true
@@ -187,6 +239,10 @@ paths:
         type: string
       - name: h14
         in: header
+        required: true
+        type: string
+      - name: f14
+        in: formData
         required: true
         type: string
       - name: p15
@@ -201,6 +257,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f15
+        in: formData
+        required: true
+        type: string
       - name: p16
         in: path
         required: true
@@ -211,6 +271,10 @@ paths:
         type: string
       - name: h16
         in: header
+        required: true
+        type: string
+      - name: f16
+        in: formData
         required: true
         type: string
       - name: p17
@@ -225,6 +289,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f17
+        in: formData
+        required: true
+        type: string
       - name: p18
         in: path
         required: true
@@ -235,6 +303,10 @@ paths:
         type: string
       - name: h18
         in: header
+        required: true
+        type: string
+      - name: f18
+        in: formData
         required: true
         type: string
       - name: p19
@@ -249,6 +321,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f19
+        in: formData
+        required: true
+        type: string
       - name: p20
         in: path
         required: true
@@ -259,6 +335,10 @@ paths:
         type: string
       - name: h20
         in: header
+        required: true
+        type: string
+      - name: f20
+        in: formData
         required: true
         type: string
       - name: p21
@@ -273,6 +353,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f21
+        in: formData
+        required: true
+        type: string
       - name: p22
         in: path
         required: true
@@ -285,6 +369,10 @@ paths:
         in: header
         required: true
         type: string
+      - name: f22
+        in: formData
+        required: true
+        type: string
       - name: p23
         in: path
         required: true
@@ -295,6 +383,10 @@ paths:
         type: string
       - name: h23
         in: header
+        required: true
+        type: string
+      - name: f23
+        in: formData
         required: true
         type: string
       responses:
