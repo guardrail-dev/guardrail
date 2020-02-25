@@ -9,6 +9,12 @@ import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import scala.meta._
 
 object Scala {
+  implicit object ScalaInternalTermNameEscaper extends ScalaParameter.InternalTermNameEscaper[ScalaLanguage] {
+    def escape = {
+      case tn @ Term.Name(n) if tn.syntax != n => Term.Name(s"_${n}")
+      case tn                                  => tn
+    }
+  }
   implicit class RichRawParameterName(parameter: RawParameterName) {
     import _root_.scala.meta._
     def toLit: Lit.String = Lit.String(parameter.value)
