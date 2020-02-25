@@ -718,9 +718,11 @@ object AkkaHttpServerGenerator {
         (akkaForm, handlerDefinitions) <- formToAkka(consumes, operationId)(formArgs)
         akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
         (responseCompanionTerm, responseCompanionType) = (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
-        responseType = ServerRawResponse(operation)
-          .filter(_ == true)
-          .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
+        responseType = if (ServerRawResponse(operation).getOrElse(false)) {
+          t"HttpResponse"
+        } else {
+          t"${Term.Name(resourceName)}.${responseCompanionType}"
+        }
         orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
               .map(_.param)
               .map(List(_))
