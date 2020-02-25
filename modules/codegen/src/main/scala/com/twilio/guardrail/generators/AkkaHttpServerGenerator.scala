@@ -727,23 +727,21 @@ object AkkaHttpServerGenerator {
         entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
         fullRouteMatcher = {
           def bindParams(pairs: List[(Term, List[Term.Name])]): Term => Term =
-            NonEmptyList
-              .fromList(pairs)
-              .fold[Term => Term](identity)(_.foldLeft[Term => Term](identity)({
-                case (acc, (directive, params)) =>
-                  params match {
-                    case List() =>
-                      next => acc(Term.Apply(directive, List(next)))
-                    case xs =>
-                      next =>
-                        acc(
-                          Term.Apply(
-                            Term.Select(directive, Term.Name("apply")),
-                            List(Term.PartialFunction(List(Case(groupDirectivePats(xs.map(x => Pat.Var(x))), None, next))))
-                          )
+            pairs.foldLeft[Term => Term](identity)({
+              case (acc, (directive, params)) =>
+                params match {
+                  case List() =>
+                    next => acc(Term.Apply(directive, List(next)))
+                  case xs =>
+                    next =>
+                      acc(
+                        Term.Apply(
+                          Term.Select(directive, Term.Name("apply")),
+                          List(Term.PartialFunction(List(Case(groupDirectivePats(xs.map(x => Pat.Var(x))), None, next))))
                         )
-                  }
-              }))
+                      )
+                }
+            })
           val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
           val pathMatcher    = bindParams(akkaPath.toList)
           val qsMatcher      = bindParams(akkaQs)
