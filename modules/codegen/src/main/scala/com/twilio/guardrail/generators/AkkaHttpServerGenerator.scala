@@ -747,7 +747,7 @@ object AkkaHttpServerGenerator {
           val qsMatcher      = bindParams(akkaQs)
           val headerMatcher  = bindParams(akkaHeaders)
           val tracingMatcher = bindParams(tracingFields.map(_.term).map((_, tracingFields.map(_.param.paramName).toList)).toList)
-          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs ++ formArgs).toList.map(_.paramName))))
+          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
 
           methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
