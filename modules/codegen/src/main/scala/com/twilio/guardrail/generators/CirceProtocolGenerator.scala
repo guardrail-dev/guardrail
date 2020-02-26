@@ -3,7 +3,7 @@ package generators
 
 import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
-import cats.{ Foldable, ~> }
+import cats.~>
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
