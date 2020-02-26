@@ -3,7 +3,7 @@ package generators
 
 import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
-import cats.~>
+import cats.{ Foldable, ~> }
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
@@ -173,6 +173,7 @@ object CirceProtocolGenerator {
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
           param => discriminatorNames.contains(param.term.name.value)
         )
+
         val terms = params.map(_.term)
 
         val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
