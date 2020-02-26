@@ -4,6 +4,7 @@ package terms
 import cats.InjectK
 import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
+import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
@@ -73,7 +74,10 @@ class ScalaTerms[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]) {
   def widenClassDefinition(value: L#ClassDefinition): Free[F, L#Definition]   = Free.inject[ScalaTerm[L, ?], F](WidenClassDefinition(value))
   def widenObjectDefinition(value: L#ObjectDefinition): Free[F, L#Definition] = Free.inject[ScalaTerm[L, ?], F](WidenObjectDefinition(value))
 
-  def compareTerms(a: L#Term, b: L#Term): Free[F, Boolean] = Free.inject[ScalaTerm[L, ?], F](CompareTerms(a, b))
+  def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]): Free[F, Option[L#Term]] =
+    Free.inject[ScalaTerm[L, ?], F](FindCommonDefaultValue(history, a, b))
+  def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType): Free[F, RawParameterType] =
+    Free.inject[ScalaTerm[L, ?], F](FindCommonRawType(history, a, b))
 
   def renderImplicits(
       pkgPath: Path,

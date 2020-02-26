@@ -405,7 +405,7 @@ object ProtocolGenerator {
     }
     val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
     for {
-      paramsAndNestedDefinitions <- props.traverse[Free[F, ?], (ProtocolParameter[L], Option[NestedProtocolElems[L]])] {
+      paramsAndNestedDefinitions <- props.traverse[Free[F, ?], (Tracker[ProtocolParameter[L]], Option[NestedProtocolElems[L]])] {
         case (name, schema) =>
           val typeName = getClsName(name).append(name.toCamelCase.capitalize)
           for {
@@ -423,7 +423,7 @@ object ProtocolGenerator {
               customType.isDefined,
               defValue
             )
-          } yield (parameter, maybeNestedDefinition.flatMap(_.toOption))
+          } yield (Tracker.cloneHistory(schema, parameter), maybeNestedDefinition.flatMap(_.toOption))
       }
       (params, nestedDefinitions) = paramsAndNestedDefinitions.unzip
       deduplicatedParams <- deduplicateParams(params)
@@ -431,45 +431,32 @@ object ProtocolGenerator {
   }
 
   private def deduplicateParams[L <: LA, F[_]](
-      params: List[ProtocolParameter[L]]
+      params: List[Tracker[ProtocolParameter[L]]]
   )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, List[ProtocolParameter[L]]] = {
     import Sc._
     Foldable[List]
-      .foldLeftM[Free[F, ?], ProtocolParameter[L], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, a) =>
+      .foldLeftM[Free[F, ?], Tracker[ProtocolParameter[L]], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, ta) =>
+        val a = ta.get
         s.find(p => p.name == a.name) match {
           case None => Free.pure(a :: s)
           case Some(duplicate) =>
-            val comparedDefaultValues: Free[F, Boolean] = (a.defaultValue, duplicate.defaultValue) match {
-              case (Some(a), Some(b)) => compareTerms(a, b)
-              case (None, None)       => Free.pure(true)
-              case _                  => Free.pure(false)
-            }
-            comparedDefaultValues.flatMap { defaultValues =>
-              val isCompatible = a.rawType == duplicate.rawType && defaultValues
-              if (isCompatible) {
-                val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
-                val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
-                val mergedParameter = ProtocolParameter[L](
-                  a.term,
-                  a.name,
-                  a.dep,
-                  a rawType,
-                  a.readOnlyKey.orElse(duplicate.readOnlyKey),
-                  emptyToNull,
-                  redactionBehaviour,
-                  a.defaultValue
-                )
-                Free.pure(mergedParameter :: s.filter(_.name != a.name))
-              } else {
-                Sw.log
-                  .error(
-                    s"There is a mismatch for parameter ${a.name}. This parameter is defined at multiple places and those definitions are incompatible with each other. They must have the same name, type and default value."
-                  )
-                  .flatMap { _ =>
-                    // TODO how to do it properly?
-                    throw new Exception("Error")
-                  }
-              }
+            for {
+              newDefaultValue <- findCommonDefaultValue(ta.showHistory, a.defaultValue, duplicate.defaultValue)
+              newRawType      <- findCommonRawType(ta.showHistory, a.rawType, duplicate.rawType)
+            } yield {
+              val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
+              val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
+              val mergedParameter = ProtocolParameter[L](
+                a.term,
+                a.name,
+                a.dep,
+                newRawType,
+                a.readOnlyKey.orElse(duplicate.readOnlyKey),
+                emptyToNull,
+                redactionBehaviour,
+                newDefaultValue
+              )
+              mergedParameter :: s.filter(_.name != a.name)
             }
         }
       }

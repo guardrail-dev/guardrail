@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package terms
 
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
+import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
@@ -68,7 +69,8 @@ case class WidenTermSelect[L <: LA](value: L#TermSelect)             extends Sca
 case class WidenClassDefinition[L <: LA](value: L#ClassDefinition)   extends ScalaTerm[L, L#Definition]
 case class WidenObjectDefinition[L <: LA](value: L#ObjectDefinition) extends ScalaTerm[L, L#Definition]
 
-case class CompareTerms[L <: LA](a: L#Term, b: L#Term) extends ScalaTerm[L, Boolean]
+case class FindCommonDefaultValue[L <: LA](history: String, a: Option[L#Term], b: Option[L#Term]) extends ScalaTerm[L, Option[L#Term]]
+case class FindCommonRawType[L <: LA](history: String, a: RawParameterType, b: RawParameterType)  extends ScalaTerm[L, RawParameterType]
 
 case class RenderImplicits[L <: LA](
     pkgPath: Path,

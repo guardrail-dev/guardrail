@@ -259,7 +259,26 @@ object JavaGenerator {
       case WidenClassDefinition(value)  => Target.pure(value)
       case WidenObjectDefinition(value) => Target.pure(value)
 
-      case CompareTerms(a, b) => Target.pure(a == b)
+      case FindCommonDefaultValue(history, a, b) =>
+        (a, b) match {
+          case (Some(va), Some(vb)) =>
+            if (va.toString() == vb.toString()) {
+              Target.pure(Some(va))
+            } else {
+              Target.raiseError(
+                s"There is a mismatch at ${history} between default values ${va} and ${vb}. This parameter is defined at multiple places and those definitions are incompatible with each other. They must have the same name, type and default value. (${history})"
+              )
+            }
+          case (va, vb) => Target.pure(va.orElse(vb))
+        }
+      case FindCommonRawType(history, a, b) =>
+        if (a == b) {
+          Target.pure(a)
+        } else {
+          Target.raiseError(
+            s"There is a mismatch at ${history} between types ${a} and ${b}. Conflicting definitions between types and inherited types are not supported."
+          )
+        }
 
       case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
         Target.pure(None)
