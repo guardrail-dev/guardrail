@@ -18,7 +18,7 @@ addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.5")
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.32")
 
-addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.1.0")
+addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.1.2")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
 
