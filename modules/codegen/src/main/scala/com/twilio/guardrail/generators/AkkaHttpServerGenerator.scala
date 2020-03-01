@@ -711,11 +711,10 @@ object AkkaHttpServerGenerator {
         qsArgs     = parameters.queryStringParams
         bodyArgs   = parameters.bodyParams
 
-        akkaMethod <- httpMethodToAkka(method)
-        akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
-        akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
-        akkaBody   <- bodyToAkka(operationId, bodyArgs)
-        asyncFormProcessing = formArgs.exists(_.isFile) || consumes.exists(_ == RouteMeta.MultipartFormData)
+        akkaMethod                     <- httpMethodToAkka(method)
+        akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
+        akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
+        akkaBody                       <- bodyToAkka(operationId, bodyArgs)
         (akkaForm, handlerDefinitions) <- formToAkka(consumes, operationId)(formArgs)
         akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
         (responseCompanionTerm, responseCompanionType) = (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
