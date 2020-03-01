@@ -39,6 +39,22 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
+val exampleFrameworkSuites = Map(
+  "scala" -> List(
+    ("akka-http", "akkaHttp", List("client", "server")),
+    ("endpoints", "endpoints", List("client")),
+    ("http4s", "http4s", List("client", "server"))
+  ),
+  "java" -> List(
+    ("dropwizard", "dropwizard", List("client", "server")),
+    ("spring-mvc", "springMvc", List("server"))
+  )
+)
+
+
+val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
+val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
+
 import com.twilio.guardrail.sbt.ExampleCase
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
 val exampleCases: List[ExampleCase] = List(
@@ -77,7 +93,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),
-  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(Set("akka-http", "endpoints", "http4s")),
+  ExampleCase(sampleResource("polymorphism-nested.yaml"), "polymorphismNested").frameworks(scalaFrameworks.toSet),
   ExampleCase(sampleResource("raw-response.yaml"), "raw"),
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
@@ -85,19 +101,8 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("http4s")),
-  ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames")
-)
-
-val exampleFrameworkSuites = Map(
-  "scala" -> List(
-    ("akka-http", "akkaHttp", List("client", "server")),
-    ("endpoints", "endpoints", List("client")),
-    ("http4s", "http4s", List("client", "server"))
-  ),
-  "java" -> List(
-    ("dropwizard", "dropwizard", List("client", "server")),
-    ("spring-mvc", "springMvc", List("server"))
-  )
+  ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
+  ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(scalaFrameworks.toSet),
 )
 
 def exampleArgs(language: String): List[List[String]] = exampleCases
@@ -141,9 +146,6 @@ artifact in (Compile, assembly) := {
 }
 
 addArtifact(artifact in (Compile, assembly), assembly)
-
-val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
-val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
 

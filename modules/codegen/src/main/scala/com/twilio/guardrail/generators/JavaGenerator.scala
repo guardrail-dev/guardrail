@@ -240,6 +240,7 @@ object JavaGenerator {
           )
         )
 
+      case BytesType()               => Target.raiseError("format: bytes not supported for Java")
       case DateType()                => safeParseType("java.time.LocalDate")
       case DateTimeType()            => safeParseType("java.time.OffsetDateTime")
       case UUIDType()                => safeParseType("java.util.UUID")

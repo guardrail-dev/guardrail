@@ -132,6 +132,7 @@ object ScalaGenerator {
       case AlterMethodParameterName(param, name) =>
         Target.pure(param.copy(name = name))
 
+      case BytesType()               => Target.pure(t"Base64String")
       case DateType()                => Target.pure(t"java.time.LocalDate")
       case DateTimeType()            => Target.pure(t"java.time.OffsetDateTime")
       case UUIDType()                => Target.pure(t"java.util.UUID")
@@ -245,6 +246,22 @@ object ScalaGenerator {
                   ev.addPath(value)
                 }
               }
+
+              class Base64String(val data: Array[Byte]) extends AnyVal {
+                override def toString() = "Base64String(" + data.toString() + ")"
+              }
+              object Base64String {
+                def apply(bytes: Array[Byte]): Base64String = new Base64String(bytes)
+                def unapply(value: Base64String): Option[Array[Byte]] = Some(value.data)
+                private[this] val encoder = java.util.Base64.getEncoder
+                implicit val encode: Encoder[Base64String] =
+                  Encoder[String].contramap[Base64String](v => new String(encoder.encode(v.data)))
+
+                private[this] val decoder = java.util.Base64.getDecoder
+                implicit val decode: Decoder[Base64String] =
+                  Decoder[String].emapTry(v => scala.util.Try(decoder.decode(v))).map(new Base64String(_))
+              }
+
             }
           """
         Target.pure(Some(WriteTree(pkgPath.resolve("Implicits.scala"), sourceToBytes(implicits))))

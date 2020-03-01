@@ -50,6 +50,7 @@ case class SelectType[L <: LA](typeNames: NonEmptyList[String])                 
 case class SelectTerm[L <: LA](termNames: NonEmptyList[String])                                 extends ScalaTerm[L, L#Term]
 case class AlterMethodParameterName[L <: LA](param: L#MethodParameter, name: L#TermName)        extends ScalaTerm[L, L#MethodParameter]
 
+case class BytesType[L <: LA]()                                               extends ScalaTerm[L, L#Type]
 case class UUIDType[L <: LA]()                                                extends ScalaTerm[L, L#Type]
 case class DateType[L <: LA]()                                                extends ScalaTerm[L, L#Type]
 case class DateTimeType[L <: LA]()                                            extends ScalaTerm[L, L#Type]

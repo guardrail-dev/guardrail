@@ -1,0 +1,27 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /foo:
+    get:
+      operationId: foo
+      responses:
+        '200':
+          description: foo
+          schema:
+            $ref: '#/definitions/Foo'
+definitions:
+  Foo:
+    type: object
+    properties:
+      value:
+        type: string
+        format: byte
