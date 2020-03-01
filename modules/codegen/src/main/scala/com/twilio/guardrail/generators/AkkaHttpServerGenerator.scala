@@ -221,7 +221,7 @@ object AkkaHttpServerGenerator {
         multi: Term => Type => Option[Term] => Target[Term],
         multiOpt: Term => Type => Option[Term] => Target[Term],
         optional: Term => Type => Option[Term] => Target[Term]
-    )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
+    )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[(Term, List[Term.Name])]] =
       for {
         directives <- params.traverse {
           case sparam @ ScalaParameter(_, param, _, argName, argType) =>
@@ -252,7 +252,7 @@ object AkkaHttpServerGenerator {
       } yield directives match {
         case Nil => Option.empty
         case x :: xs =>
-          Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" })
+          Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.paramName)))
       }
 
     def bodyToAkka(operationId: String, body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
@@ -263,7 +263,7 @@ object AkkaHttpServerGenerator {
         }
       )
 
-    def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] =
+    def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] =
       directivesFromParams(
         arg => {
           case t"String" =>
@@ -308,7 +308,7 @@ object AkkaHttpServerGenerator {
         }
       ) _
 
-    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[Term]] = {
+    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] = {
       type Unmarshaller = Term
       type Arg          = Term
       val nameReceptacle: Arg => Type => Term = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
@@ -711,18 +711,18 @@ object AkkaHttpServerGenerator {
         qsArgs     = parameters.queryStringParams
         bodyArgs   = parameters.bodyParams
 
-        akkaMethod <- httpMethodToAkka(method)
-        akkaPath   <- pathStrToAkka(basePath, path, pathArgs)
-        akkaQs     <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
-        akkaBody   <- bodyToAkka(operationId, bodyArgs)
-        asyncFormProcessing = formArgs.exists(_.isFile) || consumes.exists(_ == RouteMeta.MultipartFormData)
-        akkaForm_ <- formToAkka(consumes, operationId)(formArgs)
-        (akkaForm, handlerDefinitions) = akkaForm_
-        akkaHeaders <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.map((_, args.map(_.paramName))).toList))
+        akkaMethod                     <- httpMethodToAkka(method)
+        akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
+        akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
+        akkaBody                       <- bodyToAkka(operationId, bodyArgs)
+        (akkaForm, handlerDefinitions) <- formToAkka(consumes, operationId)(formArgs)
+        akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
         (responseCompanionTerm, responseCompanionType) = (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
-        responseType = ServerRawResponse(operation)
-          .filter(_ == true)
-          .fold[Type](t"${Term.Name(resourceName)}.${responseCompanionType}")(Function.const(t"HttpResponse"))
+        responseType = if (ServerRawResponse(operation).getOrElse(false)) {
+          t"HttpResponse"
+        } else {
+          t"${Term.Name(resourceName)}.${responseCompanionType}"
+        }
         orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
               .map(_.param)
               .map(List(_))
@@ -748,8 +748,8 @@ object AkkaHttpServerGenerator {
           val pathMatcher    = bindParams(akkaPath.toList)
           val qsMatcher      = bindParams(akkaQs)
           val headerMatcher  = bindParams(akkaHeaders)
-          val tracingMatcher = bindParams(tracingFields.map(_.term).map((_, tracingFields.map(_.param.paramName).toList)).toList)
-          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs ++ formArgs).toList.map(_.paramName))))
+          val tracingMatcher = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
+          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
 
           methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }

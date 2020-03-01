@@ -77,6 +77,7 @@ sealed abstract class Target[A] {
   def map[B](f: A => B): Target[B]
   def flatMap[B](f: A => Target[B]): Target[B]
   def recover[AA >: A](f: Error => AA): Target[AA]
+  def fold[B](fail: Error => B, pass: A => B): B
 }
 object TargetValue {
   def unapply[A](x: TargetValue[A]): Option[A] = Some(x.value)
@@ -87,6 +88,7 @@ class TargetValue[A](val value: A) extends Target[A] {
   def map[B](f: A => B): Target[B]                 = new TargetValue(f(value))
   def flatMap[B](f: A => Target[B]): Target[B]     = f(value)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(value)
+  def fold[B](fail: Error => B, pass: A => B): B   = pass(value)
 }
 object TargetError {
   def unapply[A](x: TargetError[A]): Option[Error] = Some(x.error)
@@ -97,4 +99,5 @@ class TargetError[A](val error: Error) extends Target[A] {
   def map[B](f: A => B): Target[B]                 = new TargetError(error)
   def flatMap[B](f: A => Target[B]): Target[B]     = new TargetError(error)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(f(error))
+  def fold[B](fail: Error => B, pass: A => B): B   = fail(error)
 }
