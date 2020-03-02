@@ -225,7 +225,14 @@ object AkkaHttpServerGenerator {
     def groupTypes: List[Type] => Type       = groupGeneric[Type](a => t"Tuple1[$a]", xs => t"(..${xs})")
     def groupTerms: List[Term] => Term       = groupGeneric[Term](a => q"Tuple1($a)", xs => q"(..${xs})")
     def groupPats: List[Pat] => Pat          = groupGeneric[Pat](a => p"Tuple1($a)", xs => p"(..${xs})")
-    def groupDirectivePats: List[Pat] => Pat = groupGeneric[Pat](identity _, xs => p"(..${xs})")
+    def groupDirectivePats: List[Pat] => Pat = {
+      val prefix: Pat => Pat =  {
+        case Pat.Var(Term.Name(a)) =>
+          Pat.Var(Term.Name(s"_${a}"))
+        case pat => pat
+      }
+      groupGeneric[Pat](prefix, xs => p"(..${xs.map(prefix)})")
+    }
 
     def directivesFromParams(
         required: Term => Type => Option[Term] => Target[Term],
@@ -263,7 +270,7 @@ object AkkaHttpServerGenerator {
       } yield directives match {
         case Nil => Option.empty
         case x :: xs =>
-          Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.paramName)))
+          Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.internalParamName)))
       }
 
     def bodyToAkka(operationId: String, body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
@@ -337,6 +344,7 @@ object AkkaHttpServerGenerator {
       def toPat: Pat        = if (value.nonEmpty && ('A'.to('Z').contains(value(0)))) toTerm else toVar
       def toVar: Pat.Var    = Pat.Var(toTerm)
       def toTerm: Term.Name = Term.Name(value)
+      def toInternalTerm: Term.Name = if (Term.Name(value).syntax != value) { Term.Name(s"_${value}") } else { Term.Name(value) }
       def toType: Type.Name = Type.Name(value)
 
       override def toString(): String = s"Binding($value)"
@@ -392,7 +400,7 @@ object AkkaHttpServerGenerator {
                           val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
                           List(
                             Case(
-                              Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(pats)),
+                              Pat.Extract(Term.Select(partsTerm, containerName.toInternalTerm), List(pats)),
                               None,
                               terms
                             )
