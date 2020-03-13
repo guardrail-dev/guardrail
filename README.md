@@ -28,6 +28,12 @@ Build tool plugins
 - Makefile
   - [docs](docs/plugins/make.md)
 
+Adopters
+========
+
+- [Avast](https://www.avast.com/)
+- [Twilio](https://www.twilio.com/)
+
 Contributors
 ============
 
