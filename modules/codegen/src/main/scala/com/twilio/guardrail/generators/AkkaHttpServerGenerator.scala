@@ -216,22 +216,22 @@ object AkkaHttpServerGenerator {
       })
     }
 
-    def groupGeneric[A](single: A => A, combine: List[A] => A): List[A] => A = {
+    def groupGeneric[A, B](single: A => (List[B], A), combine: List[A] => (List[B], A)): List[A] => (List[B], A) = {
       case a :: Nil              => single(a)
       case xs if xs.length <= 22 => combine(xs)
-      case xs                    => xs.splitAt(21) match { case (xs, ys) => combine(xs :+ groupGeneric(single, combine)(ys)) }
+      case xs                    => xs.splitAt(21) match { case (xs, ys) => groupGeneric(single, combine)(ys).traverse(y => combine(xs :+ y)).flatten }
     }
 
-    def groupTypes: List[Type] => Type       = groupGeneric[Type](a => t"Tuple1[$a]", xs => t"(..${xs})")
-    def groupTerms: List[Term] => Term       = groupGeneric[Term](a => q"Tuple1($a)", xs => q"(..${xs})")
-    def groupPats: List[Pat] => Pat          = groupGeneric[Pat](a => p"Tuple1($a)", xs => p"(..${xs})")
-    def groupDirectivePats: List[Pat] => Pat = {
-      val prefix: Pat => Pat =  {
+    def groupTypes: List[Type] => Type       = groupGeneric[Type, Nothing](a => (List.empty, t"Tuple1[$a]"), xs => (List.empty, t"(..${xs})")).map(_._2)
+    def groupTerms: List[Term] => Term       = groupGeneric[Term, Term](a => (List.empty, q"Tuple1($a)"), xs => (List.empty, q"(..${xs})")).map(_._2)
+    def groupPats: List[Pat] => Pat          = groupGeneric[Pat, Term](a => (List.empty, p"Tuple1($a)"), xs => (List.empty, p"(..${xs})")).map(_._2)
+    def groupDirectivePats: List[Pat] => (List[Term], Pat) = {
+      val prefix: Pat => (List[Term], Pat) =  {
         case Pat.Var(Term.Name(a)) =>
-          Pat.Var(Term.Name(s"_${a}"))
-        case pat => pat
+          (List.empty, Pat.Var(Term.Name(s"_${a}")))
+        case pat => (List.empty, pat)
       }
-      groupGeneric[Pat](prefix, xs => p"(..${xs.map(prefix)})")
+      groupGeneric[Pat, Term](prefix, xs => xs.traverse(prefix) match { case (terms, xs) =>  (terms, p"(..${xs})") })
     }
 
     def directivesFromParams(
@@ -745,7 +745,7 @@ object AkkaHttpServerGenerator {
                       acc(
                         Term.Apply(
                           Term.Select(directive, Term.Name("apply")),
-                          List(Term.PartialFunction(List(Case(groupDirectivePats(xs.map(x => Pat.Var(x))), None, next))))
+                          List(Term.PartialFunction(List(Case(groupDirectivePats(xs.map(x => Pat.Var(x)))._2, None, next))))
                         )
                       )
                 }
