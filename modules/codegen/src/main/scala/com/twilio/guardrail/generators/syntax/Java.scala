@@ -25,8 +25,12 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
+import com.twilio.guardrail.generators.ScalaParameter
 
 object Java {
+  implicit object JavaInternalTermNameEscaper extends ScalaParameter.InternalTermNameEscaper[JavaLanguage] {
+    def escape = identity _
+  }
   implicit class RichType(val tpe: Type) extends AnyVal {
     def isOptional: Boolean =
       tpe match {

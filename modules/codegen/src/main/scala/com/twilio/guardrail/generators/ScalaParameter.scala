@@ -43,8 +43,14 @@ class ScalaParameter[L <: LA] private[generators] (
 
   def withParamName(newParamName: L#TermName): ScalaParameter[L] =
     new ScalaParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
+
+  def internalParamName(implicit ev: ScalaParameter.InternalTermNameEscaper[L]): L#TermName = ev.escape(paramName)
 }
+
 object ScalaParameter {
+  trait InternalTermNameEscaper[L <: LA] {
+    def escape: L#TermName => L#TermName
+  }
   def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
