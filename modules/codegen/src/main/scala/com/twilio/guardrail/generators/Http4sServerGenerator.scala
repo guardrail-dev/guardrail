@@ -11,7 +11,7 @@ import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ Header, Response, Responses }
+import com.twilio.guardrail.protocol.terms.{ ContentType, Header, Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -566,8 +566,8 @@ object Http4sServerGenerator {
                 )
               )
 
-        val consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
-        val produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+        val consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
+        val produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
         val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(operationId, bodyArgs, responses, consumes, produces)
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
@@ -739,15 +739,15 @@ object Http4sServerGenerator {
         operationId: String,
         bodyArgs: Option[ScalaParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
-        consumes: Seq[RouteMeta.ContentType],
-        produces: Seq[RouteMeta.ContentType]
+        consumes: Seq[ContentType],
+        produces: Seq[ContentType]
     ): List[Defn.Val] =
       generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces) ++ generateResponseGenerators(
             operationId,
             responses
           )
 
-    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateDecoders(operationId: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(
@@ -756,7 +756,7 @@ object Http4sServerGenerator {
           )
       }
 
-    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
         response        <- responses.value
         typeDefaultPair <- response.value

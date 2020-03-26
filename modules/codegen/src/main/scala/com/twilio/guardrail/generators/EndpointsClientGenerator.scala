@@ -8,7 +8,7 @@ import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.protocol.terms.{ ContentType, MultipartFormData, Responses, TextPlain }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.shims._
@@ -125,8 +125,8 @@ object EndpointsClientGenerator {
             staticQueryParams: Option[Term],
             headerParams: Term,
             responses: Responses[ScalaLanguage],
-            produces: Seq[RouteMeta.ContentType],
-            consumes: Seq[RouteMeta.ContentType],
+            produces: Seq[ContentType],
+            consumes: Seq[ContentType],
             tracing: Boolean
         )(
             tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
@@ -144,7 +144,7 @@ object EndpointsClientGenerator {
           val (fallbackBodyAlgebra, fallbackBodyArgument) = (Some(q"emptyRequest"), None)
 
           val (textPlainAlgebra, textPlainArgument): (Option[Term], Option[Term]) =
-            if (consumes.contains(RouteMeta.TextPlain))
+            if (consumes.contains(TextPlain))
               (bodyArgs.map(_ => q"textPlainRequest"), bodyArgs.map(sp => if (sp.required) sp.paramName else q"""${sp.paramName}.getOrElse("")"""))
             else (None, None)
 
@@ -152,7 +152,7 @@ object EndpointsClientGenerator {
             (
               formDataParams.map(
                 _ =>
-                  if (consumes.contains(RouteMeta.MultipartFormData)) {
+                  if (consumes.contains(MultipartFormData)) {
                     q"multipartFormDataRequest"
                   } else {
                     q"formDataRequest[List[(String, String)]]()"
@@ -365,8 +365,8 @@ object EndpointsClientGenerator {
             // Placeholder for when more functions get logging
             _ <- Target.pure(())
 
-            produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
-            consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+            produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
+            consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
 
             headerArgs = parameters.headerParams
             pathArgs   = parameters.pathParams
@@ -382,7 +382,7 @@ object EndpointsClientGenerator {
 
             // _ <- Target.log.debug(s"Generated: $urlWithParams")
             // Generate FormData arguments
-            formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
+            formDataParams = generateFormDataParams(formArgs, consumes.contains(MultipartFormData))
             // Generate header arguments
             headerParams = generateHeaderParams(headerArgs)
 

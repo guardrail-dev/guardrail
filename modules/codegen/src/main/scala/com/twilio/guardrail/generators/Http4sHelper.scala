@@ -1,8 +1,7 @@
 package com.twilio.guardrail.generators
 
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ Response, Responses }
-import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, Response, Responses }
 import com.twilio.guardrail.StrictProtocolElems
 import scala.meta._
 
@@ -62,8 +61,8 @@ object Http4sHelper {
     List[Defn](cls, companion)
   }
 
-  def generateDecoder(tpe: Type, consumes: Seq[RouteMeta.ContentType]): Term =
-    if (consumes.contains(RouteMeta.ApplicationJson) || consumes.isEmpty)
+  def generateDecoder(tpe: Type, consumes: Seq[ContentType]): Term =
+    if (consumes.contains(ApplicationJson) || consumes.isEmpty)
       q"jsonOf[F, $tpe]"
     else
       tpe match {
@@ -83,8 +82,8 @@ object Http4sHelper {
         case _             => q"EntityDecoder[F, $tpe]"
       }
 
-  def generateEncoder(tpe: Type, produces: Seq[RouteMeta.ContentType]): Term =
-    if (produces.contains(RouteMeta.ApplicationJson) || produces.isEmpty)
+  def generateEncoder(tpe: Type, produces: Seq[ContentType]): Term =
+    if (produces.contains(ApplicationJson) || produces.isEmpty)
       q"jsonEncoderOf[F, $tpe]"
     else
       tpe match {
