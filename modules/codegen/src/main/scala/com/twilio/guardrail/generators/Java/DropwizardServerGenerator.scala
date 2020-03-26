@@ -92,65 +92,6 @@ object DropwizardServerGenerator {
     checkMatch(List.empty, initialHeads, initialRest)
   }
 
-  // FIXME: does this handle includes from other files?
-  private def definitionName(refName: Option[String]): Option[String] =
-    refName.flatMap({ rn =>
-      rn.split("/").toList match {
-        case "#" :: _ :: name :: Nil => Some(name)
-        case _                       => None
-      }
-    })
-
-  def getBestConsumes(contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] = {
-    val priorityOrder = NonEmptyList.of(
-      UrlencodedFormData,
-      ApplicationJson,
-      MultipartFormData,
-      TextPlain
-    )
-
-    priorityOrder
-      .foldLeft[Option[ContentType]](None)({
-        case (s @ Some(_), _) => s
-        case (None, next)     => contentTypes.find(_ == next)
-      })
-      .orElse(parameters.formParams.headOption.map(_ => UrlencodedFormData))
-      .orElse(parameters.bodyParams.map(_ => ApplicationJson))
-  }
-
-  private def getBestProduces(
-      contentTypes: List[ContentType],
-      responses: List[ApiResponse],
-      protocolElems: List[StrictProtocolElems[JavaLanguage]]
-  ): Option[ContentType] = {
-    val priorityOrder = NonEmptyList.of(
-      ApplicationJson,
-      TextPlain,
-      OctetStream
-    )
-
-    priorityOrder
-      .foldLeft[Option[ContentType]](None)({
-        case (s @ Some(_), _) => s
-        case (None, next)     => contentTypes.find(_ == next)
-      })
-      .orElse(
-        responses
-          .map({ resp =>
-            protocolElems
-              .find(pe => definitionName(Option(resp.get$ref())).contains(pe.name))
-              .flatMap({
-                case _: ClassDefinition[_]                                              => Some(ApplicationJson)
-                case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain)
-                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain)
-                case _                                                                  => None
-              })
-          })
-          .headOption
-          .flatten
-      )
-  }
-
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
     Target.log.function("generateResponseSuperClass") {
       for {
@@ -342,27 +283,19 @@ object DropwizardServerGenerator {
                   method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
                 }
 
-                val consumes = getBestConsumes(operation.get.consumes.flatMap(ContentType.unapply).toList, parameters)
-                  .orElse({
-                    if (parameters.formParams.nonEmpty) {
-                      if (parameters.formParams.exists(_.isFile)) {
-                        Some(MultipartFormData)
-                      } else {
-                        Some(UrlencodedFormData)
-                      }
-                    } else if (parameters.bodyParams.nonEmpty) {
-                      Some(ApplicationJson)
-                    } else {
-                      None
-                    }
-                  })
+                val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
+                val consumes    = DropwizardHelpers.getBestConsumes(operationId, allConsumes, parameters)
                 consumes
                   .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)
 
-                val successResponses =
-                  operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
-                val produces = getBestProduces(operation.get.produces.flatMap(ContentType.unapply).toList, successResponses, protocolElems)
+                val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
+                val bestSuccessResponse = responses.value
+                  .filter(_.statusCode / 100 == 2)
+                  .find(_.value.isDefined)
+                val produces = bestSuccessResponse.flatMap(
+                  DropwizardHelpers.getBestProduces(operationId, allProduces, _)
+                )
                 produces
                   .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), p.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)

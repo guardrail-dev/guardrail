@@ -2,7 +2,6 @@ package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
 import cats.instances.list._
-import cats.syntax.foldable._
 import cats.syntax.traverse._
 import cats.~>
 import com.github.javaparser.StaticJavaParser
@@ -14,28 +13,15 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{
-  ApplicationJson,
-  BinaryContent,
-  ContentType,
-  MultipartFormData,
-  OctetStream,
-  Response,
-  TextContent,
-  TextPlain,
-  UrlencodedFormData
-}
+import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Response, TextContent, UrlencodedFormData }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, SupportDefinition, SwaggerUtil, Target }
-import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.media.MediaType
 import java.net.URI
-import scala.collection.JavaConverters._
 
 object AsyncHttpClientClientGenerator {
   private val URI_TYPE                       = StaticJavaParser.parseClassOrInterfaceType("URI")
@@ -51,55 +37,6 @@ object AsyncHttpClientClientGenerator {
 
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
-
-  private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
-  def getBestConsumes(operation: Operation, parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
-    Option(parameters.formParams.nonEmpty)
-      .filter(_ == true)
-      .map(
-        _ =>
-          if (parameters.formParams.exists(_.isFile)) {
-            MultipartFormData
-          } else {
-            UrlencodedFormData
-          }
-      )
-      .orElse(
-        parameters.bodyParams.map({ bodyParam =>
-          val allConsumes = operation.consumes.flatMap(ContentType.unapply)
-          CONSUMES_PRIORITY
-            .collectFirstSome(ct => allConsumes.find(_ == ct))
-            .orElse(allConsumes.collectFirst({ case tc: TextContent => tc }))
-            .orElse(allConsumes.collectFirst({ case bc: BinaryContent => bc }))
-            .getOrElse({
-              val fallback = if (bodyParam.rawType.format.contains("string")) TextPlain else ApplicationJson
-              println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to $fallback")
-              fallback
-            })
-        })
-      )
-
-  private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
-  def getBestProduces(operation: Operation, response: Response[JavaLanguage]): Option[ContentType] =
-    response.value
-      .map(_._1)
-      .flatMap({ valueType =>
-        val allProduces = operation.getResponses.asScala
-          .get(response.statusCode.toString)
-          .flatMap(resp => Option(resp.getContent))
-          .fold(List.empty[(String, MediaType)])(_.asScala.toList)
-          .collectFirst({ case (ContentType(ct), _) => ct })
-
-        PRODUCES_PRIORITY
-          .collectFirstSome(ct => allProduces.find(_ == ct))
-          .orElse(allProduces.collectFirst({ case tc: TextContent => tc }))
-          .orElse(allProduces.collectFirst({ case bc: BinaryContent => bc }))
-          .orElse({
-            val fallback = if (valueType.isNamed("String")) TextPlain else ApplicationJson
-            println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to ${fallback.value}")
-            Option(fallback)
-          })
-      })
 
   private def showParam(param: ScalaParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
@@ -531,8 +468,11 @@ object AsyncHttpClientClientGenerator {
             (parameters.headerParams, "addHeader", false)
           )
 
-          val consumes = getBestConsumes(operation.get, parameters)
-          val produces = responses.value.map(resp => (resp.statusCode, getBestProduces(operation.get, resp))).toMap
+          val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
+          val consumes    = DropwizardHelpers.getBestConsumes(operation.get.getOperationId, allConsumes, parameters)
+          val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
+          val produces =
+            responses.value.map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces(operation.get.getOperationId, allProduces, resp))).toMap
 
           val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
               .flatMap({
