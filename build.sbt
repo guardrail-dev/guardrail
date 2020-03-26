@@ -100,7 +100,8 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
-  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("http4s")),
+  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks(Set("dropwizard", "http4s")),
+  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("dropwizard", "http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
   ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(scalaFrameworks.toSet),
 )
