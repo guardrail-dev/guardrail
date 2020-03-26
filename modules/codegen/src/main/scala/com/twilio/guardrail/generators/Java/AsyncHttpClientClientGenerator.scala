@@ -17,7 +17,17 @@ import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, MultipartFormData, OctetStream, Response, TextPlain, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Response,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -42,32 +52,35 @@ object AsyncHttpClientClientGenerator {
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
 
+  private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
   def getBestConsumes(operation: Operation, parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
-    if (parameters.formParams.nonEmpty) {
-      if (parameters.formParams.exists(_.isFile)) {
-        Option(MultipartFormData)
-      } else {
-        Option(UrlencodedFormData)
-      }
-    } else if (parameters.bodyParams.isDefined) {
-      val validTypes = Seq(ApplicationJson, TextPlain)
-      operation.consumes
-        .collectFirst({ case ContentType(value) if validTypes.contains(value) => value })
-        .orElse({
-          println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to application/json")
-          Option(ApplicationJson)
+    Option(parameters.formParams.nonEmpty)
+      .filter(_ == true)
+      .map(
+        _ =>
+          if (parameters.formParams.exists(_.isFile)) {
+            MultipartFormData
+          } else {
+            UrlencodedFormData
+          }
+      )
+      .orElse(
+        parameters.bodyParams.map({ bodyParam =>
+          val allConsumes = operation.consumes.flatMap(ContentType.unapply)
+          CONSUMES_PRIORITY
+            .collectFirstSome(ct => allConsumes.find(_ == ct))
+            .orElse(allConsumes.collectFirst({ case tc: TextContent => tc }))
+            .orElse(allConsumes.collectFirst({ case bc: BinaryContent => bc }))
+            .getOrElse({
+              val fallback = if (bodyParam.rawType.format.contains("string")) TextPlain else ApplicationJson
+              println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to $fallback")
+              fallback
+            })
         })
-    } else {
-      Option.empty
-    }
+      )
 
-  def getBestProduces(operation: Operation, response: Response[JavaLanguage]): Option[ContentType] = {
-    val priorityOrder = NonEmptyList.of(
-      ApplicationJson,
-      TextPlain,
-      OctetStream
-    )
-
+  private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
+  def getBestProduces(operation: Operation, response: Response[JavaLanguage]): Option[ContentType] =
     response.value
       .map(_._1)
       .flatMap({ valueType =>
@@ -77,15 +90,16 @@ object AsyncHttpClientClientGenerator {
           .fold(List.empty[(String, MediaType)])(_.asScala.toList)
           .collectFirst({ case (ContentType(ct), _) => ct })
 
-        priorityOrder
+        PRODUCES_PRIORITY
           .collectFirstSome(ct => allProduces.find(_ == ct))
+          .orElse(allProduces.collectFirst({ case tc: TextContent => tc }))
+          .orElse(allProduces.collectFirst({ case bc: BinaryContent => bc }))
           .orElse({
             val fallback = if (valueType.isNamed("String")) TextPlain else ApplicationJson
             println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to ${fallback.value}")
             Option(fallback)
           })
       })
-  }
 
   private def showParam(param: ScalaParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
@@ -214,7 +228,7 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        case Some(TextPlain) =>
+        case Some(TextContent(_)) =>
           Option(
             new ExpressionStmt(
               wrapSetBody(
@@ -227,7 +241,7 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        case Some(OctetStream) | None =>
+        case Some(BinaryContent(_)) | None =>
           // FIXME: we're hoping that the type is something that AHC already supports
           Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
 
@@ -569,8 +583,8 @@ object AsyncHttpClientClientGenerator {
           callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
           val callBuilderInitContentType = consumes.map({ ct =>
             val ctStr = ct match {
-              case TextPlain => s"${ct.value}; charset=utf-8"
-              case _         => ct.value
+              case TextContent(_) => s"${ct.value}; charset=utf-8"
+              case _              => ct.value
             }
             new ExpressionStmt(
               new MethodCallExpr(
@@ -765,26 +779,26 @@ object AsyncHttpClientClientGenerator {
                                                 AssignExpr.Operator.ASSIGN
                                               )
 
-                                            case TextPlain =>
+                                            case UrlencodedFormData | MultipartFormData =>
+                                              // This should never happen & would be a bug in Guardrail
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
+                                                new NullLiteralExpr,
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+
+                                            case TextContent(_) =>
                                               new AssignExpr(
                                                 new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
                                                 new MethodCallExpr(new NameExpr("response"), "getResponseBody"),
                                                 AssignExpr.Operator.ASSIGN
                                               )
 
-                                            case OctetStream =>
+                                            case BinaryContent(_) =>
                                               // FIXME: need to standardize on a type for byte streams
                                               new AssignExpr(
                                                 new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
                                                 new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsByteBuffer"),
-                                                AssignExpr.Operator.ASSIGN
-                                              )
-
-                                            case UrlencodedFormData | MultipartFormData =>
-                                              // This should never happen & would be a bug in Guardrail
-                                              new AssignExpr(
-                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new NullLiteralExpr,
                                                 AssignExpr.Operator.ASSIGN
                                               )
                                           }

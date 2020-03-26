@@ -12,7 +12,17 @@ import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, MultipartFormData, OctetStream, Responses, TextPlain, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Responses,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.shims._
@@ -625,9 +635,9 @@ object AkkaHttpServerGenerator {
 
                   case ApplicationJson => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/json"))
 
-                  case OctetStream => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/octet-stream"))
+                  case BinaryContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
 
-                  case TextPlain => (Nil, Target.raiseError(s"Unable to generate unmarshaller for text/plain"))
+                  case TextContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
                 })
                 .traverse(_.flatSequence)
 

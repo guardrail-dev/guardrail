@@ -18,7 +18,17 @@ import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, MultipartFormData, OctetStream, Response, TextPlain, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Response,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
@@ -30,14 +40,16 @@ import scala.util.Try
 
 object SpringMvcServerGenerator {
   private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
-    def toSpringMediaType: String =
-      (ct match {
-        case ApplicationJson    => "APPLICATION_JSON"
-        case UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
-        case MultipartFormData  => "MULTIPART_FORM_DATA"
-        case TextPlain          => "TEXT_PLAIN"
-        case OctetStream        => "APPLICATION_OCTET_STREAM"
-      }) + "_VALUE"
+    def toSpringMediaType: Expression =
+      ct match {
+        case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
+        case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED_VALUE")
+        case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA_VALUE")
+        case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN_VALUE")
+        case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM_VALUE")
+        case TextContent(name)   => new StringLiteralExpr(name)
+        case BinaryContent(name) => new StringLiteralExpr(name)
+      }
   }
 
   private val ASYNC_RESPONSE_TYPE        = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
@@ -329,14 +341,14 @@ object SpringMvcServerGenerator {
                   })
 
                 consumes
-                  .map(c => new MemberValuePair("consumes", new FieldAccessExpr(new NameExpr("MediaType"), c.toSpringMediaType)))
+                  .map(c => new MemberValuePair("consumes", c.toSpringMediaType))
                   .foreach(nodeList.addLast)
 
                 val successResponses =
                   operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
                 val produces = getBestProduces(operation.get.produces.flatMap(ContentType.unapply).toList, successResponses, protocolElems)
                 produces
-                  .map(c => new MemberValuePair("produces", new FieldAccessExpr(new NameExpr("MediaType"), c.toSpringMediaType)))
+                  .map(c => new MemberValuePair("produces", c.toSpringMediaType))
                   .foreach(nodeList.addLast)
 
                 if (!nodeList.isEmpty) {

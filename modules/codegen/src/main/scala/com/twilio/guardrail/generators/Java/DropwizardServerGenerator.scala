@@ -18,7 +18,17 @@ import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, MultipartFormData, OctetStream, Response, TextPlain, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Response,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
@@ -30,12 +40,14 @@ import scala.util.Try
 
 object DropwizardServerGenerator {
   private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
-    def toJaxRsAnnotationName: String = ct match {
-      case ApplicationJson    => "APPLICATION_JSON"
-      case UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
-      case MultipartFormData  => "MULTIPART_FORM_DATA"
-      case TextPlain          => "TEXT_PLAIN"
-      case OctetStream        => "APPLICATION_OCTET_STREAM"
+    def toJaxRsAnnotationName: Expression = ct match {
+      case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
+      case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
+      case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
+      case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")
+      case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
+      case TextContent(name)   => new StringLiteralExpr(name)
+      case BinaryContent(name) => new StringLiteralExpr(name)
     }
   }
 
@@ -344,14 +356,14 @@ object DropwizardServerGenerator {
                     }
                   })
                 consumes
-                  .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
+                  .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)
 
                 val successResponses =
                   operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
                 val produces = getBestProduces(operation.get.produces.flatMap(ContentType.unapply).toList, successResponses, protocolElems)
                 produces
-                  .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
+                  .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), p.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)
 
                 def transformJsr310Params(parameter: Parameter): Parameter = {
