@@ -55,6 +55,7 @@ object DropwizardServerGenerator {
   private val RESPONSE_TYPE         = StaticJavaParser.parseClassOrInterfaceType("Response")
   private val RESPONSE_BUILDER_TYPE = StaticJavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
+  private val FILE_TYPE             = StaticJavaParser.parseClassOrInterfaceType("java.io.File")
 
   private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.InstantParam")
   private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetDateTimeParam")
@@ -395,6 +396,17 @@ object DropwizardServerGenerator {
                   }
                 }
 
+                // When we have a file inside multipart/form-data, we don't want to use InputStream,
+                // because that will require the server to buffer the entire contents in memory as it
+                // reads in the entire body.  Instead we instruct Dropwizard to write it out to a file
+                // on disk and use java.io.File.
+                def transformMultipartFile(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter =
+                  (param.isFile, param.required) match {
+                    case (true, true)  => parameter.setType(FILE_TYPE)
+                    case (true, false) => parameter.setType(optionalType(FILE_TYPE))
+                    case _             => parameter
+                  }
+
                 def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
                   if (param.required) {
                     // NB: The order here is actually critical.  In the case where we're using multipart,
@@ -426,7 +438,8 @@ object DropwizardServerGenerator {
                       val parameter       = param.param.clone()
                       val annotated       = addParamAnnotation(parameter, param, annotationName)
                       val dateTransformed = transformJsr310Params(annotated)
-                      addValidationAnnotations(dateTransformed, param)
+                      val fileTransformed = transformMultipartFile(dateTransformed, param)
+                      addValidationAnnotations(fileTransformed, param)
                     })
                 })
 
@@ -607,10 +620,11 @@ object DropwizardServerGenerator {
 
                 val futureResponseType = completionStageType(responseType.clone())
                 val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, operationId)
-                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
-                  parameter =>
-                    handlerMethodSig.addParameter(parameter.param.clone())
-                })
+                (
+                  (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
+                      parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
+                      parameters.bodyParams.map(_.param.clone())
+                ).foreach(handlerMethodSig.addParameter)
                 handlerMethodSig.setBody(null)
 
                 (method, handlerMethodSig)

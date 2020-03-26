@@ -134,10 +134,11 @@ object AsyncHttpClientClientGenerator {
         new NodeList[Expression](
           new ObjectCreationExpr(
             null,
-            FILE_PART_TYPE,
+            INPUT_STREAM_PART_TYPE,
             new NodeList(
               new StringLiteralExpr(param.argName.value),
-              new NameExpr(name)
+              new NameExpr(name),
+              new StringLiteralExpr(param.argName.value)
             )
           )
         )
@@ -176,20 +177,7 @@ object AsyncHttpClientClientGenerator {
       new MethodCallExpr(new NameExpr("builder"), "setBody", new NodeList[Expression](expr))
 
     if (param.isFile) {
-      Option(
-        new ExpressionStmt(
-          wrapSetBody(
-            new ObjectCreationExpr(
-              null,
-              FILE_PART_TYPE,
-              new NodeList(
-                new StringLiteralExpr(param.argName.value),
-                new NameExpr(param.paramName.asString)
-              )
-            )
-          )
-        )
-      )
+      Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
     } else {
       contentType match {
         case Some(ApplicationJson) =>
@@ -798,7 +786,7 @@ object AsyncHttpClientClientGenerator {
                                               // FIXME: need to standardize on a type for byte streams
                                               new AssignExpr(
                                                 new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsByteBuffer"),
+                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
                                                 AssignExpr.Operator.ASSIGN
                                               )
                                           }
@@ -897,7 +885,7 @@ object AsyncHttpClientClientGenerator {
             "org.asynchttpclient.Request",
             "org.asynchttpclient.RequestBuilder",
             "org.asynchttpclient.Response",
-            "org.asynchttpclient.request.body.multipart.FilePart",
+            "org.asynchttpclient.request.body.multipart.InputStreamPart",
             "org.asynchttpclient.request.body.multipart.StringPart"
           ).map(safeParseRawImport) ++ List(
                 "java.util.Objects.requireNonNull"

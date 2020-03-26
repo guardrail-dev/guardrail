@@ -11,6 +11,6 @@ object AsyncHttpClientHelpers {
   val REQUEST_BUILDER_TYPE: ClassOrInterfaceType                          = StaticJavaParser.parseClassOrInterfaceType("RequestBuilder")
   val REQUEST_TYPE: ClassOrInterfaceType                                  = StaticJavaParser.parseClassOrInterfaceType("Request")
   val RESPONSE_TYPE: ClassOrInterfaceType                                 = StaticJavaParser.parseClassOrInterfaceType("Response")
-  val FILE_PART_TYPE: ClassOrInterfaceType                                = StaticJavaParser.parseClassOrInterfaceType("FilePart")
+  val INPUT_STREAM_PART_TYPE: ClassOrInterfaceType                        = StaticJavaParser.parseClassOrInterfaceType("InputStreamPart")
   val STRING_PART_TYPE: ClassOrInterfaceType                              = StaticJavaParser.parseClassOrInterfaceType("StringPart")
 }
