@@ -346,7 +346,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
       "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
       "junit"                      %  "junit"                  % "4.12"             % Test,
       "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-      "org.mockito"                %% "mockito-scala"          % "1.7.1"            % Test,
+      "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
       "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
       "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
       "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
@@ -368,7 +368,7 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
       "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
       "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
       "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-      "org.mockito"                %% "mockito-scala"            % "1.7.1"            % Test,
+      "org.mockito"                %% "mockito-scala"            % "1.12.0"           % Test,
       "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
