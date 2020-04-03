@@ -628,9 +628,10 @@ object DropwizardServerGenerator {
             "javax.ws.rs.HttpMethod"
           ).traverse(safeParseRawImport)
 
-          shower <- SerializationHelpers.showerSupportDef
-
-          jersey <- SerializationHelpers.guardrailJerseySupportDef
+          shower                  <- SerializationHelpers.showerSupportDef
+          jersey                  <- SerializationHelpers.guardrailJerseySupportDef
+          jacksonFormUtils        <- SerializationHelpers.jacksonFormUtils
+          jacksonFormReaderWriter <- SerializationHelpers.jacksonFormMessageReaderWriterDef
         } yield {
           def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
             val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
@@ -648,6 +649,8 @@ object DropwizardServerGenerator {
           List(
             shower,
             jersey,
+            jacksonFormUtils,
+            jacksonFormReaderWriter,
             httpMethodAnnotation("PATCH"),
             httpMethodAnnotation("TRACE")
           )
