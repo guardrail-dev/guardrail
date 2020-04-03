@@ -8,7 +8,7 @@ import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, UnknownType, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
@@ -707,26 +707,40 @@ object AsyncHttpClientClientGenerator {
                                                 AssignExpr.Operator.ASSIGN
                                               )
 
-                                            case UrlencodedFormData | MultipartFormData =>
-                                              // This should never happen & would be a bug in Guardrail
-                                              new AssignExpr(
-                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new NullLiteralExpr,
-                                                AssignExpr.Operator.ASSIGN
+                                            case contentType =>
+                                              val bodyGetter = valueType match {
+                                                case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
+                                                case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
+                                                case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
+                                                case _ if valueType.isNamed("String")      => "getResponseBody"
+                                                case _ =>
+                                                  println(
+                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType for operation ${operation.get.getOperationId}; falling back to String"
+                                                  )
+                                                  "getResponseBody"
+                                              }
+                                              val bodyGetterExpr = new MethodCallExpr(
+                                                new NameExpr("response"),
+                                                bodyGetter,
+                                                bodyGetter match {
+                                                  case "getResponseBody" =>
+                                                    new NodeList[Expression](
+                                                      new MethodCallExpr(
+                                                        new MethodCallExpr(
+                                                          new NameExpr("AsyncHttpClientUtils"),
+                                                          "getResponseCharset",
+                                                          new NodeList[Expression](new NameExpr("response"))
+                                                        ),
+                                                        "orElse",
+                                                        new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                                      )
+                                                    )
+                                                  case _ => new NodeList[Expression]
+                                                }
                                               )
-
-                                            case TextContent(_) =>
                                               new AssignExpr(
                                                 new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBody"),
-                                                AssignExpr.Operator.ASSIGN
-                                              )
-
-                                            case BinaryContent(_) =>
-                                              // FIXME: need to standardize on a type for byte streams
-                                              new AssignExpr(
-                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
+                                                bodyGetterExpr,
                                                 AssignExpr.Operator.ASSIGN
                                               )
                                           }
@@ -815,6 +829,7 @@ object AsyncHttpClientClientGenerator {
         } else {
           (List(
             "java.net.URI",
+            "java.nio.charset.StandardCharsets",
             "java.util.Optional",
             "java.util.concurrent.CompletionStage",
             "java.util.function.Function",
@@ -954,7 +969,8 @@ object AsyncHttpClientClientGenerator {
           (ahcSupportImports, ahcSupportClass) = ahcSupport
           jacksonSupport <- generateJacksonSupportClass()
           (jacksonSupportImports, jacksonSupportClass) = jacksonSupport
-          shower <- SerializationHelpers.showerSupportDef
+          asyncHttpclientUtils <- asyncHttpClientUtilsSupportDef
+          shower               <- SerializationHelpers.showerSupportDef
         } yield {
           exceptionClasses.map({
             case (imports, cls) =>
@@ -962,6 +978,7 @@ object AsyncHttpClientClientGenerator {
           }) ++ List(
             SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, ahcSupportClass),
             SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, jacksonSupportClass),
+            asyncHttpclientUtils,
             shower
           )
         }
