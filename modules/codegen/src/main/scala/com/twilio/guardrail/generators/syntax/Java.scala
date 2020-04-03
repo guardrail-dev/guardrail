@@ -2,24 +2,14 @@ package com.twilio.guardrail.generators.syntax
 
 import cats.implicits._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.comments.{ BlockComment, Comment }
-import com.github.javaparser.ast.expr.{
-  ClassExpr,
-  Expression,
-  FieldAccessExpr,
-  LiteralStringValueExpr,
-  MethodCallExpr,
-  Name,
-  NameExpr,
-  SimpleName,
-  StringLiteralExpr,
-  ThisExpr
-}
+import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.nodeTypes.{ NodeWithName, NodeWithSimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
 import com.twilio.guardrail.{ SupportDefinition, Target }
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -53,17 +43,11 @@ object Java {
         case cls: ClassOrInterfaceType if name.contains(".") =>
           (cls.getScope.asScala.fold("")(_.getName.asString + ".") + cls.getNameAsString) == name
         case cls: ClassOrInterfaceType => cls.getNameAsString == name
-        case pt: PrimitiveType         => pt.asString == name
-        case _                         => false
+        case other                     => other.asString == name
       }
 
-    def name: Option[String] =
-      tpe match {
-        case cls: ClassOrInterfaceType =>
-          Some(cls.getScope.asScala.fold("")(_.getName.asString + ".") + cls.getNameAsString)
-        case pt: PrimitiveType => Option(pt.asString)
-        case _                 => None
-      }
+    @deprecated("Just use Type#asString", "0.0.0")
+    def name: Option[String] = Option(tpe.asString)
   }
 
   implicit class RichListOfNode[T <: Node](val l: List[T]) extends AnyVal {
@@ -126,6 +110,7 @@ object Java {
   def safeParseSimpleName(s: String): Target[SimpleName] = safeParse("safeParseSimpleName")(StaticJavaParser.parseSimpleName, s)
   def safeParseName(s: String): Target[Name]             = safeParse("safeParseName")(StaticJavaParser.parseName, s)
   def safeParseType(s: String): Target[Type]             = safeParse("safeParseType")(StaticJavaParser.parseType, s)
+  def safeParseTypeName(s: String): Target[JavaTypeName] = safeParse("safeParseTypeName")(s => JavaTypeName(StaticJavaParser.parseType(s)), s)
   def safeParseClassOrInterfaceType(s: String): Target[ClassOrInterfaceType] =
     safeParse("safeParseClassOrInterfaceType")(StaticJavaParser.parseClassOrInterfaceType, s)
   def safeParseExpression[T <: Expression](s: String)(implicit cls: ClassTag[T]): Target[T] =

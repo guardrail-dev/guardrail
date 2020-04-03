@@ -19,8 +19,8 @@ import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Locale
-
 import com.github.javaparser.StaticJavaParser
+import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
 import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
 import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
 import org.eclipse.jface.text.Document
@@ -187,13 +187,13 @@ object JavaGenerator {
               None
           }
       case ParseTypeName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseName)
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
 
       case PureTermName(tpe) =>
         Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeIdentifier).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
 
       case PureTypeName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseTypeName).getOrElse(Target.raiseError("A structure's name is empty"))
 
       case PureMethodParameter(nameStr, tpe, default) =>
         safeParseSimpleName(nameStr.asString.escapeIdentifier).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
@@ -205,15 +205,11 @@ object JavaGenerator {
         Target.pure(a.equals(b))
 
       case ExtractTypeName(tpe) =>
-        def extractTypeName(tpe: Type): Target[Name] = tpe match {
+        def extractTypeName(tpe: Type): Target[JavaTypeName] = tpe match {
           case a: AstArrayType if a.getComponentType.isPrimitiveType => extractTypeName(new AstArrayType(a.getComponentType.asPrimitiveType().toBoxedType))
-          case a: AstArrayType                                       => safeParseName(a.asString)
-          case ci: ClassOrInterfaceType                              => safeParseName(ci.getNameAsString)
-          case p: PrimitiveType                                      => safeParseName(p.toBoxedType.getNameAsString)
-          case _: VoidType                                           => safeParseName("Void")
-          case _ =>
-            println(s"WARN: ExtractTypeName: unhandled type ${tpe.getClass.getName}")
-            safeParseName("Void")
+          case ci: ClassOrInterfaceType                              => safeParseTypeName(ci.getNameAsString)
+          case p: PrimitiveType                                      => safeParseTypeName(p.toBoxedType.getNameAsString)
+          case other                                                 => safeParseTypeName(other.asString)
         }
 
         extractTypeName(tpe).map(Option.apply)
