@@ -75,10 +75,10 @@ object AkkaHttpClientGenerator {
             } yield result
           }
 
-        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
+        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
           if (parameters.isEmpty) {
             None
-          } else if (needsMultipart) {
+          } else if (consumes.contains(MultipartFormData)) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, v))"
 
@@ -339,7 +339,7 @@ object AkkaHttpClientGenerator {
 
           _ <- Target.log.debug(s"Generated: $urlWithParams")
           // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains(MultipartFormData))
+          formDataParams = generateFormDataParams(formArgs, consumes)
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
