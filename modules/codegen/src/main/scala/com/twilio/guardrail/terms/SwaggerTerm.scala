@@ -125,7 +125,6 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
       p.setIn("body")
       p.setName("body")
-      p.setSchema(schema.get)
       p.set$ref(ref.get)
 
       required.get.foreach(x => p.setRequired(x))

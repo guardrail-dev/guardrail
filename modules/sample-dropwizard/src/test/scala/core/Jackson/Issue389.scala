@@ -16,7 +16,8 @@ class Issue389 extends FreeSpec with Matchers {
           .map(new Bar.Builder().withA(_).build())
           .toList
           .asJava
-      ).build()
+      )
+      .build()
     val expected = """{"customArray":[{"a":1},{"a":2},{"a":3},{"a":4}],"customMap":null}"""
     assertResult(expected)(mapper.writeValueAsString(foo))
   }
@@ -29,7 +30,8 @@ class Issue389 extends FreeSpec with Matchers {
           .map(x => x.toString() -> new Bar.Builder().withA(x).build())
           .toMap
           .asJava
-      ).build()
+      )
+      .build()
     val expected = """{"customArray":null,"customMap":{"1":{"a":1},"2":{"a":2},"3":{"a":3},"4":{"a":4}}}"""
     assertResult(expected)(mapper.writeValueAsString(foo))
   }
