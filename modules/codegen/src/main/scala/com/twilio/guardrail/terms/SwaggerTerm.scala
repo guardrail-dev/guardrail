@@ -9,7 +9,7 @@ import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.{ ContentType, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, OctetStream, TextContent, UrlencodedFormData }
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -111,9 +111,9 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       required: Tracker[Option[Boolean]]
   ): Option[Tracker[Parameter]] = {
     val content = for {
-      (_, mt) <- fields.value.headOption
-      schema  <- mt.downField("schema", _.getSchema()).indexedCosequence
-      ref     <- schema.downField("$ref", _.get$ref()).indexedCosequence
+      (ContentType(ct), mt) <- fields.value.headOption
+      schema                <- mt.downField("schema", _.getSchema()).indexedCosequence
+      ref                   <- schema.downField("$ref", _.get$ref()).indexedCosequence
     } yield {
       val p = new Parameter
 
@@ -122,7 +122,16 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
         schema.get.setFormat(null)
       }
 
-      p.setIn("body")
+      p.setIn(ct match {
+        case ApplicationJson => "body"
+        case OctetStream     => "body"
+
+        case MultipartFormData  => "formData"
+        case UrlencodedFormData => "formData"
+
+        case BinaryContent(_) => "body"
+        case TextContent(_)   => "body"
+      })
       p.setName("body")
       p.set$ref(ref.get)
 
