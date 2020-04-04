@@ -375,7 +375,8 @@ object ProtocolGenerator {
         }
         nestedClasses.map { v =>
           val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ v)
-          tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, fullType, defn, finalStaticDefns, parents))
+          val rawType          = RawParameterType(model.downField("type", _.getType()).get, model.downField("format", _.getFormat()).get)
+          tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, rawType, _, fullType, defn, finalStaticDefns, parents))
         }
       }
     } yield result

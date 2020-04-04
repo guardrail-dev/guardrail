@@ -54,8 +54,8 @@ class Issue166 extends FunSuite with Matchers with SwaggerSpecRunner {
         .foldMap(Http4s)
     )
 
-    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _) = proto
-    val CodegenDefinitions(Nil, Nil, Nil, None)                                  = codegen
+    val ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, _, _) :: Nil, _, _, _) = proto
+    val CodegenDefinitions(Nil, Nil, Nil, None)                                     = codegen
 
     val definition = q"""
       case class Blix(map: String)
