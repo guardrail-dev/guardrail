@@ -161,7 +161,7 @@ object CirceProtocolGenerator {
               )(Function.const((tpe, defaultValue)) _)
             term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
             dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-          } yield ProtocolParameter[ScalaLanguage](term, name, dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+          } yield ProtocolParameter[ScalaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
         }
 
       case RenderDTOClass(clsName, selfParams, parents) =>
@@ -208,7 +208,7 @@ object CirceProtocolGenerator {
         val discriminators     = parents.flatMap(_.discriminators)
         val discriminatorNames = discriminators.map(_.propertyName).toSet
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminatorNames.contains(param.name)
+          param => discriminatorNames.contains(param.name.value)
         )
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
         val paramCount                 = params.length
@@ -251,7 +251,7 @@ object CirceProtocolGenerator {
           )
         } else */ {
             val pairs: List[Term.Tuple] = params
-              .map(param => q"""(${Lit.String(param.name)}, a.${Term.Name(param.term.name.value)}.asJson)""")
+              .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)""")
               .to[List]
             Option(
               q"""
@@ -270,7 +270,7 @@ object CirceProtocolGenerator {
         val discriminators     = parents.flatMap(_.discriminators)
         val discriminatorNames = discriminators.map(_.propertyName).toSet
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminatorNames.contains(param.name)
+          param => discriminatorNames.contains(param.name.value)
         )
         val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
         val paramCount                = params.length
@@ -304,11 +304,11 @@ object CirceProtocolGenerator {
                       val enum = if (param.emptyToNull == EmptyIsNull) {
                         enumerator"""
                   ${Pat.Var(term)} <- c.downField(${Lit
-                          .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
+                          .String(param.name.value)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
                 """
                       } else {
                         enumerator"""
-                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name)}).as[${tpe}]
+                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name.value)}).as[${tpe}]
                 """
                       }
                       (term, enum)
