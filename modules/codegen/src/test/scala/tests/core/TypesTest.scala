@@ -87,7 +87,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       |      - requiredArray
       |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: Nil, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -175,7 +175,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       |
       |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, _, _, _) :: ClassDefinition(_, _, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, _, _, _, _) :: ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: Nil, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -227,7 +227,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
       |                type: string
       |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: Nil, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -289,7 +289,7 @@ class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
          |            type: boolean
          |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, _, _) :: ClassDefinition(_, _, _, _, _, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, _, _, _) :: ClassDefinition(_, _, _, _, _, staticDefns, _, _) :: Nil, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

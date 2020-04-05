@@ -6,6 +6,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.protocol.terms.protocol.ProtocolSupportTerms
 import com.twilio.guardrail.generators.RawParameterType
+import com.twilio.guardrail.generators.RawParameterName
 
 case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
 
@@ -28,7 +29,8 @@ case class ClassDefinition[L <: LA](
     fullType: L#Type,
     cls: L#ClassDefinition,
     staticDefns: StaticDefns[L],
-    parents: List[SuperClass[L]] = Nil
+    parents: List[SuperClass[L]] = Nil,
+    fieldProjections: List[(RawParameterName, L#TermName)] = Nil
 ) extends NestedProtocolElems[L]
 
 case class ADT[L <: LA](name: String, tpe: L#TypeName, fullType: L#Type, trt: L#Trait, staticDefns: StaticDefns[L]) extends StrictProtocolElems[L]
@@ -66,7 +68,7 @@ object ProtocolElems {
                         .fold[F[ProtocolElems[L]]](d.pure[F].widen)({
                           case RandomType(name, tpe) =>
                             RandomType[L](name, tpe).pure[F].widen
-                          case ClassDefinition(name, rawType, tpe, _, cls, _, _) =>
+                          case ClassDefinition(name, rawType, tpe, _, cls, _, _, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
                           case EnumDefinition(name, tpe, _, elems, cls, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
@@ -79,7 +81,7 @@ object ProtocolElems {
                         .fold[F[ProtocolElems[L]]](d.pure[F].widen)({
                           case RandomType(name, tpe) =>
                             liftVectorType(tpe, customTpe).map(RandomType[L](name, _))
-                          case ClassDefinition(name, rawType, tpe, _, cls, _, _) =>
+                          case ClassDefinition(name, rawType, tpe, _, cls, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType(_, customTpe)).map(RandomType[L](name, _))
                           case EnumDefinition(name, tpe, _, elems, cls, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType(_, customTpe)).map(RandomType[L](name, _))
@@ -92,7 +94,7 @@ object ProtocolElems {
                         .fold[F[ProtocolElems[L]]](d.pure[F].widen)({
                           case RandomType(name, tpe) =>
                             liftMapType(tpe, customTpe).map(RandomType[L](name, _))
-                          case ClassDefinition(name, rawType, tpe, _, cls, _, _) =>
+                          case ClassDefinition(name, rawType, tpe, _, cls, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftMapType(_, customTpe)).map(RandomType[L](name, _))
                           case EnumDefinition(name, tpe, _, elems, cls, _) =>
                             widenTypeName(tpe).flatMap(liftMapType(_, customTpe)).map(RandomType[L](name, _))

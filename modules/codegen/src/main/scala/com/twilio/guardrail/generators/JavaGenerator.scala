@@ -366,7 +366,7 @@ object JavaGenerator {
             staticDefns.definitions.foreach(clsCopy.addMember)
             cu.addType(clsCopy)
             Option((cls.getName.getIdentifier, cu))
-          case ClassDefinition(_, _, _, _, cls, staticDefns, _) =>
+          case ClassDefinition(_, _, _, _, cls, staticDefns, _, _) =>
             val cu = new CompilationUnit()
             cu.setPackageDeclaration(pkgDecl)
             imports.foreach(cu.addImport)

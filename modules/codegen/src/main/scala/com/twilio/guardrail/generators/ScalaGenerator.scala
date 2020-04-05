@@ -394,7 +394,7 @@ object ScalaGenerator {
             List.empty[Stat]
           )
 
-        case ClassDefinition(_, rawType, _, _, cls, staticDefns, _) =>
+        case ClassDefinition(_, rawType, _, _, cls, staticDefns, _, _) =>
           (
             List(
               WriteTree(

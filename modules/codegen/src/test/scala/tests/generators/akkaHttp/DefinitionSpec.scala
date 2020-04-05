@@ -69,7 +69,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Plain objects should be generated") {
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -133,7 +133,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Camel case conversion should happen") {
     val (
-      ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, _, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -158,7 +158,7 @@ class DefinitionSpec extends FunSuite with Matchers with SwaggerSpecRunner {
 
   test("Defaults should work") {
     val (
-      ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, _, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

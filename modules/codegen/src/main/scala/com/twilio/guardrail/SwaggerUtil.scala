@@ -86,7 +86,7 @@ object SwaggerUtil {
             .flatMap {
               case RandomType(name, tpe) =>
                 Resolved[L](tpe, None, None, None, None).pure[F]
-              case ClassDefinition(name, rawType, _, fullType, cls, _, _) =>
+              case ClassDefinition(name, rawType, _, fullType, cls, _, _, fieldProjections) =>
                 Resolved[L](fullType, None, None, None, None).pure[F]
               case EnumDefinition(name, _, fullType, elems, cls, _) =>
                 Resolved[L](fullType, None, None, Some("string"), None).pure[F]
@@ -98,7 +98,7 @@ object SwaggerUtil {
             .flatMap {
               case RandomType(name, tpe) =>
                 liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case ClassDefinition(name, rawType, _, fullType, cls, _, _) =>
+              case ClassDefinition(name, rawType, _, fullType, cls, _, _, _) =>
                 liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(name, _, fullType, elems, cls, _) =>
                 liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
@@ -110,7 +110,7 @@ object SwaggerUtil {
             .flatMap {
               case RandomType(name, tpe) =>
                 liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case ClassDefinition(_, rawType, _, fullType, _, _, _) =>
+              case ClassDefinition(_, rawType, _, fullType, _, _, _, _) =>
                 liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
               case EnumDefinition(_, _, fullType, _, _, _) =>
                 liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
