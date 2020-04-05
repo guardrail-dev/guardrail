@@ -10,6 +10,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
@@ -32,16 +33,20 @@ class LanguageParameter[L <: LA] private[generators] (
     val rawType: RawParameterType,
     val required: Boolean,
     val hashAlgorithm: Option[String],
-    val isFile: Boolean
+    val isFile: Boolean,
+    val fieldProjections: Option[NonEmptyList[(RawParameterName, L#TermName)]]
 ) {
   override def toString: String =
     s"LanguageParameter($in, $param, $paramName, $argName, $argType)"
 
   def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): LanguageParameter[L] =
-    new LanguageParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
+    new LanguageParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile, fieldProjections)
 
   def withParamName(newParamName: L#TermName): LanguageParameter[L] =
-    new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
+    new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile, fieldProjections)
+
+  def withFieldProjections(newFieldProjections: NonEmptyList[(RawParameterName, L#TermName)]): LanguageParameter[L] =
+    new LanguageParameter[L](in, param, paramName, argName, argType, rawType, required, hashAlgorithm, isFile, Some(newFieldProjections))
 }
 object LanguageParameter {
   def unapply[L <: LA](param: LanguageParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
@@ -151,7 +156,8 @@ object LanguageParameter {
         RawParameterType(rawType, rawFormat),
         required,
         FileHashAlgorithm(parameter.get),
-        isFileType
+        isFileType,
+        NonEmptyList.fromList(fieldProjections)
       )
     })
   }
@@ -177,7 +183,8 @@ object LanguageParameter {
                   param.rawType,
                   param.required,
                   param.hashAlgorithm,
-                  param.isFile
+                  param.isFile,
+                  param.fieldProjections
                 )
               }
             }
