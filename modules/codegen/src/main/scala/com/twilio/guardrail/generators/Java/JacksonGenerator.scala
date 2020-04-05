@@ -798,7 +798,7 @@ object JacksonGenerator {
         val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
         for {
           tpeClassDep <- meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
+            case SwaggerUtil.Resolved(declType, classDep, _, _, _, _) =>
               Target.pure((declType, classDep))
             case SwaggerUtil.Deferred(tpeName) =>
               val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
@@ -899,7 +899,7 @@ object JacksonGenerator {
     ) =
       for {
         result <- arr match {
-          case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+          case SwaggerUtil.Resolved(tpe, dep, default, _, _, _) => Target.pure(tpe)
           case SwaggerUtil.Deferred(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), UserError(s"Unresolved reference ${tpeName}")).flatten
           case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>

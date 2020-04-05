@@ -165,10 +165,10 @@ object CirceProtocolGenerator {
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
+            case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat, _) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
               // assume that binary data are represented as a string. allow users to override.
               (t"String", classDep)
-            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
+            case SwaggerUtil.Resolved(declType, classDep, _, _, _, _) =>
               (declType, classDep)
             case SwaggerUtil.Deferred(tpeName) =>
               val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -417,7 +417,7 @@ object CirceProtocolGenerator {
     def extractArrayType(arr: SwaggerUtil.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
       for {
         result <- arr match {
-          case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+          case SwaggerUtil.Resolved(tpe, dep, default, _, _, _) => Target.pure(tpe)
           case SwaggerUtil.Deferred(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
           case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>

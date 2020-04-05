@@ -81,7 +81,7 @@ object LanguageParameter {
           customSchemaTypeName <- schema.get.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
           customTypeName = customSchemaTypeName.orElse(customParamTypeName)
           res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get, Nil))
         } yield res
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
@@ -103,9 +103,9 @@ object LanguageParameter {
     }
 
     log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                                     <- paramMeta(parameter)
-      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+      _                                                                                          <- log.debug(parameter.unwrapTracker.showNotNull)
+      meta                                                                                       <- paramMeta(parameter)
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat, fieldProjections) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.get.getRequired()).fold(false)(identity)
       declType <- if (!required) {
