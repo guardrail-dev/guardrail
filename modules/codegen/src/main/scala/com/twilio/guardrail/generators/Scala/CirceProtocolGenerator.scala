@@ -152,7 +152,7 @@ object CirceProtocolGenerator {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
+          argName = Term.Name(if (needCamelSnakeConversion) name.toCamelCase else name)
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
@@ -191,9 +191,19 @@ object CirceProtocolGenerator {
             .fold[(Type, Option[Term])](
               (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
             )(Function.const((tpe, defaultValue)) _)
-          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+          term = param"${argName}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](
+          term,
+          argName,
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          finalDefaultValue
+        )
       }
 
     def renderDTOClass(

@@ -853,7 +853,17 @@ object JacksonGenerator {
             )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
           term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
           dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
-        } yield ProtocolParameter[JavaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
+        } yield ProtocolParameter[JavaLanguage](
+          term,
+          new Name(argName),
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          defaultValue
+        )
       }
 
     def encodeModel(

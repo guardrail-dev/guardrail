@@ -38,6 +38,7 @@ case object DataRedacted extends RedactionBehaviour
 
 case class ProtocolParameter[L <: LA](
     param: L#MethodParameter,
+    term: L#TermName,
     name: RawParameterName,
     dep: Option[L#TermName],
     rawType: RawParameterType,
@@ -464,6 +465,7 @@ object ProtocolGenerator {
               val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
               val mergedParameter = ProtocolParameter[L](
                 a.param,
+                a.term,
                 a.name,
                 a.dep,
                 newRawType,
