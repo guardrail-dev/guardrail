@@ -48,30 +48,32 @@ object Http4sClientGenerator {
             pathArgs: List[ScalaParameter[ScalaLanguage]],
             qsArgs: List[ScalaParameter[ScalaLanguage]]
         ): Target[Term] =
-          Target.log.function("generateUrlWithParams")(for {
-            _    <- Target.log.debug(s"Using ${path.get} and ${pathArgs.map(_.argName)}")
-            base <- generateUrlPathParams(path, pathArgs)
+          Target.log.function("generateUrlWithParams") {
+            for {
+              _    <- Target.log.debug(s"Using ${path.get} and ${pathArgs.map(_.argName)}")
+              base <- generateUrlPathParams(path, pathArgs)
 
-            _ <- Target.log.debug(s"QS: ${qsArgs}")
+              _ <- Target.log.debug(s"QS: ${qsArgs}")
 
-            suffix = if (path.unwrapTracker.contains("?")) {
-              Lit.String("&")
-            } else {
-              Lit.String("?")
-            }
+              suffix = if (path.unwrapTracker.contains("?")) {
+                Lit.String("&")
+              } else {
+                Lit.String("?")
+              }
 
-            _ <- Target.log.debug(s"QS: ${qsArgs}")
+              _ <- Target.log.debug(s"QS: ${qsArgs}")
 
-            result = NonEmptyList
-              .fromList(qsArgs.toList)
-              .fold(base)({
-                _.foldLeft[Term](q"${base} + ${suffix}") {
-                  case (a, ScalaParameter(_, _, paramName, argName, _)) =>
-                    q""" $a + Formatter.addArg(${Lit
-                      .String(argName.value)}, ${paramName})"""
-                }
-              })
-          } yield q"Uri.unsafeFromString(${result})")
+              result = NonEmptyList
+                .fromList(qsArgs.toList)
+                .fold(base)({
+                  _.foldLeft[Term](q"${base} + ${suffix}") {
+                    case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                      q""" $a + Formatter.addArg(${Lit
+                        .String(argName.value)}, ${paramName})"""
+                  }
+                })
+            } yield q"Uri.unsafeFromString(${result})"
+          }
 
         def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
           if (parameters.isEmpty) {
