@@ -1,7 +1,7 @@
 package com.twilio
 
 import cats.{ Applicative, Id }
-import cats.data.{ EitherK, EitherT, IndexedStateT }
+import cats.data.{ EitherK, IndexedStateT }
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
@@ -36,24 +36,6 @@ package guardrail {
       def error(message: String): F[Unit]   = pushLogger(StructuredLogger.error(message))
     }
   }
-
-  object CoreTarget extends LogAbstraction {
-    type F[A] = CoreTarget[A]
-    val A                                                     = Applicative[CoreTarget]
-    def pushLogger(value: StructuredLogger): CoreTarget[Unit] = EitherT.pure(()) // IndexedStateT.modify(_ |+| value))
-    def pure[T](x: T): CoreTarget[T]                          = x.pure[CoreTarget]
-    def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] =
-      EitherT.fromOption(x, default)
-    @deprecated("Use raiseError instead", "v0.41.2")
-    def error[T](x: Error): CoreTarget[T]      = EitherT.fromEither(Left(x))
-    def raiseError[T](x: Error): CoreTarget[T] = EitherT.fromEither(Left(x))
-    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
-    def unsafeExtract[T](x: CoreTarget[T]): T =
-      x.valueOr({ err =>
-        throw new Exception(err.toString)
-      })
-    //.runEmptyA
-  }
 }
 
 package object guardrail {
@@ -74,9 +56,5 @@ package object guardrail {
 
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
 
-  type Logger[T]     = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
-  type CoreTarget[A] = EitherT[Id, Error, A]
-
-  // Likely can be removed in future versions of scala or cats? -Ypartial-unification seems to get confused here -- possibly higher arity issues?
-  // implicit val loggerMonad: cats.Monad[Logger] = cats.data.IndexedStateT.catsDataMonadForIndexedStateT[cats.Id, StructuredLogger]
+  type Logger[T] = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
 }

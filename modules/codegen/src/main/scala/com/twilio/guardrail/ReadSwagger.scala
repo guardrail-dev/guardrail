@@ -1,5 +1,7 @@
 package com.twilio.guardrail
 
+import cats.implicits._
+
 import java.nio.file.Path
 import java.util
 
@@ -18,7 +20,7 @@ object ReadSwagger {
           Option(new OpenAPIParser().readLocation(rs.path.toAbsolutePath.toString, new util.LinkedList(), opts).getOpenAPI),
           UserError(s"Spec file ${rs.path} is incorrectly formatted.")
         )
-        .flatMap(rs.next(_).toEitherT)
+        .flatMap(rs.next(_).toCoreTarget)
     } else {
       CoreTarget.raiseError(UserError(s"Spec file ${rs.path} does not exist."))
     }
