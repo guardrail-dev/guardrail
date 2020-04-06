@@ -13,31 +13,27 @@ object DropwizardHelpers {
   private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
 
   def getBestConsumes(operationId: String, contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
-    Option(parameters.formParams.nonEmpty)
-      .filter(_ == true)
-      .map(
-        _ =>
-          if (parameters.formParams.exists(_.isFile) || contentTypes.contains(MultipartFormData)) {
-            MultipartFormData
-          } else {
-            UrlencodedFormData
-          }
-      )
-      .orElse(
-        parameters.bodyParams.map({ bodyParam =>
-          CONSUMES_PRIORITY
-            .collectFirstSome(ct => contentTypes.find(_ == ct))
-            .orElse(contentTypes.collectFirst({ case tc: TextContent => tc }))
-            .orElse(contentTypes.collectFirst({ case bc: BinaryContent => bc }))
-            .getOrElse({
-              val fallback =
-                if (bodyParam.argType.isPrimitiveType || bodyParam.argType.isNamed("String")) TextPlain
-                else ApplicationJson
-              println(s"WARNING: no supported body param type for operation '$operationId'; falling back to $fallback")
-              fallback
-            })
-        })
-      )
+    if (parameters.formParams.nonEmpty) {
+      if (parameters.formParams.exists(_.isFile) || contentTypes.contains(MultipartFormData)) {
+        Some(MultipartFormData)
+      } else {
+        Some(UrlencodedFormData)
+      }
+    } else {
+      parameters.bodyParams.map({ bodyParam =>
+        CONSUMES_PRIORITY
+          .collectFirstSome(ct => contentTypes.find(_ == ct))
+          .orElse(contentTypes.collectFirst({ case tc: TextContent => tc }))
+          .orElse(contentTypes.collectFirst({ case bc: BinaryContent => bc }))
+          .getOrElse({
+            val fallback =
+              if (bodyParam.argType.isPrimitiveType || bodyParam.argType.isNamed("String")) TextPlain
+              else ApplicationJson
+            println(s"WARNING: no supported body param type for operation '$operationId'; falling back to $fallback")
+            fallback
+          })
+      })
+    }
 
   def getBestProduces(operationId: String, contentTypes: List[ContentType], response: Response[JavaLanguage]): Option[ContentType] =
     response.value
