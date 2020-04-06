@@ -46,6 +46,7 @@ object StructuredLogger extends StructuredLoggerInstances {
   def push(next: String): StructuredLogger = StructuredLogger(StructuredLoggerPush(next).pure[Vector])
   def pop: StructuredLogger                = StructuredLogger(StructuredLoggerPop.pure[Vector])
   def reset: StructuredLogger              = StructuredLogger(StructuredLoggerReset.pure[Vector])
+  object Empty extends StructuredLogger(Vector.empty)
 }
 sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {

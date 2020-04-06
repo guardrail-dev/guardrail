@@ -102,8 +102,8 @@ trait SwaggerSpecRunner extends EitherValues {
           List.empty
         )
         .foldMap(framework) match {
-        case TargetError(err) => err
-        case _                => ???
+        case TargetError(err, _) => err
+        case _                   => ???
       }
     )
   //.value
