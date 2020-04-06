@@ -7,7 +7,7 @@ import cats.implicits._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
-import com.twilio.guardrail.protocol.terms.{ Header, Responses }
+import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -164,8 +164,8 @@ object AkkaHttpClientGenerator {
             formDataParams: Option[Term],
             headerParams: Term,
             responses: Responses[ScalaLanguage],
-            produces: NonEmptyList[RouteMeta.ContentType],
-            consumes: Seq[RouteMeta.ContentType],
+            produces: NonEmptyList[ContentType],
+            consumes: Seq[ContentType],
             tracing: Boolean
         )(
             tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
@@ -184,7 +184,7 @@ object AkkaHttpClientGenerator {
               Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))
             else None
           val textPlainBody: Option[Term] =
-            if (consumes.contains(RouteMeta.TextPlain))
+            if (consumes.contains(TextPlain))
               body.map { sp =>
                 val inner = if (sp.required) sp.paramName else q"${sp.paramName}.getOrElse(${Lit.String("")})"
                 q"TextPlain(${inner})"
@@ -194,7 +194,7 @@ object AkkaHttpClientGenerator {
             body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
           val formEntity: Option[Term] = formDataParams.map { formDataParams =>
-            if (consumes.contains(RouteMeta.MultipartFormData)) {
+            if (consumes.contains(MultipartFormData)) {
               q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
             } else {
               q"""FormData($formDataParams: _*)"""
@@ -322,9 +322,9 @@ object AkkaHttpClientGenerator {
           _ <- Target.pure(())
 
           produces = NonEmptyList
-            .fromList(operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_)))
-            .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
-          consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
+            .fromList(operation.get.produces.toList.flatMap(ContentType.unapply(_)))
+            .getOrElse(NonEmptyList.one(ApplicationJson))
+          consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams
@@ -339,7 +339,7 @@ object AkkaHttpClientGenerator {
 
           _ <- Target.log.debug(s"Generated: $urlWithParams")
           // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
+          formDataParams = generateFormDataParams(formArgs, consumes.contains(MultipartFormData))
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
@@ -473,10 +473,10 @@ object AkkaHttpClientGenerator {
         Target.pure(NonEmptyList(Right(client), Nil))
     }
 
-    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): Target[List[Defn.Val]] =
+    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[ContentType]): Target[List[Defn.Val]] =
       generateDecoders(methodName, responses, produces)
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[RouteMeta.ContentType]): Target[List[Defn.Val]] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[ContentType]): Target[List[Defn.Val]] =
       (for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1).toList

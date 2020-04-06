@@ -8,7 +8,7 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ Header, Responses }
+import com.twilio.guardrail.protocol.terms.{ ContentType, Header, MultipartFormData, Responses }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
@@ -163,8 +163,8 @@ object Http4sClientGenerator {
             formDataParams: Option[Term],
             headerParams: Term,
             responses: Responses[ScalaLanguage],
-            produces: Seq[RouteMeta.ContentType],
-            consumes: Seq[RouteMeta.ContentType],
+            produces: Seq[ContentType],
+            consumes: Seq[ContentType],
             tracing: Boolean
         )(
             tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
@@ -182,7 +182,7 @@ object Http4sClientGenerator {
             defaultHeaders                 = param"headers: List[Header] = List.empty"
             safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
-            formDataNeedsMultipart = consumes.contains(RouteMeta.MultipartFormData)
+            formDataNeedsMultipart = consumes.contains(MultipartFormData)
             formEntity: Option[Term] = formDataParams.map { formDataParams =>
               if (formDataNeedsMultipart) {
                 q"""_multipart"""
@@ -309,8 +309,8 @@ object Http4sClientGenerator {
           // Placeholder for when more functions get logging
           _ <- Target.pure(())
 
-          consumes = operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_))
-          produces = operation.get.produces.toList.flatMap(RouteMeta.ContentType.unapply(_))
+          consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
+          produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
 
           headerArgs = parameters.headerParams
           pathArgs   = parameters.pathParams
@@ -325,7 +325,7 @@ object Http4sClientGenerator {
 
           _ <- Target.log.debug(s"Generated: ${urlWithParams}")
           // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains(RouteMeta.MultipartFormData))
+          formDataParams = generateFormDataParams(formArgs, consumes.contains(MultipartFormData))
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
@@ -452,18 +452,18 @@ object Http4sClientGenerator {
         methodName: String,
         bodyArgs: Option[ScalaParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
-        produces: Seq[RouteMeta.ContentType],
-        consumes: Seq[RouteMeta.ContentType]
+        produces: Seq[ContentType],
+        consumes: Seq[ContentType]
     ): List[Defn.Val] =
       generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
 
-    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case ScalaParameter(_, _, _, _, argType) =>
           List(q"private[this] val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, consumes)}")
       }
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[RouteMeta.ContentType]): List[Defn.Val] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1)

@@ -2,32 +2,26 @@ package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
 import cats.instances.list._
-import cats.syntax.foldable._
 import cats.syntax.traverse._
 import cats.~>
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, UnknownType, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.Response
+import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Response, TextContent, UrlencodedFormData }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.RouteMeta
-import com.twilio.guardrail.terms.RouteMeta.ContentType
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, SupportDefinition, SwaggerUtil, Target }
-import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.media.MediaType
 import java.net.URI
-
-import scala.collection.JavaConverters._
 
 object AsyncHttpClientClientGenerator {
   private val URI_TYPE                       = StaticJavaParser.parseClassOrInterfaceType("URI")
@@ -43,51 +37,6 @@ object AsyncHttpClientClientGenerator {
 
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
-
-  def getBestConsumes(operation: Operation, parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
-    if (parameters.formParams.nonEmpty) {
-      if (parameters.formParams.exists(_.isFile)) {
-        Option(RouteMeta.MultipartFormData)
-      } else {
-        Option(RouteMeta.UrlencodedFormData)
-      }
-    } else if (parameters.bodyParams.isDefined) {
-      val validTypes = Seq(RouteMeta.ApplicationJson, RouteMeta.TextPlain)
-      operation.consumes
-        .collectFirst({ case ContentType(value) if validTypes.contains(value) => value })
-        .orElse({
-          println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to application/json")
-          Option(RouteMeta.ApplicationJson)
-        })
-    } else {
-      Option.empty
-    }
-
-  def getBestProduces(operation: Operation, response: Response[JavaLanguage]): Option[ContentType] = {
-    val priorityOrder = NonEmptyList.of(
-      RouteMeta.ApplicationJson,
-      RouteMeta.TextPlain,
-      RouteMeta.OctetStream
-    )
-
-    response.value
-      .map(_._1)
-      .flatMap({ valueType =>
-        val allProduces = operation.getResponses.asScala
-          .get(response.statusCode.toString)
-          .flatMap(resp => Option(resp.getContent))
-          .fold(List.empty[(String, MediaType)])(_.asScala.toList)
-          .collectFirst({ case (ContentType(ct), _) => ct })
-
-        priorityOrder
-          .collectFirstSome(ct => allProduces.find(_ == ct))
-          .orElse({
-            val fallback = if (valueType.isNamed("String")) RouteMeta.TextPlain else RouteMeta.ApplicationJson
-            println(s"WARNING: no supported body param type for operation '${operation.getOperationId}'; falling back to ${fallback.value}")
-            Option(fallback)
-          })
-      })
-  }
 
   private def showParam(param: ScalaParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
@@ -122,10 +71,11 @@ object AsyncHttpClientClientGenerator {
         new NodeList[Expression](
           new ObjectCreationExpr(
             null,
-            FILE_PART_TYPE,
+            INPUT_STREAM_PART_TYPE,
             new NodeList(
               new StringLiteralExpr(param.argName.value),
-              new NameExpr(name)
+              new NameExpr(name),
+              new StringLiteralExpr(param.argName.value)
             )
           )
         )
@@ -164,23 +114,10 @@ object AsyncHttpClientClientGenerator {
       new MethodCallExpr(new NameExpr("builder"), "setBody", new NodeList[Expression](expr))
 
     if (param.isFile) {
-      Option(
-        new ExpressionStmt(
-          wrapSetBody(
-            new ObjectCreationExpr(
-              null,
-              FILE_PART_TYPE,
-              new NodeList(
-                new StringLiteralExpr(param.argName.value),
-                new NameExpr(param.paramName.asString)
-              )
-            )
-          )
-        )
-      )
+      Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
     } else {
       contentType match {
-        case Some(RouteMeta.ApplicationJson) =>
+        case Some(ApplicationJson) =>
           Option(
             new TryStmt(
               new BlockStmt(
@@ -216,7 +153,7 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        case Some(RouteMeta.TextPlain) =>
+        case Some(TextContent(_)) =>
           Option(
             new ExpressionStmt(
               wrapSetBody(
@@ -229,11 +166,11 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        case Some(RouteMeta.OctetStream) | None =>
+        case Some(BinaryContent(_)) | None =>
           // FIXME: we're hoping that the type is something that AHC already supports
           Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
 
-        case Some(RouteMeta.UrlencodedFormData) | Some(RouteMeta.MultipartFormData) =>
+        case Some(UrlencodedFormData) | Some(MultipartFormData) =>
           // We shouldn't be here, since we can't have a body param with these content types
           None
       }
@@ -531,8 +468,11 @@ object AsyncHttpClientClientGenerator {
             (parameters.headerParams, "addHeader", false)
           )
 
-          val consumes = getBestConsumes(operation.get, parameters)
-          val produces = responses.value.map(resp => (resp.statusCode, getBestProduces(operation.get, resp))).toMap
+          val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
+          val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
+          val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
+          val produces =
+            responses.value.map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces(operation.get.getOperationId, allProduces, resp))).toMap
 
           val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
               .flatMap({
@@ -571,8 +511,8 @@ object AsyncHttpClientClientGenerator {
           callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
           val callBuilderInitContentType = consumes.map({ ct =>
             val ctStr = ct match {
-              case RouteMeta.TextPlain => s"${ct.value}; charset=utf-8"
-              case _                   => ct.value
+              case TextContent(_) => s"${ct.value}; charset=utf-8"
+              case _              => ct.value
             }
             new ExpressionStmt(
               new MethodCallExpr(
@@ -749,11 +689,11 @@ object AsyncHttpClientClientGenerator {
                                             .flatten
                                             .getOrElse({
                                               println(
-                                                s"WARNING: no supported content type specified for ${operation.get.getOperationId}'s ${response.statusCode} response; falling back to application/json"
+                                                s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
                                               )
-                                              RouteMeta.ApplicationJson
+                                              ApplicationJson
                                             }) match {
-                                            case RouteMeta.ApplicationJson =>
+                                            case ApplicationJson =>
                                               new AssignExpr(
                                                 new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
                                                 new MethodCallExpr(
@@ -767,26 +707,40 @@ object AsyncHttpClientClientGenerator {
                                                 AssignExpr.Operator.ASSIGN
                                               )
 
-                                            case RouteMeta.TextPlain =>
-                                              new AssignExpr(
-                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBody"),
-                                                AssignExpr.Operator.ASSIGN
+                                            case contentType =>
+                                              val bodyGetter = valueType match {
+                                                case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
+                                                case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
+                                                case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
+                                                case _ if valueType.isNamed("String")      => "getResponseBody"
+                                                case _ =>
+                                                  println(
+                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
+                                                  )
+                                                  "getResponseBody"
+                                              }
+                                              val bodyGetterExpr = new MethodCallExpr(
+                                                new NameExpr("response"),
+                                                bodyGetter,
+                                                bodyGetter match {
+                                                  case "getResponseBody" =>
+                                                    new NodeList[Expression](
+                                                      new MethodCallExpr(
+                                                        new MethodCallExpr(
+                                                          new NameExpr("AsyncHttpClientUtils"),
+                                                          "getResponseCharset",
+                                                          new NodeList[Expression](new NameExpr("response"))
+                                                        ),
+                                                        "orElse",
+                                                        new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                                      )
+                                                    )
+                                                  case _ => new NodeList[Expression]
+                                                }
                                               )
-
-                                            case RouteMeta.OctetStream =>
-                                              // FIXME: need to standardize on a type for byte streams
                                               new AssignExpr(
                                                 new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsByteBuffer"),
-                                                AssignExpr.Operator.ASSIGN
-                                              )
-
-                                            case RouteMeta.UrlencodedFormData | RouteMeta.MultipartFormData =>
-                                              // This should never happen & would be a bug in Guardrail
-                                              new AssignExpr(
-                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                                new NullLiteralExpr,
+                                                bodyGetterExpr,
                                                 AssignExpr.Operator.ASSIGN
                                               )
                                           }
@@ -875,6 +829,7 @@ object AsyncHttpClientClientGenerator {
         } else {
           (List(
             "java.net.URI",
+            "java.nio.charset.StandardCharsets",
             "java.util.Optional",
             "java.util.concurrent.CompletionStage",
             "java.util.function.Function",
@@ -885,7 +840,7 @@ object AsyncHttpClientClientGenerator {
             "org.asynchttpclient.Request",
             "org.asynchttpclient.RequestBuilder",
             "org.asynchttpclient.Response",
-            "org.asynchttpclient.request.body.multipart.FilePart",
+            "org.asynchttpclient.request.body.multipart.InputStreamPart",
             "org.asynchttpclient.request.body.multipart.StringPart"
           ).map(safeParseRawImport) ++ List(
                 "java.util.Objects.requireNonNull"
@@ -1014,7 +969,8 @@ object AsyncHttpClientClientGenerator {
           (ahcSupportImports, ahcSupportClass) = ahcSupport
           jacksonSupport <- generateJacksonSupportClass()
           (jacksonSupportImports, jacksonSupportClass) = jacksonSupport
-          shower <- SerializationHelpers.showerSupportDef
+          asyncHttpclientUtils <- asyncHttpClientUtilsSupportDef
+          shower               <- SerializationHelpers.showerSupportDef
         } yield {
           exceptionClasses.map({
             case (imports, cls) =>
@@ -1022,6 +978,7 @@ object AsyncHttpClientClientGenerator {
           }) ++ List(
             SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, ahcSupportClass),
             SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, jacksonSupportClass),
+            asyncHttpclientUtils,
             shower
           )
         }

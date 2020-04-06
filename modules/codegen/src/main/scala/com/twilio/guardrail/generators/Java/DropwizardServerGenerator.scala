@@ -18,7 +18,17 @@ import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.Response
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Response,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
@@ -29,13 +39,15 @@ import scala.language.existentials
 import scala.util.Try
 
 object DropwizardServerGenerator {
-  private implicit class ContentTypeExt(val ct: RouteMeta.ContentType) extends AnyVal {
-    def toJaxRsAnnotationName: String = ct match {
-      case RouteMeta.ApplicationJson    => "APPLICATION_JSON"
-      case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
-      case RouteMeta.MultipartFormData  => "MULTIPART_FORM_DATA"
-      case RouteMeta.TextPlain          => "TEXT_PLAIN"
-      case RouteMeta.OctetStream        => "APPLICATION_OCTET_STREAM"
+  private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
+    def toJaxRsAnnotationName: Expression = ct match {
+      case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
+      case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
+      case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
+      case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")
+      case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
+      case TextContent(name)   => new StringLiteralExpr(name)
+      case BinaryContent(name) => new StringLiteralExpr(name)
     }
   }
 
@@ -43,6 +55,7 @@ object DropwizardServerGenerator {
   private val RESPONSE_TYPE         = StaticJavaParser.parseClassOrInterfaceType("Response")
   private val RESPONSE_BUILDER_TYPE = StaticJavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
+  private val FILE_TYPE             = StaticJavaParser.parseClassOrInterfaceType("java.io.File")
 
   private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.InstantParam")
   private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetDateTimeParam")
@@ -77,65 +90,6 @@ object DropwizardServerGenerator {
     val splitRoutePaths             = routePaths.map(splitPathComponents)
     val (initialHeads, initialRest) = getHeads(splitRoutePaths)
     checkMatch(List.empty, initialHeads, initialRest)
-  }
-
-  // FIXME: does this handle includes from other files?
-  private def definitionName(refName: Option[String]): Option[String] =
-    refName.flatMap({ rn =>
-      rn.split("/").toList match {
-        case "#" :: _ :: name :: Nil => Some(name)
-        case _                       => None
-      }
-    })
-
-  def getBestConsumes(contentTypes: List[RouteMeta.ContentType], parameters: ScalaParameters[JavaLanguage]): Option[RouteMeta.ContentType] = {
-    val priorityOrder = NonEmptyList.of(
-      RouteMeta.UrlencodedFormData,
-      RouteMeta.ApplicationJson,
-      RouteMeta.MultipartFormData,
-      RouteMeta.TextPlain
-    )
-
-    priorityOrder
-      .foldLeft[Option[RouteMeta.ContentType]](None)({
-        case (s @ Some(_), _) => s
-        case (None, next)     => contentTypes.find(_ == next)
-      })
-      .orElse(parameters.formParams.headOption.map(_ => RouteMeta.UrlencodedFormData))
-      .orElse(parameters.bodyParams.map(_ => RouteMeta.ApplicationJson))
-  }
-
-  private def getBestProduces(
-      contentTypes: List[RouteMeta.ContentType],
-      responses: List[ApiResponse],
-      protocolElems: List[StrictProtocolElems[JavaLanguage]]
-  ): Option[RouteMeta.ContentType] = {
-    val priorityOrder = NonEmptyList.of(
-      RouteMeta.ApplicationJson,
-      RouteMeta.TextPlain,
-      RouteMeta.OctetStream
-    )
-
-    priorityOrder
-      .foldLeft[Option[RouteMeta.ContentType]](None)({
-        case (s @ Some(_), _) => s
-        case (None, next)     => contentTypes.find(_ == next)
-      })
-      .orElse(
-        responses
-          .map({ resp =>
-            protocolElems
-              .find(pe => definitionName(Option(resp.get$ref())).contains(pe.name))
-              .flatMap({
-                case _: ClassDefinition[_]                                              => Some(RouteMeta.ApplicationJson)
-                case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(RouteMeta.TextPlain)
-                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(RouteMeta.TextPlain)
-                case _                                                                  => None
-              })
-          })
-          .headOption
-          .flatten
-      )
   }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
@@ -329,29 +283,21 @@ object DropwizardServerGenerator {
                   method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
                 }
 
-                val consumes = getBestConsumes(operation.get.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
-                  .orElse({
-                    if (parameters.formParams.nonEmpty) {
-                      if (parameters.formParams.exists(_.isFile)) {
-                        Some(RouteMeta.MultipartFormData)
-                      } else {
-                        Some(RouteMeta.UrlencodedFormData)
-                      }
-                    } else if (parameters.bodyParams.nonEmpty) {
-                      Some(RouteMeta.ApplicationJson)
-                    } else {
-                      None
-                    }
-                  })
+                val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
+                val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
                 consumes
-                  .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), new FieldAccessExpr(new NameExpr("MediaType"), c.toJaxRsAnnotationName)))
+                  .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)
 
-                val successResponses =
-                  operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
-                val produces = getBestProduces(operation.get.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
+                val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
+                val bestSuccessResponse = responses.value
+                  .filter(_.statusCode / 100 == 2)
+                  .find(_.value.isDefined)
+                val produces = bestSuccessResponse.flatMap(
+                  DropwizardHelpers.getBestProduces(operationId, allProduces, _)
+                )
                 produces
-                  .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), new FieldAccessExpr(new NameExpr("MediaType"), p.toJaxRsAnnotationName)))
+                  .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), p.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)
 
                 def transformJsr310Params(parameter: Parameter): Parameter = {
@@ -383,6 +329,17 @@ object DropwizardServerGenerator {
                   }
                 }
 
+                // When we have a file inside multipart/form-data, we don't want to use InputStream,
+                // because that will require the server to buffer the entire contents in memory as it
+                // reads in the entire body.  Instead we instruct Dropwizard to write it out to a file
+                // on disk and use java.io.File.
+                def transformMultipartFile(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter =
+                  (param.isFile, param.required) match {
+                    case (true, true)  => parameter.setType(FILE_TYPE)
+                    case (true, false) => parameter.setType(optionalType(FILE_TYPE))
+                    case _             => parameter
+                  }
+
                 def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
                   if (param.required) {
                     // NB: The order here is actually critical.  In the case where we're using multipart,
@@ -407,14 +364,15 @@ object DropwizardServerGenerator {
                   (parameters.pathParams, "PathParam"),
                   (parameters.headerParams, "HeaderParam"),
                   (parameters.queryStringParams, "QueryParam"),
-                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "FormDataParam" else "FormParam")
+                  (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
                 ).flatMap({
                   case (params, annotationName) =>
                     params.map({ param =>
                       val parameter       = param.param.clone()
                       val annotated       = addParamAnnotation(parameter, param, annotationName)
                       val dateTransformed = transformJsr310Params(annotated)
-                      addValidationAnnotations(dateTransformed, param)
+                      val fileTransformed = transformMultipartFile(dateTransformed, param)
+                      addValidationAnnotations(fileTransformed, param)
                     })
                 })
 
@@ -595,10 +553,11 @@ object DropwizardServerGenerator {
 
                 val futureResponseType = completionStageType(responseType.clone())
                 val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, operationId)
-                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
-                  parameter =>
-                    handlerMethodSig.addParameter(parameter.param.clone())
-                })
+                (
+                  (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
+                      parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
+                      parameters.bodyParams.map(_.param.clone())
+                ).foreach(handlerMethodSig.addParameter)
                 handlerMethodSig.setBody(null)
 
                 (method, handlerMethodSig)

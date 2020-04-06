@@ -12,7 +12,17 @@ import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Responses,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.shims._
@@ -331,19 +341,19 @@ object AkkaHttpServerGenerator {
       override def toString(): String = s"Binding($value)"
     }
 
-    def formToAkka(consumes: NonEmptyList[RouteMeta.ContentType], operationId: String)(
+    def formToAkka(consumes: NonEmptyList[ContentType], operationId: String)(
         params: List[ScalaParameter[ScalaLanguage]]
     ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
-        _ <- if (params.exists(_.isFile) && !consumes.exists(_ == RouteMeta.MultipartFormData)) {
+        _ <- if (params.exists(_.isFile) && !consumes.exists(_ == MultipartFormData)) {
           Target.log.warning("type: file detected, automatically enabling multipart/form-data handling")
         } else {
           Target.pure(())
         }
 
         hasFile              = params.exists(_.isFile)
-        urlencoded           = consumes.exists(_ == RouteMeta.UrlencodedFormData)
-        multipart            = consumes.exists(_ == RouteMeta.MultipartFormData)
+        urlencoded           = consumes.exists(_ == UrlencodedFormData)
+        multipart            = consumes.exists(_ == MultipartFormData)
         referenceAccumulator = q"fileReferences"
 
         result <- NonEmptyList
@@ -539,7 +549,7 @@ object AkkaHttpServerGenerator {
             for {
               (handlers, unmarshallerTerms) <- consumes.distinct
                 .traverse[(List[Stat], ?), Target[NonEmptyList[Term.Name]]]({
-                  case RouteMeta.MultipartFormData => {
+                  case MultipartFormData => {
                     val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
                     val fru = q"""
                   object ${partsTerm} {
@@ -583,7 +593,7 @@ object AkkaHttpServerGenerator {
                     (fru, Target.pure(NonEmptyList.one(unmarshallerTerm)))
                   }
 
-                  case RouteMeta.UrlencodedFormData => {
+                  case UrlencodedFormData => {
                     val unmarshallerTerm = q"FormDataUnmarshaller"
                     val fru = q"""
                   implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
@@ -623,11 +633,11 @@ object AkkaHttpServerGenerator {
                     (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
                   }
 
-                  case RouteMeta.ApplicationJson => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/json"))
+                  case ApplicationJson => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/json"))
 
-                  case RouteMeta.OctetStream => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/octet-stream"))
+                  case BinaryContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
 
-                  case RouteMeta.TextPlain => (Nil, Target.raiseError(s"Unable to generate unmarshaller for text/plain"))
+                  case TextContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
                 })
                 .traverse(_.flatSequence)
 
@@ -683,8 +693,8 @@ object AkkaHttpServerGenerator {
         _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
         consumes = NonEmptyList
-          .fromList(operation.get.consumes.toList.flatMap(RouteMeta.ContentType.unapply(_)))
-          .getOrElse(NonEmptyList.one(RouteMeta.ApplicationJson))
+          .fromList(operation.get.consumes.toList.flatMap(ContentType.unapply(_)))
+          .getOrElse(NonEmptyList.one(ApplicationJson))
         operationId <- operation
           .downField("operationId", _.getOperationId())
           .map(_.map(splitOperationParts).map(_._2))
@@ -801,14 +811,14 @@ object AkkaHttpServerGenerator {
         operationId: String,
         bodyArgs: Option[ScalaParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
-        consumes: NonEmptyList[RouteMeta.ContentType]
+        consumes: NonEmptyList[ContentType]
     ): Target[List[Defn.Val]] =
       generateDecoders(operationId, bodyArgs, consumes)
 
     def generateDecoders(
         operationId: String,
         bodyArgs: Option[ScalaParameter[ScalaLanguage]],
-        consumes: NonEmptyList[RouteMeta.ContentType]
+        consumes: NonEmptyList[ContentType]
     ): Target[List[Defn.Val]] =
       bodyArgs.toList.traverse {
         case ScalaParameter(_, _, _, _, argType) =>

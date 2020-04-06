@@ -10,7 +10,7 @@ import com.twilio.guardrail.terms.framework._
 object DropwizardGenerator {
   object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: FrameworkTerm[JavaLanguage, T]): Target[T] = term match {
-      case FileType(format)   => safeParseType(format.getOrElse("java.io.File"))
+      case FileType(format)   => safeParseType(format.getOrElse("java.io.InputStream"))
       case ObjectType(format) => safeParseType("com.fasterxml.jackson.databind.JsonNode")
 
       case GetFrameworkImports(tracing) =>

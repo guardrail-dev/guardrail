@@ -1,5 +1,14 @@
 package com.twilio.guardrail.languages
 
+import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
+
+object JavaLanguage {
+  case class JavaTypeName(tpe: com.github.javaparser.ast.`type`.Type) {
+    def asString: String          = tpe.asString
+    override def toString: String = asString
+  }
+}
+
 class JavaLanguage extends LanguageAbstraction {
 
   type Statement = com.github.javaparser.ast.stmt.Statement
@@ -31,7 +40,7 @@ class JavaLanguage extends LanguageAbstraction {
   type ValueDefinition = com.github.javaparser.ast.body.VariableDeclarator
   type MethodParameter = com.github.javaparser.ast.body.Parameter
   type Type            = com.github.javaparser.ast.`type`.Type
-  type TypeName        = com.github.javaparser.ast.expr.Name
+  type TypeName        = JavaTypeName
   type Annotation      = com.github.javaparser.ast.expr.AnnotationExpr
 
   // Result

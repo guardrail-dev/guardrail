@@ -1,3 +1,5 @@
+import complete.DefaultParsers._
+
 val projectName = "guardrail-root"
 name := projectName
 organization in ThisBuild := "com.twilio"
@@ -100,16 +102,17 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
-  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("http4s")),
+  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks(Set("dropwizard", "http4s")),
+  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("dropwizard", "http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
   ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(scalaFrameworks.toSet),
 )
 
-def exampleArgs(language: String): List[List[String]] = exampleCases
+def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
   .foldLeft(List[List[String]](List(language)))({
     case (acc, ExampleCase(path, prefix, extra, onlyFrameworks)) =>
       acc ++ (for {
-        frameworkSuite <- exampleFrameworkSuites(language)
+        frameworkSuite <- exampleFrameworkSuites(language).filter(efs => framework.forall(_ == efs._1))
         (frameworkName, frameworkPackage, kinds) = frameworkSuite
         if onlyFrameworks.forall(_.contains(frameworkName))
         kind <- kinds
@@ -139,6 +142,17 @@ fullRunTask(
   "com.twilio.guardrail.CLI",
   exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
+
+lazy val runExample: InputKey[Unit] = inputKey[Unit]("Run generators with example args (usage: runExample [language] [framework])")
+runExample := Def.inputTaskDyn {
+  val args: Seq[String] = spaceDelimited("<arg>").parsed
+  val runArgs = args match {
+    case language :: framework :: Nil => exampleArgs(language, Some(framework))
+    case language :: Nil => exampleArgs(language)
+    case Nil => exampleArgs("scala") ++ exampleArgs("java")
+  }
+  runTask(Test, "com.twilio.guardrail.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
+}.evaluated
 
 artifact in (Compile, assembly) := {
   (artifact in (Compile, assembly)).value

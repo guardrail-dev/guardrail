@@ -1,50 +1,27 @@
 package com.twilio.guardrail
 package terms
 
-import cats.data.{ NonEmptyList, NonEmptyMap }
-import cats.free.Free
-import cats.data.State
-import cats.implicits._
 import cats.Order
-import com.twilio.guardrail.core.{ Mappish, Tracker }
+import cats.data.{ NonEmptyList, NonEmptyMap, State }
+import cats.free.Free
+import cats.implicits._
 import com.twilio.guardrail.core.implicits._
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.generators.syntax._
+import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.protocol.terms.{ ContentType, UrlencodedFormData }
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import io.swagger.v3.oas.models.{ Components, Operation, PathItem }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
-import io.swagger.v3.oas.models.media.{ ArraySchema, Encoding, MediaType, Schema, StringSchema }
+import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityRequirement, SecurityScheme => SwSecurityScheme }
+import io.swagger.v3.oas.models.{ Components, Operation, PathItem }
 import java.net.URI
-import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.collection.immutable.TreeMap
-
-object RouteMeta {
-  sealed abstract class ContentType(val value: String) {
-    override val toString: String = value
-  }
-  case object ApplicationJson    extends ContentType("application/json")
-  case object MultipartFormData  extends ContentType("multipart/form-data")
-  case object UrlencodedFormData extends ContentType("application/x-www-form-urlencoded")
-  case object TextPlain          extends ContentType("text/plain")
-  case object OctetStream        extends ContentType("application/octet-stream")
-  object ContentType {
-    def unapply(value: String): Option[ContentType] = value.toLowerCase(Locale.US) match {
-      case "application/json"                  => Some(ApplicationJson)
-      case "multipart/form-data"               => Some(MultipartFormData)
-      case "application/x-www-form-urlencoded" => Some(UrlencodedFormData)
-      case "text/plain"                        => Some(TextPlain)
-      case "application/octet-stream"          => Some(OctetStream)
-      case _                                   => None
-    }
-    implicit val ContentTypeOrder = Order[String].contramap[ContentType](_.value)
-  }
-}
 
 object SecurityRequirements {
   type SecurityScopes = List[String]
@@ -182,7 +159,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     type HashCode            = Int
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
-    val contentTypes: List[RouteMeta.ContentType] = fields.value.collect({ case (RouteMeta.ContentType(ct), _) => ct })
+    val contentTypes: List[ContentType] = fields.value.collect({ case (ContentType(ct), _) => ct })
     val ((maxCount, instances), ps) = fields.value
       .flatMap({
         case (_, mt) =>
@@ -211,7 +188,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             p.setRequired(isRequired)
             p.setExtensions(schema.unwrapTracker.getExtensions)
 
-            if (schema.downField("type", _.getType()).indexedCosequence.exists(_.get == "file") && contentTypes.contains(RouteMeta.UrlencodedFormData)) {
+            if (schema.downField("type", _.getType()).indexedCosequence.exists(_.get == "file") && contentTypes.contains(UrlencodedFormData)) {
               p.setRequired(false)
             }
 

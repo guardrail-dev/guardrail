@@ -9,36 +9,47 @@ import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.{ Node, NodeList }
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
+import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
 import com.twilio.guardrail.generators.syntax.Java._
-import com.twilio.guardrail.languages.{ JavaLanguage, LA }
-import com.twilio.guardrail.protocol.terms.{ Response, Responses }
+import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Response,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
 import io.swagger.v3.oas.models.responses.ApiResponse
-
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
 
 object SpringMvcServerGenerator {
-  private implicit class ContentTypeExt(val ct: RouteMeta.ContentType) extends AnyVal {
-    def toSpringMediaType: String =
-      (ct match {
-        case RouteMeta.ApplicationJson    => "APPLICATION_JSON"
-        case RouteMeta.UrlencodedFormData => "APPLICATION_FORM_URLENCODED"
-        case RouteMeta.MultipartFormData  => "MULTIPART_FORM_DATA"
-        case RouteMeta.TextPlain          => "TEXT_PLAIN"
-        case RouteMeta.OctetStream        => "APPLICATION_OCTET_STREAM"
-      }) + "_VALUE"
+  private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
+    def toSpringMediaType: Expression =
+      ct match {
+        case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
+        case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED_VALUE")
+        case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA_VALUE")
+        case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN_VALUE")
+        case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM_VALUE")
+        case TextContent(name)   => new StringLiteralExpr(name)
+        case BinaryContent(name) => new StringLiteralExpr(name)
+      }
   }
 
   private val ASYNC_RESPONSE_TYPE        = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
@@ -82,36 +93,36 @@ object SpringMvcServerGenerator {
       }
     })
 
-  def getBestConsumes(contentTypes: List[RouteMeta.ContentType], parameters: ScalaParameters[JavaLanguage]): Option[RouteMeta.ContentType] = {
+  def getBestConsumes(contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
-      RouteMeta.UrlencodedFormData,
-      RouteMeta.ApplicationJson,
-      RouteMeta.MultipartFormData,
-      RouteMeta.TextPlain
+      UrlencodedFormData,
+      ApplicationJson,
+      MultipartFormData,
+      TextPlain
     )
 
     priorityOrder
-      .foldLeft[Option[RouteMeta.ContentType]](None)({
+      .foldLeft[Option[ContentType]](None)({
         case (s @ Some(_), _) => s
         case (None, next)     => contentTypes.find(_ == next)
       })
-      .orElse(parameters.formParams.headOption.map(_ => RouteMeta.UrlencodedFormData))
-      .orElse(parameters.bodyParams.map(_ => RouteMeta.ApplicationJson))
+      .orElse(parameters.formParams.headOption.map(_ => UrlencodedFormData))
+      .orElse(parameters.bodyParams.map(_ => ApplicationJson))
   }
 
   private def getBestProduces(
-      contentTypes: List[RouteMeta.ContentType],
+      contentTypes: List[ContentType],
       responses: List[ApiResponse],
       protocolElems: List[StrictProtocolElems[JavaLanguage]]
-  ): Option[RouteMeta.ContentType] = {
+  ): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
-      RouteMeta.ApplicationJson,
-      RouteMeta.TextPlain,
-      RouteMeta.OctetStream
+      ApplicationJson,
+      TextPlain,
+      OctetStream
     )
 
     priorityOrder
-      .foldLeft[Option[RouteMeta.ContentType]](None)({
+      .foldLeft[Option[ContentType]](None)({
         case (s @ Some(_), _) => s
         case (None, next)     => contentTypes.find(_ == next)
       })
@@ -121,9 +132,9 @@ object SpringMvcServerGenerator {
             protocolElems
               .find(pe => definitionName(Option(resp.get$ref())).contains(pe.name))
               .flatMap({
-                case _: ClassDefinition[_]                                              => Some(RouteMeta.ApplicationJson)
-                case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(RouteMeta.TextPlain)
-                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(RouteMeta.TextPlain)
+                case _: ClassDefinition[_]                                              => Some(ApplicationJson)
+                case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain)
+                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain)
                 case _                                                                  => None
               })
           })
@@ -314,30 +325,30 @@ object SpringMvcServerGenerator {
                   nodeList.addLast(new MemberValuePair("path", new StringLiteralExpr(pathSuffix)))
                 }
 
-                val consumes = getBestConsumes(operation.get.consumes.flatMap(RouteMeta.ContentType.unapply).toList, parameters)
+                val consumes = getBestConsumes(operation.get.consumes.flatMap(ContentType.unapply).toList, parameters)
                   .orElse({
                     if (parameters.formParams.nonEmpty) {
                       if (parameters.formParams.exists(_.isFile)) {
-                        Some(RouteMeta.MultipartFormData)
+                        Some(MultipartFormData)
                       } else {
-                        Some(RouteMeta.UrlencodedFormData)
+                        Some(UrlencodedFormData)
                       }
                     } else if (parameters.bodyParams.nonEmpty) {
-                      Some(RouteMeta.ApplicationJson)
+                      Some(ApplicationJson)
                     } else {
                       None
                     }
                   })
 
                 consumes
-                  .map(c => new MemberValuePair("consumes", new FieldAccessExpr(new NameExpr("MediaType"), c.toSpringMediaType)))
+                  .map(c => new MemberValuePair("consumes", c.toSpringMediaType))
                   .foreach(nodeList.addLast)
 
                 val successResponses =
                   operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
-                val produces = getBestProduces(operation.get.produces.flatMap(RouteMeta.ContentType.unapply).toList, successResponses, protocolElems)
+                val produces = getBestProduces(operation.get.produces.flatMap(ContentType.unapply).toList, successResponses, protocolElems)
                 produces
-                  .map(c => new MemberValuePair("produces", new FieldAccessExpr(new NameExpr("MediaType"), c.toSpringMediaType)))
+                  .map(c => new MemberValuePair("produces", c.toSpringMediaType))
                   .foreach(nodeList.addLast)
 
                 if (!nodeList.isEmpty) {
@@ -411,7 +422,7 @@ object SpringMvcServerGenerator {
                   (parameters.pathParams, "PathVariable"),
                   (parameters.headerParams, "RequestHeader"),
                   (parameters.queryStringParams, "RequestParam"),
-                  (parameters.formParams, if (consumes.contains(RouteMeta.MultipartFormData)) "RequestParam" else "ModelAttribute")
+                  (parameters.formParams, if (consumes.contains(MultipartFormData)) "RequestParam" else "ModelAttribute")
                 ).flatMap({
                   case (params, annotationName) =>
                     params.map({ param =>

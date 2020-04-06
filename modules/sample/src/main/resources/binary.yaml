@@ -34,12 +34,14 @@ paths:
             type: string
             format: binary
             x-scala-type: Array[Byte]
+            x-java-type: byte[]
           required: true
       responses:
         '200':
           schema:
             type: file
             x-scala-type: Array[Byte]
+            x-java-type: byte[]
   /fooChunk:
     post:
       operationId: fooChunk
@@ -50,9 +52,11 @@ paths:
             type: string
             format: binary
             x-scala-type: fs2.Chunk[Byte]
+            x-java-type: java.io.InputStream
           required: true
       responses:
         '200':
           schema:
             type: file
             x-scala-type: fs2.Chunk[Byte]
+            x-java-type: java.io.InputStream
