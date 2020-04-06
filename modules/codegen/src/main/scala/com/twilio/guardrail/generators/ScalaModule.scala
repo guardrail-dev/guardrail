@@ -7,8 +7,6 @@ import cats.arrow.FunctionK
 import com.twilio.guardrail.circe.CirceVersion
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
-  implicit val coreTargetMonad: cats.Monad[CoreTarget] = cats.data.EitherT.catsDataMonadErrorForEitherT[cats.Id, Error]
-
   def circe(circeVersion: CirceVersion): FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
     val interpDefinitionPM
         : FunctionK[DefinitionPM[ScalaLanguage, ?], Target] = CirceProtocolGenerator.ProtocolSupportTermInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(

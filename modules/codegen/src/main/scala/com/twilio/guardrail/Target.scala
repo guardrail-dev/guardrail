@@ -2,7 +2,6 @@ package com.twilio.guardrail
 
 import com.twilio.swagger.core.StructuredLogger
 import cats.{ Applicative, MonadError }
-import cats.data.EitherT
 import cats.Traverse
 import cats.Eval
 
@@ -73,7 +72,7 @@ object Target extends LogAbstraction {
 
 sealed abstract class Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA
-  def toEitherT: EitherT[cats.Id, Error, A]
+  def toCoreTarget: CoreTarget[A]
   def map[B](f: A => B): Target[B]
   def flatMap[B](f: A => Target[B]): Target[B]
   def recover[AA >: A](f: Error => AA): Target[AA]
@@ -84,7 +83,7 @@ object TargetValue {
 }
 class TargetValue[A](val value: A) extends Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA  = value
-  def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.right[Error](cats.Monad[cats.Id].pure(value))
+  def toCoreTarget: CoreTarget[A]                  = new CoreTargetValue(value)
   def map[B](f: A => B): Target[B]                 = new TargetValue(f(value))
   def flatMap[B](f: A => Target[B]): Target[B]     = f(value)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(value)
@@ -95,7 +94,7 @@ object TargetError {
 }
 class TargetError[A](val error: Error) extends Target[A] {
   def valueOr[AA >: A](fallback: Error => AA): AA  = fallback(error)
-  def toEitherT: EitherT[cats.Id, Error, A]        = EitherT.left[A](cats.Monad[cats.Id].pure(error))
+  def toCoreTarget: CoreTarget[A]                  = new CoreTargetError(error)
   def map[B](f: A => B): Target[B]                 = new TargetError(error)
   def flatMap[B](f: A => Target[B]): Target[B]     = new TargetError(error)
   def recover[AA >: A](f: Error => AA): Target[AA] = new TargetValue(f(error))
