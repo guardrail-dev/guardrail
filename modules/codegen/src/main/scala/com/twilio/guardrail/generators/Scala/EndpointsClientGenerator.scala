@@ -66,9 +66,11 @@ object EndpointsClientGenerator {
             case _                                                => liftTerm _
           }
 
-          val args: List[Term] = parameters.map {
-            case LanguageParameter(_, param, paramName, argName, _) =>
-              lifter(param)(paramName, argName)
+          val args: List[Term] = parameters.flatMap {
+            case lp @ LanguageParameter(_, param, paramName, argName, _) =>
+              lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
+                xs.toList.map({ case (rp, term) => lifter(param)(q"${lp.paramName}.$term", rp) })
+              }
           }
           Some(q"List[Option[(String, Either[String, org.scalajs.dom.raw.File])]](..${args}).flatten")
         } else {
@@ -94,9 +96,11 @@ object EndpointsClientGenerator {
             case _                              => liftTerm _
           }
 
-          val args: List[Term] = parameters.map {
-            case LanguageParameter(_, param, paramName, argName, _) =>
-              lifter(param)(paramName, argName)
+          val args: List[Term] = parameters.flatMap {
+            case lp @ LanguageParameter(_, param, paramName, argName, _) =>
+              lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
+                xs.toList.map({ case (rp, term) => lifter(param)(q"${lp.paramName}.$term", rp) })
+              }
           }
           Some(q"List(..$args).flatten")
         }

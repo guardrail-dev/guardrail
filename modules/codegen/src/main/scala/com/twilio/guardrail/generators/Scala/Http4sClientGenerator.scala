@@ -109,9 +109,11 @@ object Http4sClientGenerator {
             }
           }
 
-          val args: List[Term] = parameters.map {
-            case LanguageParameter(_, param, paramName, argName, _) =>
-              lifter(param)(paramName, argName)
+          val args: List[Term] = parameters.flatMap {
+            case lp @ LanguageParameter(_, param, paramName, argName, _) =>
+              lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
+                xs.toList.map({ case (rp, term) => lifter(param)(q"${lp.paramName}.$term", rp) })
+              }
           }
           Some(q"List(..$args)")
         } else {
@@ -137,9 +139,11 @@ object Http4sClientGenerator {
             case _                            => liftTerm _
           }
 
-          val args: List[Term] = parameters.map {
-            case LanguageParameter(_, param, paramName, argName, _) =>
-              lifter(param)(paramName, argName)
+          val args: List[Term] = parameters.flatMap {
+            case lp @ LanguageParameter(_, param, paramName, argName, _) =>
+              lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
+                xs.toList.map({ case (rp, term) => lifter(param)(q"${lp.paramName}.$term", rp) })
+              }
           }
           Some(q"List(..$args)")
         }
