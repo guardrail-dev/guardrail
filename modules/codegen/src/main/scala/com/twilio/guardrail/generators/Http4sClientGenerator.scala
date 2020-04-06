@@ -91,8 +91,8 @@ object Http4sClientGenerator {
             def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"Some(Part.formData[F](${tName.toLit}, Formatter.show($tParamName)))"
 
-            val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
-              case (a, ScalaParameter(_, param, paramName, argName, _)) =>
+            val args: List[Term] = parameters.map {
+              case ScalaParameter(_, param, paramName, argName, _) =>
                 val lifter: (Term.Name, RawParameterName) => Term = {
                   param match {
                     case param"$_: Option[fs2.Stream[F,Byte]]" =>
@@ -106,7 +106,7 @@ object Http4sClientGenerator {
                     case _                                  => liftTerm _
                   }
                 }
-                a :+ lifter(paramName, argName)
+                lifter(paramName, argName)
             }
             Some(q"List(..$args)")
           } else {
@@ -124,8 +124,8 @@ object Http4sClientGenerator {
               q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
             }
 
-            val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
-              case (a, ScalaParameter(_, param, paramName, argName, _)) =>
+            val args: List[Term] = parameters.map {
+              case ScalaParameter(_, param, paramName, argName, _) =>
                 val lifter: (Term.Name, RawParameterName) => Term =
                   param match {
                     case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
@@ -134,7 +134,7 @@ object Http4sClientGenerator {
                     case param"$_: Iterable[$_] = $_" => liftIterable _
                     case _                            => liftTerm _
                   }
-                a :+ lifter(paramName, argName)
+                lifter(paramName, argName)
             }
             Some(q"List(..$args)")
           }
