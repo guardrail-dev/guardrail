@@ -189,10 +189,10 @@ object JacksonGenerator {
             )
           )
 
-        val parseMethod = new MethodDeclaration(
+        val fromStringMethod = new MethodDeclaration(
           new NodeList(publicModifier, staticModifier),
           enumType,
-          "parse"
+          "fromString"
         ).addMarkerAnnotation("JsonCreator")
           .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
           .setBody(
@@ -228,6 +228,21 @@ object JacksonGenerator {
             )
           )
 
+        val compatParseMethod = new MethodDeclaration(
+          new NodeList(publicModifier, staticModifier),
+          enumType,
+          "parse"
+        ).addMarkerAnnotation("Deprecated")
+          .setJavadocComment("@deprecated See {@link #fromString(String)}")
+          .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ReturnStmt(new MethodCallExpr("fromString", new NameExpr("name")))
+              )
+            )
+          )
+
         val staticInitializer = new InitializerDeclaration(
           true,
           new BlockStmt(
@@ -257,7 +272,8 @@ object JacksonGenerator {
             nameField,
             constructor,
             getNameMethod,
-            parseMethod
+            fromStringMethod,
+            compatParseMethod
           )
         )
 
