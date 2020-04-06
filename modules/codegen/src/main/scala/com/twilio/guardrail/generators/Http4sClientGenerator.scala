@@ -75,10 +75,10 @@ object Http4sClientGenerator {
             } yield q"Uri.unsafeFromString(${result})"
           }
 
-        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
+        def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
           if (parameters.isEmpty) {
             None
-          } else if (needsMultipart) {
+          } else if (consumes.contains(MultipartFormData)) {
             def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
               q"$tParamName.map(v => Part.fileData[F](${tName.toLit}, v._1, v._2))"
 
@@ -327,7 +327,7 @@ object Http4sClientGenerator {
 
           _ <- Target.log.debug(s"Generated: ${urlWithParams}")
           // Generate FormData arguments
-          formDataParams = generateFormDataParams(formArgs, consumes.contains(MultipartFormData))
+          formDataParams = generateFormDataParams(formArgs, consumes)
           // Generate header arguments
           headerParams = generateHeaderParams(headerArgs)
 
