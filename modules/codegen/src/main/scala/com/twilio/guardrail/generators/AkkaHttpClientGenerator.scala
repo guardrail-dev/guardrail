@@ -91,21 +91,21 @@ object AkkaHttpClientGenerator {
             def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"Some(Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show($tParamName)))"
 
+            val lifter: Term.Param => (Term, RawParameterName) => Term = {
+              case param"$_: Option[BodyPartEntity]" =>
+                liftOptionFileTerm _
+              case param"$_: Option[BodyPartEntity] = $_" =>
+                liftOptionFileTerm _
+              case param"$_: BodyPartEntity"      => liftFileTerm _
+              case param"$_: BodyPartEntity = $_" => liftFileTerm _
+              case param"$_: Option[$_]"          => liftOptionTerm _
+              case param"$_: Option[$_] = $_"     => liftOptionTerm _
+              case _                              => liftTerm _
+            }
+
             val args: List[Term] = parameters.map {
               case ScalaParameter(_, param, paramName, argName, _) =>
-                val lifter: (Term, RawParameterName) => Term =
-                  param match {
-                    case param"$_: Option[BodyPartEntity]" =>
-                      liftOptionFileTerm _
-                    case param"$_: Option[BodyPartEntity] = $_" =>
-                      liftOptionFileTerm _
-                    case param"$_: BodyPartEntity"      => liftFileTerm _
-                    case param"$_: BodyPartEntity = $_" => liftFileTerm _
-                    case param"$_: Option[$_]"          => liftOptionTerm _
-                    case param"$_: Option[$_] = $_"     => liftOptionTerm _
-                    case _                              => liftTerm _
-                  }
-                lifter(paramName, argName)
+                lifter(param)(paramName, argName)
             }
             Some(q"List(..$args)")
           } else {
@@ -123,17 +123,17 @@ object AkkaHttpClientGenerator {
               q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
             }
 
+            val lifter: Term.Param => (Term, RawParameterName) => Term = {
+              case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
+              case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
+              case param"$_: Iterable[$tpe]"      => liftIterable _
+              case param"$_: Iterable[$tpe] = $_" => liftIterable _
+              case x                              => liftTerm _
+            }
+
             val args: List[Term] = parameters.map {
               case ScalaParameter(_, param, paramName, argName, _) =>
-                val lifter: (Term, RawParameterName) => Term =
-                  param match {
-                    case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
-                    case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
-                    case param"$_: Iterable[$tpe]"      => liftIterable _
-                    case param"$_: Iterable[$tpe] = $_" => liftIterable _
-                    case x                              => liftTerm _
-                  }
-                lifter(paramName, argName)
+                lifter(param)(paramName, argName)
             }
             Some(q"List(..$args).flatten")
           }
@@ -145,14 +145,15 @@ object AkkaHttpClientGenerator {
           def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
             q"Some(RawHeader(${tName.toLit}, Formatter.show($tParamName)))"
 
+          val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
+            case param"$_: Option[$_]"      => liftOptionTerm _
+            case param"$_: Option[$_] = $_" => liftOptionTerm _
+            case _                          => liftTerm _
+          }
+
           val args: List[Term] = parameters.map {
             case ScalaParameter(_, param, paramName, argName, _) =>
-              val lifter: (Term.Name, RawParameterName) => Term = param match {
-                case param"$_: Option[$_]"      => liftOptionTerm _
-                case param"$_: Option[$_] = $_" => liftOptionTerm _
-                case _                          => liftTerm _
-              }
-              lifter(paramName, argName)
+              lifter(param)(paramName, argName)
           }
           q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
         }
