@@ -284,7 +284,7 @@ object DropwizardServerGenerator {
                 }
 
                 val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
-                val consumes    = DropwizardHelpers.getBestConsumes(operationId, allConsumes, parameters)
+                val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
                 consumes
                   .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                   .foreach(method.addAnnotation)

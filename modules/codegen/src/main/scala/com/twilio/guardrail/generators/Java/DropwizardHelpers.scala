@@ -3,16 +3,18 @@ package com.twilio.guardrail.generators.Java
 import cats.data.NonEmptyList
 import cats.syntax.foldable._
 import com.github.javaparser.ast.`type`.Type
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.ScalaParameters
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms._
+import io.swagger.v3.oas.models.Operation
 
 object DropwizardHelpers {
   private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
   private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
 
-  def getBestConsumes(operationId: String, contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
+  def getBestConsumes(operation: Tracker[Operation], contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
     if (parameters.formParams.nonEmpty) {
       if (parameters.formParams.exists(_.isFile) || contentTypes.contains(MultipartFormData)) {
         Some(MultipartFormData)
@@ -29,7 +31,7 @@ object DropwizardHelpers {
             val fallback =
               if (bodyParam.argType.isPrimitiveType || bodyParam.argType.isNamed("String")) TextPlain
               else ApplicationJson
-            println(s"WARNING: no supported body param type for operation '$operationId'; falling back to $fallback")
+            println(s"WARNING: no supported body param type at ${operation.showHistory}; falling back to $fallback")
             fallback
           })
       })

@@ -469,7 +469,7 @@ object AsyncHttpClientClientGenerator {
           )
 
           val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
-          val consumes    = DropwizardHelpers.getBestConsumes(operation.get.getOperationId, allConsumes, parameters)
+          val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
           val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
           val produces =
             responses.value.map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces(operation.get.getOperationId, allProduces, resp))).toMap
@@ -689,7 +689,7 @@ object AsyncHttpClientClientGenerator {
                                             .flatten
                                             .getOrElse({
                                               println(
-                                                s"WARNING: no supported content type specified for ${operation.get.getOperationId}'s ${response.statusCode} response; falling back to application/json"
+                                                s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
                                               )
                                               ApplicationJson
                                             }) match {
@@ -715,7 +715,7 @@ object AsyncHttpClientClientGenerator {
                                                 case _ if valueType.isNamed("String")      => "getResponseBody"
                                                 case _ =>
                                                   println(
-                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType for operation ${operation.get.getOperationId}; falling back to String"
+                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
                                                   )
                                                   "getResponseBody"
                                               }
