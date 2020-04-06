@@ -20,6 +20,7 @@ import com.twilio.guardrail.extract.Default
 
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
+import com.twilio.guardrail.generators.RawParameterName
 
 case class ProtocolDefinitions[L <: LA](
     elems: List[StrictProtocolElems[L]],
@@ -37,7 +38,7 @@ case object DataRedacted extends RedactionBehaviour
 
 case class ProtocolParameter[L <: LA](
     term: L#MethodParameter,
-    name: String,
+    name: RawParameterName,
     dep: Option[L#TermName],
     rawType: RawParameterType,
     readOnlyKey: Option[String],

@@ -116,51 +116,53 @@ object CirceProtocolGenerator {
           .map(_.toList)
 
       case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
-        Target.log.function(s"transformProperty")(for {
-          _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
+        Target.log.function(s"transformProperty") {
+          for {
+            _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
-          rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
+            argName = if (needCamelSnakeConversion) name.toCamelCase else name
+            rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
-          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-          emptyToNull = (property match {
-            case d: DateSchema      => EmptyValueIsNull(d)
-            case dt: DateTimeSchema => EmptyValueIsNull(dt)
-            case s: StringSchema    => EmptyValueIsNull(s)
-            case _                  => None
-          }).getOrElse(EmptyIsEmpty)
-          dataRedaction = DataRedaction(property).getOrElse(DataVisible)
+            readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
+            emptyToNull = (property match {
+              case d: DateSchema      => EmptyValueIsNull(d)
+              case dt: DateTimeSchema => EmptyValueIsNull(dt)
+              case s: StringSchema    => EmptyValueIsNull(s)
+              case _                  => None
+            }).getOrElse(EmptyIsEmpty)
+            dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
-          (tpe, classDep) = meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
-              // assume that binary data are represented as a string. allow users to override.
-              (t"String", classDep)
-            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
-              (declType, classDep)
-            case SwaggerUtil.Deferred(tpeName) =>
-              val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
-                println(s"Unable to find definition for ${tpeName}, just inlining")
-                Type.Name(tpeName)
-              }
-              (tpe, Option.empty)
-            case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
-              val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
-              val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"${containerTpe.getOrElse(t"Vector")}[$innerType]", Option.empty)
-            case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
-              val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
-              val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
-          }
+            (tpe, classDep) = meta match {
+              case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
+                // assume that binary data are represented as a string. allow users to override.
+                (t"String", classDep)
+              case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
+                (declType, classDep)
+              case SwaggerUtil.Deferred(tpeName) =>
+                val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
+                  println(s"Unable to find definition for ${tpeName}, just inlining")
+                  Type.Name(tpeName)
+                }
+                (tpe, Option.empty)
+              case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
+                val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
+                val innerType    = concreteType.getOrElse(Type.Name(tpeName))
+                (t"${containerTpe.getOrElse(t"Vector")}[$innerType]", Option.empty)
+              case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
+                val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
+                val innerType    = concreteType.getOrElse(Type.Name(tpeName))
+                (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
+            }
 
-          (finalDeclType, finalDefaultValue) = Option(isRequired)
-            .filterNot(_ == false)
-            .fold[(Type, Option[Term])](
-              (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-            )(Function.const((tpe, defaultValue)) _)
-          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
-          dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, name, dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue))
+            (finalDeclType, finalDefaultValue) = Option(isRequired)
+              .filterNot(_ == false)
+              .fold[(Type, Option[Term])](
+                (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
+              )(Function.const((tpe, defaultValue)) _)
+            term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+            dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
+          } yield ProtocolParameter[ScalaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        }
 
       case RenderDTOClass(clsName, selfParams, parents) =>
         val discriminators     = parents.flatMap(_.discriminators)
@@ -206,7 +208,7 @@ object CirceProtocolGenerator {
         val discriminators     = parents.flatMap(_.discriminators)
         val discriminatorNames = discriminators.map(_.propertyName).toSet
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminatorNames.contains(param.name)
+          param => discriminatorNames.contains(param.name.value)
         )
         val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
         val paramCount                 = params.length
@@ -249,7 +251,7 @@ object CirceProtocolGenerator {
           )
         } else */ {
             val pairs: List[Term.Tuple] = params
-              .map(param => q"""(${Lit.String(param.name)}, a.${Term.Name(param.term.name.value)}.asJson)""")
+              .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)""")
               .to[List]
             Option(
               q"""
@@ -268,7 +270,7 @@ object CirceProtocolGenerator {
         val discriminators     = parents.flatMap(_.discriminators)
         val discriminatorNames = discriminators.map(_.propertyName).toSet
         val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-          param => discriminatorNames.contains(param.name)
+          param => discriminatorNames.contains(param.name.value)
         )
         val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
         val paramCount                = params.length
@@ -302,11 +304,11 @@ object CirceProtocolGenerator {
                       val enum = if (param.emptyToNull == EmptyIsNull) {
                         enumerator"""
                   ${Pat.Var(term)} <- c.downField(${Lit
-                          .String(param.name)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
+                          .String(param.name.value)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
                 """
                       } else {
                         enumerator"""
-                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name)}).as[${tpe}]
+                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name.value)}).as[${tpe}]
                 """
                       }
                       (term, enum)

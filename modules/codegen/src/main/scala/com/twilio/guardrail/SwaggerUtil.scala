@@ -55,34 +55,19 @@ object SwaggerUtil {
             if (lazyTypes.isEmpty) {
               Free.pure(Right(resolvedTypes))
             } else {
-              def partitionEitherM[G[_], A, B, C](
-                  fa: List[A]
-              )(f: A => G[Either[B, C]])(implicit A: cats.Alternative[List], M: cats.Monad[G]): G[(List[B], List[C])] = {
-                import cats.instances.tuple._
-
-                implicit val mb: cats.Monoid[List[B]] = A.algebra[B]
-                implicit val mc: cats.Monoid[List[C]] = A.algebra[C]
-
-                Foldable[List].foldMapM[G, A, (List[B], List[C])](fa)(
-                  a =>
-                    f(a).map {
-                      case Right(c) => (A.empty[B], A.pure(c))
-                      case Left(b)  => (A.pure(b), A.empty[C])
-                    }
-                )
-              }
-
-              (partitionEitherM(lazyTypes) {
-                case x @ (clsName, Deferred(tpeName)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(Free.pure _).map(Either.fromOption(_, x))
-                case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
-                case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType(_, containerTpe)).map(Either.fromOption(_, x))
-              }).map({
-                case (newLazyTypes, newResolvedTypes) =>
-                  Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
-              })
+              lazyTypes
+                .partitionEitherM({
+                  case x @ (clsName, Deferred(tpeName)) =>
+                    lookupTypeName(clsName, tpeName, resolvedTypes)(Free.pure _).map(Either.fromOption(_, x))
+                  case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
+                    lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
+                  case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
+                    lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType(_, containerTpe)).map(Either.fromOption(_, x))
+                })
+                .map({
+                  case (newLazyTypes, newResolvedTypes) =>
+                    Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
+                })
             }
         }
     }

@@ -41,19 +41,19 @@ object EndpointsClientGenerator {
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
-            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftOptionFileTerm(tParamName: Term, tName: RawParameterName) =
               q"$tParamName.map(v => (${tName.toLit}, Right(v)))"
 
-            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftFileTerm(tParamName: Term, tName: RawParameterName) =
               q"Some((${tName.toLit}, Right($tParamName)))"
 
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftOptionTerm(tParamName: Term, tName: RawParameterName) =
               q"$tParamName.map(v => (${tName.toLit}, Left(Formatter.show(v))))"
 
-            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"Some((${tName.toLit}, Left(Formatter.show($tParamName))))"
 
-            val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
+            val lifter: Term.Param => (Term, RawParameterName) => Term = {
               case param"$_: Option[org.scalajs.dom.raw.File]"      => liftOptionFileTerm _
               case param"$_: Option[org.scalajs.dom.raw.File] = $_" => liftOptionFileTerm _
               case param"$_: org.scalajs.dom.raw.File"              => liftFileTerm _
@@ -83,17 +83,17 @@ object EndpointsClientGenerator {
               q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
             }
 
-            val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
-              case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-                val lifter: (Term.Name, RawParameterName) => Term =
-                  param match {
-                    case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
-                    case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
-                    case param"$_: Iterable[$tpe]"      => liftIterable _
-                    case param"$_: Iterable[$tpe] = $_" => liftIterable _
-                    case _                              => liftTerm _
-                  }
-                a :+ lifter(paramName, argName)
+            val lifter: Term.Param => (Term, RawParameterName) => Term = {
+              case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
+              case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
+              case param"$_: Iterable[$tpe]"      => liftIterable _
+              case param"$_: Iterable[$tpe] = $_" => liftIterable _
+              case _                              => liftTerm _
+            }
+
+            val args: List[Term] = parameters.map {
+              case ScalaParameter(_, param, paramName, argName, _) =>
+                lifter(param)(paramName, argName)
             }
             Some(q"List(..$args).flatten")
           }
@@ -105,14 +105,15 @@ object EndpointsClientGenerator {
           def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
             q"Some(RawHeader(${tName.toLit}, Formatter.show($tParamName)))"
 
-          val args: List[Term] = parameters.foldLeft(List.empty[Term]) {
-            case (a, ScalaParameter(_, param, paramName, argName, _)) =>
-              val lifter: (Term.Name, RawParameterName) => Term = param match {
-                case param"$_: Option[$_]"      => liftOptionTerm _
-                case param"$_: Option[$_] = $_" => liftOptionTerm _
-                case _                          => liftTerm _
-              }
-              a :+ lifter(paramName, argName)
+          val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
+            case param"$_: Option[$_]"      => liftOptionTerm _
+            case param"$_: Option[$_] = $_" => liftOptionTerm _
+            case _                          => liftTerm _
+          }
+
+          val args: List[Term] = parameters.map {
+            case ScalaParameter(_, param, paramName, argName, _) =>
+              lifter(param)(paramName, argName)
           }
           q"scala.collection.immutable.Seq[Option[String]](..$args).flatten"
         }

@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators
 
 import cats.data.NonEmptyList
+import cats.implicits._
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, TextPlain }
 import scala.meta._
@@ -13,14 +14,15 @@ object AkkaHttpHelper {
     }
 
     for {
-      unmarshallers <- consumes.traverse[Target, Term]({
-        case ApplicationJson => Target.pure(q"structuredJsonEntityUnmarshaller")
-        case TextPlain       => Target.pure(q"stringyJsonEntityUnmarshaller")
-        case contentType     => Target.raiseError(s"Unable to generate decoder for ${contentType}")
+      unmarshallers <- consumes.toList.flatTraverse[Target, Term]({
+        case ApplicationJson => Target.pure(List(q"structuredJsonEntityUnmarshaller"))
+        case TextPlain       => Target.pure(List(q"stringyJsonEntityUnmarshaller"))
+        case contentType     => Target.log.warning(s"Unable to generate decoder for ${contentType}").map(_ => List.empty)
       })
-      unmarshaller = unmarshallers match {
-        case NonEmptyList(x, Nil) => x
-        case xs                   => q"Unmarshaller.firstOf(..${xs.toList})"
+      unmarshaller <- unmarshallers match {
+        case Nil      => Target.raiseError(s"No decoders available")
+        case x :: Nil => Target.pure(x)
+        case xs       => Target.pure(q"Unmarshaller.firstOf(..${xs})")
       }
     } yield {
       val decoder = q""" {
