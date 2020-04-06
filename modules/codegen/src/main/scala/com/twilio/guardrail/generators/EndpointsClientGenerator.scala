@@ -41,19 +41,19 @@ object EndpointsClientGenerator {
           if (parameters.isEmpty) {
             None
           } else if (needsMultipart) {
-            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftOptionFileTerm(tParamName: Term, tName: RawParameterName) =
               q"$tParamName.map(v => (${tName.toLit}, Right(v)))"
 
-            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftFileTerm(tParamName: Term, tName: RawParameterName) =
               q"Some((${tName.toLit}, Right($tParamName)))"
 
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftOptionTerm(tParamName: Term, tName: RawParameterName) =
               q"$tParamName.map(v => (${tName.toLit}, Left(Formatter.show(v))))"
 
-            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"Some((${tName.toLit}, Left(Formatter.show($tParamName))))"
 
-            val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
+            val lifter: Term.Param => (Term, RawParameterName) => Term = {
               case param"$_: Option[org.scalajs.dom.raw.File]"      => liftOptionFileTerm _
               case param"$_: Option[org.scalajs.dom.raw.File] = $_" => liftOptionFileTerm _
               case param"$_: org.scalajs.dom.raw.File"              => liftFileTerm _
@@ -85,7 +85,7 @@ object EndpointsClientGenerator {
 
             val args: List[Term] = parameters.map {
               case ScalaParameter(_, param, paramName, argName, _) =>
-                val lifter: (Term.Name, RawParameterName) => Term =
+                val lifter: (Term, RawParameterName) => Term =
                   param match {
                     case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
                     case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _

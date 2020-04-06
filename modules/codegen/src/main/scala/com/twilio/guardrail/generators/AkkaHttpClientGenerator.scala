@@ -79,21 +79,21 @@ object AkkaHttpClientGenerator {
           if (parameters.isEmpty) {
             None
           } else if (consumes.contains(MultipartFormData)) {
-            def liftOptionFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftOptionFileTerm(tParamName: Term, tName: RawParameterName) =
               q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, v))"
 
-            def liftFileTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftFileTerm(tParamName: Term, tName: RawParameterName) =
               q"Some(Multipart.FormData.BodyPart(${tName.toLit}, $tParamName))"
 
-            def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftOptionTerm(tParamName: Term, tName: RawParameterName) =
               q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show(v)))"
 
-            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"Some(Multipart.FormData.BodyPart(${tName.toLit}, Formatter.show($tParamName)))"
 
             val args: List[Term] = parameters.map {
               case ScalaParameter(_, param, paramName, argName, _) =>
-                val lifter: (Term.Name, RawParameterName) => Term =
+                val lifter: (Term, RawParameterName) => Term =
                   param match {
                     case param"$_: Option[BodyPartEntity]" =>
                       liftOptionFileTerm _
@@ -109,7 +109,7 @@ object AkkaHttpClientGenerator {
             }
             Some(q"List(..$args)")
           } else {
-            def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
+            def liftTerm(tParamName: Term, tName: RawParameterName) =
               q"List((${tName.toLit}, Formatter.show($tParamName)))"
 
             def liftIterable(tParamName: Term, tName: RawParameterName) =
@@ -125,7 +125,7 @@ object AkkaHttpClientGenerator {
 
             val args: List[Term] = parameters.map {
               case ScalaParameter(_, param, paramName, argName, _) =>
-                val lifter: (Term.Name, RawParameterName) => Term =
+                val lifter: (Term, RawParameterName) => Term =
                   param match {
                     case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
                     case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
