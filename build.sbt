@@ -62,6 +62,8 @@ def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/
 val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
   ExampleCase(sampleResource("alias.yaml"), "alias"),
+  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks(Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks(Set("dropwizard")),
   ExampleCase(sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain"),
   ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
   ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
