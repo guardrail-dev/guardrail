@@ -30,7 +30,7 @@ case class ClassDefinition[L <: LA](
     cls: L#ClassDefinition,
     staticDefns: StaticDefns[L],
     parents: List[SuperClass[L]] = Nil,
-    fieldProjections: List[(RawParameterName, L#TermName)] = Nil
+    fieldProjections: List[(RawParameterName, L#TermName, L#MethodParameter)] = Nil
 ) extends NestedProtocolElems[L]
 
 case class ADT[L <: LA](name: String, tpe: L#TypeName, fullType: L#Type, trt: L#Trait, staticDefns: StaticDefns[L]) extends StrictProtocolElems[L]

@@ -110,7 +110,7 @@ object AkkaHttpClientGenerator {
           val args: List[Term] = parameters.flatMap {
             case lp @ LanguageParameter(_, param, paramName, argName, _) =>
               lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
-                xs.toList.map({ case (rp, term) => lifter(param)(q"${lp.paramName}.$term", rp) })
+                xs.toList.map({ case (rp, term, projectedParam) => lifter(projectedParam)(q"${lp.paramName}.$term", rp) })
               }
           }
           Some(q"List(..$args)")
@@ -140,7 +140,7 @@ object AkkaHttpClientGenerator {
           val args: List[Term] = parameters.flatMap {
             case lp @ LanguageParameter(_, param, paramName, argName, _) =>
               lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
-                xs.toList.map({ case (rp, term) => lifter(param)(q"${lp.paramName}.$term", rp) })
+                xs.toList.map({ case (rp, term, projectedParam) => lifter(projectedParam)(q"${lp.paramName}.$term", rp) })
               }
           }
           Some(q"List(..$args).flatten")

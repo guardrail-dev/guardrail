@@ -34,7 +34,7 @@ class LanguageParameter[L <: LA] private[generators] (
     val required: Boolean,
     val hashAlgorithm: Option[String],
     val isFile: Boolean,
-    val fieldProjections: Option[NonEmptyList[(RawParameterName, L#TermName)]]
+    val fieldProjections: Option[NonEmptyList[(RawParameterName, L#TermName, L#MethodParameter)]]
 ) {
   override def toString: String =
     s"LanguageParameter($in, $param, $paramName, $argName, $argType)"
@@ -45,7 +45,7 @@ class LanguageParameter[L <: LA] private[generators] (
   def withParamName(newParamName: L#TermName): LanguageParameter[L] =
     new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile, fieldProjections)
 
-  def withFieldProjections(newFieldProjections: NonEmptyList[(RawParameterName, L#TermName)]): LanguageParameter[L] =
+  def withFieldProjections(newFieldProjections: NonEmptyList[(RawParameterName, L#TermName, L#MethodParameter)]): LanguageParameter[L] =
     new LanguageParameter[L](in, param, paramName, argName, argType, rawType, required, hashAlgorithm, isFile, Some(newFieldProjections))
 }
 object LanguageParameter {

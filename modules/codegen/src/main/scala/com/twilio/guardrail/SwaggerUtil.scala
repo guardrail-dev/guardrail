@@ -28,7 +28,7 @@ object SwaggerUtil {
       defaultValue: Option[L#Term],
       rawType: Option[String],
       rawFormat: Option[String],
-      fieldProjections: List[(RawParameterName, L#TermName)]
+      fieldProjections: List[(RawParameterName, L#TermName, L#MethodParameter)]
   ) extends ResolvedType[L]
   sealed trait LazyResolvedType[L <: LA]                                         extends ResolvedType[L]
   case class Deferred[L <: LA](value: String)                                    extends LazyResolvedType[L]

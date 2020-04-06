@@ -355,7 +355,7 @@ object ProtocolGenerator {
       tpe                         <- parseTypeName(clsName.last)
       fullType                    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns                 <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
-      fieldProjections = params.map(param => (param.name, param.term))
+      fieldProjections = params.map(param => (param.name, param.term, param.param))
       result <- if (parents.isEmpty && props.isEmpty) (Left("Entity isn't model"): Either[String, ClassDefinition[L]]).pure[F]
       else {
         val nestedClasses = nestedDefinitions.flatTraverse {
