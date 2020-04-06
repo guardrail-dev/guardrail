@@ -62,7 +62,14 @@ done
 # unlikely that it'll conflict. Tested against BSD and GNU `base64`
 marker="$(echo "${RANDOM}" | base64)"
 
-if [[ "${#@}" -eq 2 ]]; then
+if [[ "${#@}" -eq 1 ]]; then
+  branch_tip="$1"
+  common_root="$(git rev-parse origin/master 2>/dev/null)"
+   if [ $? -ne 0 ]; then
+     common_root="$(git rev-parse upstream/master 2>/dev/null)"
+   fi
+  format_hash=
+elif [[ "${#@}" -eq 2 ]]; then
 # common_root is the SHA of the commit immediately before the formatting commit.
 # This is expected to be the closest ancestor to your branch, as well as the
 # formatting commit.
@@ -70,15 +77,13 @@ if [[ "${#@}" -eq 2 ]]; then
 # format_hash is the SHA of the formatting commit. This is the first one to
 # be reverted, as mentioned at the top of this script.
   format_hash="$2"
-elif [[ "${#@}" -eq 0 ]]; then
-  echo "Assuming hard-coded default values for common_root and format_hash" >&2
-  echo "Hopefully this is what you want. If so, press enter." >&2
-  read -p 'Press enter to proceed with defaults: '
-  format_hash="b1cd9fa287df65246523b13c88cb808537075c72"
-  common_root="$(git rev-parse "${format_hash}^")"
 else
-  echo "Usage: ${0} [<common_root> <format_hash>]" >&2
+  echo "Usage: ${0} [<common_root> [<format_hash>]]" >&2
   exit 2
+fi
+
+if [ ! -z "$branch_tip" ]; then
+  git checkout "$branch_tip"
 fi
 
 # Base assumption is that this'll work at all.
@@ -91,23 +96,35 @@ git rebase -q "${common_root}"
 current_hash="$(git rev-parse @)"
 
 # Revert the formatting commit
-git checkout -q "${format_hash}"
-git revert --no-edit -n "${format_hash}"
+if [ ! -z "$format_hash" ] && [ "${format_hash}" != "${common_root}" ]; then
+  git checkout -q "${format_hash}"
+  git revert --no-edit -n "${format_hash}"
 
-# Leave an indicator to future commands that we need to fold this revert
-# commit into the next commit.
-git commit -m "${marker} @v reverting"
+  # Leave an indicator to future commands that we need to fold this revert
+  # commit into the next commit.
+  git commit -m "${marker} @v reverting" --allow-empty
+else
+  format_hash="${common_root}"
+  git checkout "${common_root}"
+  git commit -m "${marker} @v reverting" --allow-empty
+fi
 
 # Walk the whole changeset, interpolating in reformat && revert to avoid
 # merge conflicts
-git rebase -i "${common_root}" "${current_hash}" --onto @ \
-  -x "set -x; ${format_cmd} && git commit -m '${marker} @^ formatting' modules && git revert --no-edit -n @ && git commit -m '${marker} @v reverting'; set +x"
+echo git rebase "${common_root}" "${current_hash}" --onto @
+read -p '[Enter] '
+
+git rebase "${common_root}" "${current_hash}" --onto @ \
+  -x "set -x; ${format_cmd} && git commit -m '${marker} @^ formatting' modules --allow-empty && git revert --no-edit -n @ && git commit -m '${marker} @v reverting' --allow-empty; set +x"
 
 # The very last commit may include just a lone revert of formatting changes.
 # It must be stopped.
 if [[ "$(git log --oneline --format=%s -n 1)" = "${marker} @v reverting" ]]; then
   git reset --hard @^
 fi
+
+echo "About to start collapsing format commits on top of $(git rev-parse @)"
+read -p '[Enter] '
 
 # Finally, one last walk to fold the format/revert commits into their
 # associated commit.
@@ -120,6 +137,9 @@ fi
 # applied against the original formatting, and since we keep reformatting
 # with the same rules (provided formatting is deterministic), we can
 # seamlessly move towards a better formatted world.
-git rebase "${format_hash}" \
-  -x "set -x; [[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker}\"*              ]] || (git reset @^^; git add modules; git commit         -C @@{1} modules) || true; set +x" \
-  -x "set -x; [[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker} @^ formatting\" ]] && (git reset @^ ; git add modules; git commit --amend -C @     modules) || true; set +x"
+#
+# Relying on touch $TMPDIR/$marker to skip collapsing the first commit.
+# An alternate approach here would be to add an empty commit immediately after ${format_hash}
+git rebase --keep-empty "${format_hash}" \
+  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker}\"*              ]] || (git checkout @^^ && git cherry-pick --no-commit @@{1}^ @@{1} && git commit         -C @@{1}) || true" \
+  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker} @^ formatting\" ]] && (git checkout @^  && git cherry-pick --no-commit @@{1}        && git commit --amend -C @    ) || true"
