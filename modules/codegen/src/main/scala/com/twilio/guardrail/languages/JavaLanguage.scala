@@ -4,8 +4,8 @@ import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
 
 object JavaLanguage {
   case class JavaTypeName(tpe: com.github.javaparser.ast.`type`.Type) {
-    def asString: String          = toString
-    override def toString: String = tpe.asString
+    def asString: String          = tpe.asString
+    override def toString: String = asString
   }
 }
 
