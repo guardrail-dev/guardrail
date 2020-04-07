@@ -52,14 +52,14 @@ object JacksonGenerator {
 
     params
       .map({ param =>
-        val parameterType = if (param.term.getType.isOptional) {
-          param.term.getType.containedType.unbox
+        val parameterType = if (param.param.getType.isOptional) {
+          param.param.getType.containedType.unbox
         } else {
-          param.term.getType.unbox
+          param.param.getType.unbox
         }
         val defaultValue = defaultValueToExpression(param.defaultValue)
 
-        ParameterTerm(param.name.value, param.term.getNameAsString, param.term.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction)
+        ParameterTerm(param.name.value, param.param.getNameAsString, param.param.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction)
       })
       .partition(
         pt => !pt.fieldType.isOptional && pt.defaultValue.isEmpty
@@ -405,7 +405,7 @@ object JacksonGenerator {
           .map(_.toMap)
       } yield {
         val params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(
-                param => discriminatorNames.contains(param.term.getName.getIdentifier) || parentParamNames.contains(param.term.getName.getIdentifier)
+                param => discriminatorNames.contains(param.param.getName.getIdentifier) || parentParamNames.contains(param.param.getName.getIdentifier)
               )
         val (requiredTerms, optionalTerms) = sortParams(params)
         val terms                          = requiredTerms ++ optionalTerms
@@ -968,7 +968,7 @@ object JacksonGenerator {
         val (parentRequiredTerms, parentOptionalTerms) = sortParams(parentParams)
         val parentTerms                                = parentRequiredTerms ++ parentOptionalTerms
         val params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(
-                param => parentParamNames.contains(param.term.getName.getIdentifier)
+                param => parentParamNames.contains(param.param.getName.getIdentifier)
               )
         val (requiredTerms, optionalTerms) = sortParams(params)
         val terms                          = requiredTerms ++ optionalTerms

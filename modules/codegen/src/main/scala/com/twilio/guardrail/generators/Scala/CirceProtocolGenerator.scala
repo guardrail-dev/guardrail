@@ -209,14 +209,14 @@ object CirceProtocolGenerator {
         None
       }
       val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-        param => discriminatorNames.contains(param.term.name.value)
+        param => discriminatorNames.contains(param.param.name.value)
       )
 
-      val terms = params.map(_.term)
+      val terms = params.map(_.param)
 
       val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
         def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
-          case param if param.dataRedaction == DataVisible => q"${Term.Name(param.term.name.value)}.toString()"
+          case param if param.dataRedaction == DataVisible => q"${Term.Name(param.param.name.value)}.toString()"
           case _                                           => Lit.String("[redacted]")
         }
 
@@ -261,7 +261,7 @@ object CirceProtocolGenerator {
         /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
         if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
-            .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
+            .map(param => (Lit.String(param.name), Term.Name(param.param.name.value)))
             .to[List]
             .unzip
           val List(name)  = names
@@ -273,7 +273,7 @@ object CirceProtocolGenerator {
           )
         } else if (paramCount >= 2 && paramCount <= 22) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
-            .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
+            .map(param => (Lit.String(param.name), Term.Name(param.param.name.value)))
             .to[List]
             .unzip
           val tupleFields = fields
@@ -293,7 +293,7 @@ object CirceProtocolGenerator {
           )
         } else */ {
           val pairs: List[Term.Tuple] = params
-            .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)""")
+            .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.param.name.value)}.asJson)""")
             .to[List]
           Option(
             q"""
@@ -342,7 +342,7 @@ object CirceProtocolGenerator {
               .traverse({
                 case (param, idx) =>
                   for {
-                    rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
+                    rawTpe <- Target.fromOption(param.param.decltpe, UserError("Missing type"))
                     tpe <- rawTpe match {
                       case tpe: Type => Target.pure(tpe)
                       case x         => Target.raiseUserError(s"Unsure how to map ${x.structure}, please report this bug!")
@@ -556,7 +556,7 @@ object CirceProtocolGenerator {
       for {
         testTerms <- (
           params
-            .map(_.term)
+            .map(_.param)
             .filter(_.name.value != discriminator.propertyName)
             .traverse { t =>
               for {
