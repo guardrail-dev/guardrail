@@ -85,7 +85,7 @@ object TargetValue {
 }
 class TargetValue[A](val value: A, logEntries: StructuredLogger) extends Target[A](logEntries) {
   def valueOr[AA >: A](fallback: Error => AA): AA          = value
-  def toCoreTarget: CoreTarget[A]                          = new CoreTargetValue(value)
+  def toCoreTarget: CoreTarget[A]                          = new CoreTargetValue(value, logEntries)
   def map[B](f: A => B): Target[B]                         = new TargetValue(f(value), logEntries)
   def flatMap[B](f: A => Target[B]): Target[B]             = f(value).prependLogger(logEntries)
   def recover[AA >: A](f: Error => AA): Target[AA]         = new TargetValue(value, logEntries)
@@ -97,10 +97,10 @@ object TargetError {
 }
 class TargetError[A](val error: Error, logEntries: StructuredLogger) extends Target[A](logEntries) {
   def valueOr[AA >: A](fallback: Error => AA): AA          = fallback(error)
-  def toCoreTarget: CoreTarget[A]                          = new CoreTargetError(error)
+  def toCoreTarget: CoreTarget[A]                          = new CoreTargetError(error, logEntries)
   def map[B](f: A => B): Target[B]                         = new TargetError(error, logEntries)
   def flatMap[B](f: A => Target[B]): Target[B]             = new TargetError(error, logEntries)
-  def recover[AA >: A](f: Error => AA): Target[AA]         = new TargetValue(f(error), StructuredLogger.Empty)
+  def recover[AA >: A](f: Error => AA): Target[AA]         = new TargetValue(f(error), logEntries)
   def fold[B](fail: Error => B, pass: A => B): B           = fail(error)
   def prependLogger(lastLogs: StructuredLogger): Target[A] = new TargetError(error, lastLogs |+| logEntries)
 }
