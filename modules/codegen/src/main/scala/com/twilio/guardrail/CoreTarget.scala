@@ -46,7 +46,7 @@ object CoreTarget extends LogAbstraction {
   }
 
   type F[A] = CoreTarget[A]
-  val A                                                     = Applicative[CoreTarget]
+  val A                                                     = coreTargetInstances
   def pushLogger(value: StructuredLogger): CoreTarget[Unit] = new CoreTargetValue((), value)
   def pure[T](x: T): CoreTarget[T]                          = x.pure[CoreTarget]
   def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] =

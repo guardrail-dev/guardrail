@@ -8,17 +8,8 @@ import cats.implicits._
 
 object Target extends LogAbstraction {
   type F[A] = Target[A]
-  val A = new Applicative[Target] {
-    def pure[A](x: A): Target[A] = new TargetValue(x, StructuredLogger.Empty)
-    def ap[A, B](ff: Target[A => B])(fa: Target[A]): Target[B] =
-      (ff, fa) match {
-        case (TargetValue(f, fl), TargetValue(a, al)) => new TargetValue(f(a), fl |+| al)
-        case (TargetError(err, la), _)                => new TargetError(err, la)
-        case (fst, TargetError(err, la))              => new TargetError(err, la).prependLogger(fst.logEntries)
-      }
-  }
   def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), value)
-  def pure[T](x: T): Target[T]                          = A.pure(x)
+  def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
   @deprecated("Use raiseError instead", "v0.41.2")
   def error[T](x: String): Target[T]          = raiseError(x)
   def raiseError[T](x: String): Target[T]     = new TargetError(UserError(x), StructuredLogger.Empty)
@@ -32,7 +23,7 @@ object Target extends LogAbstraction {
     })
 
   implicit val targetInstances = new MonadError[Target, Error] with Traverse[Target] {
-    def pure[A](x: A): Target[A] = Target.A.pure(x)
+    def pure[A](x: A): Target[A] = new TargetValue(x, StructuredLogger.Empty)
 
     def handleErrorWith[A](fa: Target[A])(f: Error => Target[A]): Target[A] = fa match {
       case fa @ TargetValue(_, _) => fa
@@ -68,6 +59,7 @@ object Target extends LogAbstraction {
       case TargetError(e, la) => G.pure[Target[B]](new TargetError(e, la))
     }
   }
+  val A = targetInstances
 }
 
 sealed abstract class Target[A](val logEntries: StructuredLogger) {
