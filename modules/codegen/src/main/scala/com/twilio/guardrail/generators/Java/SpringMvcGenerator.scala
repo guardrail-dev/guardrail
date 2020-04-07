@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators.Java
 
 import cats.~>
+import cats.implicits._
 import com.github.javaparser.ast.expr.Name
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.generators.syntax.Java.{ safeParseName, safeParseType }

@@ -1,9 +1,7 @@
 package com.twilio.guardrail.generators
 
 import cats.~>
-import cats.instances.list._
-import cats.instances.option._
-import cats.syntax.traverse._
+import cats.implicits._
 import com.github.javaparser.ast._
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType, ArrayType => AstArrayType }
