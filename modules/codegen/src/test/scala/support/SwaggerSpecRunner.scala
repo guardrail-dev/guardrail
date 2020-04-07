@@ -92,21 +92,15 @@ trait SwaggerSpecRunner extends EitherValues {
       Sc: ScalaTerms[L, CodegenApplication[L, ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (StructuredLogger, Error) =
-    (
-      StructuredLogger(Vector.empty),
-      Common
-        .prepareDefinitions[L, CodegenApplication[L, ?]](
-          kind,
-          context,
-          Tracker(swagger),
-          List.empty
-        )
-        .foldMap(framework) match {
-        case TargetError(err, _) => err
-        case _                   => ???
-      }
-    )
-  //.value
-  //.runEmpty
-  //.map(_.map(_.left.value))
+    Common
+      .prepareDefinitions[L, CodegenApplication[L, ?]](
+        kind,
+        context,
+        Tracker(swagger),
+        List.empty
+      )
+      .foldMap(framework) match {
+      case TargetError(err, la) => (la, err)
+      case _                    => ???
+    }
 }

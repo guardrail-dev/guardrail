@@ -84,19 +84,19 @@ trait CLICommon {
     // code is included into all other build tools.
     val coreArgs = C.parseArgs(newArgs).map(NonEmptyList.fromList(_))
 
+    implicit val logLevel: LogLevel = level
+      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
+      .getOrElse(LogLevels.Warning)
+
     val result = coreArgs
       .foldMap(interpreter)
       .flatMap({ args =>
         guardrailRunner(args.map(language -> _).toMap)
       })
 
-    implicit val logLevel: LogLevel = level
-      .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
-      .getOrElse(LogLevels.Warning)
-
     val fallback = List.empty[Path]
     import CLICommon.unsafePrintHelp
-    val /*(logger,*/ paths /*)*/ = result
+    val paths = result
       .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
@@ -144,7 +144,7 @@ trait CLICommon {
         identity
       )
 
-    // println(logger.show)
+    println(result.logEntries.show)
 
     if (paths.isEmpty) {
       CommandLineResult.failure
