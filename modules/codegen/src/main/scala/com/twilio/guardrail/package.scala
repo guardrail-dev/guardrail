@@ -1,15 +1,12 @@
 package com.twilio
 
-import cats.Id
-import cats.data.{ EitherK, IndexedStateT }
+import cats.data.EitherK
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm
 import com.twilio.guardrail.terms.framework.FrameworkTerm
 import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
-
-import com.twilio.swagger.core.StructuredLogger
 
 package guardrail {
   case class CodegenDefinitions[L <: LA](
@@ -37,6 +34,4 @@ package object guardrail {
   type Parser[L <: LA, T] = EitherK[SwaggerTerm[L, ?], ClientServerTerms[L, ?], T]
 
   type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
-
-  type Logger[T] = IndexedStateT[Id, StructuredLogger, StructuredLogger, T]
 }
