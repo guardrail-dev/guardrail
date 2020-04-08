@@ -46,7 +46,7 @@ case class CoreTermInterp[L <: LA](
         args <- CoreTarget.pure(parsed.filterNot(_.defaults))
         args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
         args <- if (args.exists(_.printHelp))
-          CoreTarget.raiseError[NonEmptyList[Args]](PrintHelp)
+          CoreTarget.raise[NonEmptyList[Args]](PrintHelp)
         else CoreTarget.pure(args)
       } yield args
 
@@ -71,7 +71,7 @@ case class CoreTermInterp[L <: LA](
               .copy(defaults = false)
             def Continue(x: From): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.left(x))
             def Return(x: To): CoreTarget[Either[From, To]]     = CoreTarget.pure(Either.right(x))
-            def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.raiseError(x)
+            def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.raise(x)
             for {
               _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
               step <- pair match {
@@ -132,7 +132,7 @@ case class CoreTermInterp[L <: LA](
               for {
                 _ <- CoreTarget.log.debug(s"Attempting to parse $x as an import directive")
                 customImport <- handleImport(x)
-                  .fold[CoreTarget[L#Import]](err => CoreTarget.raiseError(UnparseableArgument("import", err.toString)), CoreTarget.pure _)
+                  .fold[CoreTarget[L#Import]](err => CoreTarget.raise(UnparseableArgument("import", err.toString)), CoreTarget.pure _)
               } yield customImport
           )
         _ <- CoreTarget.log.debug("Finished processing arguments")

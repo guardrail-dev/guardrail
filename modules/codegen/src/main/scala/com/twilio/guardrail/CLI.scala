@@ -168,7 +168,7 @@ trait CLICommon {
               .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
               .foldMap(scalaInterpreter)
           case other =>
-            CoreTarget.raiseError(UnparseableArgument("language", other))
+            CoreTarget.raise(UnparseableArgument("language", other))
         }).map(_.toList)
     })
 
@@ -183,7 +183,7 @@ trait CLICommon {
               .leftFlatMap(
                 value =>
                   CoreTarget.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> CoreTarget
-                        .raiseError[List[Path]](value)
+                        .raise[List[Path]](value)
               )
               .productL(CoreTarget.pushLogger(StructuredLogger.reset))
         )

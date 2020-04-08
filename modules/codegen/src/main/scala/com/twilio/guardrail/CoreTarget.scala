@@ -49,11 +49,11 @@ object CoreTarget extends LogAbstraction {
   val A                                                     = coreTargetInstances
   def pushLogger(value: StructuredLogger): CoreTarget[Unit] = new CoreTargetValue((), value)
   def pure[T](x: T): CoreTarget[T]                          = x.pure[CoreTarget]
+
+  def raise[T](x: Error): CoreTarget[T] = new CoreTargetError(x, StructuredLogger.Empty)
+
   def fromOption[T](x: Option[T], default: => Error): CoreTarget[T] =
     x.fold[CoreTarget[T]](new CoreTargetError(default, StructuredLogger.Empty))(new CoreTargetValue[T](_, StructuredLogger.Empty))
-  @deprecated("Use raiseError instead", "v0.41.2")
-  def error[T](x: Error): CoreTarget[T]      = new CoreTargetError(x, StructuredLogger.Empty)
-  def raiseError[T](x: Error): CoreTarget[T] = new CoreTargetError(x, StructuredLogger.Empty)
   @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def unsafeExtract[T](x: CoreTarget[T]): T =
     x.valueOr({ err =>
