@@ -10,9 +10,9 @@ object Target {
   def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), value)
   def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
 
-  def raise[T](x: Error): Target[T]           = new TargetError(x, StructuredLogger.Empty)
-  def raiseUserError[T](x: String): Target[T] = raise(UserError(x))
-  def raiseException[T](x: String): Target[T] = raise(RuntimeFailure(x))
+  def raiseError[T](x: Error): Target[T]      = new TargetError(x, StructuredLogger.Empty)
+  def raiseUserError[T](x: String): Target[T] = raiseError(UserError(x))
+  def raiseException[T](x: String): Target[T] = raiseError(RuntimeFailure(x))
   def fromOption[T](x: Option[T], default: => Error): Target[T] =
     x.fold[Target[T]](new TargetError(default, StructuredLogger.Empty))(new TargetValue(_, StructuredLogger.Empty))
 

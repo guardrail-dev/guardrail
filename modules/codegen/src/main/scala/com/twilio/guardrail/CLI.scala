@@ -168,7 +168,7 @@ trait CLICommon {
               .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
               .foldMap(scalaInterpreter)
           case other =>
-            Target.raise(UnparseableArgument("language", other))
+            Target.raiseError(UnparseableArgument("language", other))
         }).map(_.toList)
     })
 
@@ -181,7 +181,8 @@ trait CLICommon {
               .readSwagger(rs)
               .map(_.map(WriteTree.unsafeWriteTree))
               .leftFlatMap(
-                value => Target.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> Target.raise[List[Path]](value)
+                value =>
+                  Target.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> Target.raiseError[List[Path]](value)
               )
               .productL(Target.pushLogger(StructuredLogger.reset))
         )

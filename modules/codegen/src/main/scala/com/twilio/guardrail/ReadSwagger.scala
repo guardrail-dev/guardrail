@@ -22,6 +22,6 @@ object ReadSwagger {
         )
         .flatMap(rs.next(_))
     } else {
-      Target.raise(UserError(s"Spec file ${rs.path} does not exist."))
+      Target.raiseError(UserError(s"Spec file ${rs.path} does not exist."))
     }
 }

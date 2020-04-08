@@ -14,10 +14,10 @@ abstract class AbstractModule[L <: LA] {
           case _                 => (Set(module), Nil)
         })
       } match {
-        case (rest, Nil)          => Target.raise(MissingModule(section))
+        case (rest, Nil)          => Target.raiseError(MissingModule(section))
         case (rest, value :: Nil) => Target.pure((rest, value))
         case (rest, a :: b :: _) =>
-          Target.raise(ModuleConflict(section))
+          Target.raiseError(ModuleConflict(section))
       }
     })
 }
