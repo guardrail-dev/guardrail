@@ -171,7 +171,7 @@ object Common {
 
   def processArgs[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
     args.traverse(
       arg =>
@@ -185,12 +185,12 @@ object Common {
 
   def runM[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {
       validated  <- validateArgs(args.toList)
-      writeTrees <- processArgs(validated)
+      writeTrees <- processArgs[L, F](validated)
     } yield writeTrees
   }
 }
