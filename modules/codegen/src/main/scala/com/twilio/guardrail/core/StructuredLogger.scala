@@ -1,6 +1,6 @@
 package com.twilio.swagger.core
 
-import cats.data.NonEmptyVector
+import cats.data.{ Chain, NonEmptyChain }
 import cats.implicits._
 import cats.{ Monoid, Order, Show }
 
@@ -35,44 +35,45 @@ object LogLevels {
 }
 
 sealed trait StructuredLogEntry
-sealed case class StructuredLogBlock(lines: NonEmptyVector[(LogLevel, String)]) extends StructuredLogEntry
-sealed case class StructuredLoggerPush(next: String)                            extends StructuredLogEntry
-case object StructuredLoggerPop                                                 extends StructuredLogEntry
-case object StructuredLoggerReset                                               extends StructuredLogEntry
+sealed case class StructuredLogBlock(lines: NonEmptyChain[(LogLevel, String)]) extends StructuredLogEntry
+sealed case class StructuredLoggerPush(next: String)                           extends StructuredLogEntry
+case object StructuredLoggerPop                                                extends StructuredLogEntry
+case object StructuredLoggerReset                                              extends StructuredLogEntry
 
-case class StructuredLogger(entries: Vector[StructuredLogEntry])
+case class StructuredLogger(entries: Chain[StructuredLogEntry])
 
 object StructuredLogger extends StructuredLoggerInstances {
-  def push(next: String): StructuredLogger = StructuredLogger(StructuredLoggerPush(next).pure[Vector])
-  def pop: StructuredLogger                = StructuredLogger(StructuredLoggerPop.pure[Vector])
-  def reset: StructuredLogger              = StructuredLogger(StructuredLoggerReset.pure[Vector])
+  def push(next: String): StructuredLogger = StructuredLogger(StructuredLoggerPush(next).pure[Chain])
+  def pop: StructuredLogger                = StructuredLogger(StructuredLoggerPop.pure[Chain])
+  def reset: StructuredLogger              = StructuredLogger(StructuredLoggerReset.pure[Chain])
+  object Empty extends StructuredLogger(Chain.empty)
 }
 sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {
-    def empty                                             = StructuredLogger(Vector.empty)
-    def combine(x: StructuredLogger, y: StructuredLogger) = StructuredLogger(Monoid[Vector[StructuredLogEntry]].combine(x.entries, y.entries))
+    def empty                                             = StructuredLogger(Chain.empty)
+    def combine(x: StructuredLogger, y: StructuredLogger) = StructuredLogger(Monoid[Chain[StructuredLogEntry]].combine(x.entries, y.entries))
   }
   class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
     def show(value: StructuredLogger): String =
       value.entries
-        .foldLeft((Vector.empty[(LogLevel, NonEmptyVector[String], String)], Vector.empty[String]))({
+        .foldLeft((Chain.empty[(LogLevel, NonEmptyChain[String], String)], Chain.empty[String]))({
           case ((acc, newHistory), StructuredLoggerPop) =>
-            (acc, newHistory.take(newHistory.length - 1))
+            (acc, newHistory.initLast.fold[Chain[String]](Chain.empty)(_._1))
           case ((acc, newHistory), StructuredLoggerPush(name)) =>
             (acc, newHistory :+ name)
           case ((acc, newHistory), StructuredLoggerReset) =>
-            (acc, Vector.empty)
+            (acc, Chain.empty)
           case ((acc, newHistory), StructuredLogBlock(lines)) =>
-            val newAcc = acc ++ lines
+            val newAcc: Chain[(LogLevel, NonEmptyChain[String], String)] = acc ++ lines
                     .filter(_._1 >= desiredLevel)
                     .map({
                       case (level, message) =>
-                        (level, NonEmptyVector.fromVector(newHistory).getOrElse(NonEmptyVector("<root>", Vector.empty)), message)
+                        (level, NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>")), message)
                     })
             (newAcc, newHistory)
         })
         ._1
-        .foldLeft((Vector.empty[String], Vector.empty[String]))({
+        .foldLeft((Chain.empty[String], Chain.empty[String]))({
           case ((lastHistory, messages), (level, history, message)) =>
             val showFullHistory = true
             def makePrefix(history: Vector[String]): String =
@@ -85,26 +86,28 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
                    }) + " " + b
               }
 
-            val commonPrefixLength = history.length - lastHistory.zip(history.toList).takeWhile(((_: String) == (_: String)).tupled).length
+            val historyVec         = history.toChain.toVector
+            val commonPrefixLength = historyVec.length - lastHistory.toVector.zip(historyVec).takeWhile(((_: String) == (_: String)).tupled).length
             val histories = if (!showFullHistory) {
-              (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(history.toVector.take(i))}")
+              (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(historyVec.take(i))}")
             } else Nil
-            val prefix    = s"${level.show} ${makePrefix(history.toVector)}: "
+            val prefix    = s"${level.show} ${makePrefix(historyVec)}: "
             val formatted = (message.linesIterator.take(1).map(prefix + _) ++ message.linesIterator.drop(1).map((" " * prefix.length) + _)).mkString("\n")
-            (history.toVector, (messages ++ histories) ++ Vector(formatted))
+            (history.toChain, (messages ++ Chain.fromSeq(histories)) ++ Chain(formatted))
         })
         ._2
+        .toVector
         .mkString("\n")
   }
 
   def debug(message: String): StructuredLogger =
-    StructuredLogger(Vector(StructuredLogBlock(NonEmptyVector.one((LogLevels.Debug, message)))))
+    StructuredLogger(Chain(StructuredLogBlock(NonEmptyChain.one((LogLevels.Debug, message)))))
   def info(message: String): StructuredLogger =
-    StructuredLogger(Vector(StructuredLogBlock(NonEmptyVector.one((LogLevels.Info, message)))))
+    StructuredLogger(Chain(StructuredLogBlock(NonEmptyChain.one((LogLevels.Info, message)))))
   def warning(message: String): StructuredLogger =
-    StructuredLogger(Vector(StructuredLogBlock(NonEmptyVector.one((LogLevels.Warning, message)))))
+    StructuredLogger(Chain(StructuredLogBlock(NonEmptyChain.one((LogLevels.Warning, message)))))
   def error(message: String): StructuredLogger =
-    StructuredLogger(Vector(StructuredLogBlock(NonEmptyVector.one((LogLevels.Error, message)))))
+    StructuredLogger(Chain(StructuredLogBlock(NonEmptyChain.one((LogLevels.Error, message)))))
 }
 
 trait StructuredLoggerLowPriority { self: StructuredLoggerInstances =>

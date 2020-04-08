@@ -4,6 +4,7 @@ package generators
 import com.twilio.guardrail.languages.ScalaLanguage
 import cats.data.NonEmptyList
 import cats.arrow.FunctionK
+import cats.implicits._
 import com.twilio.guardrail.circe.CirceVersion
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {

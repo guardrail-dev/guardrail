@@ -1,8 +1,7 @@
 package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
-import cats.instances.list._
-import cats.syntax.traverse._
+import cats.implicits._
 import cats.~>
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }

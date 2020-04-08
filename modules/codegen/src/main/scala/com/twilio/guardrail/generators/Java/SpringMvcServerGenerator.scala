@@ -2,9 +2,7 @@ package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
 import cats.~>
-import cats.instances.list._
-import cats.syntax.flatMap._
-import cats.syntax.traverse._
+import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
