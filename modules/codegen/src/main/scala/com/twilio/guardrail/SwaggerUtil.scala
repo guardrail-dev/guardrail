@@ -576,8 +576,8 @@ object SwaggerUtil {
           .parse(path.unwrapTracker)
           .done match {
           case ParseResult.Done(input, result)         => Target.pure(result)
-          case ParseResult.Fail(input, stack, message) => Target.raiseError(s"Failed to parse URL: ${message} (unparsed: ${input}) (${path.showHistory})")
-          case ParseResult.Partial(k)                  => Target.raiseError(s"Unexpected parser state attempting to parse ${path} (${path.showHistory})")
+          case ParseResult.Fail(input, stack, message) => Target.raiseUserError(s"Failed to parse URL: ${message} (unparsed: ${input}) (${path.showHistory})")
+          case ParseResult.Partial(k)                  => Target.raiseUserError(s"Unexpected parser state attempting to parse ${path} (${path.showHistory})")
         }
     }
 

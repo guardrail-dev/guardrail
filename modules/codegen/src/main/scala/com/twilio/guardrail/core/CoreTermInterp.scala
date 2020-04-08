@@ -12,29 +12,29 @@ import scala.util.control.NonFatal
 
 case class CoreTermInterp[L <: LA](
     defaultFramework: String,
-    handleModules: NonEmptyList[String] => CoreTarget[CodegenApplication[L, ?] ~> Target],
+    handleModules: NonEmptyList[String] => Target[CodegenApplication[L, ?] ~> Target],
     frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
     handleImport: String => Either[Error, L#Import]
-) extends (CoreTerm[L, ?] ~> CoreTarget) {
-  def apply[T](x: CoreTerm[L, T]): CoreTarget[T] = x match {
+) extends (CoreTerm[L, ?] ~> Target) {
+  def apply[T](x: CoreTerm[L, T]): Target[T] = x match {
     case GetDefaultFramework() =>
-      CoreTarget.log.function("getDefaultFramework") {
-        CoreTarget.log.debug(s"Providing ${defaultFramework}") >> CoreTarget.pure(Some(defaultFramework))
+      Target.log.function("getDefaultFramework") {
+        Target.log.debug(s"Providing ${defaultFramework}") >> Target.pure(Some(defaultFramework))
       }
 
     case ExtractGenerator(context, vendorDefaultFramework) =>
-      CoreTarget.log.function("extractGenerator") {
+      Target.log.function("extractGenerator") {
         for {
-          _ <- CoreTarget.log.debug("Looking up framework")
+          _ <- Target.log.debug("Looking up framework")
           framework <- NonEmptyList
             .fromList(context.modules)
             .toRight(context.framework)
             .bitraverse(
               ctxFramework =>
                 for {
-                  frameworkName <- CoreTarget.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
-                  framework     <- CoreTarget.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
-                  _             <- CoreTarget.log.debug(s"Found: $framework")
+                  frameworkName <- Target.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
+                  framework     <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
+                  _             <- Target.log.debug(s"Found: $framework")
                 } yield framework,
               handleModules
             )
@@ -43,11 +43,11 @@ case class CoreTermInterp[L <: LA](
 
     case ValidateArgs(parsed) =>
       for {
-        args <- CoreTarget.pure(parsed.filterNot(_.defaults))
-        args <- CoreTarget.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
+        args <- Target.pure(parsed.filterNot(_.defaults))
+        args <- Target.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
         args <- if (args.exists(_.printHelp))
-          CoreTarget.raiseError[NonEmptyList[Args]](PrintHelp)
-        else CoreTarget.pure(args)
+          Target.raiseError[NonEmptyList[Args]](PrintHelp)
+        else Target.pure(args)
       } yield args
 
     case ParseArgs(args) => {
@@ -59,9 +59,9 @@ case class CoreTermInterp[L <: LA](
       type From = (List[Args], List[String])
       type To   = List[Args]
       val start: From = (List.empty[Args], args.toList)
-      import CoreTarget.log.debug
-      CoreTarget.log.function("parseArgs") {
-        FlatMap[CoreTarget].tailRecM[From, To](start)({
+      import Target.log.debug
+      Target.log.function("parseArgs") {
+        FlatMap[Target].tailRecM[From, To](start)({
           case pair @ (sofar, rest) =>
             val empty = sofar
               .filter(_.defaults)
@@ -69,9 +69,9 @@ case class CoreTermInterp[L <: LA](
               .headOption
               .getOrElse(defaultArgs)
               .copy(defaults = false)
-            def Continue(x: From): CoreTarget[Either[From, To]] = CoreTarget.pure(Either.left(x))
-            def Return(x: To): CoreTarget[Either[From, To]]     = CoreTarget.pure(Either.right(x))
-            def Bail(x: Error): CoreTarget[Either[From, To]]    = CoreTarget.raiseError(x)
+            def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
+            def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
+            def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
             for {
               _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
               step <- pair match {
@@ -118,11 +118,11 @@ case class CoreTermInterp[L <: LA](
         case x: Parsed.Error      => Left(x)
         case Parsed.Success(tree) => Right(tree)
       }
-      CoreTarget.log.function("processArgSet")(for {
-        _          <- CoreTarget.log.debug("Processing arguments")
-        specPath   <- CoreTarget.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
-        outputPath <- CoreTarget.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
-        pkgName    <- CoreTarget.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
+      Target.log.function("processArgSet")(for {
+        _          <- Target.log.debug("Processing arguments")
+        specPath   <- Target.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
+        outputPath <- Target.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
+        pkgName    <- Target.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
         kind       = args.kind
         dtoPackage = args.dtoPackage
         context    = args.context
@@ -130,12 +130,12 @@ case class CoreTermInterp[L <: LA](
           .traverse(
             x =>
               for {
-                _ <- CoreTarget.log.debug(s"Attempting to parse $x as an import directive")
+                _ <- Target.log.debug(s"Attempting to parse $x as an import directive")
                 customImport <- handleImport(x)
-                  .fold[CoreTarget[L#Import]](err => CoreTarget.raiseError(UnparseableArgument("import", err.toString)), CoreTarget.pure _)
+                  .fold[Target[L#Import]](err => Target.raiseError(UnparseableArgument("import", err.toString)), Target.pure _)
               } yield customImport
           )
-        _ <- CoreTarget.log.debug("Finished processing arguments")
+        _ <- Target.log.debug("Finished processing arguments")
       } yield {
         ReadSwagger(
           Paths.get(specPath), {

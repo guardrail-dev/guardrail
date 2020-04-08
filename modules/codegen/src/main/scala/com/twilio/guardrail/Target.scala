@@ -6,16 +6,16 @@ import cats.Traverse
 import cats.Eval
 import cats.implicits._
 
-object Target extends LogAbstraction {
-  type F[A] = Target[A]
+object Target {
   def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), value)
   def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
-  @deprecated("Use raiseError instead", "v0.41.2")
-  def error[T](x: String): Target[T]          = raiseError(x)
-  def raiseError[T](x: String): Target[T]     = new TargetError(UserError(x), StructuredLogger.Empty)
-  def raiseException[T](x: String): Target[T] = new TargetError(RuntimeFailure(x), StructuredLogger.Empty)
-  def fromOption[T](x: Option[T], default: => String): Target[T] =
-    x.fold[Target[T]](new TargetError(UserError(default), StructuredLogger.Empty))(new TargetValue(_, StructuredLogger.Empty))
+
+  def raiseError[T](x: Error): Target[T]      = new TargetError(x, StructuredLogger.Empty)
+  def raiseUserError[T](x: String): Target[T] = raiseError(UserError(x))
+  def raiseException[T](x: String): Target[T] = raiseError(RuntimeFailure(x))
+  def fromOption[T](x: Option[T], default: => Error): Target[T] =
+    x.fold[Target[T]](new TargetError(default, StructuredLogger.Empty))(new TargetValue(_, StructuredLogger.Empty))
+
   @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def unsafeExtract[T](x: Target[T]): T =
     x.valueOr({ err =>
@@ -59,33 +59,44 @@ object Target extends LogAbstraction {
       case TargetError(e, la) => G.pure[Target[B]](new TargetError(e, la))
     }
   }
-  val A = targetInstances
+
+  object log {
+    def push(name: String): Target[Unit] = pushLogger(StructuredLogger.push(name))
+    def pop: Target[Unit]                = pushLogger(StructuredLogger.pop)
+    def function[A](name: String): Target[A] => Target[A] = { func =>
+      (push(name) *> func) <* pop
+    }
+    def debug(message: String): Target[Unit]   = pushLogger(StructuredLogger.debug(message))
+    def info(message: String): Target[Unit]    = pushLogger(StructuredLogger.info(message))
+    def warning(message: String): Target[Unit] = pushLogger(StructuredLogger.warning(message))
+    def error(message: String): Target[Unit]   = pushLogger(StructuredLogger.error(message))
+  }
 }
 
 sealed abstract class Target[A](val logEntries: StructuredLogger) {
   def valueOr[AA >: A](fallback: Error => AA): AA
-  def toCoreTarget: CoreTarget[A]
   def recover[AA >: A](f: Error => AA): Target[AA]
   def fold[B](fail: Error => B, pass: A => B): B
   def prependLogger(lastLogs: StructuredLogger): Target[A]
+  def leftFlatMap[AA >: A](f: Error => Target[AA]): Target[AA]
 }
 object TargetValue {
   def unapply[A](x: TargetValue[A]): Option[(A, StructuredLogger)] = Some((x.value, x.logEntries))
 }
 class TargetValue[A](val value: A, logEntries: StructuredLogger) extends Target[A](logEntries) {
-  def valueOr[AA >: A](fallback: Error => AA): AA          = value
-  def toCoreTarget: CoreTarget[A]                          = new CoreTargetValue(value, logEntries)
-  def recover[AA >: A](f: Error => AA): Target[AA]         = new TargetValue(value, logEntries)
-  def fold[B](fail: Error => B, pass: A => B): B           = pass(value)
-  def prependLogger(lastLogs: StructuredLogger): Target[A] = new TargetValue(value, lastLogs |+| logEntries)
+  def valueOr[AA >: A](fallback: Error => AA): AA              = value
+  def recover[AA >: A](f: Error => AA): Target[AA]             = new TargetValue(value, logEntries)
+  def fold[B](fail: Error => B, pass: A => B): B               = pass(value)
+  def prependLogger(lastLogs: StructuredLogger): Target[A]     = new TargetValue(value, lastLogs |+| logEntries)
+  def leftFlatMap[AA >: A](f: Error => Target[AA]): Target[AA] = new TargetValue(value, logEntries)
 }
 object TargetError {
   def unapply[A](x: TargetError[A]): Option[(Error, StructuredLogger)] = Some((x.error, x.logEntries))
 }
 class TargetError[A](val error: Error, logEntries: StructuredLogger) extends Target[A](logEntries) {
-  def valueOr[AA >: A](fallback: Error => AA): AA          = fallback(error)
-  def toCoreTarget: CoreTarget[A]                          = new CoreTargetError(error, logEntries)
-  def recover[AA >: A](f: Error => AA): Target[AA]         = new TargetValue(f(error), logEntries)
-  def fold[B](fail: Error => B, pass: A => B): B           = fail(error)
-  def prependLogger(lastLogs: StructuredLogger): Target[A] = new TargetError(error, lastLogs |+| logEntries)
+  def valueOr[AA >: A](fallback: Error => AA): AA              = fallback(error)
+  def recover[AA >: A](f: Error => AA): Target[AA]             = new TargetValue(f(error), logEntries)
+  def fold[B](fail: Error => B, pass: A => B): B               = fail(error)
+  def prependLogger(lastLogs: StructuredLogger): Target[A]     = new TargetError(error, lastLogs |+| logEntries)
+  def leftFlatMap[AA >: A](f: Error => Target[AA]): Target[AA] = f(error).prependLogger(logEntries)
 }

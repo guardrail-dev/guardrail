@@ -102,7 +102,7 @@ object Java {
     Target.log.function(s"${log}: ${s}") {
       Try(parser(s)) match {
         case Success(value) => Target.pure(value)
-        case Failure(t)     => Target.raiseError(formatException(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}")(t))
+        case Failure(t)     => Target.raiseUserError(formatException(s"Unable to parse '${s}' to a ${cls.runtimeClass.getName}")(t))
       }
     }
 
@@ -294,13 +294,13 @@ object Java {
   def loadSupportDefinitionFromString(className: String, source: String): Target[SupportDefinition[JavaLanguage]] =
     Try(StaticJavaParser.parse(source)) match {
       case Failure(t) =>
-        Target.raiseError[SupportDefinition[JavaLanguage]](s"Failed to parse class ${className} from string: $t")
+        Target.raiseUserError[SupportDefinition[JavaLanguage]](s"Failed to parse class ${className} from string: $t")
       case Success(cu) =>
         cu.getClassByName(className)
           .asScala
           .orElse(cu.getInterfaceByName(className).asScala)
           .fold(
-            Target.raiseError[SupportDefinition[JavaLanguage]](s"Unable to find class ${className} in parsed string")
+            Target.raiseUserError[SupportDefinition[JavaLanguage]](s"Unable to find class ${className} in parsed string")
           )(
             clsDef =>
               Target.pure(

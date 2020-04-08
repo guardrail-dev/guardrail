@@ -125,7 +125,7 @@ object AkkaHttpServerGenerator {
                 TracingLabel(operation)
                   .map(Lit.String(_))
                   .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
-                s"Missing client name (${operation.showHistory})"
+                UserError(s"Missing client name (${operation.showHistory})")
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -205,7 +205,7 @@ object AkkaHttpServerGenerator {
       case HttpMethod.POST    => Target.pure(q"post")
       case HttpMethod.PUT     => Target.pure(q"put")
       case HttpMethod.OPTIONS => Target.pure(q"options")
-      case other              => Target.raiseError(s"Unknown method: ${other}")
+      case other              => Target.raiseUserError(s"Unknown method: ${other}")
     }
 
     def pathStrToAkka(
@@ -294,8 +294,8 @@ object AkkaHttpServerGenerator {
               """
               )
         },
-        arg => tpe => _ => Target.raiseError(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" =>
             _ => Target.pure(q"optionalHeaderValueByName(${arg})")
@@ -633,11 +633,11 @@ object AkkaHttpServerGenerator {
                     (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
                   }
 
-                  case ApplicationJson => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/json"))
+                  case ApplicationJson => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json"))
 
-                  case BinaryContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
+                  case BinaryContent(name) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name"))
 
-                  case TextContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
+                  case TextContent(name) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name"))
                 })
                 .traverse(_.flatSequence)
 
@@ -803,7 +803,7 @@ object AkkaHttpServerGenerator {
 
     def combineRouteTerms(terms: List[Term]): Target[Term] =
       Target.log.function(s"combineRouteTerms(<${terms.length} routes>)")(for {
-        routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
+        routes <- Target.fromOption(NonEmptyList.fromList(terms), UserError("Generated no routes, no source to generate"))
         _      <- routes.traverse(route => Target.log.debug(route.toString))
       } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" })
 

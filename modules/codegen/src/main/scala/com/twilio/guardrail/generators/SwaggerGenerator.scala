@@ -68,7 +68,7 @@ object SwaggerGenerator {
                               commonRequestBodies
                                 .get(name)
                                 .fold[Target[Tracker[Operation]]](
-                                  Target.raiseError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
+                                  Target.raiseUserError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
                                 )({ commonRequestBody =>
                                   Target.pure(
                                     operation.map(
@@ -80,7 +80,7 @@ object SwaggerGenerator {
                                   )
                                 })
                             case (rbref, _) =>
-                              Target.raiseError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
+                              Target.raiseUserError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
                           }
                       )
                       .getOrElse(Target.pure(operation))
@@ -93,26 +93,26 @@ object SwaggerGenerator {
 
       case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
         for {
-          name <- Target.fromOption(Option(securityScheme.getName), s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property")
-          in   <- Target.fromOption(Option(securityScheme.getIn), s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property")
+          name <- Target.fromOption(Option(securityScheme.getName), UserError(s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property"))
+          in   <- Target.fromOption(Option(securityScheme.getIn), UserError(s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property"))
         } yield ApiKeySecurityScheme[L](name, in, tpe)
 
       case ExtractHttpSecurityScheme(schemeName, securityScheme, tpe) =>
         for {
-          authScheme <- Target.fromOption(Option(securityScheme.getScheme), s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme")
+          authScheme <- Target.fromOption(Option(securityScheme.getScheme), UserError(s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme"))
         } yield HttpSecurityScheme[L](authScheme, tpe)
 
       case ExtractOpenIdConnectSecurityScheme(schemeName, securityScheme, tpe) =>
         for {
           url <- Target.fromOption(
             Option(securityScheme.getOpenIdConnectUrl).flatMap(url => Try(new URI(url)).toOption),
-            s"Security scheme ${schemeName} has a missing or invalid OpenID Connect URL"
+            UserError(s"Security scheme ${schemeName} has a missing or invalid OpenID Connect URL")
           )
         } yield OpenIdConnectSecurityScheme[L](url, tpe)
 
       case ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe) =>
         for {
-          flows <- Target.fromOption(Option(securityScheme.getFlows), s"Security scheme ${schemeName} has no OAuth2 flows")
+          flows <- Target.fromOption(Option(securityScheme.getFlows), UserError(s"Security scheme ${schemeName} has no OAuth2 flows"))
         } yield OAuth2SecurityScheme[L](flows, tpe)
 
       case GetClassName(operation, vendorPrefixes) =>
@@ -138,7 +138,7 @@ object SwaggerGenerator {
         } yield className)
 
       case GetParameterName(parameter) =>
-        Target.fromOption(Option(parameter.getName()), s"Parameter missing 'name': ${parameter}")
+        Target.fromOption(Option(parameter.getName()), UserError(s"Parameter missing 'name': ${parameter}"))
 
       case GetBodyParameterSchema(parameter) =>
         parameter
@@ -170,7 +170,7 @@ object SwaggerGenerator {
           .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
 
       case FallbackParameterHandler(parameter) =>
-        Target.raiseError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
+        Target.raiseUserError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
 
       case GetOperationId(operation) =>
         operation
@@ -202,17 +202,17 @@ object SwaggerGenerator {
       case FallbackPropertyTypeHandler(prop) =>
         val determinedType = prop.downField("type", _.getType()).fold("No type definition")(s => s"type: ${s.unwrapTracker}")
         val className      = prop.unwrapTracker.getClass.getName
-        Target.raiseError(
+        Target.raiseUserError(
           s"""|Unknown type for the following structure (${determinedType}, class: ${className}, ${prop.showHistory}):
               |  ${prop.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n  ")}
               |""".stripMargin
         )
 
       case ResolveType(name, protocolElems) =>
-        Target.fromOption(protocolElems.find(_.name == name), s"Unable to resolve ${name}")
+        Target.fromOption(protocolElems.find(_.name == name), UserError(s"Unable to resolve ${name}"))
 
       case FallbackResolveElems(lazyElems) =>
-        Target.raiseError(s"Unable to resolve: ${lazyElems.map(_.name)}")
+        Target.raiseUserError(s"Unable to resolve: ${lazyElems.map(_.name)}")
 
       case LogPush(name) =>
         Target.log.push(name)

@@ -51,8 +51,8 @@ object CLICommon {
 }
 
 trait CLICommon {
-  def scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> CoreTarget
-  def javaInterpreter: CoreTerm[JavaLanguage, ?] ~> CoreTarget
+  def scalaInterpreter: CoreTerm[ScalaLanguage, ?] ~> Target
+  def javaInterpreter: CoreTerm[JavaLanguage, ?] ~> Target
 
   def processArgs(args: Array[String]): CommandLineResult = {
     val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
@@ -69,7 +69,7 @@ trait CLICommon {
     case "scala" => run("scala", _)(scalaInterpreter)
   }
 
-  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> CoreTarget): CommandLineResult = {
+  def run[L <: LA](language: String, args: Array[String])(interpreter: CoreTerm[L, ?] ~> Target): CommandLineResult = {
     val C = CoreTerms.coreTerm[L, CoreTerm[L, ?]]
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
@@ -155,8 +155,8 @@ trait CLICommon {
 
   def runLanguages(
       tasks: Map[String, NonEmptyList[Args]]
-  ): CoreTarget[List[ReadSwagger[Target[List[WriteTree]]]]] =
-    tasks.toList.flatTraverse[CoreTarget, ReadSwagger[Target[List[WriteTree]]]]({
+  ): Target[List[ReadSwagger[Target[List[WriteTree]]]]] =
+    tasks.toList.flatTraverse[Target, ReadSwagger[Target[List[WriteTree]]]]({
       case (language, args) =>
         (language match {
           case "java" =>
@@ -168,11 +168,11 @@ trait CLICommon {
               .runM[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
               .foldMap(scalaInterpreter)
           case other =>
-            CoreTarget.raiseError(UnparseableArgument("language", other))
+            Target.raiseError(UnparseableArgument("language", other))
         }).map(_.toList)
     })
 
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => CoreTarget[List[java.nio.file.Path]] = { tasks =>
+  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
     runLanguages(tasks)
       .flatMap(
         _.flatTraverse(
@@ -182,10 +182,9 @@ trait CLICommon {
               .map(_.map(WriteTree.unsafeWriteTree))
               .leftFlatMap(
                 value =>
-                  CoreTarget.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> CoreTarget
-                        .raiseError[List[Path]](value)
+                  Target.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> Target.raiseError[List[Path]](value)
               )
-              .productL(CoreTarget.pushLogger(StructuredLogger.reset))
+              .productL(Target.pushLogger(StructuredLogger.reset))
         )
       )
       .map(_.distinct)

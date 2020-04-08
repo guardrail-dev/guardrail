@@ -430,7 +430,7 @@ object AsyncHttpClientClientGenerator {
           pathExpr <- pathExprNode match {
             case e: Expression => Target.pure(e)
             case x =>
-              Target.raiseError[Expression](s"BUG: Returned node from generateUrlPathParams() was a ${x.getClass.getName}, not an Expression as expected")
+              Target.raiseUserError[Expression](s"BUG: Returned node from generateUrlPathParams() was a ${x.getClass.getName}, not an Expression as expected")
           }
         } yield {
           val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, methodName)
@@ -824,7 +824,7 @@ object AsyncHttpClientClientGenerator {
 
       case GetImports(tracing) =>
         if (tracing) {
-          Target.raiseError("Tracing is not yet supported by this framework")
+          Target.raiseUserError("Tracing is not yet supported by this framework")
         } else {
           (List(
             "java.net.URI",

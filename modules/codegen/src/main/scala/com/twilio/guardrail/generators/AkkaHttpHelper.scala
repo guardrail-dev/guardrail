@@ -20,7 +20,7 @@ object AkkaHttpHelper {
         case contentType     => Target.log.warning(s"Unable to generate decoder for ${contentType}").map(_ => List.empty)
       })
       unmarshaller <- unmarshallers match {
-        case Nil      => Target.raiseError(s"No decoders available")
+        case Nil      => Target.raiseUserError(s"No decoders available")
         case x :: Nil => Target.pure(x)
         case xs       => Target.pure(q"Unmarshaller.firstOf(..${xs})")
       }

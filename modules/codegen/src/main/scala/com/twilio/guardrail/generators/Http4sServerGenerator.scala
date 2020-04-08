@@ -41,7 +41,7 @@ object Http4sServerGenerator {
                 TracingLabel(operation)
                   .map(Lit.String(_))
                   .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
-                s"Missing client name (${operation.showHistory})"
+                UserError(s"Missing client name (${operation.showHistory})")
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -120,7 +120,7 @@ object Http4sServerGenerator {
       case HttpMethod.PATCH  => Target.pure(Term.Name("PATCH"))
       case HttpMethod.POST   => Target.pure(Term.Name("POST"))
       case HttpMethod.PUT    => Target.pure(Term.Name("PUT"))
-      case other             => Target.raiseError(s"Unknown method: ${other}")
+      case other             => Target.raiseUserError(s"Unknown method: ${other}")
     }
 
     def pathStrToHttp4s(basePath: Option[String], path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
@@ -184,8 +184,8 @@ object Http4sServerGenerator {
               )
             )
         },
-        arg => _ => Target.raiseError(s"Unsupported Iterable[${arg}"),
-        arg => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}"),
+        arg => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" => Target.pure(Param(None, None, q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)"))
           case tpe =>
@@ -599,7 +599,7 @@ object Http4sServerGenerator {
     def combineRouteTerms(terms: List[Case]): Target[Term] =
       Target.log.function("combineRouteTerms")(for {
         _      <- Target.log.debug(s"Args: <${terms.length} routes>")
-        routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
+        routes <- Target.fromOption(NonEmptyList.fromList(terms), UserError("Generated no routes, no source to generate"))
         _      <- routes.traverse(route => Target.log.debug(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList))
 
@@ -727,7 +727,7 @@ object Http4sServerGenerator {
             val newName = Term.Name(s"_${param.paramName.value}")
             Target.log.debug(s"Escaping param ${param.argName.value}").flatMap { _ =>
               if (newName.syntax == newName.value) Target.pure(param.withParamName(newName))
-              else Target.raiseError(s"Can't escape parameter with name ${param.argName.value}.")
+              else Target.raiseUserError(s"Can't escape parameter with name ${param.argName.value}.")
             }
           }
         } yield res

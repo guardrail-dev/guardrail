@@ -31,7 +31,7 @@ object JavaGenerator {
   def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
     case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
     case None                   => Target.pure(new MethodCallExpr(name))
-    case other                  => Target.raiseError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+    case other                  => Target.raiseUserError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
   }
 
   private val formatter = ToolFactory.createCodeFormatter(
@@ -52,11 +52,11 @@ object JavaGenerator {
     val sourceStr = source.toString
     Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
       .fold(
-        Target.raiseError[Array[Byte]](s"Failed to format class '$className'")
+        Target.raiseUserError[Array[Byte]](s"Failed to format class '$className'")
       )({ textEdit =>
         val doc = new Document(sourceStr)
         Try(textEdit.apply(doc)).fold(
-          t => Target.raiseError[Array[Byte]](s"Failed to format class '$className': $t"),
+          t => Target.raiseUserError[Array[Byte]](s"Failed to format class '$className': $t"),
           _ => Target.pure(doc.get.getBytes(StandardCharsets.UTF_8))
         )
       })
@@ -77,7 +77,7 @@ object JavaGenerator {
         cu.addType(td)
         prettyPrintSource(cu).map(bytes => WriteTree(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), bytes))
       case other =>
-        Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
+        Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
   def writeServerTree(
@@ -95,7 +95,7 @@ object JavaGenerator {
         cu.addType(td)
         prettyPrintSource(cu).map(bytes => WriteTree(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), bytes))
       case other =>
-        Target.raiseError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
+        Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
   object JavaInterp extends (ScalaTerm[JavaLanguage, ?] ~> Target) {
@@ -135,7 +135,7 @@ object JavaGenerator {
         customTpe
           .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.List").map(identity))({
             case t: ClassOrInterfaceType => Target.pure(t)
-            case x                       => Target.raiseError(s"Unsure how to map $x")
+            case x                       => Target.raiseUserError(s"Unsure how to map $x")
           })
           .map(_.setTypeArguments(new NodeList(value)))
       case LiftVectorTerm(value) => buildMethodCall("java.util.Collections.singletonList", Some(value))
@@ -143,7 +143,7 @@ object JavaGenerator {
         customTpe
           .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.Map").map(identity))({
             case t: ClassOrInterfaceType => Target.pure(t)
-            case x                       => Target.raiseError(s"Unsure how to map $x")
+            case x                       => Target.raiseUserError(s"Unsure how to map $x")
           })
           .map(_.setTypeArguments(STRING_TYPE, value))
       case FullyQualifyPackageName(rawPkgName) => Target.pure(rawPkgName)
@@ -153,9 +153,9 @@ object JavaGenerator {
           case s: StringLiteralExpr =>
             values
               .find(_._1 == s.getValue)
-              .fold(Target.raiseError[Name](s"Enumeration ${tpe} is not defined for default value ${s.getValue}"))(value => Target.pure(value._3))
+              .fold(Target.raiseUserError[Name](s"Enumeration ${tpe} is not defined for default value ${s.getValue}"))(value => Target.pure(value._3))
           case _ =>
-            Target.raiseError(s"Enumeration ${tpe} somehow has a default value that isn't a string")
+            Target.raiseUserError(s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
       case FormatEnumName(enumValue) => Target.pure(enumValue.toSnakeCase.toUpperCase(Locale.US))
@@ -164,17 +164,17 @@ object JavaGenerator {
           case SwaggerUtil.Deferred(tpe) =>
             Target.pure(SwaggerUtil.DeferredArray(tpe, containerTpe))
           case SwaggerUtil.DeferredArray(_, _) =>
-            Target.raiseError("FIXME: Got an Array of Arrays, currently not supported")
+            Target.raiseUserError("FIXME: Got an Array of Arrays, currently not supported")
           case SwaggerUtil.DeferredMap(_, _) =>
-            Target.raiseError("FIXME: Got an Array of Maps, currently not supported")
+            Target.raiseUserError("FIXME: Got an Array of Maps, currently not supported")
         }
       case EmbedMap(tpe, containerTpe) =>
         tpe match {
           case SwaggerUtil.Deferred(inner) => Target.pure(SwaggerUtil.DeferredMap(inner, containerTpe))
           case SwaggerUtil.DeferredMap(_, _) =>
-            Target.raiseError("FIXME: Got a map of maps, currently not supported")
+            Target.raiseUserError("FIXME: Got a map of maps, currently not supported")
           case SwaggerUtil.DeferredArray(_, _) =>
-            Target.raiseError("FIXME: Got a map of arrays, currently not supported")
+            Target.raiseUserError("FIXME: Got a map of arrays, currently not supported")
         }
       case ParseType(tpe) =>
         safeParseType(tpe)
@@ -188,10 +188,10 @@ object JavaGenerator {
         Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
 
       case PureTermName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeIdentifier).map(safeParseName).getOrElse(Target.raiseError("A structure's name is empty"))
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeIdentifier).map(safeParseName).getOrElse(Target.raiseUserError("A structure's name is empty"))
 
       case PureTypeName(tpe) =>
-        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseTypeName).getOrElse(Target.raiseError("A structure's name is empty"))
+        Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseTypeName).getOrElse(Target.raiseUserError("A structure's name is empty"))
 
       case PureMethodParameter(nameStr, tpe, default) =>
         safeParseSimpleName(nameStr.asString.escapeIdentifier).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
@@ -234,7 +234,7 @@ object JavaGenerator {
           )
         )
 
-      case BytesType()               => Target.raiseError("format: bytes not supported for Java")
+      case BytesType()               => Target.raiseUserError("format: bytes not supported for Java")
       case DateType()                => safeParseType("java.time.LocalDate")
       case DateTimeType()            => safeParseType("java.time.OffsetDateTime")
       case UUIDType()                => safeParseType("java.util.UUID")
@@ -247,7 +247,7 @@ object JavaGenerator {
       case IntegerType(format)       => safeParseType("java.math.BigInteger")
       case BooleanType(format)       => safeParseType("Boolean")
       case ArrayType(format)         => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList[Type](STRING_TYPE)))
-      case FallbackType(tpe, format) => Target.fromOption(tpe, "Missing type").flatMap(safeParseType)
+      case FallbackType(tpe, format) => Target.fromOption(tpe, UserError("Missing type")).flatMap(safeParseType)
 
       case WidenTypeName(tpe)           => safeParseType(tpe.asString)
       case WidenTermSelect(value)       => Target.pure(value)
@@ -260,7 +260,7 @@ object JavaGenerator {
             if (va.toString() == vb.toString()) {
               Target.pure(Some(va))
             } else {
-              Target.raiseError(
+              Target.raiseUserError(
                 s"There is a mismatch at ${history} between default values ${va} and ${vb}. This parameter is defined at multiple places and those definitions are incompatible with each other. They must have the same name, type and default value. (${history})"
               )
             }
@@ -270,7 +270,7 @@ object JavaGenerator {
         if (a == b) {
           Target.pure(a)
         } else {
-          Target.raiseError(
+          Target.raiseUserError(
             s"There is a mismatch at ${history} between types ${a} and ${b}. Conflicting definitions between types and inherited types are not supported."
           )
         }
@@ -279,7 +279,7 @@ object JavaGenerator {
         Target.pure(None)
 
       case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
-        Target.raiseError("Java does not support Framework Implicits")
+        Target.raiseUserError("Java does not support Framework Implicits")
 
       case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
         for {
@@ -390,7 +390,7 @@ object JavaGenerator {
         } yield handlerTree +: serverTrees
 
       case WrapToObject(_, _, _) =>
-        Target.raiseError("Currently not supported for Java")
+        Target.raiseUserError("Currently not supported for Java")
     }
   }
 }

@@ -85,7 +85,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     )
 
     import com.twilio.guardrail.generators.{ AkkaHttp, ScalaModule }
-    val result: List[WriteTree] = CoreTarget
+    val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)
@@ -147,7 +147,7 @@ class WritePackageSpec extends FunSuite with Matchers {
     )
 
     import com.twilio.guardrail.generators.{ AkkaHttp, ScalaModule }
-    val result: List[WriteTree] = CoreTarget
+    val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, CoreTerm[ScalaLanguage, ?]](args)

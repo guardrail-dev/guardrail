@@ -110,7 +110,7 @@ object CirceProtocolGenerator {
             Target.pure(extractedProps)
           })
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-            comp => Target.raiseError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+            comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
           )
           .getOrElse(Target.pure(List.empty))
           .map(_.toList)
@@ -294,10 +294,10 @@ object CirceProtocolGenerator {
                 .traverse({
                   case (param, idx) =>
                     for {
-                      rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
+                      rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
                       tpe <- rawTpe match {
                         case tpe: Type => Target.pure(tpe)
-                        case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
+                        case x         => Target.raiseUserError(s"Unsure how to map ${x.structure}, please report this bug!")
                       }
                     } yield {
                       val term = Term.Name(s"v$idx")
@@ -355,16 +355,16 @@ object CirceProtocolGenerator {
           result <- arr match {
             case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
             case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               Target.fromOption(
                 lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"Vector")}[${tpe}]"),
-                s"Unresolved reference ${tpeName}"
+                UserError(s"Unresolved reference ${tpeName}")
               )
             case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
               Target.fromOption(
                 lookupTypeName(tpeName, concreteTypes)(tpe => t"Vector[${customTpe.getOrElse(t"Map")}[String, ${tpe}]]"),
-                s"Unresolved reference ${tpeName}"
+                UserError(s"Unresolved reference ${tpeName}")
               )
           }
         } yield result
@@ -374,7 +374,7 @@ object CirceProtocolGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseError _, Target.pure _)
+        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
 
       case ProtocolImports() =>
         Target.pure(
@@ -427,7 +427,7 @@ object CirceProtocolGenerator {
                       val thisParent = (clsName, e, tail)
                       allParents(e).map(otherParents => thisParent :: otherParents)
                   })
-                  .getOrElse(Target.raiseError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
+                  .getOrElse(Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
               case _ => Target.pure(List.empty)
             }
           ).getOrElse(Target.pure(List.empty))
@@ -497,7 +497,7 @@ object CirceProtocolGenerator {
                         case tpe: Type => Some(tpe)
                         case x         => None
                       }),
-                    t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!")
+                    UserError(t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!"))
                   )
                 } yield q"""def ${Term.Name(t.name.value)}: ${tpe}"""
               }
