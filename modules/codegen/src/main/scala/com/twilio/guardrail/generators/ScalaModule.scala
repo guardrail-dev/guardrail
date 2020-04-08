@@ -68,7 +68,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     interpFrameworkCSF
   }
 
-  def extract(modules: NonEmptyList[String]): CoreTarget[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
+  def extract(modules: NonEmptyList[String]): Target[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
     (for {
       (circeVersion, protocolGenerator) <- popModule(
         "json",

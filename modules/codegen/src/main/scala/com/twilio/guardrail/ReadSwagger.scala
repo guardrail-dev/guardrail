@@ -11,17 +11,17 @@ import io.swagger.v3.parser.core.models.ParseOptions
 
 case class ReadSwagger[T](path: Path, next: OpenAPI => T)
 object ReadSwagger {
-  def readSwagger[T](rs: ReadSwagger[Target[T]]): CoreTarget[T] =
+  def readSwagger[T](rs: ReadSwagger[Target[T]]): Target[T] =
     if (rs.path.toFile.exists()) {
       val opts = new ParseOptions()
       opts.setResolve(true)
-      CoreTarget
+      Target
         .fromOption(
           Option(new OpenAPIParser().readLocation(rs.path.toAbsolutePath.toString, new util.LinkedList(), opts).getOpenAPI),
           UserError(s"Spec file ${rs.path} is incorrectly formatted.")
         )
-        .flatMap(rs.next(_).toCoreTarget)
+        .flatMap(rs.next(_))
     } else {
-      CoreTarget.raise(UserError(s"Spec file ${rs.path} does not exist."))
+      Target.raise(UserError(s"Spec file ${rs.path} does not exist."))
     }
 }
