@@ -183,7 +183,7 @@ object EndpointsGenerator {
           case "511" => Target.pure((511, q"NetworkAuthenticationRequired"))
           case "598" => Target.pure((598, q"NetworkReadTimeout"))
           case "599" => Target.pure((599, q"NetworkConnectTimeout"))
-          case _     => Target.raiseError(s"Unknown HTTP status code: ${key}")
+          case _     => Target.raiseUserError(s"Unknown HTTP status code: ${key}")
         }
     }
   }

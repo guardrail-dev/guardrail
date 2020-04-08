@@ -205,7 +205,7 @@ object AkkaHttpServerGenerator {
       case HttpMethod.POST    => Target.pure(q"post")
       case HttpMethod.PUT     => Target.pure(q"put")
       case HttpMethod.OPTIONS => Target.pure(q"options")
-      case other              => Target.raiseError(s"Unknown method: ${other}")
+      case other              => Target.raiseUserError(s"Unknown method: ${other}")
     }
 
     def pathStrToAkka(
@@ -294,8 +294,8 @@ object AkkaHttpServerGenerator {
               """
               )
         },
-        arg => tpe => _ => Target.raiseError(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => _ => Target.raiseError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" =>
             _ => Target.pure(q"optionalHeaderValueByName(${arg})")
@@ -633,11 +633,11 @@ object AkkaHttpServerGenerator {
                     (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
                   }
 
-                  case ApplicationJson => (Nil, Target.raiseError(s"Unable to generate unmarshaller for application/json"))
+                  case ApplicationJson => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json"))
 
-                  case BinaryContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
+                  case BinaryContent(name) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name"))
 
-                  case TextContent(name) => (Nil, Target.raiseError(s"Unable to generate unmarshaller for $name"))
+                  case TextContent(name) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name"))
                 })
                 .traverse(_.flatSequence)
 

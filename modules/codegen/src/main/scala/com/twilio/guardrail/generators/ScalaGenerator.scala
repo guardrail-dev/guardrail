@@ -51,9 +51,9 @@ object ScalaGenerator {
           case Lit.String(name) =>
             values
               .find(_._1 == name)
-              .fold(Target.raiseError[Term.Select](s"Enumeration ${tpe} is not defined for default value ${name}"))(value => Target.pure(value._3))
+              .fold(Target.raiseUserError[Term.Select](s"Enumeration ${tpe} is not defined for default value ${name}"))(value => Target.pure(value._3))
           case _ =>
-            Target.raiseError[Term.Select](s"Enumeration ${tpe} somehow has a default value that isn't a string")
+            Target.raiseUserError[Term.Select](s"Enumeration ${tpe} somehow has a default value that isn't a string")
         }
       }
       case FormatEnumName(enumValue) => Target.pure(enumValue.toPascalCase)
@@ -62,17 +62,17 @@ object ScalaGenerator {
           case SwaggerUtil.Deferred(tpe) =>
             Target.pure(SwaggerUtil.DeferredArray(tpe, containerTpe))
           case SwaggerUtil.DeferredArray(_, _) =>
-            Target.raiseError("FIXME: Got an Array of Arrays, currently not supported")
+            Target.raiseUserError("FIXME: Got an Array of Arrays, currently not supported")
           case SwaggerUtil.DeferredMap(_, _) =>
-            Target.raiseError("FIXME: Got an Array of Maps, currently not supported")
+            Target.raiseUserError("FIXME: Got an Array of Maps, currently not supported")
         }
       case EmbedMap(tpe, containerTpe) =>
         (tpe match {
           case SwaggerUtil.Deferred(inner) => Target.pure(SwaggerUtil.DeferredMap(inner, containerTpe))
           case SwaggerUtil.DeferredMap(_, _) =>
-            Target.raiseError("FIXME: Got a map of maps, currently not supported")
+            Target.raiseUserError("FIXME: Got a map of maps, currently not supported")
           case SwaggerUtil.DeferredArray(_, _) =>
-            Target.raiseError("FIXME: Got a map of arrays, currently not supported")
+            Target.raiseUserError("FIXME: Got a map of arrays, currently not supported")
         })
       case ParseType(tpe) =>
         Target.pure(
@@ -158,7 +158,7 @@ object ScalaGenerator {
             if (va.structure == vb.structure) {
               Target.pure(Some(va))
             } else {
-              Target.raiseError(
+              Target.raiseUserError(
                 s"There is a mismatch at ${history} between default values ${va} and ${vb}. This parameter is defined at multiple places and those definitions are incompatible with each other. They must have the same name, type and default value. (${history})"
               )
             }
@@ -168,7 +168,7 @@ object ScalaGenerator {
         if (a == b) {
           Target.pure(a)
         } else {
-          Target.raiseError(
+          Target.raiseUserError(
             s"There is a mismatch at ${history} between types ${a} and ${b}. Conflicting definitions between types and inherited types are not supported."
           )
         }

@@ -110,7 +110,7 @@ object CirceProtocolGenerator {
             Target.pure(extractedProps)
           })
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-            comp => Target.raiseError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+            comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
           )
           .getOrElse(Target.pure(List.empty))
           .map(_.toList)
@@ -297,7 +297,7 @@ object CirceProtocolGenerator {
                       rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
                       tpe <- rawTpe match {
                         case tpe: Type => Target.pure(tpe)
-                        case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
+                        case x         => Target.raiseUserError(s"Unsure how to map ${x.structure}, please report this bug!")
                       }
                     } yield {
                       val term = Term.Name(s"v$idx")
@@ -374,7 +374,7 @@ object CirceProtocolGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseError _, Target.pure _)
+        definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
 
       case ProtocolImports() =>
         Target.pure(
@@ -427,7 +427,7 @@ object CirceProtocolGenerator {
                       val thisParent = (clsName, e, tail)
                       allParents(e).map(otherParents => thisParent :: otherParents)
                   })
-                  .getOrElse(Target.raiseError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
+                  .getOrElse(Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
               case _ => Target.pure(List.empty)
             }
           ).getOrElse(Target.pure(List.empty))

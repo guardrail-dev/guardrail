@@ -74,7 +74,7 @@ trait LowPriorityTrackerSyntax extends LowestPriorityTrackerInstances {
 
 trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
   implicit class StringyEitherSyntax[B](tracker: Tracker[Either[String, B]]) {
-    def raiseErrorIfLeft: Target[Tracker[B]] = tracker.fold(err => Target.raiseError(s"${err.get} (${err.showHistory})"), Target.pure _)
+    def raiseErrorIfLeft: Target[Tracker[B]] = tracker.fold(err => Target.raiseUserError(s"${err.get} (${err.showHistory})"), Target.pure _)
   }
 
   implicit class EitherSyntax[A, B](tracker: Tracker[Either[A, B]]) {

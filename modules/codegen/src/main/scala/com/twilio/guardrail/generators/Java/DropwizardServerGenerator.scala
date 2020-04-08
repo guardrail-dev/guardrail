@@ -254,7 +254,7 @@ object DropwizardServerGenerator {
 
       case BuildTracingFields(operation, resourceName, tracing) =>
         if (tracing) {
-          Target.raiseError(s"Tracing is not yet supported by this framework")
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
         } else {
           Target.pure(Option.empty)
         }
@@ -595,7 +595,7 @@ object DropwizardServerGenerator {
 
       case GetExtraRouteParams(tracing) =>
         if (tracing) {
-          Target.raiseError(s"Tracing is not yet supported by this framework")
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
         } else {
           Target.pure(List.empty)
         }

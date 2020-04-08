@@ -106,7 +106,7 @@ object SpringMvcGenerator {
           case "511" => parseStatusCode(511, "NetworkAuthenticationRequired")
           case "598" => parseStatusCode(598, "NetworkReadTimeout")
           case "599" => parseStatusCode(599, "NetworkConnectTimeout")
-          case _     => Target.raiseError(s"Unknown HTTP status code: ${key}")
+          case _     => Target.raiseUserError(s"Unknown HTTP status code: ${key}")
         }
     }
   }

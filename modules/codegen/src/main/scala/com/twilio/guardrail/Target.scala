@@ -11,7 +11,7 @@ object Target {
   def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
 
   def raise[T](x: Error): Target[T]           = new TargetError(x, StructuredLogger.Empty)
-  def raiseError[T](x: String): Target[T]     = raise(UserError(x))
+  def raiseUserError[T](x: String): Target[T] = raise(UserError(x))
   def raiseException[T](x: String): Target[T] = raise(RuntimeFailure(x))
   def fromOption[T](x: Option[T], default: => Error): Target[T] =
     x.fold[Target[T]](new TargetError(default, StructuredLogger.Empty))(new TargetValue(_, StructuredLogger.Empty))

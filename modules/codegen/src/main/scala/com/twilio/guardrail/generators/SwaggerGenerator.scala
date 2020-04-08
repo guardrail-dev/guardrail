@@ -68,7 +68,7 @@ object SwaggerGenerator {
                               commonRequestBodies
                                 .get(name)
                                 .fold[Target[Tracker[Operation]]](
-                                  Target.raiseError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
+                                  Target.raiseUserError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
                                 )({ commonRequestBody =>
                                   Target.pure(
                                     operation.map(
@@ -80,7 +80,7 @@ object SwaggerGenerator {
                                   )
                                 })
                             case (rbref, _) =>
-                              Target.raiseError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
+                              Target.raiseUserError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
                           }
                       )
                       .getOrElse(Target.pure(operation))
@@ -170,7 +170,7 @@ object SwaggerGenerator {
           .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
 
       case FallbackParameterHandler(parameter) =>
-        Target.raiseError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
+        Target.raiseUserError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
 
       case GetOperationId(operation) =>
         operation
@@ -202,7 +202,7 @@ object SwaggerGenerator {
       case FallbackPropertyTypeHandler(prop) =>
         val determinedType = prop.downField("type", _.getType()).fold("No type definition")(s => s"type: ${s.unwrapTracker}")
         val className      = prop.unwrapTracker.getClass.getName
-        Target.raiseError(
+        Target.raiseUserError(
           s"""|Unknown type for the following structure (${determinedType}, class: ${className}, ${prop.showHistory}):
               |  ${prop.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n  ")}
               |""".stripMargin
@@ -212,7 +212,7 @@ object SwaggerGenerator {
         Target.fromOption(protocolElems.find(_.name == name), UserError(s"Unable to resolve ${name}"))
 
       case FallbackResolveElems(lazyElems) =>
-        Target.raiseError(s"Unable to resolve: ${lazyElems.map(_.name)}")
+        Target.raiseUserError(s"Unable to resolve: ${lazyElems.map(_.name)}")
 
       case LogPush(name) =>
         Target.log.push(name)

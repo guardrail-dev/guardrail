@@ -306,7 +306,7 @@ object JacksonGenerator {
       dtoClassType <- safeParseClassOrInterfaceType(clsName)
       parentOpt <- (parentsWithDiscriminators, parents) match {
         case _ if parentsWithDiscriminators.length > 1 =>
-          Target.raiseError[Option[SuperClass[JavaLanguage]]](
+          Target.raiseUserError[Option[SuperClass[JavaLanguage]]](
             s"${clsName} requires unsupported multiple inheritance due to multiple parents with discriminators (${parentsWithDiscriminators.map(_.clsName).mkString(", ")})"
           )
         case _ if parentsWithDiscriminators.length == 1 => Target.pure(parentsWithDiscriminators.headOption)
@@ -333,7 +333,7 @@ object JacksonGenerator {
 
             def parseLiteral(parser: String => Expression, friendlyName: String): Target[Expression] =
               Try(parser(discriminatorValue)).fold(
-                t => Target.raiseError[Expression](s"Unable to parse '$discriminatorValue' as '$friendlyName': ${t.getMessage}"),
+                t => Target.raiseUserError[Expression](s"Unable to parse '$discriminatorValue' as '$friendlyName': ${t.getMessage}"),
                 Target.pure[Expression]
               )
 
@@ -341,7 +341,7 @@ object JacksonGenerator {
               case Some(tpe @ "string") =>
                 term.rawType.format match {
                   case Some("date") | Some("date-time") | Some("byte") | Some("binary") =>
-                    Target.raiseError[Expression](
+                    Target.raiseUserError[Expression](
                       s"Unsupported discriminator type '$tpe' with format '${term.rawType.format.getOrElse("unknown")}' for property '${term.propertyName}'"
                     )
                   case _ => Target.pure[Expression](new StringLiteralExpr(discriminatorValue))
@@ -352,7 +352,7 @@ object JacksonGenerator {
                   case Some(fmt @ "int32") => parseLiteral(x => new IntegerLiteralExpr(x.toInt), fmt)
                   case Some(fmt @ "int64") => parseLiteral(x => new LongLiteralExpr(x.toLong), fmt)
                   case Some(fmt) =>
-                    Target.raiseError[Expression](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '${term.propertyName}'")
+                    Target.raiseUserError[Expression](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '${term.propertyName}'")
                   case None =>
                     parseLiteral(
                       x => new ObjectCreationExpr(null, BIG_INTEGER_FQ_TYPE, new NodeList(new StringLiteralExpr(new BigInteger(x).toString))),
@@ -364,7 +364,7 @@ object JacksonGenerator {
                   case Some(fmt @ "float")  => parseLiteral(x => new DoubleLiteralExpr(x.toFloat), fmt)
                   case Some(fmt @ "double") => parseLiteral(x => new DoubleLiteralExpr(x.toDouble), fmt)
                   case Some(fmt) =>
-                    Target.raiseError[Expression](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '${term.propertyName}'")
+                    Target.raiseUserError[Expression](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '${term.propertyName}'")
                   case None =>
                     parseLiteral(
                       x => new ObjectCreationExpr(null, BIG_DECIMAL_FQ_TYPE, new NodeList(new StringLiteralExpr(new java.math.BigDecimal(x).toString))),
@@ -372,14 +372,14 @@ object JacksonGenerator {
                     )
                 }
               case Some(tpe) =>
-                Target.raiseError[Expression](s"Unsupported discriminator type '$tpe' for property '${term.propertyName}'")
+                Target.raiseUserError[Expression](s"Unsupported discriminator type '$tpe' for property '${term.propertyName}'")
               case None =>
                 term.fieldType match {
                   case cls: ClassOrInterfaceType =>
                     // hopefully it's an enum type; nothing else really makes sense here
                     Target.pure[Expression](new FieldAccessExpr(cls.getNameAsExpression, discriminatorValue.toSnakeCase.toUpperCase(Locale.US)))
                   case tpe =>
-                    Target.raiseError[Expression](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
+                    Target.raiseUserError[Expression](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
                 }
             }
 
@@ -760,7 +760,7 @@ object JacksonGenerator {
               )
           )
           .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-            comp => Target.raiseError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+            comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
           )
           .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
@@ -788,7 +788,7 @@ object JacksonGenerator {
                 for {
                   fqListType <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.List")) {
                     case ci: ClassOrInterfaceType => Target.pure(ci)
-                    case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                    case t                        => Target.raiseUserError(s"Supplied type was not supported: ${t}")
                   }
                   concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
                   innerType <- concreteType.getOrElse(safeParseType(tpeName))
@@ -797,7 +797,7 @@ object JacksonGenerator {
                 for {
                   fqMapType <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.Map")) {
                     case ci: ClassOrInterfaceType => Target.pure(ci)
-                    case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                    case t                        => Target.raiseUserError(s"Supplied type was not supported: ${t}")
                   }
                   concreteType = lookupTypeName(tpeName, concreteTypes)(Target.pure)
                   innerType <- concreteType.getOrElse(safeParseType(tpeName))
@@ -860,7 +860,7 @@ object JacksonGenerator {
               for {
                 tpe <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.List")) {
                   case ci: ClassOrInterfaceType => Target.pure(ci)
-                  case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                  case t                        => Target.raiseUserError(s"Supplied type was not supported: ${t}")
                 }
                 res <- Target
                   .fromOption(lookupTypeName(tpeName, concreteTypes)(t => Target.pure(tpe.setTypeArguments(t))), UserError(s"Unresolved reference ${tpeName}"))
@@ -870,7 +870,7 @@ object JacksonGenerator {
               for {
                 tpe <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.Map")) {
                   case ci: ClassOrInterfaceType => Target.pure(ci)
-                  case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
+                  case t                        => Target.raiseUserError(s"Supplied type was not supported: ${t}")
                 }
                 res <- Target
                   .fromOption(
@@ -887,7 +887,7 @@ object JacksonGenerator {
   object ProtocolSupportTermInterp extends (ProtocolSupportTerm[JavaLanguage, ?] ~> Target) {
     def apply[T](term: ProtocolSupportTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
-        definitions.fold[Target[List[PropMeta[JavaLanguage]]]](Target.raiseError, Target.pure)
+        definitions.fold[Target[List[PropMeta[JavaLanguage]]]](Target.raiseUserError, Target.pure)
 
       case ProtocolImports() =>
         (List(
@@ -918,7 +918,7 @@ object JacksonGenerator {
     for {
       parentOpt <- (parentsWithDiscriminators, parents) match {
         case _ if parentsWithDiscriminators.length > 1 =>
-          Target.raiseError[Option[SuperClass[JavaLanguage]]](
+          Target.raiseUserError[Option[SuperClass[JavaLanguage]]](
             s"${className} requires unsupported multiple inheritance due to multiple parents with discriminators (${parentsWithDiscriminators.map(_.clsName).mkString(", ")})"
           )
         case _ if parentsWithDiscriminators.length == 1 => Target.pure(parentsWithDiscriminators.headOption)
