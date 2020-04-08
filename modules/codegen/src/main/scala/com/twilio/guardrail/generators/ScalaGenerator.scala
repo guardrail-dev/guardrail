@@ -87,10 +87,10 @@ object ScalaGenerator {
         Target.pure(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)))
 
       case PureTermName(tpe) =>
-        Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Term.Name(_)), "A structure's name is empty")
+        Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Term.Name(_)), UserError("A structure's name is empty"))
 
       case PureTypeName(tpe) =>
-        Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)), "A structure's name is empty")
+        Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)), UserError("A structure's name is empty"))
 
       case PureMethodParameter(name, tpe, default) =>
         Target.pure(param"${name}: ${tpe}".copy(default = default))
@@ -145,7 +145,7 @@ object ScalaGenerator {
       case IntegerType(format)       => Target.pure(t"BigInt")
       case BooleanType(format)       => Target.pure(t"Boolean")
       case ArrayType(format)         => Target.pure(t"Iterable[String]")
-      case FallbackType(tpe, format) => Target.fromOption(tpe, "Missing type").map(Type.Name(_))
+      case FallbackType(tpe, format) => Target.fromOption(tpe, UserError("Missing type")).map(Type.Name(_))
 
       case WidenTypeName(tpe)           => Target.pure(tpe)
       case WidenTermSelect(value)       => Target.pure(value)
@@ -310,7 +310,7 @@ object ScalaGenerator {
         dtoComponents.traverse {
           case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
             for {
-              dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), "DTO Components not quite long enough")
+              dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))
             } yield {
               val dtoPkg = dtoRestNel.init
                 .foldLeft[Term.Ref](Term.Name(dtoHead)) {

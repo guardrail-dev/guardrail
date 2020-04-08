@@ -294,7 +294,7 @@ object CirceProtocolGenerator {
                 .traverse({
                   case (param, idx) =>
                     for {
-                      rawTpe <- Target.fromOption(param.term.decltpe, "Missing type")
+                      rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
                       tpe <- rawTpe match {
                         case tpe: Type => Target.pure(tpe)
                         case x         => Target.raiseError(s"Unsure how to map ${x.structure}, please report this bug!")
@@ -355,16 +355,16 @@ object CirceProtocolGenerator {
           result <- arr match {
             case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), s"Unresolved reference ${tpeName}")
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
             case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               Target.fromOption(
                 lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"Vector")}[${tpe}]"),
-                s"Unresolved reference ${tpeName}"
+                UserError(s"Unresolved reference ${tpeName}")
               )
             case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
               Target.fromOption(
                 lookupTypeName(tpeName, concreteTypes)(tpe => t"Vector[${customTpe.getOrElse(t"Map")}[String, ${tpe}]]"),
-                s"Unresolved reference ${tpeName}"
+                UserError(s"Unresolved reference ${tpeName}")
               )
           }
         } yield result
@@ -497,7 +497,7 @@ object CirceProtocolGenerator {
                         case tpe: Type => Some(tpe)
                         case x         => None
                       }),
-                    t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!")
+                    UserError(t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!"))
                   )
                 } yield q"""def ${Term.Name(t.name.value)}: ${tpe}"""
               }

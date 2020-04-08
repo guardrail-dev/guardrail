@@ -247,7 +247,7 @@ object JavaGenerator {
       case IntegerType(format)       => safeParseType("java.math.BigInteger")
       case BooleanType(format)       => safeParseType("Boolean")
       case ArrayType(format)         => safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList[Type](STRING_TYPE)))
-      case FallbackType(tpe, format) => Target.fromOption(tpe, "Missing type").flatMap(safeParseType)
+      case FallbackType(tpe, format) => Target.fromOption(tpe, UserError("Missing type")).flatMap(safeParseType)
 
       case WidenTypeName(tpe)           => safeParseType(tpe.asString)
       case WidenTermSelect(value)       => Target.pure(value)

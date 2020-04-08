@@ -855,7 +855,7 @@ object JacksonGenerator {
           result <- arr match {
             case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
             case SwaggerUtil.Deferred(tpeName) =>
-              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), s"Unresolved reference ${tpeName}").flatten
+              Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), UserError(s"Unresolved reference ${tpeName}")).flatten
             case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               for {
                 tpe <- containerTpe.fold(safeParseClassOrInterfaceType("java.util.List")) {
@@ -863,7 +863,7 @@ object JacksonGenerator {
                   case t                        => Target.raiseError(s"Supplied type was not supported: ${t}")
                 }
                 res <- Target
-                  .fromOption(lookupTypeName(tpeName, concreteTypes)(t => Target.pure(tpe.setTypeArguments(t))), s"Unresolved reference ${tpeName}")
+                  .fromOption(lookupTypeName(tpeName, concreteTypes)(t => Target.pure(tpe.setTypeArguments(t))), UserError(s"Unresolved reference ${tpeName}"))
                   .flatten
               } yield res
             case SwaggerUtil.DeferredMap(tpeName, containerTpe) =>
@@ -875,7 +875,7 @@ object JacksonGenerator {
                 res <- Target
                   .fromOption(
                     lookupTypeName(tpeName, concreteTypes)(t => safeParseType("java.util.List<${tpe}<String, ${t}>>")),
-                    s"Unresolved reference ${tpeName}"
+                    UserError(s"Unresolved reference ${tpeName}")
                   )
                   .flatten
               } yield res

@@ -41,7 +41,7 @@ object Http4sServerGenerator {
                 TracingLabel(operation)
                   .map(Lit.String(_))
                   .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
-                s"Missing client name (${operation.showHistory})"
+                UserError(s"Missing client name (${operation.showHistory})")
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -599,7 +599,7 @@ object Http4sServerGenerator {
     def combineRouteTerms(terms: List[Case]): Target[Term] =
       Target.log.function("combineRouteTerms")(for {
         _      <- Target.log.debug(s"Args: <${terms.length} routes>")
-        routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
+        routes <- Target.fromOption(NonEmptyList.fromList(terms), UserError("Generated no routes, no source to generate"))
         _      <- routes.traverse(route => Target.log.debug(route.toString))
       } yield scala.meta.Term.PartialFunction(routes.toList))
 

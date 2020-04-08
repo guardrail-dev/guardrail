@@ -125,7 +125,7 @@ object AkkaHttpServerGenerator {
                 TracingLabel(operation)
                   .map(Lit.String(_))
                   .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
-                s"Missing client name (${operation.showHistory})"
+                UserError(s"Missing client name (${operation.showHistory})")
               )
             } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
           } else Target.pure(None)
@@ -803,7 +803,7 @@ object AkkaHttpServerGenerator {
 
     def combineRouteTerms(terms: List[Term]): Target[Term] =
       Target.log.function(s"combineRouteTerms(<${terms.length} routes>)")(for {
-        routes <- Target.fromOption(NonEmptyList.fromList(terms), "Generated no routes, no source to generate")
+        routes <- Target.fromOption(NonEmptyList.fromList(terms), UserError("Generated no routes, no source to generate"))
         _      <- routes.traverse(route => Target.log.debug(route.toString))
       } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" })
 

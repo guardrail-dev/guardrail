@@ -14,8 +14,8 @@ object Target extends LogAbstraction {
   def error[T](x: String): Target[T]          = raiseError(x)
   def raiseError[T](x: String): Target[T]     = new TargetError(UserError(x), StructuredLogger.Empty)
   def raiseException[T](x: String): Target[T] = new TargetError(RuntimeFailure(x), StructuredLogger.Empty)
-  def fromOption[T](x: Option[T], default: => String): Target[T] =
-    x.fold[Target[T]](new TargetError(UserError(default), StructuredLogger.Empty))(new TargetValue(_, StructuredLogger.Empty))
+  def fromOption[T](x: Option[T], default: => Error): Target[T] =
+    x.fold[Target[T]](new TargetError(default, StructuredLogger.Empty))(new TargetValue(_, StructuredLogger.Empty))
   @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def unsafeExtract[T](x: Target[T]): T =
     x.valueOr({ err =>
