@@ -1,8 +1,7 @@
 package com.twilio
 
-import cats.{ Applicative, Id }
+import cats.Id
 import cats.data.{ EitherK, IndexedStateT }
-import cats.implicits._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -19,23 +18,6 @@ package guardrail {
       supportDefinitions: List[SupportDefinition[L]],
       frameworksImplicits: Option[(L#TermName, L#ObjectDefinition)]
   )
-
-  trait LogAbstraction {
-    type F[_]
-    implicit def A: Applicative[F]
-    def pushLogger(value: StructuredLogger): F[Unit]
-    object log {
-      def push(name: String): F[Unit] = pushLogger(StructuredLogger.push(name))
-      def pop: F[Unit]                = pushLogger(StructuredLogger.pop)
-      def function[A](name: String): F[A] => F[A] = { func =>
-        (push(name) *> func) <* pop
-      }
-      def debug(message: String): F[Unit]   = pushLogger(StructuredLogger.debug(message))
-      def info(message: String): F[Unit]    = pushLogger(StructuredLogger.info(message))
-      def warning(message: String): F[Unit] = pushLogger(StructuredLogger.warning(message))
-      def error(message: String): F[Unit]   = pushLogger(StructuredLogger.error(message))
-    }
-  }
 }
 
 package object guardrail {

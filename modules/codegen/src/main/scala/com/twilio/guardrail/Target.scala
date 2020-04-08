@@ -6,8 +6,7 @@ import cats.Traverse
 import cats.Eval
 import cats.implicits._
 
-object Target extends LogAbstraction {
-  type F[A] = Target[A]
+object Target {
   def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), value)
   def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
 
@@ -60,7 +59,18 @@ object Target extends LogAbstraction {
       case TargetError(e, la) => G.pure[Target[B]](new TargetError(e, la))
     }
   }
-  val A = targetInstances
+
+  object log {
+    def push(name: String): Target[Unit] = pushLogger(StructuredLogger.push(name))
+    def pop: Target[Unit]                = pushLogger(StructuredLogger.pop)
+    def function[A](name: String): Target[A] => Target[A] = { func =>
+      (push(name) *> func) <* pop
+    }
+    def debug(message: String): Target[Unit]   = pushLogger(StructuredLogger.debug(message))
+    def info(message: String): Target[Unit]    = pushLogger(StructuredLogger.info(message))
+    def warning(message: String): Target[Unit] = pushLogger(StructuredLogger.warning(message))
+    def error(message: String): Target[Unit]   = pushLogger(StructuredLogger.error(message))
+  }
 }
 
 sealed abstract class Target[A](val logEntries: StructuredLogger) {
