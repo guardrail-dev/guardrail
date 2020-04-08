@@ -1,0 +1,82 @@
+openapi: 3.0.2
+info:
+  title: Character Encoding Tests (Request InputStream)
+  version: 1.0.0
+paths:
+  /formData:
+    post:
+      x-jvm-package: charEncReqStream
+      operationId: sendFormData
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - str
+              properties:
+                str:
+                  type: string
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                type: string
+        500:
+          content:
+            text/plain:
+              schema:
+                type: string
+  /textPlain:
+    post:
+      x-jvm-package: charEncReqStream
+      operationId: sendTextPlain
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              x-java-type: java.io.InputStream
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                type: string
+        500:
+          content:
+            text/plain:
+              schema:
+                type: string
+  /pojo:
+    post:
+      x-jvm-package: charEncReqStream
+      operationId: sendPojo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pojo"
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pojo"
+        500:
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Pojo:
+      type: object
+      required:
+        - str
+      properties:
+        str:
+          type: string
