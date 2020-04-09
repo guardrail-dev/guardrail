@@ -13,7 +13,7 @@ case class Args(
 )
 
 object Args {
-  val empty = Args(CodegenTarget.Client, Option.empty, Option.empty, Option.empty, List.empty, false, Context.empty, false, List.empty)
+  val empty: Args = Args(CodegenTarget.Client, Option.empty, Option.empty, Option.empty, List.empty, false, Context.empty, false, List.empty)
   def isEmpty: Args => Boolean = { args =>
     args.specPath.isEmpty &&
     args.outputPath.isEmpty &&

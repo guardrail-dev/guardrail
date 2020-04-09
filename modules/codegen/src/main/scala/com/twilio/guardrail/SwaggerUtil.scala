@@ -534,9 +534,9 @@ object SwaggerUtil {
       type P  = Parser[(Option[TN], T)]
       type LP = Parser[List[(Option[TN], T)]]
 
-      val plainString      = many(noneOf("{}/?")).map(_.mkString)
-      val plainNEString    = many1(noneOf("{}/?")).map(_.toList.mkString)
-      val stringSegment: P = plainNEString.map(s => (None, stringPath(s)))
+      val plainString: Parser[String]   = many(noneOf("{}/?")).map(_.mkString)
+      val plainNEString: Parser[String] = many1(noneOf("{}/?")).map(_.toList.mkString)
+      val stringSegment: P              = plainNEString.map(s => (None, stringPath(s)))
       def regexSegment(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>

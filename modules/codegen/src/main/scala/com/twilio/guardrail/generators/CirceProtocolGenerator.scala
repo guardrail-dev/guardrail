@@ -16,7 +16,7 @@ import scala.collection.JavaConverters._
 import scala.meta._
 
 object CirceProtocolGenerator {
-  def suffixClsName(prefix: String, clsName: String) = Pat.Var(Term.Name(s"${prefix}${clsName}"))
+  def suffixClsName(prefix: String, clsName: String): Pat.Var = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
   def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[ScalaLanguage]])(f: Type => Type): Option[Type] =
     concreteTypes

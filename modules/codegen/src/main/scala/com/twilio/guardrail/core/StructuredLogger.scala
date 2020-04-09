@@ -29,7 +29,7 @@ object LogLevels {
   case object Error   extends LogLevel("error")
   case object Silent  extends LogLevel("silent")
 
-  val members = Vector(Debug, Info, Warning, Error, Silent)
+  val members: Vector[LogLevel] = Vector(Debug, Info, Warning, Error, Silent)
 
   def apply(value: String): Option[LogLevel] = members.find(_.level == value)
 }
@@ -50,8 +50,8 @@ object StructuredLogger extends StructuredLoggerInstances {
 }
 sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {
-    def empty                                             = StructuredLogger(Chain.empty)
-    def combine(x: StructuredLogger, y: StructuredLogger) = StructuredLogger(Monoid[Chain[StructuredLogEntry]].combine(x.entries, y.entries))
+    def empty: StructuredLogger                                             = StructuredLogger(Chain.empty)
+    def combine(x: StructuredLogger, y: StructuredLogger): StructuredLogger = StructuredLogger(Monoid[Chain[StructuredLogEntry]].combine(x.entries, y.entries))
   }
   class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
     def show(value: StructuredLogger): String =

@@ -17,12 +17,12 @@ import com.twilio.guardrail.SwaggerUtil.ResolvedType
 case class RawParameterName private[generators] (value: String)
 case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
-  val filterParamBy     = ScalaParameter.filterParams(parameters)
-  val headerParams      = filterParamBy("header")
-  val pathParams        = filterParamBy("path")
-  val queryStringParams = filterParamBy("query")
-  val bodyParams        = filterParamBy("body").headOption
-  val formParams        = filterParamBy("formData")
+  val filterParamBy: String => List[ScalaParameter[L]] = ScalaParameter.filterParams(parameters)
+  val headerParams: List[ScalaParameter[L]]            = filterParamBy("header")
+  val pathParams: List[ScalaParameter[L]]              = filterParamBy("path")
+  val queryStringParams: List[ScalaParameter[L]]       = filterParamBy("query")
+  val bodyParams: Option[ScalaParameter[L]]            = filterParamBy("body").headOption
+  val formParams: List[ScalaParameter[L]]              = filterParamBy("formData")
 }
 class ScalaParameter[L <: LA] private[generators] (
     val in: Option[String],

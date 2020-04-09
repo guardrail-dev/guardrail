@@ -22,13 +22,13 @@ object IndexedFunctor {
   implicit object indexedList extends IndexedFunctor[List] {
     type I = Int
     def map[A, B](fa: List[A])(f: (I, A) => B): List[B] = fa.zipWithIndex.map({ case (v, k) => f(k, v) })
-    def label(i: Int)                                   = Some(s"[${i}]")
+    def label(i: Int): Some[String]                     = Some(s"[${i}]")
   }
 
   implicit object indexedNonEmptyList extends IndexedFunctor[NonEmptyList] {
     type I = Int
     def map[A, B](fa: NonEmptyList[A])(f: (I, A) => B): NonEmptyList[B] = fa.zipWithIndex.map({ case (v, k) => f(k, v) })
-    def label(i: Int)                                                   = Some(s"[${i}]")
+    def label(i: Int): Some[String]                                     = Some(s"[${i}]")
   }
 
   implicit def indexedOption: IndexedFunctor[Option] = new IndexedFunctor[Option] {

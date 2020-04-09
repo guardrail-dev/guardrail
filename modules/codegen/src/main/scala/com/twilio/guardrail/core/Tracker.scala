@@ -5,6 +5,7 @@ import cats.data._
 import cats.implicits._
 import com.twilio.guardrail.{ Target, UserError }
 import scala.collection.JavaConverters._
+import cats.Functor
 
 /**
   * Tracker is a class to marshal access into potentially nullable fields in Java classes,
@@ -57,7 +58,7 @@ trait LowestPriorityTrackerInstances {
       }
   }
 
-  implicit def trackerFunctor = new cats.Functor[Tracker] {
+  implicit def trackerFunctor: Functor[Tracker] = new cats.Functor[Tracker] {
     def map[A, B](fa: Tracker[A])(f: A => B): Tracker[B] = new Tracker(f(fa.unwrapTracker), fa.history)
   }
 }
@@ -137,7 +138,7 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
 
 object Tracker extends HighPriorityTrackerEvidence with HighPriorityTrackerSyntax {
   object Convincer {
-    def apply[A, B](f: A => B) = new Convincer[A, B] {
+    def apply[A, B](f: A => B): Convincer[A, B] = new Convincer[A, B] {
       def apply(a: A): B = f(a)
     }
   }
