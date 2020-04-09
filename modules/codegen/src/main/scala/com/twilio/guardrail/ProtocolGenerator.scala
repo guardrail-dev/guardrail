@@ -164,6 +164,16 @@ object ProtocolGenerator {
     */
   def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
 
+  def getPropertyRequirement(schema: Tracker[Schema[_]], isRequired: Boolean): PropertyRequirement =
+    (for {
+      isNullable <- schema.downField("nullable", _.getNullable)
+    } yield (isRequired, isNullable.getOrElse(false)) match {
+      case (true, false)  => PropertyRequirement.Required
+      case (true, true)   => PropertyRequirement.RequiredNullable
+      case (false, false) => PropertyRequirement.Optional
+      case (false, true)  => PropertyRequirement.OptionalNullable
+    }).get
+
   /**
     * Handle polymorphic model
     */
@@ -202,17 +212,17 @@ object ProtocolGenerator {
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
-          val typeName   = NonEmptyList.of(hierarchy.name, name.toCamelCase.capitalize)
-          val isRequired = requiredFields.contains(name)
+          val typeName            = NonEmptyList.of(hierarchy.name, name.toCamelCase.capitalize)
+          val propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name))
           for {
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
-            defValue     <- defaultValue(typeName, prop.get, isRequired, definitions.map(_.map(_.get)))
+            defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
             res <- transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(
               name,
               prop.get,
               resolvedType,
-              isRequired,
+              propertyRequirement,
               customType.isDefined,
               defValue
             )
@@ -414,13 +424,13 @@ object ProtocolGenerator {
             maybeNestedDefinition <- processProperty(name, schema)
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
             customType            <- SwaggerUtil.customTypeName(schema.get)
-            isRequired = requiredFields.contains(name)
-            defValue <- defaultValue(typeName, schema.get, isRequired, definitions.map(_.map(_.get)))
+            propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name))
+            defValue <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
             parameter <- transformProperty(getClsName(name).last, needCamelSnakeConversion, concreteTypes)(
               name,
               schema.get,
               resolvedType,
-              isRequired,
+              propertyRequirement,
               customType.isDefined,
               defValue
             )
@@ -668,7 +678,12 @@ object ProtocolGenerator {
     } yield ProtocolDefinitions[L](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents))
   }
 
-  private def defaultValue[L <: LA, F[_]](name: NonEmptyList[String], schema: Schema[_], isRequired: Boolean, definitions: List[(String, Schema[_])])(
+  private def defaultValue[L <: LA, F[_]](
+      name: NonEmptyList[String],
+      schema: Schema[_],
+      requirement: PropertyRequirement,
+      definitions: List[(String, Schema[_])]
+  )(
       implicit Sc: ScalaTerms[L, F]
   ): Free[F, Option[L#Term]] = {
     import Sc._
@@ -678,17 +693,17 @@ object ProtocolGenerator {
         definitions
           .collectFirst {
             case (cls, refSchema) if ref.endsWith(s"/$cls") =>
-              defaultValue(NonEmptyList.of(cls), refSchema, isRequired, definitions)
+              defaultValue(NonEmptyList.of(cls), refSchema, requirement, definitions)
           }
           .getOrElse(Free.pure(None))
       case None =>
         schema match {
-          case map: MapSchema if isRequired =>
+          case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable =>
             for {
               customTpe <- SwaggerUtil.customMapTypeName(map)
               result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => Free.pure(None))
             } yield result
-          case arr: ArraySchema if isRequired =>
+          case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable =>
             for {
               customTpe <- SwaggerUtil.customArrayTypeName(arr)
               result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => Free.pure(None))
