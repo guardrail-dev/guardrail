@@ -31,7 +31,7 @@ object SwaggerUtil {
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
+    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
       import Sc._
       import Sw._
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
@@ -75,7 +75,7 @@ object SwaggerUtil {
     def resolve[L <: LA, F[_]](
         value: ResolvedType[L],
         protocolElems: List[StrictProtocolElems[L]]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Resolved[L]] = {
+    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, Resolved[L]] = {
       import Sc._
       import Sw._
       log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
@@ -120,25 +120,31 @@ object SwaggerUtil {
     }
   }
 
-  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
+  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): F[Option[String]] = {
+    import S._
     for {
-      prefixes <- S.vendorPrefixes()
+      prefixes <- vendorPrefixes()
     } yield CustomTypeName(v, prefixes)
+  }
 
-  def customArrayTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
+  def customArrayTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): F[Option[String]] = {
+    import S._
     for {
-      prefixes <- S.vendorPrefixes()
+      prefixes <- vendorPrefixes()
     } yield CustomArrayTypeName(v, prefixes)
+  }
 
-  def customMapTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): Free[F, Option[String]] =
+  def customMapTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): F[Option[String]] = {
+    import S._
     for {
-      prefixes <- S.vendorPrefixes()
+      prefixes <- vendorPrefixes()
     } yield CustomMapTypeName(v, prefixes)
+  }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: Tracker[T]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
@@ -203,7 +209,7 @@ object SwaggerUtil {
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
@@ -242,7 +248,7 @@ object SwaggerUtil {
       typeName: Tracker[Option[String]],
       format: Tracker[Option[String]],
       customType: Option[String]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
     Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType})") {
       import Sc._
       import Fw._
@@ -299,7 +305,7 @@ object SwaggerUtil {
     }
 
   def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]])(
-      implicit Sc: ScalaTerms[L, F],
+      implicit Sc: ScalaTerms[L, Free[F, ?]],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
@@ -314,7 +320,7 @@ object SwaggerUtil {
     }
   }
 
-  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, F]): Free[F, Option[L#Type]] = {
+  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, Free[F, ?]]): Free[F, Option[L#Type]] = {
     import Sc._
     val tpe = s.trim
     if (tpe.nonEmpty) {
@@ -323,7 +329,7 @@ object SwaggerUtil {
   }
 
   def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(
-      implicit Sc: ScalaTerms[L, F],
+      implicit Sc: ScalaTerms[L, Free[F, ?]],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
@@ -346,7 +352,7 @@ object SwaggerUtil {
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
@@ -434,7 +440,7 @@ object SwaggerUtil {
   def extractSecuritySchemes[L <: LA, F[_]](
       swagger: OpenAPI,
       prefixes: List[String]
-  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): Free[F, Map[String, SecurityScheme[L]]] = {
+  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]]): Free[F, Map[String, SecurityScheme[L]]] = {
     import Sw._
     import Sc._
 

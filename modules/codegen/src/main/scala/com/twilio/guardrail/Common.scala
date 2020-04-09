@@ -30,7 +30,7 @@ object Common {
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, F],
+      Sc: ScalaTerms[L, Free[F, ?]],
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
@@ -110,7 +110,7 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
     import Fw._
     import Sc._
 

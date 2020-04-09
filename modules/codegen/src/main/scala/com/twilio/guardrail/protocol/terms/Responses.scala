@@ -25,7 +25,7 @@ class Responses[L <: LA](val value: List[Response[L]]) {
 object Responses {
   def getResponses[L <: LA, F[_]](operationId: String, operation: Tracker[Operation], protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, F],
+      Sc: ScalaTerms[L, Free[F, ?]],
       Sw: SwaggerTerms[L, F]
   ): Free[F, Responses[L]] = Sw.log.function("getResponses") {
     import Fw._
