@@ -17,7 +17,7 @@ import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 
 object Java {
-  implicit class RichType(val tpe: Type) extends AnyVal {
+  implicit class RichType(private val tpe: Type) extends AnyVal {
     def isOptional: Boolean =
       tpe match {
         case cls: ClassOrInterfaceType =>
@@ -50,11 +50,11 @@ object Java {
     def name: Option[String] = Option(tpe.asString)
   }
 
-  implicit class RichListOfNode[T <: Node](val l: List[T]) extends AnyVal {
+  implicit class RichListOfNode[T <: Node](private val l: List[T]) extends AnyVal {
     def toNodeList: NodeList[T] = new NodeList[T](l: _*)
   }
 
-  implicit class RichNodeList[T <: Node](val nl: NodeList[T]) extends AnyVal {
+  implicit class RichNodeList[T <: Node](private val nl: NodeList[T]) extends AnyVal {
     def toList(implicit cls: ClassTag[T]): List[T] = nl.iterator.asScala.toList
   }
 
@@ -230,7 +230,7 @@ object Java {
     "while"
   )
 
-  implicit class RichJavaString(val s: String) extends AnyVal {
+  implicit class RichJavaString(private val s: String) extends AnyVal {
     def escapeReservedWord: String = if (reservedWords.contains(s)) s + "_" else s
     def unescapeReservedWord: String =
       if (s.endsWith("_")) {

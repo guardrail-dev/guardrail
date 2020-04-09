@@ -65,7 +65,7 @@ package object syntax {
     "([A-Z]+)([A-Z][^A-Z]+)".r
   )
 
-  implicit class RichString(val s: String) extends AnyVal {
+  implicit class RichString(private val s: String) extends AnyVal {
     private def splitParts(s: String): List[String] =
       BOUNDARY_SPLITTERS
         .foldLeft(SPLIT_DELIMITERS.split(s))(

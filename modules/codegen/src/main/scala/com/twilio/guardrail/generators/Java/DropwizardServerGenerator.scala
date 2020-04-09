@@ -34,7 +34,7 @@ import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 
 object DropwizardServerGenerator {
-  private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
+  private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toJaxRsAnnotationName: Expression = ct match {
       case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
       case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")

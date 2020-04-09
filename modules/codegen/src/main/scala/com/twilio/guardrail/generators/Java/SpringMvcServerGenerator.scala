@@ -37,7 +37,7 @@ import scala.language.existentials
 import scala.util.Try
 
 object SpringMvcServerGenerator {
-  private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
+  private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toSpringMediaType: Expression =
       ct match {
         case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
