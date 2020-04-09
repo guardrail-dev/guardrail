@@ -23,7 +23,7 @@ object Common {
 
   def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit
-      C: ClientTerms[L, F],
+      C: ClientTerms[L, Free[F, ?]],
       R: ArrayProtocolTerms[L, F],
       E: EnumProtocolTerms[L, F],
       Fw: FrameworkTerms[L, F],
