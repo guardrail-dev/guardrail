@@ -196,6 +196,8 @@ addCommandAlias(
 
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
+addCompilerPlugin(scalafixSemanticdb)
+scalacOptions += "-Yrangepos"
 
 publishMavenStyle := true
 
@@ -209,11 +211,13 @@ val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, 
 val codegenSettings = Seq(
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
+  addCompilerPlugin(scalafixSemanticdb),
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
   scalacOptions in ThisBuild ++= Seq(
     "-Ypartial-unification",
     "-Ydelambdafy:method",
+    "-Yrangepos",
     // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/twilio/guardrail/pull/282
     "-feature",
     "-unchecked",
