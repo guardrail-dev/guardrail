@@ -672,7 +672,7 @@ object ProtocolGenerator {
       implicit Sc: ScalaTerms[L, F]
   ): Free[F, Option[L#Term]] = {
     import Sc._
-    val empty = Free.pure[F, Option[L#Term]](None)
+    val empty = Option.empty[L#Term].pure[F]
     Option(schema.get$ref()) match {
       case Some(ref) =>
         definitions
@@ -680,18 +680,18 @@ object ProtocolGenerator {
             case (cls, refSchema) if ref.endsWith(s"/$cls") =>
               defaultValue(NonEmptyList.of(cls), refSchema, isRequired, definitions)
           }
-          .getOrElse(Free.pure(None))
+          .getOrElse(empty)
       case None =>
         schema match {
           case map: MapSchema if isRequired =>
             for {
               customTpe <- SwaggerUtil.customMapTypeName(map)
-              result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => Free.pure(None))
+              result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
             } yield result
           case arr: ArraySchema if isRequired =>
             for {
               customTpe <- SwaggerUtil.customArrayTypeName(arr)
-              result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => Free.pure(None))
+              result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
             } yield result
           case p: BooleanSchema =>
             Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_)))
@@ -710,12 +710,12 @@ object ProtocolGenerator {
                   enumName <- formatEnumName(defaultEnumValue)
                   result   <- selectTerm(name.append(enumName))
                 } yield Some(result)
-              case None => Free.pure(None)
+              case None => empty
             }
           case p: StringSchema =>
             Default(p).extract[String].fold(empty)(litString(_).map(Some(_)))
           case _ =>
-            Free.pure(None)
+            empty
         }
     }
 
