@@ -18,7 +18,7 @@ import scala.meta._
 
 object EndpointsClientGenerator {
   object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] with FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
-    implicit def ClientTermsMonad: Monad[Target] = Target.targetInstances
+    implicit def MonadF: Monad[Target] = Target.targetInstances
 
     type L    = ScalaLanguage
     type F[A] = Target[A]

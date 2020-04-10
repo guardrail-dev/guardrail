@@ -11,7 +11,7 @@ import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtoc
 import java.net.URI
 
 abstract class ClientTerms[L <: LA, F[_]] {
-  implicit def ClientTermsMonad: Monad[F]
+  implicit def MonadF: Monad[F]
   def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
       route: RouteMeta,
       methodName: String,
@@ -43,7 +43,7 @@ abstract class ClientTerms[L <: LA, F[_]] {
 
 object ClientTerms {
   implicit def enumTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]): ClientTerms[L, Free[F, ?]] = new ClientTerms[L, Free[F, ?]] {
-    def ClientTermsMonad = Free.catsFreeMonadForFree
+    def MonadF = Free.catsFreeMonadForFree
     def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
         route: RouteMeta,
         methodName: String,
