@@ -13,6 +13,17 @@ import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 
+abstract class SwaggerLogAdapter[F[_]] {
+  def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")
+  def function[A](name: String): F[A] => F[A]
+  def push(name: String): F[Unit]
+  def pop: F[Unit]
+  def debug(message: String): F[Unit]
+  def info(message: String): F[Unit]
+  def warning(message: String): F[Unit]
+  def error(message: String): F[Unit]
+}
+
 class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
   def extractCommonRequestBodies(components: Option[Components]): Free[F, Map[String, RequestBody]] =
     Free.inject[SwaggerTerm[L, ?], F](ExtractCommonRequestBodies(components))
@@ -74,8 +85,8 @@ class SwaggerTerms[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]) {
     Free.inject[SwaggerTerm[L, ?], F](ResolveType(name, protocolElems))
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): Free[F, List[StrictProtocolElems[L]]] =
     Free.inject[SwaggerTerm[L, ?], F](FallbackResolveElems(lazyElems))
-  object log {
-    def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")
+
+  def log: SwaggerLogAdapter[Free[F, ?]] = new SwaggerLogAdapter[Free[F, ?]] {
     def function[A](name: String): Free[F, A] => Free[F, A] = { func =>
       (push(name) *> func) <* pop
     }
