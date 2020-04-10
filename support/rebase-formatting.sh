@@ -141,5 +141,5 @@ read -p '[Enter] '
 # Relying on touch $TMPDIR/$marker to skip collapsing the first commit.
 # An alternate approach here would be to add an empty commit immediately after ${format_hash}
 git rebase --keep-empty "${format_hash}" \
-  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker}\"*              ]] || (git checkout @^^ && git cherry-pick --no-commit @@{1}^ @@{1} && git commit         -C @@{1}) || true" \
-  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker} @^ formatting\" ]] && (git checkout @^  && git cherry-pick --no-commit @@{1}        && git commit --amend -C @    ) || true"
+  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker}\"*              ]] || (git checkout @^^ && git cherry-pick --no-commit @@{1}^ @@{1} && git commit         -C @@{1} --allow-empty) || true" \
+  -x "[[ \"\$(git log --oneline --format=%s -n 1)\" = \"${marker} @^ formatting\" ]] && (git checkout @^  && git cherry-pick --no-commit @@{1}        && git commit --amend -C @     --allow-empty) || true"
