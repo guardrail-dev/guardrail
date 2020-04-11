@@ -4,7 +4,6 @@ import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.oas.models.media._
 import cats.Monad
 import cats.data.NonEmptyList
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
@@ -528,17 +527,17 @@ object ProtocolGenerator {
     (RandomType[L](clsName, tpe): ProtocolElems[L]).pure[F]
 
   def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]])(
-      implicit R: ArrayProtocolTerms[L, Free[F, ?]],
-      F: FrameworkTerms[L, Free[F, ?]],
+      implicit R: ArrayProtocolTerms[L, F],
+      F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, Free[F, ?]]
-  ): Free[F, ProtocolElems[L]] = {
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
+  ): F[ProtocolElems[L]] = {
     import R._
     for {
       deferredTpe <- SwaggerUtil.modelMetaType(arr)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
-      ret         <- typeAlias[L, Free[F, ?]](clsName, tpe)
+      ret         <- typeAlias[L, F](clsName, tpe)
     } yield ret
   }
 
@@ -619,15 +618,15 @@ object ProtocolGenerator {
   }
 
   def fromSwagger[L <: LA, F[_]](swagger: Tracker[OpenAPI], dtoPackage: List[String])(
-      implicit E: EnumProtocolTerms[L, Free[F, ?]],
-      M: ModelProtocolTerms[L, Free[F, ?]],
-      R: ArrayProtocolTerms[L, Free[F, ?]],
+      implicit E: EnumProtocolTerms[L, F],
+      M: ModelProtocolTerms[L, F],
+      R: ArrayProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
-      F: FrameworkTerms[L, Free[F, ?]],
-      P: PolyProtocolTerms[L, Free[F, ?]],
-      Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, Free[F, ?]]
-  ): Free[F, ProtocolDefinitions[L]] = {
+      F: FrameworkTerms[L, F],
+      P: PolyProtocolTerms[L, F],
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
+  ): F[ProtocolDefinitions[L]] = {
     import S._
     import Sw._
 
@@ -635,7 +634,7 @@ object ProtocolGenerator {
     Sw.log.function("ProtocolGenerator.fromSwagger")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
-      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, Free[F, ?]](definitions.value)
+      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value)
       polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
@@ -670,8 +669,8 @@ object ProtocolGenerator {
                 for {
                   tpeName        <- getType(x)
                   customTypeName <- SwaggerUtil.customTypeName(x.get)
-                  tpe            <- SwaggerUtil.typeName[L, Free[F, ?]](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
-                  res            <- typeAlias[L, Free[F, ?]](clsName, tpe)
+                  tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
+                  res            <- typeAlias[L, F](clsName, tpe)
                 } yield res
             )
       }

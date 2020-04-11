@@ -1,5 +1,6 @@
 package com.twilio.guardrail.docs
 
+import cats.free.Free
 import cats.arrow.FunctionK
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
@@ -25,7 +26,7 @@ object DocsHelpers {
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
+          Common.prepareDefinitions[ScalaLanguage, Free[CodegenApplication[ScalaLanguage, ?], ?]](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
             .foldMap(generator)
         )
         val server = codegenDefinitions.servers.head
@@ -43,7 +44,7 @@ object DocsHelpers {
         )
       case GeneratingClients =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](CodegenTarget.Client, Context.empty, openAPI, List("definitions"))
+          Common.prepareDefinitions[ScalaLanguage, Free[CodegenApplication[ScalaLanguage, ?], ?]](CodegenTarget.Client, Context.empty, openAPI, List("definitions"))
             .foldMap(generator)
         )
         codegenDefinitions.clients match {

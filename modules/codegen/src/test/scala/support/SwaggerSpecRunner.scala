@@ -42,7 +42,7 @@ trait SwaggerSpecRunner extends EitherValues {
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val /*(clientLogger,*/ (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
       Common
-        .prepareDefinitions[L, CodegenApplication[L, ?]](
+        .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
           CodegenTarget.Client,
           context,
           Tracker(swagger),
@@ -56,7 +56,7 @@ trait SwaggerSpecRunner extends EitherValues {
 
     val /*(serverLogger,*/ (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) =
       Common
-        .prepareDefinitions[L, CodegenApplication[L, ?]](
+        .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
           CodegenTarget.Server,
           context,
           Tracker(swagger),
@@ -94,7 +94,7 @@ trait SwaggerSpecRunner extends EitherValues {
       Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (StructuredLogger, Error) =
     Common
-      .prepareDefinitions[L, CodegenApplication[L, ?]](
+      .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
         kind,
         context,
         Tracker(swagger),

@@ -2,7 +2,6 @@ package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
-import cats.free.Free
 import cats.implicits._
 import cats.Id
 import com.twilio.guardrail.core.Tracker
@@ -23,17 +22,17 @@ object Common {
 
   def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit
-      C: ClientTerms[L, Free[F, ?]],
-      R: ArrayProtocolTerms[L, Free[F, ?]],
-      E: EnumProtocolTerms[L, Free[F, ?]],
-      Fw: FrameworkTerms[L, Free[F, ?]],
-      M: ModelProtocolTerms[L, Free[F, ?]],
-      Pol: PolyProtocolTerms[L, Free[F, ?]],
+      C: ClientTerms[L, F],
+      R: ArrayProtocolTerms[L, F],
+      E: EnumProtocolTerms[L, F],
+      Fw: FrameworkTerms[L, F],
+      M: ModelProtocolTerms[L, F],
+      Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
-      Se: ServerTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, Free[F, ?]]
-  ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
+      Sc: ScalaTerms[L, F],
+      Se: ServerTerms[L, F],
+      Sw: SwaggerTerms[L, F]
+  ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw._
     import Sc._
     import Sw._
@@ -87,7 +86,7 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[L, Free[F, ?]](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
             Clients(clients, supportDefinitions) = clientMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)
@@ -95,12 +94,12 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, Free[F, ?]](context, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)
         case CodegenTarget.Models =>
-          Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty, List.empty, Option.empty))
+          CodegenDefinitions[L](List.empty, List.empty, List.empty, Option.empty).pure[F]
       }
     } yield (proto, codegen))
   }

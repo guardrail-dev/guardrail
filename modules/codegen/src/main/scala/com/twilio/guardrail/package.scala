@@ -18,7 +18,10 @@ package guardrail {
   )
 }
 
-trait MonadChain10 {
+trait MonadChain11 {
+  implicit def monadForProtocolSupportTerms[L <: LA, F[_]](implicit ev: ProtocolSupportTerms[L, F]): Monad[F] = ev.MonadF
+}
+trait MonadChain10 extends MonadChain11 {
   implicit def monadForServerTerms[L <: LA, F[_]](implicit ev: ServerTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain9 extends MonadChain10 {

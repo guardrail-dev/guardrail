@@ -143,11 +143,17 @@ class CoreTermInterp[L <: LA](
           swagger =>
             try {
               val Sw = SwaggerTerms.swaggerTerm[L, CodegenApplication[L, ?]]
+              val Sc = ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]]
               val program = for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
-                definitionsPkgName <- ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]].fullyQualifyPackageName(pkgName)
+                definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)
                 (proto, codegen) <- Common
-                  .prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, Tracker(swagger), definitionsPkgName ++ ("definitions" :: dtoPackage))
+                  .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
+                    kind,
+                    context,
+                    Tracker(swagger),
+                    definitionsPkgName ++ ("definitions" :: dtoPackage)
+                  )
                 result <- Common
                   .writePackage[L, Free[CodegenApplication[L, ?], ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
               } yield result

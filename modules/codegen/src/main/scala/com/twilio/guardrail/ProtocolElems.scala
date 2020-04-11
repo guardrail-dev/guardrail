@@ -1,7 +1,6 @@
 package com.twilio.guardrail
 
 import cats.FlatMap
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
@@ -45,11 +44,11 @@ object ProtocolElems {
   def resolve[L <: LA, F[_]](
       elems: List[ProtocolElems[L]],
       limit: Int = 10
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], P: ProtocolSupportTerms[L, F]): Free[F, List[StrictProtocolElems[L]]] = {
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], P: ProtocolSupportTerms[L, F]): F[List[StrictProtocolElems[L]]] = {
     import Sc._
     import Sw._
     log.function(s"resolve(${elems.length} references)")(
-      FlatMap[Free[F, ?]]
+      FlatMap[F]
         .tailRecM[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]((limit, elems))({
           case (iters, xs) if iters > 0 =>
             val lazyElems: List[LazyProtocolElems[L]]     = xs.collect { case x: LazyProtocolElems[_]   => x }
@@ -58,13 +57,13 @@ object ProtocolElems {
               _ <- log.debug(s"$iters left")
               res <- if (lazyElems.nonEmpty) {
                 val newElems = lazyElems
-                  .traverse[Free[F, ?], ProtocolElems[L]]({
+                  .traverse[F, ProtocolElems[L]]({
                     case d @ Deferred(name) =>
                       strictElems
                         .find(_.name == name)
-                        .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
+                        .fold[F[ProtocolElems[L]]](d.pure[F].widen)({
                           case RandomType(name, tpe) =>
-                            Free.pure(RandomType[L](name, tpe))
+                            RandomType[L](name, tpe).pure[F].widen
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
                           case EnumDefinition(name, tpe, _, elems, cls, _) =>
@@ -75,7 +74,7 @@ object ProtocolElems {
                     case d @ DeferredArray(name, customTpe) =>
                       strictElems
                         .find(_.name == name)
-                        .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
+                        .fold[F[ProtocolElems[L]]](d.pure[F].widen)({
                           case RandomType(name, tpe) =>
                             liftVectorType(tpe, customTpe).map(RandomType[L](name, _))
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
@@ -88,7 +87,7 @@ object ProtocolElems {
                     case d @ DeferredMap(name, customTpe) =>
                       strictElems
                         .find(_.name == name)
-                        .fold[Free[F, ProtocolElems[L]]](Free.pure(d))({
+                        .fold[F[ProtocolElems[L]]](d.pure[F].widen)({
                           case RandomType(name, tpe) =>
                             liftMapType(tpe, customTpe).map(RandomType[L](name, _))
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
@@ -103,7 +102,7 @@ object ProtocolElems {
                 newElems.map { x =>
                   Left((iters - 1, x))
                 }
-              } else Free.pure[F, Either[(Int, List[ProtocolElems[L]]), List[StrictProtocolElems[L]]]](Right(strictElems))
+              } else Right(strictElems).pure[F].widen
             } yield res
           case (_, xs) =>
             val lazyElems = xs.collect { case x: LazyProtocolElems[_] => x }
