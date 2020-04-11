@@ -18,7 +18,10 @@ package guardrail {
   )
 }
 
-trait MonadChain4 {
+trait MonadChain5 {
+  implicit def monadForArray[L <: LA, F[_]](implicit ev: ArrayProtocolTerms[L, F]): Monad[F] = ev.MonadF
+}
+trait MonadChain4 extends MonadChain5 {
   implicit def monadForSwagger[L <: LA, F[_]](implicit ev: SwaggerTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain3 extends MonadChain4 {

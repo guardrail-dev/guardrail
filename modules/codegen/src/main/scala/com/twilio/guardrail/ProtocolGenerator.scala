@@ -527,7 +527,7 @@ object ProtocolGenerator {
     Free.pure(RandomType[L](clsName, tpe))
 
   def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]])(
-      implicit R: ArrayProtocolTerms[L, F],
+      implicit R: ArrayProtocolTerms[L, Free[F, ?]],
       F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, Free[F, ?]],
@@ -620,7 +620,7 @@ object ProtocolGenerator {
   def fromSwagger[L <: LA, F[_]](swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit E: EnumProtocolTerms[L, F],
       M: ModelProtocolTerms[L, F],
-      R: ArrayProtocolTerms[L, F],
+      R: ArrayProtocolTerms[L, Free[F, ?]],
       S: ProtocolSupportTerms[L, F],
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
