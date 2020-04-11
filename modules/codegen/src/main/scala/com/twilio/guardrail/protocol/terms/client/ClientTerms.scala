@@ -11,7 +11,7 @@ import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtoc
 import java.net.URI
 
 abstract class ClientTerms[L <: LA, F[_]] {
-  implicit def MonadF: Monad[F]
+  def MonadF: Monad[F]
   def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
       route: RouteMeta,
       methodName: String,
