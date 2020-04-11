@@ -31,7 +31,7 @@ object SwaggerUtil {
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
-    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
       import Sc._
       import Sw._
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
@@ -40,25 +40,27 @@ object SwaggerUtil {
       }
 
       def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved[L])])(
-          f: L#Type => Free[F, L#Type]
-      ): Free[F, Option[(String, Resolved[L])]] =
+          f: L#Type => F[L#Type]
+      ): F[Option[(String, Resolved[L])]] =
         resolvedTypes
           .find(_._1 == tpeName)
           .map(_._2)
           .traverse(x => f(x.tpe).map(tpe => (clsName, x.copy(tpe = tpe))))
 
-      log.debug(s"resolve ${values.length} references") >> FlatMap[Free[F, ?]]
-        .tailRecM[(List[(String, LazyResolvedType[L])], List[(String, Resolved[L])]), List[(String, Resolved[L])]](
+      type Continue = (List[(String, LazyResolvedType[L])], List[(String, Resolved[L])])
+      type Stop     = List[(String, Resolved[L])]
+      log.debug(s"resolve ${values.length} references") >> FlatMap[F]
+        .tailRecM[Continue, Stop](
           (lazyTypes, resolvedTypes)
         ) {
           case (lazyTypes, resolvedTypes) =>
             if (lazyTypes.isEmpty) {
-              Free.pure(Right(resolvedTypes))
+              (Right(resolvedTypes): Either[Continue, Stop]).pure[F]
             } else {
               lazyTypes
                 .partitionEitherM({
                   case x @ (clsName, Deferred(tpeName)) =>
-                    lookupTypeName(clsName, tpeName, resolvedTypes)(Free.pure _).map(Either.fromOption(_, x))
+                    lookupTypeName(clsName, tpeName, resolvedTypes)(_.pure[F]).map(Either.fromOption(_, x))
                   case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
                     lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
                   case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
@@ -75,22 +77,22 @@ object SwaggerUtil {
     def resolve[L <: LA, F[_]](
         value: ResolvedType[L],
         protocolElems: List[StrictProtocolElems[L]]
-    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, Resolved[L]] = {
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[Resolved[L]] = {
       import Sc._
       import Sw._
       log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
-        case x @ Resolved(_, _, _, _, _) => Free.pure(x)
+        case x @ Resolved(_, _, _, _, _) => x.pure[F]
         case Deferred(name) =>
           resolveType(name, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                Free.pure(Resolved[L](tpe, None, None, None, None))
+                Resolved[L](tpe, None, None, None, None).pure[F]
               case ClassDefinition(name, _, fullType, cls, _, _) =>
-                Free.pure(Resolved[L](fullType, None, None, None, None))
+                Resolved[L](fullType, None, None, None, None).pure[F]
               case EnumDefinition(name, _, fullType, elems, cls, _) =>
-                Free.pure(Resolved[L](fullType, None, None, Some("string"), None))
+                Resolved[L](fullType, None, None, Some("string"), None).pure[F]
               case ADT(_, _, fullType, _, _) =>
-                Free.pure(Resolved[L](fullType, None, None, None, None))
+                Resolved[L](fullType, None, None, None, None).pure[F]
             }
         case DeferredArray(name, containerTpe) =>
           resolveType(name, protocolElems)
@@ -144,7 +146,7 @@ object SwaggerUtil {
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: Tracker[T]
-    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
@@ -209,7 +211,7 @@ object SwaggerUtil {
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
@@ -236,7 +238,7 @@ object SwaggerUtil {
               } yield (clsName, resolved)
             )
       }
-      result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
+      result <- SwaggerUtil.ResolvedType.resolveReferences[L, Free[F, ?]](entries)
     } yield result.map {
       case (clsName, SwaggerUtil.Resolved(tpe, _, _, _, _)) =>
         PropMeta[L](clsName, tpe)
@@ -248,7 +250,7 @@ object SwaggerUtil {
       typeName: Tracker[Option[String]],
       format: Tracker[Option[String]],
       customType: Option[String]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
     Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType})") {
       import Sc._
       import Fw._
@@ -306,7 +308,7 @@ object SwaggerUtil {
 
   def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]])(
       implicit Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, F],
+      Sw: SwaggerTerms[L, Free[F, ?]],
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
     import Fw._
@@ -330,7 +332,7 @@ object SwaggerUtil {
 
   def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(
       implicit Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, F],
+      Sw: SwaggerTerms[L, Free[F, ?]],
       Fw: FrameworkTerms[L, F]
   ): Free[F, ResolvedType[L]] = {
     import Fw._
@@ -352,7 +354,7 @@ object SwaggerUtil {
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
@@ -440,7 +442,7 @@ object SwaggerUtil {
   def extractSecuritySchemes[L <: LA, F[_]](
       swagger: OpenAPI,
       prefixes: List[String]
-  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]]): Free[F, Map[String, SecurityScheme[L]]] = {
+  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
     import Sw._
     import Sc._
 
@@ -452,7 +454,7 @@ object SwaggerUtil {
         case (schemeName, scheme) =>
           val typeName = CustomTypeName(scheme, prefixes)
           for {
-            tpe <- typeName.fold(Free.pure[F, Option[L#Type]](Option.empty[L#Type]))(parseType)
+            tpe <- typeName.fold(Option.empty[L#Type].pure[F])(parseType)
             parsedScheme <- scheme.getType match {
               case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
               case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]

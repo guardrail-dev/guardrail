@@ -32,7 +32,7 @@ object Common {
       S: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, Free[F, ?]],
       Se: ServerTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: SwaggerTerms[L, Free[F, ?]]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw._
     import Sc._

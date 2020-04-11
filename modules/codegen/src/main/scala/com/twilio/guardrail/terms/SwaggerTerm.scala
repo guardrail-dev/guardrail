@@ -238,7 +238,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]]): Free[F, ScalaParameters[L]] =
     for {
       a <- ScalaParameter.fromParameters(protocolElems).apply(parameters)
     } yield new ScalaParameters[L](a)

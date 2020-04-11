@@ -26,7 +26,7 @@ object Responses {
   def getResponses[L <: LA, F[_]](operationId: String, operation: Tracker[Operation], protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
       Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, F]
+      Sw: SwaggerTerms[L, Free[F, ?]]
   ): Free[F, Responses[L]] = Sw.log.function("getResponses") {
     import Fw._
     import Sc._
@@ -45,7 +45,7 @@ object Responses {
                   } yield schema).traverse { prop =>
                     for {
                       meta     <- SwaggerUtil.propMeta[L, F](prop)
-                      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+                      resolved <- SwaggerUtil.ResolvedType.resolve[L, Free[F, ?]](meta, protocolElems)
                       SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
 
                     } yield (baseType, baseDefaultValue)

@@ -7,7 +7,7 @@ import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm
 import com.twilio.guardrail.terms.framework.FrameworkTerm
-import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerm, ScalaTerms, SwaggerTerm }
+import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 
 package guardrail {
   case class CodegenDefinitions[L <: LA](
@@ -18,7 +18,10 @@ package guardrail {
   )
 }
 
-trait MonadChain3 {
+trait MonadChain4 {
+  implicit def monadForSwagger[L <: LA, F[_]](implicit ev: SwaggerTerms[L, F]): Monad[F] = ev.MonadF
+}
+trait MonadChain3 extends MonadChain4 {
   implicit def monadForScala[L <: LA, F[_]](implicit ev: ScalaTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain2 extends MonadChain3 {

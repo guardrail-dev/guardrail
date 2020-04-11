@@ -50,143 +50,149 @@ object ScalaParameter {
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => Free[F, ScalaParameter[L]] = { parameter =>
-    import Fw._
-    import Sc._
-    import Sw._
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]]): Tracker[Parameter] => Free[F, ScalaParameter[L]] = {
+    parameter =>
+      import Fw._
+      import Sc._
+      import Sw._
 
-    def paramMeta(param: Tracker[Parameter]): Free[F, SwaggerUtil.ResolvedType[L]] = {
-      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): Free[F, Option[L#Term]] =
-        (_type, fmt.get) match {
-          case ("string", None) =>
-            Default(p).extract[String].traverse(litString(_))
-          case ("number", Some("float")) =>
-            Default(p).extract[Float].traverse(litFloat(_))
-          case ("number", Some("double")) =>
-            Default(p).extract[Double].traverse(litDouble(_))
-          case ("integer", Some("int32")) =>
-            Default(p).extract[Int].traverse(litInt(_))
-          case ("integer", Some("int64")) =>
-            Default(p).extract[Long].traverse(litLong(_))
-          case ("boolean", None) =>
-            Default(p).extract[Boolean].traverse(litBoolean(_))
-          case x => Free.pure(Option.empty[L#Term])
+      def paramMeta(param: Tracker[Parameter]): Free[F, SwaggerUtil.ResolvedType[L]] = {
+        def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): Free[F, Option[L#Term]] =
+          (_type, fmt.get) match {
+            case ("string", None) =>
+              Default(p).extract[String].traverse(litString(_))
+            case ("number", Some("float")) =>
+              Default(p).extract[Float].traverse(litFloat(_))
+            case ("number", Some("double")) =>
+              Default(p).extract[Double].traverse(litDouble(_))
+            case ("integer", Some("int32")) =>
+              Default(p).extract[Int].traverse(litInt(_))
+            case ("integer", Some("int64")) =>
+              Default(p).extract[Long].traverse(litLong(_))
+            case ("boolean", None) =>
+              Default(p).extract[Boolean].traverse(litBoolean(_))
+            case x => Free.pure(Option.empty[L#Term])
+          }
+
+        def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => Free[F, Tracker[String]]): Free[F, ResolvedType[L]] =
+          for {
+            tpeName <- typeFetcher(param)
+            schema = param.downField("schema", _.getSchema)
+            fmt    = schema.flatDownField("format", _.getFormat)
+            customParamTypeName  <- SwaggerUtil.customTypeName(param)
+            customSchemaTypeName <- schema.get.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
+            customTypeName = customSchemaTypeName.orElse(customParamTypeName)
+            res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
+              .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get))
+          } yield res
+
+        def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
+
+        param
+          .refine[Free[F, SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(
+            r => getRefParameterRef(r).map(_.get).map(SwaggerUtil.Deferred(_))
+          )
+          .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(r => getSimpleRef(r.downField("schema", _.getSchema)).map(SwaggerUtil.Deferred(_)))
+          .orRefine({ case x: Parameter if x.isInBody => x })(
+            x =>
+              getBodyParameterSchema(x)
+                .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+          )
+          .orRefine({ case x: Parameter if x.isInHeader => x })(x => resolveParam(x, getHeaderParameterType))
+          .orRefine({ case x: Parameter if x.isInPath => x })(x => resolveParam(x, getPathParameterType))
+          .orRefine({ case x: Parameter if x.isInQuery => x })(x => resolveParam(x, getQueryParameterType))
+          .orRefine({ case x: Parameter if x.isInCookies => x })(x => resolveParam(x, getCookieParameterType))
+          .orRefine({ case x: Parameter if x.isInFormData => x })(x => resolveParam(x, getFormParameterType))
+          .orRefineFallback(fallbackParameterHandler(_))
+      }
+
+      log.function(s"fromParameter")(for {
+        _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
+        meta                                                                     <- paramMeta(parameter)
+        SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, Free[F, ?]](meta, protocolElems)
+
+        required = Option[java.lang.Boolean](parameter.get.getRequired()).fold(false)(identity)
+        declType <- if (!required) {
+          liftOptionalType(paramType)
+        } else {
+          Free.pure[F, L#Type](paramType)
         }
 
-      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => Free[F, Tracker[String]]): Free[F, ResolvedType[L]] =
-        for {
-          tpeName <- typeFetcher(param)
-          schema = param.downField("schema", _.getSchema)
-          fmt    = schema.flatDownField("format", _.getFormat)
-          customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- schema.get.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
-          customTypeName = customSchemaTypeName.orElse(customParamTypeName)
-          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get))
-        } yield res
+        enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(Free.pure[F, L#Term] _)) { tpe =>
+          protocolElems
+            .flatTraverse({
+              case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
+                for {
+                  areEqual <- typeNamesEqual(tpe, _tpeName)
+                } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
+              case _ => Free.pure[F, List[EnumDefinition[L]]](List.empty)
+            })
+            .flatMap(_.headOption.fold[Free[F, Option[L#Term]]](baseDefaultValue.traverse(Free.pure _)) { x =>
+              baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
+            })
+        })
 
-      def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
+        defaultValue <- if (!required) {
+          (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
+        } else {
+          Free.pure[F, Option[L#Term]](enumDefaultValue)
+        }
 
-      param
-        .refine[Free[F, SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(r => getRefParameterRef(r).map(_.get).map(SwaggerUtil.Deferred(_)))
-        .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(r => getSimpleRef(r.downField("schema", _.getSchema)).map(SwaggerUtil.Deferred(_)))
-        .orRefine({ case x: Parameter if x.isInBody => x })(
-          x =>
-            getBodyParameterSchema(x)
-              .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+        name <- getParameterName(parameter.get)
+
+        paramName <- pureTermName(name.toCamelCase)
+        param     <- pureMethodParameter(paramName, declType, defaultValue)
+
+        ftpe       <- fileType(None)
+        isFileType <- typesEqual(paramType, ftpe)
+      } yield {
+        new ScalaParameter[L](
+          Option(parameter.get.getIn),
+          param,
+          paramName,
+          RawParameterName(name),
+          declType,
+          RawParameterType(rawType, rawFormat),
+          required,
+          FileHashAlgorithm(parameter.get),
+          isFileType
         )
-        .orRefine({ case x: Parameter if x.isInHeader => x })(x => resolveParam(x, getHeaderParameterType))
-        .orRefine({ case x: Parameter if x.isInPath => x })(x => resolveParam(x, getPathParameterType))
-        .orRefine({ case x: Parameter if x.isInQuery => x })(x => resolveParam(x, getQueryParameterType))
-        .orRefine({ case x: Parameter if x.isInCookies => x })(x => resolveParam(x, getCookieParameterType))
-        .orRefine({ case x: Parameter if x.isInFormData => x })(x => resolveParam(x, getFormParameterType))
-        .orRefineFallback(fallbackParameterHandler(_))
-    }
-
-    log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                                     <- paramMeta(parameter)
-      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-
-      required = Option[java.lang.Boolean](parameter.get.getRequired()).fold(false)(identity)
-      declType <- if (!required) {
-        liftOptionalType(paramType)
-      } else {
-        Free.pure[F, L#Type](paramType)
-      }
-
-      enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(Free.pure[F, L#Term] _)) { tpe =>
-        protocolElems
-          .flatTraverse({
-            case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
-              for {
-                areEqual <- typeNamesEqual(tpe, _tpeName)
-              } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
-            case _ => Free.pure[F, List[EnumDefinition[L]]](List.empty)
-          })
-          .flatMap(_.headOption.fold[Free[F, Option[L#Term]]](baseDefaultValue.traverse(Free.pure _)) { x =>
-            baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
-          })
       })
-
-      defaultValue <- if (!required) {
-        (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
-      } else {
-        Free.pure[F, Option[L#Term]](enumDefaultValue)
-      }
-
-      name <- getParameterName(parameter.get)
-
-      paramName <- pureTermName(name.toCamelCase)
-      param     <- pureMethodParameter(paramName, declType, defaultValue)
-
-      ftpe       <- fileType(None)
-      isFileType <- typesEqual(paramType, ftpe)
-    } yield {
-      new ScalaParameter[L](
-        Option(parameter.get.getIn),
-        param,
-        paramName,
-        RawParameterName(name),
-        declType,
-        RawParameterType(rawType, rawFormat),
-        required,
-        FileHashAlgorithm(parameter.get),
-        isFileType
-      )
-    })
   }
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => Free[F, List[ScalaParameter[L]]] = {
-    params =>
-      import Sc._
-      for {
-        parameters <- params.traverse(fromParameter(protocolElems))
-        counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
-        result <- parameters.traverse { param =>
-          extractTermName(param.paramName).flatMap { name =>
-            if (counts.getOrElse(name, 0) > 1) {
-              pureTermName(param.argName.value).flatMap { escapedName =>
-                alterMethodParameterName(param.param, escapedName).map { newParam =>
-                  new ScalaParameter[L](
-                    param.in,
-                    newParam,
-                    escapedName,
-                    param.argName,
-                    param.argType,
-                    param.rawType,
-                    param.required,
-                    param.hashAlgorithm,
-                    param.isFile
-                  )
-                }
+  )(
+      implicit Fw: FrameworkTerms[L, F],
+      Sc: ScalaTerms[L, Free[F, ?]],
+      Sw: SwaggerTerms[L, Free[F, ?]]
+  ): List[Tracker[Parameter]] => Free[F, List[ScalaParameter[L]]] = { params =>
+    import Sc._
+    for {
+      parameters <- params.traverse(fromParameter(protocolElems))
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      result <- parameters.traverse { param =>
+        extractTermName(param.paramName).flatMap { name =>
+          if (counts.getOrElse(name, 0) > 1) {
+            pureTermName(param.argName.value).flatMap { escapedName =>
+              alterMethodParameterName(param.param, escapedName).map { newParam =>
+                new ScalaParameter[L](
+                  param.in,
+                  newParam,
+                  escapedName,
+                  param.argName,
+                  param.argType,
+                  param.rawType,
+                  param.required,
+                  param.hashAlgorithm,
+                  param.isFile
+                )
               }
-            } else Free.pure[F, ScalaParameter[L]](param)
-          }
+            }
+          } else Free.pure[F, ScalaParameter[L]](param)
         }
-      } yield result
+      }
+    } yield result
   }
 
   /**
