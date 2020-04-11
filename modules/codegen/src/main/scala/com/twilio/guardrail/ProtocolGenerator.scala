@@ -191,7 +191,7 @@ object ProtocolGenerator {
       implicit F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
       E: EnumProtocolTerms[L, Free[F, ?]],
-      M: ModelProtocolTerms[L, F],
+      M: ModelProtocolTerms[L, Free[F, ?]],
       Sc: ScalaTerms[L, Free[F, ?]],
       Sw: SwaggerTerms[L, Free[F, ?]]
   ): Free[F, ProtocolElems[L]] = {
@@ -256,7 +256,7 @@ object ProtocolGenerator {
       concreteTypes: List[PropMeta[L]],
       dtoPackage: List[String]
   )(
-      implicit M: ModelProtocolTerms[L, F],
+      implicit M: ModelProtocolTerms[L, Free[F, ?]],
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, Free[F, ?]],
       P: PolyProtocolTerms[L, F],
@@ -333,7 +333,7 @@ object ProtocolGenerator {
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String]
   )(
-      implicit M: ModelProtocolTerms[L, F],
+      implicit M: ModelProtocolTerms[L, Free[F, ?]],
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, Free[F, ?]],
       P: PolyProtocolTerms[L, F],
@@ -389,7 +389,7 @@ object ProtocolGenerator {
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String]
   )(
-      implicit M: ModelProtocolTerms[L, F],
+      implicit M: ModelProtocolTerms[L, Free[F, ?]],
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, Free[F, ?]],
       P: PolyProtocolTerms[L, F],
@@ -619,7 +619,7 @@ object ProtocolGenerator {
 
   def fromSwagger[L <: LA, F[_]](swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit E: EnumProtocolTerms[L, Free[F, ?]],
-      M: ModelProtocolTerms[L, F],
+      M: ModelProtocolTerms[L, Free[F, ?]],
       R: ArrayProtocolTerms[L, Free[F, ?]],
       S: ProtocolSupportTerms[L, F],
       F: FrameworkTerms[L, F],

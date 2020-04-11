@@ -27,7 +27,7 @@ object Common {
       R: ArrayProtocolTerms[L, Free[F, ?]],
       E: EnumProtocolTerms[L, Free[F, ?]],
       Fw: FrameworkTerms[L, F],
-      M: ModelProtocolTerms[L, F],
+      M: ModelProtocolTerms[L, Free[F, ?]],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, Free[F, ?]],
