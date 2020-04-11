@@ -25,7 +25,7 @@ object Common {
       implicit
       C: ClientTerms[L, Free[F, ?]],
       R: ArrayProtocolTerms[L, Free[F, ?]],
-      E: EnumProtocolTerms[L, F],
+      E: EnumProtocolTerms[L, Free[F, ?]],
       Fw: FrameworkTerms[L, F],
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
