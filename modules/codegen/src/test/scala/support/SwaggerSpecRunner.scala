@@ -5,6 +5,7 @@ import com.twilio.guardrail.languages.LA
 import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.arrow.FunctionK
+import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.swagger.core.{ LogLevels, StructuredLogger }
@@ -36,7 +37,7 @@ trait SwaggerSpecRunner extends EitherValues {
 
   def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
       implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
-      Sc: ScalaTerms[L, CodegenApplication[L, ?]],
+      Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val /*(clientLogger,*/ (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
@@ -89,7 +90,7 @@ trait SwaggerSpecRunner extends EitherValues {
 
   def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: FunctionK[CodegenApplication[L, ?], Target])(
       implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
-      Sc: ScalaTerms[L, CodegenApplication[L, ?]],
+      Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
   ): (StructuredLogger, Error) =
     Common

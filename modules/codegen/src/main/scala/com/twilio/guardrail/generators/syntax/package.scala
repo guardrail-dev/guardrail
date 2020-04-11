@@ -17,7 +17,7 @@ package syntax {
   }
 
   class RichCollection[A, Repr](xs: IterableLike[A, Repr]) {
-    def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]) = {
+    def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]): That = {
       val builder = cbf(xs.repr)
       val i       = xs.iterator
       var set     = Set[B]()
@@ -65,7 +65,7 @@ package object syntax {
     "([A-Z]+)([A-Z][^A-Z]+)".r
   )
 
-  implicit class RichString(val s: String) extends AnyVal {
+  implicit class RichString(private val s: String) extends AnyVal {
     private def splitParts(s: String): List[String] =
       BOUNDARY_SPLITTERS
         .foldLeft(SPLIT_DELIMITERS.split(s))(
@@ -96,10 +96,10 @@ package object syntax {
 
   }
 
-  implicit def RichSchema    = new RichNotNullShower[Schema[_]](_)
-  implicit def RichOperation = new RichNotNullShower[Operation](_)
-  implicit def RichPathItem  = new RichNotNullShower[PathItem](_)
-  implicit def RichParameter = new RichNotNullShower[Parameter](_)
+  implicit def RichSchema: Schema[_] => RichNotNullShower[Schema[_]]    = new RichNotNullShower[Schema[_]](_)
+  implicit def RichOperation: Operation => RichNotNullShower[Operation] = new RichNotNullShower[Operation](_)
+  implicit def RichPathItem: PathItem => RichNotNullShower[PathItem]    = new RichNotNullShower[PathItem](_)
+  implicit def RichParameter: Parameter => RichNotNullShower[Parameter] = new RichNotNullShower[Parameter](_)
 
-  implicit def toRichCollection[A, Repr](xs: IterableLike[A, Repr]) = new RichCollection(xs)
+  implicit def toRichCollection[A, Repr](xs: IterableLike[A, Repr]): RichCollection[A, Repr] = new RichCollection(xs)
 }

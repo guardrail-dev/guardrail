@@ -774,7 +774,7 @@ object Http4sServerGenerator {
           .generateEntityResponseGenerator(q"org.http4s.Status.${response.statusCodeName}")}"
       }
 
-    def generateTracingExtractor(operationId: String, tracingField: Term) =
+    def generateTracingExtractor(operationId: String, tracingField: Term): Defn.Object =
       q"""
          object ${Term.Name(s"usingFor${operationId.capitalize}")} {
            def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))

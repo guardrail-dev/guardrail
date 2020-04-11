@@ -11,9 +11,9 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target }
+import com.twilio.guardrail.{ RenderedRoutes, SupportDefinition, Target }
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.ScalaParameter
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -30,14 +30,11 @@ import com.twilio.guardrail.protocol.terms.{
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.RouteMeta
-import io.swagger.v3.oas.models.responses.ApiResponse
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
-import scala.util.Try
 
 object DropwizardServerGenerator {
-  private implicit class ContentTypeExt(val ct: ContentType) extends AnyVal {
+  private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toJaxRsAnnotationName: Expression = ct match {
       case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
       case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")

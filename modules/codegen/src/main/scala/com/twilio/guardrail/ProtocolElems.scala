@@ -45,7 +45,7 @@ object ProtocolElems {
   def resolve[L <: LA, F[_]](
       elems: List[ProtocolElems[L]],
       limit: Int = 10
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], P: ProtocolSupportTerms[L, F]): Free[F, List[StrictProtocolElems[L]]] = {
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F], P: ProtocolSupportTerms[L, F]): Free[F, List[StrictProtocolElems[L]]] = {
     import Sc._
     import Sw._
     log.function(s"resolve(${elems.length} references)")(

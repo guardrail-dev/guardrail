@@ -22,7 +22,7 @@ object Target {
       throw new Exception(err.toString)
     })
 
-  implicit val targetInstances = new MonadError[Target, Error] with Traverse[Target] {
+  implicit val targetInstances: MonadError[Target, Error] with Traverse[Target] = new MonadError[Target, Error] with Traverse[Target] {
     def pure[A](x: A): Target[A] = new TargetValue(x, StructuredLogger.Empty)
 
     def handleErrorWith[A](fa: Target[A])(f: Error => Target[A]): Target[A] = fa match {

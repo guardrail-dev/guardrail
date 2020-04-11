@@ -31,7 +31,7 @@ object ServerGenerator {
   )(
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): Free[F, Servers[L]] = {
     import S._
     import Sw._
 

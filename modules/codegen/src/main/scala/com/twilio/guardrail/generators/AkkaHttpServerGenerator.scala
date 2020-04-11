@@ -12,17 +12,7 @@ import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{
-  ApplicationJson,
-  BinaryContent,
-  ContentType,
-  MultipartFormData,
-  OctetStream,
-  Responses,
-  TextContent,
-  TextPlain,
-  UrlencodedFormData
-}
+import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, UrlencodedFormData }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.RouteMeta
 import com.twilio.guardrail.shims._

@@ -22,5 +22,7 @@ addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.1.5")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
 
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.13")
+
 // for jdk11
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0"

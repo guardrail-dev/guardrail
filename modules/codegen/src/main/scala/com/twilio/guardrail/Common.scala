@@ -23,14 +23,14 @@ object Common {
 
   def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit
-      C: ClientTerms[L, F],
+      C: ClientTerms[L, Free[F, ?]],
       R: ArrayProtocolTerms[L, F],
       E: EnumProtocolTerms[L, F],
       Fw: FrameworkTerms[L, F],
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, F],
+      Sc: ScalaTerms[L, Free[F, ?]],
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
@@ -110,7 +110,7 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
     import Fw._
     import Sc._
 
@@ -171,7 +171,7 @@ object Common {
 
   def processArgs[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
     args.traverse(
       arg =>
@@ -185,12 +185,12 @@ object Common {
 
   def runM[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[L, F]): Free[F, NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
 
     for {
       validated  <- validateArgs(args.toList)
-      writeTrees <- processArgs(validated)
+      writeTrees <- processArgs[L, F](validated)
     } yield writeTrees
   }
 }

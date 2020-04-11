@@ -17,12 +17,12 @@ import com.twilio.guardrail.SwaggerUtil.ResolvedType
 case class RawParameterName private[generators] (value: String)
 case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
 class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
-  val filterParamBy     = ScalaParameter.filterParams(parameters)
-  val headerParams      = filterParamBy("header")
-  val pathParams        = filterParamBy("path")
-  val queryStringParams = filterParamBy("query")
-  val bodyParams        = filterParamBy("body").headOption
-  val formParams        = filterParamBy("formData")
+  val filterParamBy: String => List[ScalaParameter[L]] = ScalaParameter.filterParams(parameters)
+  val headerParams: List[ScalaParameter[L]]            = filterParamBy("header")
+  val pathParams: List[ScalaParameter[L]]              = filterParamBy("path")
+  val queryStringParams: List[ScalaParameter[L]]       = filterParamBy("query")
+  val bodyParams: Option[ScalaParameter[L]]            = filterParamBy("body").headOption
+  val formParams: List[ScalaParameter[L]]              = filterParamBy("formData")
 }
 class ScalaParameter[L <: LA] private[generators] (
     val in: Option[String],
@@ -50,7 +50,7 @@ object ScalaParameter {
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => Free[F, ScalaParameter[L]] = { parameter =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => Free[F, ScalaParameter[L]] = { parameter =>
     import Fw._
     import Sc._
     import Sw._
@@ -159,33 +159,34 @@ object ScalaParameter {
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => Free[F, List[ScalaParameter[L]]] = { params =>
-    import Sc._
-    for {
-      parameters <- params.traverse(fromParameter(protocolElems))
-      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
-      result <- parameters.traverse { param =>
-        extractTermName(param.paramName).flatMap { name =>
-          if (counts.getOrElse(name, 0) > 1) {
-            pureTermName(param.argName.value).flatMap { escapedName =>
-              alterMethodParameterName(param.param, escapedName).map { newParam =>
-                new ScalaParameter[L](
-                  param.in,
-                  newParam,
-                  escapedName,
-                  param.argName,
-                  param.argType,
-                  param.rawType,
-                  param.required,
-                  param.hashAlgorithm,
-                  param.isFile
-                )
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => Free[F, List[ScalaParameter[L]]] = {
+    params =>
+      import Sc._
+      for {
+        parameters <- params.traverse(fromParameter(protocolElems))
+        counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+        result <- parameters.traverse { param =>
+          extractTermName(param.paramName).flatMap { name =>
+            if (counts.getOrElse(name, 0) > 1) {
+              pureTermName(param.argName.value).flatMap { escapedName =>
+                alterMethodParameterName(param.param, escapedName).map { newParam =>
+                  new ScalaParameter[L](
+                    param.in,
+                    newParam,
+                    escapedName,
+                    param.argName,
+                    param.argType,
+                    param.rawType,
+                    param.required,
+                    param.hashAlgorithm,
+                    param.isFile
+                  )
+                }
               }
-            }
-          } else Free.pure[F, ScalaParameter[L]](param)
+            } else Free.pure[F, ScalaParameter[L]](param)
+          }
         }
-      }
-    } yield result
+      } yield result
   }
 
   /**

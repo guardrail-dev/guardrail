@@ -7,7 +7,6 @@ import com.twilio.swagger.core._
 import org.scalatest.{ FunSuite, Matchers }
 
 class StructuredLoggerSuite extends FunSuite with Matchers {
-  /*
   test("Structured Logger can nest functions") {
     val structure =
       Target.log.function("first") {
@@ -19,7 +18,7 @@ class StructuredLoggerSuite extends FunSuite with Matchers {
           } yield ()
         }
       }
-    val logEntries = structure.value.runEmptyS
+    val logEntries = structure.logEntries
     val expected   = """
       |   INFO    first second: one
       |   INFO    first second: two
@@ -31,5 +30,4 @@ class StructuredLoggerSuite extends FunSuite with Matchers {
       logEntries.show should ===(expected)
     }
   }
- */
 }
