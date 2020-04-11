@@ -36,7 +36,7 @@ trait SwaggerSpecRunner extends EitherValues {
   }
 
   def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
-      implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
+      implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
@@ -89,7 +89,7 @@ trait SwaggerSpecRunner extends EitherValues {
   }
 
   def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: FunctionK[CodegenApplication[L, ?], Target])(
-      implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
+      implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (StructuredLogger, Error) =

@@ -6,7 +6,6 @@ import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
@@ -146,13 +145,13 @@ object SwaggerUtil {
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: Tracker[T]
-    )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
         import Fw._
         log.debug(s"model:\n${log.schemaToString(model.get)}") >> (model
-          .refine[Free[F, ResolvedType[L]]]({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(
+          .refine[F[ResolvedType[L]]]({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(
             ref =>
               for {
                 ref <- getSimpleRef(ref.map(Option(_)))
@@ -180,7 +179,7 @@ object SwaggerUtil {
               rec <- map
                 .downField("additionalProperties", _.getAdditionalProperties())
                 .map(_.getOrElse(false))
-                .refine[Free[F, ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(Resolved[L](_, None, None, None, None)))
+                .refine[F[ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(Resolved[L](_, None, None, None, None)))
                 .orRefine({ case s: Schema[_] => s })(propMeta[L, F](_))
                 .orRefineFallback({ s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
@@ -211,10 +210,10 @@ object SwaggerUtil {
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], F: FrameworkTerms[L, F]): Free[F, List[PropMeta[L]]] = {
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
     import Sc._
     for {
-      entries <- definitions.traverse[Free[F, ?], (String, SwaggerUtil.ResolvedType[L])] {
+      entries <- definitions.traverse[F, (String, SwaggerUtil.ResolvedType[L])] {
         case (clsName, schema) =>
           schema
             .refine({ case impl: Schema[_] if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) => impl })(
@@ -238,7 +237,7 @@ object SwaggerUtil {
               } yield (clsName, resolved)
             )
       }
-      result <- SwaggerUtil.ResolvedType.resolveReferences[L, Free[F, ?]](entries)
+      result <- SwaggerUtil.ResolvedType.resolveReferences[L, F](entries)
     } yield result.map {
       case (clsName, SwaggerUtil.Resolved(tpe, _, _, _, _)) =>
         PropMeta[L](clsName, tpe)
@@ -250,7 +249,7 @@ object SwaggerUtil {
       typeName: Tracker[Option[String]],
       format: Tracker[Option[String]],
       customType: Option[String]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, L#Type] =
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[L#Type] =
     Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType})") {
       import Sc._
       import Fw._
@@ -293,7 +292,7 @@ object SwaggerUtil {
             case (tpe, fmt) =>
               fallbackType(tpe, fmt)
           }
-        })(Free.pure(_))
+        })(_.pure[F])
         _ <- Sw.log.debug(s"Returning ${result}")
       } yield result
     }
@@ -307,10 +306,10 @@ object SwaggerUtil {
     }
 
   def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]])(
-      implicit Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, Free[F, ?]],
+      implicit Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): Free[F, ResolvedType[L]] = {
+  ): F[ResolvedType[L]] = {
     import Fw._
     propMetaImpl(property) {
       case o: ObjectSchema =>
@@ -322,23 +321,23 @@ object SwaggerUtil {
     }
   }
 
-  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, Free[F, ?]]): Free[F, Option[L#Type]] = {
+  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
     val tpe = s.trim
     if (tpe.nonEmpty) {
       parseType(tpe)
-    } else Free.pure(Option.empty[L#Type])
+    } else Option.empty[L#Type].pure[F]
   }
 
   def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(
-      implicit Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, Free[F, ?]],
+      implicit Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): Free[F, ResolvedType[L]] = {
+  ): F[ResolvedType[L]] = {
     import Fw._
     propMetaImpl(property) {
       case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
-        Free.pure(Resolved[L](tpe, None, None, None, None))
+        (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
       case o: ObjectSchema =>
         for {
           customTpeName <- customTypeName(o)
@@ -346,21 +345,21 @@ object SwaggerUtil {
           fallback      <- objectType(None)
         } yield Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
       case _: ComposedSchema =>
-        Free.pure(Resolved[L](tpe, None, None, None, None))
+        (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
       case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) =>
-        Free.pure(Resolved[L](tpe, None, None, None, None))
+        (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
     }
   }
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
-      strategy: PartialFunction[Schema[_], Free[F, ResolvedType[L]]]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, ResolvedType[L]] =
+      strategy: PartialFunction[Schema[_], F[ResolvedType[L]]]
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
       import Sw._
 
-      def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => Free[F, ResolvedType[L]] = { a =>
+      def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => F[ResolvedType[L]] = { a =>
         val rawType   = a.downField("type", _.getType())
         val rawFormat = a.downField("format", _.getFormat())
 
@@ -369,7 +368,7 @@ object SwaggerUtil {
           tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
         } yield Resolved[L](tpe, None, None, rawType.get, rawFormat.get)
       }
-      def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => Free[F, L#Term]): Tracker[A] => Free[F, ResolvedType[L]] = { a =>
+      def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[ResolvedType[L]] = { a =>
         val rawType   = a.downField("type", _.getType())
         val rawFormat = a.downField("format", _.getFormat())
         for {
@@ -383,7 +382,7 @@ object SwaggerUtil {
 
       log.debug(s"property:\n${log.schemaToString(property.get)} (${property.get.getExtensions()})").flatMap { _ =>
         property
-          .refine[Free[F, ResolvedType[L]]](strategy)(_.get)
+          .refine[F[ResolvedType[L]]](strategy)(_.get)
           .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
@@ -406,7 +405,7 @@ object SwaggerUtil {
                 rec <- m
                   .downField("additionalProperties", _.getAdditionalProperties())
                   .map(_.getOrElse(false))
-                  .refine[Free[F, ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(Resolved[L](_, None, None, None, None)))
+                  .refine[F[ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(Resolved[L](_, None, None, None, None)))
                   .orRefine({ case s: Schema[_] => s })(propMetaImpl[L, F](_)(strategy))
                   .orRefineFallback({ s =>
                     log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None).map(

@@ -26,7 +26,7 @@ object Common {
       C: ClientTerms[L, Free[F, ?]],
       R: ArrayProtocolTerms[L, Free[F, ?]],
       E: EnumProtocolTerms[L, Free[F, ?]],
-      Fw: FrameworkTerms[L, F],
+      Fw: FrameworkTerms[L, Free[F, ?]],
       M: ModelProtocolTerms[L, Free[F, ?]],
       Pol: PolyProtocolTerms[L, Free[F, ?]],
       S: ProtocolSupportTerms[L, F],
@@ -87,7 +87,7 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, Free[F, ?]](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
             Clients(clients, supportDefinitions) = clientMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)
@@ -110,7 +110,7 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): F[List[WriteTree]] = {
     import Fw._
     import Sc._
 
@@ -148,7 +148,7 @@ object Common {
       ).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({
+      frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F])({
         case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply)
       })
 

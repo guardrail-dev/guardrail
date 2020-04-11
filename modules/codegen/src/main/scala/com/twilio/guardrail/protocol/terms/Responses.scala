@@ -1,8 +1,7 @@
 package com.twilio.guardrail.protocol.terms
 
-import cats.free.Free
 import cats.implicits._
-import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil }
+import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFrameworkTerms }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
@@ -25,16 +24,16 @@ class Responses[L <: LA](val value: List[Response[L]]) {
 object Responses {
   def getResponses[L <: LA, F[_]](operationId: String, operation: Tracker[Operation], protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
-      Sw: SwaggerTerms[L, Free[F, ?]]
-  ): Free[F, Responses[L]] = Sw.log.function("getResponses") {
+      Sc: ScalaTerms[L, F],
+      Sw: SwaggerTerms[L, F]
+  ): F[Responses[L]] = Sw.log.function("getResponses") {
     import Fw._
     import Sc._
     for {
       responses <- Sw.getResponses(operationId, operation)
 
       instances <- responses
-        .foldLeft[List[Free[F, Response[L]]]](List.empty)({
+        .foldLeft[List[F[Response[L]]]](List.empty)({
           case (acc, (key, resp)) =>
             acc :+ (for {
                   httpCode <- lookupStatusCode(key)
@@ -45,7 +44,7 @@ object Responses {
                   } yield schema).traverse { prop =>
                     for {
                       meta     <- SwaggerUtil.propMeta[L, F](prop)
-                      resolved <- SwaggerUtil.ResolvedType.resolve[L, Free[F, ?]](meta, protocolElems)
+                      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
                       SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
 
                     } yield (baseType, baseDefaultValue)
@@ -55,7 +54,7 @@ object Responses {
                       for {
                         termName   <- pureTermName(s"${name}Header".toCamelCase)
                         typeName   <- pureTypeName("String").flatMap(widenTypeName)
-                        resultType <- if (header.getRequired) Free.pure[F, L#Type](typeName) else liftOptionalType(typeName)
+                        resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
                       } yield new Header(name, header.getRequired, resultType, termName)
                   }
                 } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers))) // FIXME: headOption

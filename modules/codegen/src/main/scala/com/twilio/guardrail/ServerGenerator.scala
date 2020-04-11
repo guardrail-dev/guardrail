@@ -31,7 +31,7 @@ object ServerGenerator {
   )(
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], S: ServerTerms[L, F], Sw: SwaggerTerms[L, Free[F, ?]]): Free[F, Servers[L]] = {
+  )(implicit Fw: FrameworkTerms[L, Free[F, ?]], Sc: ScalaTerms[L, Free[F, ?]], S: ServerTerms[L, F], Sw: SwaggerTerms[L, Free[F, ?]]): Free[F, Servers[L]] = {
     import S._
     import Sw._
 
@@ -51,7 +51,7 @@ object ServerGenerator {
                   operationId         <- getOperationId(operation)
                   responses           <- Responses.getResponses(operationId, operation, protocolElems)
                   responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
-                  parameters          <- route.getParameters[L, F](protocolElems)
+                  parameters          <- route.getParameters[L, Free[F, ?]](protocolElems)
                   tracingField        <- buildTracingFields(operation, className, context.tracing)
                 } yield (responseDefinitions, (operationId, tracingField, route, parameters, responses))
             }

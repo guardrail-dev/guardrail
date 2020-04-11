@@ -6,7 +6,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerm
-import com.twilio.guardrail.terms.framework.FrameworkTerm
+import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 
 package guardrail {
@@ -18,7 +18,10 @@ package guardrail {
   )
 }
 
-trait MonadChain8 {
+trait MonadChain9 {
+  implicit def monadForFrameworkTerms[L <: LA, F[_]](implicit ev: FrameworkTerms[L, F]): Monad[F] = ev.MonadF
+}
+trait MonadChain8 extends MonadChain9 {
   implicit def monadForPolyProtocolTerms[L <: LA, F[_]](implicit ev: PolyProtocolTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain7 extends MonadChain8 {
