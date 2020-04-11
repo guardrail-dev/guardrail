@@ -5,7 +5,7 @@ import cats.data.EitherK
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.protocol.terms.server.ServerTerm
+import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
 import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
 
@@ -18,7 +18,10 @@ package guardrail {
   )
 }
 
-trait MonadChain9 {
+trait MonadChain10 {
+  implicit def monadForServerTerms[L <: LA, F[_]](implicit ev: ServerTerms[L, F]): Monad[F] = ev.MonadF
+}
+trait MonadChain9 extends MonadChain10 {
   implicit def monadForFrameworkTerms[L <: LA, F[_]](implicit ev: FrameworkTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain8 extends MonadChain9 {

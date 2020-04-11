@@ -31,7 +31,7 @@ object Common {
       Pol: PolyProtocolTerms[L, Free[F, ?]],
       S: ProtocolSupportTerms[L, F],
       Sc: ScalaTerms[L, Free[F, ?]],
-      Se: ServerTerms[L, F],
+      Se: ServerTerms[L, Free[F, ?]],
       Sw: SwaggerTerms[L, Free[F, ?]]
   ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw._
@@ -95,7 +95,7 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, Free[F, ?]](context, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
             Servers(servers, supportDefinitions) = serverMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)
