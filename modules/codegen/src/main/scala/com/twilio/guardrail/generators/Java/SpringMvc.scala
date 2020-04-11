@@ -1,5 +1,6 @@
 package com.twilio.guardrail.generators.Java
 
+import cats.arrow.FunctionK
 import cats.~>
 import com.twilio.guardrail.generators.Java.SpringMvcClientGenerator.ClientTermInterp
 import com.twilio.guardrail.generators.Java.SpringMvcGenerator.FrameworkInterp
@@ -29,7 +30,7 @@ import com.twilio.guardrail.{
   Target
 }
 
-object SpringMvc extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
+object SpringMvc extends FunctionK[CodegenApplication[JavaLanguage, ?], Target] {
   val interpDefinitionPM: DefinitionPM[JavaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
   val interpDefinitionPME: DefinitionPME[JavaLanguage, ?] ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
   val interpDefinitionPMEA: DefinitionPMEA[JavaLanguage, ?] ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME

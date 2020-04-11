@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.Java
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.~>
+import cats.arrow.FunctionK
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
@@ -402,7 +402,7 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
+  object ClientTermInterp extends FunctionK[ClientTerm[JavaLanguage, ?], Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     type L    = JavaLanguage

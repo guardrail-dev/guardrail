@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.~>
+import cats.arrow.FunctionK
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail._
@@ -19,7 +19,7 @@ import scala.meta._
 object ScalaGenerator {
   private def sourceToBytes(source: Source): Array[Byte] = (GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8)
 
-  object ScalaInterp extends (ScalaTerm[ScalaLanguage, ?] ~> Target) {
+  object ScalaInterp extends FunctionK[ScalaTerm[ScalaLanguage, ?], Target] {
     // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
     // defined inside `apply`. Once 2.11 is dropped, these can be moved back.
     val matchImplicit: PartialFunction[Stat, Defn.Val] = {

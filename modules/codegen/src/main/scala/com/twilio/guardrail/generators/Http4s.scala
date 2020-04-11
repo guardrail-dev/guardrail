@@ -4,6 +4,7 @@ package generators
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.languages.ScalaLanguage
 import cats.~>
+import cats.arrow.FunctionK
 
 import Http4sClientGenerator._
 import Http4sServerGenerator._
@@ -11,7 +12,7 @@ import Http4sGenerator._
 import CirceProtocolGenerator._
 import ScalaGenerator._
 
-object Http4s extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
+object Http4s extends FunctionK[CodegenApplication[ScalaLanguage, ?], Target] {
   val interpDefinitionPM: DefinitionPM[ScalaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or new ModelProtocolTermInterp(CirceVersion.V012)
   val interpDefinitionPME: DefinitionPME[ScalaLanguage, ?] ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
   val interpDefinitionPMEA: DefinitionPMEA[ScalaLanguage, ?] ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME

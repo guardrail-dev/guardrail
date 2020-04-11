@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators.Java
 
 import cats.~>
+import cats.arrow.FunctionK
 import com.twilio.guardrail.generators.Java.AsyncHttpClientClientGenerator.ClientTermInterp
 import com.twilio.guardrail.generators.Java.DropwizardGenerator.FrameworkInterp
 import com.twilio.guardrail.generators.Java.DropwizardServerGenerator.ServerTermInterp
@@ -23,7 +24,7 @@ import com.twilio.guardrail.{
   Target
 }
 
-object Dropwizard extends (CodegenApplication[JavaLanguage, ?] ~> Target) {
+object Dropwizard extends FunctionK[CodegenApplication[JavaLanguage, ?], Target] {
   val interpDefinitionPM: DefinitionPM[JavaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or ModelProtocolTermInterp
   val interpDefinitionPME: DefinitionPME[JavaLanguage, ?] ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
   val interpDefinitionPMEA: DefinitionPMEA[JavaLanguage, ?] ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME

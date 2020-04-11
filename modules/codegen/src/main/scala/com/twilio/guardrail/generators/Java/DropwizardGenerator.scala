@@ -1,6 +1,6 @@
 package com.twilio.guardrail.generators.Java
 
-import cats.~>
+import cats.arrow.FunctionK
 import cats.implicits._
 import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.Target
@@ -9,7 +9,7 @@ import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.framework._
 
 object DropwizardGenerator {
-  object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {
+  object FrameworkInterp extends FunctionK[FrameworkTerm[JavaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[JavaLanguage, T]): Target[T] = term match {
       case FileType(format)   => safeParseType(format.getOrElse("java.io.InputStream"))
       case ObjectType(format) => safeParseType("com.fasterxml.jackson.databind.JsonNode")

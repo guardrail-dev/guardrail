@@ -1,6 +1,6 @@
 package com.twilio.guardrail.generators
 
-import cats.~>
+import cats.arrow.FunctionK
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
@@ -103,7 +103,7 @@ object JavaGenerator {
         Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
-  object JavaInterp extends (ScalaTerm[JavaLanguage, ?] ~> Target) {
+  object JavaInterp extends FunctionK[ScalaTerm[JavaLanguage, ?], Target] {
     type L    = JavaLanguage
     type F[A] = Target[A]
     implicit def MonadF: Monad[F]         = Target.targetInstances

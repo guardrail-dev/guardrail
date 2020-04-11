@@ -4,6 +4,7 @@ package generators
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.languages.ScalaLanguage
 import cats.~>
+import cats.arrow.FunctionK
 
 import EndpointsClientGenerator._
 import EndpointsServerGenerator._
@@ -11,7 +12,7 @@ import CirceProtocolGenerator._
 import ScalaGenerator._
 import EndpointsGenerator._
 
-object Endpoints extends (CodegenApplication[ScalaLanguage, ?] ~> Target) {
+object Endpoints extends FunctionK[CodegenApplication[ScalaLanguage, ?], Target] {
   val interpDefinitionPM: DefinitionPM[ScalaLanguage, ?] ~> Target       = ProtocolSupportTermInterp or new ModelProtocolTermInterp(CirceVersion.V012)
   val interpDefinitionPME: DefinitionPME[ScalaLanguage, ?] ~> Target     = EnumProtocolTermInterp or interpDefinitionPM
   val interpDefinitionPMEA: DefinitionPMEA[ScalaLanguage, ?] ~> Target   = ArrayProtocolTermInterp or interpDefinitionPME
