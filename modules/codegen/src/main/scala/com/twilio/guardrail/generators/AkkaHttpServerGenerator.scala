@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import cats.arrow.FunctionK
+import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil
@@ -14,78 +14,79 @@ import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, UrlencodedFormData }
 import com.twilio.guardrail.protocol.terms.server._
-import com.twilio.guardrail.terms.RouteMeta
+import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+import _root_.io.swagger.v3.oas.models.Operation
 
 object AkkaHttpServerGenerator {
-  object ServerTermInterp extends FunctionK[ServerTerm[ScalaLanguage, ?], Target] {
+  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
     }
-    def apply[T](term: ServerTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateResponseDefinitions(operationId, responses, protocolElems) =>
-        for {
-          _ <- Target.pure(())
-          responseSuperType = Type.Name(s"${operationId}Response")
-          responseSuperTerm = Term.Name(s"${operationId}Response")
+    implicit def MonadF: Monad[Target] = Target.targetInstances
 
-          instances = responses.value
-            .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
-              case (acc, resp) =>
-                acc :+ ({
-                  val statusCodeName = resp.statusCodeName
-                  val statusCode     = q"StatusCodes.${statusCodeName}"
-                  val valueType      = resp.value.map(_._1)
-                  val responseTerm   = Term.Name(s"${operationId}Response${statusCodeName.value}")
-                  val responseName   = Type.Name(s"${operationId}Response${statusCodeName.value}")
-                  valueType.fold[(Defn, Defn, Case)](
-                    (
-                      q"case object $responseTerm                      extends $responseSuperType($statusCode)",
-                      q"def $statusCodeName: $responseSuperType = $responseTerm",
-                      p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
-                    )
-                  ) { valueType =>
-                    (
-                      q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
-                      q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                      p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
-                    )
-                  }
-                })
-            })
-
-          (terms, aliases, marshallers) = instances.unzip3
-
-          convenienceConstructors = aliases.flatMap({
-            case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }
-            case _                                  => None
+    def generateResponseDefinitions(
+        operationId: String,
+        responses: Responses[ScalaLanguage],
+        protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+    ) =
+      for {
+        _ <- Target.pure(())
+        responseSuperType = Type.Name(s"${operationId}Response")
+        responseSuperTerm = Term.Name(s"${operationId}Response")
+        instances = responses.value
+          .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
+            case (acc, resp) =>
+              acc :+ ({
+                val statusCodeName = resp.statusCodeName
+                val statusCode     = q"StatusCodes.${statusCodeName}"
+                val valueType      = resp.value.map(_._1)
+                val responseTerm   = Term.Name(s"${operationId}Response${statusCodeName.value}")
+                val responseName   = Type.Name(s"${operationId}Response${statusCodeName.value}")
+                valueType.fold[(Defn, Defn, Case)](
+                  (
+                    q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                    q"def $statusCodeName: $responseSuperType = $responseTerm",
+                    p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+                  )
+                ) { valueType =>
+                  (
+                    q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
+                    q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
+                    p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                  )
+                }
+              })
           })
-
-          implicitHelpers = convenienceConstructors
-            .groupBy(_._1)
-            .flatMap({
-              case (tpe, (_, name) :: Nil) =>
-                Some(tpe -> name)
-              case _ =>
-                None
-            })
-            .toList
-            .sortBy(_._2.value)
-            .map {
-              case (tpe, name) =>
-                q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)"
-            }
-
-          companion = q"""
+        (terms, aliases, marshallers) = instances.unzip3
+        convenienceConstructors = aliases.flatMap({
+          case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }
+          case _                                  => None
+        })
+        implicitHelpers = convenienceConstructors
+          .groupBy(_._1)
+          .flatMap({
+            case (tpe, (_, name) :: Nil) =>
+              Some(tpe -> name)
+            case _ =>
+              None
+          })
+          .toList
+          .sortBy(_._2.value)
+          .map {
+            case (tpe, name) =>
+              q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)"
+          }
+        companion = q"""
             object ${responseSuperTerm} {
               implicit val ${Pat
-            .Var(Term.Name(s"${operationId}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term
-            .Name(s"${operationId}TR")}(resp) }
+          .Var(Term.Name(s"${operationId}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term
+          .Name(s"${operationId}TR")}(resp) }
               implicit def ${Term
-            .Name(s"${operationId}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
+          .Name(s"${operationId}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
                 ${Term.Match(Term.Name("value"), marshallers)}
 
               def apply[T](value: T)(implicit ev: T => ${responseSuperType}): ${responseSuperType} = ev(value)
@@ -95,75 +96,89 @@ object AkkaHttpServerGenerator {
               ..${aliases}
             }
           """
-
-        } yield List[Defn](
-          q"sealed abstract class ${responseSuperType}(val statusCode: StatusCode)"
-        ) ++ terms ++ List[Defn](
-              companion
-            )
-
-      case BuildTracingFields(operation, resourceName, tracing) =>
-        for {
-          _ <- Target.log.debug(s"buildTracingFields(${operation.get.showNotNull}, ${resourceName}, ${tracing})")
-          res <- if (tracing) {
-            for {
-              operationId <- operation
-                .downField("operationId", _.getOperationId())
-                .map(_.map(splitOperationParts(_)._2))
-                .raiseErrorIfEmpty("Missing operationId")
-              label <- Target.fromOption[Lit.String](
-                TracingLabel(operation)
-                  .map(Lit.String(_))
-                  .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
-                UserError(s"Missing client name (${operation.showHistory})")
-              )
-            } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
-          } else Target.pure(None)
-        } yield res
-
-      case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
-        for {
-          renderedRoutes <- routes.traverse {
-            case (operationId, tracingFields, sr @ RouteMeta(path, method, operation, securityRequirements), parameters, responses) =>
-              for {
-                rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
-              } yield rendered
-          }
-          routeTerms = renderedRoutes.map(_.route)
-          combinedRouteTerms <- combineRouteTerms(routeTerms)
-          methodSigs = renderedRoutes.map(_.methodSig)
-        } yield {
-          RenderedRoutes[ScalaLanguage](
-            List(combinedRouteTerms),
-            List.empty,
-            methodSigs,
-            renderedRoutes.flatMap(_.supportDefinitions),
-            renderedRoutes.flatMap(_.handlerDefinitions)
+      } yield List[Defn](
+        q"sealed abstract class ${responseSuperType}(val statusCode: StatusCode)"
+      ) ++ terms ++ List[Defn](
+            companion
           )
+    def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
+      for {
+        _ <- Target.log.debug(s"buildTracingFields(${operation.get.showNotNull}, ${resourceName}, ${tracing})")
+        res <- if (tracing) {
+          for {
+            operationId <- operation
+              .downField("operationId", _.getOperationId())
+              .map(_.map(splitOperationParts(_)._2))
+              .raiseErrorIfEmpty("Missing operationId")
+            label <- Target.fromOption[Lit.String](
+              TracingLabel(operation)
+                .map(Lit.String(_))
+                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+              UserError(s"Missing client name (${operation.showHistory})")
+            )
+          } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+        } else Target.pure(None)
+      } yield res
+    def generateRoutes(
+        tracing: Boolean,
+        resourceName: String,
+        basePath: Option[String],
+        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, ScalaParameters[ScalaLanguage], Responses[ScalaLanguage])],
+        protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+    ) =
+      for {
+        renderedRoutes <- routes.traverse {
+          case (operationId, tracingFields, sr @ RouteMeta(path, method, operation, securityRequirements), parameters, responses) =>
+            for {
+              rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
+            } yield rendered
         }
-
-      case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
-        for {
-          _ <- Target.log.debug(s"renderHandler(${handlerName}, ${methodSigs}")
-        } yield q"""
+        routeTerms = renderedRoutes.map(_.route)
+        combinedRouteTerms <- combineRouteTerms(routeTerms)
+        methodSigs = renderedRoutes.map(_.methodSig)
+      } yield {
+        RenderedRoutes[ScalaLanguage](
+          List(combinedRouteTerms),
+          List.empty,
+          methodSigs,
+          renderedRoutes.flatMap(_.supportDefinitions),
+          renderedRoutes.flatMap(_.handlerDefinitions)
+        )
+      }
+    def renderHandler(
+        handlerName: String,
+        methodSigs: List[scala.meta.Decl.Def],
+        handlerDefinitions: List[scala.meta.Stat],
+        responseDefinitions: List[scala.meta.Defn]
+    ) =
+      for {
+        _ <- Target.log.debug(s"renderHandler(${handlerName}, ${methodSigs}")
+      } yield q"""
           trait ${Type.Name(handlerName)} {
             ..${methodSigs ++ handlerDefinitions}
           }
         """
-
-      case GetExtraRouteParams(tracing) =>
-        for {
-          _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
-          res <- if (tracing) {
-            Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
-          } else Target.pure(List.empty)
-        } yield res
-
-      case RenderClass(resourceName, handlerName, _, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
-        for {
-          _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
-          routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
-        } yield List(q"""
+    def getExtraRouteParams(tracing: Boolean) =
+      for {
+        _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
+        res <- if (tracing) {
+          Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
+        } else Target.pure(List.empty)
+      } yield res
+    def renderClass(
+        resourceName: String,
+        handlerName: String,
+        annotations: List[scala.meta.Mod.Annot],
+        combinedRouteTerms: List[scala.meta.Term],
+        extraRouteParams: List[scala.meta.Term.Param],
+        responseDefinitions: List[scala.meta.Defn],
+        supportDefinitions: List[scala.meta.Defn]
+    ) =
+      for {
+        _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
+        routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
+      } yield List(q"""
           object ${Term.Name(resourceName)} {
             ..${supportDefinitions};
             def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
@@ -173,20 +188,21 @@ object AkkaHttpServerGenerator {
             ..${responseDefinitions}
           }
         """)
+    def getExtraImports(tracing: Boolean) =
+      for {
+        _ <- Target.log.debug(s"getExtraImports(${tracing})")
+      } yield {
+        List(
+          if (tracing) Option(q"import akka.http.scaladsl.server.Directive1") else None,
+          Option(q"import scala.language.higherKinds")
+        ).flatten
+      }
 
-      case GetExtraImports(tracing) =>
-        for {
-          _ <- Target.log.debug(s"getExtraImports(${tracing})")
-        } yield {
-          List(
-            if (tracing) Option(q"import akka.http.scaladsl.server.Directive1") else None,
-            Option(q"import scala.language.higherKinds")
-          ).flatten
-        }
-
-      case GenerateSupportDefinitions(tracing, securitySchemes) =>
-        Target.pure(List.empty)
-    }
+    def generateSupportDefinitions(
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+    ) =
+      Target.pure(List.empty)
 
     def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {
       case HttpMethod.DELETE  => Target.pure(q"delete")
