@@ -103,7 +103,7 @@ object JavaGenerator {
         Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
-  object JavaInterp extends FunctionK[ScalaTerm[JavaLanguage, ?], Target] {
+  object JavaInterp extends ScalaTerms[JavaLanguage, Target] with FunctionK[ScalaTerm[JavaLanguage, ?], Target] {
     type L    = JavaLanguage
     type F[A] = Target[A]
     implicit def MonadF: Monad[F]         = Target.targetInstances

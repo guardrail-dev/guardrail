@@ -402,7 +402,7 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  object ClientTermInterp extends FunctionK[ClientTerm[JavaLanguage, ?], Target] {
+  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] with FunctionK[ClientTerm[JavaLanguage, ?], Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     type L    = JavaLanguage
