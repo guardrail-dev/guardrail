@@ -37,6 +37,36 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
       parents: List[SuperClass[L]] = Nil
   ): F[Option[L#ValueDefinition]]
   def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]): F[StaticDefns[L]]
+
+  def copy(
+      newMonadF: Monad[F] = MonadF,
+      newExtractProperties: Tracker[Schema[_]] => F[List[(String, Tracker[Schema[_]])]] = extractProperties _,
+      newTransformProperty: (
+          String,
+          Boolean,
+          List[PropMeta[L]]
+      ) => (String, Schema[_], ResolvedType[L], PropertyRequirement, Boolean, Option[L#Term]) => F[ProtocolParameter[L]] = transformProperty _,
+      newRenderDTOClass: (String, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = renderDTOClass _,
+      newEncodeModel: (String, Boolean, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = encodeModel _,
+      newDecodeModel: (String, Boolean, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = decodeModel _,
+      newRenderDTOStaticDefns: (String, List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition]) => F[StaticDefns[L]] = renderDTOStaticDefns _
+  ) = new ModelProtocolTerms[L, F] {
+    def MonadF                                         = newMonadF
+    def extractProperties(swagger: Tracker[Schema[_]]) = newExtractProperties(swagger)
+    def transformProperty(
+        clsName: String,
+        needCamelSnakeConversion: Boolean,
+        concreteTypes: List[PropMeta[L]]
+    )(name: String, prop: Schema[_], meta: ResolvedType[L], requirement: PropertyRequirement, isCustomType: Boolean, defaultValue: Option[L#Term]) =
+      newTransformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, prop, meta, requirement, isCustomType, defaultValue)
+    def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) = newRenderDTOClass(clsName, terms, parents)
+    def encodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) =
+      newEncodeModel(clsName, needCamelSnakeConversion, params, parents)
+    def decodeModel(clsName: String, needCamelSnakeConversion: Boolean, params: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) =
+      newDecodeModel(clsName, needCamelSnakeConversion, params, parents)
+    def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
+      newRenderDTOStaticDefns(clsName, deps, encoder, decoder)
+  }
 }
 object ModelProtocolTerms {
   implicit def modelProtocolTerm[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]): ModelProtocolTerms[L, Free[F, ?]] =
