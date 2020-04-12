@@ -2,8 +2,8 @@ package com.twilio.guardrail
 package generators
 
 import cats.implicits._
-import cats.~>
-import com.twilio.guardrail.core.Tracker
+import cats.Monad
+import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
 import com.twilio.guardrail.generators.syntax._
@@ -14,6 +14,10 @@ import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import java.net.URI
 import scala.collection.JavaConverters._
 import scala.util.Try
+import io.swagger.v3.oas.models.Components
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
+import io.swagger.v3.oas.models.PathItem
 
 object SwaggerGenerator {
   private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] = {
@@ -24,17 +28,22 @@ object SwaggerGenerator {
     } yield tpe
   }
 
-  def apply[L <: LA]() = new (SwaggerTerm[L, ?] ~> Target) {
-    def splitOperationParts(operationId: String): (List[String], String) = {
-      val parts = operationId.split('.')
-      (parts.drop(1).toList, parts.last)
-    }
+  def apply[L <: LA](): SwaggerTerms[L, Target] =
+    new SwaggerTerms[L, Target] {
+      def MonadF: Monad[Target] = Target.targetInstances
+      def splitOperationParts(operationId: String): (List[String], String) = {
+        val parts = operationId.split('.')
+        (parts.drop(1).toList, parts.last)
+      }
 
-    def apply[T](term: SwaggerTerm[L, T]): Target[T] = term match {
-      case ExtractCommonRequestBodies(components) =>
+      def extractCommonRequestBodies(components: Option[Components]): Target[Map[String, RequestBody]] =
         Target.pure(components.flatMap(c => Option(c.getRequestBodies)).fold(Map.empty[String, RequestBody])(_.asScala.toMap))
 
-      case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) =>
+      def extractOperations(
+          paths: Tracker[Mappish[List, String, PathItem]],
+          commonRequestBodies: Map[String, RequestBody],
+          globalSecurityRequirements: Option[SecurityRequirements]
+      ): Target[List[RouteMeta]] =
         Target.log.function("extractOperations")(for {
           _ <- Target.log.debug(s"Args: ${paths.get.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
           routes <- paths.indexedCosequence.value.flatTraverse({
@@ -91,18 +100,22 @@ object SwaggerGenerator {
           })
         } yield routes)
 
-      case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe) =>
+      def extractApiKeySecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =
         for {
           name <- Target.fromOption(Option(securityScheme.getName), UserError(s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property"))
           in   <- Target.fromOption(Option(securityScheme.getIn), UserError(s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property"))
         } yield ApiKeySecurityScheme[L](name, in, tpe)
 
-      case ExtractHttpSecurityScheme(schemeName, securityScheme, tpe) =>
+      def extractHttpSecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =
         for {
           authScheme <- Target.fromOption(Option(securityScheme.getScheme), UserError(s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme"))
         } yield HttpSecurityScheme[L](authScheme, tpe)
 
-      case ExtractOpenIdConnectSecurityScheme(schemeName, securityScheme, tpe) =>
+      def extractOpenIdConnectSecurityScheme(
+          schemeName: String,
+          securityScheme: SwSecurityScheme,
+          tpe: Option[L#Type]
+      ) =
         for {
           url <- Target.fromOption(
             Option(securityScheme.getOpenIdConnectUrl).flatMap(url => Try(new URI(url)).toOption),
@@ -110,12 +123,12 @@ object SwaggerGenerator {
           )
         } yield OpenIdConnectSecurityScheme[L](url, tpe)
 
-      case ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe) =>
+      def extractOAuth2SecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =
         for {
           flows <- Target.fromOption(Option(securityScheme.getFlows), UserError(s"Security scheme ${schemeName} has no OAuth2 flows"))
         } yield OAuth2SecurityScheme[L](flows, tpe)
 
-      case GetClassName(operation, vendorPrefixes) =>
+      def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String]) =
         Target.log.function("getClassName")(for {
           _ <- Target.log.debug(s"Args: ${operation.get.showNotNull}")
 
@@ -137,69 +150,69 @@ object SwaggerGenerator {
           className = pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
         } yield className)
 
-      case GetParameterName(parameter) =>
+      def getParameterName(parameter: Parameter) =
         Target.fromOption(Option(parameter.getName()), UserError(s"Parameter missing 'name': ${parameter}"))
 
-      case GetBodyParameterSchema(parameter) =>
+      def getBodyParameterSchema(parameter: Tracker[Parameter]) =
         parameter
           .downField("schema", _.getSchema())
           .raiseErrorIfEmpty("Schema not specified")
 
-      case GetHeaderParameterType(parameter) =>
+      def getHeaderParameterType(parameter: Tracker[Parameter]) =
         parameterSchemaType(parameter)
 
-      case GetPathParameterType(parameter) =>
+      def getPathParameterType(parameter: Tracker[Parameter]) =
         parameterSchemaType(parameter)
 
-      case GetQueryParameterType(parameter) =>
+      def getQueryParameterType(parameter: Tracker[Parameter]) =
         parameterSchemaType(parameter)
 
-      case GetCookieParameterType(parameter) =>
+      def getCookieParameterType(parameter: Tracker[Parameter]) =
         parameterSchemaType(parameter)
 
-      case GetFormParameterType(parameter) =>
+      def getFormParameterType(parameter: Tracker[Parameter]) =
         parameterSchemaType(parameter)
 
-      case GetSerializableParameterType(parameter) =>
+      def getSerializableParameterType(parameter: Tracker[Parameter]) =
         parameterSchemaType(parameter)
 
-      case GetRefParameterRef(parameter) =>
+      def getRefParameterRef(parameter: Tracker[Parameter]) =
         parameter
           .downField("$ref", _.get$ref())
           .map(_.flatMap(_.split("/").lastOption))
           .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
 
-      case FallbackParameterHandler(parameter) =>
+      def fallbackParameterHandler(parameter: Tracker[Parameter]) =
         Target.raiseUserError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
 
-      case GetOperationId(operation) =>
+      def getOperationId(operation: Tracker[Operation]) =
         operation
           .downField("operationId", _.getOperationId())
           .map(_.map(splitOperationParts(_)._2))
           .raiseErrorIfEmpty("Missing operationId")
           .map(_.get)
 
-      case GetResponses(operationId, operation) =>
+      def getResponses(operationId: String, operation: Tracker[Operation]) =
         operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.indexedCosequence.value)
 
-      case GetSimpleRef(ref) =>
+      def getSimpleRef(ref: Tracker[Option[Schema[_]]]) =
         ref
           .flatDownField("$ref", _.get$ref)
           .map(_.flatMap(_.split("/").lastOption))
           .raiseErrorIfEmpty(s"Unspecified $$ref")
           .map(_.unwrapTracker)
 
-      case GetItems(arr) =>
+      def getItems(arr: Tracker[ArraySchema]) =
         arr
           .downField("items", _.getItems())
           .raiseErrorIfEmpty("Unspecified items")
 
-      case GetType(model) =>
+      def getType(model: Tracker[Schema[_]]) =
         model
           .downField("type", _.getType())
           .raiseErrorIfEmpty("Unknown type")
 
-      case FallbackPropertyTypeHandler(prop) =>
+      def fallbackPropertyTypeHandler(prop: Tracker[Schema[_]]) = {
         val determinedType = prop.downField("type", _.getType()).fold("No type definition")(s => s"type: ${s.unwrapTracker}")
         val className      = prop.unwrapTracker.getClass.getName
         Target.raiseUserError(
@@ -207,30 +220,21 @@ object SwaggerGenerator {
               |  ${prop.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n  ")}
               |""".stripMargin
         )
+      }
 
-      case ResolveType(name, protocolElems) =>
+      def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]) =
         Target.fromOption(protocolElems.find(_.name == name), UserError(s"Unable to resolve ${name}"))
 
-      case FallbackResolveElems(lazyElems) =>
+      def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]) =
         Target.raiseUserError(s"Unable to resolve: ${lazyElems.map(_.name)}")
-
-      case LogPush(name) =>
-        Target.log.push(name)
-
-      case LogPop() =>
-        Target.log.pop
-
-      case LogDebug(message) =>
-        Target.log.debug(message)
-
-      case LogInfo(message) =>
-        Target.log.info(message)
-
-      case LogWarning(message) =>
-        Target.log.warning(message)
-
-      case LogError(message) =>
-        Target.log.error(message)
+      def log: SwaggerLogAdapter[Target] = new SwaggerLogAdapter[Target] {
+        def function[A](name: String): Target[A] => Target[A] = Target.log.function(name)
+        def push(name: String): Target[Unit]                  = Target.log.push(name)
+        def pop: Target[Unit]                                 = Target.log.pop
+        def debug(message: String): Target[Unit]              = Target.log.debug(message)
+        def info(message: String): Target[Unit]               = Target.log.info(message)
+        def warning(message: String): Target[Unit]            = Target.log.warning(message)
+        def error(message: String): Target[Unit]              = Target.log.error(message)
+      }
     }
-  }
 }
