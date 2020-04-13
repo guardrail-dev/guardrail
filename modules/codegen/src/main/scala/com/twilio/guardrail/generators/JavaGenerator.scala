@@ -27,6 +27,8 @@ import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConst
 import org.eclipse.jface.text.Document
 import scala.collection.JavaConverters._
 import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 import scala.language.existentials
 
@@ -51,18 +53,21 @@ object JavaGenerator {
     ).asJava
   )
 
-  def prettyPrintSource(source: CompilationUnit): Target[Array[Byte]] = {
+  def prettyPrintSource(source: CompilationUnit): Target[Future[Array[Byte]]] = {
     val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
     val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
     val sourceStr = source.toString
     Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
       .fold(
-        Target.raiseUserError[Array[Byte]](s"Failed to format class '$className'")
+        Target.raiseUserError[Future[Array[Byte]]](s"Failed to format class '$className'")
       )({ textEdit =>
         val doc = new Document(sourceStr)
         Try(textEdit.apply(doc)).fold(
-          t => Target.raiseUserError[Array[Byte]](s"Failed to format class '$className': $t"),
-          _ => Target.pure(doc.get.getBytes(StandardCharsets.UTF_8))
+          t => Target.raiseUserError[Future[Array[Byte]]](s"Failed to format class '$className': $t"),
+          _ =>
+            Target.pure(Future {
+              doc.get.getBytes(StandardCharsets.UTF_8)
+            })
         )
       })
   }
@@ -353,7 +358,7 @@ object JavaGenerator {
           case RandomType(_, _) =>
             Option.empty
         }
-        nameAndBytes <- nameAndCompilationUnit.fold(Target.pure(Option.empty[(String, Array[Byte])]))({
+        nameAndBytes <- nameAndCompilationUnit.fold(Target.pure(Option.empty[(String, Future[Array[Byte]])]))({
           case (name, cu) =>
             prettyPrintSource(cu).map(bytes => Option((name, bytes)))
         })

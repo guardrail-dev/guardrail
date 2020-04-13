@@ -13,11 +13,15 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 import scala.meta._
 
 object ScalaGenerator {
-  private def sourceToBytes(source: Source): Array[Byte] = (GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8)
+  private def sourceToBytes(source: Source): Future[Array[Byte]] = Future {
+    (GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8)
+  }
 
   object ScalaInterp extends (ScalaTerm[ScalaLanguage, ?] ~> Target) {
     // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are

@@ -15,6 +15,8 @@ import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 
 import scala.meta._
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class WritePackageSpec extends FunSuite with Matchers {
   val parseOpts = new ParseOptions
@@ -67,7 +69,7 @@ class WritePackageSpec extends FunSuite with Matchers {
   def extractPackage(path: Path, results: List[WriteTree]): Term.Ref = {
     val Some(source"""package ${fooPkg }
     ..${stats }
-    """) = results.find(_.path == path).headOption.map(_.contents).map(x => new String(x).parse[Source].get)
+    """) = results.find(_.path == path).headOption.map(_.contents).map(x => new String(Await.result(x, Duration.Inf)).parse[Source].get)
     fooPkg
   }
 
