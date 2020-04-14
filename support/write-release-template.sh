@@ -35,6 +35,13 @@ fi
 
 github_api="$(mktemp)"
 
+if [ ! -z "$remote" ]; then
+        newer_prs="$(git log --merges --oneline "${current_head}...${remote}/master" | grep 'Merge pull request' | wc -l)"
+        if [ "$newer_prs" -gt 0 ]; then
+                echo "Preparing to release old version, not including $newer_prs PRs" >&2
+        fi
+fi
+
 curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...master"
 
 cat > "${notes_file}" <<!
