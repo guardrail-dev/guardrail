@@ -35,6 +35,8 @@ fi
 
 github_api="$(mktemp)"
 
+current_head="$(git rev-parse @)"
+
 if [ ! -z "$remote" ]; then
         newer_prs="$(git log --merges --oneline "${current_head}...${remote}/master" | grep 'Merge pull request' | wc -l)"
         if [ "$newer_prs" -gt 0 ]; then
@@ -42,7 +44,7 @@ if [ ! -z "$remote" ]; then
         fi
 fi
 
-curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...master"
+curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...${current_head}"
 
 cat > "${notes_file}" <<!
 TITLE
