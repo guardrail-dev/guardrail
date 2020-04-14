@@ -764,7 +764,7 @@ object JacksonGenerator {
           )
           .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, requirement, isCustomType, defaultValue) =>
         Target.log.function("transformProperty") {
           val readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
           val emptyToNull = (property match {
@@ -814,8 +814,8 @@ object JacksonGenerator {
                 Target.log.warning(s"Can't generate default value for class $clsName and property $name.") >> Target.pure(None)
               case None => Target.pure(None)
             }
-            (finalDeclType, finalDefaultValue) <- Option(isRequired)
-              .filterNot(_ == false)
+            (finalDeclType, finalDefaultValue) <- Option(requirement)
+              .filterNot(req => req == PropertyRequirement.Optional || req == PropertyRequirement.OptionalNullable)
               .fold[Target[(Type, Option[Expression])]](
                 (
                   safeParseType(s"Optional<${tpe}>"),

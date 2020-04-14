@@ -6,6 +6,14 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
 
+sealed trait PropertyRequirement
+object PropertyRequirement {
+  case object Required         extends PropertyRequirement
+  case object RequiredNullable extends PropertyRequirement
+  case object Optional         extends PropertyRequirement
+  case object OptionalNullable extends PropertyRequirement
+}
+
 sealed trait ModelProtocolTerm[L <: LA, T]
 case class ExtractProperties[L <: LA](swagger: Tracker[Schema[_]]) extends ModelProtocolTerm[L, List[(String, Tracker[Schema[_]])]]
 case class TransformProperty[L <: LA](
@@ -15,7 +23,7 @@ case class TransformProperty[L <: LA](
     meta: ResolvedType[L],
     needCamelSnakeConversion: Boolean,
     concreteTypes: List[PropMeta[L]],
-    isRequired: Boolean,
+    requirement: PropertyRequirement,
     isCustomType: Boolean,
     defaultValue: Option[L#Term]
 ) extends ModelProtocolTerm[L, ProtocolParameter[L]]

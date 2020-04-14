@@ -115,7 +115,7 @@ object CirceProtocolGenerator {
           .getOrElse(Target.pure(List.empty))
           .map(_.toList)
 
-      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, isRequired, isCustomType, defaultValue) =>
+      case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, requirement, isCustomType, defaultValue) =>
         Target.log.function(s"transformProperty") {
           for {
             _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
@@ -154,8 +154,8 @@ object CirceProtocolGenerator {
                 (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
             }
 
-            (finalDeclType, finalDefaultValue) = Option(isRequired)
-              .filterNot(_ == false)
+            (finalDeclType, finalDefaultValue) = Option(requirement)
+              .filterNot(req => req == PropertyRequirement.Optional || req == PropertyRequirement.OptionalNullable)
               .fold[(Type, Option[Term])](
                 (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
               )(Function.const((tpe, defaultValue)) _)
