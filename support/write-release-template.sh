@@ -1,5 +1,15 @@
 #!/bin/env bash
 
+for remote in github upstream origin; do
+        git remote | grep "$remote" && break 2>/dev/null >&2
+        unset remote
+done
+if [ ! -z "$remote" ]; then
+        git fetch -p "$remote"
+else
+        echo "Unable to find workable remote, not fetching." >&2
+fi
+
 last_tag="$(git tag | tail -n1)"
 read -p "Last release (${last_tag}): " new_last_tag
 if [ ! -z "${new_last_tag}" ]; then
