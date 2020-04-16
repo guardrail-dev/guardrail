@@ -23,7 +23,7 @@ object Http4sClientGenerator {
     type L    = ScalaLanguage
     type F[A] = Target[A]
 
-    implicit def ClientTermsMonad: Monad[Target] = Target.targetInstances
+    implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')

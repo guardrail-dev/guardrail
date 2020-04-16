@@ -1,5 +1,6 @@
 package tests.core.issues
 
+import cats.free.Free
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
@@ -44,7 +45,7 @@ class Issue166 extends FunSuite with Matchers with SwaggerSpecRunner {
     opts.setResolve(true)
     val (proto, codegen) = Target.unsafeExtract(
       Common
-        .prepareDefinitions[ScalaLanguage, CodegenApplication[ScalaLanguage, ?]](
+        .prepareDefinitions[ScalaLanguage, Free[CodegenApplication[ScalaLanguage, ?], ?]](
           CodegenTarget.Models,
           Context.empty,
           Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),

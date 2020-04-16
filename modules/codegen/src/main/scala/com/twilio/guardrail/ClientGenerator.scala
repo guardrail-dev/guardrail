@@ -1,7 +1,6 @@
 package com.twilio.guardrail
 
 import cats.data.NonEmptyList
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
@@ -32,7 +31,7 @@ object ClientGenerator {
   )(
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
-  )(implicit C: ClientTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, Clients[L]] = {
+  )(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[Clients[L]] = {
     import C._
     import Sw._
     for {

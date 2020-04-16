@@ -2,8 +2,8 @@ package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.oas.models.media._
+import cats.Monad
 import cats.data.NonEmptyList
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
@@ -50,7 +50,7 @@ case class ProtocolParameter[L <: LA](
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
 
 object Discriminator {
-  def fromSchema[L <: LA, F[_]](schema: Schema[_])(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, Option[Discriminator[L]]] =
+  def fromSchema[L <: LA, F[_]](schema: Schema[_])(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[Option[Discriminator[L]]] =
     Sw.log.function("Discriminator.fromSchema") {
       import Sc._
       Option(schema.getDiscriminator)
@@ -112,13 +112,13 @@ object ProtocolGenerator {
   )(
       implicit E: EnumProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, Either[String, EnumDefinition[L]]] = {
+  ): F[Either[String, EnumDefinition[L]]] = {
     import E._
     import Sc._
 
-    def validProg(enum: List[String], tpe: L#Type, fullType: L#Type): Free[F, EnumDefinition[L]] =
+    def validProg(enum: List[String], tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
       for {
         elems <- enum.traverse { elem =>
           for {
@@ -192,9 +192,9 @@ object ProtocolGenerator {
       P: PolyProtocolTerms[L, F],
       E: EnumProtocolTerms[L, F],
       M: ModelProtocolTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, ProtocolElems[L]] = {
+  ): F[ProtocolElems[L]] = {
     import M._
     import P._
     import Sc._
@@ -210,8 +210,8 @@ object ProtocolGenerator {
 
     for {
       parents <- hierarchy.model
-        .refine[Free[F, List[SuperClass[L]]]]({ case c: ComposedSchema => c })(extractParents(_, definitions, concreteTypes, dtoPackage))
-        .getOrElse(Free.pure[F, List[SuperClass[L]]](Nil))
+        .refine[F[List[SuperClass[L]]]]({ case c: ComposedSchema => c })(extractParents(_, definitions, concreteTypes, dtoPackage))
+        .getOrElse(List.empty[SuperClass[L]].pure[F])
       props <- extractProperties(hierarchy.model)
       requiredFields           = hierarchy.required ::: hierarchy.children.flatMap(_.required)
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
@@ -260,9 +260,9 @@ object ProtocolGenerator {
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, F],
       P: PolyProtocolTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, List[SuperClass[L]]] = {
+  ): F[List[SuperClass[L]]] = {
     import M._
     import P._
     import Sc._
@@ -306,8 +306,8 @@ object ProtocolGenerator {
             tpe <- parseTypeName(clsName)
 
             discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-              _.refine[Free[F, List[Discriminator[L]]]]({ case m: ObjectSchema => m })(m => Discriminator.fromSchema(m.get).map(_.toList))
-                .getOrElse(Free.pure[F, List[Discriminator[L]]](List.empty))
+              _.refine[F[List[Discriminator[L]]]]({ case m: ObjectSchema => m })(m => Discriminator.fromSchema(m.get).map(_.toList))
+                .getOrElse(List.empty[Discriminator[L]].pure[F])
             )
           } yield tpe
             .map(
@@ -337,9 +337,9 @@ object ProtocolGenerator {
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, F],
       P: PolyProtocolTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, Either[String, ClassDefinition[L]]] = {
+  ): F[Either[String, ClassDefinition[L]]] = {
     import M._
     import Sc._
 
@@ -354,7 +354,7 @@ object ProtocolGenerator {
       tpe                         <- parseTypeName(clsName.last)
       fullType                    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns                 <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
-      result <- if (parents.isEmpty && props.isEmpty) Free.pure[F, Either[String, ClassDefinition[L]]](Left("Entity isn't model"))
+      result <- if (parents.isEmpty && props.isEmpty) (Left("Entity isn't model"): Either[String, ClassDefinition[L]]).pure[F]
       else {
         val nestedClasses = nestedDefinitions.flatTraverse {
           case classDefinition: ClassDefinition[L] =>
@@ -393,17 +393,17 @@ object ProtocolGenerator {
       F: FrameworkTerms[L, F],
       E: EnumProtocolTerms[L, F],
       P: PolyProtocolTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, (List[ProtocolParameter[L]], List[NestedProtocolElems[L]])] = {
+  ): F[(List[ProtocolParameter[L]], List[NestedProtocolElems[L]])] = {
     import M._
     import Sc._
     def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
 
-    def processProperty(name: String, schema: Tracker[Schema[_]]): Free[F, Option[Either[String, NestedProtocolElems[L]]]] = {
+    def processProperty(name: String, schema: Tracker[Schema[_]]): F[Option[Either[String, NestedProtocolElems[L]]]] = {
       val nestedClassName = getClsName(name).append(name.toCamelCase.capitalize)
       schema
-        .refine[Free[F, Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
+        .refine[F[Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
           _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage).map(Option(_))
         )
         .orRefine({ case o: ComposedSchema => o })(
@@ -417,11 +417,11 @@ object ProtocolGenerator {
         .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
           s => fromEnum(nestedClassName.last, s, dtoPackage).map(Option(_))
         )
-        .getOrElse(Free.pure[F, Option[Either[String, NestedProtocolElems[L]]]](Option.empty))
+        .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
     }
     val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
     for {
-      paramsAndNestedDefinitions <- props.traverse[Free[F, ?], (Tracker[ProtocolParameter[L]], Option[NestedProtocolElems[L]])] {
+      paramsAndNestedDefinitions <- props.traverse[F, (Tracker[ProtocolParameter[L]], Option[NestedProtocolElems[L]])] {
         case (name, schema) =>
           val typeName = getClsName(name).append(name.toCamelCase.capitalize)
           for {
@@ -448,13 +448,13 @@ object ProtocolGenerator {
 
   private def deduplicateParams[L <: LA, F[_]](
       params: List[Tracker[ProtocolParameter[L]]]
-  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]]): Free[F, List[ProtocolParameter[L]]] = {
+  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): F[List[ProtocolParameter[L]]] = {
     import Sc._
     Foldable[List]
-      .foldLeftM[Free[F, ?], Tracker[ProtocolParameter[L]], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, ta) =>
+      .foldLeftM[F, Tracker[ProtocolParameter[L]], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, ta) =>
         val a = ta.get
         s.find(p => p.name == a.name) match {
-          case None => Free.pure(a :: s)
+          case None => (a :: s).pure[F]
           case Some(duplicate) =>
             for {
               newDefaultValue <- findCommonDefaultValue(ta.showHistory, a.defaultValue, duplicate.defaultValue)
@@ -482,9 +482,9 @@ object ProtocolGenerator {
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Tracker[Schema[_]])(
       implicit
       Fw: FrameworkTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, ProtocolElems[L]] = {
+  ): F[ProtocolElems[L]] = {
     import Fw._
     val model: Option[Tracker[ObjectSchema]] = abstractModel
       .refine[Option[Tracker[ObjectSchema]]]({ case m: ObjectSchema => m })(x => Option(x))
@@ -498,10 +498,10 @@ object ProtocolGenerator {
       )
       .orRefineFallback(_ => None)
     for {
-      tpe <- model.fold[Free[F, L#Type]](objectType(None)) { m =>
+      tpe <- model.fold[F[L#Type]](objectType(None)) { m =>
         val raw = m.downField("type", _.getType())
         for {
-          tpeName <- SwaggerUtil.customTypeName[L, Free[F, ?], Tracker[ObjectSchema]](m)
+          tpeName <- SwaggerUtil.customTypeName[L, F, Tracker[ObjectSchema]](m)
           res <- SwaggerUtil.typeName[L, F](
             raw,
             m.downField("format", _.getFormat()),
@@ -515,7 +515,7 @@ object ProtocolGenerator {
 
   def plainTypeAlias[L <: LA, F[_]](
       clsName: String
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]]): Free[F, ProtocolElems[L]] = {
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F]): F[ProtocolElems[L]] = {
     import Fw._
     for {
       tpe <- objectType(None)
@@ -523,16 +523,16 @@ object ProtocolGenerator {
     } yield res
   }
 
-  def typeAlias[L <: LA, F[_]](clsName: String, tpe: L#Type): Free[F, ProtocolElems[L]] =
-    Free.pure(RandomType[L](clsName, tpe))
+  def typeAlias[L <: LA, F[_]: Monad](clsName: String, tpe: L#Type): F[ProtocolElems[L]] =
+    (RandomType[L](clsName, tpe): ProtocolElems[L]).pure[F]
 
   def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]])(
       implicit R: ArrayProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, ProtocolElems[L]] = {
+  ): F[ProtocolElems[L]] = {
     import R._
     for {
       deferredTpe <- SwaggerUtil.modelMetaType(arr)
@@ -561,7 +561,7 @@ object ProtocolGenerator {
     */
   def groupHierarchies[L <: LA, F[_]](
       definitions: Mappish[List, String, Tracker[Schema[_]]]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, (List[ClassParent[L]], List[(String, Tracker[Schema[_]])])] = {
+  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[(List[ClassParent[L]], List[(String, Tracker[Schema[_]])])] = {
 
     def firstInHierarchy(model: Tracker[Schema[_]]): Option[ObjectSchema] =
       model
@@ -593,16 +593,16 @@ object ProtocolGenerator {
           .getOrElse(None)
     }
 
-    def classHierarchy(cls: String, model: Tracker[Schema[_]]): Free[F, Option[ClassParent[L]]] =
+    def classHierarchy(cls: String, model: Tracker[Schema[_]]): F[Option[ClassParent[L]]] =
       model
         .refine({ case c: ComposedSchema => c })(
           c =>
             firstInHierarchy(c)
-              .fold(Free.pure[F, Option[Discriminator[L]]](Option.empty))(Discriminator.fromSchema)
+              .fold(Option.empty[Discriminator[L]].pure[F])(Discriminator.fromSchema[L, F])
               .map(_.map((_, getRequiredFieldsRec(c))))
         )
         .orRefine({ case x: Schema[_] => x })(m => Discriminator.fromSchema(m.get).map(_.map((_, getRequiredFieldsRec(m)))))
-        .getOrElse(Free.pure[F, Option[(Discriminator[L], List[String])]](Option.empty))
+        .getOrElse(Option.empty[(Discriminator[L], List[String])].pure[F])
         .map(_.map({ case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) }))
 
     Sw.log.function("groupHierarchies")(
@@ -624,9 +624,9 @@ object ProtocolGenerator {
       S: ProtocolSupportTerms[L, F],
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, ProtocolDefinitions[L]] = {
+  ): F[ProtocolDefinitions[L]] = {
     import S._
     import Sw._
 
@@ -670,7 +670,7 @@ object ProtocolGenerator {
                   tpeName        <- getType(x)
                   customTypeName <- SwaggerUtil.customTypeName(x.get)
                   tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
-                  res            <- typeAlias(clsName, tpe)
+                  res            <- typeAlias[L, F](clsName, tpe)
                 } yield res
             )
       }

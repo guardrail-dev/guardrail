@@ -11,7 +11,6 @@ import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import cats.implicits._
-import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 case class RawParameterName private[generators] (value: String)
@@ -50,13 +49,13 @@ object ScalaParameter {
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => Free[F, ScalaParameter[L]] = { parameter =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => F[ScalaParameter[L]] = { parameter =>
     import Fw._
     import Sc._
     import Sw._
 
-    def paramMeta(param: Tracker[Parameter]): Free[F, SwaggerUtil.ResolvedType[L]] = {
-      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): Free[F, Option[L#Term]] =
+    def paramMeta(param: Tracker[Parameter]): F[SwaggerUtil.ResolvedType[L]] = {
+      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): F[Option[L#Term]] =
         (_type, fmt.get) match {
           case ("string", None) =>
             Default(p).extract[String].traverse(litString(_))
@@ -70,10 +69,10 @@ object ScalaParameter {
             Default(p).extract[Long].traverse(litLong(_))
           case ("boolean", None) =>
             Default(p).extract[Boolean].traverse(litBoolean(_))
-          case x => Free.pure(Option.empty[L#Term])
+          case x => Option.empty[L#Term].pure[F]
         }
 
-      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => Free[F, Tracker[String]]): Free[F, ResolvedType[L]] =
+      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[ResolvedType[L]] =
         for {
           tpeName <- typeFetcher(param)
           schema = param.downField("schema", _.getSchema)
@@ -88,7 +87,7 @@ object ScalaParameter {
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
       param
-        .refine[Free[F, SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(r => getRefParameterRef(r).map(_.get).map(SwaggerUtil.Deferred(_)))
+        .refine[F[SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(r => getRefParameterRef(r).map(_.get).map(SwaggerUtil.Deferred(_)))
         .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(r => getSimpleRef(r.downField("schema", _.getSchema)).map(SwaggerUtil.Deferred(_)))
         .orRefine({ case x: Parameter if x.isInBody => x })(
           x =>
@@ -112,19 +111,19 @@ object ScalaParameter {
       declType <- if (!required) {
         liftOptionalType(paramType)
       } else {
-        Free.pure[F, L#Type](paramType)
+        paramType.pure[F]
       }
 
-      enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(Free.pure[F, L#Term] _)) { tpe =>
+      enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(_.pure[F])) { tpe =>
         protocolElems
           .flatTraverse({
             case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
               for {
                 areEqual <- typeNamesEqual(tpe, _tpeName)
               } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
-            case _ => Free.pure[F, List[EnumDefinition[L]]](List.empty)
+            case _ => List.empty[EnumDefinition[L]].pure[F]
           })
-          .flatMap(_.headOption.fold[Free[F, Option[L#Term]]](baseDefaultValue.traverse(Free.pure _)) { x =>
+          .flatMap(_.headOption.fold[F[Option[L#Term]]](baseDefaultValue.traverse(_.pure[F])) { x =>
             baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
           })
       })
@@ -132,7 +131,7 @@ object ScalaParameter {
       defaultValue <- if (!required) {
         (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
       } else {
-        Free.pure[F, Option[L#Term]](enumDefaultValue)
+        enumDefaultValue.pure[F]
       }
 
       name <- getParameterName(parameter.get)
@@ -159,34 +158,33 @@ object ScalaParameter {
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => Free[F, List[ScalaParameter[L]]] = {
-    params =>
-      import Sc._
-      for {
-        parameters <- params.traverse(fromParameter(protocolElems))
-        counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
-        result <- parameters.traverse { param =>
-          extractTermName(param.paramName).flatMap { name =>
-            if (counts.getOrElse(name, 0) > 1) {
-              pureTermName(param.argName.value).flatMap { escapedName =>
-                alterMethodParameterName(param.param, escapedName).map { newParam =>
-                  new ScalaParameter[L](
-                    param.in,
-                    newParam,
-                    escapedName,
-                    param.argName,
-                    param.argType,
-                    param.rawType,
-                    param.required,
-                    param.hashAlgorithm,
-                    param.isFile
-                  )
-                }
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => F[List[ScalaParameter[L]]] = { params =>
+    import Sc._
+    for {
+      parameters <- params.traverse(fromParameter(protocolElems))
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      result <- parameters.traverse { param =>
+        extractTermName(param.paramName).flatMap { name =>
+          if (counts.getOrElse(name, 0) > 1) {
+            pureTermName(param.argName.value).flatMap { escapedName =>
+              alterMethodParameterName(param.param, escapedName).map { newParam =>
+                new ScalaParameter[L](
+                  param.in,
+                  newParam,
+                  escapedName,
+                  param.argName,
+                  param.argType,
+                  param.rawType,
+                  param.required,
+                  param.hashAlgorithm,
+                  param.isFile
+                )
               }
-            } else Free.pure[F, ScalaParameter[L]](param)
-          }
+            }
+          } else param.pure[F]
         }
-      } yield result
+      }
+    } yield result
   }
 
   /**

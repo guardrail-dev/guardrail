@@ -11,7 +11,7 @@ import java.nio.file.Path
 import cats.data.NonEmptyList
 
 abstract class ScalaTerms[L <: LA, F[_]] {
-  implicit def MonadF: Monad[F]
+  def MonadF: Monad[F]
   def vendorPrefixes(): F[List[String]]
 
   def litString(value: String): F[L#Term]

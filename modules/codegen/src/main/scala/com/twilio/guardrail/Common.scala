@@ -2,7 +2,6 @@ package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
-import cats.free.Free
 import cats.implicits._
 import cats.Id
 import com.twilio.guardrail.core.Tracker
@@ -23,17 +22,17 @@ object Common {
 
   def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI], dtoPackage: List[String])(
       implicit
-      C: ClientTerms[L, Free[F, ?]],
+      C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
       E: EnumProtocolTerms[L, F],
       Fw: FrameworkTerms[L, F],
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, Free[F, ?]],
+      Sc: ScalaTerms[L, F],
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
-  ): Free[F, (ProtocolDefinitions[L], CodegenDefinitions[L])] = {
+  ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw._
     import Sc._
     import Sw._
@@ -100,7 +99,7 @@ object Common {
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)
         case CodegenTarget.Models =>
-          Free.pure[F, CodegenDefinitions[L]](CodegenDefinitions[L](List.empty, List.empty, List.empty, Option.empty))
+          CodegenDefinitions[L](List.empty, List.empty, List.empty, Option.empty).pure[F]
       }
     } yield (proto, codegen))
   }
@@ -110,7 +109,7 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, Free[F, ?]], Fw: FrameworkTerms[L, F]): Free[F, List[WriteTree]] = {
+  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): F[List[WriteTree]] = {
     import Fw._
     import Sc._
 
@@ -148,7 +147,7 @@ object Common {
       ).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, pkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- frameworkImplicits.fold(Free.pure[F, Option[WriteTree]](None))({
+      frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F])({
         case (name, defn) => renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, protocolImports, defn, name).map(Option.apply)
       })
 

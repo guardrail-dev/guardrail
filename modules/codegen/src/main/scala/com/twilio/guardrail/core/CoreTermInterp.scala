@@ -5,6 +5,7 @@ import cats.data.{ NonEmptyList, State }
 // Issue #496: Injected StructuredLogger too slow import cats.free.{ Free, GuardrailFreeHacks }
 import cats.implicits._
 import cats.{ FlatMap, Monad, ~> }
+import cats.free.Free
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import java.nio.file.Paths
@@ -142,13 +143,19 @@ class CoreTermInterp[L <: LA](
           swagger =>
             try {
               val Sw = SwaggerTerms.swaggerTerm[L, CodegenApplication[L, ?]]
+              val Sc = ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]]
               val program = for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
-                definitionsPkgName <- ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]].fullyQualifyPackageName(pkgName)
+                definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)
                 (proto, codegen) <- Common
-                  .prepareDefinitions[L, CodegenApplication[L, ?]](kind, context, Tracker(swagger), definitionsPkgName ++ ("definitions" :: dtoPackage))
+                  .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
+                    kind,
+                    context,
+                    Tracker(swagger),
+                    definitionsPkgName ++ ("definitions" :: dtoPackage)
+                  )
                 result <- Common
-                  .writePackage[L, CodegenApplication[L, ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
+                  .writePackage[L, Free[CodegenApplication[L, ?], ?]](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
               } yield result
               // Issue #496: Injected StructuredLogger too slow
               // GuardrailFreeHacks.injectLogs(program, Set("LogPush", "LogPop", "LogDebug", "LogInfo", "LogWarning", "LogError"), Sw.log.push, Sw.log.pop, Free.pure(()))

@@ -36,13 +36,13 @@ trait SwaggerSpecRunner extends EitherValues {
   }
 
   def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
-      implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
+      implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
+      Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val /*(clientLogger,*/ (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
       Common
-        .prepareDefinitions[L, CodegenApplication[L, ?]](
+        .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
           CodegenTarget.Client,
           context,
           Tracker(swagger),
@@ -56,7 +56,7 @@ trait SwaggerSpecRunner extends EitherValues {
 
     val /*(serverLogger,*/ (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) =
       Common
-        .prepareDefinitions[L, CodegenApplication[L, ?]](
+        .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
           CodegenTarget.Server,
           context,
           Tracker(swagger),
@@ -89,12 +89,12 @@ trait SwaggerSpecRunner extends EitherValues {
   }
 
   def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: FunctionK[CodegenApplication[L, ?], Target])(
-      implicit Fw: FrameworkTerms[L, CodegenApplication[L, ?]],
+      implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sw: SwaggerTerms[L, CodegenApplication[L, ?]]
+      Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (StructuredLogger, Error) =
     Common
-      .prepareDefinitions[L, CodegenApplication[L, ?]](
+      .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
         kind,
         context,
         Tracker(swagger),

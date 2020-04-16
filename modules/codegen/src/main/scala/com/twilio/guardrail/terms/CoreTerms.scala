@@ -7,7 +7,7 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.languages.LA
 
 abstract class CoreTerms[L <: LA, F[_]] {
-  implicit def MonadF: Monad[F]
+  def MonadF: Monad[F]
   def getDefaultFramework: F[Option[String]]
   def extractGenerator(context: Context, defaultFramework: Option[String]): F[CodegenApplication[L, ?] ~> Target]
   def parseArgs(args: Array[String]): F[List[Args]]

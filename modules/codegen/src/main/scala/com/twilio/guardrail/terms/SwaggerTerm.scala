@@ -3,7 +3,6 @@ package terms
 
 import cats.Order
 import cats.data.{ NonEmptyList, NonEmptyMap, State }
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.core.{ Mappish, Tracker }
@@ -238,7 +237,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, Free[F, ?]], Sw: SwaggerTerms[L, F]): Free[F, ScalaParameters[L]] =
+  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[ScalaParameters[L]] =
     for {
       a <- ScalaParameter.fromParameters(protocolElems).apply(parameters)
     } yield new ScalaParameters[L](a)
