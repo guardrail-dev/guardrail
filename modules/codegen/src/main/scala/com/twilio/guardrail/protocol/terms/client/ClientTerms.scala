@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.client
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
 import com.twilio.guardrail.generators.ScalaParameters
@@ -10,7 +11,7 @@ import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
 import java.net.URI
 
-abstract class ClientTerms[L <: LA, F[_]] {
+abstract class ClientTerms[L <: LA, F[_]] extends FunctionK[ClientTerm[L, ?], F] {
   def MonadF: Monad[F]
   def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
       route: RouteMeta,
@@ -99,6 +100,26 @@ abstract class ClientTerms[L <: LA, F[_]] {
         tracing: Boolean
     ) =
       newBuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
+  }
+
+  def apply[T](term: ClientTerm[L, T]): F[T] = term match {
+    case GenerateClientOperation(className, route, methodName, tracing, parameters, responses, securitySchemes) =>
+      generateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
+
+    case GetImports(tracing) => getImports(tracing)
+
+    case GetExtraImports(tracing) => getExtraImports(tracing)
+
+    case ClientClsArgs(tracingName, serverUrls, tracing) => clientClsArgs(tracingName, serverUrls, tracing)
+
+    case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
+
+    case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
+
+    case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing)
+
+    case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
+      buildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
   }
 }
 

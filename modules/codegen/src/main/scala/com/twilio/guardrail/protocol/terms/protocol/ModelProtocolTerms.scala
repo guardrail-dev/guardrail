@@ -2,13 +2,14 @@ package com.twilio.guardrail.protocol.terms.protocol
 
 import io.swagger.v3.oas.models.media.Schema
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
-abstract class ModelProtocolTerms[L <: LA, F[_]] {
+abstract class ModelProtocolTerms[L <: LA, F[_]] extends FunctionK[ModelProtocolTerm[L, ?], F] {
   def MonadF: Monad[F]
   def extractProperties(swagger: Tracker[Schema[_]]): F[List[(String, Tracker[Schema[_]])]]
   def transformProperty(
@@ -67,7 +68,18 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
     def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
       newRenderDTOStaticDefns(clsName, deps, encoder, decoder)
   }
+
+  def apply[T](term: ModelProtocolTerm[L, T]): F[T] = term match {
+    case ExtractProperties(swagger) => extractProperties(swagger)
+    case TransformProperty(clsName, name, property, meta, needCamelSnakeConversion, concreteTypes, requirement, isCustomType, defaultValue) =>
+      transformProperty(clsName, needCamelSnakeConversion, concreteTypes)(name, property, meta, requirement, isCustomType, defaultValue)
+    case RenderDTOClass(clsName, terms, parents)                         => renderDTOClass(clsName, terms, parents)
+    case EncodeModel(clsName, needCamelSnakeConversion, params, parents) => encodeModel(clsName, needCamelSnakeConversion, params, parents)
+    case DecodeModel(clsName, needCamelSnakeConversion, params, parents) => decodeModel(clsName, needCamelSnakeConversion, params, parents)
+    case RenderDTOStaticDefns(clsName, deps, encoder, decoder)           => renderDTOStaticDefns(clsName, deps, encoder, decoder)
+  }
 }
+
 object ModelProtocolTerms {
   implicit def modelProtocolTerm[L <: LA, F[_]](implicit I: InjectK[ModelProtocolTerm[L, ?], F]): ModelProtocolTerms[L, Free[F, ?]] =
     new ModelProtocolTerms[L, Free[F, ?]] {

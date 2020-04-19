@@ -2,7 +2,6 @@ package com.twilio.guardrail
 package generators
 
 import cats.Monad
-import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.core.Tracker
@@ -19,7 +18,7 @@ import java.net.URI
 
 object Http4sClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] with FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
+  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
@@ -473,25 +472,6 @@ object Http4sClientGenerator {
             }
           """
       Target.pure(NonEmptyList(Right(client), Nil))
-    }
-    def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route, methodName, tracing, parameters, responses, securitySchemes) =>
-        generateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
-
-      case GetImports(tracing) => getImports(tracing)
-
-      case GetExtraImports(tracing) => getExtraImports(tracing)
-
-      case ClientClsArgs(tracingName, serverUrls, tracing) => clientClsArgs(tracingName, serverUrls, tracing)
-
-      case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
-
-      case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
-
-      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing)
-
-      case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
-        buildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     }
 
     def generateCodecs(

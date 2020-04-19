@@ -3,7 +3,6 @@ package com.twilio.guardrail.generators.Java
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.arrow.FunctionK
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
@@ -402,7 +401,7 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] with FunctionK[ClientTerm[JavaLanguage, ?], Target] {
+  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def generateClientOperation(
@@ -1297,34 +1296,6 @@ object AsyncHttpClientClientGenerator {
       ).foreach(clientClass.addMember)
 
       Target.pure(NonEmptyList(Right(clientClass), Nil))
-    }
-
-    def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(
-          className,
-          route,
-          methodName,
-          tracing,
-          parameters,
-          responses,
-          securitySchemes
-          ) =>
-        generateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
-
-      case GetImports(tracing) => getImports(tracing)
-
-      case GetExtraImports(tracing) => getExtraImports(tracing)
-
-      case ClientClsArgs(tracingName, serverUrls, tracing) => clientClsArgs(tracingName, serverUrls, tracing)
-
-      case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
-
-      case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
-
-      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing)
-
-      case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
-        buildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     }
   }
 }

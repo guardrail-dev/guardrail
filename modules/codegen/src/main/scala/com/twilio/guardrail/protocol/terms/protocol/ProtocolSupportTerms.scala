@@ -1,10 +1,11 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.languages.LA
 
-abstract class ProtocolSupportTerms[L <: LA, F[_]] {
+abstract class ProtocolSupportTerms[L <: LA, F[_]] extends FunctionK[ProtocolSupportTerm[L, ?], F] {
   def MonadF: Monad[F]
   def extractConcreteTypes(models: Either[String, List[PropMeta[L]]]): F[List[PropMeta[L]]]
   def protocolImports(): F[List[L#Import]]
@@ -23,6 +24,20 @@ abstract class ProtocolSupportTerms[L <: LA, F[_]] {
     def protocolImports()                                               = newProtocolImports()
     def packageObjectImports()                                          = newPackageObjectImports()
     def packageObjectContents()                                         = newPackageObjectContents()
+  }
+
+  def apply[T](term: ProtocolSupportTerm[L, T]): F[T] = term match {
+    case ExtractConcreteTypes(models) =>
+      extractConcreteTypes(models)
+
+    case ProtocolImports() =>
+      protocolImports()
+
+    case PackageObjectImports() =>
+      packageObjectImports()
+
+    case PackageObjectContents() =>
+      packageObjectContents()
   }
 }
 object ProtocolSupportTerms {

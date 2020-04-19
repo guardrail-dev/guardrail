@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.ScalaParameters
@@ -10,7 +11,7 @@ import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import io.swagger.v3.oas.models.Operation
 
-abstract class ServerTerms[L <: LA, F[_]] {
+abstract class ServerTerms[L <: LA, F[_]] extends FunctionK[ServerTerm[L, ?], F] {
   def MonadF: Monad[F]
   def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): F[Option[TracingField[L]]]
   def generateRoutes(
@@ -98,6 +99,20 @@ abstract class ServerTerms[L <: LA, F[_]] {
         responseDefinitions: List[L#Definition]
     )                                     = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)
     def getExtraImports(tracing: Boolean) = newGetExtraImports(tracing)
+  }
+
+  def apply[T](term: ServerTerm[L, T]): F[T] = term match {
+    case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
+    case BuildTracingFields(operation, resourceName, tracing)               => buildTracingFields(operation, resourceName, tracing)
+    case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
+      generateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes)
+    case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
+      renderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)
+    case GetExtraRouteParams(tracing) => getExtraRouteParams(tracing)
+    case RenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
+      renderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
+    case GetExtraImports(tracing)                             => getExtraImports(tracing)
+    case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
   }
 }
 

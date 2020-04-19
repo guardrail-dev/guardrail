@@ -2,10 +2,11 @@ package com.twilio.guardrail
 package terms.framework
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.languages.LA
 
-abstract class FrameworkTerms[L <: LA, F[_]] {
+abstract class FrameworkTerms[L <: LA, F[_]] extends FunctionK[FrameworkTerm[L, ?], F] {
   def MonadF: Monad[F]
   def getFrameworkImports(tracing: Boolean): F[List[L#Import]]
   def getFrameworkImplicits(): F[Option[(L#TermName, L#ObjectDefinition)]]
@@ -30,6 +31,15 @@ abstract class FrameworkTerms[L <: LA, F[_]] {
     def lookupStatusCode(key: String)             = newLookupStatusCode(key)
     def fileType(format: Option[String])          = newFileType(format)
     def objectType(format: Option[String])        = newObjectType(format)
+  }
+
+  def apply[T](term: FrameworkTerm[L, T]): F[T] = term match {
+    case FileType(format)                 => fileType(format)
+    case ObjectType(format)               => objectType(format)
+    case GetFrameworkImports(tracing)     => getFrameworkImports(tracing)
+    case GetFrameworkImplicits()          => getFrameworkImplicits()
+    case GetFrameworkDefinitions(tracing) => getFrameworkDefinitions(tracing)
+    case LookupStatusCode(key)            => lookupStatusCode(key)
   }
 }
 

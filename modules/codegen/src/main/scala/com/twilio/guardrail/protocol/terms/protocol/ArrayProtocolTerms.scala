@@ -1,11 +1,12 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil
 
-abstract class ArrayProtocolTerms[L <: LA, F[_]] {
+abstract class ArrayProtocolTerms[L <: LA, F[_]] extends FunctionK[ArrayProtocolTerm[L, ?], F] {
   def MonadF: Monad[F]
   def extractArrayType(arr: SwaggerUtil.ResolvedType[L], concreteTypes: List[PropMeta[L]]): F[L#Type]
 
@@ -15,6 +16,10 @@ abstract class ArrayProtocolTerms[L <: LA, F[_]] {
   ): ArrayProtocolTerms[L, F] = new ArrayProtocolTerms[L, F] {
     def MonadF                                                                               = newMonadF
     def extractArrayType(arr: SwaggerUtil.ResolvedType[L], concreteTypes: List[PropMeta[L]]) = newExtractArrayType(arr, concreteTypes)
+  }
+
+  def apply[T](term: ArrayProtocolTerm[L, T]): F[T] = term match {
+    case ExtractArrayType(arr, concreteTypes) => extractArrayType(arr, concreteTypes)
   }
 }
 

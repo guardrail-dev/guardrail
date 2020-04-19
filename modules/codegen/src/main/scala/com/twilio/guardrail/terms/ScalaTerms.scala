@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package terms
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.generators.RawParameterType
@@ -10,7 +11,7 @@ import java.nio.file.Path
 
 import cats.data.NonEmptyList
 
-abstract class ScalaTerms[L <: LA, F[_]] {
+abstract class ScalaTerms[L <: LA, F[_]] extends FunctionK[ScalaTerm[L, ?], F] {
   def MonadF: Monad[F]
   def vendorPrefixes(): F[List[String]]
 
@@ -22,8 +23,8 @@ abstract class ScalaTerms[L <: LA, F[_]] {
   def litBoolean(value: Boolean): F[L#Term]
   def liftOptionalType(value: L#Type): F[L#Type]
   def liftOptionalTerm(value: L#Term): F[L#Term]
-  def emptyArray: F[L#Term]
-  def emptyMap: F[L#Term]
+  def emptyArray(): F[L#Term]
+  def emptyMap(): F[L#Term]
   def emptyOptionalTerm(): F[L#Term]
   def liftVectorType(value: L#Type, customTpe: Option[L#Type]): F[L#Type]
   def liftVectorTerm(value: L#Term): F[L#Term]
@@ -318,6 +319,104 @@ abstract class ScalaTerms[L <: LA, F[_]] {
     )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server)
     def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)
   }
+
+  def apply[T](term: ScalaTerm[L, T]): F[T] = term match {
+    case VendorPrefixes() => vendorPrefixes()
+
+    case LitString(value)                                  => litString(value)
+    case LitFloat(value)                                   => litFloat(value)
+    case LitDouble(value)                                  => litDouble(value)
+    case LitInt(value)                                     => litInt(value)
+    case LitLong(value)                                    => litLong(value)
+    case LitBoolean(value)                                 => litBoolean(value)
+    case LiftOptionalType(value)                           => liftOptionalType(value)
+    case LiftOptionalTerm(value)                           => liftOptionalTerm(value)
+    case EmptyOptionalTerm()                               => emptyOptionalTerm()
+    case EmptyArray()                                      => emptyArray()
+    case EmptyMap()                                        => emptyMap()
+    case LiftVectorType(value, customTpe)                  => liftVectorType(value, customTpe)
+    case LiftVectorTerm(value)                             => liftVectorTerm(value)
+    case LiftMapType(value, customTpe)                     => liftMapType(value, customTpe)
+    case FullyQualifyPackageName(rawPkgName)               => fullyQualifyPackageName(rawPkgName)
+    case LookupEnumDefaultValue(tpe, defaultValue, values) => lookupEnumDefaultValue(tpe, defaultValue, values)
+    case FormatEnumName(enumValue)                         => formatEnumName(enumValue)
+    case EmbedArray(tpe, customTpe) =>
+      embedArray(tpe, customTpe)
+    case EmbedMap(tpe, customTpe) =>
+      embedMap(tpe, customTpe)
+    case ParseType(value) =>
+      parseType(value)
+    case ParseTypeName(value) =>
+      parseTypeName(value)
+
+    case PureTermName(value) =>
+      pureTermName(value)
+
+    case PureTypeName(value) =>
+      pureTypeName(value)
+
+    case PureMethodParameter(name, tpe, default) =>
+      pureMethodParameter(name, tpe, default)
+
+    case TypeNamesEqual(a, b) =>
+      typeNamesEqual(a, b)
+
+    case TypesEqual(a, b) =>
+      typesEqual(a, b)
+
+    case ExtractTypeName(tpe) =>
+      extractTypeName(tpe)
+    case ExtractTermName(term) =>
+      extractTermName(term)
+    case SelectType(typeNames) =>
+      selectType(typeNames)
+    case SelectTerm(termNames) =>
+      selectTerm(termNames)
+    case AlterMethodParameterName(param, name) =>
+      alterMethodParameterName(param, name)
+
+    case BytesType()               => bytesType()
+    case DateType()                => dateType()
+    case DateTimeType()            => dateTimeType()
+    case UUIDType()                => uuidType()
+    case StringType(format)        => stringType(format)
+    case FloatType()               => floatType()
+    case DoubleType()              => doubleType()
+    case NumberType(format)        => numberType(format)
+    case IntType()                 => intType()
+    case LongType()                => longType()
+    case IntegerType(format)       => integerType(format)
+    case BooleanType(format)       => booleanType(format)
+    case ArrayType(format)         => arrayType(format)
+    case FallbackType(tpe, format) => fallbackType(tpe, format)
+
+    case WidenTypeName(tpe)           => widenTypeName(tpe)
+    case WidenTermSelect(value)       => widenTermSelect(value)
+    case WidenClassDefinition(value)  => widenClassDefinition(value)
+    case WidenObjectDefinition(value) => widenObjectDefinition(value)
+
+    case FindCommonDefaultValue(history, a, b) =>
+      findCommonDefaultValue(history, a, b)
+    case FindCommonRawType(history, a, b) =>
+      findCommonRawType(history, a, b)
+
+    case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
+      renderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports)
+    case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
+      renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName)
+    case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
+      renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
+    case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
+      writePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
+    case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
+      writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem)
+    case WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client) =>
+      writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client)
+    case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server) =>
+      writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server)
+    case WrapToObject(name, imports, definitions) =>
+      wrapToObject(name, imports, definitions)
+  }
 }
 
 object ScalaTerms {
@@ -333,8 +432,8 @@ object ScalaTerms {
     def litBoolean(value: Boolean): Free[F, L#Term]                               = Free.inject[ScalaTerm[L, ?], F](LitBoolean(value))
     def liftOptionalType(value: L#Type): Free[F, L#Type]                          = Free.inject[ScalaTerm[L, ?], F](LiftOptionalType(value))
     def liftOptionalTerm(value: L#Term): Free[F, L#Term]                          = Free.inject[ScalaTerm[L, ?], F](LiftOptionalTerm(value))
-    def emptyArray: Free[F, L#Term]                                               = Free.inject[ScalaTerm[L, ?], F](EmptyArray())
-    def emptyMap: Free[F, L#Term]                                                 = Free.inject[ScalaTerm[L, ?], F](EmptyMap())
+    def emptyArray(): Free[F, L#Term]                                             = Free.inject[ScalaTerm[L, ?], F](EmptyArray())
+    def emptyMap(): Free[F, L#Term]                                               = Free.inject[ScalaTerm[L, ?], F](EmptyMap())
     def emptyOptionalTerm(): Free[F, L#Term]                                      = Free.inject[ScalaTerm[L, ?], F](EmptyOptionalTerm())
     def liftVectorType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](LiftVectorType(value, customTpe))
     def liftVectorTerm(value: L#Term): Free[F, L#Term]                            = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
