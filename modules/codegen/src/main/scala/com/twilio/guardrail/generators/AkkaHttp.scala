@@ -3,8 +3,6 @@ package generators
 
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.languages.ScalaLanguage
-import cats.~>
-import cats.arrow.FunctionK
 
 import AkkaHttpClientGenerator._
 import AkkaHttpServerGenerator._

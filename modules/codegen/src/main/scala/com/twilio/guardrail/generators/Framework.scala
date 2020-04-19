@@ -6,12 +6,6 @@ import cats.arrow.FunctionK
 
 import com.twilio.guardrail.languages.LA
 
-import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
-import com.twilio.guardrail.protocol.terms.client.ClientTerms
-import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
-import com.twilio.guardrail.terms.framework.FrameworkTerms
-
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerm, EnumProtocolTerm, ModelProtocolTerm, PolyProtocolTerm, ProtocolSupportTerm }
 import com.twilio.guardrail.protocol.terms.client.ClientTerm
 import com.twilio.guardrail.protocol.terms.server.ServerTerm

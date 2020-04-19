@@ -1,7 +1,5 @@
 package com.twilio.guardrail.generators.Java
 
-import cats.arrow.FunctionK
-import cats.~>
 import com.twilio.guardrail.generators.Framework
 import com.twilio.guardrail.generators.Java.SpringMvcClientGenerator.ClientTermInterp
 import com.twilio.guardrail.generators.Java.SpringMvcGenerator.{ FrameworkInterp => FrameworkTermInterp }
@@ -16,20 +14,7 @@ import com.twilio.guardrail.generators.Java.JacksonGenerator.{
 import com.twilio.guardrail.generators.JavaGenerator.JavaInterp
 import com.twilio.guardrail.generators.SwaggerGenerator
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.{
-  ClientServerTerms,
-  CodegenApplication,
-  DefinitionPM,
-  DefinitionPME,
-  DefinitionPMEA,
-  DefinitionPMEAP,
-  FrameworkC,
-  FrameworkCS,
-  FrameworkCSF,
-  ModelInterpreters,
-  Parser,
-  Target
-}
+import com.twilio.guardrail.Target
 
 object SpringMvc extends Framework[JavaLanguage, Target] {
   implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
