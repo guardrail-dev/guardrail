@@ -20,9 +20,6 @@ object EndpointsClientGenerator {
   object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] with FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    type L    = ScalaLanguage
-    type F[A] = Target[A]
-
     private[this] def formatClientName(clientName: Option[String]): Term.Param =
       clientName.fold(
         param"clientName: String"
@@ -32,11 +29,16 @@ object EndpointsClientGenerator {
       serverUrls
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(
+        className: List[String],
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+        parameters: ScalaParameters[ScalaLanguage]
+    )(
         route: RouteMeta,
         methodName: String,
-        responses: Responses[L]
-    ): F[RenderedClientOperation[L]] = {
+        responses: Responses[ScalaLanguage]
+    ): Target[RenderedClientOperation[ScalaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
       def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
         if (parameters.isEmpty) {
@@ -419,21 +421,28 @@ object EndpointsClientGenerator {
         } yield renderedClientOperation
       )
     }
-    def getImports(tracing: Boolean): F[List[L#Import]]      = Target.pure(List.empty)
-    def getExtraImports(tracing: Boolean): F[List[L#Import]] = Target.pure(List.empty)
-    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): F[List[List[L#MethodParameter]]] =
+    def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
+    def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
+    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] =
       Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
-    def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]] =
+    def generateResponseDefinitions(
+        operationId: String,
+        responses: Responses[ScalaLanguage],
+        protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+    ): Target[List[scala.meta.Defn]] =
       Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
-    def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]] =
+    def generateSupportDefinitions(
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+    ): Target[List[SupportDefinition[ScalaLanguage]]] =
       Target.pure(List.empty)
     def buildStaticDefns(
         clientName: String,
         tracingName: Option[String],
         serverUrls: Option[NonEmptyList[URI]],
-        ctorArgs: List[List[L#MethodParameter]],
+        ctorArgs: List[List[scala.meta.Term.Param]],
         tracing: Boolean
-    ): F[StaticDefns[L]] = {
+    ): Target[StaticDefns[ScalaLanguage]] = {
       def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
         params
           .map({
@@ -460,11 +469,11 @@ object EndpointsClientGenerator {
         tracingName: Option[String],
         serverUrls: Option[NonEmptyList[URI]],
         basePath: Option[String],
-        ctorArgs: List[List[L#MethodParameter]],
-        clientCalls: List[L#Definition],
-        supportDefinitions: List[L#Definition],
+        ctorArgs: List[List[scala.meta.Term.Param]],
+        clientCalls: List[scala.meta.Defn],
+        supportDefinitions: List[scala.meta.Defn],
         tracing: Boolean
-    ): F[NonEmptyList[Either[L#Trait, L#ClassDefinition]]] = {
+    ): Target[NonEmptyList[Either[scala.meta.Defn.Trait, scala.meta.Defn.Class]]] = {
       val (endpointDefs, rest0) = supportDefinitions.partition {
         case q"val $name = endpoint(...$_)" => true
         case _                              => false

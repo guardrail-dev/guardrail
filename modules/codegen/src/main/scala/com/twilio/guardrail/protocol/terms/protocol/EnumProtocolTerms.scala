@@ -21,6 +21,33 @@ abstract class EnumProtocolTerms[L <: LA, F[_]] {
       decoder: Option[L#ValueDefinition]
   ): F[StaticDefns[L]]
   def buildAccessor(clsName: String, termName: String): F[L#TermSelect]
+
+  def copy(
+      newMonadF: Monad[F] = MonadF,
+      newExtractEnum: Schema[_] => F[Either[String, List[String]]] = extractEnum _,
+      newRenderMembers: (String, List[(String, L#TermName, L#TermSelect)]) => F[Option[L#ObjectDefinition]] = renderMembers _,
+      newEncodeEnum: String => F[Option[L#ValueDefinition]] = encodeEnum _,
+      newDecodeEnum: String => F[Option[L#ValueDefinition]] = decodeEnum _,
+      newRenderClass: (String, L#Type, List[(String, L#TermName, L#TermSelect)]) => F[L#ClassDefinition] = renderClass _,
+      newRenderStaticDefns: (String, Option[L#ObjectDefinition], List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition]) => F[StaticDefns[L]] =
+        renderStaticDefns _,
+      newBuildAccessor: (String, String) => F[L#TermSelect] = buildAccessor _
+  ) = new EnumProtocolTerms[L, F] {
+    def MonadF                                                                                     = newMonadF
+    def extractEnum(swagger: Schema[_])                                                            = newExtractEnum(swagger)
+    def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)])            = newRenderMembers(clsName, elems)
+    def encodeEnum(clsName: String)                                                                = newEncodeEnum(clsName)
+    def decodeEnum(clsName: String)                                                                = newDecodeEnum(clsName)
+    def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]) = newRenderClass(clsName, tpe, elems)
+    def renderStaticDefns(
+        clsName: String,
+        members: Option[L#ObjectDefinition],
+        accessors: List[L#TermName],
+        encoder: Option[L#ValueDefinition],
+        decoder: Option[L#ValueDefinition]
+    )                                                    = newRenderStaticDefns(clsName, members, accessors, encoder, decoder)
+    def buildAccessor(clsName: String, termName: String) = newBuildAccessor(clsName, termName)
+  }
 }
 
 object EnumProtocolTerms {

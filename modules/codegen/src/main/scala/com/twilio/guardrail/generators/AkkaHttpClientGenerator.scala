@@ -22,8 +22,6 @@ object AkkaHttpClientGenerator {
   object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] with FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    type L = ScalaLanguage
-
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -38,11 +36,16 @@ object AkkaHttpClientGenerator {
       serverUrls
         .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(
+        className: List[String],
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+        parameters: ScalaParameters[ScalaLanguage]
+    )(
         route: RouteMeta,
         methodName: String,
-        responses: Responses[L]
-    ): Target[RenderedClientOperation[L]] = {
+        responses: Responses[ScalaLanguage]
+    ): Target[RenderedClientOperation[ScalaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
       def generateUrlWithParams(
           path: Tracker[String],
@@ -364,9 +367,9 @@ object AkkaHttpClientGenerator {
         )
       } yield renderedClientOperation)
     }
-    def getImports(tracing: Boolean): Target[List[L#Import]]      = Target.pure(List.empty)
-    def getExtraImports(tracing: Boolean): Target[List[L#Import]] = Target.pure(List.empty)
-    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[L#MethodParameter]]] = {
+    def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
+    def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
+    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
       val ihc =
         param"implicit httpClient: HttpRequest => Future[HttpResponse]"
       val iec  = param"implicit ec: ExecutionContext"
@@ -380,17 +383,24 @@ object AkkaHttpClientGenerator {
         )
       )
     }
-    def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): Target[List[L#Definition]] =
+    def generateResponseDefinitions(
+        operationId: String,
+        responses: Responses[ScalaLanguage],
+        protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+    ): Target[List[scala.meta.Defn]] =
       Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
-    def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): Target[List[SupportDefinition[L]]] =
+    def generateSupportDefinitions(
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+    ): Target[List[SupportDefinition[ScalaLanguage]]] =
       Target.pure(List.empty)
     def buildStaticDefns(
         clientName: String,
         tracingName: Option[String],
         serverUrls: Option[NonEmptyList[URI]],
-        ctorArgs: List[List[L#MethodParameter]],
+        ctorArgs: List[List[scala.meta.Term.Param]],
         tracing: Boolean
-    ): Target[StaticDefns[L]] = {
+    ): Target[StaticDefns[ScalaLanguage]] = {
       def extraConstructors(
           tracingName: Option[String],
           serverUrls: Option[NonEmptyList[URI]],
@@ -444,11 +454,11 @@ object AkkaHttpClientGenerator {
         tracingName: Option[String],
         serverUrls: Option[NonEmptyList[URI]],
         basePath: Option[String],
-        ctorArgs: List[List[L#MethodParameter]],
-        clientCalls: List[L#Definition],
-        supportDefinitions: List[L#Definition],
+        ctorArgs: List[List[scala.meta.Term.Param]],
+        clientCalls: List[scala.meta.Defn],
+        supportDefinitions: List[scala.meta.Defn],
         tracing: Boolean
-    ): Target[NonEmptyList[Either[L#Trait, L#ClassDefinition]]] = {
+    ): Target[NonEmptyList[Either[scala.meta.Defn.Trait, scala.meta.Defn.Class]]] = {
       val client =
         q"""
             class ${Type.Name(clientName)}(...$ctorArgs) {

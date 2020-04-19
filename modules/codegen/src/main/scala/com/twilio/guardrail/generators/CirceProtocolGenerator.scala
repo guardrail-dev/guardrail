@@ -3,7 +3,7 @@ package generators
 
 import _root_.io.swagger.v3.oas.models.media._
 import cats.implicits._
-import cats.~>
+import cats.arrow.FunctionK
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
@@ -24,7 +24,7 @@ object CirceProtocolGenerator {
       .map(_.tpe)
       .map(f)
 
-  object EnumProtocolTermInterp extends (EnumProtocolTerm[ScalaLanguage, ?] ~> Target) {
+  object EnumProtocolTermInterp extends FunctionK[EnumProtocolTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: EnumProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
         val enumEntries: Option[List[String]] = swagger match {
@@ -97,7 +97,7 @@ object CirceProtocolGenerator {
     }
   }
 
-  class ModelProtocolTermInterp(circeVersion: CirceVersion) extends (ModelProtocolTerm[ScalaLanguage, ?] ~> Target) {
+  class ModelProtocolTermInterp(circeVersion: CirceVersion) extends FunctionK[ModelProtocolTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: ModelProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         swagger
@@ -348,7 +348,7 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ArrayProtocolTermInterp extends (ArrayProtocolTerm[ScalaLanguage, ?] ~> Target) {
+  object ArrayProtocolTermInterp extends FunctionK[ArrayProtocolTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: ArrayProtocolTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>
         for {
@@ -371,7 +371,7 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ProtocolSupportTermInterp extends (ProtocolSupportTerm[ScalaLanguage, ?] ~> Target) {
+  object ProtocolSupportTermInterp extends FunctionK[ProtocolSupportTerm[ScalaLanguage, ?], Target] {
     def apply[T](term: ProtocolSupportTerm[ScalaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
         definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
@@ -414,7 +414,7 @@ object CirceProtocolGenerator {
     }
   }
 
-  object PolyProtocolTermInterp extends (PolyProtocolTerm[ScalaLanguage, ?] ~> Target) {
+  object PolyProtocolTermInterp extends FunctionK[PolyProtocolTerm[ScalaLanguage, ?], Target] {
     override def apply[A](fa: PolyProtocolTerm[ScalaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
         def allParents: Tracker[Schema[_]] => Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =

@@ -5,7 +5,7 @@ package Java
 import _root_.io.swagger.v3.oas.models.media._
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.~>
+import cats.arrow.FunctionK
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
 import com.twilio.guardrail.Discriminator
 import com.twilio.guardrail.core.Tracker
@@ -122,7 +122,7 @@ object JacksonGenerator {
       ).toNodeList
     )
 
-  object EnumProtocolTermInterp extends (EnumProtocolTerm[JavaLanguage, ?] ~> Target) {
+  object EnumProtocolTermInterp extends FunctionK[EnumProtocolTerm[JavaLanguage, ?], Target] {
     def apply[T](term: EnumProtocolTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractEnum(swagger) =>
         val enumEntries: Option[List[String]] = swagger match {
@@ -743,7 +743,7 @@ object JacksonGenerator {
     }
   }
 
-  object ModelProtocolTermInterp extends (ModelProtocolTerm[JavaLanguage, ?] ~> Target) {
+  object ModelProtocolTermInterp extends FunctionK[ModelProtocolTerm[JavaLanguage, ?], Target] {
     def apply[T](term: ModelProtocolTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractProperties(swagger) =>
         swagger
@@ -848,7 +848,7 @@ object JacksonGenerator {
     }
   }
 
-  object ArrayProtocolTermInterp extends (ArrayProtocolTerm[JavaLanguage, ?] ~> Target) {
+  object ArrayProtocolTermInterp extends FunctionK[ArrayProtocolTerm[JavaLanguage, ?], Target] {
     def apply[T](term: ArrayProtocolTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractArrayType(arr, concreteTypes) =>
         for {
@@ -884,7 +884,7 @@ object JacksonGenerator {
     }
   }
 
-  object ProtocolSupportTermInterp extends (ProtocolSupportTerm[JavaLanguage, ?] ~> Target) {
+  object ProtocolSupportTermInterp extends FunctionK[ProtocolSupportTerm[JavaLanguage, ?], Target] {
     def apply[T](term: ProtocolSupportTerm[JavaLanguage, T]): Target[T] = term match {
       case ExtractConcreteTypes(definitions) =>
         definitions.fold[Target[List[PropMeta[JavaLanguage]]]](Target.raiseUserError, Target.pure)
@@ -1015,7 +1015,7 @@ object JacksonGenerator {
     }
   }
 
-  object PolyProtocolTermInterp extends (PolyProtocolTerm[JavaLanguage, ?] ~> Target) {
+  object PolyProtocolTermInterp extends FunctionK[PolyProtocolTerm[JavaLanguage, ?], Target] {
     override def apply[A](fa: PolyProtocolTerm[JavaLanguage, A]): Target[A] = fa match {
       case ExtractSuperClass(swagger, definitions) =>
         def allParents(model: Tracker[Schema[_]]): List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])] =

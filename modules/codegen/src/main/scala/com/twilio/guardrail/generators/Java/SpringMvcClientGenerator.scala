@@ -1,13 +1,13 @@
 package com.twilio.guardrail.generators.Java
 
-import cats.~>
+import cats.arrow.FunctionK
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client._
 
 object SpringMvcClientGenerator {
 
-  object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
+  object ClientTermInterp extends FunctionK[ClientTerm[JavaLanguage, ?], Target] {
     def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
       case GenerateClientOperation(className, route, methodName, tracing, parameters, responses, securitySchemes) =>
         Target.raiseUserError("spring client generation is not currently supported")

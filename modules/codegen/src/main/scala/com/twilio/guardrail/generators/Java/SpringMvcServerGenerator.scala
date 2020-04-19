@@ -1,7 +1,7 @@
 package com.twilio.guardrail.generators.Java
 
 import cats.data.NonEmptyList
-import cats.~>
+import cats.arrow.FunctionK
 import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier._
@@ -272,7 +272,7 @@ object SpringMvcServerGenerator {
     }
   }
 
-  object ServerTermInterp extends (ServerTerm[JavaLanguage, ?] ~> Target) {
+  object ServerTermInterp extends FunctionK[ServerTerm[JavaLanguage, ?], Target] {
     def apply[T](term: ServerTerm[JavaLanguage, T]): Target[T] = term match {
       case GetExtraImports(tracing) =>
         List(

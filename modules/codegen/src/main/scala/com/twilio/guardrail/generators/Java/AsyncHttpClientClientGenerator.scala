@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.Java
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.~>
+import cats.arrow.FunctionK
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
@@ -402,17 +402,19 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  object ClientTermInterp extends (ClientTerm[JavaLanguage, ?] ~> Target) {
+  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] with FunctionK[ClientTerm[JavaLanguage, ?], Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    type L    = JavaLanguage
-    type F[A] = Target[A]
-
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(
+        className: List[String],
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+        parameters: ScalaParameters[JavaLanguage]
+    )(
         route: RouteMeta,
         methodName: String,
-        responses: Responses[L]
-    ): F[RenderedClientOperation[L]] = {
+        responses: Responses[JavaLanguage]
+    ): Target[RenderedClientOperation[JavaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
 
       val responseParentName = s"${operation.get.getOperationId.capitalize}Response"
@@ -834,7 +836,7 @@ object AsyncHttpClientClientGenerator {
         RenderedClientOperation[JavaLanguage](method, callBuilderCls :: Nil)
       }
     }
-    def getImports(tracing: Boolean): F[List[L#Import]] =
+    def getImports(tracing: Boolean): Target[List[com.github.javaparser.ast.ImportDeclaration]] =
       if (tracing) {
         Target.raiseUserError("Tracing is not yet supported by this framework")
       } else {
@@ -857,11 +859,19 @@ object AsyncHttpClientClientGenerator {
               "java.util.Objects.requireNonNull"
             ).map(safeParseRawStaticImport)).sequence
       }
-    def getExtraImports(tracing: Boolean): F[List[L#Import]] = Target.pure(List.empty)
-    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): F[List[List[L#MethodParameter]]] =
+    def getExtraImports(tracing: Boolean): Target[List[com.github.javaparser.ast.ImportDeclaration]] = Target.pure(List.empty)
+    def clientClsArgs(
+        tracingName: Option[String],
+        serverUrls: Option[NonEmptyList[URI]],
+        tracing: Boolean
+    ): Target[List[List[com.github.javaparser.ast.body.Parameter]]] =
       Target.pure(List.empty)
 
-    def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]] = {
+    def generateResponseDefinitions(
+        operationId: String,
+        responses: Responses[JavaLanguage],
+        protocolElems: List[StrictProtocolElems[JavaLanguage]]
+    ): Target[List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]] = {
       val abstractClassName = s"${operationId.capitalize}Response"
       val genericTypeParam  = StaticJavaParser.parseClassOrInterfaceType("T")
 
@@ -970,7 +980,10 @@ object AsyncHttpClientClientGenerator {
 
       Target.pure(List(abstractResponseClass))
     }
-    def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]] =
+    def generateSupportDefinitions(
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+    ): Target[List[SupportDefinition[JavaLanguage]]] =
       for {
         exceptionClasses <- generateClientExceptionClasses()
         ahcSupport       <- generateAsyncHttpClientSupportClass()
@@ -994,9 +1007,9 @@ object AsyncHttpClientClientGenerator {
         clientName: String,
         tracingName: Option[String],
         serverUrls: Option[NonEmptyList[URI]],
-        ctorArgs: List[List[L#MethodParameter]],
+        ctorArgs: List[List[com.github.javaparser.ast.body.Parameter]],
         tracing: Boolean
-    ): F[StaticDefns[L]] =
+    ): Target[StaticDefns[JavaLanguage]] =
       Target.pure(
         StaticDefns[JavaLanguage](
           className = clientName,
@@ -1010,11 +1023,14 @@ object AsyncHttpClientClientGenerator {
         tracingName: Option[String],
         serverUrls: Option[NonEmptyList[URI]],
         basePath: Option[String],
-        ctorArgs: List[List[L#MethodParameter]],
-        clientCalls: List[L#Definition],
-        supportDefinitions: List[L#Definition],
+        ctorArgs: List[List[com.github.javaparser.ast.body.Parameter]],
+        clientCalls: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
         tracing: Boolean
-    ): F[NonEmptyList[Either[L#Trait, L#ClassDefinition]]] = {
+    ): Target[NonEmptyList[Either[
+      com.github.javaparser.ast.body.ClassOrInterfaceDeclaration,
+      com.github.javaparser.ast.body.TypeDeclaration[_ <: com.github.javaparser.ast.body.TypeDeclaration[_]]
+    ]]] = {
       val clientType = StaticJavaParser.parseClassOrInterfaceType(clientName)
       val serverUrl  = serverUrls.map(_.head).map(uri => new URI(uri.toString + basePath.getOrElse("")))
 

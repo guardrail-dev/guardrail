@@ -1,6 +1,6 @@
 package com.twilio.guardrail.generators.Java
 
-import cats.~>
+import cats.arrow.FunctionK
 import cats.implicits._
 import com.github.javaparser.ast.expr.Name
 import com.twilio.guardrail.Target
@@ -17,7 +17,7 @@ import com.twilio.guardrail.terms.framework.{
 }
 
 object SpringMvcGenerator {
-  object FrameworkInterp extends (FrameworkTerm[JavaLanguage, ?] ~> Target) {
+  object FrameworkInterp extends FunctionK[FrameworkTerm[JavaLanguage, ?], Target] {
     def apply[T](term: FrameworkTerm[JavaLanguage, T]): Target[T] = term match {
       case FileType(format)   => safeParseType(format.getOrElse("MultipartFile"))
       case ObjectType(format) => safeParseType("com.fasterxml.jackson.databind.JsonNode")
