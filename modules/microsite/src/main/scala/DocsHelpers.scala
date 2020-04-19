@@ -7,7 +7,7 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.{ AkkaHttp, Framework }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
 import scala.meta._
@@ -18,7 +18,8 @@ case object GeneratingClients extends SnippetComponent
 
 object DocsHelpers {
   def sampleSpec = "modules/microsite/docs/sample-user.json"
-  def renderScalaSnippet(generator: FunctionK[CodegenApplication[ScalaLanguage, ?], Target], identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
+  def renderScalaSnippet(generator: Framework[ScalaLanguage, Target], identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
+    import generator._
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
     val openAPI = Tracker(new OpenAPIParser().readLocation(sampleSpec, new java.util.LinkedList(), parseOpts).getOpenAPI)

@@ -6,23 +6,23 @@ import cats.arrow.FunctionK
 
 import com.twilio.guardrail.languages.LA
 
-import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerm, EnumProtocolTerm, ModelProtocolTerm, PolyProtocolTerm, ProtocolSupportTerm }
-import com.twilio.guardrail.protocol.terms.client.ClientTerm
-import com.twilio.guardrail.protocol.terms.server.ServerTerm
-import com.twilio.guardrail.terms.{ ScalaTerm, SwaggerTerm }
-import com.twilio.guardrail.terms.framework.FrameworkTerm
+import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
+import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 trait Framework[L <: LA, F[_]] extends FunctionK[CodegenApplication[L, ?], F] {
-  implicit def ArrayProtocolInterp: FunctionK[ArrayProtocolTerm[L, ?], F]
-  implicit def ClientInterp: FunctionK[ClientTerm[L, ?], F]
-  implicit def EnumProtocolInterp: FunctionK[EnumProtocolTerm[L, ?], F]
-  implicit def FrameworkInterp: FunctionK[FrameworkTerm[L, ?], F]
-  implicit def ModelProtocolInterp: FunctionK[ModelProtocolTerm[L, ?], F]
-  implicit def PolyProtocolInterp: FunctionK[PolyProtocolTerm[L, ?], F]
-  implicit def ProtocolSupportInterp: FunctionK[ProtocolSupportTerm[L, ?], F]
-  implicit def ServerInterp: FunctionK[ServerTerm[L, ?], F]
-  implicit def SwaggerInterp: FunctionK[SwaggerTerm[L, ?], F]
-  implicit def LanguageInterp: FunctionK[ScalaTerm[L, ?], F]
+  implicit def ArrayProtocolInterp: ArrayProtocolTerms[L, F]
+  implicit def ClientInterp: ClientTerms[L, F]
+  implicit def EnumProtocolInterp: EnumProtocolTerms[L, F]
+  implicit def FrameworkInterp: FrameworkTerms[L, F]
+  implicit def ModelProtocolInterp: ModelProtocolTerms[L, F]
+  implicit def PolyProtocolInterp: PolyProtocolTerms[L, F]
+  implicit def ProtocolSupportInterp: ProtocolSupportTerms[L, F]
+  implicit def ServerInterp: ServerTerms[L, F]
+  implicit def SwaggerInterp: SwaggerTerms[L, F]
+  implicit def LanguageInterp: ScalaTerms[L, F]
 
   val interpDefinitionPM: DefinitionPM[L, ?] ~> F       = ProtocolSupportInterp or ModelProtocolInterp
   val interpDefinitionPME: DefinitionPME[L, ?] ~> F     = EnumProtocolInterp or interpDefinitionPM
