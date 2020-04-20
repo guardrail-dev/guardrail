@@ -35,13 +35,14 @@ object Target {
       case TargetValue(a, la)   => f(a).prependLogger(la)
       case TargetError(err, la) => new TargetError(err, la)
     }
+    @scala.annotation.tailrec
     def tailRecM[A, B](a: A)(f: A => Target[Either[A, B]]): Target[B] =
       f(a) match {
         case TargetError(err, la) =>
           new TargetError(err, la)
         case TargetValue(e, la) =>
           e match {
-            case Left(b)  => tailRecM(b)(f).prependLogger(la)
+            case Left(b)  => tailRecM(b)(f.map(_.prependLogger(la)))
             case Right(a) => new TargetValue(a, la)
           }
       }
