@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package terms
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
 import cats.implicits._
@@ -24,7 +25,7 @@ abstract class SwaggerLogAdapter[F[_]] {
   def error(message: String): F[Unit]
 }
 
-abstract class SwaggerTerms[L <: LA, F[_]] {
+abstract class SwaggerTerms[L <: LA, F[_]] extends FunctionK[SwaggerTerm[L, ?], F] {
   def MonadF: Monad[F]
 
   def extractCommonRequestBodies(components: Option[Components]): F[Map[String, RequestBody]]
@@ -57,7 +58,42 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]): F[StrictProtocolElems[L]]
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): F[List[StrictProtocolElems[L]]]
   def log: SwaggerLogAdapter[F]
+
+  def apply[T](term: SwaggerTerm[L, T]): F[T] = term match {
+    case ExtractCommonRequestBodies(components)                                    => extractCommonRequestBodies(components)
+    case ExtractOperations(paths, commonRequestBodies, globalSecurityRequirements) => extractOperations(paths, commonRequestBodies, globalSecurityRequirements)
+    case ExtractApiKeySecurityScheme(schemeName, securityScheme, tpe)              => extractApiKeySecurityScheme(schemeName, securityScheme, tpe)
+    case ExtractHttpSecurityScheme(schemeName, securityScheme, tpe)                => extractHttpSecurityScheme(schemeName, securityScheme, tpe)
+    case ExtractOpenIdConnectSecurityScheme(schemeName, securityScheme, tpe)       => extractOpenIdConnectSecurityScheme(schemeName, securityScheme, tpe)
+    case ExtractOAuth2SecurityScheme(schemeName, securityScheme, tpe)              => extractOAuth2SecurityScheme(schemeName, securityScheme, tpe)
+    case GetClassName(operation, vendorPrefixes)                                   => getClassName(operation, vendorPrefixes)
+    case GetParameterName(parameter)                                               => getParameterName(parameter)
+    case GetBodyParameterSchema(parameter)                                         => getBodyParameterSchema(parameter)
+    case GetHeaderParameterType(parameter)                                         => getHeaderParameterType(parameter)
+    case GetPathParameterType(parameter)                                           => getPathParameterType(parameter)
+    case GetQueryParameterType(parameter)                                          => getQueryParameterType(parameter)
+    case GetCookieParameterType(parameter)                                         => getCookieParameterType(parameter)
+    case GetFormParameterType(parameter)                                           => getFormParameterType(parameter)
+    case GetSerializableParameterType(parameter)                                   => getSerializableParameterType(parameter)
+    case GetRefParameterRef(parameter)                                             => getRefParameterRef(parameter)
+    case FallbackParameterHandler(parameter)                                       => fallbackParameterHandler(parameter)
+    case GetOperationId(operation)                                                 => getOperationId(operation)
+    case GetResponses(operationId, operation)                                      => getResponses(operationId, operation)
+    case GetSimpleRef(ref)                                                         => getSimpleRef(ref)
+    case GetItems(arr)                                                             => getItems(arr)
+    case GetType(model)                                                            => getType(model)
+    case FallbackPropertyTypeHandler(prop)                                         => fallbackPropertyTypeHandler(prop)
+    case ResolveType(name, protocolElems)                                          => resolveType(name, protocolElems)
+    case FallbackResolveElems(lazyElems)                                           => fallbackResolveElems(lazyElems)
+    case LogPush(name)                                                             => log.push(name)
+    case LogPop()                                                                  => log.pop
+    case LogDebug(message)                                                         => log.debug(message)
+    case LogInfo(message)                                                          => log.info(message)
+    case LogWarning(message)                                                       => log.warning(message)
+    case LogError(message)                                                         => log.error(message)
+  }
 }
+
 object SwaggerTerms {
   implicit def swaggerTerm[L <: LA, F[_]](implicit I: InjectK[SwaggerTerm[L, ?], F]): SwaggerTerms[L, Free[F, ?]] = new SwaggerTerms[L, Free[F, ?]] {
     def MonadF = Free.catsFreeMonadForFree

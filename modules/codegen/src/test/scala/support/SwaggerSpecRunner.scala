@@ -4,14 +4,14 @@ import _root_.io.swagger.v3.oas.models._
 import com.twilio.guardrail.languages.LA
 import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
-import cats.arrow.FunctionK
 import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.swagger.core.{ LogLevels, StructuredLogger }
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.generators.Framework
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import scala.meta.Tree
 import org.scalactic.Equality
 import org.scalatest.EitherValues
@@ -29,15 +29,15 @@ trait SwaggerSpecRunner extends EitherValues {
   def runSwaggerSpec[L <: LA](
       spec: String,
       dtoPackage: List[String] = List.empty
-  ): (Context, FunctionK[CodegenApplication[L, ?], Target]) => (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
+  ): (Context, Framework[L, Target]) => (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
     runSwagger(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI, dtoPackage) _
   }
 
-  def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: FunctionK[CodegenApplication[L, ?], Target])(
+  def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: Framework[L, Target])(
       implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
+      Sc: LanguageTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val /*(clientLogger,*/ (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
@@ -82,15 +82,15 @@ trait SwaggerSpecRunner extends EitherValues {
 
   def runInvalidSwaggerSpec[L <: LA](
       spec: String
-  ): (Context, CodegenTarget, FunctionK[CodegenApplication[L, ?], Target]) => (StructuredLogger, Error) = {
+  ): (Context, CodegenTarget, Framework[L, Target]) => (StructuredLogger, Error) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
     runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI) _
   }
 
-  def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: FunctionK[CodegenApplication[L, ?], Target])(
+  def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: Framework[L, Target])(
       implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sc: ScalaTerms[L, Free[CodegenApplication[L, ?], ?]],
+      Sc: LanguageTerms[L, Free[CodegenApplication[L, ?], ?]],
       Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
   ): (StructuredLogger, Error) =
     Common

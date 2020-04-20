@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.{ Discriminator, ProtocolParameter, StaticDefns, SuperClass }
 import com.twilio.guardrail.core.Tracker
@@ -36,7 +37,7 @@ case class RenderADTStaticDefns[L <: LA](
     decoder: Option[L#ValueDefinition]
 ) extends PolyProtocolTerm[L, StaticDefns[L]]
 
-abstract class PolyProtocolTerms[L <: LA, F[_]] {
+abstract class PolyProtocolTerms[L <: LA, F[_]] extends FunctionK[PolyProtocolTerm[L, ?], F] {
   def MonadF: Monad[F]
   def extractSuperClass(
       swagger: Tracker[ComposedSchema],
@@ -80,6 +81,14 @@ abstract class PolyProtocolTerms[L <: LA, F[_]] {
     def decodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil) = newDecodeADT(clsName, discriminator, children)
     def renderADTStaticDefns(clsName: String, discriminator: Discriminator[L], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
       newRenderADTStaticDefns(clsName, discriminator, encoder, decoder)
+  }
+
+  def apply[A](fa: PolyProtocolTerm[L, A]): F[A] = fa match {
+    case ExtractSuperClass(swagger, definitions)                                => extractSuperClass(swagger, definitions)
+    case RenderADTStaticDefns(clsName, discriminator, encoder, decoder)         => renderADTStaticDefns(clsName, discriminator, encoder, decoder)
+    case DecodeADT(clsName, discriminator, children)                            => decodeADT(clsName, discriminator, children)
+    case EncodeADT(clsName, discriminator, children)                            => encodeADT(clsName, discriminator, children)
+    case RenderSealedTrait(className, params, discriminator, parents, children) => renderSealedTrait(className, params, discriminator, parents, children)
   }
 }
 

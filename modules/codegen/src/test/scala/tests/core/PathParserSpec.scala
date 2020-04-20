@@ -3,7 +3,7 @@ package tests.core
 import cats.data.NonEmptyList
 import com.twilio.guardrail.{ SwaggerUtil, Target }
 import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.generators.syntax.Scala._
 import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
 import support.ScalaMetaMatchers._
@@ -12,11 +12,11 @@ import scala.meta._
 
 class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues with TrackerTestExtensions {
 
-  val args: List[ScalaParameter[ScalaLanguage]] = List(
-    ScalaParameter.fromParam(param"foo: Int = 1"),
-    ScalaParameter.fromParam(param"bar: Int = 1"),
-    ScalaParameter.fromParam(param"fooBar: Int = 1").withRawName("foo_bar"),
-    ScalaParameter.fromParam(param"barBaz: Int = 1").withRawName("bar_baz")
+  val args: List[LanguageParameter[ScalaLanguage]] = List(
+    LanguageParameter.fromParam(param"foo: Int = 1"),
+    LanguageParameter.fromParam(param"bar: Int = 1"),
+    LanguageParameter.fromParam(param"fooBar: Int = 1").withRawName("foo_bar"),
+    LanguageParameter.fromParam(param"barBaz: Int = 1").withRawName("bar_baz")
   )
 
   List[(String, Term)](
@@ -67,7 +67,7 @@ class PathParserSpec extends FunSuite with Matchers with EitherValues with Optio
     import Atto._
     import SwaggerUtil.paths.akkaExtractor._
 
-    implicit val params: List[ScalaParameter[ScalaLanguage]] = List.empty
+    implicit val params: List[LanguageParameter[ScalaLanguage]] = List.empty
 
     plainString.parseOnly("foo/").either.right.value shouldBe "foo"
     plainNEString.parseOnly("foo/").either.right.value shouldBe "foo"

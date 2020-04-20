@@ -2,6 +2,7 @@ package com.twilio.guardrail
 package terms
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.generators.RawParameterType
@@ -10,7 +11,7 @@ import java.nio.file.Path
 
 import cats.data.NonEmptyList
 
-abstract class ScalaTerms[L <: LA, F[_]] {
+abstract class LanguageTerms[L <: LA, F[_]] extends FunctionK[LanguageTerm[L, ?], F] {
   def MonadF: Monad[F]
   def vendorPrefixes(): F[List[String]]
 
@@ -22,8 +23,8 @@ abstract class ScalaTerms[L <: LA, F[_]] {
   def litBoolean(value: Boolean): F[L#Term]
   def liftOptionalType(value: L#Type): F[L#Type]
   def liftOptionalTerm(value: L#Term): F[L#Term]
-  def emptyArray: F[L#Term]
-  def emptyMap: F[L#Term]
+  def emptyArray(): F[L#Term]
+  def emptyMap(): F[L#Term]
   def emptyOptionalTerm(): F[L#Term]
   def liftVectorType(value: L#Type, customTpe: Option[L#Type]): F[L#Type]
   def liftVectorTerm(value: L#Term): F[L#Term]
@@ -211,7 +212,7 @@ abstract class ScalaTerms[L <: LA, F[_]] {
       newWriteClient: (Path, List[String], List[L#Import], Option[L#TermName], Option[List[String]], Client[L]) => F[List[WriteTree]] = writeClient _,
       newWriteServer: (Path, List[String], List[L#Import], Option[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
       newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[L#ObjectDefinition] = wrapToObject _
-  ) = new ScalaTerms[L, F] {
+  ) = new LanguageTerms[L, F] {
     def MonadF                                                   = newMonadF
     def vendorPrefixes()                                         = newVendorPrefixes()
     def litString(value: String)                                 = newLitString(value)
@@ -318,79 +319,178 @@ abstract class ScalaTerms[L <: LA, F[_]] {
     )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server)
     def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)
   }
+
+  def apply[T](term: LanguageTerm[L, T]): F[T] = term match {
+    case VendorPrefixes() => vendorPrefixes()
+
+    case LitString(value)                                  => litString(value)
+    case LitFloat(value)                                   => litFloat(value)
+    case LitDouble(value)                                  => litDouble(value)
+    case LitInt(value)                                     => litInt(value)
+    case LitLong(value)                                    => litLong(value)
+    case LitBoolean(value)                                 => litBoolean(value)
+    case LiftOptionalType(value)                           => liftOptionalType(value)
+    case LiftOptionalTerm(value)                           => liftOptionalTerm(value)
+    case EmptyOptionalTerm()                               => emptyOptionalTerm()
+    case EmptyArray()                                      => emptyArray()
+    case EmptyMap()                                        => emptyMap()
+    case LiftVectorType(value, customTpe)                  => liftVectorType(value, customTpe)
+    case LiftVectorTerm(value)                             => liftVectorTerm(value)
+    case LiftMapType(value, customTpe)                     => liftMapType(value, customTpe)
+    case FullyQualifyPackageName(rawPkgName)               => fullyQualifyPackageName(rawPkgName)
+    case LookupEnumDefaultValue(tpe, defaultValue, values) => lookupEnumDefaultValue(tpe, defaultValue, values)
+    case FormatEnumName(enumValue)                         => formatEnumName(enumValue)
+    case EmbedArray(tpe, customTpe) =>
+      embedArray(tpe, customTpe)
+    case EmbedMap(tpe, customTpe) =>
+      embedMap(tpe, customTpe)
+    case ParseType(value) =>
+      parseType(value)
+    case ParseTypeName(value) =>
+      parseTypeName(value)
+
+    case PureTermName(value) =>
+      pureTermName(value)
+
+    case PureTypeName(value) =>
+      pureTypeName(value)
+
+    case PureMethodParameter(name, tpe, default) =>
+      pureMethodParameter(name, tpe, default)
+
+    case TypeNamesEqual(a, b) =>
+      typeNamesEqual(a, b)
+
+    case TypesEqual(a, b) =>
+      typesEqual(a, b)
+
+    case ExtractTypeName(tpe) =>
+      extractTypeName(tpe)
+    case ExtractTermName(term) =>
+      extractTermName(term)
+    case SelectType(typeNames) =>
+      selectType(typeNames)
+    case SelectTerm(termNames) =>
+      selectTerm(termNames)
+    case AlterMethodParameterName(param, name) =>
+      alterMethodParameterName(param, name)
+
+    case BytesType()               => bytesType()
+    case DateType()                => dateType()
+    case DateTimeType()            => dateTimeType()
+    case UUIDType()                => uuidType()
+    case StringType(format)        => stringType(format)
+    case FloatType()               => floatType()
+    case DoubleType()              => doubleType()
+    case NumberType(format)        => numberType(format)
+    case IntType()                 => intType()
+    case LongType()                => longType()
+    case IntegerType(format)       => integerType(format)
+    case BooleanType(format)       => booleanType(format)
+    case ArrayType(format)         => arrayType(format)
+    case FallbackType(tpe, format) => fallbackType(tpe, format)
+
+    case WidenTypeName(tpe)           => widenTypeName(tpe)
+    case WidenTermSelect(value)       => widenTermSelect(value)
+    case WidenClassDefinition(value)  => widenClassDefinition(value)
+    case WidenObjectDefinition(value) => widenObjectDefinition(value)
+
+    case FindCommonDefaultValue(history, a, b) =>
+      findCommonDefaultValue(history, a, b)
+    case FindCommonRawType(history, a, b) =>
+      findCommonRawType(history, a, b)
+
+    case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
+      renderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports)
+    case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
+      renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName)
+    case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
+      renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
+    case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
+      writePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
+    case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
+      writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem)
+    case WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client) =>
+      writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client)
+    case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server) =>
+      writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server)
+    case WrapToObject(name, imports, definitions) =>
+      wrapToObject(name, imports, definitions)
+  }
 }
 
-object ScalaTerms {
-  implicit def scalaTerm[L <: LA, F[_]](implicit I: InjectK[ScalaTerm[L, ?], F]): ScalaTerms[L, Free[F, ?]] = new ScalaTerms[L, Free[F, ?]] {
+object LanguageTerms {
+  implicit def languageTerm[L <: LA, F[_]](implicit I: InjectK[LanguageTerm[L, ?], F]): LanguageTerms[L, Free[F, ?]] = new LanguageTerms[L, Free[F, ?]] {
     def MonadF                                  = Free.catsFreeMonadForFree
-    def vendorPrefixes(): Free[F, List[String]] = Free.inject[ScalaTerm[L, ?], F](VendorPrefixes[L]())
+    def vendorPrefixes(): Free[F, List[String]] = Free.inject[LanguageTerm[L, ?], F](VendorPrefixes[L]())
 
-    def litString(value: String): Free[F, L#Term]                                 = Free.inject[ScalaTerm[L, ?], F](LitString(value))
-    def litFloat(value: Float): Free[F, L#Term]                                   = Free.inject[ScalaTerm[L, ?], F](LitFloat(value))
-    def litDouble(value: Double): Free[F, L#Term]                                 = Free.inject[ScalaTerm[L, ?], F](LitDouble(value))
-    def litInt(value: Int): Free[F, L#Term]                                       = Free.inject[ScalaTerm[L, ?], F](LitInt(value))
-    def litLong(value: Long): Free[F, L#Term]                                     = Free.inject[ScalaTerm[L, ?], F](LitLong(value))
-    def litBoolean(value: Boolean): Free[F, L#Term]                               = Free.inject[ScalaTerm[L, ?], F](LitBoolean(value))
-    def liftOptionalType(value: L#Type): Free[F, L#Type]                          = Free.inject[ScalaTerm[L, ?], F](LiftOptionalType(value))
-    def liftOptionalTerm(value: L#Term): Free[F, L#Term]                          = Free.inject[ScalaTerm[L, ?], F](LiftOptionalTerm(value))
-    def emptyArray: Free[F, L#Term]                                               = Free.inject[ScalaTerm[L, ?], F](EmptyArray())
-    def emptyMap: Free[F, L#Term]                                                 = Free.inject[ScalaTerm[L, ?], F](EmptyMap())
-    def emptyOptionalTerm(): Free[F, L#Term]                                      = Free.inject[ScalaTerm[L, ?], F](EmptyOptionalTerm())
-    def liftVectorType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](LiftVectorType(value, customTpe))
-    def liftVectorTerm(value: L#Term): Free[F, L#Term]                            = Free.inject[ScalaTerm[L, ?], F](LiftVectorTerm(value))
-    def liftMapType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type]    = Free.inject[ScalaTerm[L, ?], F](LiftMapType(value, customTpe))
+    def litString(value: String): Free[F, L#Term]                                 = Free.inject[LanguageTerm[L, ?], F](LitString(value))
+    def litFloat(value: Float): Free[F, L#Term]                                   = Free.inject[LanguageTerm[L, ?], F](LitFloat(value))
+    def litDouble(value: Double): Free[F, L#Term]                                 = Free.inject[LanguageTerm[L, ?], F](LitDouble(value))
+    def litInt(value: Int): Free[F, L#Term]                                       = Free.inject[LanguageTerm[L, ?], F](LitInt(value))
+    def litLong(value: Long): Free[F, L#Term]                                     = Free.inject[LanguageTerm[L, ?], F](LitLong(value))
+    def litBoolean(value: Boolean): Free[F, L#Term]                               = Free.inject[LanguageTerm[L, ?], F](LitBoolean(value))
+    def liftOptionalType(value: L#Type): Free[F, L#Type]                          = Free.inject[LanguageTerm[L, ?], F](LiftOptionalType(value))
+    def liftOptionalTerm(value: L#Term): Free[F, L#Term]                          = Free.inject[LanguageTerm[L, ?], F](LiftOptionalTerm(value))
+    def emptyArray(): Free[F, L#Term]                                             = Free.inject[LanguageTerm[L, ?], F](EmptyArray())
+    def emptyMap(): Free[F, L#Term]                                               = Free.inject[LanguageTerm[L, ?], F](EmptyMap())
+    def emptyOptionalTerm(): Free[F, L#Term]                                      = Free.inject[LanguageTerm[L, ?], F](EmptyOptionalTerm())
+    def liftVectorType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type] = Free.inject[LanguageTerm[L, ?], F](LiftVectorType(value, customTpe))
+    def liftVectorTerm(value: L#Term): Free[F, L#Term]                            = Free.inject[LanguageTerm[L, ?], F](LiftVectorTerm(value))
+    def liftMapType(value: L#Type, customTpe: Option[L#Type]): Free[F, L#Type]    = Free.inject[LanguageTerm[L, ?], F](LiftMapType(value, customTpe))
 
     def fullyQualifyPackageName(rawPkgName: List[String]): Free[F, List[String]] =
-      Free.inject[ScalaTerm[L, ?], F](FullyQualifyPackageName(rawPkgName))
+      Free.inject[LanguageTerm[L, ?], F](FullyQualifyPackageName(rawPkgName))
 
     def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): Free[F, L#TermSelect] =
-      Free.inject[ScalaTerm[L, ?], F](LookupEnumDefaultValue(tpe, defaultValue, values))
-    def formatEnumName(enumValue: String): Free[F, String] = Free.inject[ScalaTerm[L, ?], F](FormatEnumName(enumValue))
+      Free.inject[LanguageTerm[L, ?], F](LookupEnumDefaultValue(tpe, defaultValue, values))
+    def formatEnumName(enumValue: String): Free[F, String] = Free.inject[LanguageTerm[L, ?], F](FormatEnumName(enumValue))
 
     def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): Free[F, LazyResolvedType[L]] =
-      Free.inject[ScalaTerm[L, ?], F](EmbedArray(tpe, customTpe))
-    def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): Free[F, LazyResolvedType[L]] = Free.inject[ScalaTerm[L, ?], F](EmbedMap(tpe, customTpe))
+      Free.inject[LanguageTerm[L, ?], F](EmbedArray(tpe, customTpe))
+    def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): Free[F, LazyResolvedType[L]] =
+      Free.inject[LanguageTerm[L, ?], F](EmbedMap(tpe, customTpe))
 
-    def parseType(value: String): Free[F, Option[L#Type]]         = Free.inject[ScalaTerm[L, ?], F](ParseType(value))
-    def parseTypeName(value: String): Free[F, Option[L#TypeName]] = Free.inject[ScalaTerm[L, ?], F](ParseTypeName(value))
-    def pureTermName(value: String): Free[F, L#TermName]          = Free.inject[ScalaTerm[L, ?], F](PureTermName(value))
-    def pureTypeName(value: String): Free[F, L#TypeName]          = Free.inject[ScalaTerm[L, ?], F](PureTypeName(value))
+    def parseType(value: String): Free[F, Option[L#Type]]         = Free.inject[LanguageTerm[L, ?], F](ParseType(value))
+    def parseTypeName(value: String): Free[F, Option[L#TypeName]] = Free.inject[LanguageTerm[L, ?], F](ParseTypeName(value))
+    def pureTermName(value: String): Free[F, L#TermName]          = Free.inject[LanguageTerm[L, ?], F](PureTermName(value))
+    def pureTypeName(value: String): Free[F, L#TypeName]          = Free.inject[LanguageTerm[L, ?], F](PureTypeName(value))
 
     def pureMethodParameter(name: L#TermName, tpe: L#Type, default: Option[L#Term]): Free[F, L#MethodParameter] =
-      Free.inject[ScalaTerm[L, ?], F](PureMethodParameter(name, tpe, default))
-    def typeNamesEqual(a: L#TypeName, b: L#TypeName): Free[F, Boolean] = Free.inject[ScalaTerm[L, ?], F](TypeNamesEqual(a, b))
-    def typesEqual(a: L#Type, b: L#Type): Free[F, Boolean]             = Free.inject[ScalaTerm[L, ?], F](TypesEqual(a, b))
-    def extractTypeName(tpe: L#Type): Free[F, Option[L#TypeName]]      = Free.inject[ScalaTerm[L, ?], F](ExtractTypeName(tpe))
-    def extractTermName(term: L#TermName): Free[F, String]             = Free.inject[ScalaTerm[L, ?], F](ExtractTermName(term))
-    def selectType(typeNames: NonEmptyList[String]): Free[F, L#Type]   = Free.inject[ScalaTerm[L, ?], F](SelectType(typeNames))
-    def selectTerm(termNames: NonEmptyList[String]): Free[F, L#Term]   = Free.inject[ScalaTerm[L, ?], F](SelectTerm(termNames))
+      Free.inject[LanguageTerm[L, ?], F](PureMethodParameter(name, tpe, default))
+    def typeNamesEqual(a: L#TypeName, b: L#TypeName): Free[F, Boolean] = Free.inject[LanguageTerm[L, ?], F](TypeNamesEqual(a, b))
+    def typesEqual(a: L#Type, b: L#Type): Free[F, Boolean]             = Free.inject[LanguageTerm[L, ?], F](TypesEqual(a, b))
+    def extractTypeName(tpe: L#Type): Free[F, Option[L#TypeName]]      = Free.inject[LanguageTerm[L, ?], F](ExtractTypeName(tpe))
+    def extractTermName(term: L#TermName): Free[F, String]             = Free.inject[LanguageTerm[L, ?], F](ExtractTermName(term))
+    def selectType(typeNames: NonEmptyList[String]): Free[F, L#Type]   = Free.inject[LanguageTerm[L, ?], F](SelectType(typeNames))
+    def selectTerm(termNames: NonEmptyList[String]): Free[F, L#Term]   = Free.inject[LanguageTerm[L, ?], F](SelectTerm(termNames))
     def alterMethodParameterName(param: L#MethodParameter, name: L#TermName): Free[F, L#MethodParameter] =
-      Free.inject[ScalaTerm[L, ?], F](AlterMethodParameterName(param, name))
+      Free.inject[LanguageTerm[L, ?], F](AlterMethodParameterName(param, name))
 
-    def bytesType(): Free[F, L#Type]                                               = Free.inject[ScalaTerm[L, ?], F](BytesType())
-    def uuidType(): Free[F, L#Type]                                                = Free.inject[ScalaTerm[L, ?], F](UUIDType())
-    def dateType(): Free[F, L#Type]                                                = Free.inject[ScalaTerm[L, ?], F](DateType())
-    def dateTimeType(): Free[F, L#Type]                                            = Free.inject[ScalaTerm[L, ?], F](DateTimeType())
-    def stringType(format: Option[String]): Free[F, L#Type]                        = Free.inject[ScalaTerm[L, ?], F](StringType(format))
-    def floatType(): Free[F, L#Type]                                               = Free.inject[ScalaTerm[L, ?], F](FloatType())
-    def doubleType(): Free[F, L#Type]                                              = Free.inject[ScalaTerm[L, ?], F](DoubleType())
-    def numberType(format: Option[String]): Free[F, L#Type]                        = Free.inject[ScalaTerm[L, ?], F](NumberType(format))
-    def intType(): Free[F, L#Type]                                                 = Free.inject[ScalaTerm[L, ?], F](IntType())
-    def longType(): Free[F, L#Type]                                                = Free.inject[ScalaTerm[L, ?], F](LongType())
-    def integerType(format: Option[String]): Free[F, L#Type]                       = Free.inject[ScalaTerm[L, ?], F](IntegerType(format))
-    def booleanType(format: Option[String]): Free[F, L#Type]                       = Free.inject[ScalaTerm[L, ?], F](BooleanType(format))
-    def arrayType(format: Option[String]): Free[F, L#Type]                         = Free.inject[ScalaTerm[L, ?], F](ArrayType(format))
-    def fallbackType(tpe: Option[String], format: Option[String]): Free[F, L#Type] = Free.inject[ScalaTerm[L, ?], F](FallbackType(tpe, format))
+    def bytesType(): Free[F, L#Type]                                               = Free.inject[LanguageTerm[L, ?], F](BytesType())
+    def uuidType(): Free[F, L#Type]                                                = Free.inject[LanguageTerm[L, ?], F](UUIDType())
+    def dateType(): Free[F, L#Type]                                                = Free.inject[LanguageTerm[L, ?], F](DateType())
+    def dateTimeType(): Free[F, L#Type]                                            = Free.inject[LanguageTerm[L, ?], F](DateTimeType())
+    def stringType(format: Option[String]): Free[F, L#Type]                        = Free.inject[LanguageTerm[L, ?], F](StringType(format))
+    def floatType(): Free[F, L#Type]                                               = Free.inject[LanguageTerm[L, ?], F](FloatType())
+    def doubleType(): Free[F, L#Type]                                              = Free.inject[LanguageTerm[L, ?], F](DoubleType())
+    def numberType(format: Option[String]): Free[F, L#Type]                        = Free.inject[LanguageTerm[L, ?], F](NumberType(format))
+    def intType(): Free[F, L#Type]                                                 = Free.inject[LanguageTerm[L, ?], F](IntType())
+    def longType(): Free[F, L#Type]                                                = Free.inject[LanguageTerm[L, ?], F](LongType())
+    def integerType(format: Option[String]): Free[F, L#Type]                       = Free.inject[LanguageTerm[L, ?], F](IntegerType(format))
+    def booleanType(format: Option[String]): Free[F, L#Type]                       = Free.inject[LanguageTerm[L, ?], F](BooleanType(format))
+    def arrayType(format: Option[String]): Free[F, L#Type]                         = Free.inject[LanguageTerm[L, ?], F](ArrayType(format))
+    def fallbackType(tpe: Option[String], format: Option[String]): Free[F, L#Type] = Free.inject[LanguageTerm[L, ?], F](FallbackType(tpe, format))
 
-    def widenTypeName(tpe: L#TypeName): Free[F, L#Type]                         = Free.inject[ScalaTerm[L, ?], F](WidenTypeName(tpe))
-    def widenTermSelect(value: L#TermSelect): Free[F, L#Term]                   = Free.inject[ScalaTerm[L, ?], F](WidenTermSelect(value))
-    def widenClassDefinition(value: L#ClassDefinition): Free[F, L#Definition]   = Free.inject[ScalaTerm[L, ?], F](WidenClassDefinition(value))
-    def widenObjectDefinition(value: L#ObjectDefinition): Free[F, L#Definition] = Free.inject[ScalaTerm[L, ?], F](WidenObjectDefinition(value))
+    def widenTypeName(tpe: L#TypeName): Free[F, L#Type]                         = Free.inject[LanguageTerm[L, ?], F](WidenTypeName(tpe))
+    def widenTermSelect(value: L#TermSelect): Free[F, L#Term]                   = Free.inject[LanguageTerm[L, ?], F](WidenTermSelect(value))
+    def widenClassDefinition(value: L#ClassDefinition): Free[F, L#Definition]   = Free.inject[LanguageTerm[L, ?], F](WidenClassDefinition(value))
+    def widenObjectDefinition(value: L#ObjectDefinition): Free[F, L#Definition] = Free.inject[LanguageTerm[L, ?], F](WidenObjectDefinition(value))
 
     def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]): Free[F, Option[L#Term]] =
-      Free.inject[ScalaTerm[L, ?], F](FindCommonDefaultValue(history, a, b))
+      Free.inject[LanguageTerm[L, ?], F](FindCommonDefaultValue(history, a, b))
     def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType): Free[F, RawParameterType] =
-      Free.inject[ScalaTerm[L, ?], F](FindCommonRawType(history, a, b))
+      Free.inject[LanguageTerm[L, ?], F](FindCommonRawType(history, a, b))
 
     def renderImplicits(
         pkgPath: Path,
@@ -399,7 +499,7 @@ object ScalaTerms {
         jsonImports: List[L#Import],
         customImports: List[L#Import]
     ): Free[F, Option[WriteTree]] =
-      Free.inject[ScalaTerm[L, ?], F](RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports))
+      Free.inject[LanguageTerm[L, ?], F](RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports))
     def renderFrameworkImplicits(
         pkgPath: Path,
         pkgName: List[String],
@@ -408,7 +508,7 @@ object ScalaTerms {
         frameworkImplicits: L#ObjectDefinition,
         frameworkImplicitName: L#TermName
     ): Free[F, WriteTree] =
-      Free.inject[ScalaTerm[L, ?], F](RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName))
+      Free.inject[LanguageTerm[L, ?], F](RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName))
     def renderFrameworkDefinitions(
         pkgPath: Path,
         pkgName: List[String],
@@ -416,7 +516,7 @@ object ScalaTerms {
         frameworkDefinitions: L#ClassDefinition,
         frameworkDefinitionsName: L#TermName
     ): Free[F, WriteTree] =
-      Free.inject[ScalaTerm[L, ?], F](RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName))
+      Free.inject[LanguageTerm[L, ?], F](RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName))
 
     def writePackageObject(
         dtoPackagePath: Path,
@@ -427,7 +527,7 @@ object ScalaTerms {
         packageObjectContents: List[L#ValueDefinition],
         extraTypes: List[L#Statement]
     ): Free[F, Option[WriteTree]] =
-      Free.inject[ScalaTerm[L, ?], F](
+      Free.inject[LanguageTerm[L, ?], F](
         WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
       )
     def writeProtocolDefinition(
@@ -438,7 +538,7 @@ object ScalaTerms {
         imports: List[L#Import],
         elem: StrictProtocolElems[L]
     ): Free[F, (List[WriteTree], List[L#Statement])] =
-      Free.inject[ScalaTerm[L, ?], F](WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem))
+      Free.inject[LanguageTerm[L, ?], F](WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem))
     def writeClient(
         pkgPath: Path,
         pkgName: List[String],
@@ -447,7 +547,7 @@ object ScalaTerms {
         dtoComponents: Option[List[String]],
         client: Client[L]
     ): Free[F, List[WriteTree]] =
-      Free.inject[ScalaTerm[L, ?], F](WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client))
+      Free.inject[LanguageTerm[L, ?], F](WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client))
     def writeServer(
         pkgPath: Path,
         pkgName: List[String],
@@ -456,9 +556,9 @@ object ScalaTerms {
         dtoComponents: Option[List[String]],
         server: Server[L]
     ): Free[F, List[WriteTree]] =
-      Free.inject[ScalaTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
+      Free.inject[LanguageTerm[L, ?], F](WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server))
 
     def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): Free[F, L#ObjectDefinition] =
-      Free.inject[ScalaTerm[L, ?], F](WrapToObject(name, imports, definitions))
+      Free.inject[LanguageTerm[L, ?], F](WrapToObject(name, imports, definitions))
   }
 }

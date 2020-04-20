@@ -3,86 +3,102 @@ package generators
 
 import com.twilio.guardrail.languages.ScalaLanguage
 import cats.data.NonEmptyList
-import cats.arrow.FunctionK
 import cats.implicits._
 import com.twilio.guardrail.circe.CirceVersion
 
+import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.framework.FrameworkTerms
+
 object ScalaModule extends AbstractModule[ScalaLanguage] {
-  def circe(circeVersion: CirceVersion): FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
-    val interpDefinitionPM
-        : FunctionK[DefinitionPM[ScalaLanguage, ?], Target] = CirceProtocolGenerator.ProtocolSupportTermInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(
-            circeVersion
-          )
-    val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
-    val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
-    val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
-    interpDefinitionPMEAP
-  }
+  def circe(circeVersion: CirceVersion): (
+      ProtocolSupportTerms[ScalaLanguage, Target],
+      ModelProtocolTerms[ScalaLanguage, Target],
+      EnumProtocolTerms[ScalaLanguage, Target],
+      ArrayProtocolTerms[ScalaLanguage, Target],
+      PolyProtocolTerms[ScalaLanguage, Target]
+  ) = (
+    CirceProtocolGenerator.ProtocolSupportTermInterp,
+    new CirceProtocolGenerator.ModelProtocolTermInterp(circeVersion),
+    CirceProtocolGenerator.EnumProtocolTermInterp,
+    CirceProtocolGenerator.ArrayProtocolTermInterp,
+    CirceProtocolGenerator.PolyProtocolTermInterp
+  )
 
-  def circeJava8(circeVersion: CirceVersion): FunctionK[ModelInterpreters[ScalaLanguage, ?], Target] = {
-    import com.twilio.guardrail.protocol.terms.protocol.{ PackageObjectImports, ProtocolSupportTerm }
-    val java8timeCirceInterp = new FunctionK[ProtocolSupportTerm[ScalaLanguage, ?], Target] {
-      import scala.meta._
-      def apply[A](value: ProtocolSupportTerm[ScalaLanguage, A]): Target[A] = value match {
-        case PackageObjectImports() =>
-          CirceProtocolGenerator.ProtocolSupportTermInterp(value).map { values =>
-            values :+ q"import io.circe.java8.time._"
-          }
-        case other => CirceProtocolGenerator.ProtocolSupportTermInterp(other)
-      }
-    }
+  def circeJava8(circeVersion: CirceVersion): (
+      ProtocolSupportTerms[ScalaLanguage, Target],
+      ModelProtocolTerms[ScalaLanguage, Target],
+      EnumProtocolTerms[ScalaLanguage, Target],
+      ArrayProtocolTerms[ScalaLanguage, Target],
+      PolyProtocolTerms[ScalaLanguage, Target]
+  ) = (
+    CirceProtocolGenerator.ProtocolSupportTermInterp.copy(newPackageObjectImports =
+      () =>
+        CirceProtocolGenerator.ProtocolSupportTermInterp.packageObjectImports().map { values =>
+          import scala.meta._
+          values :+ q"import io.circe.java8.time._"
+        }
+    ),
+    new CirceProtocolGenerator.ModelProtocolTermInterp(circeVersion),
+    CirceProtocolGenerator.EnumProtocolTermInterp,
+    CirceProtocolGenerator.ArrayProtocolTermInterp,
+    CirceProtocolGenerator.PolyProtocolTermInterp
+  )
 
-    val interpDefinitionPM: FunctionK[DefinitionPM[ScalaLanguage, ?], Target] = java8timeCirceInterp or new CirceProtocolGenerator.ModelProtocolTermInterp(
-            circeVersion
-          )
-    val interpDefinitionPME: FunctionK[DefinitionPME[ScalaLanguage, ?], Target]     = CirceProtocolGenerator.EnumProtocolTermInterp or interpDefinitionPM
-    val interpDefinitionPMEA: FunctionK[DefinitionPMEA[ScalaLanguage, ?], Target]   = CirceProtocolGenerator.ArrayProtocolTermInterp or interpDefinitionPME
-    val interpDefinitionPMEAP: FunctionK[DefinitionPMEAP[ScalaLanguage, ?], Target] = CirceProtocolGenerator.PolyProtocolTermInterp or interpDefinitionPMEA
-    interpDefinitionPMEAP
-  }
+  def akkaHttp(circeVersion: CirceVersion): (
+      ClientTerms[ScalaLanguage, Target],
+      ServerTerms[ScalaLanguage, Target],
+      FrameworkTerms[ScalaLanguage, Target]
+  ) = (AkkaHttpClientGenerator.ClientTermInterp, AkkaHttpServerGenerator.ServerTermInterp, new AkkaHttpGenerator.FrameworkInterp(circeVersion))
 
-  def akkaHttp(
-      circeVersion: CirceVersion,
-      interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]
-  ): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
-    val interpFrameworkC: FunctionK[FrameworkC[ScalaLanguage, ?], Target]     = AkkaHttpClientGenerator.ClientTermInterp or interpModel
-    val interpFrameworkCS: FunctionK[FrameworkCS[ScalaLanguage, ?], Target]   = AkkaHttpServerGenerator.ServerTermInterp or interpFrameworkC
-    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = new AkkaHttpGenerator.FrameworkInterp(circeVersion) or interpFrameworkCS
-    interpFrameworkCSF
-  }
+  def endpoints(circeVersion: CirceVersion): (
+      ClientTerms[ScalaLanguage, Target],
+      ServerTerms[ScalaLanguage, Target],
+      FrameworkTerms[ScalaLanguage, Target]
+  ) = (
+    EndpointsClientGenerator.ClientTermInterp,
+    EndpointsServerGenerator.ServerTermInterp,
+    EndpointsGenerator.FrameworkInterp
+  )
 
-  def endpoints(
-      circeVersion: CirceVersion,
-      interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]
-  ): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
-    val interpFrameworkC: FunctionK[FrameworkC[ScalaLanguage, ?], Target]     = EndpointsClientGenerator.ClientTermInterp or interpModel
-    val interpFrameworkCS: FunctionK[FrameworkCS[ScalaLanguage, ?], Target]   = EndpointsServerGenerator.ServerTermInterp or interpFrameworkC
-    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = EndpointsGenerator.FrameworkInterp or interpFrameworkCS
-    interpFrameworkCSF
-  }
+  def http4s: (
+      ClientTerms[ScalaLanguage, Target],
+      ServerTerms[ScalaLanguage, Target],
+      FrameworkTerms[ScalaLanguage, Target]
+  ) = (
+    Http4sClientGenerator.ClientTermInterp,
+    Http4sServerGenerator.ServerTermInterp,
+    Http4sGenerator.FrameworkInterp
+  )
 
-  def http4s(interpModel: FunctionK[ModelInterpreters[ScalaLanguage, ?], Target]): FunctionK[ClientServerTerms[ScalaLanguage, ?], Target] = {
-    val interpFrameworkC: FunctionK[FrameworkC[ScalaLanguage, ?], Target]     = Http4sClientGenerator.ClientTermInterp or interpModel
-    val interpFrameworkCS: FunctionK[FrameworkCS[ScalaLanguage, ?], Target]   = Http4sServerGenerator.ServerTermInterp or interpFrameworkC
-    val interpFrameworkCSF: FunctionK[FrameworkCSF[ScalaLanguage, ?], Target] = Http4sGenerator.FrameworkInterp or interpFrameworkCS
-    interpFrameworkCSF
-  }
-
-  def extract(modules: NonEmptyList[String]): Target[FunctionK[CodegenApplication[ScalaLanguage, ?], Target]] =
+  def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] =
     (for {
-      (circeVersion, protocolGenerator) <- popModule(
+      (circeVersion, (protocol, model, enum, array, poly)) <- popModule(
         "json",
         ("circe-java8", (CirceVersion.V011, circeJava8(CirceVersion.V011))),
         ("circe-0.11", (CirceVersion.V011, circe(CirceVersion.V011))),
         ("circe", (CirceVersion.V012, circe(CirceVersion.V012)))
       )
-      interpFramework <- popModule(
+      (client, server, framework) <- popModule(
         "framework",
-        ("akka-http", akkaHttp(circeVersion, protocolGenerator)),
-        ("http4s", http4s(protocolGenerator)),
-        ("endpoints", endpoints(circeVersion, protocolGenerator))
+        ("akka-http", akkaHttp(circeVersion)),
+        ("http4s", http4s),
+        ("endpoints", endpoints(circeVersion))
       )
-      parser             = SwaggerGenerator[ScalaLanguage] or interpFramework
-      codegenApplication = ScalaGenerator.ScalaInterp or parser
-    } yield codegenApplication).runA(modules.toList.toSet)
+      // parser             =  or interpFramework
+      // codegenApplication = ScalaGenerator.ScalaInterp or parser
+    } yield new Framework[ScalaLanguage, Target] {
+      def ArrayProtocolInterp: ArrayProtocolTerms[ScalaLanguage, Target]     = array
+      def ClientInterp: ClientTerms[ScalaLanguage, Target]                   = client
+      def EnumProtocolInterp: EnumProtocolTerms[ScalaLanguage, Target]       = enum
+      def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]             = framework
+      def ModelProtocolInterp: ModelProtocolTerms[ScalaLanguage, Target]     = model
+      def PolyProtocolInterp: PolyProtocolTerms[ScalaLanguage, Target]       = poly
+      def ProtocolSupportInterp: ProtocolSupportTerms[ScalaLanguage, Target] = protocol
+      def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = server
+      def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]
+      def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator.ScalaInterp
+    }).runA(modules.toList.toSet)
 }

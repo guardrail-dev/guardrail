@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import cats.syntax.foldable._
 import com.github.javaparser.ast.`type`.Type
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms._
@@ -14,7 +14,7 @@ object DropwizardHelpers {
   private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
   private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson, TextPlain, OctetStream)
 
-  def getBestConsumes(operation: Tracker[Operation], contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] =
+  def getBestConsumes(operation: Tracker[Operation], contentTypes: List[ContentType], parameters: LanguageParameters[JavaLanguage]): Option[ContentType] =
     if (parameters.formParams.nonEmpty) {
       if (parameters.formParams.exists(_.isFile) || contentTypes.contains(MultipartFormData)) {
         Some(MultipartFormData)

@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.syntax
 import cats.data.NonEmptyList
 import com.twilio.guardrail.{ StaticDefns, SwaggerUtil, Target }
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaParameter }
+import com.twilio.guardrail.generators.{ LanguageParameter, RawParameterName, RawParameterType }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import scala.meta._
@@ -18,31 +18,32 @@ object Scala {
     def toLit: Lit.String = Lit.String(s"${value.context}:${value.operationId}")
   }
 
-  implicit class RichScalaParameter(value: ScalaParameter.type) {
+  implicit class RichLanguageParameter(value: LanguageParameter.type) {
     import _root_.scala.meta._
     import com.twilio.guardrail.languages.ScalaLanguage
-    def fromParam(param: Term.Param, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): ScalaParameter[ScalaLanguage] = param match {
-      case param @ Term.Param(_, name, decltype, _) =>
-        val tpe: Type = decltype
-          .flatMap({
-            case tpe @ t"Option[$_]" => Some(tpe)
-            case Type.ByName(tpe)    => Some(tpe)
-            case tpe @ Type.Name(_)  => Some(tpe)
-            case _                   => None
-          })
-          .getOrElse(t"Nothing")
-        new ScalaParameter[ScalaLanguage](
-          None,
-          param,
-          Term.Name(name.value),
-          RawParameterName(name.value),
-          tpe,
-          RawParameterType(rawType, rawFormat),
-          true,
-          None,
-          false
-        )
-    }
+    def fromParam(param: Term.Param, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): LanguageParameter[ScalaLanguage] =
+      param match {
+        case param @ Term.Param(_, name, decltype, _) =>
+          val tpe: Type = decltype
+            .flatMap({
+              case tpe @ t"Option[$_]" => Some(tpe)
+              case Type.ByName(tpe)    => Some(tpe)
+              case tpe @ Type.Name(_)  => Some(tpe)
+              case _                   => None
+            })
+            .getOrElse(t"Nothing")
+          new LanguageParameter[ScalaLanguage](
+            None,
+            param,
+            Term.Name(name.value),
+            RawParameterName(name.value),
+            tpe,
+            RawParameterType(rawType, rawFormat),
+            true,
+            None,
+            false
+          )
+      }
   }
 
   implicit class ExtendedUnzip[T1, T2, T3, T4, T5, T6, T7, T8](xs: NonEmptyList[(T1, T2, T3, T4, T5, T6, T7, T8)]) {
@@ -69,7 +70,7 @@ object Scala {
     }
     """
 
-  def generateUrlPathParams(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[Term] =
+  def generateUrlPathParams(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[Term] =
     SwaggerUtil.paths.generateUrlPathParams[ScalaLanguage](
       path,
       pathArgs,

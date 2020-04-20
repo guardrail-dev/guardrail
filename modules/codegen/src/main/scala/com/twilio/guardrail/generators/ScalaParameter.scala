@@ -8,22 +8,22 @@ import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 case class RawParameterName private[generators] (value: String)
 case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
-class ScalaParameters[L <: LA](val parameters: List[ScalaParameter[L]]) {
-  val filterParamBy: String => List[ScalaParameter[L]] = ScalaParameter.filterParams(parameters)
-  val headerParams: List[ScalaParameter[L]]            = filterParamBy("header")
-  val pathParams: List[ScalaParameter[L]]              = filterParamBy("path")
-  val queryStringParams: List[ScalaParameter[L]]       = filterParamBy("query")
-  val bodyParams: Option[ScalaParameter[L]]            = filterParamBy("body").headOption
-  val formParams: List[ScalaParameter[L]]              = filterParamBy("formData")
+class LanguageParameters[L <: LA](val parameters: List[LanguageParameter[L]]) {
+  val filterParamBy: String => List[LanguageParameter[L]] = LanguageParameter.filterParams(parameters)
+  val headerParams: List[LanguageParameter[L]]            = filterParamBy("header")
+  val pathParams: List[LanguageParameter[L]]              = filterParamBy("path")
+  val queryStringParams: List[LanguageParameter[L]]       = filterParamBy("query")
+  val bodyParams: Option[LanguageParameter[L]]            = filterParamBy("body").headOption
+  val formParams: List[LanguageParameter[L]]              = filterParamBy("formData")
 }
-class ScalaParameter[L <: LA] private[generators] (
+class LanguageParameter[L <: LA] private[generators] (
     val in: Option[String],
     val param: L#MethodParameter,
     val paramName: L#TermName,
@@ -35,21 +35,21 @@ class ScalaParameter[L <: LA] private[generators] (
     val isFile: Boolean
 ) {
   override def toString: String =
-    s"ScalaParameter($in, $param, $paramName, $argName, $argType)"
+    s"LanguageParameter($in, $param, $paramName, $argName, $argType)"
 
-  def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): ScalaParameter[L] =
-    new ScalaParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
+  def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): LanguageParameter[L] =
+    new LanguageParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
 
-  def withParamName(newParamName: L#TermName): ScalaParameter[L] =
-    new ScalaParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
+  def withParamName(newParamName: L#TermName): LanguageParameter[L] =
+    new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
 }
-object ScalaParameter {
-  def unapply[L <: LA](param: ScalaParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
+object LanguageParameter {
+  def unapply[L <: LA](param: LanguageParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => F[ScalaParameter[L]] = { parameter =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => F[LanguageParameter[L]] = { parameter =>
     import Fw._
     import Sc._
     import Sw._
@@ -142,7 +142,7 @@ object ScalaParameter {
       ftpe       <- fileType(None)
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
-      new ScalaParameter[L](
+      new LanguageParameter[L](
         Option(parameter.get.getIn),
         param,
         paramName,
@@ -158,7 +158,7 @@ object ScalaParameter {
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => F[List[ScalaParameter[L]]] = { params =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => F[List[LanguageParameter[L]]] = { params =>
     import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
@@ -168,7 +168,7 @@ object ScalaParameter {
           if (counts.getOrElse(name, 0) > 1) {
             pureTermName(param.argName.value).flatMap { escapedName =>
               alterMethodParameterName(param.param, escapedName).map { newParam =>
-                new ScalaParameter[L](
+                new LanguageParameter[L](
                   param.in,
                   newParam,
                   escapedName,
@@ -192,7 +192,7 @@ object ScalaParameter {
     * @param params
     * @return
     */
-  def filterParams[L <: LA](params: List[ScalaParameter[L]]): String => List[ScalaParameter[L]] = { in =>
+  def filterParams[L <: LA](params: List[LanguageParameter[L]]): String => List[LanguageParameter[L]] = { in =>
     params.filter(_.in == Some(in))
   }
 }

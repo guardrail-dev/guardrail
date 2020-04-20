@@ -3,7 +3,6 @@ package com.twilio.guardrail.generators
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.arrow.FunctionK
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail._
@@ -23,7 +22,7 @@ object ScalaGenerator {
     (GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8)
   }
 
-  object ScalaInterp extends ScalaTerms[ScalaLanguage, Target] with FunctionK[ScalaTerm[ScalaLanguage, ?], Target] {
+  object ScalaInterp extends LanguageTerms[ScalaLanguage, Target] {
     // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
     // defined inside `apply`. Once 2.11 is dropped, these can be moved back.
     val matchImplicit: PartialFunction[Stat, Defn.Val] = {
@@ -34,30 +33,33 @@ object ScalaGenerator {
     val buildPkgTerm: List[String] => Term.Ref =
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
-    type F[A] = Target[A]
-    type L    = ScalaLanguage
+    implicit def MonadF: Monad[Target]         = Target.targetInstances
+    def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-scala", "x-jvm"))
 
-    implicit def MonadF: Monad[F]         = Target.targetInstances
-    def vendorPrefixes(): F[List[String]] = Target.pure(List("x-scala", "x-jvm"))
+    def litString(value: String): Target[scala.meta.Term]                 = Target.pure(Lit.String(value))
+    def litFloat(value: Float): Target[scala.meta.Term]                   = Target.pure(Lit.Float(value))
+    def litDouble(value: Double): Target[scala.meta.Term]                 = Target.pure(Lit.Double(value))
+    def litInt(value: Int): Target[scala.meta.Term]                       = Target.pure(Lit.Int(value))
+    def litLong(value: Long): Target[scala.meta.Term]                     = Target.pure(Lit.Long(value))
+    def litBoolean(value: Boolean): Target[scala.meta.Term]               = Target.pure(Lit.Boolean(value))
+    def liftOptionalType(value: scala.meta.Type): Target[scala.meta.Type] = Target.pure(t"Option[$value]")
+    def liftOptionalTerm(value: scala.meta.Term): Target[scala.meta.Term] = Target.pure(q"Option($value)")
+    def emptyArray(): Target[scala.meta.Term]                             = Target.pure(q"Vector.empty")
+    def emptyMap(): Target[scala.meta.Term]                               = Target.pure(q"Map.empty")
+    def emptyOptionalTerm(): Target[scala.meta.Term]                      = Target.pure(q"None")
+    def liftVectorType(value: scala.meta.Type, customTpe: Option[scala.meta.Type]): Target[scala.meta.Type] =
+      Target.pure(t"${customTpe.getOrElse(t"Vector")}[$value]")
+    def liftVectorTerm(value: scala.meta.Term): Target[scala.meta.Term] = Target.pure(q"Vector($value)")
+    def liftMapType(value: scala.meta.Type, customTpe: Option[scala.meta.Type]): Target[scala.meta.Type] =
+      Target.pure(t"${customTpe.getOrElse(t"Map")}[String, $value]")
 
-    def litString(value: String): F[L#Term]                                 = Target.pure(Lit.String(value))
-    def litFloat(value: Float): F[L#Term]                                   = Target.pure(Lit.Float(value))
-    def litDouble(value: Double): F[L#Term]                                 = Target.pure(Lit.Double(value))
-    def litInt(value: Int): F[L#Term]                                       = Target.pure(Lit.Int(value))
-    def litLong(value: Long): F[L#Term]                                     = Target.pure(Lit.Long(value))
-    def litBoolean(value: Boolean): F[L#Term]                               = Target.pure(Lit.Boolean(value))
-    def liftOptionalType(value: L#Type): F[L#Type]                          = Target.pure(t"Option[$value]")
-    def liftOptionalTerm(value: L#Term): F[L#Term]                          = Target.pure(q"Option($value)")
-    def emptyArray(): F[L#Term]                                             = Target.pure(q"Vector.empty")
-    def emptyMap(): F[L#Term]                                               = Target.pure(q"Map.empty")
-    def emptyOptionalTerm(): F[L#Term]                                      = Target.pure(q"None")
-    def liftVectorType(value: L#Type, customTpe: Option[L#Type]): F[L#Type] = Target.pure(t"${customTpe.getOrElse(t"Vector")}[$value]")
-    def liftVectorTerm(value: L#Term): F[L#Term]                            = Target.pure(q"Vector($value)")
-    def liftMapType(value: L#Type, customTpe: Option[L#Type]): F[L#Type]    = Target.pure(t"${customTpe.getOrElse(t"Map")}[String, $value]")
+    def fullyQualifyPackageName(rawPkgName: List[String]): Target[List[String]] = Target.pure("_root_" +: rawPkgName)
 
-    def fullyQualifyPackageName(rawPkgName: List[String]): F[List[String]] = Target.pure("_root_" +: rawPkgName)
-
-    def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): F[L#TermSelect] =
+    def lookupEnumDefaultValue(
+        tpe: scala.meta.Type.Name,
+        defaultValue: scala.meta.Term,
+        values: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]
+    ): Target[scala.meta.Term.Select] =
       defaultValue match {
         case Lit.String(name) =>
           values
@@ -66,26 +68,26 @@ object ScalaGenerator {
         case _ =>
           Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that isn't a string")
       }
-    def formatEnumName(enumValue: String): F[String] = Target.pure(enumValue.toPascalCase)
+    def formatEnumName(enumValue: String): Target[String] = Target.pure(enumValue.toPascalCase)
 
-    def embedArray(tpe: LazyResolvedType[L], containerTpe: Option[L#Type]): F[LazyResolvedType[L]] = tpe match {
+    def embedArray(tpe: LazyResolvedType[ScalaLanguage], containerTpe: Option[scala.meta.Type]): Target[LazyResolvedType[ScalaLanguage]] = tpe match {
       case SwaggerUtil.Deferred(tpe) =>
-        Target.pure(SwaggerUtil.DeferredArray[L](tpe, containerTpe))
+        Target.pure(SwaggerUtil.DeferredArray[ScalaLanguage](tpe, containerTpe))
       case SwaggerUtil.DeferredArray(_, _) =>
         Target.raiseUserError("FIXME: Got an Array of Arrays, currently not supported")
       case SwaggerUtil.DeferredMap(_, _) =>
         Target.raiseUserError("FIXME: Got an Array of Maps, currently not supported")
     }
-    def embedMap(tpe: LazyResolvedType[L], containerTpe: Option[L#Type]): F[LazyResolvedType[L]] = tpe match {
+    def embedMap(tpe: LazyResolvedType[ScalaLanguage], containerTpe: Option[scala.meta.Type]): Target[LazyResolvedType[ScalaLanguage]] = tpe match {
       case SwaggerUtil.Deferred(inner) =>
-        Target.pure(SwaggerUtil.DeferredMap[L](inner, containerTpe))
+        Target.pure(SwaggerUtil.DeferredMap[ScalaLanguage](inner, containerTpe))
       case SwaggerUtil.DeferredMap(_, _) =>
         Target.raiseUserError("FIXME: Got a map of maps, currently not supported")
       case SwaggerUtil.DeferredArray(_, _) =>
         Target.raiseUserError("FIXME: Got a map of arrays, currently not supported")
     }
 
-    def parseType(tpe: String): F[Option[L#Type]] =
+    def parseType(tpe: String): Target[Option[scala.meta.Type]] =
       Target.pure(
         tpe
           .parse[Type]
@@ -94,28 +96,28 @@ object ScalaGenerator {
             None
           }, Option.apply _)
       )
-    def parseTypeName(tpe: String): F[Option[L#TypeName]] = Target.pure(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)))
-    def pureTermName(tpe: String): F[L#TermName] =
+    def parseTypeName(tpe: String): Target[Option[scala.meta.Type.Name]] = Target.pure(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)))
+    def pureTermName(tpe: String): Target[scala.meta.Term.Name] =
       Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Term.Name(_)), UserError("A structure's name is empty"))
-    def pureTypeName(tpe: String): F[L#TypeName] =
+    def pureTypeName(tpe: String): Target[scala.meta.Type.Name] =
       Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)), UserError("A structure's name is empty"))
 
-    def pureMethodParameter(name: L#TermName, tpe: L#Type, default: Option[L#Term]): F[L#MethodParameter] =
+    def pureMethodParameter(name: scala.meta.Term.Name, tpe: scala.meta.Type, default: Option[scala.meta.Term]): Target[scala.meta.Term.Param] =
       Target.pure(param"$name: $tpe".copy(default = default))
-    def typeNamesEqual(a: L#TypeName, b: L#TypeName): F[Boolean] = Target.pure(a.value == b.value)
-    def typesEqual(a: L#Type, b: L#Type): F[Boolean]             = Target.pure(a.structure == b.structure)
-    def extractTypeName(tpe: L#Type): F[Option[L#TypeName]] =
+    def typeNamesEqual(a: scala.meta.Type.Name, b: scala.meta.Type.Name): Target[Boolean] = Target.pure(a.value == b.value)
+    def typesEqual(a: scala.meta.Type, b: scala.meta.Type): Target[Boolean]               = Target.pure(a.structure == b.structure)
+    def extractTypeName(tpe: scala.meta.Type): Target[Option[scala.meta.Type.Name]] =
       Target.pure(tpe match {
         case x: Type.Name =>
           Option(x)
         case _ =>
           Option.empty
       })
-    def extractTermName(term: L#TermName): F[String] = {
+    def extractTermName(term: scala.meta.Term.Name): Target[String] = {
       val Term.Name(name) = term
       Target.pure(name)
     }
-    def selectType(typeNames: NonEmptyList[String]): F[L#Type] = {
+    def selectType(typeNames: NonEmptyList[String]): Target[scala.meta.Type] = {
       val tpe   = Type.Name(typeNames.last)
       val names = typeNames.init.map(Term.Name.apply _)
       val result = names match {
@@ -127,36 +129,36 @@ object ScalaGenerator {
       }
       Target.pure(result)
     }
-    def selectTerm(termNames: NonEmptyList[String]): F[L#Term] = {
+    def selectTerm(termNames: NonEmptyList[String]): Target[scala.meta.Term] = {
       val result = termNames.tail.foldLeft[Term](Term.Name(termNames.head))({
         case (current, next) =>
           Term.Select(current, Term.Name(next))
       })
       Target.pure(result)
     }
-    def alterMethodParameterName(param: L#MethodParameter, name: L#TermName): F[L#MethodParameter] = Target.pure(param.copy(name = name))
+    def alterMethodParameterName(param: scala.meta.Term.Param, name: scala.meta.Term.Name): Target[scala.meta.Term.Param] = Target.pure(param.copy(name = name))
 
-    def bytesType(): F[L#Type]                                               = Target.pure(t"Base64String")
-    def uuidType(): F[L#Type]                                                = Target.pure(t"java.util.UUID")
-    def dateType(): F[L#Type]                                                = Target.pure(t"java.time.LocalDate")
-    def dateTimeType(): F[L#Type]                                            = Target.pure(t"java.time.OffsetDateTime")
-    def stringType(format: Option[String]): F[L#Type]                        = Target.pure(format.fold(t"String")(Type.Name(_)))
-    def floatType(): F[L#Type]                                               = Target.pure(t"Float")
-    def doubleType(): F[L#Type]                                              = Target.pure(t"Double")
-    def numberType(format: Option[String]): F[L#Type]                        = Target.pure(t"BigDecimal")
-    def intType(): F[L#Type]                                                 = Target.pure(t"Int")
-    def longType(): F[L#Type]                                                = Target.pure(t"Long")
-    def integerType(format: Option[String]): F[L#Type]                       = Target.pure(t"BigInt")
-    def booleanType(format: Option[String]): F[L#Type]                       = Target.pure(t"Boolean")
-    def arrayType(format: Option[String]): F[L#Type]                         = Target.pure(t"Iterable[String]")
-    def fallbackType(tpe: Option[String], format: Option[String]): F[L#Type] = Target.fromOption(tpe, UserError("Missing type")).map(Type.Name(_))
+    def bytesType(): Target[scala.meta.Type]                                               = Target.pure(t"Base64String")
+    def uuidType(): Target[scala.meta.Type]                                                = Target.pure(t"java.util.UUID")
+    def dateType(): Target[scala.meta.Type]                                                = Target.pure(t"java.time.LocalDate")
+    def dateTimeType(): Target[scala.meta.Type]                                            = Target.pure(t"java.time.OffsetDateTime")
+    def stringType(format: Option[String]): Target[scala.meta.Type]                        = Target.pure(format.fold(t"String")(Type.Name(_)))
+    def floatType(): Target[scala.meta.Type]                                               = Target.pure(t"Float")
+    def doubleType(): Target[scala.meta.Type]                                              = Target.pure(t"Double")
+    def numberType(format: Option[String]): Target[scala.meta.Type]                        = Target.pure(t"BigDecimal")
+    def intType(): Target[scala.meta.Type]                                                 = Target.pure(t"Int")
+    def longType(): Target[scala.meta.Type]                                                = Target.pure(t"Long")
+    def integerType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"BigInt")
+    def booleanType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"Boolean")
+    def arrayType(format: Option[String]): Target[scala.meta.Type]                         = Target.pure(t"Iterable[String]")
+    def fallbackType(tpe: Option[String], format: Option[String]): Target[scala.meta.Type] = Target.fromOption(tpe, UserError("Missing type")).map(Type.Name(_))
 
-    def widenTypeName(tpe: L#TypeName): F[L#Type]                         = Target.pure(tpe)
-    def widenTermSelect(value: L#TermSelect): F[L#Term]                   = Target.pure(value)
-    def widenClassDefinition(value: L#ClassDefinition): F[L#Definition]   = Target.pure(value)
-    def widenObjectDefinition(value: L#ObjectDefinition): F[L#Definition] = Target.pure(value)
+    def widenTypeName(tpe: scala.meta.Type.Name): Target[scala.meta.Type]             = Target.pure(tpe)
+    def widenTermSelect(value: scala.meta.Term.Select): Target[scala.meta.Term]       = Target.pure(value)
+    def widenClassDefinition(value: scala.meta.Defn.Class): Target[scala.meta.Defn]   = Target.pure(value)
+    def widenObjectDefinition(value: scala.meta.Defn.Object): Target[scala.meta.Defn] = Target.pure(value)
 
-    def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]): F[Option[L#Term]] = (a, b) match {
+    def findCommonDefaultValue(history: String, a: Option[scala.meta.Term], b: Option[scala.meta.Term]): Target[Option[scala.meta.Term]] = (a, b) match {
       case (Some(va), Some(vb)) =>
         if (va.structure == vb.structure) {
           Target.pure(Some(va))
@@ -168,7 +170,7 @@ object ScalaGenerator {
       case (va, vb) =>
         Target.pure(va.orElse(vb))
     }
-    def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType): F[RawParameterType] =
+    def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType): Target[RawParameterType] =
       if (a == b) {
         Target.pure(a)
       } else {
@@ -180,10 +182,10 @@ object ScalaGenerator {
     def renderImplicits(
         pkgPath: Path,
         pkgName: List[String],
-        frameworkImports: List[L#Import],
-        jsonImports: List[L#Import],
-        customImports: List[L#Import]
-    ): F[Option[WriteTree]] = {
+        frameworkImports: List[scala.meta.Import],
+        jsonImports: List[scala.meta.Import],
+        customImports: List[scala.meta.Import]
+    ): Target[Option[WriteTree]] = {
       val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
       val implicits     = source"""
             package $pkg
@@ -277,11 +279,11 @@ object ScalaGenerator {
     def renderFrameworkImplicits(
         pkgPath: Path,
         pkgName: List[String],
-        frameworkImports: List[L#Import],
-        jsonImports: List[L#Import],
-        frameworkImplicits: L#ObjectDefinition,
-        frameworkImplicitName: L#TermName
-    ): F[WriteTree] = {
+        frameworkImports: List[scala.meta.Import],
+        jsonImports: List[scala.meta.Import],
+        frameworkImplicits: scala.meta.Defn.Object,
+        frameworkImplicitName: scala.meta.Term.Name
+    ): Target[WriteTree] = {
       val pkg: Term.Ref          = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
       val implicitsRef: Term.Ref = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
       val frameworkImplicitsFile = source"""
@@ -303,10 +305,10 @@ object ScalaGenerator {
     def renderFrameworkDefinitions(
         pkgPath: Path,
         pkgName: List[String],
-        frameworkImports: List[L#Import],
-        frameworkDefinitions: L#ClassDefinition,
-        frameworkDefinitionsName: L#TermName
-    ): F[WriteTree] = {
+        frameworkImports: List[scala.meta.Import],
+        frameworkDefinitions: scala.meta.Defn.Class,
+        frameworkDefinitionsName: scala.meta.Term.Name
+    ): Target[WriteTree] = {
       val pkg: Term.Ref            = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
       val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
       val frameworkDefinitionsFile = source"""
@@ -327,12 +329,12 @@ object ScalaGenerator {
     def writePackageObject(
         dtoPackagePath: Path,
         dtoComponents: Option[NonEmptyList[String]],
-        customImports: List[L#Import],
-        packageObjectImports: List[L#Import],
-        protocolImports: List[L#Import],
-        packageObjectContents: List[L#ValueDefinition],
-        extraTypes: List[L#Statement]
-    ): F[Option[WriteTree]] =
+        customImports: List[scala.meta.Import],
+        packageObjectImports: List[scala.meta.Import],
+        protocolImports: List[scala.meta.Import],
+        packageObjectContents: List[scala.meta.Defn.Val],
+        extraTypes: List[scala.meta.Stat]
+    ): Target[Option[WriteTree]] =
       dtoComponents.traverse({
         case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
           for (dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))) yield {
@@ -370,9 +372,9 @@ object ScalaGenerator {
         pkgName: List[String],
         definitions: List[String],
         dtoComponents: List[String],
-        imports: List[L#Import],
-        elem: StrictProtocolElems[L]
-    ): F[(List[WriteTree], List[L#Statement])] =
+        imports: List[scala.meta.Import],
+        elem: StrictProtocolElems[ScalaLanguage]
+    ): Target[(List[WriteTree], List[scala.meta.Stat])] =
       Target.pure(elem match {
         case EnumDefinition(_, _, _, _, cls, staticDefns) =>
           (
@@ -431,11 +433,11 @@ object ScalaGenerator {
     def writeClient(
         pkgPath: Path,
         pkgName: List[String],
-        customImports: List[L#Import],
-        frameworkImplicitName: Option[L#TermName],
+        customImports: List[scala.meta.Import],
+        frameworkImplicitName: Option[scala.meta.Term.Name],
         dtoComponents: Option[List[String]],
-        _client: Client[L]
-    ): F[List[WriteTree]] = {
+        _client: Client[ScalaLanguage]
+    ): Target[List[WriteTree]] = {
       val Client(pkg, clientName, imports, staticDefns, client, responseDefinitions) = _client
       Target.pure(
         List(
@@ -459,11 +461,11 @@ object ScalaGenerator {
     def writeServer(
         pkgPath: Path,
         pkgName: List[String],
-        customImports: List[L#Import],
-        frameworkImplicitName: Option[L#TermName],
+        customImports: List[scala.meta.Import],
+        frameworkImplicitName: Option[scala.meta.Term.Name],
         dtoComponents: Option[List[String]],
-        server: Server[L]
-    ): F[List[WriteTree]] = {
+        server: Server[ScalaLanguage]
+    ): Target[List[WriteTree]] = {
       val Server(pkg, extraImports, handlerDefinition, serverDefinitions) = server
       Target.pure(
         List(
@@ -484,108 +486,12 @@ object ScalaGenerator {
       )
     }
 
-    def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): F[L#ObjectDefinition] = Target.pure(q"""
+    def wrapToObject(name: scala.meta.Term.Name, imports: List[scala.meta.Import], definitions: List[scala.meta.Defn]): Target[scala.meta.Defn.Object] =
+      Target.pure(q"""
              object $name {
                  ..$imports
                  ..$definitions
              }
            """)
-    def apply[T](term: ScalaTerm[ScalaLanguage, T]): Target[T] = term match {
-      case VendorPrefixes() => vendorPrefixes()
-
-      case LitString(value)                                  => litString(value)
-      case LitFloat(value)                                   => litFloat(value)
-      case LitDouble(value)                                  => litDouble(value)
-      case LitInt(value)                                     => litInt(value)
-      case LitLong(value)                                    => litLong(value)
-      case LitBoolean(value)                                 => litBoolean(value)
-      case LiftOptionalType(value)                           => liftOptionalType(value)
-      case LiftOptionalTerm(value)                           => liftOptionalTerm(value)
-      case EmptyOptionalTerm()                               => emptyOptionalTerm()
-      case EmptyArray()                                      => emptyArray()
-      case EmptyMap()                                        => emptyMap()
-      case LiftVectorType(value, customTpe)                  => liftVectorType(value, customTpe)
-      case LiftVectorTerm(value)                             => liftVectorTerm(value)
-      case LiftMapType(value, customTpe)                     => liftMapType(value, customTpe)
-      case FullyQualifyPackageName(rawPkgName)               => fullyQualifyPackageName(rawPkgName)
-      case LookupEnumDefaultValue(tpe, defaultValue, values) => lookupEnumDefaultValue(tpe, defaultValue, values)
-      case FormatEnumName(enumValue)                         => formatEnumName(enumValue)
-      case EmbedArray(tpe, customTpe) =>
-        embedArray(tpe, customTpe)
-      case EmbedMap(tpe, customTpe) =>
-        embedMap(tpe, customTpe)
-      case ParseType(value) =>
-        parseType(value)
-      case ParseTypeName(value) =>
-        parseTypeName(value)
-
-      case PureTermName(value) =>
-        pureTermName(value)
-
-      case PureTypeName(value) =>
-        pureTypeName(value)
-
-      case PureMethodParameter(name, tpe, default) =>
-        pureMethodParameter(name, tpe, default)
-
-      case TypeNamesEqual(a, b) =>
-        typeNamesEqual(a, b)
-
-      case TypesEqual(a, b) =>
-        typesEqual(a, b)
-
-      case ExtractTypeName(tpe) =>
-        extractTypeName(tpe)
-      case ExtractTermName(term) =>
-        extractTermName(term)
-      case SelectType(typeNames) =>
-        selectType(typeNames)
-      case SelectTerm(termNames) =>
-        selectTerm(termNames)
-      case AlterMethodParameterName(param, name) =>
-        alterMethodParameterName(param, name)
-
-      case BytesType()               => bytesType()
-      case DateType()                => dateType()
-      case DateTimeType()            => dateTimeType()
-      case UUIDType()                => uuidType()
-      case StringType(format)        => stringType(format)
-      case FloatType()               => floatType()
-      case DoubleType()              => doubleType()
-      case NumberType(format)        => numberType(format)
-      case IntType()                 => intType()
-      case LongType()                => longType()
-      case IntegerType(format)       => integerType(format)
-      case BooleanType(format)       => booleanType(format)
-      case ArrayType(format)         => arrayType(format)
-      case FallbackType(tpe, format) => fallbackType(tpe, format)
-
-      case WidenTypeName(tpe)           => widenTypeName(tpe)
-      case WidenTermSelect(value)       => widenTermSelect(value)
-      case WidenClassDefinition(value)  => widenClassDefinition(value)
-      case WidenObjectDefinition(value) => widenObjectDefinition(value)
-
-      case FindCommonDefaultValue(history, a, b) =>
-        findCommonDefaultValue(history, a, b)
-      case FindCommonRawType(history, a, b) =>
-        findCommonRawType(history, a, b)
-
-      case RenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports) =>
-        renderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports)
-      case RenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName) =>
-        renderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName)
-      case RenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName) =>
-        renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
-      case WritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes) =>
-        writePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
-      case WriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem) =>
-        writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem)
-      case WriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client) =>
-        writeClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client)
-      case WriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server) =>
-        writeServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server)
-      case WrapToObject(name, imports, definitions) =>
-        wrapToObject(name, imports, definitions)
-    }
   }
 }

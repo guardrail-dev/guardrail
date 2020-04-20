@@ -4,17 +4,18 @@ package core
 import cats.data.{ NonEmptyList, State }
 // Issue #496: Injected StructuredLogger too slow import cats.free.{ Free, GuardrailFreeHacks }
 import cats.implicits._
-import cats.{ FlatMap, Monad, ~> }
+import cats.{ FlatMap, Monad }
 import cats.free.Free
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
+import com.twilio.guardrail.generators.Framework
 import java.nio.file.Paths
 import scala.util.control.NonFatal
 
 class CoreTermInterp[L <: LA](
     defaultFramework: String,
-    handleModules: NonEmptyList[String] => Target[CodegenApplication[L, ?] ~> Target],
-    frameworkMapping: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
+    handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
+    frameworkMapping: PartialFunction[String, Framework[L, Target]],
     handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] {
   implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -113,7 +114,7 @@ class CoreTermInterp[L <: LA](
     }
   }
 
-  def processArgSet(targetInterpreter: CodegenApplication[L, ?] ~> Target)(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
+  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
     import scala.meta.parsers.Parsed
     implicit def parsed2Either[Z]: Parsed[Z] => Either[Parsed.Error, Z] = {
       case x: Parsed.Error      => Left(x)
@@ -143,7 +144,7 @@ class CoreTermInterp[L <: LA](
           swagger =>
             try {
               val Sw = SwaggerTerms.swaggerTerm[L, CodegenApplication[L, ?]]
-              val Sc = ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]]
+              val Sc = LanguageTerms.languageTerm[L, CodegenApplication[L, ?]]
               val program = for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)

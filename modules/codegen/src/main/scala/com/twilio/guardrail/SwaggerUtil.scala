@@ -9,11 +9,11 @@ import cats.{ FlatMap, Foldable }
 import cats.implicits._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
-import com.twilio.guardrail.terms.{ ScalaTerms, SecurityScheme, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SecurityScheme, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
-import com.twilio.guardrail.generators.ScalaParameter
+import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
@@ -30,7 +30,7 @@ object SwaggerUtil {
   object ResolvedType {
     def resolveReferences[L <: LA, F[_]](
         values: List[(String, ResolvedType[L])]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
+    )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[List[(String, Resolved[L])]] = Sw.log.function("resolveReferences") {
       import Sc._
       import Sw._
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
@@ -76,7 +76,7 @@ object SwaggerUtil {
     def resolve[L <: LA, F[_]](
         value: ResolvedType[L],
         protocolElems: List[StrictProtocolElems[L]]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[Resolved[L]] = {
+    )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Resolved[L]] = {
       import Sc._
       import Sw._
       log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
@@ -121,21 +121,21 @@ object SwaggerUtil {
     }
   }
 
-  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): F[Option[String]] = {
+  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: LanguageTerms[L, F]): F[Option[String]] = {
     import S._
     for {
       prefixes <- vendorPrefixes()
     } yield CustomTypeName(v, prefixes)
   }
 
-  def customArrayTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): F[Option[String]] = {
+  def customArrayTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: LanguageTerms[L, F]): F[Option[String]] = {
     import S._
     for {
       prefixes <- vendorPrefixes()
     } yield CustomArrayTypeName(v, prefixes)
   }
 
-  def customMapTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: ScalaTerms[L, F]): F[Option[String]] = {
+  def customMapTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit S: LanguageTerms[L, F]): F[Option[String]] = {
     import S._
     for {
       prefixes <- vendorPrefixes()
@@ -145,7 +145,7 @@ object SwaggerUtil {
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
     def apply[T <: Schema[_]](
         model: Tracker[T]
-    )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
+    )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
         import Sw._
@@ -210,7 +210,7 @@ object SwaggerUtil {
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
+  )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[F, (String, SwaggerUtil.ResolvedType[L])] {
@@ -249,7 +249,7 @@ object SwaggerUtil {
       typeName: Tracker[Option[String]],
       format: Tracker[Option[String]],
       customType: Option[String]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[L#Type] =
+  )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[L#Type] =
     Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType})") {
       import Sc._
       import Fw._
@@ -306,7 +306,7 @@ object SwaggerUtil {
     }
 
   def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]])(
-      implicit Sc: ScalaTerms[L, F],
+      implicit Sc: LanguageTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): F[ResolvedType[L]] = {
@@ -321,7 +321,7 @@ object SwaggerUtil {
     }
   }
 
-  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: ScalaTerms[L, F]): F[Option[L#Type]] = {
+  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
     val tpe = s.trim
     if (tpe.nonEmpty) {
@@ -330,7 +330,7 @@ object SwaggerUtil {
   }
 
   def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(
-      implicit Sc: ScalaTerms[L, F],
+      implicit Sc: LanguageTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): F[ResolvedType[L]] = {
@@ -353,7 +353,7 @@ object SwaggerUtil {
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: PartialFunction[Schema[_], F[ResolvedType[L]]]
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
+  )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
@@ -441,7 +441,7 @@ object SwaggerUtil {
   def extractSecuritySchemes[L <: LA, F[_]](
       swagger: OpenAPI,
       prefixes: List[String]
-  )(implicit Sw: SwaggerTerms[L, F], Sc: ScalaTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
+  )(implicit Sw: SwaggerTerms[L, F], Sc: LanguageTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
     import Sw._
     import Sc._
 
@@ -492,7 +492,9 @@ object SwaggerUtil {
   object paths {
     import atto._, Atto._
 
-    private[this] def lookupName[L <: LA, T](bindingName: String, pathArgs: List[ScalaParameter[L]])(f: ScalaParameter[L] => atto.Parser[T]): atto.Parser[T] =
+    private[this] def lookupName[L <: LA, T](bindingName: String, pathArgs: List[LanguageParameter[L]])(
+        f: LanguageParameter[L] => atto.Parser[T]
+    ): atto.Parser[T] =
       pathArgs
         .find(_.argName.value == bindingName)
         .fold[atto.Parser[T]](
@@ -504,7 +506,7 @@ object SwaggerUtil {
 
     def generateUrlPathParams[L <: LA](
         path: Tracker[String],
-        pathArgs: List[ScalaParameter[L]],
+        pathArgs: List[LanguageParameter[L]],
         showLiteralPathComponent: String => L#Term,
         showInterpolatedPathComponent: L#TermName => L#Term,
         initialPathTerm: L#Term,
@@ -530,7 +532,7 @@ object SwaggerUtil {
     }
 
     class Extractors[T, TN <: T](
-        pathSegmentConverter: (ScalaParameter[ScalaLanguage], Option[T]) => Either[String, T],
+        pathSegmentConverter: (LanguageParameter[ScalaLanguage], Option[T]) => Either[String, T],
         buildParamConstraint: ((String, String)) => T,
         joinParams: (T, T) => T,
         stringPath: String => T,
@@ -544,11 +546,11 @@ object SwaggerUtil {
       val plainString: Parser[String]   = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString: Parser[String] = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P              = plainNEString.map(s => (None, stringPath(s)))
-      def regexSegment(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): P =
+      def regexSegment(implicit pathArgs: List[LanguageParameter[ScalaLanguage]]): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
             lookupName[ScalaLanguage, (Option[TN], T)](binding, pathArgs) {
-              case param @ ScalaParameter(_, _, paramName, argName, _) =>
+              case param @ LanguageParameter(_, _, paramName, argName, _) =>
                 val value = if (before.nonEmpty || after.nonEmpty) {
                   pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString)))
                     .fold(err, ok)
@@ -559,7 +561,7 @@ object SwaggerUtil {
             }
         }
 
-      def segments(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): LP =
+      def segments(implicit pathArgs: List[LanguageParameter[ScalaLanguage]]): LP =
         sepBy1(choice(regexSegment(pathArgs), stringSegment), char('/'))
           .map(_.toList)
 
@@ -576,9 +578,9 @@ object SwaggerUtil {
       val staticQS: Parser[Option[T]]                                        = (char('?') ~> queryPart.map(Option.apply _)) | char('?').map(_ => Option.empty[T]) | ok(Option.empty[T])
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
-      def pattern(implicit pathArgs: List[ScalaParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+      def pattern(implicit pathArgs: List[LanguageParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         opt(leadingSlash) ~> ((segments ~ (trailingSlash ~ staticQS)) | emptyPathQS | emptyPath) <~ endOfInput
-      def runParse(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+      def runParse(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         pattern(pathArgs)
           .parse(path.unwrapTracker)
           .done match {
@@ -591,7 +593,7 @@ object SwaggerUtil {
     object akkaExtractor
         extends Extractors[Term, Term.Name](
           pathSegmentConverter = {
-            case (ScalaParameter(_, param, _, argName, argType), base) =>
+            case (LanguageParameter(_, param, _, argName, argType), base) =>
               base.fold {
                 argType match {
                   case t"String" => Right(q"Segment")
@@ -633,7 +635,7 @@ object SwaggerUtil {
     object http4sExtractor
         extends Extractors[Pat, Term.Name](
           pathSegmentConverter = {
-            case (ScalaParameter(_, param, paramName, argName, argType), base) =>
+            case (LanguageParameter(_, param, paramName, argName, argType), base) =>
               base.fold[Either[String, Pat]] {
                 argType match {
                   case t"Int"                         => Right(p"IntVar(${Pat.Var(paramName)})")
@@ -669,7 +671,7 @@ object SwaggerUtil {
     object endpointsExtractor
         extends Extractors[Term, Term.Name](
           pathSegmentConverter = {
-            case (ScalaParameter(_, param, paramName, argName, argType), base) =>
+            case (LanguageParameter(_, param, paramName, argName, argType), base) =>
               base.fold[Either[String, Term]] {
                 import com.twilio.guardrail.generators.syntax.Scala._
                 Right(q"showSegment[$argType](${argName.toLit}, None)")
@@ -692,7 +694,10 @@ object SwaggerUtil {
             throw new UnsupportedOperationException
         )
 
-    def generateUrlAkkaPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[NonEmptyList[(Term, List[Term.Name])]] = {
+    def generateUrlAkkaPathExtractors(
+        path: Tracker[String],
+        pathArgs: List[LanguageParameter[ScalaLanguage]]
+    ): Target[NonEmptyList[(Term, List[Term.Name])]] = {
       import akkaExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
@@ -721,7 +726,7 @@ object SwaggerUtil {
       } yield result.reverse
     }
 
-    def generateUrlHttp4sPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
+    def generateUrlHttp4sPathExtractors(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
@@ -736,7 +741,7 @@ object SwaggerUtil {
       } yield (trailingSlashed, queryParams)
     }
 
-    def generateUrlEndpointsPathExtractors(path: Tracker[String], pathArgs: List[ScalaParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
+    def generateUrlEndpointsPathExtractors(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
       import endpointsExtractor._
       for {
         (parts, (trailingSlash, queryParams)) <- path.map(pattern(pathArgs).parseOnly(_).either).raiseErrorIfLeft.map(_.unwrapTracker)

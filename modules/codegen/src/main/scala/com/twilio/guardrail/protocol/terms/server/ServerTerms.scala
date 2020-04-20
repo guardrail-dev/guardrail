@@ -1,23 +1,24 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import io.swagger.v3.oas.models.Operation
 
-abstract class ServerTerms[L <: LA, F[_]] {
+abstract class ServerTerms[L <: LA, F[_]] extends FunctionK[ServerTerm[L, ?], F] {
   def MonadF: Monad[F]
   def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): F[Option[TracingField[L]]]
   def generateRoutes(
       tracing: Boolean,
       resourceName: String,
       basePath: Option[String],
-      routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
+      routes: List[(String, Option[TracingField[L]], RouteMeta, LanguageParameters[L], Responses[L])],
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
   ): F[RenderedRoutes[L]]
@@ -48,7 +49,7 @@ abstract class ServerTerms[L <: LA, F[_]] {
           Boolean,
           String,
           Option[String],
-          List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
+          List[(String, Option[TracingField[L]], RouteMeta, LanguageParameters[L], Responses[L])],
           List[StrictProtocolElems[L]],
           Map[String, SecurityScheme[L]]
       ) => F[RenderedRoutes[L]] = generateRoutes _,
@@ -74,7 +75,7 @@ abstract class ServerTerms[L <: LA, F[_]] {
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
+        routes: List[(String, Option[TracingField[L]], RouteMeta, LanguageParameters[L], Responses[L])],
         protocolElems: List[StrictProtocolElems[L]],
         securitySchemes: Map[String, SecurityScheme[L]]
     )                                         = newGenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes)
@@ -99,6 +100,20 @@ abstract class ServerTerms[L <: LA, F[_]] {
     )                                     = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)
     def getExtraImports(tracing: Boolean) = newGetExtraImports(tracing)
   }
+
+  def apply[T](term: ServerTerm[L, T]): F[T] = term match {
+    case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
+    case BuildTracingFields(operation, resourceName, tracing)               => buildTracingFields(operation, resourceName, tracing)
+    case GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes) =>
+      generateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes)
+    case RenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions) =>
+      renderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)
+    case GetExtraRouteParams(tracing) => getExtraRouteParams(tracing)
+    case RenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions) =>
+      renderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
+    case GetExtraImports(tracing)                             => getExtraImports(tracing)
+    case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
+  }
 }
 
 object ServerTerms {
@@ -110,7 +125,7 @@ object ServerTerms {
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
+        routes: List[(String, Option[TracingField[L]], RouteMeta, LanguageParameters[L], Responses[L])],
         protocolElems: List[StrictProtocolElems[L]],
         securitySchemes: Map[String, SecurityScheme[L]]
     ): Free[F, RenderedRoutes[L]]                                               = Free.inject[ServerTerm[L, ?], F](GenerateRoutes(tracing, resourceName, basePath, routes, protocolElems, securitySchemes))

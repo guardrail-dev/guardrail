@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
@@ -15,7 +15,7 @@ case class GenerateRoutes[L <: LA](
     tracing: Boolean,
     resourceName: String,
     basePath: Option[String],
-    routes: List[(String, Option[TracingField[L]], RouteMeta, ScalaParameters[L], Responses[L])],
+    routes: List[(String, Option[TracingField[L]], RouteMeta, LanguageParameters[L], Responses[L])],
     protocolElems: List[StrictProtocolElems[L]],
     securitySchemes: Map[String, SecurityScheme[L]]
 ) extends ServerTerm[L, RenderedRoutes[L]]

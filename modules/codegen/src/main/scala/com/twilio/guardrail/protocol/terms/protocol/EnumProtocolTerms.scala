@@ -2,11 +2,12 @@ package com.twilio.guardrail.protocol.terms.protocol
 
 import _root_.io.swagger.v3.oas.models.media.Schema
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.free.Free
 import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
 
-abstract class EnumProtocolTerms[L <: LA, F[_]] {
+abstract class EnumProtocolTerms[L <: LA, F[_]] extends FunctionK[EnumProtocolTerm[L, ?], F] {
   def MonadF: Monad[F]
   def extractEnum(swagger: Schema[_]): F[Either[String, List[String]]]
   def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)]): F[Option[L#ObjectDefinition]]
@@ -47,6 +48,16 @@ abstract class EnumProtocolTerms[L <: LA, F[_]] {
         decoder: Option[L#ValueDefinition]
     )                                                    = newRenderStaticDefns(clsName, members, accessors, encoder, decoder)
     def buildAccessor(clsName: String, termName: String) = newBuildAccessor(clsName, termName)
+  }
+
+  def apply[T](term: EnumProtocolTerm[L, T]): F[T] = term match {
+    case ExtractEnum(swagger)                                             => extractEnum(swagger)
+    case RenderMembers(clsName, elems)                                    => renderMembers(clsName, elems)
+    case EncodeEnum(clsName)                                              => encodeEnum(clsName)
+    case DecodeEnum(clsName)                                              => decodeEnum(clsName)
+    case RenderClass(clsName, tpe, elems)                                 => renderClass(clsName, tpe, elems)
+    case RenderStaticDefns(clsName, members, accessors, encoder, decoder) => renderStaticDefns(clsName, members, accessors, encoder, decoder)
+    case BuildAccessor(clsName, termName)                                 => buildAccessor(clsName, termName)
   }
 }
 

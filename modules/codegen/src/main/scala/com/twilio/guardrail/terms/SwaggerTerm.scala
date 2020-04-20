@@ -7,7 +7,7 @@ import cats.implicits._
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.generators.syntax._
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.{ ContentType, UrlencodedFormData }
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
@@ -237,10 +237,10 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): F[ScalaParameters[L]] =
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[LanguageParameters[L]] =
     for {
-      a <- ScalaParameter.fromParameters(protocolElems).apply(parameters)
-    } yield new ScalaParameters[L](a)
+      a <- LanguageParameter.fromParameters(protocolElems).apply(parameters)
+    } yield new LanguageParameters[L](a)
 }
 
 sealed trait SecurityScheme[L <: LA] {

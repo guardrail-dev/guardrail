@@ -3,7 +3,6 @@ package generators
 
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.Monad
-import cats.arrow.FunctionK
 import cats.data.{ Ior, NonEmptyList }
 import cats.implicits._
 import com.twilio.guardrail.generators.syntax.Scala._
@@ -17,7 +16,7 @@ import java.net.URI
 import scala.meta._
 
 object EndpointsClientGenerator {
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] with FunctionK[ClientTerm[ScalaLanguage, ?], Target] {
+  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     private[this] def formatClientName(clientName: Option[String]): Term.Param =
@@ -33,14 +32,14 @@ object EndpointsClientGenerator {
         className: List[String],
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
-        parameters: ScalaParameters[ScalaLanguage]
+        parameters: LanguageParameters[ScalaLanguage]
     )(
         route: RouteMeta,
         methodName: String,
         responses: Responses[ScalaLanguage]
     ): Target[RenderedClientOperation[ScalaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
-      def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
+      def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
         if (parameters.isEmpty) {
           None
         } else if (needsMultipart) {
@@ -67,7 +66,7 @@ object EndpointsClientGenerator {
           }
 
           val args: List[Term] = parameters.map {
-            case ScalaParameter(_, param, paramName, argName, _) =>
+            case LanguageParameter(_, param, paramName, argName, _) =>
               lifter(param)(paramName, argName)
           }
           Some(q"List[Option[(String, Either[String, org.scalajs.dom.raw.File])]](..${args}).flatten")
@@ -95,13 +94,13 @@ object EndpointsClientGenerator {
           }
 
           val args: List[Term] = parameters.map {
-            case ScalaParameter(_, param, paramName, argName, _) =>
+            case LanguageParameter(_, param, paramName, argName, _) =>
               lifter(param)(paramName, argName)
           }
           Some(q"List(..$args).flatten")
         }
 
-      def generateHeaderParams(parameters: List[ScalaParameter[ScalaLanguage]]): Term = {
+      def generateHeaderParams(parameters: List[LanguageParameter[ScalaLanguage]]): Term = {
         def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
           q"$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
 
@@ -115,7 +114,7 @@ object EndpointsClientGenerator {
         }
 
         val args: List[Term] = parameters.map {
-          case ScalaParameter(_, param, paramName, argName, _) =>
+          case LanguageParameter(_, param, paramName, argName, _) =>
             lifter(param)(paramName, argName)
         }
         q"scala.collection.immutable.Seq[Option[String]](..$args).flatten"
@@ -133,13 +132,13 @@ object EndpointsClientGenerator {
           consumes: Seq[ContentType],
           tracing: Boolean
       )(
-          tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
-          tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
-          pathArgs: List[ScalaParameter[ScalaLanguage]],
-          qsArgs: List[ScalaParameter[ScalaLanguage]],
-          formArgs: List[ScalaParameter[ScalaLanguage]],
-          bodyArgs: Option[ScalaParameter[ScalaLanguage]],
-          headerArgs: List[ScalaParameter[ScalaLanguage]],
+          tracingArgsPre: List[LanguageParameter[ScalaLanguage]],
+          tracingArgsPost: List[LanguageParameter[ScalaLanguage]],
+          pathArgs: List[LanguageParameter[ScalaLanguage]],
+          qsArgs: List[LanguageParameter[ScalaLanguage]],
+          formArgs: List[LanguageParameter[ScalaLanguage]],
+          bodyArgs: Option[LanguageParameter[ScalaLanguage]],
+          headerArgs: List[LanguageParameter[ScalaLanguage]],
           extraImplicits: List[Term.Param]
       ): RenderedClientOperation[ScalaLanguage] = {
 
@@ -391,10 +390,10 @@ object EndpointsClientGenerator {
           headerParams = generateHeaderParams(headerArgs)
 
           tracingArgsPre = if (tracing)
-            List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"))
+            List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"))
           else List.empty
           tracingArgsPost = if (tracing)
-            List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
+            List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
           else List.empty
           extraImplicits = List.empty
           renderedClientOperation = build(
@@ -510,19 +509,6 @@ object EndpointsClientGenerator {
             }
           """
       Target.pure(NonEmptyList(Left(algebra), Right(client) :: Nil))
-    }
-
-    def apply[T](term: ClientTerm[ScalaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(className, route, methodName, tracing, parameters, responses, securitySchemes) =>
-        generateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
-      case GetImports(tracing)                                                      => getImports(tracing)
-      case GetExtraImports(tracing)                                                 => getExtraImports(tracing)
-      case ClientClsArgs(tracingName, serverUrls, tracing)                          => clientClsArgs(tracingName, serverUrls, tracing)
-      case GenerateResponseDefinitions(operationId, responses, protocolElems)       => generateResponseDefinitions(operationId, responses, protocolElems)
-      case GenerateSupportDefinitions(tracing, securitySchemes)                     => generateSupportDefinitions(tracing, securitySchemes)
-      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing)
-      case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
-        buildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     }
   }
 }

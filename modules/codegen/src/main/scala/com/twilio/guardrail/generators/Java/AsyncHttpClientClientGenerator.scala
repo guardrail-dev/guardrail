@@ -3,7 +3,6 @@ package com.twilio.guardrail.generators.Java
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.arrow.FunctionK
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.github.javaparser.ast.Modifier._
@@ -13,7 +12,7 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -47,7 +46,7 @@ object AsyncHttpClientClientGenerator {
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
 
-  private def showParam(param: ScalaParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
+  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
     new MethodCallExpr(
       new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
@@ -70,7 +69,7 @@ object AsyncHttpClientClientGenerator {
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
-  private def generateBuilderMethodCall(param: ScalaParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean): Statement = {
+  private def generateBuilderMethodCall(param: LanguageParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean): Statement = {
     val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
     val argName         = param.paramName.asString
     val isList          = param.argType.isNamed("List")
@@ -118,7 +117,7 @@ object AsyncHttpClientClientGenerator {
     }
   }
 
-  private def generateBodyMethodCall(param: ScalaParameter[JavaLanguage], contentType: Option[ContentType]): Option[Statement] = {
+  private def generateBodyMethodCall(param: LanguageParameter[JavaLanguage], contentType: Option[ContentType]): Option[Statement] = {
     def wrapSetBody(expr: Expression): MethodCallExpr =
       new MethodCallExpr(new NameExpr("builder"), "setBody", new NodeList[Expression](expr))
 
@@ -402,14 +401,14 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] with FunctionK[ClientTerm[JavaLanguage, ?], Target] {
+  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def generateClientOperation(
         className: List[String],
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
-        parameters: ScalaParameters[JavaLanguage]
+        parameters: LanguageParameters[JavaLanguage]
     )(
         route: RouteMeta,
         methodName: String,
@@ -487,7 +486,7 @@ object AsyncHttpClientClientGenerator {
         val produces =
           responses.value.map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces(operation.get.getOperationId, allProduces, resp))).toMap
 
-        val builderMethodCalls: List[(ScalaParameter[JavaLanguage], Statement)] = builderParamsMethodNames
+        val builderMethodCalls: List[(LanguageParameter[JavaLanguage], Statement)] = builderParamsMethodNames
             .flatMap({
               case (params, name, needsMultipart) =>
                 params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
@@ -574,7 +573,7 @@ object AsyncHttpClientClientGenerator {
         val optionalParamMethods = builderMethodCalls
           .filterNot(_._1.required)
           .flatMap({
-            case (ScalaParameter(_, param, _, _, argType), methodCall) =>
+            case (LanguageParameter(_, param, _, _, argType), methodCall) =>
               val containedType = argType.containedType.unbox
 
               val optionalOverrideMethod = if (argType.isOptional && !containedType.isOptional) {
@@ -1297,34 +1296,6 @@ object AsyncHttpClientClientGenerator {
       ).foreach(clientClass.addMember)
 
       Target.pure(NonEmptyList(Right(clientClass), Nil))
-    }
-
-    def apply[T](term: ClientTerm[JavaLanguage, T]): Target[T] = term match {
-      case GenerateClientOperation(
-          className,
-          route,
-          methodName,
-          tracing,
-          parameters,
-          responses,
-          securitySchemes
-          ) =>
-        generateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
-
-      case GetImports(tracing) => getImports(tracing)
-
-      case GetExtraImports(tracing) => getExtraImports(tracing)
-
-      case ClientClsArgs(tracingName, serverUrls, tracing) => clientClsArgs(tracingName, serverUrls, tracing)
-
-      case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
-
-      case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
-
-      case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing)
-
-      case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
-        buildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
     }
   }
 }

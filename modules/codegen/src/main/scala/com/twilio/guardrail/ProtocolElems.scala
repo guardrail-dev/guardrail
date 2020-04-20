@@ -3,7 +3,7 @@ package com.twilio.guardrail
 import cats.FlatMap
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.protocol.terms.protocol.ProtocolSupportTerms
 
 case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
@@ -44,7 +44,7 @@ object ProtocolElems {
   def resolve[L <: LA, F[_]](
       elems: List[ProtocolElems[L]],
       limit: Int = 10
-  )(implicit Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F], P: ProtocolSupportTerms[L, F]): F[List[StrictProtocolElems[L]]] = {
+  )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F], P: ProtocolSupportTerms[L, F]): F[List[StrictProtocolElems[L]]] = {
     import Sc._
     import Sw._
     log.function(s"resolve(${elems.length} references)")(

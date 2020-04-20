@@ -1,18 +1,19 @@
 package com.twilio.guardrail.protocol.terms.client
 
 import cats.{ InjectK, Monad }
+import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
 import java.net.URI
 
-abstract class ClientTerms[L <: LA, F[_]] {
+abstract class ClientTerms[L <: LA, F[_]] extends FunctionK[ClientTerm[L, ?], F] {
   def MonadF: Monad[F]
-  def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+  def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
       route: RouteMeta,
       methodName: String,
       responses: Responses[L]
@@ -42,7 +43,7 @@ abstract class ClientTerms[L <: LA, F[_]] {
 
   def copy(
       newMonadF: Monad[F] = this.MonadF,
-      newGenerateClientOperation: (List[String], Boolean, Map[String, SecurityScheme[L]], ScalaParameters[L]) => (
+      newGenerateClientOperation: (List[String], Boolean, Map[String, SecurityScheme[L]], LanguageParameters[L]) => (
           RouteMeta,
           String,
           Responses[L]
@@ -66,7 +67,7 @@ abstract class ClientTerms[L <: LA, F[_]] {
       ) => F[NonEmptyList[Either[L#Trait, L#ClassDefinition]]] = buildClient _
   ): ClientTerms[L, F] = new ClientTerms[L, F] {
     def MonadF = newMonadF
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
         route: RouteMeta,
         methodName: String,
         responses: Responses[L]
@@ -100,12 +101,32 @@ abstract class ClientTerms[L <: LA, F[_]] {
     ) =
       newBuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
   }
+
+  def apply[T](term: ClientTerm[L, T]): F[T] = term match {
+    case GenerateClientOperation(className, route, methodName, tracing, parameters, responses, securitySchemes) =>
+      generateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
+
+    case GetImports(tracing) => getImports(tracing)
+
+    case GetExtraImports(tracing) => getExtraImports(tracing)
+
+    case ClientClsArgs(tracingName, serverUrls, tracing) => clientClsArgs(tracingName, serverUrls, tracing)
+
+    case GenerateResponseDefinitions(operationId, responses, protocolElems) => generateResponseDefinitions(operationId, responses, protocolElems)
+
+    case GenerateSupportDefinitions(tracing, securitySchemes) => generateSupportDefinitions(tracing, securitySchemes)
+
+    case BuildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing) => buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, tracing)
+
+    case BuildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing) =>
+      buildClient(clientName, tracingName, serverUrls, basePath, ctorArgs, clientCalls, supportDefinitions, tracing)
+  }
 }
 
 object ClientTerms {
   implicit def enumTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]): ClientTerms[L, Free[F, ?]] = new ClientTerms[L, Free[F, ?]] {
     def MonadF = Free.catsFreeMonadForFree
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
         route: RouteMeta,
         methodName: String,
         responses: Responses[L]

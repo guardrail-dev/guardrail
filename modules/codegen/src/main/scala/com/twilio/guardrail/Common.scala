@@ -11,7 +11,7 @@ import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumPr
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerms, SecurityRequirements, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
 import java.net.URI
 
@@ -29,7 +29,7 @@ object Common {
       M: ModelProtocolTerms[L, F],
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
-      Sc: ScalaTerms[L, F],
+      Sc: LanguageTerms[L, F],
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
@@ -109,7 +109,7 @@ object Common {
       pkgName: List[String],
       dtoPackage: List[String],
       customImports: List[L#Import]
-  )(implicit Sc: ScalaTerms[L, F], Fw: FrameworkTerms[L, F]): F[List[WriteTree]] = {
+  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F]): F[List[WriteTree]] = {
     import Fw._
     import Sc._
 
