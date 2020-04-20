@@ -144,7 +144,7 @@ class CoreTermInterp[L <: LA](
           swagger =>
             try {
               val Sw = SwaggerTerms.swaggerTerm[L, CodegenApplication[L, ?]]
-              val Sc = ScalaTerms.scalaTerm[L, CodegenApplication[L, ?]]
+              val Sc = LanguageTerms.languageTerm[L, CodegenApplication[L, ?]]
               val program = for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)

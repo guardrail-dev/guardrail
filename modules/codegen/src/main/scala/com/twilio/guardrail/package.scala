@@ -7,7 +7,7 @@ import com.twilio.guardrail.protocol.terms.client.{ ClientTerm, ClientTerms }
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
 import com.twilio.guardrail.terms.framework.{ FrameworkTerm, FrameworkTerms }
-import com.twilio.guardrail.terms.{ CoreTerms, ScalaTerm, ScalaTerms, SwaggerTerm, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CoreTerms, LanguageTerm, LanguageTerms, SwaggerTerm, SwaggerTerms }
 
 package guardrail {
   case class CodegenDefinitions[L <: LA](
@@ -43,7 +43,7 @@ trait MonadChain4 extends MonadChain5 {
   implicit def monadForSwagger[L <: LA, F[_]](implicit ev: SwaggerTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain3 extends MonadChain4 {
-  implicit def monadForScala[L <: LA, F[_]](implicit ev: ScalaTerms[L, F]): Monad[F] = ev.MonadF
+  implicit def monadForLanguage[L <: LA, F[_]](implicit ev: LanguageTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain2 extends MonadChain3 {
   implicit def monadForCore[L <: LA, F[_]](implicit ev: CoreTerms[L, F]): Monad[F] = ev.MonadF
@@ -68,5 +68,5 @@ package object guardrail extends MonadChain1 {
 
   type Parser[L <: LA, T] = EitherK[SwaggerTerm[L, ?], ClientServerTerms[L, ?], T]
 
-  type CodegenApplication[L <: LA, T] = EitherK[ScalaTerm[L, ?], Parser[L, ?], T]
+  type CodegenApplication[L <: LA, T] = EitherK[LanguageTerm[L, ?], Parser[L, ?], T]
 }

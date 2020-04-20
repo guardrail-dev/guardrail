@@ -9,7 +9,7 @@ import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
@@ -99,6 +99,6 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def ProtocolSupportInterp: ProtocolSupportTerms[ScalaLanguage, Target] = protocol
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = server
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]
-      def LanguageInterp: ScalaTerms[ScalaLanguage, Target]                  = ScalaGenerator.ScalaInterp
+      def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator.ScalaInterp
     }).runA(modules.toList.toSet)
 }

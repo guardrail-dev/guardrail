@@ -8,7 +8,7 @@ import com.twilio.guardrail.extract.{ Default, FileHashAlgorithm }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
@@ -49,7 +49,7 @@ object ScalaParameter {
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => F[ScalaParameter[L]] = { parameter =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): Tracker[Parameter] => F[ScalaParameter[L]] = { parameter =>
     import Fw._
     import Sc._
     import Sw._
@@ -158,7 +158,7 @@ object ScalaParameter {
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: ScalaTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => F[List[ScalaParameter[L]]] = { params =>
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): List[Tracker[Parameter]] => F[List[ScalaParameter[L]]] = { params =>
     import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))

@@ -102,7 +102,7 @@ object JavaGenerator {
         Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
 
-  object JavaInterp extends ScalaTerms[JavaLanguage, Target] {
+  object JavaInterp extends LanguageTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target]         = Target.targetInstances
     def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-java", "x-jvm"))
 

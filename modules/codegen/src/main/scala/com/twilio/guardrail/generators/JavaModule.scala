@@ -13,7 +13,7 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 object JavaModule extends AbstractModule[JavaLanguage] {
@@ -56,6 +56,6 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def ProtocolSupportInterp: ProtocolSupportTerms[JavaLanguage, Target] = protocol
       def ServerInterp: ServerTerms[JavaLanguage, Target]                   = server
       def SwaggerInterp: SwaggerTerms[JavaLanguage, Target]                 = SwaggerGenerator[JavaLanguage]
-      def LanguageInterp: ScalaTerms[JavaLanguage, Target]                  = JavaGenerator.JavaInterp
+      def LanguageInterp: LanguageTerms[JavaLanguage, Target]               = JavaGenerator.JavaInterp
     }).runA(modules.toList.toSet)
 }

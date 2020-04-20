@@ -9,7 +9,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ ScalaTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 trait Framework[L <: LA, F[_]] extends FunctionK[CodegenApplication[L, ?], F] {
@@ -22,7 +22,7 @@ trait Framework[L <: LA, F[_]] extends FunctionK[CodegenApplication[L, ?], F] {
   implicit def ProtocolSupportInterp: ProtocolSupportTerms[L, F]
   implicit def ServerInterp: ServerTerms[L, F]
   implicit def SwaggerInterp: SwaggerTerms[L, F]
-  implicit def LanguageInterp: ScalaTerms[L, F]
+  implicit def LanguageInterp: LanguageTerms[L, F]
 
   val interpDefinitionPM: DefinitionPM[L, ?] ~> F       = ProtocolSupportInterp or ModelProtocolInterp
   val interpDefinitionPME: DefinitionPME[L, ?] ~> F     = EnumProtocolInterp or interpDefinitionPM
