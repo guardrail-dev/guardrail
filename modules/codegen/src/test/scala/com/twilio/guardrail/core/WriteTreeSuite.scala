@@ -4,6 +4,7 @@ import com.twilio.guardrail.WriteTree
 import org.scalatest.FunSuite
 import java.nio.file.Files
 import org.scalatest.Matchers
+import scala.concurrent.Future
 
 class WriteTreeSuite extends FunSuite with Matchers {
   test("Ensure that even if we don't overwrite output files, the path is returned") {
@@ -12,8 +13,8 @@ class WriteTreeSuite extends FunSuite with Matchers {
 
     val contents = "example contents".getBytes
 
-    val (firstLog, firstPath)   = WriteTree.unsafeWriteTreeLogged(WriteTree(path, contents)).run
-    val (secondLog, secondPath) = WriteTree.unsafeWriteTreeLogged(WriteTree(path, contents)).run
+    val (firstLog, firstPath)   = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(contents))).run
+    val (secondLog, secondPath) = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(contents))).run
 
     val _1 = firstLog shouldBe (Nil)
     val _2 = secondLog shouldBe (Nil)

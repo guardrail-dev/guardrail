@@ -5,16 +5,20 @@ import cats.implicits._
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{ Files, Path, StandardOpenOption }
 import scala.io.AnsiColor
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 sealed trait WriteTreeState
 case object FileAbsent    extends WriteTreeState
 case object FileDifferent extends WriteTreeState
 case object FileIdentical extends WriteTreeState
-case class WriteTree(path: Path, contents: Array[Byte])
+case class WriteTree(path: Path, contents: Future[Array[Byte]])
 object WriteTree {
   val unsafeWriteTreeLogged: WriteTree => Writer[List[String], Path] = {
-    case WriteTree(path, data) =>
-      val _ = Files.createDirectories(path.getParent)
+    case WriteTree(path, dataF) =>
+      val _    = Files.createDirectories(path.getParent)
+      val data = Await.result(dataF, Duration.Inf)
       for {
         writeState <- if (Files.exists(path)) {
           val exists: Array[Byte] = Files.readAllBytes(path)
