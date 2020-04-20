@@ -3,9 +3,9 @@ package com.twilio.guardrail
 import com.twilio.guardrail.languages.ScalaLanguage
 
 package object generators {
-  implicit class RichScalaParameter(value: ScalaParameter[ScalaLanguage]) {
-    def withRawName(rawParameterName: String, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): ScalaParameter[ScalaLanguage] =
-      new ScalaParameter[ScalaLanguage](
+  implicit class RichLanguageParameter(value: LanguageParameter[ScalaLanguage]) {
+    def withRawName(rawParameterName: String, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): LanguageParameter[ScalaLanguage] =
+      new LanguageParameter[ScalaLanguage](
         value.in,
         value.param,
         value.paramName,

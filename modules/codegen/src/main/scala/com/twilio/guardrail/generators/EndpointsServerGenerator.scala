@@ -20,7 +20,7 @@ object EndpointsServerGenerator {
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, ScalaParameters[ScalaLanguage], Responses[ScalaLanguage])],
+        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, LanguageParameters[ScalaLanguage], Responses[ScalaLanguage])],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]],
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
     ) =

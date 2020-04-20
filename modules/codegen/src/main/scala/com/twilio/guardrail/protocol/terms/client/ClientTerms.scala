@@ -4,7 +4,7 @@ import cats.{ InjectK, Monad }
 import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.free.Free
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
@@ -13,7 +13,7 @@ import java.net.URI
 
 abstract class ClientTerms[L <: LA, F[_]] extends FunctionK[ClientTerm[L, ?], F] {
   def MonadF: Monad[F]
-  def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+  def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
       route: RouteMeta,
       methodName: String,
       responses: Responses[L]
@@ -43,7 +43,7 @@ abstract class ClientTerms[L <: LA, F[_]] extends FunctionK[ClientTerm[L, ?], F]
 
   def copy(
       newMonadF: Monad[F] = this.MonadF,
-      newGenerateClientOperation: (List[String], Boolean, Map[String, SecurityScheme[L]], ScalaParameters[L]) => (
+      newGenerateClientOperation: (List[String], Boolean, Map[String, SecurityScheme[L]], LanguageParameters[L]) => (
           RouteMeta,
           String,
           Responses[L]
@@ -67,7 +67,7 @@ abstract class ClientTerms[L <: LA, F[_]] extends FunctionK[ClientTerm[L, ?], F]
       ) => F[NonEmptyList[Either[L#Trait, L#ClassDefinition]]] = buildClient _
   ): ClientTerms[L, F] = new ClientTerms[L, F] {
     def MonadF = newMonadF
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
         route: RouteMeta,
         methodName: String,
         responses: Responses[L]
@@ -126,7 +126,7 @@ abstract class ClientTerms[L <: LA, F[_]] extends FunctionK[ClientTerm[L, ?], F]
 object ClientTerms {
   implicit def enumTerms[L <: LA, F[_]](implicit I: InjectK[ClientTerm[L, ?], F]): ClientTerms[L, Free[F, ?]] = new ClientTerms[L, Free[F, ?]] {
     def MonadF = Free.catsFreeMonadForFree
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: ScalaParameters[L])(
+    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
         route: RouteMeta,
         methodName: String,
         responses: Responses[L]

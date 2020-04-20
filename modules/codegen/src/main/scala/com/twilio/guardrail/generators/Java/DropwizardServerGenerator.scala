@@ -14,7 +14,7 @@ import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -263,7 +263,7 @@ object DropwizardServerGenerator {
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, ScalaParameters[JavaLanguage], Responses[JavaLanguage])],
+        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, LanguageParameters[JavaLanguage], Responses[JavaLanguage])],
         protocolElems: List[StrictProtocolElems[JavaLanguage]],
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
     ) =
@@ -335,14 +335,14 @@ object DropwizardServerGenerator {
               // because that will require the server to buffer the entire contents in memory as it
               // reads in the entire body.  Instead we instruct Dropwizard to write it out to a file
               // on disk and use java.io.File.
-              def transformMultipartFile(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter =
+              def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
                 (param.isFile, param.required) match {
                   case (true, true)  => parameter.setType(FILE_TYPE)
                   case (true, false) => parameter.setType(optionalType(FILE_TYPE))
                   case _             => parameter
                 }
 
-              def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
+              def addValidationAnnotations(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter = {
                 if (param.required) {
                   // NB: The order here is actually critical.  In the case where we're using multipart,
                   // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
@@ -352,7 +352,7 @@ object DropwizardServerGenerator {
                 parameter
               }
 
-              def addParamAnnotation(parameter: Parameter, param: ScalaParameter[JavaLanguage], annotationName: String): Parameter =
+              def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
                 parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
               def boxParameterTypes(parameter: Parameter): Parameter = {

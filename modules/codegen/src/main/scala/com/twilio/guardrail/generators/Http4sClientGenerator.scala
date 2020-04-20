@@ -39,7 +39,7 @@ object Http4sClientGenerator {
         className: List[String],
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
-        parameters: ScalaParameters[ScalaLanguage]
+        parameters: LanguageParameters[ScalaLanguage]
     )(
         route: RouteMeta,
         methodName: String,
@@ -48,8 +48,8 @@ object Http4sClientGenerator {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
       def generateUrlWithParams(
           path: Tracker[String],
-          pathArgs: List[ScalaParameter[ScalaLanguage]],
-          qsArgs: List[ScalaParameter[ScalaLanguage]]
+          pathArgs: List[LanguageParameter[ScalaLanguage]],
+          qsArgs: List[LanguageParameter[ScalaLanguage]]
       ): Target[Term] =
         Target.log.function("generateUrlWithParams") {
           for {
@@ -70,7 +70,7 @@ object Http4sClientGenerator {
               .fromList(qsArgs.toList)
               .fold(base)({
                 _.foldLeft[Term](q"${base} + ${suffix}") {
-                  case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                  case (a, LanguageParameter(_, _, paramName, argName, _)) =>
                     q""" $a + Formatter.addArg(${Lit
                       .String(argName.value)}, ${paramName})"""
                 }
@@ -78,7 +78,7 @@ object Http4sClientGenerator {
           } yield q"Uri.unsafeFromString(${result})"
         }
 
-      def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
+      def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
         if (parameters.isEmpty) {
           None
         } else if (consumes.contains(MultipartFormData)) {
@@ -109,7 +109,7 @@ object Http4sClientGenerator {
           }
 
           val args: List[Term] = parameters.map {
-            case ScalaParameter(_, param, paramName, argName, _) =>
+            case LanguageParameter(_, param, paramName, argName, _) =>
               lifter(param)(paramName, argName)
           }
           Some(q"List(..$args)")
@@ -137,13 +137,13 @@ object Http4sClientGenerator {
           }
 
           val args: List[Term] = parameters.map {
-            case ScalaParameter(_, param, paramName, argName, _) =>
+            case LanguageParameter(_, param, paramName, argName, _) =>
               lifter(param)(paramName, argName)
           }
           Some(q"List(..$args)")
         }
 
-      def generateHeaderParams(parameters: List[ScalaParameter[ScalaLanguage]]): Term = {
+      def generateHeaderParams(parameters: List[LanguageParameter[ScalaLanguage]]): Term = {
         def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
           q"$tParamName.map(v => Header(${tName.toLit}, Formatter.show(v)))"
 
@@ -157,7 +157,7 @@ object Http4sClientGenerator {
         }
 
         val args: List[Term] = parameters.map {
-          case ScalaParameter(_, param, paramName, argName, _) =>
+          case LanguageParameter(_, param, paramName, argName, _) =>
             lifter(param)(paramName, argName)
         }
         q"List[Option[Header]](..$args).flatten"
@@ -174,13 +174,13 @@ object Http4sClientGenerator {
           consumes: Seq[ContentType],
           tracing: Boolean
       )(
-          tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
-          tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
-          pathArgs: List[ScalaParameter[ScalaLanguage]],
-          qsArgs: List[ScalaParameter[ScalaLanguage]],
-          formArgs: List[ScalaParameter[ScalaLanguage]],
-          body: Option[ScalaParameter[ScalaLanguage]],
-          headerArgs: List[ScalaParameter[ScalaLanguage]],
+          tracingArgsPre: List[LanguageParameter[ScalaLanguage]],
+          tracingArgsPost: List[LanguageParameter[ScalaLanguage]],
+          pathArgs: List[LanguageParameter[ScalaLanguage]],
+          qsArgs: List[LanguageParameter[ScalaLanguage]],
+          formArgs: List[LanguageParameter[ScalaLanguage]],
+          body: Option[LanguageParameter[ScalaLanguage]],
+          headerArgs: List[LanguageParameter[ScalaLanguage]],
           extraImplicits: List[Term.Param]
       ): Target[RenderedClientOperation[ScalaLanguage]] =
         for {
@@ -337,10 +337,10 @@ object Http4sClientGenerator {
         headerParams = generateHeaderParams(headerArgs)
 
         tracingArgsPre = if (tracing)
-          List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
+          List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
         else List.empty
         tracingArgsPost = if (tracing)
-          List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
+          List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
         else List.empty
         extraImplicits = List.empty
 
@@ -476,16 +476,16 @@ object Http4sClientGenerator {
 
     def generateCodecs(
         methodName: String,
-        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+        bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
         produces: Seq[ContentType],
         consumes: Seq[ContentType]
     ): List[Defn.Val] =
       generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
 
-    def generateEncoders(methodName: String, bodyArgs: Option[ScalaParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
+    def generateEncoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
-        case ScalaParameter(_, _, _, _, argType) =>
+        case LanguageParameter(_, _, _, _, argType) =>
           List(q"private[this] val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${Http4sHelper.generateEncoder(argType, consumes)}")
       }
 

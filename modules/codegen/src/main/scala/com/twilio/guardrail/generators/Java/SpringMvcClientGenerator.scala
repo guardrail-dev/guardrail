@@ -4,7 +4,7 @@ import com.twilio.guardrail.Target
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client._
 import cats.data.NonEmptyList
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.StrictProtocolElems
@@ -18,7 +18,7 @@ object SpringMvcClientGenerator {
         className: List[String],
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
-        parameters: ScalaParameters[JavaLanguage]
+        parameters: LanguageParameters[JavaLanguage]
     )(
         route: RouteMeta,
         methodName: String,

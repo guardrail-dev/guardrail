@@ -39,7 +39,7 @@ object AkkaHttpClientGenerator {
         className: List[String],
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
-        parameters: ScalaParameters[ScalaLanguage]
+        parameters: LanguageParameters[ScalaLanguage]
     )(
         route: RouteMeta,
         methodName: String,
@@ -48,8 +48,8 @@ object AkkaHttpClientGenerator {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
       def generateUrlWithParams(
           path: Tracker[String],
-          pathArgs: List[ScalaParameter[ScalaLanguage]],
-          qsArgs: List[ScalaParameter[ScalaLanguage]]
+          pathArgs: List[LanguageParameter[ScalaLanguage]],
+          qsArgs: List[LanguageParameter[ScalaLanguage]]
       ): Target[Term] =
         Target.log.function("generateUrlWithParams") {
           for {
@@ -70,7 +70,7 @@ object AkkaHttpClientGenerator {
               .fromList(qsArgs)
               .fold(base)({
                 _.foldLeft[Term](q"$base + $suffix") {
-                  case (a, ScalaParameter(_, _, paramName, argName, _)) =>
+                  case (a, LanguageParameter(_, _, paramName, argName, _)) =>
                     q""" $a + Formatter.addArg(${Lit
                       .String(argName.value)}, $paramName)"""
                 }
@@ -78,7 +78,7 @@ object AkkaHttpClientGenerator {
           } yield result
         }
 
-      def generateFormDataParams(parameters: List[ScalaParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
+      def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
         if (parameters.isEmpty) {
           None
         } else if (consumes.contains(MultipartFormData)) {
@@ -107,7 +107,7 @@ object AkkaHttpClientGenerator {
           }
 
           val args: List[Term] = parameters.map {
-            case ScalaParameter(_, param, paramName, argName, _) =>
+            case LanguageParameter(_, param, paramName, argName, _) =>
               lifter(param)(paramName, argName)
           }
           Some(q"List(..$args)")
@@ -135,13 +135,13 @@ object AkkaHttpClientGenerator {
           }
 
           val args: List[Term] = parameters.map {
-            case ScalaParameter(_, param, paramName, argName, _) =>
+            case LanguageParameter(_, param, paramName, argName, _) =>
               lifter(param)(paramName, argName)
           }
           Some(q"List(..$args).flatten")
         }
 
-      def generateHeaderParams(parameters: List[ScalaParameter[ScalaLanguage]]): Term = {
+      def generateHeaderParams(parameters: List[LanguageParameter[ScalaLanguage]]): Term = {
         def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
           q"$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
 
@@ -155,7 +155,7 @@ object AkkaHttpClientGenerator {
         }
 
         val args: List[Term] = parameters.map {
-          case ScalaParameter(_, param, paramName, argName, _) =>
+          case LanguageParameter(_, param, paramName, argName, _) =>
             lifter(param)(paramName, argName)
         }
         q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
@@ -172,13 +172,13 @@ object AkkaHttpClientGenerator {
           consumes: Seq[ContentType],
           tracing: Boolean
       )(
-          tracingArgsPre: List[ScalaParameter[ScalaLanguage]],
-          tracingArgsPost: List[ScalaParameter[ScalaLanguage]],
-          pathArgs: List[ScalaParameter[ScalaLanguage]],
-          qsArgs: List[ScalaParameter[ScalaLanguage]],
-          formArgs: List[ScalaParameter[ScalaLanguage]],
-          body: Option[ScalaParameter[ScalaLanguage]],
-          headerArgs: List[ScalaParameter[ScalaLanguage]],
+          tracingArgsPre: List[LanguageParameter[ScalaLanguage]],
+          tracingArgsPost: List[LanguageParameter[ScalaLanguage]],
+          pathArgs: List[LanguageParameter[ScalaLanguage]],
+          qsArgs: List[LanguageParameter[ScalaLanguage]],
+          formArgs: List[LanguageParameter[ScalaLanguage]],
+          body: Option[LanguageParameter[ScalaLanguage]],
+          headerArgs: List[LanguageParameter[ScalaLanguage]],
           extraImplicits: List[Term.Param]
       ): Target[RenderedClientOperation[ScalaLanguage]] = {
         val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
@@ -348,10 +348,10 @@ object AkkaHttpClientGenerator {
         headerParams = generateHeaderParams(headerArgs)
 
         tracingArgsPre = if (tracing)
-          List(ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"))
+          List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"))
         else List.empty
         tracingArgsPost = if (tracing)
-          List(ScalaParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
+          List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
         else List.empty
         extraImplicits = List.empty
         renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(

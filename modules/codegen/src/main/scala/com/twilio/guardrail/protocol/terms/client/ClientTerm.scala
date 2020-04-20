@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms.client
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.generators.ScalaParameters
+import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
@@ -14,7 +14,7 @@ case class GenerateClientOperation[L <: LA](
     route: RouteMeta,
     methodName: String,
     tracing: Boolean,
-    parameters: ScalaParameters[L],
+    parameters: LanguageParameters[L],
     responses: Responses[L],
     securitySchemes: Map[String, SecurityScheme[L]]
 ) extends ClientTerm[L, RenderedClientOperation[L]]

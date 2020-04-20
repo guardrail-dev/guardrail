@@ -14,7 +14,7 @@ import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ ScalaParameter, ScalaParameters }
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -94,7 +94,7 @@ object SpringMvcServerGenerator {
       }
     })
 
-  def getBestConsumes(contentTypes: List[ContentType], parameters: ScalaParameters[JavaLanguage]): Option[ContentType] = {
+  def getBestConsumes(contentTypes: List[ContentType], parameters: LanguageParameters[JavaLanguage]): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
       UrlencodedFormData,
       ApplicationJson,
@@ -305,7 +305,7 @@ object SpringMvcServerGenerator {
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, ScalaParameters[JavaLanguage], Responses[JavaLanguage])],
+        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, LanguageParameters[JavaLanguage], Responses[JavaLanguage])],
         protocolElems: List[StrictProtocolElems[JavaLanguage]],
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
     ) =
@@ -406,17 +406,17 @@ object SpringMvcServerGenerator {
                 }
               }
 
-              def addValidationAnnotations(parameter: Parameter, param: ScalaParameter[JavaLanguage]): Parameter = {
+              def addValidationAnnotations(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter = {
                 if (param.required) {
                   parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
                 }
                 parameter
               }
 
-              def addParamAnnotation(parameter: Parameter, param: ScalaParameter[JavaLanguage], annotationName: String): Parameter =
+              def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
                 parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
-              def addParamMarkerAnnotation(parameter: Parameter, param: ScalaParameter[JavaLanguage], annotationName: String): Parameter =
+              def addParamMarkerAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
                 parameter.addAnnotation(new MarkerAnnotationExpr(new Name(annotationName)))
 
               def boxParameterTypes(parameter: Parameter): Parameter = {

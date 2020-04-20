@@ -116,14 +116,14 @@ object AkkaHttpServerGenerator {
                 .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
               UserError(s"Missing client name (${operation.showHistory})")
             )
-          } yield Some(TracingField[ScalaLanguage](ScalaParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
+          } yield Some(TracingField[ScalaLanguage](LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
         } else Target.pure(None)
       } yield res
     def generateRoutes(
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, ScalaParameters[ScalaLanguage], Responses[ScalaLanguage])],
+        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, LanguageParameters[ScalaLanguage], Responses[ScalaLanguage])],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]],
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
     ) =
@@ -217,7 +217,7 @@ object AkkaHttpServerGenerator {
     def pathStrToAkka(
         basePath: Option[String],
         path: Tracker[String],
-        pathArgs: List[ScalaParameter[ScalaLanguage]]
+        pathArgs: List[LanguageParameter[ScalaLanguage]]
     ): Target[NonEmptyList[(Term, List[Term.Name])]] = {
 
       def addTrailingSlashMatcher(trailingSlash: Boolean, term: Term.Apply): Term =
@@ -237,10 +237,10 @@ object AkkaHttpServerGenerator {
         multi: Term => Type => Option[Term] => Target[Term],
         multiOpt: Term => Type => Option[Term] => Target[Term],
         optional: Term => Type => Option[Term] => Target[Term]
-    )(params: List[ScalaParameter[ScalaLanguage]]): Target[Option[(Term, List[Term.Name])]] =
+    )(params: List[LanguageParameter[ScalaLanguage]]): Target[Option[(Term, List[Term.Name])]] =
       for {
         directives <- params.traverse {
-          case sparam @ ScalaParameter(_, param, _, argName, argType) =>
+          case sparam @ LanguageParameter(_, param, _, argName, argType) =>
             val unmarshaller: Type => Option[Term] = tpe =>
               sparam.rawType.tpe match {
                 case Some("string") => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
@@ -271,15 +271,15 @@ object AkkaHttpServerGenerator {
           Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.paramName)))
       }
 
-    def bodyToAkka(operationId: String, body: Option[ScalaParameter[ScalaLanguage]]): Target[Option[Term]] =
+    def bodyToAkka(operationId: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term]] =
       Target.pure(
         body.map {
-          case ScalaParameter(_, _, _, _, argType) =>
+          case LanguageParameter(_, _, _, _, argType) =>
             q"entity(as[${argType}](${Term.Name(s"${operationId.uncapitalized}Decoder")}))"
         }
       )
 
-    def headersToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] =
+    def headersToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] =
       directivesFromParams(
         arg => {
           case t"String" =>
@@ -324,7 +324,7 @@ object AkkaHttpServerGenerator {
         }
       ) _
 
-    def qsToAkka: List[ScalaParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] = {
+    def qsToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] = {
       type Unmarshaller = Term
       type Arg          = Term
       val nameReceptacle: Arg => Type => Term = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
@@ -348,7 +348,7 @@ object AkkaHttpServerGenerator {
     }
 
     def formToAkka(consumes: NonEmptyList[ContentType], operationId: String)(
-        params: List[ScalaParameter[ScalaLanguage]]
+        params: List[LanguageParameter[ScalaLanguage]]
     ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
         _ <- if (params.exists(_.isFile) && !consumes.exists(_ == MultipartFormData)) {
@@ -368,7 +368,7 @@ object AkkaHttpServerGenerator {
             val partsTerm = Term.Name(s"${operationId}Parts")
             val (multipartContainers, unmarshallers, matchers, termPatterns, optionalTermPatterns, unpacks, termTypes, grabHeads) = params
               .map({
-                case rawParameter @ ScalaParameter(a, param, paramName, argName, argType) =>
+                case rawParameter @ LanguageParameter(a, param, paramName, argName, argType) =>
                   val containerName    = new Binding(paramName.value)
                   val unmarshallerName = new Binding(s"Unmarshal${paramName.value}Part")
                   val binding          = new Binding(paramName.value)
@@ -691,7 +691,7 @@ object AkkaHttpServerGenerator {
         basePath: Option[String],
         route: RouteMeta,
         tracingFields: Option[TracingField[ScalaLanguage]],
-        parameters: ScalaParameters[ScalaLanguage],
+        parameters: LanguageParameters[ScalaLanguage],
         responses: Responses[ScalaLanguage]
     ): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
@@ -815,7 +815,7 @@ object AkkaHttpServerGenerator {
 
     def generateCodecs(
         operationId: String,
-        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+        bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
         consumes: NonEmptyList[ContentType]
     ): Target[List[Defn.Val]] =
@@ -823,11 +823,11 @@ object AkkaHttpServerGenerator {
 
     def generateDecoders(
         operationId: String,
-        bodyArgs: Option[ScalaParameter[ScalaLanguage]],
+        bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         consumes: NonEmptyList[ContentType]
     ): Target[List[Defn.Val]] =
       bodyArgs.toList.traverse {
-        case ScalaParameter(_, _, _, _, argType) =>
+        case LanguageParameter(_, _, _, _, argType) =>
           for {
             (decoder, baseType) <- AkkaHttpHelper.generateDecoder(argType, consumes)
           } yield {
