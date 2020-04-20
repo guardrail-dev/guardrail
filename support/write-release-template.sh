@@ -1,5 +1,15 @@
 #!/bin/env bash
 
+for remote in github upstream origin; do
+        git remote | grep "$remote" && break 2>/dev/null >&2
+        unset remote
+done
+if [ ! -z "$remote" ]; then
+        git fetch -p "$remote"
+else
+        echo "Unable to find workable remote, not fetching." >&2
+fi
+
 last_tag="$(git tag | tail -n1)"
 read -p "Last release (${last_tag}): " new_last_tag
 if [ ! -z "${new_last_tag}" ]; then
@@ -25,7 +35,16 @@ fi
 
 github_api="$(mktemp)"
 
-curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...master"
+current_head="$(git rev-parse @)"
+
+if [ ! -z "$remote" ]; then
+        newer_prs="$(git log --merges --oneline "${current_head}...${remote}/master" | grep 'Merge pull request' | wc -l)"
+        if [ "$newer_prs" -gt 0 ]; then
+                echo "Preparing to release old version, not including $newer_prs PRs" >&2
+        fi
+fi
+
+curl --silent -o "${github_api}" "https://api.github.com/repos/twilio/guardrail/compare/${last_tag}...${current_head}"
 
 cat > "${notes_file}" <<!
 TITLE
