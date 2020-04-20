@@ -5,9 +5,11 @@ import cats.{ Applicative, MonadError }
 import cats.Traverse
 import cats.Eval
 import cats.implicits._
+import java.util.concurrent.atomic.AtomicBoolean
 
 object Target {
-  def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), value)
+  val loggerEnabled                                     = new AtomicBoolean(false)
+  def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), if (loggerEnabled.get) value else StructuredLogger.Empty)
   def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
 
   def raiseError[T](x: Error): Target[T]      = new TargetError(x, StructuredLogger.Empty)
@@ -35,13 +37,14 @@ object Target {
       case TargetValue(a, la)   => f(a).prependLogger(la)
       case TargetError(err, la) => new TargetError(err, la)
     }
+    @scala.annotation.tailrec
     def tailRecM[A, B](a: A)(f: A => Target[Either[A, B]]): Target[B] =
       f(a) match {
         case TargetError(err, la) =>
           new TargetError(err, la)
         case TargetValue(e, la) =>
           e match {
-            case Left(b)  => tailRecM(b)(f).prependLogger(la)
+            case Left(b)  => tailRecM(b)(if (loggerEnabled.get) f.map(_.prependLogger(la)) else f)
             case Right(a) => new TargetValue(a, la)
           }
       }

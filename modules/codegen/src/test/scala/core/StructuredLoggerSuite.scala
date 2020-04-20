@@ -8,6 +8,7 @@ import org.scalatest.{ FunSuite, Matchers }
 
 class StructuredLoggerSuite extends FunSuite with Matchers {
   test("Structured Logger can nest functions") {
+    Target.loggerEnabled.set(true)
     val structure =
       Target.log.function("first") {
         Target.log.function("second") {
@@ -18,6 +19,7 @@ class StructuredLoggerSuite extends FunSuite with Matchers {
           } yield ()
         }
       }
+    Target.loggerEnabled.set(false)
     val logEntries = structure.logEntries
     val expected   = """
       |   INFO    first second: one
