@@ -1,7 +1,7 @@
 package tests.generators.http4s
 
 import com.twilio.guardrail._
-import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner

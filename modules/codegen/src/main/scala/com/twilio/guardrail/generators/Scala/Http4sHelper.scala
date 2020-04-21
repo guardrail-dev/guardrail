@@ -1,4 +1,4 @@
-package com.twilio.guardrail.generators
+package com.twilio.guardrail.generators.Scala
 
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, Response, Responses }

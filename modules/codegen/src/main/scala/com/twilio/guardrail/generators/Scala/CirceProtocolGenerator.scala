@@ -1,13 +1,25 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
 import cats.implicits._
+import com.twilio.guardrail.{
+  DataVisible,
+  Discriminator,
+  EmptyIsEmpty,
+  EmptyIsNull,
+  ProtocolParameter,
+  StaticDefns,
+  SuperClass,
+  SwaggerUtil,
+  Target,
+  UserError
+}
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
+import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._

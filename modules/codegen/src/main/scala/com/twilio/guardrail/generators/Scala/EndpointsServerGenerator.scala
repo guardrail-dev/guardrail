@@ -1,13 +1,15 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
 import cats.Monad
+import com.twilio.guardrail.{ Target, TracingField }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import _root_.io.swagger.v3.oas.models.Operation
+import com.twilio.guardrail.StrictProtocolElems
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.generators.LanguageParameters
 
 object EndpointsServerGenerator {
   object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {

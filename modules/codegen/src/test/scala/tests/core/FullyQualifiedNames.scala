@@ -1,6 +1,6 @@
 package tests.core
 
-import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions, Server, Servers }
 import org.scalatest.{ FunSuite, Matchers }

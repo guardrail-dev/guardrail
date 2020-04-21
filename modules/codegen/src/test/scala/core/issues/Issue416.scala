@@ -1,7 +1,7 @@
 package core.issues
 
 import com.twilio.guardrail.{ Context, Server, Servers }
-import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.generators.Scala.Http4s
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 

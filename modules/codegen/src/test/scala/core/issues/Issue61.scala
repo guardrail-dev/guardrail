@@ -1,6 +1,6 @@
 package tests.core.issues
 
-import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.{ Context, ProtocolDefinitions, RandomType }
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner

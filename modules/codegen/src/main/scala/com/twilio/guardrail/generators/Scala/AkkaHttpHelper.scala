@@ -1,4 +1,4 @@
-package com.twilio.guardrail.generators
+package com.twilio.guardrail.generators.Scala
 
 import cats.data.NonEmptyList
 import cats.implicits._

@@ -7,7 +7,8 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.{ AkkaHttp, Framework }
+import com.twilio.guardrail.generators.Framework
+import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
 import scala.meta._
