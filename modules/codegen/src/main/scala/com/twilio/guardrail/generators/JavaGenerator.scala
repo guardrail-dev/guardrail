@@ -7,7 +7,7 @@ import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.github.javaparser.ast._
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, ArrayType => AstArrayType }
-import com.github.javaparser.ast.body.{ BodyDeclaration, Parameter, TypeDeclaration }
+import com.github.javaparser.ast.body.{ BodyDeclaration, ClassOrInterfaceDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
 import com.twilio.guardrail._
@@ -28,7 +28,6 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import scala.language.existentials
 
 object JavaGenerator {
@@ -344,6 +343,19 @@ object JavaGenerator {
         pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
         bytes   <- pkgDecl.traverse(x => prettyPrintSource(new CompilationUnit().setPackageDeclaration(x)))
       } yield bytes.map(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), _))
+
+    private def staticifyInnerObjects(decl: BodyDeclaration[_ <: BodyDeclaration[_]]): BodyDeclaration[_ <: BodyDeclaration[_]] = {
+      def rec(decl: BodyDeclaration[_ <: BodyDeclaration[_]]): Unit =
+        decl match {
+          case cls: ClassOrInterfaceDeclaration if !cls.isInterface =>
+            cls.addModifier(Modifier.Keyword.STATIC)
+            cls.getMembers.toList.foreach(rec)
+          case _ =>
+        }
+      rec(decl)
+      decl
+    }
+
     def writeProtocolDefinition(
         outputPath: Path,
         pkgName: List[String],
@@ -372,7 +384,8 @@ object JavaGenerator {
             imports.foreach(cu.addImport)
             staticDefns.extraImports.foreach(cu.addImport)
             val clsCopy = cls.clone()
-            staticDefns.definitions.foreach(clsCopy.addMember)
+            staticDefns.definitions.map(staticifyInnerObjects).foreach(clsCopy.addMember)
+            cu.addImport(showerImport)
             cu.addType(clsCopy)
             Option((cls.getName.getIdentifier, cu))
           case ADT(name, tpe, _, trt, staticDefns) =>
@@ -381,7 +394,8 @@ object JavaGenerator {
             imports.foreach(cu.addImport)
             staticDefns.extraImports.foreach(cu.addImport)
             val trtCopy = trt.clone()
-            staticDefns.definitions.foreach(trtCopy.addMember)
+            staticDefns.definitions.map(staticifyInnerObjects).foreach(trtCopy.addMember)
+            cu.addImport(showerImport)
             cu.addType(trtCopy)
             Option((name, cu))
           case RandomType(_, _) =>
@@ -436,7 +450,7 @@ object JavaGenerator {
         name: com.github.javaparser.ast.expr.Name,
         imports: List[com.github.javaparser.ast.ImportDeclaration],
         definitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
-    ): Target[Nothing] =
-      Target.raiseUserError("Currently not supported for Java")
+    ): Target[Option[Nothing]] =
+      Target.pure(Option.empty[Nothing])
   }
 }
