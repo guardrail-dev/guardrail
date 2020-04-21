@@ -31,3 +31,8 @@ jobs:
           ${{ runner.os }}-scala-${{ matrix.scala }}-
     - name: Run tests
       run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage checkFormatting testSuite codegen/coverageReport
+    - uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./modules/codegen/target/scala-2.12/scoverage-report/scoverage.xml
+        fail_ci_if_error: true
