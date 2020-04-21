@@ -240,7 +240,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= testDependencies,
     skip in publish := true
   )
-  .dependsOn(codegen % "compile;test")
+  .dependsOn(codegen % "compile;test", microsite % "compile; test")
 
 lazy val codegen = (project in file("modules/codegen"))
   .settings(
