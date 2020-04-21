@@ -134,18 +134,6 @@ object SwaggerGenerator {
 
           pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
-            .orElse({
-              operation
-                .downField("tags", _.getTags)
-                .toNel
-                .indexedCosequence
-                .map { tags =>
-                  println(
-                    s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})"
-                  )
-                  tags.get.toList
-                }
-            })
           opPkg     = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).get
           className = pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
         } yield className)
