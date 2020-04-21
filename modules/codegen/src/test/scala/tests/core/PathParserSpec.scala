@@ -5,12 +5,14 @@ import com.twilio.guardrail.{ SwaggerUtil, Target }
 import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
 import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.generators.syntax.Scala._
-import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
+import org.scalatest.{ EitherValues, OptionValues }
 import support.ScalaMetaMatchers._
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class PathParserSpec extends FunSuite with Matchers with EitherValues with OptionValues with TrackerTestExtensions {
+class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with OptionValues with TrackerTestExtensions {
 
   val args: List[LanguageParameter[ScalaLanguage]] = List(
     LanguageParameter.fromParam(param"foo: Int = 1"),

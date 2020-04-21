@@ -3,12 +3,13 @@ package tests.core
 import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions, Server, Servers }
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class FullyQualifiedNames extends FunSuite with Matchers with SwaggerSpecRunner {
+class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger =
     """

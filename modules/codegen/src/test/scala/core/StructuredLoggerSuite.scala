@@ -4,9 +4,10 @@ import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.core._
 
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class StructuredLoggerSuite extends FunSuite with Matchers {
+class StructuredLoggerSuite extends AnyFunSuite with Matchers {
   test("Structured Logger can nest functions") {
     Target.loggerEnabled.set(true)
     val structure =

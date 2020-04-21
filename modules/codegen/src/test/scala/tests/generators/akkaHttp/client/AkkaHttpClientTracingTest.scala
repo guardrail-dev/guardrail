@@ -2,11 +2,12 @@ package tests.generators.akkaHttp.client
 
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.{ Client, Clients, Context }
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class AkkaHttpClientTracingTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Manage child tracing span") {
     val swagger = s"""

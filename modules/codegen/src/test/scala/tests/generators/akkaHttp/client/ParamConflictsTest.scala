@@ -3,11 +3,12 @@ package tests.generators.akkaHttp.client
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class ParamConflictsTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger = s"""
     |swagger: "2.0"

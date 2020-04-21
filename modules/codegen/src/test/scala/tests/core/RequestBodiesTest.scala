@@ -5,11 +5,12 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.twilio.guardrail.generators.Java.Dropwizard
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.{ Clients, Context }
-import org.scalatest.{ FreeSpec, Matchers }
 import scala.collection.JavaConverters._
 import support.SwaggerSpecRunner
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class RequestBodiesTest extends FreeSpec with Matchers with SwaggerSpecRunner {
+class RequestBodiesTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
   val openapi: String =
     """
       |openapi: 3.0.2

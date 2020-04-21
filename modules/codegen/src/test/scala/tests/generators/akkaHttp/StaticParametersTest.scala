@@ -2,11 +2,12 @@ package tests.generators.akkaHttp
 
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.{ Context, Server, Servers }
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class StaticParametersTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""
     |swagger: "2.0"
     |info:

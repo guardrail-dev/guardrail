@@ -1,10 +1,11 @@
 package com.twilio.guardrail.generators.syntax
 
 import com.twilio.guardrail.generators.syntax.Java._
-import org.scalatest.{ FreeSpec, Matchers }
 import scala.util.Random
 import scala.util.{ Failure, Try }
 import com.github.javaparser.StaticJavaParser
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 object JavaSyntaxTest {
   val TEST_RESERVED_WORDS = List(
@@ -16,7 +17,7 @@ object JavaSyntaxTest {
   )
 }
 
-class JavaSyntaxTest extends FreeSpec with Matchers {
+class JavaSyntaxTest extends AnyFreeSpec with Matchers {
   import JavaSyntaxTest._
 
   "Reserved work escaper should" - {

@@ -199,6 +199,7 @@ addCommandAlias(
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
 addCompilerPlugin(scalafixSemanticdb)
+scalafixDependencies in ThisBuild += "org.scalatest" %% "autofix" % "3.1.0.0"
 scalacOptions += "-Yrangepos"
 
 publishMavenStyle := true

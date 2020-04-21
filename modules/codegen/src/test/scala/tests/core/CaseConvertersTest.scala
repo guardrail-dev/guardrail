@@ -1,7 +1,8 @@
 package tests.core
 
 import com.twilio.guardrail.generators.syntax.RichString
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 object CaseConvertersTest {
   private case class CaseTest(raw: String, expectedPascal: String, expectedCamel: String, expectedSnake: String, expectedDashed: String) {
@@ -34,7 +35,7 @@ object CaseConvertersTest {
   )
 }
 
-class CaseConvertersTest extends FreeSpec with Matchers {
+class CaseConvertersTest extends AnyFreeSpec with Matchers {
   import CaseConvertersTest._
 
   "Pascal case converter should work" in {

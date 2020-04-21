@@ -1,10 +1,10 @@
 package tests.core
 
-import org.scalatest.{ FunSuite, Matchers }
-
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class EscapeTreeSpec extends FunSuite with Matchers {
+class EscapeTreeSpec extends AnyFunSuite with Matchers {
 
   test("Assume special characters are not escaped") {
     val q"val $x = 3"                          = q"val `dashy-thing` = 3"

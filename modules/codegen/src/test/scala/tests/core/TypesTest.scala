@@ -3,11 +3,12 @@ package tests.core
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
-import org.scalatest.{ FunSuite, Matchers }
 import scala.meta._
 import support.SwaggerSpecRunner
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class TypesTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate no definitions") {
     val swagger: String = s"""

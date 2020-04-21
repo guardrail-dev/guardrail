@@ -2,10 +2,11 @@ package core.issues
 
 import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.{ Context, Server, Servers }
-import org.scalatest.{ FunSpec, Matchers }
 import support.SwaggerSpecRunner
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class Issue260 extends FunSpec with Matchers with SwaggerSpecRunner {
+class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("LocalDate path param is generated more than once") {
 

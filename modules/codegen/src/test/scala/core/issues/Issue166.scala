@@ -7,12 +7,13 @@ import com.twilio.guardrail._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class Issue166 extends FunSuite with Matchers with SwaggerSpecRunner {
+class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger = s"""
                    |swagger: "2.0"
