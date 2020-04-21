@@ -4,9 +4,8 @@ import java.nio.file.Path
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.core.CoreTermInterp
+import com.twilio.guardrail.core.{ CoreTermInterp, LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.terms.CoreTerms
-import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import scala.io.AnsiColor
 import scala.util.{ Failure, Success }

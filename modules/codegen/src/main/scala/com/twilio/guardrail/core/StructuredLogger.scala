@@ -1,4 +1,4 @@
-package com.twilio.swagger.core
+package com.twilio.guardrail.core
 
 import cats.data.{ Chain, NonEmptyChain }
 import cats.implicits._
