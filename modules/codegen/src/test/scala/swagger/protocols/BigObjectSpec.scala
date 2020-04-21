@@ -4,12 +4,13 @@ package protocols
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class BigObjectSpec extends FunSuite with Matchers with SwaggerSpecRunner {
+class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   val swagger: String = s"""
     |swagger: "2.0"

@@ -3,12 +3,13 @@ package core.issues
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import org.scalatest.{ FunSpec, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class Issue43 extends FunSpec with Matchers with SwaggerSpecRunner {
+class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("Generate hierarchical classes") {
 

@@ -6,11 +6,12 @@ import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.{ CodegenTarget, Context, UserError }
 import cats.instances.all._
 import org.scalacheck.{ Arbitrary, Gen }
-import org.scalatest.{ FreeSpec, Matchers }
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import support.SwaggerSpecRunner
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class TrackerTests extends FreeSpec with Matchers with ScalaCheckPropertyChecks with TrackerTestExtensions with SwaggerSpecRunner {
+class TrackerTests extends AnyFreeSpec with Matchers with ScalaCheckPropertyChecks with TrackerTestExtensions with SwaggerSpecRunner {
   class Parent(val child1: List[Child1], val child2: Map[String, Child2]) { override def toString(): String = s"Parent($child1, $child2)" }
   class Child1(val grandchild: Option[Grandchild1]) extends Parent(grandchild.toList, Map.empty) { override def toString(): String = s"Child1($grandchild)" }
   class Child2                                      extends Parent(List.empty, Map.empty)        { override def toString(): String = s"Child2()"            }

@@ -3,10 +3,11 @@ package tests.generators.akkaHttp
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ Client, Clients, Context }
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class AkkaHttpClientGeneratorTest extends FunSuite with Matchers with SwaggerSpecRunner {
+class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
 
   val swagger: String = s"""

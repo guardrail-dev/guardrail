@@ -5,11 +5,12 @@ import java.util
 import com.twilio.guardrail.extract.VendorExtension
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
-import org.scalatest.{ FunSuite, Matchers }
 
 import scala.collection.JavaConverters._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class VendorExtensionTest extends FunSuite with Matchers {
+class VendorExtensionTest extends AnyFunSuite with Matchers {
 
   val spec: String = s"""
     |swagger: '2.0'

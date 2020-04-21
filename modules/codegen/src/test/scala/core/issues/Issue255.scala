@@ -2,12 +2,13 @@ package core.issues
 
 import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
-import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner
 
 import scala.meta._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class Issue255 extends FunSuite with Matchers with SwaggerSpecRunner {
+class Issue255 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""
                            |swagger: "2.0"
                            |info:

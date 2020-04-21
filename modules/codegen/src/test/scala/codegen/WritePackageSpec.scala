@@ -9,7 +9,6 @@ import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.languages.ScalaLanguage
-import org.scalatest.{ FunSuite, Matchers }
 
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
@@ -17,8 +16,10 @@ import io.swagger.v3.parser.core.models.ParseOptions
 import scala.meta._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class WritePackageSpec extends FunSuite with Matchers {
+class WritePackageSpec extends AnyFunSuite with Matchers {
   val parseOpts = new ParseOptions
   parseOpts.setResolve(true)
   val swagger: OpenAPI = new OpenAPIParser()
