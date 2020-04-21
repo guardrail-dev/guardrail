@@ -57,6 +57,8 @@ val exampleFrameworkSuites = Map(
 val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
 val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
 
+import scoverage.ScoverageKeys
+
 import com.twilio.guardrail.sbt.ExampleCase
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
 val exampleCases: List[ExampleCase] = List(
@@ -209,6 +211,7 @@ val testDependencies = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
+  ScoverageKeys.coverageMinimum := 19.9,
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
   addCompilerPlugin(scalafixSemanticdb),
@@ -237,7 +240,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= testDependencies,
     skip in publish := true
   )
-  .dependsOn(codegen)
+  .dependsOn(codegen % "compile;test")
 
 lazy val codegen = (project in file("modules/codegen"))
   .settings(
@@ -331,6 +334,7 @@ lazy val http4sSample = (project in file("modules/sample-http4s"))
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
   .enablePlugins(ScalaJSPlugin)
   .settings(
+    coverageEnabled := false,  // scoverage issue @ commit 28b0cc55: Found a dangling UndefinedParam at Position(file:.../modules/sample-endpoints/target/generated/issues/issue351/client/endpoints/EndpointsImplicits.scala,91,34). This is likely due to a bad interaction between a macro or a compiler plugin and the Scala.js compiler plugin. If you hit this, please let us know.
     codegenSettings,
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
