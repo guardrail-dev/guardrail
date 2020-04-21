@@ -1,10 +1,11 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }

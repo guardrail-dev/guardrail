@@ -1,6 +1,6 @@
 package com.twilio.guardrail
 
-import com.twilio.swagger.core.StructuredLogger
+import com.twilio.guardrail.core.StructuredLogger
 import cats.{ Applicative, MonadError }
 import cats.Traverse
 import cats.Eval

@@ -4,9 +4,8 @@ import java.nio.file.Path
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.~>
-import com.twilio.guardrail.core.CoreTermInterp
+import com.twilio.guardrail.core.{ CoreTermInterp, LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.terms.CoreTerms
-import com.twilio.swagger.core.{ LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
 import scala.io.AnsiColor
 import scala.util.{ Failure, Success }
@@ -189,15 +188,14 @@ trait CLICommon {
 }
 
 object CLI extends CLICommon {
-  import com.twilio.guardrail.generators.{ AkkaHttp, Endpoints, Http4s }
-  import com.twilio.guardrail.generators.{ Java, JavaModule, ScalaModule }
+  import com.twilio.guardrail.generators.{ Java, JavaModule, Scala, ScalaModule }
   import scala.meta._
   val scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
     ScalaModule.extract, {
-      case "akka-http" => AkkaHttp
-      case "endpoints" => Endpoints
-      case "http4s"    => Http4s
+      case "akka-http" => Scala.AkkaHttp
+      case "endpoints" => Scala.Endpoints
+      case "http4s"    => Scala.Http4s
     }, {
       _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
     }

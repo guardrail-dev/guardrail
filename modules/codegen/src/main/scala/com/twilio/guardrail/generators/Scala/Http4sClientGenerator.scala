@@ -1,9 +1,9 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
@@ -12,6 +12,7 @@ import com.twilio.guardrail.protocol.terms.{ ContentType, Header, MultipartFormD
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import java.net.URI

@@ -5,7 +5,7 @@ import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.Http4s
+import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.languages.ScalaLanguage
 import org.scalatest.{ FunSuite, Matchers }
 import support.SwaggerSpecRunner

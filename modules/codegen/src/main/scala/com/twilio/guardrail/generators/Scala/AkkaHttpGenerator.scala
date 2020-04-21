@@ -1,6 +1,6 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
+import com.twilio.guardrail.Target
 import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.terms.framework._
 

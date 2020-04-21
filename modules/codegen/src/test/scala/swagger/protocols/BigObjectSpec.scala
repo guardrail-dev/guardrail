@@ -1,7 +1,7 @@
 package swagger
 package protocols
 
-import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import org.scalatest.{ FunSuite, Matchers }

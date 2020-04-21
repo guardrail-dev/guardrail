@@ -1,20 +1,21 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
+import com.twilio.guardrail.Target
 import com.twilio.guardrail.circe.CirceVersion
+import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
+import com.twilio.guardrail.generators.ScalaGenerator._
 import com.twilio.guardrail.languages.ScalaLanguage
 
-import Http4sClientGenerator._
-import Http4sServerGenerator._
-import Http4sGenerator.{ FrameworkInterp => Http4sFrameworkInterp }
+import AkkaHttpClientGenerator._
+import AkkaHttpServerGenerator._
 import CirceProtocolGenerator._
-import ScalaGenerator._
+import AkkaHttpGenerator._
 
-object Http4s extends Framework[ScalaLanguage, Target] {
+object AkkaHttp extends Framework[ScalaLanguage, Target] {
   implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
   implicit def ClientInterp          = ClientTermInterp
   implicit def EnumProtocolInterp    = EnumProtocolTermInterp
-  implicit def FrameworkInterp       = Http4sFrameworkInterp
+  implicit def FrameworkInterp       = new FrameworkInterp(CirceVersion.V012)
   implicit def ModelProtocolInterp   = new ModelProtocolTermInterp(CirceVersion.V012)
   implicit def PolyProtocolInterp    = PolyProtocolTermInterp
   implicit def ProtocolSupportInterp = ProtocolSupportTermInterp

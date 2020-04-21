@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp
 
-import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ Client, Clients, Context }
 import org.scalatest.{ FunSuite, Matchers }

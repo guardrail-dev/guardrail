@@ -1,7 +1,7 @@
 package core.issues
 
 import com.twilio.guardrail._
-import com.twilio.guardrail.generators.AkkaHttp
+import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import org.scalatest.{ FunSpec, Matchers }
 import support.SwaggerSpecRunner

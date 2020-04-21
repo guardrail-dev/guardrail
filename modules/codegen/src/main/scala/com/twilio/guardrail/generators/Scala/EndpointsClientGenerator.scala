@@ -1,10 +1,11 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.Monad
 import cats.data.{ Ior, NonEmptyList }
 import cats.implicits._
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, SwaggerUtil, Target }
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage

@@ -1,9 +1,9 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
 import com.twilio.guardrail.terms.framework._
 import scala.meta._
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.Target
 
 object EndpointsGenerator {
   object FrameworkInterp extends FrameworkTerms[ScalaLanguage, Target] {

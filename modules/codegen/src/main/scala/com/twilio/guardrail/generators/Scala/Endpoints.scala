@@ -1,13 +1,14 @@
-package com.twilio.guardrail
-package generators
+package com.twilio.guardrail.generators.Scala
 
+import com.twilio.guardrail.Target
 import com.twilio.guardrail.circe.CirceVersion
+import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
+import com.twilio.guardrail.generators.ScalaGenerator._
 import com.twilio.guardrail.languages.ScalaLanguage
 
 import EndpointsClientGenerator._
 import EndpointsServerGenerator._
 import CirceProtocolGenerator._
-import ScalaGenerator._
 import EndpointsGenerator.{ FrameworkInterp => EndpointsFrameworkInterp }
 
 object Endpoints extends Framework[ScalaLanguage, Target] {

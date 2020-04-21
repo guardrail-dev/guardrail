@@ -2,7 +2,7 @@ package core
 
 import cats.implicits._
 import com.twilio.guardrail._
-import com.twilio.swagger.core._
+import com.twilio.guardrail.core._
 
 import org.scalatest.{ FunSuite, Matchers }
 
