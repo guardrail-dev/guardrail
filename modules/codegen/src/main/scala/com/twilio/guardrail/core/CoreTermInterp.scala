@@ -1,11 +1,28 @@
-package com.twilio.guardrail
-package core
+package com.twilio.guardrail.core
 
 import cats.data.{ NonEmptyList, State }
 // Issue #496: Injected StructuredLogger too slow import cats.free.{ Free, GuardrailFreeHacks }
 import cats.implicits._
 import cats.{ FlatMap, Monad }
 import cats.free.Free
+import com.twilio.guardrail.{
+  Args,
+  CodegenApplication,
+  CodegenTarget,
+  Common,
+  Context,
+  Error,
+  MissingArg,
+  NoArgsSpecified,
+  NoFramework,
+  PrintHelp,
+  ReadSwagger,
+  Target,
+  UnknownArguments,
+  UnknownFramework,
+  UnparseableArgument,
+  WriteTree
+}
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import com.twilio.guardrail.generators.Framework
