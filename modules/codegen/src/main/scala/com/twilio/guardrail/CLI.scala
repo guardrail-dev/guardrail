@@ -3,7 +3,6 @@ package com.twilio.guardrail
 import java.nio.file.Path
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.~>
 import com.twilio.guardrail.core.{ CoreTermInterp, LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.terms.CoreTerms
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }
@@ -57,11 +56,6 @@ trait CLICommon {
     val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
     handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
   }
-
-  def chainFrameworkMappings[L <: LA](
-      first: PartialFunction[String, CodegenApplication[L, ?] ~> Target],
-      second: PartialFunction[String, CodegenApplication[L, ?] ~> Target]
-  ): PartialFunction[String, CodegenApplication[L, ?] ~> Target] = first.orElse(second)
 
   def handleLanguage: PartialFunction[String, Array[String] => CommandLineResult] = {
     case "java"  => run("java", _)(javaInterpreter)

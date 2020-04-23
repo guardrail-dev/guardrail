@@ -1,7 +1,5 @@
 package com.twilio.guardrail.docs
 
-import cats.free.Free
-import cats.arrow.FunctionK
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
@@ -10,7 +8,7 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.Framework
 import com.twilio.guardrail.generators.Scala.AkkaHttp
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.server.{ ServerTerm, ServerTerms }
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import scala.meta._
 
 sealed trait SnippetComponent
@@ -28,8 +26,7 @@ object DocsHelpers {
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Free[CodegenApplication[ScalaLanguage, ?], ?]](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
-            .foldMap(generator)
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
         )
         val server = codegenDefinitions.servers.head
         val q"object ${oname} { ..${stats} }" = server.serverDefinitions.head
@@ -46,8 +43,7 @@ object DocsHelpers {
         )
       case GeneratingClients =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Free[CodegenApplication[ScalaLanguage, ?], ?]](CodegenTarget.Client, Context.empty, openAPI, List("definitions"))
-            .foldMap(generator)
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"))
         )
         codegenDefinitions.clients match {
           case g :: Nil =>

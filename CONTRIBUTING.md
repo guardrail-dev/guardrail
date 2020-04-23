@@ -78,5 +78,4 @@ Useful commands inside sbt console
 Resources
 =========
 
-- Cats' Free Monad: http://typelevel.org/cats/datatypes/freemonad.html
 - Scalameta Quasiquotes: https://github.com/scalameta/scalameta/blob/master/notes/quasiquotes.md

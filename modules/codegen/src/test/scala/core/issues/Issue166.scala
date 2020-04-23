@@ -1,6 +1,5 @@
 package tests.core.issues
 
-import cats.free.Free
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
@@ -44,15 +43,15 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   test("Handle generation of models") {
     val opts = new ParseOptions()
     opts.setResolve(true)
+    import Http4s._
     val (proto, codegen) = Target.unsafeExtract(
       Common
-        .prepareDefinitions[ScalaLanguage, Free[CodegenApplication[ScalaLanguage, ?], ?]](
+        .prepareDefinitions[ScalaLanguage, Target](
           CodegenTarget.Models,
           Context.empty,
           Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
           List.empty
         )
-        .foldMap(Http4s)
     )
 
     val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _) = proto
