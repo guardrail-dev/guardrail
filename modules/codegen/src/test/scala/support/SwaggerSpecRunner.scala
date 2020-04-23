@@ -34,38 +34,34 @@ trait SwaggerSpecRunner extends EitherValues {
     runSwagger(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI, dtoPackage) _
   }
 
-  def runSwagger[L <: LA](swagger: OpenAPI, dtoPackage: List[String] = List.empty)(context: Context, framework: Framework[L, Target])(
-      implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sc: LanguageTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
-  ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
-    val /*(clientLogger,*/ (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
+  def runSwagger[L <: LA](
+      swagger: OpenAPI,
+      dtoPackage: List[String] = List.empty
+  )(context: Context, framework: Framework[L, Target]): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
+    import framework._
+    val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
       Common
-        .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
+        .prepareDefinitions[L, Target](
           CodegenTarget.Client,
           context,
           Tracker(swagger),
           dtoPackage
         )
-        .foldMap(framework)
         .valueOr({ err =>
           throw new Exception(err.toString)
         })
-    //.runEmpty
 
-    val /*(serverLogger,*/ (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) =
+    val (_, CodegenDefinitions(Nil, servers, serverSupportDefs, _)) =
       Common
-        .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
+        .prepareDefinitions[L, Target](
           CodegenTarget.Server,
           context,
           Tracker(swagger),
           List.empty
         )
-        .foldMap(framework)
         .valueOr({ err =>
           throw new Exception(err.toString)
         })
-    //.runEmpty
 
     // FIXME: In lieu of https://github.com/scalatest/scalatest/issues/405,
     // figure out a way to use https://stackoverflow.com/a/7219813 to only println
@@ -87,20 +83,17 @@ trait SwaggerSpecRunner extends EitherValues {
     runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI) _
   }
 
-  def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: Framework[L, Target])(
-      implicit Fw: FrameworkTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sc: LanguageTerms[L, Free[CodegenApplication[L, ?], ?]],
-      Sw: SwaggerTerms[L, Free[CodegenApplication[L, ?], ?]]
-  ): (StructuredLogger, Error) =
+  def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: Framework[L, Target]): (StructuredLogger, Error) = {
+    import framework._
     Common
-      .prepareDefinitions[L, Free[CodegenApplication[L, ?], ?]](
+      .prepareDefinitions[L, Target](
         kind,
         context,
         Tracker(swagger),
         List.empty
-      )
-      .foldMap(framework) match {
+      ) match {
       case TargetError(err, la) => (la, err)
       case _                    => ???
     }
+  }
 }
