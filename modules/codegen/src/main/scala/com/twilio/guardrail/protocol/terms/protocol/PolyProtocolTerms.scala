@@ -9,32 +9,6 @@ import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
 /**
   * Protocol for Polymorphic models
   */
-sealed trait PolyProtocolTerm[L <: LA, T]
-
-case class ExtractSuperClass[L <: LA](swagger: Tracker[ComposedSchema], definitions: List[(String, Tracker[Schema[_]])])
-    extends PolyProtocolTerm[L, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]
-
-case class RenderSealedTrait[L <: LA](
-    className: String,
-    params: List[ProtocolParameter[L]],
-    discriminator: Discriminator[L],
-    parents: List[SuperClass[L]] = Nil,
-    children: List[String] = Nil
-) extends PolyProtocolTerm[L, L#Trait]
-
-case class EncodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], children: List[String] = Nil)
-    extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
-
-case class DecodeADT[L <: LA](clsName: String, discriminator: Discriminator[L], children: List[String] = Nil)
-    extends PolyProtocolTerm[L, Option[L#ValueDefinition]]
-
-case class RenderADTStaticDefns[L <: LA](
-    clsName: String,
-    discriminator: Discriminator[L],
-    encoder: Option[L#ValueDefinition],
-    decoder: Option[L#ValueDefinition]
-) extends PolyProtocolTerm[L, StaticDefns[L]]
-
 abstract class PolyProtocolTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
   def extractSuperClass(
