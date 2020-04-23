@@ -1,6 +1,5 @@
 package tests.core.issues
 
-import cats.free.Free
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._

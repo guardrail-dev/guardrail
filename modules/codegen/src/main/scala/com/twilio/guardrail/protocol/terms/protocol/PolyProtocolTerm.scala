@@ -1,8 +1,6 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import cats.{ InjectK, Monad }
-import cats.arrow.FunctionK
-import cats.free.Free
+import cats.Monad
 import com.twilio.guardrail.{ Discriminator, ProtocolParameter, StaticDefns, SuperClass }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
@@ -37,7 +35,7 @@ case class RenderADTStaticDefns[L <: LA](
     decoder: Option[L#ValueDefinition]
 ) extends PolyProtocolTerm[L, StaticDefns[L]]
 
-abstract class PolyProtocolTerms[L <: LA, F[_]] extends FunctionK[PolyProtocolTerm[L, ?], F] {
+abstract class PolyProtocolTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
   def extractSuperClass(
       swagger: Tracker[ComposedSchema],
@@ -82,40 +80,4 @@ abstract class PolyProtocolTerms[L <: LA, F[_]] extends FunctionK[PolyProtocolTe
     def renderADTStaticDefns(clsName: String, discriminator: Discriminator[L], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
       newRenderADTStaticDefns(clsName, discriminator, encoder, decoder)
   }
-
-  def apply[A](fa: PolyProtocolTerm[L, A]): F[A] = fa match {
-    case ExtractSuperClass(swagger, definitions)                                => extractSuperClass(swagger, definitions)
-    case RenderADTStaticDefns(clsName, discriminator, encoder, decoder)         => renderADTStaticDefns(clsName, discriminator, encoder, decoder)
-    case DecodeADT(clsName, discriminator, children)                            => decodeADT(clsName, discriminator, children)
-    case EncodeADT(clsName, discriminator, children)                            => encodeADT(clsName, discriminator, children)
-    case RenderSealedTrait(className, params, discriminator, parents, children) => renderSealedTrait(className, params, discriminator, parents, children)
-  }
-}
-
-object PolyProtocolTerms {
-  implicit def polyProtocolTerms[L <: LA, F[_]](implicit I: InjectK[PolyProtocolTerm[L, ?], F]): PolyProtocolTerms[L, Free[F, ?]] =
-    new PolyProtocolTerms[L, Free[F, ?]]() {
-      def MonadF = Free.catsFreeMonadForFree
-      def extractSuperClass(
-          swagger: Tracker[ComposedSchema],
-          definitions: List[(String, Tracker[Schema[_]])]
-      ): Free[F, List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] = Free.inject[PolyProtocolTerm[L, ?], F](ExtractSuperClass(swagger, definitions))
-      def renderSealedTrait(
-          className: String,
-          params: List[ProtocolParameter[L]],
-          discriminator: Discriminator[L],
-          parents: List[SuperClass[L]] = Nil,
-          children: List[String] = Nil
-      ): Free[F, L#Trait] = Free.inject[PolyProtocolTerm[L, ?], F](RenderSealedTrait(className, params, discriminator, parents, children))
-      def encodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
-        Free.inject[PolyProtocolTerm[L, ?], F](EncodeADT(clsName, discriminator, children))
-      def decodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil): Free[F, Option[L#ValueDefinition]] =
-        Free.inject[PolyProtocolTerm[L, ?], F](DecodeADT(clsName, discriminator, children))
-      def renderADTStaticDefns(
-          clsName: String,
-          discriminator: Discriminator[L],
-          encoder: Option[L#ValueDefinition],
-          decoder: Option[L#ValueDefinition]
-      ): Free[F, StaticDefns[L]] = Free.inject[PolyProtocolTerm[L, ?], F](RenderADTStaticDefns(clsName, discriminator, encoder, decoder))
-    }
 }

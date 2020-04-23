@@ -4,7 +4,6 @@ import _root_.io.swagger.v3.oas.models._
 import com.twilio.guardrail.languages.LA
 import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
-import cats.free.Free
 import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.{ LogLevels, StructuredLogger, Tracker }
