@@ -248,7 +248,7 @@ lazy val codegen = (project in file("modules/codegen"))
     (name := "guardrail") +:
       codegenSettings,
     libraryDependencies ++= testDependencies ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.3.8",
+      "org.scalameta"               %% "scalameta"                    % "4.3.10",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.19.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.3.600",
