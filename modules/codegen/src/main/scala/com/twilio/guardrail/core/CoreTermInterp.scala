@@ -15,7 +15,7 @@ import scala.util.control.NonFatal
 class CoreTermInterp[L <: LA](
     defaultFramework: String,
     handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
-    frameworkMapping: PartialFunction[String, Framework[L, Target]],
+    val frameworkMapping: PartialFunction[String, Framework[L, Target]],
     handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] {
   implicit def MonadF: Monad[Target] = Target.targetInstances
