@@ -27,12 +27,20 @@ import java.nio.file.Paths
 import scala.util.control.NonFatal
 
 class CoreTermInterp[L <: LA](
-    defaultFramework: String,
-    handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
-    frameworkMapping: PartialFunction[String, Framework[L, Target]],
-    handleImport: String => Either[Error, L#Import]
-) extends CoreTerms[L, Target] {
+    val defaultFramework: String,
+    val handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
+    val frameworkMapping: PartialFunction[String, Framework[L, Target]],
+    val handleImport: String => Either[Error, L#Import]
+) extends CoreTerms[L, Target] { self =>
   implicit def MonadF: Monad[Target] = Target.targetInstances
+
+  def extendWith(
+      defaultFramework: String = self.defaultFramework,
+      handleModules: NonEmptyList[String] => Target[Framework[L, Target]] = self.handleModules,
+      additionalFrameworkMappings: PartialFunction[String, Framework[L, Target]] = PartialFunction.empty,
+      handleImport: String => Either[Error, L#Import] = self.handleImport
+  ): CoreTermInterp[L] = new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.orElse(self.frameworkMapping), handleImport)
+
   def getDefaultFramework =
     Target.log.function("getDefaultFramework") {
       Target.log.debug(s"Providing ${defaultFramework}") >> Target.pure(Some(defaultFramework))
