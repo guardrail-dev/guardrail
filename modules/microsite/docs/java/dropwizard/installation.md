@@ -1,0 +1,43 @@
+---
+layout: docs
+title: "Installation - java - dropwizard - guardrail"
+---
+
+Installation
+============
+
+guardrail is available as a modular core, with both [sbt](https://github.com/twilio/sbt-guardrail) and [Maven](https://github.com/twilio/guardrail-maven-plugin) integration. The core can also be run as a stand-alone [CLI](https://github.com/twilio/guardrail/blob/978a92db3dd46812aa19f05050995f864cbb5bb3/build.sbt#L33-L48) application, with full support for all features.
+
+guardrail for Dropwizard is generally set up using the maven plugin. This will generate your server or client at build time. The following is an example invocation in a `pom.xml` file:
+
+
+```
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.twilio</groupId>
+                <artifactId>guardrail-maven-plugin_2.12</artifactId>
+                <version>0.54.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-app-server</id>
+                        <goals>
+                            <goal>generate-sources</goal>
+                        </goals>
+                        <configuration>
+                            <language>java</language>
+                            <framework>dropwizard</framework>
+                            <kind>server</kind>
+                            <specPath>server-spec.yaml</specPath>
+                            <packageName>demowizard.generated</packageName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            (...)
+        </plugins>
+    </build>
+```
+
+<span style="float: left">[Prev: What is guardrail?](what-is-guardrail)</span>
+<span style="float: right">[Next: Sample API specification](sample-api-specification)</span>
