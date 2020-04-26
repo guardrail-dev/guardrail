@@ -18,3 +18,10 @@ Table of Contents
    1. [Separation of business logic](generating-a-server#separation-of-business-logic)
    1. [API structure slip is impossible](generating-a-server#api-structure-slip-is-impossible)
 1. [Generating clients](generating-clients)
+
+Java Dropwizard
+---------------
+
+Support for Dropwizard 1.3 has been available since guardrail v0.45.0.
+
+Using guardrail you can generate server definions and http clients.

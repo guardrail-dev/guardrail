@@ -42,7 +42,7 @@ Server Handlers, Resources
 
 guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The `Resource` contains all the JAX-RS routing logic, accepting a `Handler` as a definion of the logic to perform for the routes. The `Handler` is generated as an interface. You will write the implementation of the `Handler` and pass it to the `Resource` in the bootstrapping of the Dropwizard service.
 
-Consider the sample OpenAPI spec file we saw back in [Sample API Specification](sample-api-specification.md). That specified one path. When guardrail generates the server components for us, there will be a `UserHandler` with one method of the following signature:
+Consider the sample OpenAPI spec file we saw back in [Sample API Specification](sample-api-specification). That specified one path. When guardrail generates the server components for us, there will be a `UserHandler` with one method of the following signature:
 
 ```java
 public CompletionStage<GetUserResponse> getUser(String id)

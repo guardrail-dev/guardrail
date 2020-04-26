@@ -6,7 +6,7 @@ title: "Sample API Specification - java - dropwizard - guardrail"
 Sample API specification
 ========================
 
-The following is a complete, annotated OpenAPI specification file: (guardrail extensions are documented in [guardrail Extensions](#guardrail-extensions))
+The following is a complete, annotated OpenAPI specification file: (guardrail extensions are documented in [guardrail Extensions](../../scala/akka-http/guardrail-extensions))
 
 
 ```yaml
