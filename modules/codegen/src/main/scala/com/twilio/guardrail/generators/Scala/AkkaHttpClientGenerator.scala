@@ -107,9 +107,11 @@ object AkkaHttpClientGenerator {
             case _                              => liftTerm _
           }
 
-          val args: List[Term] = parameters.map {
-            case LanguageParameter(_, param, paramName, argName, _) =>
-              lifter(param)(paramName, argName)
+          val args: List[Term] = parameters.flatMap {
+            case lp @ LanguageParameter(_, param, paramName, argName, _) =>
+              lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
+                xs.toList.map({ case (rp, term, projectedParam) => lifter(projectedParam)(q"${lp.paramName}.$term", rp) })
+              }
           }
           Some(q"List(..$args)")
         } else {
@@ -122,6 +124,8 @@ object AkkaHttpClientGenerator {
           def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
             val lifter = tpe match {
               case t"Iterable[$_]" => liftIterable _
+              case t"List[$_]"     => liftIterable _
+              case t"Vector[$_]"   => liftIterable _
               case _               => liftTerm _
             }
             q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
@@ -132,12 +136,18 @@ object AkkaHttpClientGenerator {
             case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
             case param"$_: Iterable[$tpe]"      => liftIterable _
             case param"$_: Iterable[$tpe] = $_" => liftIterable _
+            case param"$_: List[$tpe]"          => liftIterable _
+            case param"$_: List[$tpe] = $_"     => liftIterable _
+            case param"$_: Vector[$tpe]"        => liftIterable _
+            case param"$_: Vector[$tpe] = $_"   => liftIterable _
             case x                              => liftTerm _
           }
 
-          val args: List[Term] = parameters.map {
-            case LanguageParameter(_, param, paramName, argName, _) =>
-              lifter(param)(paramName, argName)
+          val args: List[Term] = parameters.flatMap {
+            case lp @ LanguageParameter(_, param, paramName, argName, _) =>
+              lp.fieldProjections.fold(List(lifter(param)(paramName, argName))) { xs =>
+                xs.toList.map({ case (rp, term, projectedParam) => lifter(projectedParam)(q"${lp.paramName}.$term", rp) })
+              }
           }
           Some(q"List(..$args).flatten")
         }

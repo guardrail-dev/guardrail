@@ -39,7 +39,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
 
   test("Test that fully qualified names are used") {
     val (
-      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _),
+      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, _, fullType, _, _, _, _)), _, _, _),
       Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
       _
     ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, Http4s)

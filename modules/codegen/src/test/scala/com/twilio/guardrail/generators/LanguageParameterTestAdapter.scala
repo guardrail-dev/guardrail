@@ -14,7 +14,8 @@ package object generators {
         RawParameterType(rawType, rawFormat),
         value.required,
         value.hashAlgorithm,
-        value.isFile
+        value.isFile,
+        None
       )
   }
 }

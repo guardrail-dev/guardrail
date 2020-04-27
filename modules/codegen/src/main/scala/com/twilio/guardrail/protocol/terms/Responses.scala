@@ -45,7 +45,7 @@ object Responses {
                     for {
                       meta     <- SwaggerUtil.propMeta[L, F](prop)
                       resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-                      SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+                      SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _, _) = resolved
 
                     } yield (baseType, baseDefaultValue)
                   }

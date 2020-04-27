@@ -41,7 +41,8 @@ object Scala {
             RawParameterType(rawType, rawFormat),
             true,
             None,
-            false
+            false,
+            None
           )
       }
   }

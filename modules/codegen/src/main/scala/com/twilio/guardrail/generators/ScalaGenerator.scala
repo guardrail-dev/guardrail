@@ -205,9 +205,9 @@ object ScalaGenerator {
                   def addArg(key: String, v: T): String = f(key)(v)
                 }
 
-                implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
-                implicit def addArgIterable[T](implicit ev: AddArg[T]): AddArg[Iterable[T]] = build[Iterable[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
-                implicit def addArgOption[T](implicit ev: AddArg[T]): AddArg[Option[T]] = build[Option[T]](key => v => v.map(ev.addArg(key, _)).getOrElse(""))
+                implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(ev.addArg(key, _)).mkString("&"))
+                implicit def addArgIterable[T](implicit ev: AddArg[T]): AddArg[Iterable[T]] = build[Iterable[T]](key => vs => vs.map(ev.addArg(key, _)).mkString("&"))
+                implicit def addArgOption[T](implicit ev: AddArg[T]): AddArg[Option[T]] = build[Option[T]](key => v => v.fold("")(ev.addArg(key, _)))
               }
 
               abstract class AddPath[T] {
@@ -393,7 +393,8 @@ object ScalaGenerator {
             ),
             List.empty[Stat]
           )
-        case ClassDefinition(_, _, _, cls, staticDefns, _) =>
+
+        case ClassDefinition(_, rawType, _, _, cls, staticDefns, _, _) =>
           (
             List(
               WriteTree(

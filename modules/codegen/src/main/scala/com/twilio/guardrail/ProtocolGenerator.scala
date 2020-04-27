@@ -37,7 +37,8 @@ case object DataVisible  extends RedactionBehaviour
 case object DataRedacted extends RedactionBehaviour
 
 case class ProtocolParameter[L <: LA](
-    term: L#MethodParameter,
+    param: L#MethodParameter,
+    term: L#TermName,
     name: RawParameterName,
     dep: Option[L#TermName],
     rawType: RawParameterType,
@@ -354,6 +355,7 @@ object ProtocolGenerator {
       tpe                         <- parseTypeName(clsName.last)
       fullType                    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns                 <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
+      fieldProjections = params.map(param => (param.name, param.term, param.param))
       result <- if (parents.isEmpty && props.isEmpty) (Left("Entity isn't model"): Either[String, ClassDefinition[L]]).pure[F]
       else {
         val nestedClasses = nestedDefinitions.flatTraverse {
@@ -374,7 +376,10 @@ object ProtocolGenerator {
         }
         nestedClasses.map { v =>
           val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ v)
-          tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, fullType, defn, finalStaticDefns, parents))
+          val rawType          = RawParameterType(model.downField("type", _.getType()).get, model.downField("format", _.getFormat()).get)
+          tpe
+            .toRight("Empty entity name")
+            .map(ClassDefinition[L](clsName.last, rawType, _, fullType, defn, finalStaticDefns, parents, fieldProjections = fieldProjections))
         }
       }
     } yield result
@@ -463,6 +468,7 @@ object ProtocolGenerator {
               val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
               val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
               val mergedParameter = ProtocolParameter[L](
+                a.param,
                 a.term,
                 a.name,
                 a.dep,

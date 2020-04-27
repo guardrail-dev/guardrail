@@ -52,14 +52,14 @@ object JacksonGenerator {
 
     params
       .map({ param =>
-        val parameterType = if (param.term.getType.isOptional) {
-          param.term.getType.containedType.unbox
+        val parameterType = if (param.param.getType.isOptional) {
+          param.param.getType.containedType.unbox
         } else {
-          param.term.getType.unbox
+          param.param.getType.unbox
         }
         val defaultValue = defaultValueToExpression(param.defaultValue)
 
-        ParameterTerm(param.name.value, param.term.getNameAsString, param.term.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction)
+        ParameterTerm(param.name.value, param.param.getNameAsString, param.param.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction)
       })
       .partition(
         pt => !pt.fieldType.isOptional && pt.defaultValue.isEmpty
@@ -405,7 +405,7 @@ object JacksonGenerator {
           .map(_.toMap)
       } yield {
         val params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(
-                param => discriminatorNames.contains(param.term.getName.getIdentifier) || parentParamNames.contains(param.term.getName.getIdentifier)
+                param => discriminatorNames.contains(param.param.getName.getIdentifier) || parentParamNames.contains(param.param.getName.getIdentifier)
               )
         val (requiredTerms, optionalTerms) = sortParams(params)
         val terms                          = requiredTerms ++ optionalTerms
@@ -798,7 +798,7 @@ object JacksonGenerator {
         val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
         for {
           tpeClassDep <- meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
+            case SwaggerUtil.Resolved(declType, classDep, _, _, _, _) =>
               Target.pure((declType, classDep))
             case SwaggerUtil.Deferred(tpeName) =>
               val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
@@ -853,7 +853,17 @@ object JacksonGenerator {
             )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
           term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
           dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
-        } yield ProtocolParameter[JavaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
+        } yield ProtocolParameter[JavaLanguage](
+          term,
+          new Name(argName),
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          defaultValue
+        )
       }
 
     def encodeModel(
@@ -889,7 +899,7 @@ object JacksonGenerator {
     ) =
       for {
         result <- arr match {
-          case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+          case SwaggerUtil.Resolved(tpe, dep, default, _, _, _) => Target.pure(tpe)
           case SwaggerUtil.Deferred(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(Target.pure(_)), UserError(s"Unresolved reference ${tpeName}")).flatten
           case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
@@ -968,7 +978,7 @@ object JacksonGenerator {
         val (parentRequiredTerms, parentOptionalTerms) = sortParams(parentParams)
         val parentTerms                                = parentRequiredTerms ++ parentOptionalTerms
         val params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(
-                param => parentParamNames.contains(param.term.getName.getIdentifier)
+                param => parentParamNames.contains(param.param.getName.getIdentifier)
               )
         val (requiredTerms, optionalTerms) = sortParams(params)
         val terms                          = requiredTerms ++ optionalTerms

@@ -10,6 +10,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
@@ -32,16 +33,20 @@ class LanguageParameter[L <: LA] private[generators] (
     val rawType: RawParameterType,
     val required: Boolean,
     val hashAlgorithm: Option[String],
-    val isFile: Boolean
+    val isFile: Boolean,
+    val fieldProjections: Option[NonEmptyList[(RawParameterName, L#TermName, L#MethodParameter)]]
 ) {
   override def toString: String =
     s"LanguageParameter($in, $param, $paramName, $argName, $argType)"
 
   def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): LanguageParameter[L] =
-    new LanguageParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
+    new LanguageParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile, fieldProjections)
 
   def withParamName(newParamName: L#TermName): LanguageParameter[L] =
-    new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
+    new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile, fieldProjections)
+
+  def withFieldProjections(newFieldProjections: NonEmptyList[(RawParameterName, L#TermName, L#MethodParameter)]): LanguageParameter[L] =
+    new LanguageParameter[L](in, param, paramName, argName, argType, rawType, required, hashAlgorithm, isFile, Some(newFieldProjections))
 }
 object LanguageParameter {
   def unapply[L <: LA](param: LanguageParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
@@ -81,7 +86,7 @@ object LanguageParameter {
           customSchemaTypeName <- schema.get.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
           customTypeName = customSchemaTypeName.orElse(customParamTypeName)
           res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get, Nil))
         } yield res
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
@@ -103,9 +108,9 @@ object LanguageParameter {
     }
 
     log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                                     <- paramMeta(parameter)
-      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+      _                                                                                          <- log.debug(parameter.unwrapTracker.showNotNull)
+      meta                                                                                       <- paramMeta(parameter)
+      SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat, fieldProjections) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = Option[java.lang.Boolean](parameter.get.getRequired()).fold(false)(identity)
       declType <- if (!required) {
@@ -151,7 +156,8 @@ object LanguageParameter {
         RawParameterType(rawType, rawFormat),
         required,
         FileHashAlgorithm(parameter.get),
-        isFileType
+        isFileType,
+        NonEmptyList.fromList(fieldProjections)
       )
     })
   }
@@ -177,7 +183,8 @@ object LanguageParameter {
                   param.rawType,
                   param.required,
                   param.hashAlgorithm,
-                  param.isFile
+                  param.isFile,
+                  param.fieldProjections
                 )
               }
             }

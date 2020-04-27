@@ -67,7 +67,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
 
   test("All types should be dereferenced") {
     val (
-      ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, _, cls, staticDefns, _, _) :: _, _, _, _),
       Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _, Nil),
       _
     )             = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

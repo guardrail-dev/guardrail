@@ -152,7 +152,7 @@ object CirceProtocolGenerator {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
+          argName = Term.Name(if (needCamelSnakeConversion) name.toCamelCase else name)
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
@@ -165,10 +165,10 @@ object CirceProtocolGenerator {
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
-            case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
+            case SwaggerUtil.Resolved(declType, classDep, _, Some(rawType), rawFormat, _) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
               // assume that binary data are represented as a string. allow users to override.
               (t"String", classDep)
-            case SwaggerUtil.Resolved(declType, classDep, _, _, _) =>
+            case SwaggerUtil.Resolved(declType, classDep, _, _, _, _) =>
               (declType, classDep)
             case SwaggerUtil.Deferred(tpeName) =>
               val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -191,9 +191,19 @@ object CirceProtocolGenerator {
             .fold[(Type, Option[Term])](
               (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
             )(Function.const((tpe, defaultValue)) _)
-          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+          term = param"${argName}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](
+          term,
+          argName,
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          finalDefaultValue
+        )
       }
 
     def renderDTOClass(
@@ -209,14 +219,14 @@ object CirceProtocolGenerator {
         None
       }
       val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-        param => discriminatorNames.contains(param.term.name.value)
+        param => discriminatorNames.contains(param.param.name.value)
       )
 
-      val terms = params.map(_.term)
+      val terms = params.map(_.param)
 
       val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
         def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
-          case param if param.dataRedaction == DataVisible => q"${Term.Name(param.term.name.value)}.toString()"
+          case param if param.dataRedaction == DataVisible => q"${Term.Name(param.param.name.value)}.toString()"
           case _                                           => Lit.String("[redacted]")
         }
 
@@ -261,7 +271,7 @@ object CirceProtocolGenerator {
         /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
         if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
-            .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
+            .map(param => (Lit.String(param.name), Term.Name(param.param.name.value)))
             .to[List]
             .unzip
           val List(name)  = names
@@ -273,7 +283,7 @@ object CirceProtocolGenerator {
           )
         } else if (paramCount >= 2 && paramCount <= 22) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
-            .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
+            .map(param => (Lit.String(param.name), Term.Name(param.param.name.value)))
             .to[List]
             .unzip
           val tupleFields = fields
@@ -293,7 +303,7 @@ object CirceProtocolGenerator {
           )
         } else */ {
           val pairs: List[Term.Tuple] = params
-            .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)""")
+            .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.param.name.value)}.asJson)""")
             .to[List]
           Option(
             q"""
@@ -342,7 +352,7 @@ object CirceProtocolGenerator {
               .traverse({
                 case (param, idx) =>
                   for {
-                    rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
+                    rawTpe <- Target.fromOption(param.param.decltpe, UserError("Missing type"))
                     tpe <- rawTpe match {
                       case tpe: Type => Target.pure(tpe)
                       case x         => Target.raiseUserError(s"Unsure how to map ${x.structure}, please report this bug!")
@@ -407,7 +417,7 @@ object CirceProtocolGenerator {
     def extractArrayType(arr: SwaggerUtil.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
       for {
         result <- arr match {
-          case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+          case SwaggerUtil.Resolved(tpe, dep, default, _, _, _) => Target.pure(tpe)
           case SwaggerUtil.Deferred(tpeName) =>
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
           case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
@@ -556,7 +566,7 @@ object CirceProtocolGenerator {
       for {
         testTerms <- (
           params
-            .map(_.term)
+            .map(_.param)
             .filter(_.name.value != discriminator.propertyName)
             .traverse { t =>
               for {
