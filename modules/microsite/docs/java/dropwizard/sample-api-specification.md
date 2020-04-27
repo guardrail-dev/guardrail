@@ -61,7 +61,7 @@ components:                                          # reusable sections of the 
                                                      # camelCase identifier.
           type: string                               # One of the primitive types supported in the OpenAPI specification.
         user_addresses:                              # Similar to `id`, though `user_addresses` can be safely transformed into
-                                                     # `userAddress`, so this is done to expose idiomatic Scala. The underlying
+                                                     # `userAddress`, so this is done to expose idiomatic Java. The underlying
                                                      # marshallers and unmarshallers maintain this mapping for you though,
                                                      # so no chance of protocol violations.
           $ref: "#/components/schemas/UserAddresses" # Ensures that the type of `userAddress` will be `List<UserAddress>`
