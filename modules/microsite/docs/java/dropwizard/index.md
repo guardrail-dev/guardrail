@@ -22,6 +22,6 @@ Table of Contents
 Java Dropwizard
 ---------------
 
-Support for Dropwizard 1.3 has been available since guardrail v0.45.0.o
+Support for Dropwizard 1.3 has been available since guardrail v0.45.0.
 
 Using guardrail you can generate server definions and http clients.
