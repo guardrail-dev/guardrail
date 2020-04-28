@@ -6,7 +6,7 @@ import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.{ Node, NodeList }
+import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
@@ -223,7 +223,7 @@ object DropwizardServerGenerator {
 
   object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def getExtraImports(tracing: Boolean) =
+    override def getExtraImports(tracing: Boolean): Target[List[ImportDeclaration]] =
       List(
         "javax.inject.Inject",
         "javax.validation.constraints.NotNull",
@@ -252,21 +252,21 @@ object DropwizardServerGenerator {
         "org.slf4j.LoggerFactory"
       ).traverse(safeParseRawImport)
 
-    def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
+    override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[JavaLanguage]]] =
       if (tracing) {
         Target.raiseUserError(s"Tracing is not yet supported by this framework")
       } else {
         Target.pure(Option.empty)
       }
 
-    def generateRoutes(
+    override def generateRoutes(
         tracing: Boolean,
         resourceName: String,
         basePath: Option[String],
         routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, LanguageParameters[JavaLanguage], Responses[JavaLanguage])],
         protocolElems: List[StrictProtocolElems[JavaLanguage]],
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
-    ) =
+    ): Target[RenderedRoutes[JavaLanguage]] =
       for {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
         handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
@@ -593,18 +593,18 @@ object DropwizardServerGenerator {
         RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
       }
 
-    def getExtraRouteParams(tracing: Boolean) =
+    override def getExtraRouteParams(tracing: Boolean): Target[List[Parameter]] =
       if (tracing) {
         Target.raiseUserError(s"Tracing is not yet supported by this framework")
       } else {
         Target.pure(List.empty)
       }
 
-    def generateResponseDefinitions(
+    override def generateResponseDefinitions(
         operationId: String,
         responses: Responses[JavaLanguage],
         protocolElems: List[StrictProtocolElems[JavaLanguage]]
-    ) =
+    ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       for {
         abstractResponseClassName <- safeParseSimpleName(s"${operationId.capitalize}Response").map(_.asString)
         abstractResponseClassType <- safeParseClassOrInterfaceType(abstractResponseClassName)
@@ -620,10 +620,10 @@ object DropwizardServerGenerator {
         abstractResponseClass :: Nil
       }
 
-    def generateSupportDefinitions(
+    override def generateSupportDefinitions(
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
-    ) =
+    ): Target[List[SupportDefinition[JavaLanguage]]] =
       for {
         annotationImports <- List(
           "java.lang.annotation.ElementType",
@@ -657,7 +657,7 @@ object DropwizardServerGenerator {
         )
       }
 
-    def renderClass(
+    override def renderClass(
         className: String,
         handlerName: String,
         classAnnotations: List[com.github.javaparser.ast.expr.AnnotationExpr],
@@ -665,17 +665,17 @@ object DropwizardServerGenerator {
         extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
         supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
-    ) =
+    ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       safeParseSimpleName(className) >>
           safeParseSimpleName(handlerName) >>
           Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
 
-    def renderHandler(
+    override def renderHandler(
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
         handlerDefinitions: List[com.github.javaparser.ast.stmt.Statement],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
-    ) = {
+    ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
       sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)
       Target.pure(handlerClass)
