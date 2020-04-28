@@ -352,7 +352,7 @@ object AkkaHttpServerGenerator {
     ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
         _ <- if (params.exists(_.isFile) && !consumes.exists(_.unwrapTracker == MultipartFormData)) {
-          Target.log.warning("type: file detected, automatically enabling multipart/form-data handling")
+          Target.log.warning(s"type: file detected, automatically enabling multipart/form-data handling (${consumes.showHistory})")
         } else {
           Target.pure(())
         }

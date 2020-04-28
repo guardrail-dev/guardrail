@@ -15,13 +15,13 @@ object AkkaHttpHelper {
     }
 
     for {
-      unmarshallers <- consumes.unwrapTracker.toList.flatTraverse {
-        case ApplicationJson => Target.pure(List(q"structuredJsonEntityUnmarshaller"))
-        case TextPlain       => Target.pure(List(q"stringyJsonEntityUnmarshaller"))
-        case contentType     => Target.log.warning(s"Unable to generate decoder for ${contentType}").map(_ => List.empty[Term.Name])
+      unmarshallers <- consumes.indexedDistribute.toList.flatTraverse {
+        case Tracker(_, ApplicationJson)   => Target.pure(List(q"structuredJsonEntityUnmarshaller"))
+        case Tracker(_, TextPlain)         => Target.pure(List(q"stringyJsonEntityUnmarshaller"))
+        case Tracker(history, contentType) => Target.log.warning(s"Unable to generate decoder for ${contentType} (${history})").map(_ => List.empty[Term.Name])
       }
       unmarshaller <- unmarshallers match {
-        case Nil      => Target.raiseUserError(s"No decoders available")
+        case Nil      => Target.raiseUserError(s"No decoders available (${consumes.showHistory})")
         case x :: Nil => Target.pure(x)
         case xs       => Target.pure(q"Unmarshaller.firstOf(..${xs})")
       }
