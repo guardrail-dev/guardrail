@@ -1,6 +1,7 @@
 package com.twilio.guardrail.core
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
+import cats._
 import cats.data._
 import cats.implicits._
 import com.twilio.guardrail.{ Target, UserError }
@@ -83,16 +84,19 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
       tracker.unwrapTracker.fold(x => a(Tracker.cloneHistory(tracker, x)), x => b(Tracker.cloneHistory(tracker, x)))
   }
 
+  implicit class FlatSyntax[F[_]: FlatMap: Applicative, A](tracker: Tracker[F[A]]) {
+    class FlatDownFieldPartiallyApplied[C](val dummy: Boolean = true) {
+      def apply[B](label: String, f: A => B)(implicit ev: Tracker.Convincer[F[B], C], M: MonoidK[F]): Tracker[C] =
+        new Tracker(ev(tracker.unwrapTracker.flatMap(x => Option(f(x)).fold(M.empty[B])(_.pure[F]))), tracker.history :+ s".${label}")
+    }
+    def flatDownField[C]: FlatDownFieldPartiallyApplied[C] = new FlatDownFieldPartiallyApplied()
+  }
+
   implicit class OptionSyntax[A](tracker: Tracker[Option[A]]) {
     def fold[B](default: => B)(f: Tracker[A] => B): B =
       tracker.unwrapTracker.fold(default)(x => f(Tracker.cloneHistory(tracker, x)))
     def orHistory: Either[Vector[String], Tracker[A]]      = tracker.indexedCosequence.toRight(tracker.history)
     def raiseErrorIfEmpty(err: String): Target[Tracker[A]] = Target.fromOption(tracker.indexedCosequence, UserError(s"${err} (${tracker.showHistory})"))
-    class FlatDownFieldPartiallyApplied[C](val dummy: Boolean = true) {
-      def apply[B](label: String, f: A => B)(implicit ev: Tracker.Convincer[Option[B], C]): Tracker[C] =
-        new Tracker(ev(tracker.get.flatMap(x => Option(f(x)))), tracker.history :+ s".${label}")
-    }
-    def flatDownField[C]: FlatDownFieldPartiallyApplied[C] = new FlatDownFieldPartiallyApplied()
   }
 
   implicit class RefineSyntax[A](tracker: Tracker[A]) {
