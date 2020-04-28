@@ -6,7 +6,7 @@ import scala.collection.JavaConverters._
 
 package object shims {
   implicit class OperationExt(operation: Operation) {
-    def consumes: Seq[String] =
+    def consumes: List[String] =
       for {
         body        <- Option(operation.getRequestBody()).toList
         content     <- Option(body.getContent()).toList
@@ -14,7 +14,7 @@ package object shims {
         if contentType != "*/*"
       } yield contentType
 
-    def produces: Seq[String] =
+    def produces: List[String] =
       for {
         responses   <- Option(operation.getResponses()).toList
         response    <- responses.asScala.values
