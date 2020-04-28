@@ -169,7 +169,7 @@ object AkkaHttpClientGenerator {
           formDataParams: Option[Term],
           headerParams: Term,
           responses: Responses[ScalaLanguage],
-          produces: NonEmptyList[ContentType],
+          produces: Tracker[NonEmptyList[ContentType]],
           consumes: Seq[ContentType],
           tracing: Boolean
       )(
@@ -326,9 +326,14 @@ object AkkaHttpClientGenerator {
         // Placeholder for when more functions get logging
         _ <- Target.pure(())
 
-        produces = NonEmptyList
-          .fromList(operation.get.produces.toList.flatMap(ContentType.unapply(_)))
-          .getOrElse(NonEmptyList.one(ApplicationJson))
+        produces = operation
+          .downField("produces", _.produces)
+          .map(
+            xs =>
+              NonEmptyList
+                .fromList(xs.flatMap(ContentType.unapply(_)))
+                .getOrElse(NonEmptyList.one(ApplicationJson))
+          )
         consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
 
         headerArgs = parameters.headerParams
@@ -496,10 +501,10 @@ object AkkaHttpClientGenerator {
       Target.pure(NonEmptyList(Right(client), Nil))
     }
 
-    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[ContentType]): Target[List[Defn.Val]] =
+    def generateCodecs(methodName: String, responses: Responses[ScalaLanguage], produces: Tracker[NonEmptyList[ContentType]]): Target[List[Defn.Val]] =
       generateDecoders(methodName, responses, produces)
 
-    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: NonEmptyList[ContentType]): Target[List[Defn.Val]] =
+    def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Tracker[NonEmptyList[ContentType]]): Target[List[Defn.Val]] =
       (for {
         resp <- responses.value
         tpe  <- resp.value.map(_._1).toList
@@ -509,5 +514,4 @@ object AkkaHttpClientGenerator {
         } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
       }).sequence
   }
-
 }

@@ -347,19 +347,19 @@ object AkkaHttpServerGenerator {
       override def toString(): String = s"Binding($value)"
     }
 
-    def formToAkka(consumes: NonEmptyList[ContentType], operationId: String)(
+    def formToAkka(consumes: Tracker[NonEmptyList[ContentType]], operationId: String)(
         params: List[LanguageParameter[ScalaLanguage]]
     ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
-        _ <- if (params.exists(_.isFile) && !consumes.exists(_ == MultipartFormData)) {
+        _ <- if (params.exists(_.isFile) && !consumes.exists(_.unwrapTracker == MultipartFormData)) {
           Target.log.warning("type: file detected, automatically enabling multipart/form-data handling")
         } else {
           Target.pure(())
         }
 
         hasFile              = params.exists(_.isFile)
-        urlencoded           = consumes.exists(_ == UrlencodedFormData)
-        multipart            = consumes.exists(_ == MultipartFormData)
+        urlencoded           = consumes.exists(_.unwrapTracker == UrlencodedFormData)
+        multipart            = consumes.exists(_.unwrapTracker == MultipartFormData)
         referenceAccumulator = q"fileReferences"
 
         result <- NonEmptyList
@@ -553,7 +553,7 @@ object AkkaHttpServerGenerator {
             } else (List.empty[Stat], term => term)
 
             for {
-              (handlers, unmarshallerTerms) <- consumes.distinct
+              (handlers, unmarshallerTerms) <- consumes.get.distinct
                 .traverse[(List[Stat], ?), Target[NonEmptyList[Term.Name]]]({
                   case MultipartFormData => {
                     val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
@@ -698,9 +698,14 @@ object AkkaHttpServerGenerator {
       for {
         _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
-        consumes = NonEmptyList
-          .fromList(operation.get.consumes.toList.flatMap(ContentType.unapply(_)))
-          .getOrElse(NonEmptyList.one(ApplicationJson))
+        consumes = operation
+          .downField("consumes", _.consumes)
+          .map(
+            xs =>
+              NonEmptyList
+                .fromList(xs.flatMap(ContentType.unapply(_)))
+                .getOrElse(NonEmptyList.one(ApplicationJson))
+          )
         operationId <- operation
           .downField("operationId", _.getOperationId())
           .map(_.map(splitOperationParts).map(_._2))
@@ -817,14 +822,14 @@ object AkkaHttpServerGenerator {
         operationId: String,
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
-        consumes: NonEmptyList[ContentType]
+        consumes: Tracker[NonEmptyList[ContentType]]
     ): Target[List[Defn.Val]] =
       generateDecoders(operationId, bodyArgs, consumes)
 
     def generateDecoders(
         operationId: String,
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
-        consumes: NonEmptyList[ContentType]
+        consumes: Tracker[NonEmptyList[ContentType]]
     ): Target[List[Defn.Val]] =
       bodyArgs.toList.traverse {
         case LanguageParameter(_, _, _, _, argType) =>
