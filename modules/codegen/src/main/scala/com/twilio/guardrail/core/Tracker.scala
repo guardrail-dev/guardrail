@@ -152,4 +152,5 @@ object Tracker extends HighPriorityTrackerEvidence with HighPriorityTrackerSynta
 
   def apply(swagger: OpenAPI): Tracker[OpenAPI]                     = new Tracker(swagger, Vector.empty)
   def cloneHistory[A, B](tracker: Tracker[A], value: B): Tracker[B] = new Tracker(value, tracker.history)
+  def unapply[A](instance: Tracker[A]): Some[(String, A)]           = Some((instance.showHistory, instance.unwrapTracker))
 }
