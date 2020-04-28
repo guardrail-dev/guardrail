@@ -12,9 +12,9 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import scala.meta.Tree
 import org.scalactic.Equality
-import org.scalatest.EitherValues
+import org.scalatest.{ EitherValues, OptionValues }
 
-trait SwaggerSpecRunner extends EitherValues {
+trait SwaggerSpecRunner extends EitherValues with OptionValues {
   implicit def TreeEquality[A <: Tree]: Equality[A] =
     new Equality[A] {
       def areEqual(a: A, b: Any): Boolean =

@@ -6,6 +6,7 @@ import com.twilio.guardrail.{ Context, Server, Servers }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import support.SwaggerSpecRunner
 
 class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
@@ -53,9 +54,10 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
       .collectFirst({
         case method: MethodDeclaration if method.getNameAsString == "foo" => method
       })
-      .get
+      .value
       .getAnnotationByName("Produces")
-      .get
+      .asScala
+      .value
       .asSingleMemberAnnotationExpr()
       .getMemberValue
       .toString mustBe "MediaType.APPLICATION_JSON"
