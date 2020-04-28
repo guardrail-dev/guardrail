@@ -287,21 +287,33 @@ object DropwizardServerGenerator {
                 method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
               }
 
-              val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
+              val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
               val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
               consumes
                 .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                 .foreach(method.addAnnotation)
-              val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
-              val bestSuccessResponse = responses.value
-                .filter(_.statusCode / 100 == 2)
-                .find(_.value.isDefined)
-              val produces = bestSuccessResponse.flatMap(
-                DropwizardHelpers.getBestProduces(operationId, allProduces, _)
-              )
-              produces
-                .map(p => new SingleMemberAnnotationExpr(new Name("Produces"), p.toJaxRsAnnotationName))
-                .foreach(method.addAnnotation)
+
+              val allProduces = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
+              NonEmptyList
+                .fromList(
+                  responses.value
+                    .flatMap(DropwizardHelpers.getBestProduces(operationId, allProduces, _))
+                    .distinct
+                    .map(_.toJaxRsAnnotationName)
+                )
+                .foreach(
+                  producesExprs =>
+                    method.addAnnotation(
+                      new SingleMemberAnnotationExpr(
+                        new Name("Produces"),
+                        producesExprs.toList match {
+                          case singleProduces :: Nil => singleProduces
+                          case manyProduces          => new ArrayInitializerExpr(manyProduces.toNodeList)
+                        }
+                      )
+                    )
+                )
+
               def transformJsr310Params(parameter: Parameter): Parameter = {
                 val isOptional = parameter.getType.isOptional
                 val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
