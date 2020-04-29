@@ -486,12 +486,12 @@ object ScalaGenerator {
       )
     }
 
-    def wrapToObject(name: scala.meta.Term.Name, imports: List[scala.meta.Import], definitions: List[scala.meta.Defn]): Target[scala.meta.Defn.Object] =
-      Target.pure(q"""
+    def wrapToObject(name: scala.meta.Term.Name, imports: List[scala.meta.Import], definitions: List[scala.meta.Defn]): Target[Option[scala.meta.Defn.Object]] =
+      Target.pure(Some(q"""
              object $name {
                  ..$imports
                  ..$definitions
              }
-           """)
+           """))
   }
 }

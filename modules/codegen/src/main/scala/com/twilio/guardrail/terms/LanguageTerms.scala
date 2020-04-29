@@ -130,7 +130,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       server: Server[L]
   ): F[List[WriteTree]]
 
-  def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): F[L#ObjectDefinition]
+  def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): F[Option[L#ObjectDefinition]]
 
   def copy(
       newMonadF: Monad[F] = MonadF,
@@ -209,7 +209,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       ) => F[(List[WriteTree], List[L#Statement])] = writeProtocolDefinition _,
       newWriteClient: (Path, List[String], List[L#Import], Option[L#TermName], Option[List[String]], Client[L]) => F[List[WriteTree]] = writeClient _,
       newWriteServer: (Path, List[String], List[L#Import], Option[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
-      newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[L#ObjectDefinition] = wrapToObject _
+      newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = wrapToObject _
   ) = new LanguageTerms[L, F] {
     def MonadF                                                   = newMonadF
     def vendorPrefixes()                                         = newVendorPrefixes()
