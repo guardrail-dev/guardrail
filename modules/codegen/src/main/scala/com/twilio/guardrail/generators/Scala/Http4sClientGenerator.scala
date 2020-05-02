@@ -124,7 +124,7 @@ object Http4sClientGenerator {
           def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
             val lifter = tpe match {
               case t"Vector[$_]" => liftVector _
-              case _               => liftTerm _
+              case _             => liftTerm _
             }
             q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
           }
@@ -132,8 +132,8 @@ object Http4sClientGenerator {
           val lifter: Term.Param => (Term, RawParameterName) => Term = {
             case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
             case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
-            case param"$_: Vector[$_]"      => liftVector _
-            case param"$_: Vector[$_] = $_" => liftVector _
+            case param"$_: Vector[$_]"        => liftVector _
+            case param"$_: Vector[$_] = $_"   => liftVector _
             case _                            => liftTerm _
           }
 

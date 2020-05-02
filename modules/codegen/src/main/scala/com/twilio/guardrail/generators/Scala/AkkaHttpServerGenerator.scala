@@ -619,8 +619,8 @@ object AkkaHttpServerGenerator {
                             val (realType, getFunc, transformResponse): (Type, Term.Name, (Term => Term)) = param.argType match {
                               case t"Vector[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
                               case t"Option[Vector[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
-                              case t"Option[$x]"           => (x, q"get", (x: Term) => x)
-                              case x                       => (x, q"get", (x: Term) => x)
+                              case t"Option[$x]"         => (x, q"get", (x: Term) => x)
+                              case x                     => (x, q"get", (x: Term) => x)
                             }
                             val unmarshaller = param.rawType.tpe match {
                               case Some("string") => q"jsonStringyUnmarshaller"

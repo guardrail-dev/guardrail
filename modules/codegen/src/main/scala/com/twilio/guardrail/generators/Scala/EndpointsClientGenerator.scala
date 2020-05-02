@@ -81,17 +81,17 @@ object EndpointsClientGenerator {
           def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
             val lifter = tpe match {
               case t"Vector[$_]" => liftVector _
-              case _               => liftTerm _
+              case _             => liftTerm _
             }
             q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
           }
 
           val lifter: Term.Param => (Term, RawParameterName) => Term = {
-            case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
-            case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
+            case param"$_: Option[$tpe]"      => liftOptionTerm(tpe) _
+            case param"$_: Option[$tpe] = $_" => liftOptionTerm(tpe) _
             case param"$_: Vector[$tpe]"      => liftVector _
             case param"$_: Vector[$tpe] = $_" => liftVector _
-            case _                              => liftTerm _
+            case _                            => liftTerm _
           }
 
           val args: List[Term] = parameters.map {
