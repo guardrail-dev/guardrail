@@ -58,9 +58,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def deletePet(
           respond: PetResource.deletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Vector[String])                                                    = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Vector[String])                                                          = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
@@ -121,8 +121,8 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def deletePet(
           respond: PetResource.deletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Vector[String])                                                    = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Vector[String])                                                          = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
@@ -162,7 +162,7 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
 
   test("round-trip: 404 response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.findPetsByStatusResponse] =
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Vector[String]): Future[PetResource.findPetsByStatusResponse] =
         Future.successful(respond.NotFound)
 
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
@@ -170,7 +170,7 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
           respond: PetResource.deletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Vector[String])                                                          = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
@@ -212,9 +212,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
         else Future.successful(respond.NotFound)
 
       def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet)                                                                               = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Vector[String])                                                    = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Vector[String])                                                          = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
@@ -253,9 +253,9 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def deletePet(
           respond: PetResource.deletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Vector[String])                                                    = ???
       def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Vector[String])                                                          = ???
       def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
