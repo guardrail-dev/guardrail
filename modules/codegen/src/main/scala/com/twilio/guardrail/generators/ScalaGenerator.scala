@@ -150,7 +150,7 @@ object ScalaGenerator {
     def longType(): Target[scala.meta.Type]                                                = Target.pure(t"Long")
     def integerType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"BigInt")
     def booleanType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"Boolean")
-    def arrayType(format: Option[String]): Target[scala.meta.Type]                         = Target.pure(t"Iterable[String]")
+    def arrayType(format: Option[String]): Target[scala.meta.Type]                         = Target.pure(t"Vector[String]")
     def fallbackType(tpe: Option[String], format: Option[String]): Target[scala.meta.Type] = Target.fromOption(tpe, UserError("Missing type")).map(Type.Name(_))
 
     def widenTypeName(tpe: scala.meta.Type.Name): Target[scala.meta.Type]             = Target.pure(tpe)
@@ -206,7 +206,7 @@ object ScalaGenerator {
                 }
 
                 implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
-                implicit def addArgIterable[T](implicit ev: AddArg[T]): AddArg[Iterable[T]] = build[Iterable[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
+                implicit def addArgVector[T](implicit ev: AddArg[T]): AddArg[Vector[T]] = build[Vector[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgOption[T](implicit ev: AddArg[T]): AddArg[Option[T]] = build[Option[T]](key => v => v.map(ev.addArg(key, _)).getOrElse(""))
               }
 

@@ -247,17 +247,17 @@ object AkkaHttpServerGenerator {
                 case _              => Option.empty
               }
             param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[Vector[$tpe]]" =>
                 multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[Vector[$tpe]] = $_" =>
                 multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe]" =>
                 optional(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe] = $_" =>
                 optional(argName.toLit)(tpe)(unmarshaller(tpe))
-              case param"$_: Iterable[$tpe]" =>
+              case param"$_: Vector[$tpe]" =>
                 multi(argName.toLit)(tpe)(unmarshaller(tpe))
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: Vector[$tpe] = $_" =>
                 multi(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: $tpe = $_" =>
                 required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
@@ -300,8 +300,8 @@ object AkkaHttpServerGenerator {
               """
               )
         },
-        arg => tpe => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => _ => Target.raiseUserError(s"Unsupported Vector[${arg}]"),
+        arg => tpe => _ => Target.raiseUserError(s"Unsupported Option[Vector[${arg}]]"),
         arg => {
           case t"String" =>
             _ => Target.pure(q"optionalHeaderValueByName(${arg})")
@@ -617,8 +617,8 @@ object AkkaHttpServerGenerator {
                             q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
                           } else {
                             val (realType, getFunc, transformResponse): (Type, Term.Name, (Term => Term)) = param.argType match {
-                              case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
-                              case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                              case t"Vector[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                              case t"Option[Vector[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
                               case t"Option[$x]"           => (x, q"get", (x: Term) => x)
                               case x                       => (x, q"get", (x: Term) => x)
                             }

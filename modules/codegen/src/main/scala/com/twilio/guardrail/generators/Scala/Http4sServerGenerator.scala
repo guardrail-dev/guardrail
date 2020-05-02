@@ -171,17 +171,17 @@ object Http4sServerGenerator {
         directives <- params.traverse[Target, T] {
           case scalaParam @ LanguageParameter(_, param, _, _, argType) =>
             param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[Vector[$tpe]]" =>
                 multiOpt(scalaParam)(tpe)
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[Vector[$tpe]] = $_" =>
                 multiOpt(scalaParam)(tpe)
               case param"$_: Option[$tpe]" =>
                 optional(scalaParam)(tpe)
               case param"$_: Option[$tpe] = $_" =>
                 optional(scalaParam)(tpe)
-              case param"$_: Iterable[$tpe]" =>
+              case param"$_: Vector[$tpe]" =>
                 multi(scalaParam)(tpe)
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: Vector[$tpe] = $_" =>
                 multi(scalaParam)(tpe)
               case _ => required(scalaParam)(argType)
             }
@@ -212,8 +212,8 @@ object Http4sServerGenerator {
               )
             )
         },
-        arg => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}"),
-        arg => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => _ => Target.raiseUserError(s"Unsupported Vector[${arg}"),
+        arg => _ => Target.raiseUserError(s"Unsupported Option[Vector[${arg}]]"),
         arg => {
           case t"String" => Target.pure(Param(None, None, q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)"))
           case tpe =>
@@ -675,7 +675,7 @@ object Http4sServerGenerator {
         .traverse({
           case LanguageParameter(_, param, _, argName, argType) =>
             val (queryParamMatcher, elemType) = param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[Vector[$tpe]]" =>
                 (q"""
                   object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
                     val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
@@ -684,7 +684,7 @@ object Http4sServerGenerator {
                     }
                   }
                  """, tpe)
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[Vector[$tpe]] = $_" =>
                 (q"""
                   object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
                     val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
@@ -705,14 +705,14 @@ object Http4sServerGenerator {
                     .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
                   tpe
                 )
-              case param"$_: Iterable[$tpe]" =>
+              case param"$_: Vector[$tpe]" =>
                 (q"""
                    object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
                      def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
                    }
                  """, tpe)
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: Vector[$tpe] = $_" =>
                 (q"""
                    object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}

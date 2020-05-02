@@ -116,12 +116,12 @@ object AkkaHttpClientGenerator {
           def liftTerm(tParamName: Term, tName: RawParameterName) =
             q"List((${tName.toLit}, Formatter.show($tParamName)))"
 
-          def liftIterable(tParamName: Term, tName: RawParameterName) =
+          def liftVector(tParamName: Term, tName: RawParameterName) =
             q"$tParamName.toList.map(x => (${tName.toLit}, Formatter.show(x)))"
 
           def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
             val lifter = tpe match {
-              case t"Iterable[$_]" => liftIterable _
+              case t"Vector[$_]" => liftVector _
               case _               => liftTerm _
             }
             q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
@@ -130,8 +130,8 @@ object AkkaHttpClientGenerator {
           val lifter: Term.Param => (Term, RawParameterName) => Term = {
             case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
             case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
-            case param"$_: Iterable[$tpe]"      => liftIterable _
-            case param"$_: Iterable[$tpe] = $_" => liftIterable _
+            case param"$_: Vector[$tpe]"      => liftVector _
+            case param"$_: Vector[$tpe] = $_" => liftVector _
             case x                              => liftTerm _
           }
 
