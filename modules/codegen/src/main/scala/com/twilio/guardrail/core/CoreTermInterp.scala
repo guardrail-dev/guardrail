@@ -24,6 +24,9 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import com.twilio.guardrail.generators.Framework
 import java.nio.file.Paths
+
+import com.twilio.guardrail.protocol.terms.protocol.PropertyRequirement
+
 import scala.util.control.NonFatal
 
 class CoreTermInterp[L <: LA](
@@ -128,6 +131,24 @@ class CoreTermInterp[L <: LA](
                 Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
               case (sofar :: already, "--module" :: value :: xs) =>
                 Continue((sofar.copy(context = sofar.context.copy(modules = sofar.context.modules :+ value)) :: already, xs))
+              case (sofar :: already, "--encoder-optional-property" :: value :: xs) =>
+                parseOptionalProperty("--encoder-optional-property", value).map { propertyRequirement =>
+                  Left(
+                    (
+                      sofar.copy(context = sofar.context.copy(propertyRequirement = sofar.context.propertyRequirement.copy(encoder = propertyRequirement))) :: already,
+                      xs
+                    )
+                  )
+                }
+              case (sofar :: already, "--decoder-optional-property" :: value :: xs) =>
+                parseOptionalProperty("--decoder-optional-property", value).map { propertyRequirement =>
+                  Left(
+                    (
+                      sofar.copy(context = sofar.context.copy(propertyRequirement = sofar.context.propertyRequirement.copy(decoder = propertyRequirement))) :: already,
+                      xs
+                    )
+                  )
+                }
               case (_, unknown) =>
                 debug("Unknown argument") >> Bail(UnknownArguments(unknown))
             }
@@ -135,6 +156,14 @@ class CoreTermInterp[L <: LA](
       })
     }
   }
+
+  private def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
+    value match {
+      case "required-nullable" => Target.pure(PropertyRequirement.RequiredNullable)
+      case "optional"          => Target.pure(PropertyRequirement.Optional)
+      case "legacy"            => Target.pure(PropertyRequirement.OptionalLegacy)
+      case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
+    }
 
   def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
     import scala.meta.parsers.Parsed

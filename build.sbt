@@ -85,6 +85,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue223.yaml"), "issues.issue223"),
   ExampleCase(sampleResource("issues/issue249.yaml"), "issues.issue249"),
   ExampleCase(sampleResource("issues/issue264.yaml"), "issues.issue264"),
+  ExampleCase(sampleResource("issues/issue315.yaml"), "issues.issue315"),
   ExampleCase(sampleResource("issues/issue325.yaml"), "issues.issue325"),
   ExampleCase(sampleResource("issues/issue351.yaml"), "issues.issue351"),
   ExampleCase(sampleResource("issues/issue357.yaml"), "issues.issue357"),

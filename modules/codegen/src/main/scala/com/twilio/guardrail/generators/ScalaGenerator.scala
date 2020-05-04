@@ -332,7 +332,7 @@ object ScalaGenerator {
         customImports: List[scala.meta.Import],
         packageObjectImports: List[scala.meta.Import],
         protocolImports: List[scala.meta.Import],
-        packageObjectContents: List[scala.meta.Defn.Val],
+        packageObjectContents: List[scala.meta.Stat],
         extraTypes: List[scala.meta.Stat]
     ): Target[Option[WriteTree]] =
       dtoComponents.traverse({

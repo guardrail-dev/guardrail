@@ -837,7 +837,10 @@ object JacksonGenerator {
             case None => Target.pure(None)
           }
           (finalDeclType, finalDefaultValue) <- Option(requirement)
-            .filterNot(req => req == PropertyRequirement.Optional || req == PropertyRequirement.OptionalNullable)
+            .filter {
+              case PropertyRequirement.Required => true
+              case _                            => false
+            }
             .fold[Target[(Type, Option[Expression])]](
               (
                 safeParseType(s"Optional<${tpe}>"),
@@ -853,7 +856,18 @@ object JacksonGenerator {
             )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
           term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
           dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
-        } yield ProtocolParameter[JavaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
+        } yield ProtocolParameter[JavaLanguage](
+          term,
+          finalDeclType,
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          requirement,
+          defaultValue
+        )
       }
 
     def encodeModel(

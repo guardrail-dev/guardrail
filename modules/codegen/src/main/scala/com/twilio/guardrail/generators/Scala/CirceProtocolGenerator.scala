@@ -185,15 +185,27 @@ object CirceProtocolGenerator {
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
               (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
           }
-
-          (finalDeclType, finalDefaultValue) = Option(requirement)
-            .filterNot(req => req == PropertyRequirement.Optional || req == PropertyRequirement.OptionalNullable)
-            .fold[(Type, Option[Term])](
-              (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-            )(Function.const((tpe, defaultValue)) _)
+          (finalDeclType, finalDefaultValue) = requirement match {
+            case PropertyRequirement.Required => tpe -> defaultValue
+            case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
+              t"Option[$tpe]" -> defaultValue.map(t => q"Option($t)").orElse(Some(q"None"))
+            case PropertyRequirement.OptionalNullable =>
+              t"Property[Option[$tpe]]" -> defaultValue.map(t => q"Property.Present($t)")
+          }
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](
+          term,
+          tpe,
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          requirement,
+          finalDefaultValue
+        )
       }
 
     def renderDTOClass(
@@ -292,12 +304,43 @@ object CirceProtocolGenerator {
             """
           )
         } else */ {
-          val pairs: List[Term.Tuple] = params
-            .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)""")
-            .to[List]
+          def encodeRequired(param: ProtocolParameter[ScalaLanguage]) =
+            q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)"""
+
+          def encodeOptionalRequirement(param: ProtocolParameter[ScalaLanguage], requirement: PropertyRequirement.OptionalRequirement) = requirement match {
+            case PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy =>
+              Right(encodeRequired(param))
+            case PropertyRequirement.Optional =>
+              Left(q"""a.${Term.Name(param.term.name.value)}.map(value => (${Lit.String(param.name.value)}, value.asJson))""")
+          }
+
+          val allFields: List[Either[Term.Apply, Term.Tuple]] = params.map { param =>
+            param.propertyRequirement match {
+              case PropertyRequirement.Required =>
+                Right(encodeRequired(param))
+              case PropertyRequirement.OptionalNullable =>
+                val name = Lit.String(param.name.value)
+                Left(q"a.${Term.Name(param.term.name.value)}.fold(ifAbsent = None, ifPresent = value => Some($name -> value.asJson))")
+              case requirement: PropertyRequirement.OptionalRequirement =>
+                encodeOptionalRequirement(param, requirement)
+              case PropertyRequirement.Configured(encoderRequirement, _) =>
+                encodeOptionalRequirement(param, encoderRequirement)
+            }
+          }
+
+          val pairs: List[Term.Tuple] = allFields.collect {
+            case Right(pair) => pair
+          }
+          val optional = allFields.collect {
+            case Left(field) => field
+          }
+          val simpleCase = q"Vector(..${pairs})"
+          val arg = optional.foldLeft[Term](simpleCase) { (acc, field) =>
+            q"$acc ++ $field"
+          }
           Option(
             q"""
-                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable(Vector(..${pairs})))
+                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable($arg))
               """
           )
         }
@@ -349,16 +392,34 @@ object CirceProtocolGenerator {
                     }
                   } yield {
                     val term = Term.Name(s"v$idx")
-                    val enum = if (param.emptyToNull == EmptyIsNull) {
-                      enumerator"""
-                  ${Pat.Var(term)} <- c.downField(${Lit
-                        .String(param.name.value)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
-                """
+                    val name = Lit.String(param.name.value)
+
+                    val downField = if (param.emptyToNull == EmptyIsNull) {
+                      q"c.downField($name).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j))"
                     } else {
-                      enumerator"""
-                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name.value)}).as[${tpe}]
-                """
+                      q"c.downField($name)"
                     }
+
+                    def decodeOptional(param: ProtocolParameter[ScalaLanguage], propertyRequirement: PropertyRequirement) = propertyRequirement match {
+                      case PropertyRequirement.OptionalLegacy =>
+                        q"$downField.as[${tpe}]"
+                      case PropertyRequirement.RequiredNullable =>
+                        q"$downField.as[Json].flatMap(_.as[${tpe}])"
+                      case PropertyRequirement.Optional =>
+                        q"$downField.as[Json].map(_.as[${param.baseType}].map(Some(_))).getOrElse(Right(None))"
+                    }
+
+                    val parseTerm = param.propertyRequirement match {
+                      case PropertyRequirement.Required =>
+                        q"$downField.as[${tpe}]"
+                      case PropertyRequirement.OptionalNullable =>
+                        q"$downField.as[Json].map(_.as[Option[${param.baseType}]].map(Property.Present(_))).getOrElse(Right(Property.Absent))"
+                      case requirement: PropertyRequirement.OptionalRequirement =>
+                        decodeOptional(param, requirement)
+                      case PropertyRequirement.Configured(_, decoderRequirement) =>
+                        decodeOptional(param, decoderRequirement)
+                    }
+                    val enum = enumerator"""${Pat.Var(term)} <- $parseTerm"""
                     (term, enum)
                   }
               })
@@ -461,7 +522,28 @@ object CirceProtocolGenerator {
           q"implicit val guardrailEncodeLocalDateTime: Encoder[LocalDateTime] = Encoder[LocalDateTime]",
           q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
           q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
-          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]"
+          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
+          q"""sealed trait Property[+T] {
+               def fold[R](ifAbsent: => R,
+                           ifPresent: T => R): R
+
+               def flatten[R](implicit ev: T <:< Option[R]): Option[R] = fold(None, identity[T])
+              }
+             """,
+          q"""
+              object Property {
+                case object Absent extends Property[Nothing] {
+                  def fold[R](ifAbsent: => R,
+                           ifValue: Nothing => R): R = ifAbsent
+                }
+                final case class Present[+T](value: T) extends Property[T] {
+                  def fold[R](ifAbsent: => R,
+                           ifPresent: T => R): R = ifPresent(value)
+                }
+
+
+              }
+             """
         )
       )
   }

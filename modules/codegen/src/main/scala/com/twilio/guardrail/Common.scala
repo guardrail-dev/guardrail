@@ -39,7 +39,7 @@ object Common {
 
     Sw.log.function("prepareDefinitions")(for {
       proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) <- ProtocolGenerator
-        .fromSwagger[L, F](swagger, dtoPackage)
+        .fromSwagger[L, F](swagger, dtoPackage, context.propertyRequirement)
 
       serverUrls = NonEmptyList.fromList(
         swagger

@@ -336,7 +336,7 @@ object JavaGenerator {
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],
         protocolImports: List[com.github.javaparser.ast.ImportDeclaration],
-        packageObjectContents: List[com.github.javaparser.ast.body.VariableDeclarator],
+        packageObjectContents: List[com.github.javaparser.ast.stmt.Statement],
         extraTypes: List[com.github.javaparser.ast.stmt.Statement]
     ): Target[Option[WriteTree]] =
       for {

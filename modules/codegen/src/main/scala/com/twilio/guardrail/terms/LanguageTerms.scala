@@ -102,7 +102,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       customImports: List[L#Import],
       packageObjectImports: List[L#Import],
       protocolImports: List[L#Import],
-      packageObjectContents: List[L#ValueDefinition],
+      packageObjectContents: List[L#Statement],
       extraTypes: List[L#Statement]
   ): F[Option[WriteTree]]
   def writeProtocolDefinition(
@@ -196,7 +196,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
           List[L#Import],
           List[L#Import],
           List[L#Import],
-          List[L#ValueDefinition],
+          List[L#Statement],
           List[L#Statement]
       ) => F[Option[WriteTree]] = writePackageObject _,
       newWriteProtocolDefinition: (
@@ -288,7 +288,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         customImports: List[L#Import],
         packageObjectImports: List[L#Import],
         protocolImports: List[L#Import],
-        packageObjectContents: List[L#ValueDefinition],
+        packageObjectContents: List[L#Statement],
         extraTypes: List[L#Statement]
     ) = newWritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
     def writeProtocolDefinition(
