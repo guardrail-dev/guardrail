@@ -169,10 +169,14 @@ class CoreTermInterp[L <: LA](
     val shouldWarn = propertyRequirement.encoder != propertyRequirement.decoder &&
         (propertyRequirement.encoder == PropertyRequirement.Optional || propertyRequirement.decoder == PropertyRequirement.Optional)
     if (shouldWarn) {
-      if(propertyRequirement.encoder == PropertyRequirement.Optional) {
-        Target.log.warning("'optional' --encoder-optional-property was used, which does not match value of provided (or default) --decoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`.")
-      }else {
-        Target.log.warning("'optional' --decoder-optional-property was used, which does not match value of provided (or default) --encoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`.")
+      if (propertyRequirement.encoder == PropertyRequirement.Optional) {
+        Target.log.warning(
+          "'optional' --encoder-optional-property was used, which does not match value of provided (or default) --decoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+        )
+      } else {
+        Target.log.warning(
+          "'optional' --decoder-optional-property was used, which does not match value of provided (or default) --encoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+        )
       }
     } else {
       Target.pure(())

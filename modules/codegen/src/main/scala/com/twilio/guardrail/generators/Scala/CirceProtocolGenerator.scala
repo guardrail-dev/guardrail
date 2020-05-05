@@ -535,7 +535,7 @@ object CirceProtocolGenerator {
                def fold[R](ifAbsent: => R,
                            ifPresent: T => R): R
 
-               def flatten[R](implicit ev: T <:< Option[R]): Option[R] = fold(None, identity[T])
+               def toOption: Option[T] = fold[Option[T]](None, Some(_))
               }
              """,
           q"""
@@ -549,6 +549,8 @@ object CirceProtocolGenerator {
                            ifPresent: T => R): R = ifPresent(value)
                 }
 
+                def fromOption[T](value: Option[T]): Property[T] =
+                  value.fold[Property[T]](Absent)(Present(_))
 
               }
              """

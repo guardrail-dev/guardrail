@@ -180,9 +180,9 @@ object ProtocolGenerator {
       isNullable <- schema.downField("nullable", _.getNullable)
     } yield (isRequired, isNullable) match {
       case (true, None)         => PropertyRequirement.Required
-      case (false, None)        => defaultPropertyRequirement
       case (true, Some(false))  => PropertyRequirement.Required
       case (true, Some(true))   => PropertyRequirement.RequiredNullable
+      case (false, None)        => defaultPropertyRequirement
       case (false, Some(false)) => PropertyRequirement.Optional
       case (false, Some(true))  => PropertyRequirement.OptionalNullable
     }).get
