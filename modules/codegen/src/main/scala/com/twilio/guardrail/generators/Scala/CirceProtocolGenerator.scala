@@ -187,6 +187,8 @@ object CirceProtocolGenerator {
           }
           (finalDeclType, finalDefaultValue) = requirement match {
             case PropertyRequirement.Required => tpe -> defaultValue
+            case PropertyRequirement.Optional =>
+              t"Property[$tpe]" -> defaultValue.map(t => q"Property.Present($t)").orElse(Some(q"Property.Absent"))
             case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
               t"Option[$tpe]" -> defaultValue.map(t => q"Option($t)").orElse(Some(q"None"))
             case PropertyRequirement.OptionalNullable =>
@@ -307,24 +309,24 @@ object CirceProtocolGenerator {
           def encodeRequired(param: ProtocolParameter[ScalaLanguage]) =
             q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)"""
 
-          def encodeOptionalRequirement(param: ProtocolParameter[ScalaLanguage], requirement: PropertyRequirement.OptionalRequirement) = requirement match {
-            case PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy =>
-              Right(encodeRequired(param))
-            case PropertyRequirement.Optional =>
-              Left(q"""a.${Term.Name(param.term.name.value)}.map(value => (${Lit.String(param.name.value)}, value.asJson))""")
+          def encodeOptional(param: ProtocolParameter[ScalaLanguage]) = {
+            val name = Lit.String(param.name.value)
+            q"a.${Term.Name(param.term.name.value)}.fold(ifAbsent = None, ifPresent = value => Some($name -> value.asJson))"
           }
 
           val allFields: List[Either[Term.Apply, Term.Tuple]] = params.map { param =>
+            val name = Lit.String(param.name.value)
             param.propertyRequirement match {
-              case PropertyRequirement.Required =>
+              case PropertyRequirement.Required | PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy =>
                 Right(encodeRequired(param))
-              case PropertyRequirement.OptionalNullable =>
-                val name = Lit.String(param.name.value)
-                Left(q"a.${Term.Name(param.term.name.value)}.fold(ifAbsent = None, ifPresent = value => Some($name -> value.asJson))")
-              case requirement: PropertyRequirement.OptionalRequirement =>
-                encodeOptionalRequirement(param, requirement)
-              case PropertyRequirement.Configured(encoderRequirement, _) =>
-                encodeOptionalRequirement(param, encoderRequirement)
+              case PropertyRequirement.Optional | PropertyRequirement.OptionalNullable =>
+                Left(encodeOptional(param))
+              case PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
+                Left(encodeOptional(param))
+              case PropertyRequirement.Configured(PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy, _) =>
+                Right(encodeRequired(param))
+              case PropertyRequirement.Configured(PropertyRequirement.Optional, _) =>
+                Left(q"""a.${Term.Name(param.term.name.value)}.map(value => (${Lit.String(param.name.value)}, value.asJson))""")
             }
           }
 
@@ -400,24 +402,30 @@ object CirceProtocolGenerator {
                       q"c.downField($name)"
                     }
 
-                    def decodeOptional(param: ProtocolParameter[ScalaLanguage], propertyRequirement: PropertyRequirement) = propertyRequirement match {
-                      case PropertyRequirement.OptionalLegacy =>
-                        q"$downField.as[${tpe}]"
-                      case PropertyRequirement.RequiredNullable =>
-                        q"$downField.as[Json].flatMap(_.as[${tpe}])"
-                      case PropertyRequirement.Optional =>
-                        q"$downField.as[Json].map(_.as[${param.baseType}].map(Some(_))).getOrElse(Right(None))"
-                    }
+                    def decodeOptional(tpe: Type) =
+                      q"$downField.as[Json].map(_.as[$tpe].map(Property.Present(_))).getOrElse(Right(Property.Absent))"
+
+                    def decodeOptionalRequirement(param: ProtocolParameter[ScalaLanguage], propertyRequirement: PropertyRequirement.OptionalRequirement) =
+                      propertyRequirement match {
+                        case PropertyRequirement.OptionalLegacy =>
+                          q"$downField.as[${tpe}]"
+                        case PropertyRequirement.RequiredNullable =>
+                          q"$downField.as[Json].flatMap(_.as[${tpe}])"
+                        case PropertyRequirement.Optional => // matched only where there is incosistency between encoder and decoder
+                          q"$downField.as[Json].map(_.as[${param.baseType}].map(Some(_))).getOrElse(Right(None))"
+                      }
 
                     val parseTerm = param.propertyRequirement match {
                       case PropertyRequirement.Required =>
                         q"$downField.as[${tpe}]"
                       case PropertyRequirement.OptionalNullable =>
-                        q"$downField.as[Json].map(_.as[Option[${param.baseType}]].map(Property.Present(_))).getOrElse(Right(Property.Absent))"
+                        decodeOptional(t"Option[${param.baseType}]")
+                      case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
+                        decodeOptional(param.baseType)
                       case requirement: PropertyRequirement.OptionalRequirement =>
-                        decodeOptional(param, requirement)
+                        decodeOptionalRequirement(param, requirement)
                       case PropertyRequirement.Configured(_, decoderRequirement) =>
-                        decodeOptional(param, decoderRequirement)
+                        decodeOptionalRequirement(param, decoderRequirement)
                     }
                     val enum = enumerator"""${Pat.Var(term)} <- $parseTerm"""
                     (term, enum)

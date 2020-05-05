@@ -27,7 +27,7 @@ class NullableTest extends FunSuite with Matchers with EitherValues {
     json.asObject.get.keys should not contain ("optional")
     json.as[TestObject].right.value should equal(defaultObj)
 
-    val obj2  = defaultObj.copy(optional = Some(constant))
+    val obj2  = defaultObj.copy(optional = Property.Present(constant))
     val json2 = obj2.asJson
     getKey(json2, "optional") should equal(Some(Json.fromString(constant)))
     json2.as[TestObject].right.value should equal(obj2)

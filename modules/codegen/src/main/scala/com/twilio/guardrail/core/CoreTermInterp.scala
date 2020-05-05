@@ -165,6 +165,20 @@ class CoreTermInterp[L <: LA](
       case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
     }
 
+  private def verifyPropertyRequirement(propertyRequirement: PropertyRequirement.Configured): Target[Unit] = {
+    val shouldWarn = propertyRequirement.encoder != propertyRequirement.decoder &&
+        (propertyRequirement.encoder == PropertyRequirement.Optional || propertyRequirement.decoder == PropertyRequirement.Optional)
+    if (shouldWarn) {
+      if(propertyRequirement.encoder == PropertyRequirement.Optional) {
+        Target.log.warning("'optional' --encoder-optional-property was used, which does not match value of provided (or default) --decoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`.")
+      }else {
+        Target.log.warning("'optional' --decoder-optional-property was used, which does not match value of provided (or default) --encoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`.")
+      }
+    } else {
+      Target.pure(())
+    }
+  }
+
   def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
     import scala.meta.parsers.Parsed
     implicit def parsed2Either[Z]: Parsed[Z] => Either[Parsed.Error, Z] = {
@@ -179,6 +193,7 @@ class CoreTermInterp[L <: LA](
       kind       = args.kind
       dtoPackage = args.dtoPackage
       context    = args.context
+      _ <- verifyPropertyRequirement(context.propertyRequirement)
       customImports <- args.imports
         .traverse(
           x =>

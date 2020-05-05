@@ -364,16 +364,14 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         object TestObject {
           implicit val encodeTestObject: Encoder.AsObject[TestObject] = {
             val readOnlyKeys = Set[String]()
-            Encoder.AsObject.instance[TestObject](a => JsonObject.fromIterable(Vector(("required", a.required.asJson), ("required-nullable", a.requiredNullable.asJson), ("legacy", a.legacy.asJson)) ++ a.optional.map(value => ("optional", value.asJson)) ++ a.optionalNullable.fold(ifAbsent = None, ifPresent = value => Some("optional-nullable" -> value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[TestObject](a => JsonObject.fromIterable(Vector(("required", a.required.asJson), ("required-nullable", a.requiredNullable.asJson), ("legacy", a.legacy.asJson)) ++ a.optional.fold(ifAbsent = None, ifPresent = value => Some("optional" -> value.asJson)) ++ a.optionalNullable.fold(ifAbsent = None, ifPresent = value => Some("optional-nullable" -> value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-          implicit val decodeTestObject: Decoder[TestObject] = new Decoder[TestObject] { final def apply(c: HCursor): Decoder.Result[TestObject] = for (v0 <- c.downField("required").as[String]; v1 <- c.downField("required-nullable").as[Json].flatMap(_.as[Option[String]]); v2 <- c.downField("optional").as[Json].map(_.as[String].map(Some(_))).getOrElse(Right(None)); v3 <- c.downField("optional-nullable").as[Json].map(_.as[Option[String]].map(Property.Present(_))).getOrElse(Right(Property.Absent)); v4 <- c.downField("legacy").as[Option[String]]) yield TestObject(v0, v1, v2, v3, v4) }
+          implicit val decodeTestObject: Decoder[TestObject] = new Decoder[TestObject] { final def apply(c: HCursor): Decoder.Result[TestObject] = for (v0 <- c.downField("required").as[String]; v1 <- c.downField("required-nullable").as[Json].flatMap(_.as[Option[String]]); v2 <- c.downField("optional").as[Json].map(_.as[String].map(Property.Present(_))).getOrElse(Right(Property.Absent)); v3 <- c.downField("optional-nullable").as[Json].map(_.as[Option[String]].map(Property.Present(_))).getOrElse(Right(Property.Absent)); v4 <- c.downField("legacy").as[Option[String]]) yield TestObject(v0, v1, v2, v3, v4) }
         }
        """
     val definition =
-      q"""case class TestObject(required: String, requiredNullable: Option[String] = None, optional: Option[String] = None, optionalNullable: Property[Option[String]], legacy: Option[String] = None)"""
+      q"""case class TestObject(required: String, requiredNullable: Option[String] = None, optional: Property[String] = Property.Absent, optionalNullable: Property[Option[String]], legacy: Option[String] = None)"""
 
-//    println(cls.syntax)
-//    println(cmp.syntax)
     cls.structure shouldEqual definition.structure
     cmp.structure shouldEqual companion.structure
   }
