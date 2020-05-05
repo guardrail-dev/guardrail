@@ -779,7 +779,7 @@ object JacksonGenerator {
         )
         .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
-    def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta[JavaLanguage]])(
+    def transformProperty(clsName: String, dtoPackage: List[String], needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta[JavaLanguage]])(
         name: String,
         property: Schema[_],
         meta: SwaggerUtil.ResolvedType[JavaLanguage],
@@ -872,6 +872,7 @@ object JacksonGenerator {
 
     def encodeModel(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]] = Nil
@@ -880,6 +881,7 @@ object JacksonGenerator {
 
     def decodeModel(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]] = Nil

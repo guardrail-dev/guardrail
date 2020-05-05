@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
+import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.{
   DataVisible,
@@ -19,7 +20,7 @@ import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
-import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType }
+import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -138,6 +139,7 @@ object CirceProtocolGenerator {
 
     def transformProperty(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[ScalaLanguage]]
     )(
@@ -185,14 +187,16 @@ object CirceProtocolGenerator {
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
               (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
           }
+          presence     <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
+          presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
           (finalDeclType, finalDefaultValue) = requirement match {
             case PropertyRequirement.Required => tpe -> defaultValue
             case PropertyRequirement.Optional =>
-              t"Property[$tpe]" -> defaultValue.map(t => q"Property.Present($t)").orElse(Some(q"Property.Absent"))
+              t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
             case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
               t"Option[$tpe]" -> defaultValue.map(t => q"Option($t)").orElse(Some(q"None"))
             case PropertyRequirement.OptionalNullable =>
-              t"Property[Option[$tpe]]" -> defaultValue.map(t => q"Property.Present($t)")
+              t"$presenceType[Option[$tpe]]" -> defaultValue.map(t => q"$presence.Present($t)")
           }
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
@@ -257,6 +261,7 @@ object CirceProtocolGenerator {
 
     def encodeModel(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
@@ -356,6 +361,7 @@ object CirceProtocolGenerator {
 
     def decodeModel(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
@@ -368,6 +374,7 @@ object CirceProtocolGenerator {
       val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
       val paramCount                = params.length
       for {
+        presence <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
         decVal <- if (paramCount == 0) {
           Target.pure(Option.empty[Term])
         } else
@@ -403,7 +410,7 @@ object CirceProtocolGenerator {
                     }
 
                     def decodeOptional(tpe: Type) =
-                      q"$downField.as[Json].map(_.as[$tpe].map(Property.Present(_))).getOrElse(Right(Property.Absent))"
+                      q"$downField.as[Json].map(_.as[$tpe].map($presence.Present(_))).getOrElse(Right($presence.Absent))"
 
                     def decodeOptionalRequirement(param: ProtocolParameter[ScalaLanguage], propertyRequirement: PropertyRequirement.OptionalRequirement) =
                       propertyRequirement match {
@@ -531,7 +538,7 @@ object CirceProtocolGenerator {
           q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
           q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
           q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
-          q"""sealed trait Property[+T] {
+          q"""sealed trait Presence[+T] {
                def fold[R](ifAbsent: => R,
                            ifPresent: T => R): R
 
@@ -539,18 +546,18 @@ object CirceProtocolGenerator {
               }
              """,
           q"""
-              object Property {
-                case object Absent extends Property[Nothing] {
+              object Presence {
+                case object Absent extends Presence[Nothing] {
                   def fold[R](ifAbsent: => R,
                            ifValue: Nothing => R): R = ifAbsent
                 }
-                final case class Present[+T](value: T) extends Property[T] {
+                final case class Present[+T](value: T) extends Presence[T] {
                   def fold[R](ifAbsent: => R,
                            ifPresent: T => R): R = ifPresent(value)
                 }
 
-                def fromOption[T](value: Option[T]): Property[T] =
-                  value.fold[Property[T]](Absent)(Present(_))
+                def fromOption[T](value: Option[T]): Presence[T] =
+                  value.fold[Presence[T]](Absent)(Present(_))
 
               }
              """

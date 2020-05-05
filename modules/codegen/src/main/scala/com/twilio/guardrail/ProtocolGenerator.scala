@@ -232,7 +232,7 @@ object ProtocolGenerator {
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
             defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
-            res <- transformProperty(hierarchy.name, needCamelSnakeConversion, concreteTypes)(
+            res <- transformProperty(hierarchy.name, dtoPackage, needCamelSnakeConversion, concreteTypes)(
               name,
               prop.get,
               resolvedType,
@@ -370,8 +370,8 @@ object ProtocolGenerator {
         defaultPropertyRequirement
       )
       defn        <- renderDTOClass(clsName.last, params, parents)
-      encoder     <- encodeModel(clsName.last, needCamelSnakeConversion, params, parents)
-      decoder     <- decodeModel(clsName.last, needCamelSnakeConversion, params, parents)
+      encoder     <- encodeModel(clsName.last, dtoPackage, needCamelSnakeConversion, params, parents)
+      decoder     <- decodeModel(clsName.last, dtoPackage, needCamelSnakeConversion, params, parents)
       tpe         <- parseTypeName(clsName.last)
       fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
@@ -453,7 +453,7 @@ object ProtocolGenerator {
             customType            <- SwaggerUtil.customTypeName(schema.get)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
-            parameter <- transformProperty(getClsName(name).last, needCamelSnakeConversion, concreteTypes)(
+            parameter <- transformProperty(getClsName(name).last, dtoPackage, needCamelSnakeConversion, concreteTypes)(
               name,
               schema.get,
               resolvedType,

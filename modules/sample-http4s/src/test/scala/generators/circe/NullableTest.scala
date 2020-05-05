@@ -6,7 +6,7 @@ import io.circe._
 import io.circe.syntax._
 class NullableTest extends FunSuite with Matchers with EitherValues {
   val constant   = "constant"
-  val defaultObj = TestObject(required = constant, optionalNullable = Property.Absent)
+  val defaultObj = TestObject(required = constant, optionalNullable = Presence.Absent)
 
   test("Nullability should be implemented correctly for required nullable") {
     val json = defaultObj.asJson
@@ -27,7 +27,7 @@ class NullableTest extends FunSuite with Matchers with EitherValues {
     json.asObject.get.keys should not contain ("optional")
     json.as[TestObject].right.value should equal(defaultObj)
 
-    val obj2  = defaultObj.copy(optional = Property.Present(constant))
+    val obj2  = defaultObj.copy(optional = Presence.Present(constant))
     val json2 = obj2.asJson
     getKey(json2, "optional") should equal(Some(Json.fromString(constant)))
     json2.as[TestObject].right.value should equal(obj2)
@@ -56,12 +56,12 @@ class NullableTest extends FunSuite with Matchers with EitherValues {
     json.asObject.get.keys should not contain ("optional-nullable")
     json.as[TestObject].right.value should equal(defaultObj)
 
-    val objPresent  = defaultObj.copy(optionalNullable = Property.Present(None))
+    val objPresent  = defaultObj.copy(optionalNullable = Presence.Present(None))
     val jsonPresent = objPresent.asJson
     getKey(jsonPresent, "optional-nullable") should equal(Some(Json.Null))
     jsonPresent.as[TestObject].right.value should equal(objPresent)
 
-    val objValue  = defaultObj.copy(optionalNullable = Property.Present(Some(constant)))
+    val objValue  = defaultObj.copy(optionalNullable = Presence.Present(Some(constant)))
     val jsonValue = objValue.asJson
     getKey(jsonValue, "optional-nullable") should equal(Some(Json.fromString(constant)))
     jsonValue.as[TestObject].right.value should equal(objValue)
