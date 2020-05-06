@@ -93,6 +93,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue405.yaml"), "issues.issue405"),
   ExampleCase(sampleResource("issues/issue440.yaml"), "issues.issue440"),
   ExampleCase(sampleResource("issues/issue455.yaml"), "issues.issue455"),
+  ExampleCase(sampleResource("issues/issue622.yaml"), "issues.issue622"),
   ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
   ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "support.PositiveLong"),
   // ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "support.PositiveLong"),

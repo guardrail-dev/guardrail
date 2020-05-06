@@ -205,8 +205,11 @@ object ScalaGenerator {
                   def addArg(key: String, v: T): String = f(key)(v)
                 }
 
-                implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
+                implicit def addArgSeq[T](implicit ev: AddArg[T]): AddArg[Seq[T]] = build[Seq[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
+                implicit def addArgIndexedSeq[T](implicit ev: AddArg[T]): AddArg[IndexedSeq[T]] = build[IndexedSeq[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgIterable[T](implicit ev: AddArg[T]): AddArg[Iterable[T]] = build[Iterable[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
+                implicit def addArgList[T](implicit ev: AddArg[T]): AddArg[List[T]] = build[List[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
+                implicit def addArgVector[T](implicit ev: AddArg[T]): AddArg[Vector[T]] = build[Vector[T]](key => vs => vs.map(v => ev.addArg(key, v)).mkString("&"))
                 implicit def addArgOption[T](implicit ev: AddArg[T]): AddArg[Option[T]] = build[Option[T]](key => v => v.map(ev.addArg(key, _)).getOrElse(""))
               }
 

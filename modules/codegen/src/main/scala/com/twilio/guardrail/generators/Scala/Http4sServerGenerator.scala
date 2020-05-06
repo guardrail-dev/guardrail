@@ -163,26 +163,34 @@ object Http4sServerGenerator {
 
     def directivesFromParams[T](
         required: LanguageParameter[ScalaLanguage] => Type => Target[T],
-        multi: LanguageParameter[ScalaLanguage] => Type => Target[T],
-        multiOpt: LanguageParameter[ScalaLanguage] => Type => Target[T],
+        multi: LanguageParameter[ScalaLanguage] => Type => (Term => Term) => Target[T],
+        multiOpt: LanguageParameter[ScalaLanguage] => Type => (Term => Term) => Target[T],
         optional: LanguageParameter[ScalaLanguage] => Type => Target[T]
     )(params: List[LanguageParameter[ScalaLanguage]]): Target[List[T]] =
       for {
         directives <- params.traverse[Target, T] {
           case scalaParam @ LanguageParameter(_, param, _, _, argType) =>
+            val containerTransformations = Map[String, Term => Term](
+              "Iterable"   -> identity _,
+              "List"       -> (term => q"$term.toList"),
+              "Vector"     -> (term => q"$term.toVector"),
+              "Seq"        -> (term => q"$term.toSeq"),
+              "IndexedSeq" -> (term => q"$term.toIndexedSeq")
+            )
+
             param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
-                multiOpt(scalaParam)(tpe)
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
-                multiOpt(scalaParam)(tpe)
+              case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
+                multiOpt(scalaParam)(tpe)(containerTransformations(container.syntax))
+              case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
+                multiOpt(scalaParam)(tpe)(containerTransformations(container.syntax))
               case param"$_: Option[$tpe]" =>
                 optional(scalaParam)(tpe)
               case param"$_: Option[$tpe] = $_" =>
                 optional(scalaParam)(tpe)
-              case param"$_: Iterable[$tpe]" =>
-                multi(scalaParam)(tpe)
-              case param"$_: Iterable[$tpe] = $_" =>
-                multi(scalaParam)(tpe)
+              case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
+                multi(scalaParam)(tpe)(containerTransformations(container.syntax))
+              case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
+                multi(scalaParam)(tpe)(containerTransformations(container.syntax))
               case _ => required(scalaParam)(argType)
             }
         }
@@ -212,8 +220,8 @@ object Http4sServerGenerator {
               )
             )
         },
-        arg => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}"),
-        arg => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => _ => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}"),
+        arg => _ => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" => Target.pure(Param(None, None, q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)"))
           case tpe =>
@@ -231,8 +239,8 @@ object Http4sServerGenerator {
       params =>
         directivesFromParams(
           arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)} @ _*)"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
           arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
         )(params).map {
           case Nil => Option.empty
@@ -263,36 +271,38 @@ object Http4sServerGenerator {
         },
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), q"${arg.paramName}.toList"))
+            _ => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), q"${arg.paramName}.toList"))
           case tpe =>
-            Target.pure(
-              Param(
-                None,
-                Some(
-                  (
-                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).traverse(Json.fromString(_).as[$tpe])",
-                    p"Some(Right(${Pat.Var(arg.paramName)}))"
-                  )
-                ),
-                arg.paramName
+            _ =>
+              Target.pure(
+                Param(
+                  None,
+                  Some(
+                    (
+                      q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).traverse(Json.fromString(_).as[$tpe])",
+                      p"Some(Right(${Pat.Var(arg.paramName)}))"
+                    )
+                  ),
+                  arg.paramName
+                )
               )
-            )
         },
         arg => {
-          case t"String" => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(_.toList)"))
+          case t"String" => _ => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(_.toList)"))
           case tpe =>
-            Target.pure(
-              Param(
-                None,
-                Some(
-                  (
-                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).map(Json.fromString(_).as[$tpe]).sequence.sequence",
-                    p"Right(${Pat.Var(arg.paramName)})"
-                  )
-                ),
-                arg.paramName
+            _ =>
+              Target.pure(
+                Param(
+                  None,
+                  Some(
+                    (
+                      q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).map(Json.fromString(_).as[$tpe]).sequence.sequence",
+                      p"Right(${Pat.Var(arg.paramName)})"
+                    )
+                  ),
+                  arg.paramName
+                )
               )
-            )
         },
         arg => {
           case t"String" =>
@@ -360,58 +370,60 @@ object Http4sServerGenerator {
               },
         arg =>
           elemType =>
-            if (arg.isFile) {
-              Target.pure(Param(None, None, q"multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body)"))
-            } else
-              elemType match {
-                case t"String" =>
-                  Target.pure(
-                    Param(
-                      Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
-                      ),
-                      None,
-                      arg.paramName
+            _ =>
+              if (arg.isFile) {
+                Target.pure(Param(None, None, q"multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body)"))
+              } else
+                elemType match {
+                  case t"String" =>
+                    Target.pure(
+                      Param(
+                        Some(
+                          enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
+                        ),
+                        None,
+                        arg.paramName
+                      )
                     )
-                  )
-                case tpe =>
-                  Target.pure(
-                    Param(
-                      Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
-                      ),
-                      None,
-                      arg.paramName
+                  case tpe =>
+                    Target.pure(
+                      Param(
+                        Some(
+                          enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                        ),
+                        None,
+                        arg.paramName
+                      )
                     )
-                  )
-              },
+                },
         arg =>
           elemType =>
-            if (arg.isFile) {
-              Target.pure(Param(None, None, q"Option(multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body)).filter(_.nonEmpty)"))
-            } else
-              elemType match {
-                case t"String" =>
-                  Target.pure(
-                    Param(
-                      Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence.map(Option(_).filter(_.nonEmpty))"
-                      ),
-                      None,
-                      arg.paramName
+            _ =>
+              if (arg.isFile) {
+                Target.pure(Param(None, None, q"Option(multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body)).filter(_.nonEmpty)"))
+              } else
+                elemType match {
+                  case t"String" =>
+                    Target.pure(
+                      Param(
+                        Some(
+                          enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence.map(Option(_).filter(_.nonEmpty))"
+                        ),
+                        None,
+                        arg.paramName
+                      )
                     )
-                  )
-                case tpe =>
-                  Target.pure(
-                    Param(
-                      Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
-                      ),
-                      None,
-                      arg.paramName
+                  case tpe =>
+                    Target.pure(
+                      Param(
+                        Some(
+                          enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
+                        ),
+                        None,
+                        arg.paramName
+                      )
                     )
-                  )
-              },
+                },
         arg =>
           elemType =>
             if (arg.isFile) {
@@ -674,55 +686,64 @@ object Http4sServerGenerator {
       val (decoders, matchers) = qsArgs
         .traverse({
           case LanguageParameter(_, param, _, argName, argType) =>
+            val containerTransformations = Map[String, Term => Term](
+              "Iterable"   -> identity _,
+              "List"       -> (term => q"$term.toList"),
+              "Vector"     -> (term => q"$term.toVector"),
+              "Seq"        -> (term => q"$term.toSeq"),
+              "IndexedSeq" -> (term => q"$term.toIndexedSeq")
+            )
+            val matcherName = Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")
             val (queryParamMatcher, elemType) = param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
                 (q"""
-                  object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
+                  object ${matcherName} {
                     val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                    def unapply(params: Map[String, Seq[String]]): Option[Option[List[$tpe]]] = delegate.unapply(params).collectFirst {
-                      case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty)
+                    def unapply(params: Map[String, Seq[String]]): Option[Option[$container[$tpe]]] = delegate.unapply(params).collectFirst {
+                      case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty).map(x => ${containerTransformations(container.syntax)(q"x")})
                     }
                   }
                  """, tpe)
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
                 (q"""
-                  object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
+                  object ${matcherName} {
                     val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                    def unapply(params: Map[String, Seq[String]]): Option[Option[List[$tpe]]] = delegate.unapply(params).collectFirst {
-                      case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty)
+                    def unapply(params: Map[String, Seq[String]]): Option[Option[$container[$tpe]]] = delegate.unapply(params).collectFirst {
+                      case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty).map(x => ${containerTransformations(container.syntax)(q"x")})
                     }
                   }
                  """, tpe)
               case param"$_: Option[$tpe]" =>
                 (
-                  q"""object ${Term
-                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
+                  q"""object ${matcherName} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
                   tpe
                 )
               case param"$_: Option[$tpe] = $_" =>
                 (
-                  q"""object ${Term
-                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
+                  q"""object ${matcherName} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
                   tpe
                 )
-              case param"$_: Iterable[$tpe]" =>
+              case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
                 (q"""
-                   object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
+                   object ${matcherName} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
+                     def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
+                  container.syntax
+                )(q"x")})
                    }
                  """, tpe)
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
                 (q"""
-                   object ${Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} {
+                   object ${matcherName} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
+                     def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
+                  container.syntax
+                )(q"x")})
                    }
                  """, tpe)
               case _ =>
                 (
-                  q"""object ${Term
-                    .Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
+                  q"""object ${matcherName} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
                   argType
                 )
             }
