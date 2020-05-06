@@ -1,0 +1,148 @@
+openapi: 3.0.2
+servers:
+  - url: "http://localhost:1234"
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      responses:
+        '204':
+          description: No response
+      parameters:
+        - name: refvec
+          in: query
+          required: true
+          schema:
+            $ref: "#!/components/schemas/refvec"
+        - name: reflist
+          in: query
+          required: true
+          schema:
+            $ref: "#!/components/schemas/reflist"
+        - name: refseq
+          in: query
+          required: true
+          schema:
+            $ref: "#!/components/schemas/refseq"
+        - name: refidxseq
+          in: query
+          required: true
+          schema:
+            $ref: "#!/components/schemas/refidxseq"
+        - name: vector
+          in: query
+          required: true
+          schema:
+            type: array
+            x-scala-array-type: Vector
+            items:
+              type: integer
+              format: int64
+        - name: list
+          in: query
+          required: true
+          schema:
+            type: array
+            x-scala-array-type: List
+            items:
+              type: integer
+              format: int64
+        - name: seq
+          in: query
+          required: true
+          schema:
+            type: array
+            x-scala-array-type: Seq
+            items:
+              type: integer
+              format: int64
+        - name: idxseq
+          in: query
+          required: true
+          schema:
+            type: array
+            x-scala-array-type: IndexedSeq
+            items:
+              type: integer
+              format: int64
+        - name: optrefvec
+          in: query
+          required: false
+          schema:
+            $ref: "#!/components/schemas/refvec"
+        - name: optreflist
+          in: query
+          required: false
+          schema:
+            $ref: "#!/components/schemas/reflist"
+        - name: optrefseq
+          in: query
+          required: false
+          schema:
+            $ref: "#!/components/schemas/refseq"
+        - name: optrefidxseq
+          in: query
+          required: false
+          schema:
+            $ref: "#!/components/schemas/refidxseq"
+        - name: optvector
+          in: query
+          required: false
+          schema:
+            type: array
+            x-scala-array-type: Vector
+            items:
+              type: integer
+              format: int64
+        - name: optlist
+          in: query
+          required: false
+          schema:
+            type: array
+            x-scala-array-type: List
+            items:
+              type: integer
+              format: int64
+        - name: optseq
+          in: query
+          required: false
+          schema:
+            type: array
+            x-scala-array-type: Seq
+            items:
+              type: integer
+              format: int64
+        - name: optidxseq
+          in: query
+          required: false
+          schema:
+            type: array
+            x-scala-array-type: IndexedSeq
+            items:
+              type: integer
+              format: int64
+components:
+  schemas:
+    refvec:
+      type: array
+      items:
+        type: integer
+        format: int64
+    reflist:
+      type: array
+      x-scala-array-type: List
+      items:
+        type: integer
+        format: int64
+    refseq:
+      type: array
+      x-scala-array-type: Seq
+      items:
+        type: integer
+        format: int64
+    refidxseq:
+      type: array
+      x-scala-array-type: IndexedSeq
+      items:
+        type: integer
+        format: int64
