@@ -170,18 +170,22 @@ object Http4sServerGenerator {
       for {
         directives <- params.traverse[Target, T] {
           case scalaParam @ LanguageParameter(_, param, _, _, argType) =>
+            val containerTransformations = Map[String, Term => Term](
+              "Iterable" -> identity _
+            )
+
             param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
                 multiOpt(scalaParam)(tpe)
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
                 multiOpt(scalaParam)(tpe)
               case param"$_: Option[$tpe]" =>
                 optional(scalaParam)(tpe)
               case param"$_: Option[$tpe] = $_" =>
                 optional(scalaParam)(tpe)
-              case param"$_: Iterable[$tpe]" =>
+              case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
                 multi(scalaParam)(tpe)
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
                 multi(scalaParam)(tpe)
               case _ => required(scalaParam)(argType)
             }
@@ -674,9 +678,12 @@ object Http4sServerGenerator {
       val (decoders, matchers) = qsArgs
         .traverse({
           case LanguageParameter(_, param, _, argName, argType) =>
+            val containerTransformations = Map[String, Term => Term](
+              "Iterable" -> identity _
+            )
             val matcherName = Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")
             val (queryParamMatcher, elemType) = param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
                 (q"""
                   object ${matcherName} {
                     val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
@@ -685,7 +692,7 @@ object Http4sServerGenerator {
                     }
                   }
                  """, tpe)
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
                 (q"""
                   object ${matcherName} {
                     val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
@@ -704,14 +711,14 @@ object Http4sServerGenerator {
                   q"""object ${matcherName} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
                   tpe
                 )
-              case param"$_: Iterable[$tpe]" =>
+              case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
                 (q"""
                    object ${matcherName} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
                      def unapply(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
                    }
                  """, tpe)
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
                 (q"""
                    object ${matcherName} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}

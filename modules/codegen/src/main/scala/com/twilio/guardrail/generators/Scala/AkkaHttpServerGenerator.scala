@@ -239,26 +239,32 @@ object AkkaHttpServerGenerator {
         optional: Term => Type => Option[Term] => Target[Term]
     )(params: List[LanguageParameter[ScalaLanguage]]): Target[Option[(Term, List[Term.Name])]] =
       for {
-        directives <- params.traverse {
+        directives <- params.traverse[Target, Term] {
           case sparam @ LanguageParameter(_, param, _, argName, argType) =>
+            val containerTransformations = Map[String, Term => Term](
+              "Iterable" -> identity _
+            )
+
             val unmarshaller: Type => Option[Term] = tpe =>
               sparam.rawType.tpe match {
                 case Some("string") => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
                 case _              => Option.empty
               }
             param match {
-              case param"$_: Option[Iterable[$tpe]]" =>
+              case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
                 multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
-              case param"$_: Option[Iterable[$tpe]] = $_" =>
+              case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
                 multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe]" =>
                 optional(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe] = $_" =>
                 optional(argName.toLit)(tpe)(unmarshaller(tpe))
-              case param"$_: Iterable[$tpe]" =>
+
+              case param"$_: $container[$tpe]" =>
                 multi(argName.toLit)(tpe)(unmarshaller(tpe))
-              case param"$_: Iterable[$tpe] = $_" =>
+              case param"$_: $container[$tpe] = $_" =>
                 multi(argName.toLit)(tpe)(unmarshaller(tpe))
+
               case param"$_: $tpe = $_" =>
                 required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
               case param"$_: $tpe" =>

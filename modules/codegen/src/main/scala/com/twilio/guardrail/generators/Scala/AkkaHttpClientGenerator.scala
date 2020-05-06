@@ -47,6 +47,10 @@ object AkkaHttpClientGenerator {
         responses: Responses[ScalaLanguage]
     ): Target[RenderedClientOperation[ScalaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
+      val containerTransformations = Map[String, Term => Term](
+        "Iterable" -> identity _
+      )
+
       def generateUrlWithParams(
           path: Tracker[String],
           pathArgs: List[LanguageParameter[ScalaLanguage]],
@@ -121,18 +125,18 @@ object AkkaHttpClientGenerator {
 
           def liftOptionTerm(tpe: Type)(tParamName: Term, tName: RawParameterName) = {
             val lifter = tpe match {
-              case t"Iterable[$_]" => liftIterable _
-              case _               => liftTerm _
+              case t"$container[$_]" if containerTransformations.contains(container.syntax) => liftIterable _
+              case _                                                                        => liftTerm _
             }
             q"${tParamName}.toList.flatMap(${Term.Block(List(q" x => ${lifter(Term.Name("x"), tName)}"))})"
           }
 
           val lifter: Term.Param => (Term, RawParameterName) => Term = {
-            case param"$_: Option[$tpe]"        => liftOptionTerm(tpe) _
-            case param"$_: Option[$tpe] = $_"   => liftOptionTerm(tpe) _
-            case param"$_: Iterable[$tpe]"      => liftIterable _
-            case param"$_: Iterable[$tpe] = $_" => liftIterable _
-            case x                              => liftTerm _
+            case param"$_: Option[$tpe]"                                                                 => liftOptionTerm(tpe) _
+            case param"$_: Option[$tpe] = $_"                                                            => liftOptionTerm(tpe) _
+            case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax)      => liftIterable _
+            case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) => liftIterable _
+            case x                                                                                       => liftTerm _
           }
 
           val args: List[Term] = parameters.map {
