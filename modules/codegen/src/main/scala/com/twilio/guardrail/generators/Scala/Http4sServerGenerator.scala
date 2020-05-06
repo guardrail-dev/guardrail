@@ -231,7 +231,7 @@ object Http4sServerGenerator {
       params =>
         directivesFromParams(
           arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)} @ _*)"),
+          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
           arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
           arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
         )(params).map {
@@ -708,14 +708,14 @@ object Http4sServerGenerator {
                 (q"""
                    object ${matcherName} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
+                     def unapply(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
                    }
                  """, tpe)
               case param"$_: Iterable[$tpe] = $_" =>
                 (q"""
                    object ${matcherName} {
                      val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                     def unapplySeq(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
+                     def unapply(params: Map[String, Seq[String]]): Option[Seq[String]] = delegate.unapplySeq(params)
                    }
                  """, tpe)
               case _ =>
