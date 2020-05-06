@@ -234,15 +234,19 @@ object AkkaHttpServerGenerator {
 
     def directivesFromParams(
         required: Term => Type => Option[Term] => Target[Term],
-        multi: Term => Type => Option[Term] => Target[Term],
-        multiOpt: Term => Type => Option[Term] => Target[Term],
+        multi: Term => Type => Option[Term] => (Term => Term) => Target[Term],
+        multiOpt: Term => Type => Option[Term] => (Term => Term) => Target[Term],
         optional: Term => Type => Option[Term] => Target[Term]
     )(params: List[LanguageParameter[ScalaLanguage]]): Target[Option[(Term, List[Term.Name])]] =
       for {
         directives <- params.traverse[Target, Term] {
           case sparam @ LanguageParameter(_, param, _, argName, argType) =>
             val containerTransformations = Map[String, Term => Term](
-              "Iterable" -> identity _
+              "Iterable"   -> identity _,
+              "List"       -> (term => q"$term.toList"),
+              "Vector"     -> (term => q"$term.toVector"),
+              "Seq"        -> (term => q"$term.toSeq"),
+              "IndexedSeq" -> (term => q"$term.toIndexedSeq")
             )
 
             val unmarshaller: Type => Option[Term] = tpe =>
@@ -252,18 +256,18 @@ object AkkaHttpServerGenerator {
               }
             param match {
               case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
-                multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
+                multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))(containerTransformations(container.syntax))
               case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
-                multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))
+                multiOpt(argName.toLit)(tpe)(unmarshaller(tpe))(containerTransformations(container.syntax))
               case param"$_: Option[$tpe]" =>
                 optional(argName.toLit)(tpe)(unmarshaller(tpe))
               case param"$_: Option[$tpe] = $_" =>
                 optional(argName.toLit)(tpe)(unmarshaller(tpe))
 
               case param"$_: $container[$tpe]" =>
-                multi(argName.toLit)(tpe)(unmarshaller(tpe))
+                multi(argName.toLit)(tpe)(unmarshaller(tpe))(containerTransformations(container.syntax))
               case param"$_: $container[$tpe] = $_" =>
-                multi(argName.toLit)(tpe)(unmarshaller(tpe))
+                multi(argName.toLit)(tpe)(unmarshaller(tpe))(containerTransformations(container.syntax))
 
               case param"$_: $tpe = $_" =>
                 required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
@@ -306,8 +310,8 @@ object AkkaHttpServerGenerator {
               """
               )
         },
-        arg => tpe => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}]"),
-        arg => tpe => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
+        arg => tpe => _ => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}]"),
+        arg => tpe => _ => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
           case t"String" =>
             _ => Target.pure(q"optionalHeaderValueByName(${arg})")
@@ -338,8 +342,8 @@ object AkkaHttpServerGenerator {
         _.fold[Arg => Type => Term](nameReceptacle)(um => nameReceptacle.map(_.map(term => q"${term}(${um})")))
       directivesFromParams(
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)})"),
-        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*)"),
-        arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty))"),
+        arg => tpe => um => tf => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(x => ${tf(q"x")})"),
+        arg => tpe => um => tf => Target.pure(q"parameter(${param(um)(arg)(tpe)}.*).map(xs => Option(xs).filterNot(_.isEmpty).map(x => ${tf(q"x")}))"),
         arg => tpe => um => Target.pure(q"parameter(${param(um)(arg)(tpe)}.?)")
       ) _
     }
