@@ -41,7 +41,11 @@ object EndpointsClientGenerator {
     ): Target[RenderedClientOperation[ScalaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
       val containerTransformations = Map[String, Term => Term](
-        "Iterable" -> identity _
+        "Iterable"   -> identity _,
+        "List"       -> (term => q"$term.toList"),
+        "Vector"     -> (term => q"$term.toVector"),
+        "Seq"        -> (term => q"$term.toSeq"),
+        "IndexedSeq" -> (term => q"$term.toIndexedSeq")
       )
 
       def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], needsMultipart: Boolean): Option[Term] =
