@@ -122,8 +122,14 @@ object Common {
     val CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                     = codegen
     val frameworkImplicitName                                                                            = frameworkImplicits.map(_._1)
 
-    val dtoComponents: List[String]                         = definitions ++ dtoPackage
-    val filteredDtoComponents: Option[NonEmptyList[String]] = if (protocolElems.nonEmpty) NonEmptyList.fromList(dtoComponents) else None
+    val dtoComponents: List[String] = definitions ++ dtoPackage
+
+    // Only presume ...definitions._ import is available if we have
+    // protocolElems which are not just all type aliases.
+    val filteredDtoComponents: Option[NonEmptyList[String]] =
+      NonEmptyList
+        .fromList(dtoComponents)
+        .filter(_ => protocolElems.exists({ case _: RandomType[_] => false; case _ => true }))
 
     for {
       protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
