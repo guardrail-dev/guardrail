@@ -10,6 +10,34 @@ This change was made as `IndexedSeq` has no instances for cats typeclasses, as i
 
 To aide migrations, adding `x-scala-array-type: IndexedSeq` to definitions and parameters alongside `type: array` will change the generated type back to what it was before, permitting consumers to upgrade when they have time or to choose different implementations (`List`, `NonEmtyVector`, `Chain`, etc) to provide different semantics.
 
+Migrating to 0.54.0
+===================
+
+0.54.0 introduces a module system to compensate for breaking changes in underlying libraries
+--------------------------------------------------------------------------------------------
+
+circe 0.12 broke backwards compatibility in two ways:
+- no longer publishing the circe-java8 stub library for 2.12, as it was merged into the core and the java8 implicits are just built in now
+- moving from the old naming convention of `ObjectEncoder[?]` to the new `Encoder.AsObject[?]`
+
+If you need to use old versions of circe, you may want one or the other of these two configurations:
+
+_does not include the io.circe.java8.\_ import_
+```diff
+ guardrailTasks in Compile := List(
+-  ScalaServer(file("spec.json"), pkg="com.example", framework="akka-http"),
++  ScalaServer(file("spec.json"), pkg="com.example", modules=List("akka-http", "circe-0.11")),
+ )
+```
+
+_implies circe-0.11_
+```diff
+ guardrailTasks in Compile := List(
+-  ScalaServer(file("spec.json"), pkg="com.example", framework="akka-http"),
++  ScalaServer(file("spec.json"), pkg="com.example", modules=List("akka-http", "circe-java8")),
+ )
+```
+
 Migrating to 0.49.0
 ===================
 

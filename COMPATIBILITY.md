@@ -23,7 +23,8 @@ guardrail version | akka-http | akka-stream | circe  | cats  | Notes
  "                | 10.0.15   |             |  "     |  "    |
  "                | 10.1.0    | 2.3.5       |  "     |  "    |
  "                | 10.1.7    | 2.5.19      |  "     |  "    |
-0.54.0            |  "        |  "          | 0.12.1 |  "    | For Scala 2.11, use --module circe-java8
+0.54.0            |  "        |  "          | 0.11.0 |  "    | For Scala 2.11, use --module circe-java8
+ "                |  "        |  "          | 0.12.0 |  "    | For circe 0.11, use --module circe-0.11
 
 ### http4s
 
