@@ -539,10 +539,10 @@ object CirceProtocolGenerator {
           q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
           q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
           q"""sealed trait Presence[+T] {
-               def fold[R](ifAbsent: => R,
-                           ifPresent: T => R): R
+                def fold[R](ifAbsent: => R,
+                            ifPresent: T => R): R
 
-               def toOption: Option[T] = fold[Option[T]](None, Some(_))
+                def toOption: Option[T] = fold[Option[T]](None, Some(_))
               }
              """,
           q"""
