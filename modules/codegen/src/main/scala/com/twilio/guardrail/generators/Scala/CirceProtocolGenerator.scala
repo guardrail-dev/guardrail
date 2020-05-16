@@ -541,6 +541,7 @@ object CirceProtocolGenerator {
           q"""sealed trait Presence[+T] {
                 def fold[R](ifAbsent: => R,
                             ifPresent: T => R): R
+                def map[R](f: T => R): Presence[R] = fold(Presence.absent, a => Presence.present(f(a)))
 
                 def toOption: Option[T] = fold[Option[T]](None, Some(_))
               }
@@ -561,6 +562,9 @@ object CirceProtocolGenerator {
                 def fromOption[T](value: Option[T]): Presence[T] =
                   value.fold[Presence[T]](Absent)(Present(_))
 
+                implicit object PresenceFunctor extends cats.Functor[Presence] {
+                  def map[A, B](fa: Presence[A])(f: A => B): Presence[B] = fa.fold[Presence[B]](Presence.absent, a => Presence.present(f(a)))
+                }
               }
              """
         )
