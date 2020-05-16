@@ -191,7 +191,7 @@ object CirceProtocolGenerator {
           presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
           (finalDeclType, finalDefaultValue) = requirement match {
             case PropertyRequirement.Required => tpe -> defaultValue
-            case PropertyRequirement.Optional =>
+            case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
               t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
             case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
               t"Option[$tpe]" -> defaultValue.map(t => q"Option($t)").orElse(Some(q"None"))
