@@ -418,7 +418,7 @@ object CirceProtocolGenerator {
                           q"$downField.as[${tpe}]"
                         case PropertyRequirement.RequiredNullable =>
                           q"$downField.as[Json].flatMap(_.as[${tpe}])"
-                        case PropertyRequirement.Optional => // matched only where there is incosistency between encoder and decoder
+                        case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
                           q"$downField.as[Json].map(_.as[${param.baseType}].map(Some(_))).getOrElse(Right(None))"
                       }
 
