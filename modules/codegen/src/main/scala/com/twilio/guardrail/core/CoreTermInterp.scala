@@ -166,15 +166,22 @@ class CoreTermInterp[L <: LA](
     }
 
   private def verifyPropertyRequirement: PropertyRequirement.Configured => Target[Unit] = {
-    case PropertyRequirement.Configured(PropertyRequirement.Optional, decoder) if decoder != PropertyRequirement.Optional =>
-      Target.log.warning(
-        "'optional' --encoder-optional-property was used, which does not match value of provided (or default) --decoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
-      )
-    case PropertyRequirement.Configured(encoder, PropertyRequirement.Optional) if encoder != PropertyRequirement.Optional =>
-      Target.log.warning(
-        "'optional' --decoder-optional-property was used, which does not match value of provided (or default) --encoder-optional-property. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
-      )
-    case _ => Target.pure(())
+    val mapping: PropertyRequirement.OptionalRequirement => String = {
+      case PropertyRequirement.Optional         => "optional"
+      case PropertyRequirement.OptionalLegacy   => "legacy"
+      case PropertyRequirement.RequiredNullable => "required-nullable"
+    }
+    {
+      case PropertyRequirement.Configured(PropertyRequirement.Optional, decoder) if decoder != PropertyRequirement.Optional =>
+        Target.log.warning(
+          s"--encoder-optional-property ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --decoder-optional-property ${mapping(decoder)}. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+        )
+      case PropertyRequirement.Configured(encoder, PropertyRequirement.Optional) if encoder != PropertyRequirement.Optional =>
+        Target.log.warning(
+          s"--decoder-optional-property ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --encoder-optional-property ${mapping(encoder)}. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+        )
+      case _ => Target.pure(())
+    }
   }
 
   def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
