@@ -547,6 +547,8 @@ object CirceProtocolGenerator {
              """,
           q"""
               object Presence {
+                def absent[R]: Presence[R] = Absent
+                def present[R](value: R): Presence[R] = Present(value)
                 case object Absent extends Presence[Nothing] {
                   def fold[R](ifAbsent: => R,
                            ifValue: Nothing => R): R = ifAbsent
