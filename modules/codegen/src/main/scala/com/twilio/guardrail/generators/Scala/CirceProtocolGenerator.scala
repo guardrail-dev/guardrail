@@ -538,7 +538,7 @@ object CirceProtocolGenerator {
           q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
           q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
           q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
-          q"""sealed trait Presence[+T] {
+          q"""sealed trait Presence[+T] extends Product with Serializable {
                 def fold[R](ifAbsent: => R,
                             ifPresent: T => R): R
                 def map[R](f: T => R): Presence[R] = fold(Presence.absent, a => Presence.present(f(a)))
