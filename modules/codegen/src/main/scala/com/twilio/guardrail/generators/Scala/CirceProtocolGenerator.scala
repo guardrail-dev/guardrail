@@ -445,12 +445,7 @@ object CirceProtocolGenerator {
                                 t => q"$t.flatMap(_.as[${tpe}])"
                             )
                       case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
-                        decodeField(t"Json") ++ (
-                              Vector[Term => Term](
-                                t => q"$t.map(_.as[${param.baseType}].map(Some(_)))",
-                                t => q"$t.getOrElse(Right(None))"
-                              )
-                            )
+                        decodeOptionalField(param.baseType)(x => q"Option($x)", q"None")
                     }
 
                     val parseTermAccessors: NonEmptyVector[Term => Term] = param.propertyRequirement match {
