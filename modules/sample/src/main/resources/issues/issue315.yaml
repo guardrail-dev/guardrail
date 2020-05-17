@@ -5,6 +5,23 @@ info:
 host: localhost:1234
 schemes:
   - http
+paths:
+  /foo:
+    get:
+      operationId: postTest
+      consumes:
+      - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: "#!/definitions/TestObject"
+      responses:
+        200:
+          description: test passed
+        406:
+          description: test failed
 definitions:
   TestObject:
     type: object
