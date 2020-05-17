@@ -418,6 +418,23 @@ object CirceProtocolGenerator {
                       )
                     }
 
+                    val decodeOptionalField: Type => NonEmptyVector[Term => Term] = {
+                      tpe =>
+                        NonEmptyVector.of[Term => Term](
+                          t => q"""
+                          ((c: HCursor) =>
+                            c
+                              .value
+                              .asObject
+                              .filter(!_.contains($name))
+                              .fold(${emptyToNull(q"c.downField($name)")}.as[${tpe}].map($presence.present(_))) { _ =>
+                                Right($presence.absent[${tpe}])
+                              }
+                          )($t)
+                        """
+                        )
+                    }
+
                     def decodeOptionalRequirement(
                         param: ProtocolParameter[ScalaLanguage]
                     ): PropertyRequirement.OptionalRequirement => NonEmptyVector[Term => Term] = {
@@ -440,19 +457,9 @@ object CirceProtocolGenerator {
                       case PropertyRequirement.Required =>
                         decodeField(tpe)
                       case PropertyRequirement.OptionalNullable =>
-                        decodeField(t"Json") ++ (
-                              Vector[Term => Term](
-                                t => q"$t.map(_.as[Option[${param.baseType}]].map($presence.Present(_)))",
-                                t => q"$t.getOrElse(Right($presence.Absent))"
-                              )
-                            )
+                        decodeOptionalField(t"Option[${param.baseType}]")
                       case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
-                        decodeField(t"Json") ++ (
-                              Vector[Term => Term](
-                                t => q"$t.map(_.as[${param.baseType}].map($presence.Present(_)))",
-                                t => q"$t.getOrElse(Right($presence.Absent))"
-                              )
-                            )
+                        decodeOptionalField(param.baseType)
                       case requirement: PropertyRequirement.OptionalRequirement =>
                         decodeOptionalRequirement(param)(requirement)
                       case PropertyRequirement.Configured(_, decoderRequirement) =>

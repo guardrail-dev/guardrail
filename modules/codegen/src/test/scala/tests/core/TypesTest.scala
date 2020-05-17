@@ -366,7 +366,13 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
             val readOnlyKeys = Set[String]()
             Encoder.AsObject.instance[TestObject](a => JsonObject.fromIterable(Vector(("required", a.required.asJson), ("required-nullable", a.requiredNullable.asJson), ("legacy", a.legacy.asJson)) ++ a.optional.fold(ifAbsent = None, ifPresent = value => Some("optional" -> value.asJson)) ++ a.optionalNullable.fold(ifAbsent = None, ifPresent = value => Some("optional-nullable" -> value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-          implicit val decodeTestObject: Decoder[TestObject] = new Decoder[TestObject] { final def apply(c: HCursor): Decoder.Result[TestObject] = for (v0 <- c.downField("required").as[String]; v1 <- c.downField("required-nullable").as[Json].flatMap(_.as[Option[String]]); v2 <- c.downField("optional").as[Json].map(_.as[String].map(Presence.Present(_))).getOrElse(Right(Presence.Absent)); v3 <- c.downField("optional-nullable").as[Json].map(_.as[Option[String]].map(Presence.Present(_))).getOrElse(Right(Presence.Absent)); v4 <- c.downField("legacy").as[Option[String]]) yield TestObject(v0, v1, v2, v3, v4) }
+          implicit val decodeTestObject: Decoder[TestObject] = new Decoder[TestObject] {
+            final def apply(c: HCursor): Decoder.Result[TestObject] = for (v0 <- c.downField("required").as[String]; v1 <- c.downField("required-nullable").as[Json].flatMap(_.as[Option[String]]); v2 <- ((c: HCursor) => c.value.asObject.filter(!_.contains("optional")).fold(c.downField("optional").as[String].map(x => Presence.present(x))) {
+              _ => Right(Presence.absent)
+            })(c); v3 <- ((c: HCursor) => c.value.asObject.filter(!_.contains("optional-nullable")).fold(c.downField("optional-nullable").as[Option[String]].map(x => Presence.present(x))) {
+              _ => Right(Presence.absent)
+            })(c); v4 <- c.downField("legacy").as[Option[String]]) yield TestObject(v0, v1, v2, v3, v4)
+          }
         }
        """
     val definition =
