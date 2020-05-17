@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
-import cats.data.NonEmptyList
+import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.implicits._
 import com.twilio.guardrail.{
   DataVisible,
@@ -406,38 +406,61 @@ object CirceProtocolGenerator {
                     val term = Term.Name(s"v$idx")
                     val name = Lit.String(param.name.value)
 
-                    val downField = if (param.emptyToNull == EmptyIsNull) {
-                      q"c.downField($name).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j))"
-                    } else {
-                      q"c.downField($name)"
+                    val emptyToNull: Term => Term = if (param.emptyToNull == EmptyIsNull) { t =>
+                      q"$t.withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j))"
+                    } else identity _
+
+                    val decodeField: Type => NonEmptyVector[Term => Term] = { tpe =>
+                      NonEmptyVector.of[Term => Term](
+                        t => q"$t.downField($name)",
+                        emptyToNull,
+                        t => q"$t.as[${tpe}]"
+                      )
                     }
 
-                    def decodeOptional(tpe: Type) =
-                      q"$downField.as[Json].map(_.as[$tpe].map($presence.Present(_))).getOrElse(Right($presence.Absent))"
+                    def decodeOptionalRequirement(
+                        param: ProtocolParameter[ScalaLanguage]
+                    ): PropertyRequirement.OptionalRequirement => NonEmptyVector[Term => Term] = {
+                      case PropertyRequirement.OptionalLegacy =>
+                        decodeField(tpe)
+                      case PropertyRequirement.RequiredNullable =>
+                        decodeField(t"Json") :+ (
+                                t => q"$t.flatMap(_.as[${tpe}])"
+                            )
+                      case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
+                        decodeField(t"Json") ++ (
+                              Vector[Term => Term](
+                                t => q"$t.map(_.as[${param.baseType}].map(Some(_)))",
+                                t => q"$t.getOrElse(Right(None))"
+                              )
+                            )
+                    }
 
-                    def decodeOptionalRequirement(param: ProtocolParameter[ScalaLanguage], propertyRequirement: PropertyRequirement.OptionalRequirement) =
-                      propertyRequirement match {
-                        case PropertyRequirement.OptionalLegacy =>
-                          q"$downField.as[${tpe}]"
-                        case PropertyRequirement.RequiredNullable =>
-                          q"$downField.as[Json].flatMap(_.as[${tpe}])"
-                        case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
-                          q"$downField.as[Json].map(_.as[${param.baseType}].map(Some(_))).getOrElse(Right(None))"
-                      }
-
-                    val parseTerm = param.propertyRequirement match {
+                    val parseTermAccessors: NonEmptyVector[Term => Term] = param.propertyRequirement match {
                       case PropertyRequirement.Required =>
-                        q"$downField.as[${tpe}]"
+                        decodeField(tpe)
                       case PropertyRequirement.OptionalNullable =>
-                        decodeOptional(t"Option[${param.baseType}]")
+                        decodeField(t"Json") ++ (
+                              Vector[Term => Term](
+                                t => q"$t.map(_.as[Option[${param.baseType}]].map($presence.Present(_)))",
+                                t => q"$t.getOrElse(Right($presence.Absent))"
+                              )
+                            )
                       case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
-                        decodeOptional(param.baseType)
+                        decodeField(t"Json") ++ (
+                              Vector[Term => Term](
+                                t => q"$t.map(_.as[${param.baseType}].map($presence.Present(_)))",
+                                t => q"$t.getOrElse(Right($presence.Absent))"
+                              )
+                            )
                       case requirement: PropertyRequirement.OptionalRequirement =>
-                        decodeOptionalRequirement(param, requirement)
+                        decodeOptionalRequirement(param)(requirement)
                       case PropertyRequirement.Configured(_, decoderRequirement) =>
-                        decodeOptionalRequirement(param, decoderRequirement)
+                        decodeOptionalRequirement(param)(decoderRequirement)
                     }
-                    val enum = enumerator"""${Pat.Var(term)} <- $parseTerm"""
+
+                    val parseTerm = parseTermAccessors.foldLeft[Term](q"c")((acc, next) => next(acc))
+                    val enum      = enumerator"""${Pat.Var(term)} <- $parseTerm"""
                     (term, enum)
                   }
               })
