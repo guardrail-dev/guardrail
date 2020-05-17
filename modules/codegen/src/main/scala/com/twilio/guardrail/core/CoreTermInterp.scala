@@ -131,24 +131,26 @@ class CoreTermInterp[L <: LA](
                 Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
               case (sofar :: already, "--module" :: value :: xs) =>
                 Continue((sofar.copy(context = sofar.context.copy(modules = sofar.context.modules :+ value)) :: already, xs))
-              case (sofar :: already, "--encoder-optional-property" :: value :: xs) =>
-                parseOptionalProperty("--encoder-optional-property", value).map { propertyRequirement =>
-                  Left(
+              case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
+                for {
+                  propertyRequirement <- parseOptionalProperty(arg, value)
+                  res <- Continue(
                     (
                       sofar.copy(context = sofar.context.copy(propertyRequirement = sofar.context.propertyRequirement.copy(encoder = propertyRequirement))) :: already,
                       xs
                     )
                   )
-                }
-              case (sofar :: already, "--decoder-optional-property" :: value :: xs) =>
-                parseOptionalProperty("--decoder-optional-property", value).map { propertyRequirement =>
-                  Left(
+                } yield res
+              case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
+                for {
+                  propertyRequirement <- parseOptionalProperty(arg, value)
+                  res <- Continue(
                     (
                       sofar.copy(context = sofar.context.copy(propertyRequirement = sofar.context.propertyRequirement.copy(decoder = propertyRequirement))) :: already,
                       xs
                     )
                   )
-                }
+                } yield res
               case (_, unknown) =>
                 debug("Unknown argument") >> Bail(UnknownArguments(unknown))
             }

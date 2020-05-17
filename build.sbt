@@ -96,7 +96,7 @@ val exampleCases: List[ExampleCase] = List(
         case (a, b) =>
           (
             s".${a.getOrElse("default")}${b.getOrElse("default")}".split("-").mkString("_"),
-            a.toSeq.flatMap(Seq("--encoder-optional-property", _)) ++ b.toSeq.flatMap(Seq("--decoder-optional-property", _))
+            a.toSeq.flatMap(Seq("--optional-encode-as", _)) ++ b.toSeq.flatMap(Seq("--optional-decode-as", _))
           )
       }
       ExampleCase(sampleResource("issues/issue315.yaml"), s"issues.issue315${suffix}")
