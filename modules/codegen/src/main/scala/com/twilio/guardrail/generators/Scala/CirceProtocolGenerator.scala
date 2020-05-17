@@ -418,8 +418,8 @@ object CirceProtocolGenerator {
                       )
                     }
 
-                    val decodeOptionalField: Type => NonEmptyVector[Term => Term] = {
-                      tpe =>
+                    val decodeOptionalField: Type => (Term => Term, Term) => NonEmptyVector[Term => Term] = {
+                      tpe => (present, absent) =>
                         NonEmptyVector.of[Term => Term](
                           t => q"""
                           ((c: HCursor) =>
@@ -427,8 +427,8 @@ object CirceProtocolGenerator {
                               .value
                               .asObject
                               .filter(!_.contains($name))
-                              .fold(${emptyToNull(q"c.downField($name)")}.as[${tpe}].map($presence.present(_))) { _ =>
-                                Right($presence.absent[${tpe}])
+                              .fold(${emptyToNull(q"c.downField($name)")}.as[${tpe}].map(x => ${present(q"x")})) { _ =>
+                                Right($absent)
                               }
                           )($t)
                         """
@@ -457,9 +457,9 @@ object CirceProtocolGenerator {
                       case PropertyRequirement.Required =>
                         decodeField(tpe)
                       case PropertyRequirement.OptionalNullable =>
-                        decodeOptionalField(t"Option[${param.baseType}]")
+                        decodeOptionalField(t"Option[${param.baseType}]")(x => q"$presence.present($x)", q"$presence.absent")
                       case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
-                        decodeOptionalField(param.baseType)
+                        decodeOptionalField(param.baseType)(x => q"$presence.present($x)", q"$presence.absent")
                       case requirement: PropertyRequirement.OptionalRequirement =>
                         decodeOptionalRequirement(param)(requirement)
                       case PropertyRequirement.Configured(_, decoderRequirement) =>
