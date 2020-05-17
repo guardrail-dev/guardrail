@@ -85,7 +85,24 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue223.yaml"), "issues.issue223"),
   ExampleCase(sampleResource("issues/issue249.yaml"), "issues.issue249"),
   ExampleCase(sampleResource("issues/issue264.yaml"), "issues.issue264"),
-  ExampleCase(sampleResource("issues/issue315.yaml"), "issues.issue315"),
+  ) ++ {
+    val options = List[Option[String]](None, Some("legacy"), Some("optional"), Some("required-nullable"))
+    for {
+      a <- options
+      b <- options
+    } yield {
+      val (suffix, opts): (String, Seq[String]) = (a, b) match {
+        case (None, None) => ("", Seq.empty)
+        case (a, b) =>
+          (
+            s".${a.getOrElse("default")}${b.getOrElse("default")}".split("-").mkString("_"),
+            a.toSeq.flatMap(Seq("--encoder-optional-property", _)) ++ b.toSeq.flatMap(Seq("--decoder-optional-property", _))
+          )
+      }
+      ExampleCase(sampleResource("issues/issue315.yaml"), s"issues.issue315${suffix}")
+        .args(opts: _*)
+    }
+  } ++ List(
   ExampleCase(sampleResource("issues/issue325.yaml"), "issues.issue325"),
   ExampleCase(sampleResource("issues/issue351.yaml"), "issues.issue351"),
   ExampleCase(sampleResource("issues/issue357.yaml"), "issues.issue357"),
