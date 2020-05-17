@@ -69,10 +69,16 @@ object Target {
     def function[A](name: String): Target[A] => Target[A] = { func =>
       (push(name) *> func) <* pop
     }
-    def debug(message: String): Target[Unit]   = pushLogger(StructuredLogger.debug(message))
-    def info(message: String): Target[Unit]    = pushLogger(StructuredLogger.info(message))
-    def warning(message: String): Target[Unit] = pushLogger(StructuredLogger.warning(message))
-    def error(message: String): Target[Unit]   = pushLogger(StructuredLogger.error(message))
+    def debug(message: String): Target[Unit] = pushLogger(StructuredLogger.debug(message))
+    def info(message: String): Target[Unit]  = pushLogger(StructuredLogger.info(message))
+    def warning(message: String): Target[Unit] = {
+      println(message)
+      pushLogger(StructuredLogger.warning(message))
+    }
+    def error(message: String): Target[Unit] = {
+      println(message)
+      pushLogger(StructuredLogger.error(message))
+    }
   }
 }
 
