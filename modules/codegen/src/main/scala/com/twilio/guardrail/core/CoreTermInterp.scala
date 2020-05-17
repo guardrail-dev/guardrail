@@ -114,13 +114,13 @@ class CoreTermInterp[L <: LA](
               case (sofar :: already, "--models" :: xs) =>
                 Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
               case (sofar :: already, "--framework" :: value :: xs) =>
-                Continue((sofar.copy(context = sofar.context.copy(framework = Some(value))) :: already, xs))
+                Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
               case (sofar :: already, "--help" :: xs) =>
                 Continue((sofar.copy(printHelp = true) :: already, List.empty))
               case (sofar :: already, "--specPath" :: value :: xs) =>
                 Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
               case (sofar :: already, "--tracing" :: xs) =>
-                Continue((sofar.copy(context = sofar.context.copy(tracing = true)) :: already, xs))
+                Continue((sofar.copyContext(tracing = true) :: already, xs))
               case (sofar :: already, "--outputPath" :: value :: xs) =>
                 Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
               case (sofar :: already, "--packageName" :: value :: xs) =>
@@ -130,26 +130,16 @@ class CoreTermInterp[L <: LA](
               case (sofar :: already, "--import" :: value :: xs) =>
                 Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
               case (sofar :: already, "--module" :: value :: xs) =>
-                Continue((sofar.copy(context = sofar.context.copy(modules = sofar.context.modules :+ value)) :: already, xs))
+                Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
               case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
                 for {
                   propertyRequirement <- parseOptionalProperty(arg, value)
-                  res <- Continue(
-                    (
-                      sofar.copy(context = sofar.context.copy(propertyRequirement = sofar.context.propertyRequirement.copy(encoder = propertyRequirement))) :: already,
-                      xs
-                    )
-                  )
+                  res                 <- Continue((sofar.copyPropertyRequirement(encoder = propertyRequirement) :: already, xs))
                 } yield res
               case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
                 for {
                   propertyRequirement <- parseOptionalProperty(arg, value)
-                  res <- Continue(
-                    (
-                      sofar.copy(context = sofar.context.copy(propertyRequirement = sofar.context.propertyRequirement.copy(decoder = propertyRequirement))) :: already,
-                      xs
-                    )
-                  )
+                  res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
                 } yield res
               case (_, unknown) =>
                 debug("Unknown argument") >> Bail(UnknownArguments(unknown))
