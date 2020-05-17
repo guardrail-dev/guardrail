@@ -89,8 +89,8 @@ class CoreTermInterp[L <: LA](
     import Target.log.debug
     Target.log.function("parseArgs") {
       FlatMap[Target].tailRecM[From, To](start)({
-        case pair @ (sofar, rest) =>
-          val empty = sofar
+        case pair @ (sofars, rest) =>
+          val empty = sofars
             .filter(_.defaults)
             .reverse
             .headOption
