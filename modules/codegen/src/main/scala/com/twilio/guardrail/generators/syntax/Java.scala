@@ -307,7 +307,7 @@ object Java {
                 SupportDefinition[JavaLanguage](
                   new Name(className),
                   cu.getImports.toList,
-                  clsDef
+                  List(clsDef)
                 )
               )
           )

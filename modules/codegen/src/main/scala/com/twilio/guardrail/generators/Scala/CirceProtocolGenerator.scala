@@ -12,6 +12,7 @@ import com.twilio.guardrail.{
   ProtocolParameter,
   StaticDefns,
   SuperClass,
+  SupportDefinition,
   SwaggerUtil,
   Target,
   UserError
@@ -140,6 +141,7 @@ object CirceProtocolGenerator {
     def transformProperty(
         clsName: String,
         dtoPackage: List[String],
+        supportPackage: List[String],
         needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[ScalaLanguage]]
     )(
@@ -187,8 +189,8 @@ object CirceProtocolGenerator {
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
               (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
           }
-          presence     <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
-          presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
+          presence     <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+          presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
           (finalDeclType, finalDefaultValue) = requirement match {
             case PropertyRequirement.Required => tpe -> defaultValue
             case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
@@ -362,6 +364,7 @@ object CirceProtocolGenerator {
     def decodeModel(
         clsName: String,
         dtoPackage: List[String],
+        supportPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
@@ -374,7 +377,7 @@ object CirceProtocolGenerator {
       val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
       val paramCount                = params.length
       for {
-        presence <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(dtoPackage, "Presence"))
+        presence <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         decVal <- if (paramCount == 0) {
           Target.pure(Option.empty[Term])
         } else
@@ -516,6 +519,16 @@ object CirceProtocolGenerator {
         )
       )
 
+    def staticProtocolImports(pkgName: List[String]): Target[List[Import]] = {
+      val implicitsRef: Term.Ref = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
+      Target.pure(
+        List(
+          q"import cats.implicits._",
+          q"import cats.data.EitherT"
+        ) :+ q"import $implicitsRef._"
+      )
+    }
+
     def packageObjectImports() =
       Target.pure(
         List(
@@ -523,30 +536,18 @@ object CirceProtocolGenerator {
         )
       )
 
-    def packageObjectContents() =
-      Target.pure(
-        List(
-          q"implicit val guardrailDecodeInstant: Decoder[Instant] = Decoder[Instant].or(Decoder[Long].map(Instant.ofEpochMilli))",
-          q"implicit val guardrailDecodeLocalDate: Decoder[LocalDate] = Decoder[LocalDate].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate))",
-          q"implicit val guardrailDecodeLocalDateTime: Decoder[LocalDateTime] = Decoder[LocalDateTime]",
-          q"implicit val guardrailDecodeLocalTime: Decoder[LocalTime] = Decoder[LocalTime]",
-          q"implicit val guardrailDecodeOffsetDateTime: Decoder[OffsetDateTime] = Decoder[OffsetDateTime].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
-          q"implicit val guardrailDecodeZonedDateTime: Decoder[ZonedDateTime] = Decoder[ZonedDateTime]",
-          q"implicit val guardrailEncodeInstant: Encoder[Instant] = Encoder[Instant]",
-          q"implicit val guardrailEncodeLocalDate: Encoder[LocalDate] = Encoder[LocalDate]",
-          q"implicit val guardrailEncodeLocalDateTime: Encoder[LocalDateTime] = Encoder[LocalDateTime]",
-          q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
-          q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
-          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
-          q"""sealed trait Presence[+T] extends Product with Serializable {
+    def generateSupportDefinitions() = {
+      val presenceTrait =
+        q"""sealed trait Presence[+T] extends Product with Serializable {
                 def fold[R](ifAbsent: => R,
                             ifPresent: T => R): R
                 def map[R](f: T => R): Presence[R] = fold(Presence.absent, a => Presence.present(f(a)))
 
                 def toOption: Option[T] = fold[Option[T]](None, Some(_))
               }
-             """,
-          q"""
+             """
+      val presenceObject =
+        q"""
               object Presence {
                 def absent[R]: Presence[R] = Absent
                 def present[R](value: R): Presence[R] = Present(value)
@@ -567,6 +568,25 @@ object CirceProtocolGenerator {
                 }
               }
              """
+      val presenceDefinition = SupportDefinition[ScalaLanguage](q"Presence", Nil, List(presenceTrait, presenceObject), insideDefinitions = false)
+      Target.pure(List(presenceDefinition))
+    }
+
+    def packageObjectContents() =
+      Target.pure(
+        List(
+          q"implicit val guardrailDecodeInstant: Decoder[Instant] = Decoder[Instant].or(Decoder[Long].map(Instant.ofEpochMilli))",
+          q"implicit val guardrailDecodeLocalDate: Decoder[LocalDate] = Decoder[LocalDate].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate))",
+          q"implicit val guardrailDecodeLocalDateTime: Decoder[LocalDateTime] = Decoder[LocalDateTime]",
+          q"implicit val guardrailDecodeLocalTime: Decoder[LocalTime] = Decoder[LocalTime]",
+          q"implicit val guardrailDecodeOffsetDateTime: Decoder[OffsetDateTime] = Decoder[OffsetDateTime].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
+          q"implicit val guardrailDecodeZonedDateTime: Decoder[ZonedDateTime] = Decoder[ZonedDateTime]",
+          q"implicit val guardrailEncodeInstant: Encoder[Instant] = Encoder[Instant]",
+          q"implicit val guardrailEncodeLocalDate: Encoder[LocalDate] = Encoder[LocalDate]",
+          q"implicit val guardrailEncodeLocalDateTime: Encoder[LocalDateTime] = Encoder[LocalDateTime]",
+          q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
+          q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
+          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]"
         )
       )
   }

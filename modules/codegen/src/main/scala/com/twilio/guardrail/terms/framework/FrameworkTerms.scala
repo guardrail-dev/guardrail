@@ -8,7 +8,7 @@ abstract class FrameworkTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
   def getFrameworkImports(tracing: Boolean): F[List[L#Import]]
   def getFrameworkImplicits(): F[Option[(L#TermName, L#ObjectDefinition)]]
-  def getFrameworkDefinitions(tracing: Boolean): F[List[(L#TermName, L#ClassDefinition)]]
+  def getFrameworkDefinitions(tracing: Boolean): F[List[(L#TermName, List[L#Definition])]]
   def lookupStatusCode(key: String): F[(Int, L#TermName)]
   def fileType(format: Option[String]): F[L#Type]
   def objectType(format: Option[String]): F[L#Type]
@@ -17,7 +17,7 @@ abstract class FrameworkTerms[L <: LA, F[_]] {
       newMonadF: Monad[F] = MonadF,
       newGetFrameworkImports: Boolean => F[List[L#Import]] = getFrameworkImports _,
       newGetFrameworkImplicits: () => F[Option[(L#TermName, L#ObjectDefinition)]] = getFrameworkImplicits _,
-      newGetFrameworkDefinitions: Boolean => F[List[(L#TermName, L#ClassDefinition)]] = getFrameworkDefinitions _,
+      newGetFrameworkDefinitions: Boolean => F[List[(L#TermName, List[L#Definition])]] = getFrameworkDefinitions _,
       newLookupStatusCode: String => F[(Int, L#TermName)] = lookupStatusCode _,
       newFileType: Option[String] => F[L#Type] = fileType _,
       newObjectType: Option[String] => F[L#Type] = objectType _

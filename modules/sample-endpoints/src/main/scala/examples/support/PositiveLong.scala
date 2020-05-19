@@ -1,6 +1,6 @@
-package support
+package examples.support
 
-import examples.client.http4s.Implicits
+import examples.client.endpoints.Implicits
 import io.circe.Decoder
 
 class PositiveLong private (val value: Long) extends AnyVal

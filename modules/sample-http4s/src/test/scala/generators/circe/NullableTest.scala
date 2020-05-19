@@ -2,6 +2,7 @@ package generators.circe
 
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import issues.issue315.client.http4s.definitions._
+import issues.issue315.client.http4s.support._
 import io.circe._
 import io.circe.syntax._
 class NullableTest extends FunSuite with Matchers with EitherValues {

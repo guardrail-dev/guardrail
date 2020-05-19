@@ -659,7 +659,7 @@ object DropwizardServerGenerator {
             )
             .addAnnotation(new SingleMemberAnnotationExpr(new Name("Retention"), new FieldAccessExpr(new NameExpr("RetentionPolicy"), "RUNTIME")))
             .addAnnotation(new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr(name)))
-          SupportDefinition[JavaLanguage](new Name(name), annotationImports, annotationDecl)
+          SupportDefinition[JavaLanguage](new Name(name), annotationImports, List(annotationDecl))
         }
         List(
           shower,

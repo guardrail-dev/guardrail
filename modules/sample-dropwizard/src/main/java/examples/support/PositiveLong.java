@@ -1,4 +1,4 @@
-package support;
+package examples.support;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

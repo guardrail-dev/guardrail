@@ -1,6 +1,6 @@
-package support
+package examples.support
 
-import examples.client.endpoints.Implicits
+import examples.client.akkaHttp.Implicits
 import io.circe.Decoder
 
 class PositiveLong private (val value: Long) extends AnyVal

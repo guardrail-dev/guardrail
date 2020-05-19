@@ -195,6 +195,7 @@ object ProtocolGenerator {
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
+      supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
       implicit F: FrameworkTerms[L, F],
@@ -219,7 +220,9 @@ object ProtocolGenerator {
 
     for {
       parents <- hierarchy.model
-        .refine[F[List[SuperClass[L]]]]({ case c: ComposedSchema => c })(extractParents(_, definitions, concreteTypes, dtoPackage, defaultPropertyRequirement))
+        .refine[F[List[SuperClass[L]]]]({ case c: ComposedSchema => c })(
+          extractParents(_, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+        )
         .getOrElse(List.empty[SuperClass[L]].pure[F])
       props <- extractProperties(hierarchy.model)
       requiredFields           = hierarchy.required ::: hierarchy.children.flatMap(_.required)
@@ -232,7 +235,7 @@ object ProtocolGenerator {
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
             defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
-            res <- transformProperty(hierarchy.name, dtoPackage, needCamelSnakeConversion, concreteTypes)(
+            res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, needCamelSnakeConversion, concreteTypes)(
               name,
               prop.get,
               resolvedType,
@@ -264,6 +267,7 @@ object ProtocolGenerator {
       definitions: List[(String, Tracker[Schema[_]])],
       concreteTypes: List[PropMeta[L]],
       dtoPackage: List[String],
+      supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
       implicit M: ModelProtocolTerms[L, F],
@@ -311,6 +315,7 @@ object ProtocolGenerator {
               concreteTypes,
               definitions,
               dtoPackage,
+              supportPackage,
               defaultPropertyRequirement
             )
             interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
@@ -343,6 +348,7 @@ object ProtocolGenerator {
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
+      supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
       implicit M: ModelProtocolTerms[L, F],
@@ -367,11 +373,12 @@ object ProtocolGenerator {
         concreteTypes,
         definitions,
         dtoPackage,
+        supportPackage,
         defaultPropertyRequirement
       )
       defn        <- renderDTOClass(clsName.last, params, parents)
       encoder     <- encodeModel(clsName.last, dtoPackage, needCamelSnakeConversion, params, parents)
-      decoder     <- decodeModel(clsName.last, dtoPackage, needCamelSnakeConversion, params, parents)
+      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, needCamelSnakeConversion, params, parents)
       tpe         <- parseTypeName(clsName.last)
       fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
@@ -409,6 +416,7 @@ object ProtocolGenerator {
       concreteTypes: List[PropMeta[L]],
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
+      supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
       implicit M: ModelProtocolTerms[L, F],
@@ -426,13 +434,22 @@ object ProtocolGenerator {
       val nestedClassName = getClsName(name).append(name.toCamelCase.capitalize)
       schema
         .refine[F[Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
-          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, defaultPropertyRequirement).map(Option(_))
+          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement).map(Option(_))
         )
         .orRefine({ case o: ComposedSchema => o })(
           o =>
             for {
-              parents              <- extractParents(o, definitions, concreteTypes, dtoPackage, defaultPropertyRequirement)
-              maybeClassDefinition <- fromModel(nestedClassName, schema, parents, concreteTypes, definitions, dtoPackage, defaultPropertyRequirement)
+              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+              maybeClassDefinition <- fromModel(
+                nestedClassName,
+                schema,
+                parents,
+                concreteTypes,
+                definitions,
+                dtoPackage,
+                supportPackage,
+                defaultPropertyRequirement
+              )
             } yield Option(maybeClassDefinition)
         )
         .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
@@ -453,7 +470,7 @@ object ProtocolGenerator {
             customType            <- SwaggerUtil.customTypeName(schema.get)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
-            parameter <- transformProperty(getClsName(name).last, dtoPackage, needCamelSnakeConversion, concreteTypes)(
+            parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, needCamelSnakeConversion, concreteTypes)(
               name,
               schema.get,
               resolvedType,
@@ -641,7 +658,12 @@ object ProtocolGenerator {
     )
   }
 
-  def fromSwagger[L <: LA, F[_]](swagger: Tracker[OpenAPI], dtoPackage: List[String], defaultPropertyRequirement: PropertyRequirement)(
+  def fromSwagger[L <: LA, F[_]](
+      swagger: Tracker[OpenAPI],
+      dtoPackage: List[String],
+      supportPackage: List[String],
+      defaultPropertyRequirement: PropertyRequirement
+  )(
       implicit E: EnumProtocolTerms[L, F],
       M: ModelProtocolTerms[L, F],
       R: ArrayProtocolTerms[L, F],
@@ -659,32 +681,59 @@ object ProtocolGenerator {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value)
-      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, defaultPropertyRequirement))
+      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage, defaultPropertyRequirement))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
           model
             .refine({ case m: StringSchema => m })(
               m =>
                 for {
-                  enum  <- fromEnum(clsName, m, dtoPackage)
-                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage, defaultPropertyRequirement)
+                  enum <- fromEnum(clsName, m, dtoPackage)
+                  model <- fromModel(
+                    NonEmptyList.of(clsName),
+                    m,
+                    List.empty,
+                    concreteTypes,
+                    definitions.value,
+                    dtoPackage,
+                    supportPackage,
+                    defaultPropertyRequirement
+                  )
                   alias <- modelTypeAlias(clsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
             )
             .orRefine({ case c: ComposedSchema => c })(
               comp =>
                 for {
-                  parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, defaultPropertyRequirement)
-                  model   <- fromModel(NonEmptyList.of(clsName), comp, parents, concreteTypes, definitions.value, dtoPackage, defaultPropertyRequirement)
-                  alias   <- modelTypeAlias(clsName, comp)
+                  parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+                  model <- fromModel(
+                    NonEmptyList.of(clsName),
+                    comp,
+                    parents,
+                    concreteTypes,
+                    definitions.value,
+                    dtoPackage,
+                    supportPackage,
+                    defaultPropertyRequirement
+                  )
+                  alias <- modelTypeAlias(clsName, comp)
                 } yield model.getOrElse(alias)
             )
             .orRefine({ case a: ArraySchema => a })(arr => fromArray(clsName, arr, concreteTypes))
             .orRefine({ case o: ObjectSchema => o })(
               m =>
                 for {
-                  enum  <- fromEnum(clsName, m, dtoPackage)
-                  model <- fromModel(NonEmptyList.of(clsName), m, List.empty, concreteTypes, definitions.value, dtoPackage, defaultPropertyRequirement)
+                  enum <- fromEnum(clsName, m, dtoPackage)
+                  model <- fromModel(
+                    NonEmptyList.of(clsName),
+                    m,
+                    List.empty,
+                    concreteTypes,
+                    definitions.value,
+                    dtoPackage,
+                    supportPackage,
+                    defaultPropertyRequirement
+                  )
                   alias <- modelTypeAlias(clsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
             )

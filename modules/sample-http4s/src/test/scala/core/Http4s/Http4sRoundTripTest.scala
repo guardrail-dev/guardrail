@@ -15,7 +15,7 @@ import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
-import support.PositiveLong
+import examples.support.PositiveLong
 
 class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
 

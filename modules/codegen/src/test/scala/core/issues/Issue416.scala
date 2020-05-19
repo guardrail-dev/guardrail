@@ -38,7 +38,7 @@ class Issue416 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
        |""".stripMargin
 
   test("Ensure mapRoute is generated") {
-    val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, _)) = runSwaggerSpec(swagger)(Context.empty, Http4s)
 
     val resource = q"""
       class Resource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] {

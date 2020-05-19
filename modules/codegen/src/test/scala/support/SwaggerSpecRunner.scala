@@ -35,7 +35,8 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
 
   def runSwagger[L <: LA](
       swagger: OpenAPI,
-      dtoPackage: List[String] = List.empty
+      dtoPackage: List[String] = List.empty,
+      supportPackage: List[String] = List.empty
   )(context: Context, framework: Framework[L, Target]): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     import framework._
     val (proto, CodegenDefinitions(clients, Nil, clientSupportDefs, _)) =
@@ -44,7 +45,8 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
           CodegenTarget.Client,
           context,
           Tracker(swagger),
-          dtoPackage
+          dtoPackage,
+          supportPackage
         )
         .valueOr({ err =>
           throw new Exception(err.toString)
@@ -56,6 +58,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
           CodegenTarget.Server,
           context,
           Tracker(swagger),
+          List.empty,
           List.empty
         )
         .valueOr({ err =>
@@ -89,6 +92,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
         kind,
         context,
         Tracker(swagger),
+        List.empty,
         List.empty
       ) match {
       case TargetError(err, la) => (la, err)

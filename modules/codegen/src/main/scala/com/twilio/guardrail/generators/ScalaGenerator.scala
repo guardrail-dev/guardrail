@@ -306,22 +306,16 @@ object ScalaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[scala.meta.Import],
-        frameworkDefinitions: scala.meta.Defn.Class,
+        frameworkDefinitions: List[scala.meta.Defn],
         frameworkDefinitionsName: scala.meta.Term.Name
     ): Target[WriteTree] = {
       val pkg: Term.Ref            = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
-      val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
       val frameworkDefinitionsFile = source"""
             package $pkg
 
             ..$frameworkImports
 
-            import cats.implicits._
-            import cats.data.EitherT
-
-            import $implicitsRef._
-
-            $frameworkDefinitions
+            ..$frameworkDefinitions
           """
       Target.pure(WriteTree(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), sourceToBytes(frameworkDefinitionsFile)))
     }

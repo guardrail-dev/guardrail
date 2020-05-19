@@ -21,7 +21,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.scalatest.{ EitherValues, FunSuite, Matchers }
 import scala.concurrent.Future
-import support.PositiveLong
+import examples.support.PositiveLong
 
 class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
@@ -67,14 +67,14 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
-          petId: support.PositiveLong,
+          petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
           file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
           file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
           longValue: Long,
-          customValue: support.PositiveLong,
-          customOptionalValue: Option[support.PositiveLong]
+          customValue: examples.support.PositiveLong,
+          customOptionalValue: Option[examples.support.PositiveLong]
       ) = ???
     }))
 
@@ -129,14 +129,14 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
-          petId: support.PositiveLong,
+          petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
           file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
           file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
           longValue: Long,
-          customValue: support.PositiveLong,
-          customOptionalValue: Option[support.PositiveLong]
+          customValue: examples.support.PositiveLong,
+          customOptionalValue: Option[examples.support.PositiveLong]
       ) = ???
     }))
 
@@ -177,14 +177,14 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
-          petId: support.PositiveLong,
+          petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
           file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
           file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
           longValue: Long,
-          customValue: support.PositiveLong,
-          customOptionalValue: Option[support.PositiveLong]
+          customValue: examples.support.PositiveLong,
+          customOptionalValue: Option[examples.support.PositiveLong]
       ) = ???
     }))
 
@@ -221,14 +221,14 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
-          petId: support.PositiveLong,
+          petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
           file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
           file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
           longValue: Long,
-          customValue: support.PositiveLong,
-          customOptionalValue: Option[support.PositiveLong]
+          customValue: examples.support.PositiveLong,
+          customOptionalValue: Option[examples.support.PositiveLong]
       ) = ???
     }))
 
@@ -262,14 +262,14 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.uploadFileResponse.type)(
-          petId: support.PositiveLong,
+          petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
           file2: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType),
           file3: (java.io.File, Option[String], akka.http.scaladsl.model.ContentType, String),
           longValue: Long,
-          customValue: support.PositiveLong,
-          customOptionalValue: Option[support.PositiveLong]
+          customValue: examples.support.PositiveLong,
+          customOptionalValue: Option[examples.support.PositiveLong]
       ) = {
         val f1Length = file.flatMap({
           case (f, _, _) =>

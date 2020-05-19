@@ -92,7 +92,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       pkgPath: Path,
       pkgName: List[String],
       frameworkImports: List[L#Import],
-      frameworkDefinitions: L#ClassDefinition,
+      frameworkDefinitions: List[L#Definition],
       frameworkDefinitionsName: L#TermName
   ): F[WriteTree]
 
@@ -189,7 +189,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newRenderImplicits: (Path, List[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
       newRenderFrameworkImplicits: (Path, List[String], List[L#Import], List[L#Import], L#ObjectDefinition, L#TermName) => F[WriteTree] =
         renderFrameworkImplicits _,
-      newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], L#ClassDefinition, L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
+      newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
           Option[NonEmptyList[String]],
@@ -279,7 +279,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[L#Import],
-        frameworkDefinitions: L#ClassDefinition,
+        frameworkDefinitions: List[L#Definition],
         frameworkDefinitionsName: L#TermName
     ) = newRenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
     def writePackageObject(

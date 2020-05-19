@@ -26,7 +26,7 @@ object DocsHelpers {
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), List("support"))
         )
         val server = codegenDefinitions.servers.head
         val q"object ${oname} { ..${stats} }" = server.serverDefinitions.head
@@ -43,7 +43,7 @@ object DocsHelpers {
         )
       case GeneratingClients =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), List("support"))
         )
         codegenDefinitions.clients match {
           case g :: Nil =>

@@ -25,7 +25,7 @@ import com.twilio.guardrail.terms._
 import com.twilio.guardrail.generators.Framework
 import java.nio.file.Paths
 
-import com.twilio.guardrail.protocol.terms.protocol.PropertyRequirement
+import com.twilio.guardrail.protocol.terms.protocol.{ PropertyRequirement, ProtocolSupportTerms }
 
 import scala.util.control.NonFatal
 
@@ -209,6 +209,7 @@ class CoreTermInterp[L <: LA](
               import targetInterpreter._
               val Sw = implicitly[SwaggerTerms[L, Target]]
               val Sc = implicitly[LanguageTerms[L, Target]]
+              val Ps = implicitly[ProtocolSupportTerms[L, Target]]
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)
@@ -217,10 +218,12 @@ class CoreTermInterp[L <: LA](
                     kind,
                     context,
                     Tracker(swagger),
-                    definitionsPkgName ++ ("definitions" :: dtoPackage)
+                    definitionsPkgName ++ ("definitions" :: dtoPackage),
+                    definitionsPkgName :+ "support"
                   )
+                protocolSupport <- Ps.generateSupportDefinitions()
                 result <- Common
-                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
+                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports, protocolSupport)
               } yield result
             } catch {
               case NonFatal(ex) =>

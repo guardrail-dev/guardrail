@@ -50,6 +50,7 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           CodegenTarget.Models,
           Context.empty,
           Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
+          List.empty,
           List.empty
         )
     )
