@@ -66,7 +66,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
             Encoder.AsObject.instance[Foo](a => JsonObject.fromIterable(Vector(("value", a.value.asJson), ("value2", a.value2.asJson), ("nested", a.nested.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeFoo: Decoder[Foo] = new Decoder[Foo] { final def apply(c: HCursor): Decoder.Result[Foo] = for (v0 <- c.downField("value").as[Option[Foo.Value]]; v1 <- c.downField("value2").as[Baz]; v2 <- c.downField("nested").as[Option[Foo.Nested]]) yield Foo(v0, v1, v2) }
-          sealed abstract class Value(val value: String) { override def toString: String = value.toString }
+          sealed abstract class Value(val value: String) extends Product with Serializable { override def toString: String = value.toString }
           object Value {
             object members {
               case object A extends Value("a")
@@ -89,7 +89,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               Encoder.AsObject.instance[Nested](a => JsonObject.fromIterable(Vector(("value", a.value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }
             implicit val decodeNested: Decoder[Nested] = new Decoder[Nested] { final def apply(c: HCursor): Decoder.Result[Nested] = for (v0 <- c.downField("value").as[Option[Foo.Nested.Value]]) yield Nested(v0) }
-            sealed abstract class Value(val value: String) { override def toString: String = value.toString }
+            sealed abstract class Value(val value: String) extends Product with Serializable { override def toString: String = value.toString }
             object Value {
               object members {
                 case object C extends Value("c")

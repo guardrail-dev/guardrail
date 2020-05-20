@@ -76,7 +76,7 @@ object CirceProtocolGenerator {
 
     def renderClass(clsName: String, tpe: scala.meta.Type, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
       Target.pure(q"""
-        sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) {
+        sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends Product with Serializable {
           override def toString: String = value.toString
         }
       """)
