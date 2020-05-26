@@ -782,7 +782,7 @@ object AkkaHttpServerGenerator {
           val tracingMatcher = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
           val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
 
-          methodMatcher compose pathMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
+          pathMatcher compose methodMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
         fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")))
