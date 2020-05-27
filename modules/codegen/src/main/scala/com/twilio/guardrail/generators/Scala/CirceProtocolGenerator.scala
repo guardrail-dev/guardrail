@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
+import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.implicits._
 import com.twilio.guardrail.{
   DataVisible,
@@ -11,6 +12,7 @@ import com.twilio.guardrail.{
   ProtocolParameter,
   StaticDefns,
   SuperClass,
+  SupportDefinition,
   SwaggerUtil,
   Target,
   UserError
@@ -19,7 +21,7 @@ import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
-import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType }
+import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
@@ -138,6 +140,8 @@ object CirceProtocolGenerator {
 
     def transformProperty(
         clsName: String,
+        dtoPackage: List[String],
+        supportPackage: List[String],
         needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[ScalaLanguage]]
     )(
@@ -185,15 +189,31 @@ object CirceProtocolGenerator {
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
               (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
           }
-
-          (finalDeclType, finalDefaultValue) = Option(requirement)
-            .filterNot(req => req == PropertyRequirement.Optional || req == PropertyRequirement.OptionalNullable)
-            .fold[(Type, Option[Term])](
-              (t"Option[${tpe}]", Some(defaultValue.fold[Term](q"None")(t => q"Option($t)")))
-            )(Function.const((tpe, defaultValue)) _)
+          presence     <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+          presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+          (finalDeclType, finalDefaultValue) = requirement match {
+            case PropertyRequirement.Required => tpe -> defaultValue
+            case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
+              t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
+            case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
+              t"Option[$tpe]" -> defaultValue.map(t => q"Option($t)").orElse(Some(q"None"))
+            case PropertyRequirement.OptionalNullable =>
+              t"$presenceType[Option[$tpe]]" -> defaultValue.map(t => q"$presence.Present($t)")
+          }
           term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
-        } yield ProtocolParameter[ScalaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, finalDefaultValue)
+        } yield ProtocolParameter[ScalaLanguage](
+          term,
+          tpe,
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          requirement,
+          finalDefaultValue
+        )
       }
 
     def renderDTOClass(
@@ -243,6 +263,7 @@ object CirceProtocolGenerator {
 
     def encodeModel(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
@@ -292,12 +313,43 @@ object CirceProtocolGenerator {
             """
           )
         } else */ {
-          val pairs: List[Term.Tuple] = params
-            .map(param => q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)""")
-            .to[List]
+          def encodeRequired(param: ProtocolParameter[ScalaLanguage]) =
+            q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)"""
+
+          def encodeOptional(param: ProtocolParameter[ScalaLanguage]) = {
+            val name = Lit.String(param.name.value)
+            q"a.${Term.Name(param.term.name.value)}.fold(ifAbsent = None, ifPresent = value => Some($name -> value.asJson))"
+          }
+
+          val allFields: List[Either[Term.Apply, Term.Tuple]] = params.map { param =>
+            val name = Lit.String(param.name.value)
+            param.propertyRequirement match {
+              case PropertyRequirement.Required | PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy =>
+                Right(encodeRequired(param))
+              case PropertyRequirement.Optional | PropertyRequirement.OptionalNullable =>
+                Left(encodeOptional(param))
+              case PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
+                Left(encodeOptional(param))
+              case PropertyRequirement.Configured(PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy, _) =>
+                Right(encodeRequired(param))
+              case PropertyRequirement.Configured(PropertyRequirement.Optional, _) =>
+                Left(q"""a.${Term.Name(param.term.name.value)}.map(value => (${Lit.String(param.name.value)}, value.asJson))""")
+            }
+          }
+
+          val pairs: List[Term.Tuple] = allFields.collect {
+            case Right(pair) => pair
+          }
+          val optional = allFields.collect {
+            case Left(field) => field
+          }
+          val simpleCase = q"Vector(..${pairs})"
+          val arg = optional.foldLeft[Term](simpleCase) { (acc, field) =>
+            q"$acc ++ $field"
+          }
           Option(
             q"""
-                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable(Vector(..${pairs})))
+                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable($arg))
               """
           )
         }
@@ -311,6 +363,8 @@ object CirceProtocolGenerator {
 
     def decodeModel(
         clsName: String,
+        dtoPackage: List[String],
+        supportPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
@@ -323,6 +377,7 @@ object CirceProtocolGenerator {
       val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
       val paramCount                = params.length
       for {
+        presence <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         decVal <- if (paramCount == 0) {
           Target.pure(Option.empty[Term])
         } else
@@ -349,16 +404,65 @@ object CirceProtocolGenerator {
                     }
                   } yield {
                     val term = Term.Name(s"v$idx")
-                    val enum = if (param.emptyToNull == EmptyIsNull) {
-                      enumerator"""
-                  ${Pat.Var(term)} <- c.downField(${Lit
-                        .String(param.name.value)}).withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j)).as[${tpe}]
-                """
-                    } else {
-                      enumerator"""
-                  ${Pat.Var(term)} <- c.downField(${Lit.String(param.name.value)}).as[${tpe}]
-                """
+                    val name = Lit.String(param.name.value)
+
+                    val emptyToNull: Term => Term = if (param.emptyToNull == EmptyIsNull) { t =>
+                      q"$t.withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j))"
+                    } else identity _
+
+                    val decodeField: Type => NonEmptyVector[Term => Term] = { tpe =>
+                      NonEmptyVector.of[Term => Term](
+                        t => q"$t.downField($name)",
+                        emptyToNull,
+                        t => q"$t.as[${tpe}]"
+                      )
                     }
+
+                    val decodeOptionalField: Type => (Term => Term, Term) => NonEmptyVector[Term => Term] = {
+                      tpe => (present, absent) =>
+                        NonEmptyVector.of[Term => Term](
+                          t => q"""
+                          ((c: HCursor) =>
+                            c
+                              .value
+                              .asObject
+                              .filter(!_.contains($name))
+                              .fold(${emptyToNull(q"c.downField($name)")}.as[${tpe}].map(x => ${present(q"x")})) { _ =>
+                                Right($absent)
+                              }
+                          )($t)
+                        """
+                        )
+                    }
+
+                    def decodeOptionalRequirement(
+                        param: ProtocolParameter[ScalaLanguage]
+                    ): PropertyRequirement.OptionalRequirement => NonEmptyVector[Term => Term] = {
+                      case PropertyRequirement.OptionalLegacy =>
+                        decodeField(tpe)
+                      case PropertyRequirement.RequiredNullable =>
+                        decodeField(t"Json") :+ (
+                                t => q"$t.flatMap(_.as[${tpe}])"
+                            )
+                      case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
+                        decodeOptionalField(param.baseType)(x => q"Option($x)", q"None")
+                    }
+
+                    val parseTermAccessors: NonEmptyVector[Term => Term] = param.propertyRequirement match {
+                      case PropertyRequirement.Required =>
+                        decodeField(tpe)
+                      case PropertyRequirement.OptionalNullable =>
+                        decodeOptionalField(t"Option[${param.baseType}]")(x => q"$presence.present($x)", q"$presence.absent")
+                      case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
+                        decodeOptionalField(param.baseType)(x => q"$presence.present($x)", q"$presence.absent")
+                      case requirement: PropertyRequirement.OptionalRequirement =>
+                        decodeOptionalRequirement(param)(requirement)
+                      case PropertyRequirement.Configured(_, decoderRequirement) =>
+                        decodeOptionalRequirement(param)(decoderRequirement)
+                    }
+
+                    val parseTerm = parseTermAccessors.foldLeft[Term](q"c")((acc, next) => next(acc))
+                    val enum      = enumerator"""${Pat.Var(term)} <- $parseTerm"""
                     (term, enum)
                   }
               })
@@ -440,12 +544,58 @@ object CirceProtocolGenerator {
         )
       )
 
+    def staticProtocolImports(pkgName: List[String]): Target[List[Import]] = {
+      val implicitsRef: Term.Ref = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
+      Target.pure(
+        List(
+          q"import cats.implicits._",
+          q"import cats.data.EitherT"
+        ) :+ q"import $implicitsRef._"
+      )
+    }
+
     def packageObjectImports() =
       Target.pure(
         List(
           q"import java.time._"
         )
       )
+
+    def generateSupportDefinitions() = {
+      val presenceTrait =
+        q"""sealed trait Presence[+T] extends Product with Serializable {
+                def fold[R](ifAbsent: => R,
+                            ifPresent: T => R): R
+                def map[R](f: T => R): Presence[R] = fold(Presence.absent, a => Presence.present(f(a)))
+
+                def toOption: Option[T] = fold[Option[T]](None, Some(_))
+              }
+             """
+      val presenceObject =
+        q"""
+              object Presence {
+                def absent[R]: Presence[R] = Absent
+                def present[R](value: R): Presence[R] = Present(value)
+                case object Absent extends Presence[Nothing] {
+                  def fold[R](ifAbsent: => R,
+                           ifValue: Nothing => R): R = ifAbsent
+                }
+                final case class Present[+T](value: T) extends Presence[T] {
+                  def fold[R](ifAbsent: => R,
+                           ifPresent: T => R): R = ifPresent(value)
+                }
+
+                def fromOption[T](value: Option[T]): Presence[T] =
+                  value.fold[Presence[T]](Absent)(Present(_))
+
+                implicit object PresenceFunctor extends cats.Functor[Presence] {
+                  def map[A, B](fa: Presence[A])(f: A => B): Presence[B] = fa.fold[Presence[B]](Presence.absent, a => Presence.present(f(a)))
+                }
+              }
+             """
+      val presenceDefinition = SupportDefinition[ScalaLanguage](q"Presence", Nil, List(presenceTrait, presenceObject), insideDefinitions = false)
+      Target.pure(List(presenceDefinition))
+    }
 
     def packageObjectContents() =
       Target.pure(

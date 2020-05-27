@@ -1,8 +1,9 @@
 package tests.core
 
-import com.twilio.guardrail.generators.Scala.AkkaHttp
+import com.twilio.guardrail.generators.Scala.{ AkkaHttp, Http4s }
 import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
 import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+
 import scala.meta._
 import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite
@@ -316,6 +317,66 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         }
        """
     val definition = q"""case class First(value: Option[String] = None, nested: Option[Second.Nested] = None)"""
+
+    cls.structure shouldEqual definition.structure
+    cmp.structure shouldEqual companion.structure
+  }
+
+  test("Optional fields works") {
+    val swagger =
+      s"""
+         |swagger: "2.0"
+         |info:
+         |  title: Whatever
+         |  version: 1.0.0
+         |host: localhost:1234
+         |definitions:
+         |  TestObject:
+         |    type: object
+         |    required:
+         |      - required
+         |      - required-nullable
+         |    properties:
+         |      required:
+         |        type: string
+         |      required-nullable:
+         |        type: string
+         |        x-nullable: true
+         |      optional:
+         |        type: string
+         |        x-nullable: false
+         |      optional-nullable:
+         |        type: string
+         |        x-nullable: true
+         |      legacy:
+         |        type: string
+         |""".stripMargin
+    val (
+      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      _,
+      _
+    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+
+    val cmp = companionForStaticDefns(staticDefns)
+
+    val companion =
+      q"""
+        object TestObject {
+          implicit val encodeTestObject: Encoder.AsObject[TestObject] = {
+            val readOnlyKeys = Set[String]()
+            Encoder.AsObject.instance[TestObject](a => JsonObject.fromIterable(Vector(("required", a.required.asJson), ("required-nullable", a.requiredNullable.asJson), ("legacy", a.legacy.asJson)) ++ a.optional.fold(ifAbsent = None, ifPresent = value => Some("optional" -> value.asJson)) ++ a.optionalNullable.fold(ifAbsent = None, ifPresent = value => Some("optional-nullable" -> value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          }
+          implicit val decodeTestObject: Decoder[TestObject] = new Decoder[TestObject] {
+            final def apply(c: HCursor): Decoder.Result[TestObject] = for (v0 <- c.downField("required").as[String]; v1 <- c.downField("required-nullable").as[Json].flatMap(_.as[Option[String]]); v2 <- ((c: HCursor) => c.value.asObject.filter(!_.contains("optional")).fold(c.downField("optional").as[String].map(x => Presence.present(x))) {
+              _ => Right(Presence.absent)
+            })(c); v3 <- ((c: HCursor) => c.value.asObject.filter(!_.contains("optional-nullable")).fold(c.downField("optional-nullable").as[Option[String]].map(x => Presence.present(x))) {
+              _ => Right(Presence.absent)
+            })(c); v4 <- c.downField("legacy").as[Option[String]]) yield TestObject(v0, v1, v2, v3, v4)
+          }
+        }
+       """
+    val definition =
+      q"""case class TestObject(required: String, requiredNullable: Option[String] = None, optional: Presence[String] = Presence.Absent, optionalNullable: Presence[Option[String]], legacy: Option[String] = None)"""
 
     cls.structure shouldEqual definition.structure
     cmp.structure shouldEqual companion.structure

@@ -779,7 +779,13 @@ object JacksonGenerator {
         )
         .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
-    def transformProperty(clsName: String, needCamelSnakeConversion: Boolean, concreteTypes: List[PropMeta[JavaLanguage]])(
+    def transformProperty(
+        clsName: String,
+        dtoPackage: List[String],
+        supportPackage: List[String],
+        needCamelSnakeConversion: Boolean,
+        concreteTypes: List[PropMeta[JavaLanguage]]
+    )(
         name: String,
         property: Schema[_],
         meta: SwaggerUtil.ResolvedType[JavaLanguage],
@@ -837,7 +843,10 @@ object JacksonGenerator {
             case None => Target.pure(None)
           }
           (finalDeclType, finalDefaultValue) <- Option(requirement)
-            .filterNot(req => req == PropertyRequirement.Optional || req == PropertyRequirement.OptionalNullable)
+            .filter {
+              case PropertyRequirement.Required => true
+              case _                            => false
+            }
             .fold[Target[(Type, Option[Expression])]](
               (
                 safeParseType(s"Optional<${tpe}>"),
@@ -853,11 +862,23 @@ object JacksonGenerator {
             )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
           term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
           dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
-        } yield ProtocolParameter[JavaLanguage](term, RawParameterName(name), dep, rawType, readOnlyKey, emptyToNull, dataRedaction, defaultValue)
+        } yield ProtocolParameter[JavaLanguage](
+          term,
+          finalDeclType,
+          RawParameterName(name),
+          dep,
+          rawType,
+          readOnlyKey,
+          emptyToNull,
+          dataRedaction,
+          requirement,
+          defaultValue
+        )
       }
 
     def encodeModel(
         clsName: String,
+        dtoPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]] = Nil
@@ -866,6 +887,8 @@ object JacksonGenerator {
 
     def decodeModel(
         clsName: String,
+        dtoPackage: List[String],
+        supportPackage: List[String],
         needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]] = Nil
@@ -934,6 +957,12 @@ object JacksonGenerator {
       ).map(safeParseRawImport) ++ List(
             "java.util.Objects.requireNonNull"
           ).map(safeParseRawStaticImport)).sequence
+
+    def staticProtocolImports(pkgName: List[String]) =
+      Target.pure(List.empty)
+
+    def generateSupportDefinitions() =
+      Target.pure(List.empty)
 
     def packageObjectImports() =
       Target.pure(List.empty)

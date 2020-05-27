@@ -85,6 +85,24 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue223.yaml"), "issues.issue223"),
   ExampleCase(sampleResource("issues/issue249.yaml"), "issues.issue249"),
   ExampleCase(sampleResource("issues/issue264.yaml"), "issues.issue264"),
+  ) ++ {
+    val options = List[Option[String]](None, Some("legacy"), Some("optional"), Some("required-nullable"))
+    for {
+      a <- options
+      b <- options
+    } yield {
+      val (suffix, opts): (String, Seq[String]) = (a, b) match {
+        case (None, None) => ("", Seq.empty)
+        case (a, b) =>
+          (
+            s".${a.getOrElse("default")}${b.getOrElse("default")}".split("-").mkString("_"),
+            a.toSeq.flatMap(Seq("--optional-encode-as", _)) ++ b.toSeq.flatMap(Seq("--optional-decode-as", _))
+          )
+      }
+      ExampleCase(sampleResource("issues/issue315.yaml"), s"issues.issue315${suffix}")
+        .args(opts: _*)
+    }
+  } ++ List(
   ExampleCase(sampleResource("issues/issue325.yaml"), "issues.issue325"),
   ExampleCase(sampleResource("issues/issue351.yaml"), "issues.issue351"),
   ExampleCase(sampleResource("issues/issue357.yaml"), "issues.issue357"),
@@ -95,8 +113,8 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("issues/issue455.yaml"), "issues.issue455"),
   ExampleCase(sampleResource("issues/issue622.yaml"), "issues.issue622"),
   ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
-  ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "support.PositiveLong"),
-  // ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "support.PositiveLong"),
+  ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "examples.support.PositiveLong"),
+  // ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "examples.support.PositiveLong"),
   ExampleCase(sampleResource("plain.json"), "tests.dtos"),
   ExampleCase(sampleResource("polymorphism.yaml"), "polymorphism"),
   ExampleCase(sampleResource("polymorphism-mapped.yaml"), "polymorphismMapped"),

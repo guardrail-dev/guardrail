@@ -15,12 +15,18 @@ import com.twilio.guardrail.terms.{ CoreTerms, LanguageTerms, SecurityRequiremen
 import java.nio.file.Path
 import java.net.URI
 
-case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: L#ClassDefinition)
+case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: List[L#Definition], insideDefinitions: Boolean = true)
 
 object Common {
   val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
-  def prepareDefinitions[L <: LA, F[_]](kind: CodegenTarget, context: Context, swagger: Tracker[OpenAPI], dtoPackage: List[String])(
+  def prepareDefinitions[L <: LA, F[_]](
+      kind: CodegenTarget,
+      context: Context,
+      swagger: Tracker[OpenAPI],
+      dtoPackage: List[String],
+      supportPackage: List[String]
+  )(
       implicit
       C: ClientTerms[L, F],
       R: ArrayProtocolTerms[L, F],
@@ -39,7 +45,7 @@ object Common {
 
     Sw.log.function("prepareDefinitions")(for {
       proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) <- ProtocolGenerator
-        .fromSwagger[L, F](swagger, dtoPackage)
+        .fromSwagger[L, F](swagger, dtoPackage, supportPackage, context.propertyRequirement)
 
       serverUrls = NonEmptyList.fromList(
         swagger
@@ -108,13 +114,15 @@ object Common {
       outputPath: Path,
       pkgName: List[String],
       dtoPackage: List[String],
-      customImports: List[L#Import]
-  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F]): F[List[WriteTree]] = {
+      customImports: List[L#Import],
+      protocolSupport: List[SupportDefinition[L]]
+  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F], Pt: ProtocolSupportTerms[L, F]): F[List[WriteTree]] = {
     import Fw._
     import Sc._
 
     val pkgPath        = resolveFile(outputPath)(pkgName)
     val dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
+    val supportPkgPath = resolveFile(pkgPath.resolve("support"))(Nil)
 
     val definitions: List[String] = pkgName :+ "definitions"
 
@@ -160,8 +168,12 @@ object Common {
       frameworkDefinitionsFiles <- frameworkDefinitions.traverse({
         case (name, defn) => renderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, defn, name)
       })
-      supportDefinitionsFiles <- supportDefinitions.traverse({
-        case SupportDefinition(name, imports, defn) => renderFrameworkDefinitions(pkgPath, pkgName, imports, defn, name)
+
+      protocolStaticImports <- Pt.staticProtocolImports(pkgName)
+
+      supportDefinitionsFiles <- (supportDefinitions ++ protocolSupport).traverse({
+        case SupportDefinition(name, imports, defn, true)  => renderFrameworkDefinitions(pkgPath, pkgName, imports ++ protocolStaticImports, defn, name)
+        case SupportDefinition(name, imports, defn, false) => renderFrameworkDefinitions(supportPkgPath, pkgName :+ "support", imports, defn, name)
       })
     } yield (
       protocolDefinitions ++

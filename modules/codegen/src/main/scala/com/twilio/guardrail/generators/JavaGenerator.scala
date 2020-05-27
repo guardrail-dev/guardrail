@@ -315,7 +315,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
-        frameworkDefinitions: com.github.javaparser.ast.body.TypeDeclaration[_ <: com.github.javaparser.ast.body.TypeDeclaration[_]],
+        frameworkDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
         frameworkDefinitionsName: com.github.javaparser.ast.expr.Name
     ): Target[WriteTree] =
       for {
@@ -324,7 +324,10 @@ object JavaGenerator {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)
           frameworkImports.map(cu.addImport)
-          cu.addType(frameworkDefinitions)
+          frameworkDefinitions.foreach {
+            case cls: TypeDeclaration[_] => cu.addType(cls)
+            case other                   => Target.raiseError(RuntimeFailure(s"Don't know how to handle $other. This is a bug."))
+          }
           cu
         }
         bytes <- prettyPrintSource(cu)
@@ -336,7 +339,7 @@ object JavaGenerator {
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],
         protocolImports: List[com.github.javaparser.ast.ImportDeclaration],
-        packageObjectContents: List[com.github.javaparser.ast.body.VariableDeclarator],
+        packageObjectContents: List[com.github.javaparser.ast.stmt.Statement],
         extraTypes: List[com.github.javaparser.ast.stmt.Statement]
     ): Target[Option[WriteTree]] =
       for {

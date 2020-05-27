@@ -24,6 +24,9 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
 import com.twilio.guardrail.generators.Framework
 import java.nio.file.Paths
+
+import com.twilio.guardrail.protocol.terms.protocol.{ PropertyRequirement, ProtocolSupportTerms }
+
 import scala.util.control.NonFatal
 
 class CoreTermInterp[L <: LA](
@@ -86,8 +89,8 @@ class CoreTermInterp[L <: LA](
     import Target.log.debug
     Target.log.function("parseArgs") {
       FlatMap[Target].tailRecM[From, To](start)({
-        case pair @ (sofar, rest) =>
-          val empty = sofar
+        case pair @ (sofars, rest) =>
+          val empty = sofars
             .filter(_.defaults)
             .reverse
             .headOption
@@ -111,13 +114,13 @@ class CoreTermInterp[L <: LA](
               case (sofar :: already, "--models" :: xs) =>
                 Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
               case (sofar :: already, "--framework" :: value :: xs) =>
-                Continue((sofar.copy(context = sofar.context.copy(framework = Some(value))) :: already, xs))
+                Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
               case (sofar :: already, "--help" :: xs) =>
                 Continue((sofar.copy(printHelp = true) :: already, List.empty))
               case (sofar :: already, "--specPath" :: value :: xs) =>
                 Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
               case (sofar :: already, "--tracing" :: xs) =>
-                Continue((sofar.copy(context = sofar.context.copy(tracing = true)) :: already, xs))
+                Continue((sofar.copyContext(tracing = true) :: already, xs))
               case (sofar :: already, "--outputPath" :: value :: xs) =>
                 Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
               case (sofar :: already, "--packageName" :: value :: xs) =>
@@ -127,12 +130,49 @@ class CoreTermInterp[L <: LA](
               case (sofar :: already, "--import" :: value :: xs) =>
                 Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
               case (sofar :: already, "--module" :: value :: xs) =>
-                Continue((sofar.copy(context = sofar.context.copy(modules = sofar.context.modules :+ value)) :: already, xs))
+                Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
+              case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
+                for {
+                  propertyRequirement <- parseOptionalProperty(arg, value)
+                  res                 <- Continue((sofar.copyPropertyRequirement(encoder = propertyRequirement) :: already, xs))
+                } yield res
+              case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
+                for {
+                  propertyRequirement <- parseOptionalProperty(arg, value)
+                  res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
+                } yield res
               case (_, unknown) =>
                 debug("Unknown argument") >> Bail(UnknownArguments(unknown))
             }
           } yield step
       })
+    }
+  }
+
+  private def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
+    value match {
+      case "required-nullable" => Target.pure(PropertyRequirement.RequiredNullable)
+      case "optional"          => Target.pure(PropertyRequirement.Optional)
+      case "legacy"            => Target.pure(PropertyRequirement.OptionalLegacy)
+      case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
+    }
+
+  private def verifyPropertyRequirement: PropertyRequirement.Configured => Target[Unit] = {
+    val mapping: PropertyRequirement.OptionalRequirement => String = {
+      case PropertyRequirement.Optional         => "optional"
+      case PropertyRequirement.OptionalLegacy   => "legacy"
+      case PropertyRequirement.RequiredNullable => "required-nullable"
+    }
+    {
+      case PropertyRequirement.Configured(PropertyRequirement.Optional, decoder) if decoder != PropertyRequirement.Optional =>
+        Target.log.warning(
+          s"--encoder-optional-property ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --decoder-optional-property ${mapping(decoder)}. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+        )
+      case PropertyRequirement.Configured(encoder, PropertyRequirement.Optional) if encoder != PropertyRequirement.Optional =>
+        Target.log.warning(
+          s"--decoder-optional-property ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --encoder-optional-property ${mapping(encoder)}. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+        )
+      case _ => Target.pure(())
     }
   }
 
@@ -150,6 +190,7 @@ class CoreTermInterp[L <: LA](
       kind       = args.kind
       dtoPackage = args.dtoPackage
       context    = args.context
+      _ <- verifyPropertyRequirement(context.propertyRequirement)
       customImports <- args.imports
         .traverse(
           x =>
@@ -168,6 +209,7 @@ class CoreTermInterp[L <: LA](
               import targetInterpreter._
               val Sw = implicitly[SwaggerTerms[L, Target]]
               val Sc = implicitly[LanguageTerms[L, Target]]
+              val Ps = implicitly[ProtocolSupportTerms[L, Target]]
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)
@@ -176,10 +218,12 @@ class CoreTermInterp[L <: LA](
                     kind,
                     context,
                     Tracker(swagger),
-                    definitionsPkgName ++ ("definitions" :: dtoPackage)
+                    definitionsPkgName ++ ("definitions" :: dtoPackage),
+                    definitionsPkgName :+ "support"
                   )
+                protocolSupport <- Ps.generateSupportDefinitions()
                 result <- Common
-                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports)
+                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports, protocolSupport)
               } yield result
             } catch {
               case NonFatal(ex) =>

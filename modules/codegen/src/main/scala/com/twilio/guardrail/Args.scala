@@ -1,5 +1,7 @@
 package com.twilio.guardrail
 
+import com.twilio.guardrail.protocol.terms.protocol.PropertyRequirement
+
 case class Args(
     kind: CodegenTarget,
     specPath: Option[String],
@@ -10,7 +12,33 @@ case class Args(
     context: Context,
     defaults: Boolean,
     imports: List[String]
-)
+) { self =>
+  def copyContext(
+      framework: Option[String] = self.context.framework,
+      tracing: Boolean = self.context.tracing,
+      modules: List[String] = self.context.modules,
+      propertyRequirement: PropertyRequirement.Configured = self.context.propertyRequirement
+  ): Args =
+    self.copy(
+      context = self.context.copy(
+        framework = framework,
+        tracing = tracing,
+        modules = modules,
+        propertyRequirement = propertyRequirement
+      )
+    )
+
+  def copyPropertyRequirement(
+      encoder: PropertyRequirement.OptionalRequirement = self.context.propertyRequirement.encoder,
+      decoder: PropertyRequirement.OptionalRequirement = self.context.propertyRequirement.decoder
+  ): Args =
+    copyContext(
+      propertyRequirement = self.context.propertyRequirement.copy(
+        encoder = encoder,
+        decoder = decoder
+      )
+    )
+}
 
 object Args {
   val empty: Args = Args(CodegenTarget.Client, Option.empty, Option.empty, Option.empty, List.empty, false, Context.empty, false, List.empty)

@@ -1,0 +1,44 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+paths:
+  /foo:
+    get:
+      operationId: postTest
+      consumes:
+      - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: "#!/definitions/TestObject"
+      responses:
+        200:
+          description: test passed
+        406:
+          description: test failed
+definitions:
+  TestObject:
+    type: object
+    required:
+      - required
+      - required-nullable
+    properties:
+      required:
+        type: string
+      required-nullable:
+        type: string
+        x-nullable: true
+      optional:
+        type: string
+        x-nullable: false
+      optional-nullable:
+        type: string
+        x-nullable: true
+      legacy:
+        type: string

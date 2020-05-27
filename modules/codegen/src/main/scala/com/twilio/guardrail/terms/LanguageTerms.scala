@@ -92,7 +92,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       pkgPath: Path,
       pkgName: List[String],
       frameworkImports: List[L#Import],
-      frameworkDefinitions: L#ClassDefinition,
+      frameworkDefinitions: List[L#Definition],
       frameworkDefinitionsName: L#TermName
   ): F[WriteTree]
 
@@ -102,7 +102,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       customImports: List[L#Import],
       packageObjectImports: List[L#Import],
       protocolImports: List[L#Import],
-      packageObjectContents: List[L#ValueDefinition],
+      packageObjectContents: List[L#Statement],
       extraTypes: List[L#Statement]
   ): F[Option[WriteTree]]
   def writeProtocolDefinition(
@@ -189,14 +189,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newRenderImplicits: (Path, List[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
       newRenderFrameworkImplicits: (Path, List[String], List[L#Import], List[L#Import], L#ObjectDefinition, L#TermName) => F[WriteTree] =
         renderFrameworkImplicits _,
-      newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], L#ClassDefinition, L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
+      newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
           Option[NonEmptyList[String]],
           List[L#Import],
           List[L#Import],
           List[L#Import],
-          List[L#ValueDefinition],
+          List[L#Statement],
           List[L#Statement]
       ) => F[Option[WriteTree]] = writePackageObject _,
       newWriteProtocolDefinition: (
@@ -279,7 +279,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[L#Import],
-        frameworkDefinitions: L#ClassDefinition,
+        frameworkDefinitions: List[L#Definition],
         frameworkDefinitionsName: L#TermName
     ) = newRenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
     def writePackageObject(
@@ -288,7 +288,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         customImports: List[L#Import],
         packageObjectImports: List[L#Import],
         protocolImports: List[L#Import],
-        packageObjectContents: List[L#ValueDefinition],
+        packageObjectContents: List[L#Statement],
         extraTypes: List[L#Statement]
     ) = newWritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
     def writeProtocolDefinition(

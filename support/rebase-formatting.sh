@@ -65,18 +65,14 @@ marker="$(echo "${RANDOM}" | base64)"
 if [[ "${#@}" -eq 1 ]]; then
   branch_tip="$1"
   common_root="$(git rev-parse origin/master 2>/dev/null)"
-   if [ $? -ne 0 ]; then
-     common_root="$(git rev-parse upstream/master 2>/dev/null)"
-   fi
+  if [ $? -ne 0 ]; then
+    common_root="$(git rev-parse upstream/master 2>/dev/null)"
+  fi
   format_hash=
 elif [[ "${#@}" -eq 2 ]]; then
-# common_root is the SHA of the commit immediately before the formatting commit.
-# This is expected to be the closest ancestor to your branch, as well as the
-# formatting commit.
   common_root="$1"
-# format_hash is the SHA of the formatting commit. This is the first one to
-# be reverted, as mentioned at the top of this script.
-  format_hash="$2"
+  branch_tip="$2"
+  format_hash=
 else
   echo "Usage: ${0} [<common_root> [<format_hash>]]" >&2
   exit 2

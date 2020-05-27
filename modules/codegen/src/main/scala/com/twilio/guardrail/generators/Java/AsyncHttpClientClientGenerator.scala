@@ -994,10 +994,10 @@ object AsyncHttpClientClientGenerator {
       } yield {
         exceptionClasses.map({
           case (imports, cls) =>
-            SupportDefinition[JavaLanguage](new Name(cls.getNameAsString), imports, cls)
+            SupportDefinition[JavaLanguage](new Name(cls.getNameAsString), imports, List(cls))
         }) ++ List(
-          SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, ahcSupportClass),
-          SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, jacksonSupportClass),
+          SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, List(ahcSupportClass)),
+          SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, List(jacksonSupportClass)),
           asyncHttpclientUtils,
           shower
         )
