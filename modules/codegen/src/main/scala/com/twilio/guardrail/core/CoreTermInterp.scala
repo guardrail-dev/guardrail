@@ -166,11 +166,11 @@ class CoreTermInterp[L <: LA](
     {
       case PropertyRequirement.Configured(PropertyRequirement.Optional, decoder) if decoder != PropertyRequirement.Optional =>
         Target.log.warning(
-          s"--encoder-optional-property ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --decoder-optional-property ${mapping(decoder)}. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+          s"--optional-encode-as ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --optional-decode-as ${mapping(decoder)}. This will result in the use of `Option[T]` as opposed to regular `Presence[T]`."
         )
       case PropertyRequirement.Configured(encoder, PropertyRequirement.Optional) if encoder != PropertyRequirement.Optional =>
         Target.log.warning(
-          s"--decoder-optional-property ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --encoder-optional-property ${mapping(encoder)}. This will result in the use of `Option[T]` as opposed to regular `Property[T]`."
+          s"--optional-decode-as ${mapping(PropertyRequirement.Optional)} was used, which does not match value of --optional-encode-as ${mapping(encoder)}. This will result in the use of `Option[T]` as opposed to regular `Presence[T]`."
         )
       case _ => Target.pure(())
     }
