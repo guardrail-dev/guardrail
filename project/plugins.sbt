@@ -22,7 +22,7 @@ addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.2.1")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
 
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.15")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.16")
 
 addSbtPlugin("org.scoverage"    %% "sbt-scoverage"  % "1.6.1")
 
