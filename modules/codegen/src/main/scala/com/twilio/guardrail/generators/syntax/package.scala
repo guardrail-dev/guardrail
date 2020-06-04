@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators
 
 import cats.data.NonEmptyList
 import java.util.Locale
+import java.util.regex.Matcher.quoteReplacement
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
@@ -62,14 +63,14 @@ package object syntax {
   private val SPLIT_DELIMITERS = "[-_\\s\\.]+".r
   private val BOUNDARY_SPLITTERS = List(
     "([^A-Z])([A-Z])".r,
-    "([A-Z]+)([A-Z][^A-Z]+)".r
+    "([A-Z]+)([A-Z][a-z]+)".r
   )
 
   implicit class RichString(private val s: String) extends AnyVal {
     private def splitParts(s: String): List[String] =
       BOUNDARY_SPLITTERS
         .foldLeft(SPLIT_DELIMITERS.split(s))(
-          (last, splitter) => last.flatMap(part => splitter.replaceAllIn(part, m => m.group(1) + "-" + m.group(2)).split("-"))
+          (last, splitter) => last.flatMap(part => splitter.replaceAllIn(part, m => quoteReplacement(m.group(1) + "-" + m.group(2))).split("-"))
         )
         .map(_.toLowerCase(Locale.US))
         .toList
