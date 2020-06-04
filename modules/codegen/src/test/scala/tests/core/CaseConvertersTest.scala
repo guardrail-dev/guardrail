@@ -31,7 +31,8 @@ object CaseConvertersTest {
     CaseTest("FOO BAR BAZ", "FooBarBaz", "fooBarBaz", "foo_bar_baz", "foo-bar-baz"),
     CaseTest("FOO BAR bazQuux", "FooBarBazQuux", "fooBarBazQuux", "foo_bar_baz_quux", "foo-bar-baz-quux"),
     CaseTest("FOOBarBaz", "FooBarBaz", "fooBarBaz", "foo_bar_baz", "foo-bar-baz"),
-    CaseTest("FooBARBaz", "FooBarBaz", "fooBarBaz", "foo_bar_baz", "foo-bar-baz")
+    CaseTest("FooBARBaz", "FooBarBaz", "fooBarBaz", "foo_bar_baz", "foo-bar-baz"),
+    CaseTest("UNITS_USD$3", "UnitsUsd$3", "unitsUsd$3", "units_usd$3", "units-usd$3")
   )
 }
 

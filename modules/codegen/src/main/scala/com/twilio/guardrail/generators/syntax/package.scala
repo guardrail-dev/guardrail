@@ -63,7 +63,7 @@ package object syntax {
   private val SPLIT_DELIMITERS = "[-_\\s\\.]+".r
   private val BOUNDARY_SPLITTERS = List(
     "([^A-Z])([A-Z])".r,
-    "([A-Z]+)([A-Z][^A-Z]+)".r
+    "([A-Z]+)([A-Z][a-z]+)".r
   )
 
   implicit class RichString(private val s: String) extends AnyVal {
