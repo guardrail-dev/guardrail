@@ -2,6 +2,7 @@ package com.twilio.guardrail.generators
 
 import cats.data.NonEmptyList
 import java.util.Locale
+import java.util.regex.Matcher.quoteReplacement
 import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
@@ -69,7 +70,7 @@ package object syntax {
     private def splitParts(s: String): List[String] =
       BOUNDARY_SPLITTERS
         .foldLeft(SPLIT_DELIMITERS.split(s))(
-          (last, splitter) => last.flatMap(part => splitter.replaceAllIn(part, m => m.group(1) + "-" + m.group(2)).split("-"))
+          (last, splitter) => last.flatMap(part => splitter.replaceAllIn(part, m => quoteReplacement(m.group(1) + "-" + m.group(2))).split("-"))
         )
         .map(_.toLowerCase(Locale.US))
         .toList
