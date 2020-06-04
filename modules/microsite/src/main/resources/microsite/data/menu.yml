@@ -3,19 +3,25 @@ options:
     url: ""
 
   - title: Java
+    url: java/
     nested_options:
       - title: Dropwizard
         url: java/dropwizard/
 
+      - title: Spring-MVC
+        url: java/spring-mvc/
+
   - title: Scala
+    url: scala/
     nested_options:
       - title: akka-http
         url: scala/akka-http
 
       - title: http4s
-        url: scala/akka-http
+        url: scala/http4s
 
   - title: ScalaJS
+    url: scalajs/
     nested_options:
       - title: endpoints (client only)
         url: scalajs/endpoints

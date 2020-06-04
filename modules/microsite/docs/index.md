@@ -17,3 +17,4 @@ Getting started:
   - [endpoints](scalajs/endpoints)
 - Java
   - [dropwizard](java/dropwizard)
+  - [spring-mvc](java/spring-mvc)

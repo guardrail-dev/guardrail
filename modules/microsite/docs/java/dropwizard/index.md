@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "guardrail: Java: Home"
+title: "dropwizard - java - guardrail"
 ---
 
 Table of Contents
