@@ -102,7 +102,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-    sealed abstract class Third(val value: String) {
+    sealed abstract class Third(val value: String) extends Product with Serializable {
       override def toString: String = value.toString
     }
     """

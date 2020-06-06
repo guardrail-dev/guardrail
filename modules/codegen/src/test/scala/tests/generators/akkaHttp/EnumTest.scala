@@ -63,7 +63,7 @@ class EnumTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-    sealed abstract class Bar(val value: String) {
+    sealed abstract class Bar(val value: String) extends Product with Serializable {
       override def toString: String = value.toString
     }
     """
