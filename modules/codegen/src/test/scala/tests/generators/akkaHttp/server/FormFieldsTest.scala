@@ -82,7 +82,7 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
       object Resource {
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
           {
-            put(path("foo")(({
+            path("foo")(put(({
               object putFooParts {
                 sealed trait Part
                 case class IgnoredPart(unit: Unit) extends Part
