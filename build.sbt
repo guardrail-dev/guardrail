@@ -231,7 +231,8 @@ val testDependencies = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
-  ScoverageKeys.coverageMinimum := 19.9,
+  ScoverageKeys.coverageMinimum := 80.5,
+  ScoverageKeys.coverageFailOnMinimum := true,
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
   addCompilerPlugin(scalafixSemanticdb),
