@@ -162,10 +162,11 @@ object AkkaHttpServerGenerator {
     def getExtraRouteParams(tracing: Boolean) =
       for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
-        res <- if (tracing) {
-          Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
-        } else Target.pure(List.empty)
-      } yield res
+        beforeComplete = param"""beforeComplete: Directive0 = pass"""
+        tracing <- if (tracing) {
+          Target.pure(Option(param"""trace: String => Directive1[TraceBuilder]"""))
+        } else Target.pure(Option.empty)
+      } yield tracing.toList ::: List(beforeComplete)
     def renderClass(
         resourceName: String,
         handlerName: String,
@@ -785,7 +786,7 @@ object AkkaHttpServerGenerator {
           pathMatcher compose methodMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-        fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")))
+        fullRoute       = Term.Block(List(fullRouteMatcher(q"beforeComplete(complete(handler.${Term.Name(operationId)}(...${handlerCallArgs})))")))
 
         respond = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 

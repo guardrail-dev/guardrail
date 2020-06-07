@@ -44,11 +44,11 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
 
     val resource = q"""
       object Resource {
-        def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: Handler, beforeComplete: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            (pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2"))(get(discardEntity(complete(handler.getFoo2(getFoo2Response)()))))
+            (pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2"))(get(discardEntity(beforeComplete(complete(handler.getFoo2(getFoo2Response)())))))
           } ~ {
-            (path("foo") & parameter("bar").require(_ == "1"))(get(discardEntity(complete(handler.getFoo1(getFoo1Response)()))))
+            (path("foo") & parameter("bar").require(_ == "1"))(get(discardEntity(beforeComplete(complete(handler.getFoo1(getFoo1Response)())))))
           }
         }
         sealed abstract class getFoo2Response(val statusCode: StatusCode)

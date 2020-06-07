@@ -36,9 +36,9 @@ class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     """
     val resource = q"""
       object StoreResource {
-        def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: StoreHandler, beforeComplete: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            pathEndOrSingleSlash(options(discardEntity(complete(handler.getRoot(getRootResponse)()))))
+            pathEndOrSingleSlash(options(discardEntity(beforeComplete(complete(handler.getRoot(getRootResponse)())))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
