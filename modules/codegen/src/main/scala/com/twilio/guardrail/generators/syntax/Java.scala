@@ -231,6 +231,44 @@ object Java {
   )
 
   implicit class RichJavaString(private val s: String) extends AnyVal {
+    def escapeInvalidCharacters: String =
+      s.map({
+          case '`'  => "_backtick_"
+          case '~'  => "_tilde_"
+          case '!'  => "_bang_"
+          case '@'  => "_at_"
+          case '#'  => "_pound_"
+          case '%'  => "_percent_"
+          case '^'  => "_caret_"
+          case '&'  => "_ampersand_"
+          case '*'  => "_asterisk_"
+          case '('  => "_open_paren_"
+          case ')'  => "_close_paren_"
+          case '-'  => "_"
+          case '+'  => "_plus_"
+          case '='  => "_equals_"
+          case '|'  => "_pipe_"
+          case ':'  => "_colon_"
+          case ';'  => "_semicolon_"
+          case '"'  => "_double_quote_"
+          case '\'' => "_single_quote_"
+          case ','  => "_comma_"
+          case '.'  => "_dot_"
+          case '?'  => "_question_"
+          case '\\' => "_backslash_"
+          case '/'  => "_slash_"
+          case '['  => "_open_square_brace_"
+          case ']'  => "_close_square_brace_"
+          case '{'  => "_open_curly_brace_"
+          case '}'  => "_close_curly_brace_"
+          case '<'  => "_less_than_"
+          case '>'  => "_greater_than_"
+          case c    => c.toString
+        })
+        .mkString
+        .replaceAll("^_+", "")
+        .replaceAll("_+$", "")
+
     def escapeReservedWord: String = if (reservedWords.contains(s)) s + "_" else s
     def unescapeReservedWord: String =
       if (s.endsWith("_")) {

@@ -172,13 +172,14 @@ object JavaGenerator {
           Target.raiseUserError(s"Enumeration $tpe somehow has a default value that isn't a string")
       }
 
-    def formatPackageName(packageName: List[String]): Target[List[String]] = Target.pure(packageName.map(_.toCamelCase.escapeIdentifier))
+    def formatPackageName(packageName: List[String]): Target[List[String]] =
+      Target.pure(packageName.map(_.escapeInvalidCharacters.toCamelCase.escapeIdentifier))
     def formatTypeName(typeName: String, suffix: Option[String] = None): Target[String] =
-      Target.pure(typeName.toPascalCase.escapeIdentifier + suffix.fold("")(_.toPascalCase.escapeIdentifier))
-    def formatFieldName(fieldName: String): Target[String]         = Target.pure(fieldName.toCamelCase.escapeIdentifier)
-    def formatMethodName(methodName: String): Target[String]       = Target.pure(methodName.toCamelCase.escapeIdentifier)
-    def formatMethodArgName(methodArgName: String): Target[String] = Target.pure(methodArgName.toCamelCase.escapeIdentifier)
-    def formatEnumName(enumValue: String): Target[String]          = Target.pure(enumValue.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
+      Target.pure(typeName.escapeInvalidCharacters.toPascalCase.escapeIdentifier + suffix.fold("")(_.escapeInvalidCharacters.toPascalCase.escapeIdentifier))
+    def formatFieldName(fieldName: String): Target[String]         = Target.pure(fieldName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
+    def formatMethodName(methodName: String): Target[String]       = Target.pure(methodName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
+    def formatMethodArgName(methodArgName: String): Target[String] = Target.pure(methodArgName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
+    def formatEnumName(enumValue: String): Target[String]          = Target.pure(enumValue.escapeInvalidCharacters.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
 
     def embedArray(tpe: LazyResolvedType[JavaLanguage], containerTpe: Option[com.github.javaparser.ast.`type`.Type]): Target[LazyResolvedType[JavaLanguage]] =
       tpe match {
