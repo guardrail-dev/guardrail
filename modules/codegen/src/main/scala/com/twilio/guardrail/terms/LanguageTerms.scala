@@ -31,6 +31,12 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def fullyQualifyPackageName(rawPkgName: List[String]): F[List[String]]
 
   def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): F[L#TermSelect]
+
+  def formatPackageName(packageName: List[String]): F[List[String]]
+  def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]
+  def formatFieldName(fieldName: String): F[String]
+  def formatMethodName(methodName: String): F[String]
+  def formatMethodArgName(methodArgName: String): F[String]
   def formatEnumName(enumValue: String): F[String]
 
   def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): F[LazyResolvedType[L]]
@@ -151,6 +157,11 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newLiftMapType: (L#Type, Option[L#Type]) => F[L#Type] = liftMapType _,
       newFullyQualifyPackageName: List[String] => F[List[String]] = fullyQualifyPackageName _,
       newLookupEnumDefaultValue: (L#TypeName, L#Term, List[(String, L#TermName, L#TermSelect)]) => F[L#TermSelect] = lookupEnumDefaultValue _,
+      newFormatPackageName: List[String] => F[List[String]] = formatPackageName _,
+      newFormatTypeName: (String, Option[String]) => F[String] = formatTypeName _,
+      newFormatFieldName: String => F[String] = formatFieldName _,
+      newFormatMethodName: String => F[String] = formatMethodName _,
+      newFormatMethodArgName: String => F[String] = formatMethodArgName _,
       newFormatEnumName: String => F[String] = formatEnumName _,
       newEmbedArray: (LazyResolvedType[L], Option[L#Type]) => F[LazyResolvedType[L]] = embedArray _,
       newEmbedMap: (LazyResolvedType[L], Option[L#Type]) => F[LazyResolvedType[L]] = embedMap _,
@@ -230,6 +241,11 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def fullyQualifyPackageName(rawPkgName: List[String])        = newFullyQualifyPackageName(rawPkgName)
     def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]) =
       newLookupEnumDefaultValue(tpe, defaultValue, values)
+    def formatPackageName(packageName: List[String]): F[List[String]]                 = newFormatPackageName(packageName)
+    def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]    = newFormatTypeName(typeName, suffix)
+    def formatFieldName(fieldName: String): F[String]                                 = newFormatFieldName(fieldName)
+    def formatMethodName(methodName: String): F[String]                               = newFormatMethodName(methodName)
+    def formatMethodArgName(methodArgName: String): F[String]                         = newFormatMethodArgName(methodArgName)
     def formatEnumName(enumValue: String)                                             = newFormatEnumName(enumValue)
     def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type])               = newEmbedArray(tpe, customTpe)
     def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type])                 = newEmbedMap(tpe, customTpe)

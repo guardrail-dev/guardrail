@@ -16,6 +16,7 @@ object SpringMvcClientGenerator {
     def MonadF = Target.targetInstances
     def generateClientOperation(
         className: List[String],
+        responseClsName: String,
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
         parameters: LanguageParameters[JavaLanguage]
@@ -36,7 +37,7 @@ object SpringMvcClientGenerator {
     ) =
       Target.raiseUserError("spring client generation is not currently supported")
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[JavaLanguage],
         protocolElems: List[StrictProtocolElems[JavaLanguage]]
     ) =

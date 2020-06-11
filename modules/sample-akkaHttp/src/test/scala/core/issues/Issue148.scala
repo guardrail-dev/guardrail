@@ -28,12 +28,12 @@ class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue148.server.akkaHttp.definitions._
     val route = Resource.routes(new Handler {
       override def createFoo(
-          respond: Resource.createFooResponse.type
-      )(body: Foo, xHeader: Boolean, xOptionalHeader: Option[Boolean]): Future[Resource.createFooResponse] =
+          respond: Resource.CreateFooResponse.type
+      )(body: Foo, xHeader: Boolean, xOptionalHeader: Option[Boolean]): Future[Resource.CreateFooResponse] =
         Future.successful(respond.OK(body))
-      override def getFoo(respond: Resource.getFooResponse.type)(): Future[Resource.getFooResponse] =
+      override def getFoo(respond: Resource.GetFooResponse.type)(): Future[Resource.GetFooResponse] =
         Future.successful(respond.OK(Bar("bar")))
-      override def updateFoo(respond: Resource.updateFooResponse.type)(name: Boolean, bar: Option[Boolean]): Future[Resource.updateFooResponse] =
+      override def updateFoo(respond: Resource.UpdateFooResponse.type)(name: Boolean, bar: Option[Boolean]): Future[Resource.UpdateFooResponse] =
         Future.successful(respond.Accepted(Bar("bar")))
     })
 

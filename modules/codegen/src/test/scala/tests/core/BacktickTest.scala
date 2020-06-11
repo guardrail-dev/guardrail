@@ -77,7 +77,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     tags should equal(Seq("dashy-package"))
 
     val client = q"""
-      class `Dashy-packageClient`(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
+      class DashyPackageClient(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
         val basePath: String = ""
         private[this] def makeRequest[T: ToEntityMarshaller](method: HttpMethod, uri: Uri, headers: scala.collection.immutable.Seq[HttpHeader], entity: T, protocol: HttpProtocol): EitherT[Future, Either[Throwable, HttpResponse], HttpRequest] = {
           EitherT(Marshal(entity).to[RequestEntity].map[Either[Either[Throwable, HttpResponse], HttpRequest]] {
@@ -87,17 +87,17 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        val `postDashy-op-idOKDecoder` = {
+        val postDashyOpIdOKDecoder = {
           structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[`dashy-class`].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
         }
-        val `dashy-op-idOKDecoder` = {
+        val dashyOpIdOKDecoder = {
           structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[`dashy-class`].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
         }
-        def `postDashy-op-id`(dashyParameter: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `PostDashy-op-idResponse`] = {
+        def postDashyOpId(dashyParameter: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PostDashyOpIdResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.POST, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              Unmarshal(resp.entity).to[`dashy-class`](`postDashy-op-idOKDecoder`, implicitly, implicitly).map(x => Right(`PostDashy-op-idResponse`.OK(x)))
+              Unmarshal(resp.entity).to[`dashy-class`](postDashyOpIdOKDecoder, implicitly, implicitly).map(x => Right(PostDashyOpIdResponse.OK(x)))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -105,11 +105,11 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(e))
           })))
         }
-        def `dashy-op-id`(dashyParameter: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], `Dashy-op-idResponse`] = {
+        def dashyOpId(dashyParameter: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], DashyOpIdResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              Unmarshal(resp.entity).to[`dashy-class`](`dashy-op-idOKDecoder`, implicitly, implicitly).map(x => Right(`Dashy-op-idResponse`.OK(x)))
+              Unmarshal(resp.entity).to[`dashy-class`](dashyOpIdOKDecoder, implicitly, implicitly).map(x => Right(DashyOpIdResponse.OK(x)))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -121,8 +121,8 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     """
 
     cls.head.right.get.structure should equal(client.structure)
-    cls.head.right.get.toString should include("class `Dashy-packageClient`")
-    cls.head.right.get.toString should include("def `dashy-op-id`")
+    cls.head.right.get.toString should include("class DashyPackageClient")
+    cls.head.right.get.toString should include("def dashyOpId")
     cls.head.right.get.toString should include("dashyParameter: String")
     cls.head.right.get.toString should include("\"dashy-parameter\", dashyParameter")
     cls.head.right.get.toString shouldNot include("``")
@@ -133,7 +133,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     //   automatically stripping the backticks. The following test ensures that even though
     //   the test doesn't follow the pattern, the generated code is still escaped.
     //   This behavior may change in scalameta 2.0.0+
-    cls.head.right.get.toString should include("def `postDashy-op-id`(dashyParameter")
+    cls.head.right.get.toString should include("def postDashyOpId(dashyParameter")
 
     cmp.toString shouldNot include("``")
   }

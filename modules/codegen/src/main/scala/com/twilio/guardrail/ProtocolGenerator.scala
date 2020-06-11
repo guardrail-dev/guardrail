@@ -8,16 +8,13 @@ import cats.implicits._
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.RawParameterType
-import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import java.util.Locale
-
 import cats.Foldable
 import com.twilio.guardrail.extract.Default
-
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
 import com.twilio.guardrail.generators.RawParameterName
@@ -229,9 +226,9 @@ object ProtocolGenerator {
       needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
       params <- props.traverse({
         case (name, prop) =>
-          val typeName            = NonEmptyList.of(hierarchy.name, name.toCamelCase.capitalize)
-          val propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
           for {
+            typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
+            propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
             defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
@@ -430,40 +427,43 @@ object ProtocolGenerator {
     import Sc._
     def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
 
-    def processProperty(name: String, schema: Tracker[Schema[_]]): F[Option[Either[String, NestedProtocolElems[L]]]] = {
-      val nestedClassName = getClsName(name).append(name.toCamelCase.capitalize)
-      schema
-        .refine[F[Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
-          _ => fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement).map(Option(_))
-        )
-        .orRefine({ case o: ComposedSchema => o })(
-          o =>
-            for {
-              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
-              maybeClassDefinition <- fromModel(
-                nestedClassName,
-                schema,
-                parents,
-                concreteTypes,
-                definitions,
-                dtoPackage,
-                supportPackage,
-                defaultPropertyRequirement
-              )
-            } yield Option(maybeClassDefinition)
-        )
-        .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
-        .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
-          s => fromEnum(nestedClassName.last, s, dtoPackage).map(Option(_))
-        )
-        .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
-    }
+    def processProperty(name: String, schema: Tracker[Schema[_]]): F[Option[Either[String, NestedProtocolElems[L]]]] =
+      for {
+        nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
+        defn <- schema
+          .refine[F[Option[Either[String, NestedProtocolElems[L]]]]]({ case x: ObjectSchema => x })(
+            _ =>
+              fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement).map(Option(_))
+          )
+          .orRefine({ case o: ComposedSchema => o })(
+            o =>
+              for {
+                parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+                maybeClassDefinition <- fromModel(
+                  nestedClassName,
+                  schema,
+                  parents,
+                  concreteTypes,
+                  definitions,
+                  dtoPackage,
+                  supportPackage,
+                  defaultPropertyRequirement
+                )
+              } yield Option(maybeClassDefinition)
+          )
+          .orRefine({ case a: ArraySchema => a })(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
+          .orRefine({ case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s })(
+            s => fromEnum(nestedClassName.last, s, dtoPackage).map(Option(_))
+          )
+          .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
+      } yield defn
+
     val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
     for {
       paramsAndNestedDefinitions <- props.traverse[F, (Tracker[ProtocolParameter[L]], Option[NestedProtocolElems[L]])] {
         case (name, schema) =>
-          val typeName = getClsName(name).append(name.toCamelCase.capitalize)
           for {
+            typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)

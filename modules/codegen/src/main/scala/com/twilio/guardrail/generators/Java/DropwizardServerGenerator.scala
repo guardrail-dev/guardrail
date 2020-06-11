@@ -14,7 +14,7 @@ import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -262,24 +262,32 @@ object DropwizardServerGenerator {
     override def generateRoutes(
         tracing: Boolean,
         resourceName: String,
+        handlerName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, LanguageParameters[JavaLanguage], Responses[JavaLanguage])],
+        routes: List[GenerateRouteMeta[JavaLanguage]],
         protocolElems: List[StrictProtocolElems[JavaLanguage]],
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
     ): Target[RenderedRoutes[JavaLanguage]] =
       for {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
-        handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
-        handlerType <- safeParseClassOrInterfaceType(handlerName)
+        handlerType  <- safeParseClassOrInterfaceType(handlerName)
       } yield {
         val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        val commonPathPrefix   = findPathPrefix(routes.map(_._3.path.get))
+        val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
         val (routeMethods, handlerMethodSigs) = routes
           .map({
-            case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation, securityRequirements), parameters, responses) =>
+            case GenerateRouteMeta(
+                operationId,
+                methodName,
+                responseClsName,
+                tracingFields,
+                sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
+                parameters,
+                responses
+                ) =>
               parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
-              val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, operationId)
+              val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, methodName)
                 .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
               val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
@@ -407,7 +415,7 @@ object DropwizardServerGenerator {
                 ServerRawResponse(operation)
                   .filter(_ == true)
                   .fold({
-                    val responseName = s"${handlerName}.${operationId.capitalize}Response"
+                    val responseName = s"$handlerName.$responseClsName"
                     val entitySetterIfTree = NonEmptyList
                       .fromList(responses.value.collect({
                         case Response(statusCodeName, Some(_), _) => statusCodeName
@@ -497,7 +505,7 @@ object DropwizardServerGenerator {
                               new NameExpr("logger"),
                               "error",
                               new NodeList[Expression](
-                                new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
+                                new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
                                 new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
                                 new MethodCallExpr(new NameExpr("err"), "getMessage"),
                                 new NameExpr("err")
@@ -549,7 +557,7 @@ object DropwizardServerGenerator {
 
               val handlerCall = new MethodCallExpr(
                 new FieldAccessExpr(new ThisExpr, "handler"),
-                operationId,
+                methodName,
                 new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
               )
 
@@ -562,7 +570,7 @@ object DropwizardServerGenerator {
               )
 
               val futureResponseType = completionStageType(responseType.clone())
-              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, operationId)
+              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (
                 (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
                     parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
@@ -613,17 +621,16 @@ object DropwizardServerGenerator {
       }
 
     override def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[JavaLanguage],
         protocolElems: List[StrictProtocolElems[JavaLanguage]]
     ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       for {
-        abstractResponseClassName <- safeParseSimpleName(s"${operationId.capitalize}Response").map(_.asString)
-        abstractResponseClassType <- safeParseClassOrInterfaceType(abstractResponseClassName)
+        abstractResponseClassType <- safeParseClassOrInterfaceType(responseClsName)
 
         // TODO: verify valueTypes are in protocolElems
 
-        abstractResponseClass <- generateResponseSuperClass(abstractResponseClassName)
+        abstractResponseClass <- generateResponseSuperClass(responseClsName)
         responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
       } yield {
         sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))

@@ -833,7 +833,8 @@ object JacksonGenerator {
           }
           (tpe, classDep) = tpeClassDep
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
+          argName <- if (needCamelSnakeConversion) JavaGenerator.JavaInterp.formatMethodArgName(name)
+          else Target.pure(name.escapeIdentifier)
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           expressionDefaultValue <- defaultValue match {

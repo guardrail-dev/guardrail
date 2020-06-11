@@ -68,7 +68,13 @@ object ScalaGenerator {
         case _ =>
           Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that isn't a string")
       }
-    def formatEnumName(enumValue: String): Target[String] = Target.pure(enumValue.toPascalCase)
+
+    def formatPackageName(packageName: List[String]): Target[List[String]]              = Target.pure(packageName.map(_.toCamelCase))
+    def formatTypeName(typeName: String, suffix: Option[String] = None): Target[String] = Target.pure(typeName.toPascalCase + suffix.fold("")(_.toPascalCase))
+    def formatFieldName(fieldName: String): Target[String]                              = Target.pure(fieldName.toCamelCase)
+    def formatMethodName(methodName: String): Target[String]                            = Target.pure(methodName.toCamelCase)
+    def formatMethodArgName(methodArgName: String): Target[String]                      = Target.pure(methodArgName.toCamelCase)
+    def formatEnumName(enumValue: String): Target[String]                               = Target.pure(enumValue.toPascalCase)
 
     def embedArray(tpe: LazyResolvedType[ScalaLanguage], containerTpe: Option[scala.meta.Type]): Target[LazyResolvedType[ScalaLanguage]] = tpe match {
       case SwaggerUtil.Deferred(tpe) =>
