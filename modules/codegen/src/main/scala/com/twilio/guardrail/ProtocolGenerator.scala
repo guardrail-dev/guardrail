@@ -674,6 +674,7 @@ object ProtocolGenerator {
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolDefinitions[L]] = {
     import S._
+    import Sc._
     import Sw._
 
     val definitions = swagger.downField("components", _.getComponents()).flatDownField("schemas", _.getSchemas()).indexedCosequence
@@ -688,9 +689,10 @@ object ProtocolGenerator {
             .refine({ case m: StringSchema => m })(
               m =>
                 for {
-                  enum <- fromEnum(clsName, m, dtoPackage)
+                  formattedClsName <- formatTypeName(clsName)
+                  enum             <- fromEnum(formattedClsName, m, dtoPackage)
                   model <- fromModel(
-                    NonEmptyList.of(clsName),
+                    NonEmptyList.of(formattedClsName),
                     m,
                     List.empty,
                     concreteTypes,
@@ -705,9 +707,10 @@ object ProtocolGenerator {
             .orRefine({ case c: ComposedSchema => c })(
               comp =>
                 for {
-                  parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+                  formattedClsName <- formatTypeName(clsName)
+                  parents          <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
                   model <- fromModel(
-                    NonEmptyList.of(clsName),
+                    NonEmptyList.of(formattedClsName),
                     comp,
                     parents,
                     concreteTypes,
@@ -716,16 +719,23 @@ object ProtocolGenerator {
                     supportPackage,
                     defaultPropertyRequirement
                   )
-                  alias <- modelTypeAlias(clsName, comp)
+                  alias <- modelTypeAlias(formattedClsName, comp)
                 } yield model.getOrElse(alias)
             )
-            .orRefine({ case a: ArraySchema => a })(arr => fromArray(clsName, arr, concreteTypes))
+            .orRefine({ case a: ArraySchema => a })(
+              arr =>
+                for {
+                  formattedClsName <- formatTypeName(clsName)
+                  array            <- fromArray(formattedClsName, arr, concreteTypes)
+                } yield array
+            )
             .orRefine({ case o: ObjectSchema => o })(
               m =>
                 for {
-                  enum <- fromEnum(clsName, m, dtoPackage)
+                  formattedClsName <- formatTypeName(clsName)
+                  enum             <- fromEnum(formattedClsName, m, dtoPackage)
                   model <- fromModel(
-                    NonEmptyList.of(clsName),
+                    NonEmptyList.of(formattedClsName),
                     m,
                     List.empty,
                     concreteTypes,
@@ -734,16 +744,17 @@ object ProtocolGenerator {
                     supportPackage,
                     defaultPropertyRequirement
                   )
-                  alias <- modelTypeAlias(clsName, m)
+                  alias <- modelTypeAlias(formattedClsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
             )
             .valueOr(
               x =>
                 for {
-                  tpeName        <- getType(x)
-                  customTypeName <- SwaggerUtil.customTypeName(x.get)
-                  tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
-                  res            <- typeAlias[L, F](clsName, tpe)
+                  formattedClsName <- formatTypeName(clsName)
+                  tpeName          <- getType(x)
+                  customTypeName   <- SwaggerUtil.customTypeName(x.get)
+                  tpe              <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
+                  res              <- typeAlias[L, F](formattedClsName, tpe)
                 } yield res
             )
       }

@@ -88,16 +88,16 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           }))
         }
         val postDashyOpIdOKDecoder = {
-          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[`dashy-class`].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[DashyClass].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
         }
         val dashyOpIdOKDecoder = {
-          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[`dashy-class`].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+          structuredJsonEntityUnmarshaller.flatMap(_ => _ => json => io.circe.Decoder[DashyClass].decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
         }
         def postDashyOpId(dashyParameter: String, headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], PostDashyOpIdResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.POST, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              Unmarshal(resp.entity).to[`dashy-class`](postDashyOpIdOKDecoder, implicitly, implicitly).map(x => Right(PostDashyOpIdResponse.OK(x)))
+              Unmarshal(resp.entity).to[DashyClass](postDashyOpIdOKDecoder, implicitly, implicitly).map(x => Right(PostDashyOpIdResponse.OK(x)))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -109,7 +109,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/dashy-route" + "?" + Formatter.addArg("dashy-parameter", dashyParameter), allHeaders, HttpEntity.Empty, HttpProtocols.`HTTP/1.1`).flatMap(req => EitherT(httpClient(req).flatMap(resp => resp.status match {
             case StatusCodes.OK =>
-              Unmarshal(resp.entity).to[`dashy-class`](dashyOpIdOKDecoder, implicitly, implicitly).map(x => Right(DashyOpIdResponse.OK(x)))
+              Unmarshal(resp.entity).to[DashyClass](dashyOpIdOKDecoder, implicitly, implicitly).map(x => Right(DashyOpIdResponse.OK(x)))
             case _ =>
               FastFuture.successful(Left(Right(resp)))
           }).recover({
@@ -147,27 +147,27 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-    case class `dashy-class`(dashyParam: Option[Long] = None)
+    case class DashyClass(dashyParam: Option[Long] = None)
     """
     val companion  = q"""
-      object `dashy-class` {
-        implicit val `encodedashy-class`: Encoder.AsObject[`dashy-class`] = {
+      object DashyClass {
+        implicit val encodeDashyClass: Encoder.AsObject[DashyClass] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[`dashy-class`](a => JsonObject.fromIterable(Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[DashyClass](a => JsonObject.fromIterable(Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val `decodedashy-class`: Decoder[`dashy-class`] = new Decoder[`dashy-class`] { final def apply(c: HCursor): Decoder.Result[`dashy-class`] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield `dashy-class`(v0) }
+        implicit val decodeDashyClass: Decoder[DashyClass] = new Decoder[DashyClass] { final def apply(c: HCursor): Decoder.Result[DashyClass] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield DashyClass(v0) }
       }
     """
 
     cls.structure should equal(definition.structure)
-    cls.toString should include("case class `dashy-class`")
+    cls.toString should include("case class DashyClass")
     cls.toString should include("dashyParam")
     cls.toString shouldNot include("``")
 
     cmp.structure should equal(companion.structure)
-    cmp.toString should include("`encodedashy-class`")
-    cmp.toString should include("`decodedashy-class`")
-    cmp.toString should include("`dashy-class`(v0)")
+    cmp.toString should include("encodeDashyClass")
+    cmp.toString should include("decodeDashyClass")
+    cmp.toString should include("DashyClass(v0)")
     cmp.toString shouldNot include(".dashy-")
     cmp.toString shouldNot include("[dashy-")
     cmp.toString shouldNot include("= dashy-")
@@ -183,40 +183,40 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-    sealed abstract class `dashy-enum`(val value: String) extends Product with Serializable {
+    sealed abstract class DashyEnum(val value: String) extends Product with Serializable {
       override def toString: String = value.toString
     }
     """
     val companion  = q"""
-    object `dashy-enum` {
+    object DashyEnum {
       object members {
-        case object DashyValueA extends `dashy-enum`("dashy-value-a")
-        case object DashyValueB extends `dashy-enum`("dashy-value-b")
-        case object DashyValueC extends `dashy-enum`("dashy-value.c")
+        case object DashyValueA extends DashyEnum("dashy-value-a")
+        case object DashyValueB extends DashyEnum("dashy-value-b")
+        case object DashyValueC extends DashyEnum("dashy-value.c")
       }
-      val DashyValueA: `dashy-enum` = members.DashyValueA
-      val DashyValueB: `dashy-enum` = members.DashyValueB
-      val DashyValueC: `dashy-enum` = members.DashyValueC
+      val DashyValueA: DashyEnum = members.DashyValueA
+      val DashyValueB: DashyEnum = members.DashyValueB
+      val DashyValueC: DashyEnum = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
-      implicit val `encodedashy-enum`: Encoder[`dashy-enum`] = Encoder[String].contramap(_.value)
-      implicit val `decodedashy-enum`: Decoder[`dashy-enum`] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of dashy-enum"))
-      implicit val `addPathdashy-enum`: AddPath[`dashy-enum`] = AddPath.build(_.value)
-      implicit val `showdashy-enum`: Show[`dashy-enum`] = Show.build(_.value)
-      def parse(value: String): Option[`dashy-enum`] = values.find(_.value == value)
-      implicit val order: cats.Order[`dashy-enum`] = cats.Order.by[`dashy-enum`, Int](values.indexOf)
+      implicit val encodeDashyEnum: Encoder[DashyEnum] = Encoder[String].contramap(_.value)
+      implicit val decodeDashyEnum: Decoder[DashyEnum] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of DashyEnum"))
+      implicit val addPathDashyEnum: AddPath[DashyEnum] = AddPath.build(_.value)
+      implicit val showDashyEnum: Show[DashyEnum] = Show.build(_.value)
+      def parse(value: String): Option[DashyEnum] = values.find(_.value == value)
+      implicit val order: cats.Order[DashyEnum] = cats.Order.by[DashyEnum, Int](values.indexOf)
     }
     """
 
     cls.structure should equal(definition.structure)
-    cls.toString should include("sealed abstract class `dashy-enum`")
+    cls.toString should include("sealed abstract class DashyEnum")
     cls.toString shouldNot include("``")
 
     cmp.structure should equal(companion.structure)
     cmp.toString should include("val DashyValueA")
     cmp.toString should include("case object DashyValueB")
-    cmp.toString should include("`encodedashy-enum`")
-    cmp.toString should include("`decodedashy-enum`")
-    cmp.toString should include("def parse(value: String): Option[`dashy-enum`]")
+    cmp.toString should include("encodeDashyEnum")
+    cmp.toString should include("decodeDashyEnum")
+    cmp.toString should include("def parse(value: String): Option[DashyEnum]")
     cmp.toString should include("DashyValueC")
     cmp.toString shouldNot include(".dashy-")
     cmp.toString shouldNot include("[dashy-")
