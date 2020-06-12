@@ -52,6 +52,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def typesEqual(a: L#Type, b: L#Type): F[Boolean]
   def extractTypeName(tpe: L#Type): F[Option[L#TypeName]]
   def extractTermName(term: L#TermName): F[String]
+  def extractTermNameFromParam(param: L#MethodParameter): F[String]
   def selectType(typeNames: NonEmptyList[String]): F[L#Type]
   def selectTerm(termNames: NonEmptyList[String]): F[L#Term]
   def alterMethodParameterName(param: L#MethodParameter, name: L#TermName): F[L#MethodParameter]
@@ -174,6 +175,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newTypesEqual: (L#Type, L#Type) => F[Boolean] = typesEqual _,
       newExtractTypeName: L#Type => F[Option[L#TypeName]] = extractTypeName _,
       newExtractTermName: L#TermName => F[String] = extractTermName _,
+      newExtractTermNameFromParam: L#MethodParameter => F[String] = extractTermNameFromParam _,
       newSelectType: NonEmptyList[String] => F[L#Type] = selectType _,
       newSelectTerm: NonEmptyList[String] => F[L#Term] = selectTerm _,
       newAlterMethodParameterName: (L#MethodParameter, L#TermName) => F[L#MethodParameter] = alterMethodParameterName _,
@@ -258,6 +260,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def typesEqual(a: L#Type, b: L#Type)                                              = newTypesEqual(a, b)
     def extractTypeName(tpe: L#Type)                                                  = newExtractTypeName(tpe)
     def extractTermName(term: L#TermName)                                             = newExtractTermName(term)
+    def extractTermNameFromParam(param: L#MethodParameter)                            = newExtractTermNameFromParam(param)
     def selectType(typeNames: NonEmptyList[String])                                   = newSelectType(typeNames)
     def selectTerm(termNames: NonEmptyList[String])                                   = newSelectTerm(termNames)
     def alterMethodParameterName(param: L#MethodParameter, name: L#TermName)          = newAlterMethodParameterName(param, name)

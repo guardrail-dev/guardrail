@@ -123,6 +123,7 @@ object ScalaGenerator {
       val Term.Name(name) = term
       Target.pure(name)
     }
+    def extractTermNameFromParam(param: scala.meta.Term.Param): Target[String] = Target.pure(param.name.value)
     def selectType(typeNames: NonEmptyList[String]): Target[scala.meta.Type] = {
       val tpe   = Type.Name(typeNames.last)
       val names = typeNames.init.map(Term.Name.apply _)

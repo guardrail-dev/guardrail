@@ -236,6 +236,7 @@ object JavaGenerator {
       extractTypeName(tpe).map(Option.apply)
     }
     def extractTermName(term: com.github.javaparser.ast.expr.Name): Target[String] = Target.pure(term.asString)
+    def extractTermNameFromParam(param: Parameter): Target[String]                 = Target.pure(param.getNameAsString)
     def selectType(typeNames: NonEmptyList[String]): Target[com.github.javaparser.ast.`type`.Type] =
       safeParseType(typeNames.toList.mkString("."))
     def selectTerm(termNames: NonEmptyList[String]): Target[com.github.javaparser.ast.Node] =

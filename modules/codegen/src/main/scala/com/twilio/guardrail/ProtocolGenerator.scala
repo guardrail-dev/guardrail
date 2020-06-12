@@ -12,7 +12,6 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
-import java.util.Locale
 import cats.Foldable
 import com.twilio.guardrail.extract.Default
 import scala.collection.JavaConverters._
@@ -149,25 +148,6 @@ object ProtocolGenerator {
     } yield res
   }
 
-  /**
-    * types of things we can losslessly convert between snake and camel case:
-    *   - foo
-    *   - foo_bar
-    *   - foo_bar_baz
-    *   - foo.bar
-    *
-    * types of things we canNOT losslessly convert between snake and camel case:
-    *   - Foo
-    *   - Foo_bar
-    *   - Foo_Bar
-    *   - FooBar
-    *   - foo_barBaz
-    *
-    * so essentially we have to return false if:
-    *   - there are any uppercase characters
-    */
-  def couldBeSnakeCase(s: String): Boolean = s.toLowerCase(Locale.US) == s
-
   private[this] def getPropertyRequirement(
       schema: Tracker[Schema[_]],
       isRequired: Boolean,
@@ -222,8 +202,7 @@ object ProtocolGenerator {
         )
         .getOrElse(List.empty[SuperClass[L]].pure[F])
       props <- extractProperties(hierarchy.model)
-      requiredFields           = hierarchy.required ::: hierarchy.children.flatMap(_.required)
-      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+      requiredFields = hierarchy.required ::: hierarchy.children.flatMap(_.required)
       params <- props.traverse({
         case (name, prop) =>
           for {
@@ -232,8 +211,10 @@ object ProtocolGenerator {
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
             defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
-            res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, needCamelSnakeConversion, concreteTypes)(
+            fieldName    <- formatFieldName(name)
+            res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
               name,
+              fieldName,
               prop.get,
               resolvedType,
               propertyRequirement,
@@ -360,8 +341,7 @@ object ProtocolGenerator {
 
     for {
       props <- extractProperties(model)
-      requiredFields           = getRequiredFieldsRec(model)
-      needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
+      requiredFields = getRequiredFieldsRec(model)
       (params, nestedDefinitions) <- prepareProperties(
         clsName,
         Map.empty,
@@ -374,8 +354,8 @@ object ProtocolGenerator {
         defaultPropertyRequirement
       )
       defn        <- renderDTOClass(clsName.last, params, parents)
-      encoder     <- encodeModel(clsName.last, dtoPackage, needCamelSnakeConversion, params, parents)
-      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, needCamelSnakeConversion, params, parents)
+      encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
       tpe         <- parseTypeName(clsName.last)
       fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
@@ -458,7 +438,6 @@ object ProtocolGenerator {
           .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
       } yield defn
 
-    val needCamelSnakeConversion = props.forall { case (k, _) => couldBeSnakeCase(k) }
     for {
       paramsAndNestedDefinitions <- props.traverse[F, (Tracker[ProtocolParameter[L]], Option[NestedProtocolElems[L]])] {
         case (name, schema) =>
@@ -469,9 +448,11 @@ object ProtocolGenerator {
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
             customType            <- SwaggerUtil.customTypeName(schema.get)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
-            defValue <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
-            parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, needCamelSnakeConversion, concreteTypes)(
+            defValue  <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
+            fieldName <- formatFieldName(name)
+            parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, concreteTypes)(
               name,
+              fieldName,
               schema.get,
               resolvedType,
               propertyRequirement,
@@ -482,7 +463,8 @@ object ProtocolGenerator {
       }
       (params, nestedDefinitions) = paramsAndNestedDefinitions.unzip
       deduplicatedParams <- deduplicateParams(params)
-    } yield deduplicatedParams -> nestedDefinitions.flatten
+      unconflictedParams <- fixConflictingNames(deduplicatedParams)
+    } yield (unconflictedParams, nestedDefinitions.flatten)
   }
 
   private def deduplicateParams[L <: LA, F[_]](
@@ -518,6 +500,36 @@ object ProtocolGenerator {
         }
       }
       .map(_.reverse)
+  }
+
+  private def fixConflictingNames[L <: LA, F[_]](params: List[ProtocolParameter[L]])(implicit Lt: LanguageTerms[L, F]): F[List[ProtocolParameter[L]]] = {
+    import Lt._
+    for {
+      paramsWithNames <- params.traverse(param => extractTermNameFromParam(param.term).map((_, param)))
+      counts = paramsWithNames.groupBy(_._1).mapValues(_.length)
+      newParams <- paramsWithNames.traverse({
+        case (name, param) =>
+          if (counts.getOrElse(name, 0) > 1) {
+            for {
+              newTermName    <- pureTermName(param.name.value)
+              newMethodParam <- alterMethodParameterName(param.term, newTermName)
+            } yield ProtocolParameter(
+              newMethodParam,
+              param.baseType,
+              param.name,
+              param.dep,
+              param.rawType,
+              param.readOnlyKey,
+              param.emptyToNull,
+              param.dataRedaction,
+              param.propertyRequirement,
+              param.defaultValue
+            )
+          } else {
+            param.pure[F]
+          }
+      })
+    } yield newParams
   }
 
   def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Tracker[Schema[_]])(
