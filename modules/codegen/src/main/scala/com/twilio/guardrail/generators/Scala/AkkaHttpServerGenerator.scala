@@ -162,11 +162,11 @@ object AkkaHttpServerGenerator {
     def getExtraRouteParams(tracing: Boolean) =
       for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
-        beforeComplete = param"""beforeComplete: Directive0 = pass"""
+        afterPathMethodMatch = param"""afterPathMethodMatch: Directive0 = pass"""
         tracing <- if (tracing) {
           Target.pure(Option(param"""trace: String => Directive1[TraceBuilder]"""))
         } else Target.pure(Option.empty)
-      } yield tracing.toList ::: List(beforeComplete)
+      } yield tracing.toList ::: List(afterPathMethodMatch)
     def renderClass(
         resourceName: String,
         handlerName: String,
@@ -776,17 +776,18 @@ object AkkaHttpServerGenerator {
                         )
                   }
               }))
-          val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
-          val pathMatcher    = bindParams(akkaPath.toList)
-          val qsMatcher      = bindParams(akkaQs)
-          val headerMatcher  = bindParams(akkaHeaders)
-          val tracingMatcher = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
-          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
+          val pathMatcher          = bindParams(akkaPath.toList)
+          val methodMatcher        = bindParams(List((akkaMethod, List.empty)))
+          val afterPathMethodMatch = bindParams(List((Term.Name("afterPathMethodMatch"), List.empty)))
+          val qsMatcher            = bindParams(akkaQs)
+          val headerMatcher        = bindParams(akkaHeaders)
+          val tracingMatcher       = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
+          val bodyMatcher          = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
 
-          pathMatcher compose methodMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
+          pathMatcher compose methodMatcher compose afterPathMethodMatch compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-        fullRoute       = Term.Block(List(fullRouteMatcher(q"beforeComplete(complete(handler.${Term.Name(operationId)}(...${handlerCallArgs})))")))
+        fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")))
 
         respond = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 

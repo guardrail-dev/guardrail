@@ -142,17 +142,17 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
     """
     val resource = q"""
       object StoreResource {
-        def routes(handler: StoreHandler, beforeComplete: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: StoreHandler, afterPathMethodMatch: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            pathEndOrSingleSlash(get(discardEntity(beforeComplete(complete(handler.getRoot(getRootResponse)())))))
+            pathEndOrSingleSlash(get(afterPathMethodMatch(discardEntity(complete(handler.getRoot(getRootResponse)())))))
           } ~ {
-            path("bar")(put(parameter(Symbol("bar").as[Long]).apply(bar => discardEntity(beforeComplete(complete(handler.putBar(putBarResponse)(bar)))))))
+            path("bar")(put(afterPathMethodMatch(parameter(Symbol("bar").as[Long]).apply(bar => discardEntity(complete(handler.putBar(putBarResponse)(bar)))))))
           } ~ {
-            (pathPrefix("foo") & pathEndOrSingleSlash)(get(discardEntity(beforeComplete(complete(handler.getFoo(getFooResponse)())))))
+            (pathPrefix("foo") & pathEndOrSingleSlash)(get(afterPathMethodMatch(discardEntity(complete(handler.getFoo(getFooResponse)())))))
           } ~ {
-            path("foo" / LongNumber).apply(bar => get(discardEntity(beforeComplete(complete(handler.getFooBar(getFooBarResponse)(bar))))))
+            path("foo" / LongNumber).apply(bar => get(afterPathMethodMatch(discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar))))))
           } ~ {
-            path("store" / "order" / LongNumber).apply(orderId => get(parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus]))).apply(status => discardEntity(beforeComplete(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)))))))
+            path("store" / "order" / LongNumber).apply(orderId => get(afterPathMethodMatch(parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus]))).apply(status => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)))))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)
@@ -279,17 +279,17 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
     """
     val resource = q"""
       object StoreResource {
-        def routes(handler: StoreHandler, trace: String => Directive1[TraceBuilder], beforeComplete: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: StoreHandler, trace: String => Directive1[TraceBuilder], afterPathMethodMatch: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            pathEndOrSingleSlash(get(trace("store:getRoot").apply(traceBuilder => discardEntity(beforeComplete(complete(handler.getRoot(getRootResponse)()(traceBuilder)))))))
+            pathEndOrSingleSlash(get(afterPathMethodMatch(trace("store:getRoot").apply(traceBuilder => discardEntity(complete(handler.getRoot(getRootResponse)()(traceBuilder)))))))
           } ~ {
-            path("bar")(put(parameter(Symbol("bar").as[Long]).apply(bar => trace("store:putBar").apply(traceBuilder => discardEntity(beforeComplete(complete(handler.putBar(putBarResponse)(bar)(traceBuilder))))))))
+            path("bar")(put(afterPathMethodMatch(parameter(Symbol("bar").as[Long]).apply(bar => trace("store:putBar").apply(traceBuilder => discardEntity(complete(handler.putBar(putBarResponse)(bar)(traceBuilder))))))))
           } ~ {
-            (pathPrefix("foo") & pathEndOrSingleSlash)(get(trace("store:getFoo").apply(traceBuilder => discardEntity(beforeComplete(complete(handler.getFoo(getFooResponse)()(traceBuilder)))))))
+            (pathPrefix("foo") & pathEndOrSingleSlash)(get(afterPathMethodMatch(trace("store:getFoo").apply(traceBuilder => discardEntity(complete(handler.getFoo(getFooResponse)()(traceBuilder)))))))
           } ~ {
-            path("foo" / LongNumber).apply(bar => get(trace("completely-custom-label").apply(traceBuilder => discardEntity(beforeComplete(complete(handler.getFooBar(getFooBarResponse)(bar)(traceBuilder)))))))
+            path("foo" / LongNumber).apply(bar => get(afterPathMethodMatch(trace("completely-custom-label").apply(traceBuilder => discardEntity(complete(handler.getFooBar(getFooBarResponse)(bar)(traceBuilder)))))))
           } ~ {
-            path("store" / "order" / LongNumber).apply(orderId => get(parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus]))).apply(status => trace("store:getOrderById").apply(traceBuilder => discardEntity(beforeComplete(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder))))))))
+            path("store" / "order" / LongNumber).apply(orderId => get(afterPathMethodMatch(parameter(Symbol("status").as[OrderStatus](stringyJsonUnmarshaller.andThen(unmarshallJson[OrderStatus]))).apply(status => trace("store:getOrderById").apply(traceBuilder => discardEntity(complete(handler.getOrderById(getOrderByIdResponse)(orderId, status)(traceBuilder))))))))
           }
         }
         sealed abstract class getRootResponse(val statusCode: StatusCode)

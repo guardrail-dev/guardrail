@@ -69,9 +69,9 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val resource = q"""
       object Resource {
-        def routes(handler: Handler, beforeComplete: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: Handler, afterPathMethodMatch: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            path("file")(post(({
+            path("file")(post(afterPathMethodMatch(({
               object uploadFileParts {
                 sealed trait Part
                 case class IgnoredPart(unit: Unit) extends Part
@@ -142,7 +142,7 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[Tuple1[(File, Option[String], ContentType)]]).apply(file => beforeComplete(complete(handler.uploadFile(uploadFileResponse)(file))))))
+            }: Directive[Tuple1[(File, Option[String], ContentType)]]).apply(file => complete(handler.uploadFile(uploadFileResponse)(file))))))
           }
         }
         sealed abstract class uploadFileResponse(val statusCode: StatusCode)

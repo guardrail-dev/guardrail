@@ -80,9 +80,9 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
     """
     val resource = q"""
       object Resource {
-        def routes(handler: Handler, beforeComplete: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: Handler, afterPathMethodMatch: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            path("foo")(put(({
+            path("foo")(put(afterPathMethodMatch(({
               object putFooParts {
                 sealed trait Part
                 case class IgnoredPart(unit: Unit) extends Part
@@ -177,7 +177,7 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[(String, Long, (File, Option[String], ContentType, String))]).apply((foo, bar, baz) => beforeComplete(complete(handler.putFoo(putFooResponse)(foo, bar, baz))))))
+            }: Directive[(String, Long, (File, Option[String], ContentType, String))]).apply((foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz))))))
           }
         }
         sealed abstract class putFooResponse(val statusCode: StatusCode)
