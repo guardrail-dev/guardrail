@@ -69,9 +69,9 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val resource = q"""
       object Resource {
-        def routes(handler: Handler, afterPathMethodMatch: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: Handler, afterPathMethodMatch: String => Directive0 = _ => pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            path("file")(post(afterPathMethodMatch(({
+            path("file")(post(afterPathMethodMatch("uploadFile")(({
               object uploadFileParts {
                 sealed trait Part
                 case class IgnoredPart(unit: Unit) extends Part

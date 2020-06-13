@@ -48,9 +48,9 @@ class CustomHeaderTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
 
     val resource = q"""
       object Resource {
-        def routes(handler: Handler, afterPathMethodMatch: Directive0 = pass)(implicit mat: akka.stream.Materializer): Route = {
+        def routes(handler: Handler, afterPathMethodMatch: String => Directive0 = _ => pass)(implicit mat: akka.stream.Materializer): Route = {
           {
-            path("foo")(get(afterPathMethodMatch(headerValueByName("CustomHeader").flatMap(str => onComplete(Unmarshal(str).to[Bar](stringyJsonUnmarshaller.andThen(unmarshallJson[Bar]), mat.executionContext, mat)).flatMap[Tuple1[Bar]]({
+            path("foo")(get(afterPathMethodMatch("getFoo")(headerValueByName("CustomHeader").flatMap(str => onComplete(Unmarshal(str).to[Bar](stringyJsonUnmarshaller.andThen(unmarshallJson[Bar]), mat.executionContext, mat)).flatMap[Tuple1[Bar]]({
               case Failure(e) =>
                 reject(MalformedHeaderRejection("CustomHeader", e.getMessage, Some(e)))
               case Success(x) =>

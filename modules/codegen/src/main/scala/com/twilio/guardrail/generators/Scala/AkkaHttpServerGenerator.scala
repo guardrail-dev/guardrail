@@ -162,7 +162,7 @@ object AkkaHttpServerGenerator {
     def getExtraRouteParams(tracing: Boolean) =
       for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
-        afterPathMethodMatch = param"""afterPathMethodMatch: Directive0 = pass"""
+        afterPathMethodMatch = param"""afterPathMethodMatch: String => Directive0 = _ => pass"""
         tracing <- if (tracing) {
           Target.pure(Option(param"""trace: String => Directive1[TraceBuilder]"""))
         } else Target.pure(Option.empty)
@@ -743,8 +743,9 @@ object AkkaHttpServerGenerator {
         qsArgs     = parameters.queryStringParams
         bodyArgs   = parameters.bodyParams
 
-        akkaMethod                     <- httpMethodToAkka(method)
         akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
+        akkaMethod                     <- httpMethodToAkka(method)
+        akkaAfterPathMethodMatch       <- Target.pure(q"afterPathMethodMatch(${operationId})")
         akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
         akkaBody                       <- bodyToAkka(operationId, bodyArgs)
         (akkaForm, handlerDefinitions) <- formToAkka(consumes, operationId)(formArgs)
@@ -778,7 +779,7 @@ object AkkaHttpServerGenerator {
               }))
           val pathMatcher          = bindParams(akkaPath.toList)
           val methodMatcher        = bindParams(List((akkaMethod, List.empty)))
-          val afterPathMethodMatch = bindParams(List((Term.Name("afterPathMethodMatch"), List.empty)))
+          val afterPathMethodMatch = bindParams(List((akkaAfterPathMethodMatch, List.empty)))
           val qsMatcher            = bindParams(akkaQs)
           val headerMatcher        = bindParams(akkaHeaders)
           val tracingMatcher       = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
