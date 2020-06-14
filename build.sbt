@@ -355,7 +355,7 @@ val dropwizardProjectDependencies = Seq(
   "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-  "junit"                      %  "junit"                  % "4.12"             % Test,
+  "junit"                      %  "junit"                  % "4.13"             % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
