@@ -261,7 +261,17 @@ lazy val root = (project in file("."))
     libraryDependencies ++= testDependencies,
     skip in publish := true
   )
-  .dependsOn(codegen % "compile;test", microsite % "compile; test")
+  .dependsOn(codegen, microsite)
+  .aggregate(allDeps, codegen, microsite, endpointsDependencies)
+
+lazy val allDeps = (project in file("modules/alldeps"))
+  .settings(
+    skip in publish := true,
+    libraryDependencies ++= akkaProjectDependencies,
+    libraryDependencies ++= http4sProjectDependencies,
+    libraryDependencies ++= springProjectDependencies,
+    libraryDependencies ++= dropwizardProjectDependencies,
+  )
 
 lazy val codegen = (project in file("modules/codegen"))
   .settings(
@@ -312,44 +322,98 @@ lazy val codegen = (project in file("modules/codegen"))
     )
   )
 
-lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
-  .settings(
-    codegenSettings,
-    libraryDependencies ++= Seq(
-      "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
-      "com.typesafe.akka" %% "akka-http"         % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
-      "io.circe"          %% "circe-core"        % circeVersion,
-      "io.circe"          %% "circe-generic"     % circeVersion,
-      "io.circe"          %% "circe-jawn"        % circeVersion,
-      "io.circe"          %% "circe-parser"      % circeVersion,
-      "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"         % catsVersion
+val akkaProjectDependencies = Seq(
+  "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
+  "com.typesafe.akka" %% "akka-http"         % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
+  "io.circe"          %% "circe-core"        % circeVersion,
+  "io.circe"          %% "circe-generic"     % circeVersion,
+  "io.circe"          %% "circe-jawn"        % circeVersion,
+  "io.circe"          %% "circe-parser"      % circeVersion,
+  "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
+  "org.typelevel"     %% "cats-core"         % catsVersion
+)
+
+val http4sProjectDependencies = Seq(
+  "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
+  "io.circe"      %% "circe-core"          % circeVersion,
+  "io.circe"      %% "circe-generic"       % circeVersion,
+  "io.circe"      %% "circe-parser"        % circeVersion,
+  "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
+  "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
+  "org.http4s"    %% "http4s-circe"        % http4sVersion,
+  "org.http4s"    %% "http4s-dsl"          % http4sVersion,
+  "org.scalatest" %% "scalatest"           % scalatestVersion % Test,
+  "org.typelevel" %% "cats-core"           % catsVersion,
+  "org.typelevel" %% "cats-effect"         % catsEffectVersion
+)
+
+val dropwizardProjectDependencies = Seq(
+  "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
+  "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
+  "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
+  "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
+  "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
+  "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
+  "junit"                      %  "junit"                  % "4.12"             % Test,
+  "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
+  "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
+  "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+  "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
+)
+
+val springProjectDependencies = Seq(
+  "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
+  "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
+  "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.12.0"           % Test,
+  "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
+)
+
+def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
+  Project(s"${name}Sample", file(s"modules/sample-${name}"))
+    .settings(
+      codegenSettings,
+      libraryDependencies ++= extraLibraryDependencies,
+      unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+      skip in publish := true,
+      scalafmtOnCompile := false
+    )
+
+lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies)
+
+lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
+
+val javaSampleSettings = Seq(
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    javacOptions ++= Seq(
+      "-Xlint:all"
     ),
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
-    scalafmtOnCompile := false
   )
 
-lazy val http4sSample = (project in file("modules/sample-http4s"))
+lazy val dropwizardSample = buildSampleProject("dropwizard", dropwizardProjectDependencies)
+  .settings(javaSampleSettings)
+
+lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
+  .settings(javaSampleSettings)
+
+lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
+  .enablePlugins(ScalaJSPlugin)
   .settings(
-    codegenSettings,
     libraryDependencies ++= Seq(
-      "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
-      "io.circe"      %% "circe-core"          % circeVersion,
-      "io.circe"      %% "circe-generic"       % circeVersion,
-      "io.circe"      %% "circe-parser"        % circeVersion,
-      "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
-      "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s"    %% "http4s-circe"        % http4sVersion,
-      "org.http4s"    %% "http4s-dsl"          % http4sVersion,
-      "org.scalatest" %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel" %% "cats-core"           % catsVersion,
-      "org.typelevel" %% "cats-effect"         % catsEffectVersion
+      "io.circe"          %%% "circe-core"                    % circeVersion,
+      "io.circe"          %%% "circe-generic"                 % circeVersion,
+      "io.circe"          %%% "circe-parser"                  % circeVersion,
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
+      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
+      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
+      "org.typelevel"     %%% "cats-core"                     % catsVersion
     ),
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
-    scalafmtOnCompile := false
   )
 
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
@@ -371,53 +435,6 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "org.typelevel"     %%% "cats-core"                     % catsVersion
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
-    scalafmtOnCompile := false
-  )
-
-lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
-  .settings(
-    codegenSettings,
-    javacOptions ++= Seq(
-      "-Xlint:all"
-    ),
-    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    libraryDependencies ++= Seq(
-      "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
-      "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
-      "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
-      "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
-      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
-      "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-      "junit"                      %  "junit"                  % "4.12"             % Test,
-      "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-      "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
-      "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
-      "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
-      "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
-    ),
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    crossPaths := false,  // strangely needed to get the JUnit tests to run at all
-    skip in publish := true,
-    scalafmtOnCompile := false
-  )
-
-lazy val springMvcSample = (project in file("modules/sample-springMvc"))
-  .settings(
-    codegenSettings,
-    javacOptions ++= Seq(
-      "-Xlint:all"
-    ),
-    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    libraryDependencies ++= Seq(
-      "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
-      "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
-      "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-      "org.mockito"                %% "mockito-scala"            % "1.12.0"           % Test,
-      "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
-    ),
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    crossPaths := false,
     skip in publish := true,
     scalafmtOnCompile := false
   )
