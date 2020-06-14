@@ -14,7 +14,7 @@ crossScalaVersions in ThisBuild := Seq("2.12.11")
 
 val akkaVersion          = "10.0.14"
 val catsVersion          = "2.1.1"
-val catsEffectVersion    = "2.1.2"
+val catsEffectVersion    = "2.1.3"
 val circeVersion         = "0.13.0"
 val http4sVersion        = "0.21.3"
 val scalacheckVersion    = "1.14.3"
