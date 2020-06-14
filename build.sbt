@@ -278,7 +278,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-macros"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
-      "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.0",
+      "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.1",
     ),
     scalacOptions ++= List(
       "-language:higherKinds",
@@ -387,7 +387,7 @@ lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
       "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
       "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
       "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
-      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.0"            % Test,
+      "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
       "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
       "junit"                      %  "junit"                  % "4.12"             % Test,
       "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
@@ -411,7 +411,7 @@ lazy val springMvcSample = (project in file("modules/sample-springMvc"))
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     libraryDependencies ++= Seq(
       "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
-      "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.0"            % Test,
+      "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
       "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
       "org.mockito"                %% "mockito-scala"            % "1.12.0"           % Test,
       "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
