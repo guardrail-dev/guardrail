@@ -283,7 +283,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.19.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.3.600",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.20",
-      "org.tpolecat"                %% "atto-core"                    % "0.6.3",
+      "org.tpolecat"                %% "atto-core"                    % "0.6.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-macros"                  % catsVersion,
