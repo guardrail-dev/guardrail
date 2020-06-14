@@ -361,23 +361,32 @@ val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
-lazy val akkaHttpSample = (project in file("modules/sample-akkaHttp"))
-  .settings(
-    codegenSettings,
-    libraryDependencies ++= akkaProjectDependencies,
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
-    scalafmtOnCompile := false
+def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
+  Project(s"${name}Sample", file(s"modules/sample-${name}"))
+    .settings(
+      codegenSettings,
+      libraryDependencies ++= extraLibraryDependencies,
+      unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
+      skip in publish := true,
+      scalafmtOnCompile := false
+    )
+
+lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies)
+
+lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
+
+val javaSampleSettings = Seq(
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
   )
 
-lazy val http4sSample = (project in file("modules/sample-http4s"))
-  .settings(
-    codegenSettings,
-    libraryDependencies ++= http4sProjectDependencies,
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
-    scalafmtOnCompile := false
-  )
+lazy val dropwizardSample = buildSampleProject("dropwizard", dropwizardProjectDependencies)
+  .settings(javaSampleSettings)
+
+lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
+  .settings(javaSampleSettings)
 
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
   .enablePlugins(ScalaJSPlugin)
@@ -398,34 +407,6 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "org.typelevel"     %%% "cats-core"                     % catsVersion
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
-    scalafmtOnCompile := false
-  )
-
-lazy val dropwizardSample = (project in file("modules/sample-dropwizard"))
-  .settings(
-    codegenSettings,
-    javacOptions ++= Seq(
-      "-Xlint:all"
-    ),
-    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    libraryDependencies ++= dropwizardProjectDependencies,
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    crossPaths := false,  // strangely needed to get the JUnit tests to run at all
-    skip in publish := true,
-    scalafmtOnCompile := false
-  )
-
-lazy val springMvcSample = (project in file("modules/sample-springMvc"))
-  .settings(
-    codegenSettings,
-    javacOptions ++= Seq(
-      "-Xlint:all"
-    ),
-    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    libraryDependencies ++= springProjectDependencies,
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    crossPaths := false,
     skip in publish := true,
     scalafmtOnCompile := false
   )
