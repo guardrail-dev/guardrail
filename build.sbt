@@ -261,7 +261,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= testDependencies,
     skip in publish := true
   )
-  .aggregate(allDeps, codegen, microsite)
+  .aggregate(allDeps, codegen, microsite, endpointsDependencies)
 
 lazy val allDeps = (project in file("modules/alldeps"))
   .settings(
@@ -395,6 +395,24 @@ lazy val dropwizardSample = buildSampleProject("dropwizard", dropwizardProjectDe
 
 lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
   .settings(javaSampleSettings)
+
+lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe"          %%% "circe-core"                    % circeVersion,
+      "io.circe"          %%% "circe-generic"                 % circeVersion,
+      "io.circe"          %%% "circe-parser"                  % circeVersion,
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
+      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
+      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
+      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
+      "org.typelevel"     %%% "cats-core"                     % catsVersion
+    ),
+  )
 
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
   .enablePlugins(ScalaJSPlugin)
