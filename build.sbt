@@ -262,7 +262,16 @@ lazy val root = (project in file("."))
     skip in publish := true
   )
   .dependsOn(codegen, microsite)
-  .aggregate(codegen, microsite)
+  .aggregate(allDeps, codegen, microsite)
+
+lazy val allDeps = (project in file("modules/alldeps"))
+  .settings(
+    skip in publish := true,
+    libraryDependencies ++= akkaProjectDependencies,
+    libraryDependencies ++= http4sProjectDependencies,
+    libraryDependencies ++= springProjectDependencies,
+    libraryDependencies ++= dropwizardProjectDependencies,
+  )
 
 lazy val codegen = (project in file("modules/codegen"))
   .settings(
