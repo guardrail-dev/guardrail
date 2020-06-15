@@ -12,22 +12,22 @@ git.useGitDescribe := true
 
 crossScalaVersions in ThisBuild := Seq("2.12.11")
 
-val akkaVersion          = "10.0.14"
+val akkaVersion          = "10.0.15"
 val catsVersion          = "2.1.1"
-val catsEffectVersion    = "2.1.2"
+val catsEffectVersion    = "2.1.3"
 val circeVersion         = "0.13.0"
-val http4sVersion        = "0.21.3"
+val http4sVersion        = "0.21.4"
 val scalacheckVersion    = "1.14.3"
 val scalatestVersion     = "3.1.2"
 val scalatestPlusVersion = "3.1.0.0-RC2"
 val javaparserVersion    = "3.16.1"
 val endpointsVersion     = "0.8.0"
 val ahcVersion           = "2.8.1"
-val dropwizardVersion    = "1.3.9"
-val jerseyVersion        = "2.31"
+val dropwizardVersion    = "1.3.23"
+val jerseyVersion        = "2.25.1"
 val kindProjectorVersion = "0.10.3"
-val jaxbApiVersion       = "2.2.11"
-val springBootVersion    = "2.2.3.RELEASE"
+val jaxbApiVersion       = "2.2.12"
+val springBootVersion    = "2.2.8.RELEASE"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -280,10 +280,10 @@ lazy val codegen = (project in file("modules/codegen"))
     libraryDependencies ++= testDependencies ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.3.15",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.19.0",
+      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.21.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.3.600",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.20",
-      "org.tpolecat"                %% "atto-core"                    % "0.6.3",
+      "org.tpolecat"                %% "atto-core"                    % "0.6.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-macros"                  % catsVersion,
@@ -355,10 +355,10 @@ val dropwizardProjectDependencies = Seq(
   "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-  "junit"                      %  "junit"                  % "4.12"             % Test,
+  "junit"                      %  "junit"                  % "4.13"             % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
-  "com.github.tomakehurst"     %  "wiremock"               % "1.57"             % Test,
+  "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
 )
@@ -405,7 +405,7 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
       "io.circe"          %%% "circe-core"                    % circeVersion,
       "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
       "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
@@ -425,7 +425,7 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "io.circe"          %%% "circe-core"                    % circeVersion,
       "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0-RC3",
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
       "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
