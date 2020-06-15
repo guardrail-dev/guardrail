@@ -357,7 +357,7 @@ val dropwizardProjectDependencies = Seq(
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13"             % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.14.4"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
