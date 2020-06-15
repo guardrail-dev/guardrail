@@ -26,7 +26,7 @@ val ahcVersion           = "2.8.1"
 val dropwizardVersion    = "1.3.23"
 val jerseyVersion        = "2.25.1"
 val kindProjectorVersion = "0.10.3"
-val jaxbApiVersion       = "2.2.12"
+val jaxbApiVersion       = "2.3.1"
 val springBootVersion    = "2.2.8.RELEASE"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
@@ -281,7 +281,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.scalameta"               %% "scalameta"                    % "4.3.15",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.21.0",
-      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.3.600",
+      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.4.400",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.20",
       "org.tpolecat"                %% "atto-core"                    % "0.6.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
@@ -357,8 +357,8 @@ val dropwizardProjectDependencies = Seq(
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13"             % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.12.0"           % Test,
-  "com.github.tomakehurst"     %  "wiremock"               % "2.26.3"             % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.14.4"           % Test,
+  "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
 )
@@ -367,7 +367,7 @@ val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.12.0"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.14.4"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
