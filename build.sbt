@@ -327,7 +327,6 @@ val akkaProjectDependencies = Seq(
   "com.typesafe.akka" %% "akka-http"         % akkaVersion,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
   "io.circe"          %% "circe-core"        % circeVersion,
-  "io.circe"          %% "circe-generic"     % circeVersion,
   "io.circe"          %% "circe-jawn"        % circeVersion,
   "io.circe"          %% "circe-parser"      % circeVersion,
   "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
@@ -337,7 +336,6 @@ val akkaProjectDependencies = Seq(
 val http4sProjectDependencies = Seq(
   "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
   "io.circe"      %% "circe-core"          % circeVersion,
-  "io.circe"      %% "circe-generic"       % circeVersion,
   "io.circe"      %% "circe-parser"        % circeVersion,
   "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
   "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
@@ -403,11 +401,9 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
   .settings(
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
       "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
@@ -423,11 +419,9 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
     codegenSettings,
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
       "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
