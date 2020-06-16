@@ -1,0 +1,56 @@
+openapi: 3.0.2
+info:
+  title: Escaping Invalid Characters
+  version: 1.0.0
+paths:
+  /foo:
+    get:
+      x-jvm-package: invalidCharacters
+      operationId: getFoo
+      parameters:
+        - in: query
+          name: foo^bar
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - a*b
+                - bc?
+                - d/c
+              properties:
+                'a*b':
+                  type: string
+                'bc?':
+                  type: string
+                'd/c':
+                  type: string
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidCharacters"
+components:
+  schemas:
+    InvalidCharactersEnum:
+      type: string
+      enum:
+        - normal
+        - weird@
+        - "#yeah"
+        - "!moo:cow;"
+    InvalidCharacters:
+      type: object
+      required:
+        - ']moo'
+        - some-enum*^
+      properties:
+        ']moo':
+          type: string
+        some-enum*^:
+          $ref: "#/components/schemas/InvalidCharactersEnum"

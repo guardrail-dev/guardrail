@@ -136,8 +136,9 @@ object LanguageParameter {
 
       name <- getParameterName(parameter.get)
 
-      paramName <- pureTermName(name.toCamelCase)
-      param     <- pureMethodParameter(paramName, declType, defaultValue)
+      paramName     <- formatMethodArgName(name)
+      paramTermName <- pureTermName(paramName)
+      param         <- pureMethodParameter(paramTermName, declType, defaultValue)
 
       ftpe       <- fileType(None)
       isFileType <- typesEqual(paramType, ftpe)
@@ -145,7 +146,7 @@ object LanguageParameter {
       new LanguageParameter[L](
         Option(parameter.get.getIn),
         param,
-        paramName,
+        paramTermName,
         RawParameterName(name),
         declType,
         RawParameterType(rawType, rawFormat),

@@ -82,41 +82,50 @@ object SwaggerUtil {
       log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
         case x @ Resolved(_, _, _, _, _) => x.pure[F]
         case Deferred(name) =>
-          resolveType(name, protocolElems)
-            .flatMap {
-              case RandomType(name, tpe) =>
-                Resolved[L](tpe, None, None, None, None).pure[F]
-              case ClassDefinition(name, _, fullType, cls, _, _) =>
-                Resolved[L](fullType, None, None, None, None).pure[F]
-              case EnumDefinition(name, _, fullType, elems, cls, _) =>
-                Resolved[L](fullType, None, None, Some("string"), None).pure[F]
-              case ADT(_, _, fullType, _, _) =>
-                Resolved[L](fullType, None, None, None, None).pure[F]
-            }
+          for {
+            formattedName <- formatTypeName(name)
+            resolved <- resolveType(formattedName, protocolElems)
+              .flatMap {
+                case RandomType(name, tpe) =>
+                  Resolved[L](tpe, None, None, None, None).pure[F]
+                case ClassDefinition(name, _, fullType, cls, _, _) =>
+                  Resolved[L](fullType, None, None, None, None).pure[F]
+                case EnumDefinition(name, _, fullType, elems, cls, _) =>
+                  Resolved[L](fullType, None, None, Some("string"), None).pure[F]
+                case ADT(_, _, fullType, _, _) =>
+                  Resolved[L](fullType, None, None, None, None).pure[F]
+              }
+          } yield resolved
         case DeferredArray(name, containerTpe) =>
-          resolveType(name, protocolElems)
-            .flatMap {
-              case RandomType(name, tpe) =>
-                liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case ClassDefinition(name, _, fullType, cls, _, _) =>
-                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case EnumDefinition(name, _, fullType, elems, cls, _) =>
-                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case ADT(_, _, fullType, _, _) =>
-                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-            }
+          for {
+            formattedName <- formatTypeName(name)
+            resolved <- resolveType(formattedName, protocolElems)
+              .flatMap {
+                case RandomType(name, tpe) =>
+                  liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
+                case ClassDefinition(name, _, fullType, cls, _, _) =>
+                  liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                case EnumDefinition(name, _, fullType, elems, cls, _) =>
+                  liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                case ADT(_, _, fullType, _, _) =>
+                  liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+              }
+          } yield resolved
         case DeferredMap(name, containerTpe) =>
-          resolveType(name, protocolElems)
-            .flatMap {
-              case RandomType(name, tpe) =>
-                liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case ClassDefinition(_, _, fullType, _, _, _) =>
-                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case EnumDefinition(_, _, fullType, _, _, _) =>
-                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-              case ADT(_, _, fullType, _, _) =>
-                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-            }
+          for {
+            formattedName <- formatTypeName(name)
+            resolved <- resolveType(formattedName, protocolElems)
+              .flatMap {
+                case RandomType(name, tpe) =>
+                  liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
+                case ClassDefinition(_, _, fullType, _, _, _) =>
+                  liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                case EnumDefinition(_, _, fullType, _, _, _) =>
+                  liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                case ADT(_, _, fullType, _, _) =>
+                  liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+              }
+          } yield resolved
       })
     }
   }

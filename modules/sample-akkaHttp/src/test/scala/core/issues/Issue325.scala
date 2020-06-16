@@ -24,8 +24,8 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
     import issues.issue325.server.akkaHttp.{ Handler, Resource }
     val route = Resource.routes(new Handler {
       override def testMultipleContentTypes(
-          respond: Resource.testMultipleContentTypesResponse.type
-      )(foo: String, bar: Int, baz: Option[Int], file: Option[(java.io.File, Option[String], ContentType)]): Future[Resource.testMultipleContentTypesResponse] =
+          respond: Resource.TestMultipleContentTypesResponse.type
+      )(foo: String, bar: Int, baz: Option[Int], file: Option[(java.io.File, Option[String], ContentType)]): Future[Resource.TestMultipleContentTypesResponse] =
         Future.successful(
           if (foo == foo && bar == 5 && baz.forall(_ == 10)) {
             respond.OK
@@ -36,8 +36,8 @@ class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaF
       override def testMultipleContentTypesMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): java.io.File =
         java.io.File.createTempFile("guardrail-issue-325", "dat")
       override def emptyConsumes(
-          respond: Resource.emptyConsumesResponse.type
-      )(foo: String): Future[Resource.emptyConsumesResponse] =
+          respond: Resource.EmptyConsumesResponse.type
+      )(foo: String): Future[Resource.EmptyConsumesResponse] =
         Future.successful(respond.OK)
     })
 

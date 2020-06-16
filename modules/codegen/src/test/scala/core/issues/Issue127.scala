@@ -40,7 +40,7 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val handler = q"""
       trait Handler {
-        def uploadFile(respond: Resource.uploadFileResponse.type)(file: (File, Option[String], ContentType)): scala.concurrent.Future[Resource.uploadFileResponse]
+        def uploadFile(respond: Resource.UploadFileResponse.type)(file: (File, Option[String], ContentType)): scala.concurrent.Future[Resource.UploadFileResponse]
         def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File
         def uploadFileUnmarshalToFile[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext =>
           part => {
@@ -142,23 +142,23 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[Tuple1[(File, Option[String], ContentType)]]).apply(file => complete(handler.uploadFile(uploadFileResponse)(file)))))
+            }: Directive[Tuple1[(File, Option[String], ContentType)]]).apply(file => complete(handler.uploadFile(UploadFileResponse)(file)))))
           }
         }
-        sealed abstract class uploadFileResponse(val statusCode: StatusCode)
-        case object uploadFileResponseCreated extends uploadFileResponse(StatusCodes.Created)
-        object uploadFileResponse {
-          implicit val uploadFileTRM: ToResponseMarshaller[uploadFileResponse] = Marshaller { implicit ec =>
-            resp => uploadFileTR(resp)
+        sealed abstract class UploadFileResponse(val statusCode: StatusCode)
+        case object UploadFileResponseCreated extends UploadFileResponse(StatusCodes.Created)
+        object UploadFileResponse {
+          implicit val uploadFileResponseTRM: ToResponseMarshaller[UploadFileResponse] = Marshaller { implicit ec =>
+            resp => uploadFileResponseTR(resp)
           }
-          implicit def uploadFileTR(value: uploadFileResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r: uploadFileResponseCreated.type =>
+          implicit def uploadFileResponseTR(value: UploadFileResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: UploadFileResponseCreated.type =>
               scala.concurrent.Future.successful(Marshalling.Opaque {
                 () => HttpResponse(r.statusCode)
               } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => uploadFileResponse): uploadFileResponse = ev(value)
-          def Created: uploadFileResponse = uploadFileResponseCreated
+          def apply[T](value: T)(implicit ev: T => UploadFileResponse): UploadFileResponse = ev(value)
+          def Created: UploadFileResponse = UploadFileResponseCreated
         }
       }
     """

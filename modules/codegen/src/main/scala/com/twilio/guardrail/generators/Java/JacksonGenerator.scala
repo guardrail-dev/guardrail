@@ -783,10 +783,10 @@ object JacksonGenerator {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[JavaLanguage]]
     )(
         name: String,
+        fieldName: String,
         property: Schema[_],
         meta: SwaggerUtil.ResolvedType[JavaLanguage],
         requirement: PropertyRequirement,
@@ -833,7 +833,6 @@ object JacksonGenerator {
           }
           (tpe, classDep) = tpeClassDep
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           expressionDefaultValue <- defaultValue match {
@@ -860,7 +859,7 @@ object JacksonGenerator {
                 )
               ).mapN((_, _))
             )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
-          term <- safeParseParameter(s"final ${finalDeclType} ${argName.escapeIdentifier}")
+          term <- safeParseParameter(s"final ${finalDeclType} $fieldName")
           dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
         } yield ProtocolParameter[JavaLanguage](
           term,
@@ -879,7 +878,6 @@ object JacksonGenerator {
     def encodeModel(
         clsName: String,
         dtoPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]] = Nil
     ) =
@@ -889,7 +887,6 @@ object JacksonGenerator {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]] = Nil
     ) =

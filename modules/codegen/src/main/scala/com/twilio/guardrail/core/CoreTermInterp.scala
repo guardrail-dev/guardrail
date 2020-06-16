@@ -212,7 +212,8 @@ class CoreTermInterp[L <: LA](
               val Ps = implicitly[ProtocolSupportTerms[L, Target]]
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
-                definitionsPkgName <- Sc.fullyQualifyPackageName(pkgName)
+                formattedPkgName   <- Sc.formatPackageName(pkgName)
+                definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName)
                 (proto, codegen) <- Common
                   .prepareDefinitions[L, Target](
                     kind,
@@ -223,7 +224,7 @@ class CoreTermInterp[L <: LA](
                   )
                 protocolSupport <- Ps.generateSupportDefinitions()
                 result <- Common
-                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), pkgName, dtoPackage, customImports, protocolSupport)
+                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName, dtoPackage, customImports, protocolSupport)
               } yield result
             } catch {
               case NonFatal(ex) =>

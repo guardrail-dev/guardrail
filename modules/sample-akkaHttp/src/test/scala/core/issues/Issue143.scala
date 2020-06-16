@@ -24,8 +24,8 @@ class Issue143 extends FunSuite with Matchers with EitherValues with ScalaFuture
     val tempDest = File.createTempFile("guardrail.", ".dat")
     val route = Resource.routes(new Handler {
       def uploadFile(
-          respond: Resource.uploadFileResponse.type
-      )(file: (File, Option[String], akka.http.scaladsl.model.ContentType)): Future[Resource.uploadFileResponse] =
+          respond: Resource.UploadFileResponse.type
+      )(file: (File, Option[String], akka.http.scaladsl.model.ContentType)): Future[Resource.UploadFileResponse] =
         Future.successful(respond.Created)
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: akka.http.scaladsl.model.ContentType): java.io.File =
         tempDest

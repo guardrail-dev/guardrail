@@ -19,21 +19,21 @@ class Issue357Suite extends FunSpec with Matchers with EitherValues with ScalaFu
   describe("akka-http server should") {
     import issues.issue357.server.akkaHttp.{ Handler, Resource }
     val route = Resource.routes(new Handler {
-      def deleteFoo(respond: Resource.deleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.deleteFooResponse] =
+      def deleteFoo(respond: Resource.DeleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.DeleteFooResponse] =
         Future.successful((path, query, form) match {
           case ("1234", "2345", "3456")             => respond.NoContent
           case ("foo", "bar", "baz")                => respond.NoContent
           case ("\"qfoo\"", "\"qbar\"", "\"qbaz\"") => respond.NoContent
           case _                                    => respond.BadRequest
         })
-      def patchFoo(respond: Resource.patchFooResponse.type)(path: String, query: String, form: String): Future[Resource.patchFooResponse] =
+      def patchFoo(respond: Resource.PatchFooResponse.type)(path: String, query: String, form: String): Future[Resource.PatchFooResponse] =
         Future.successful((path, query, form) match {
           case ("1234", "2345", "3456")             => respond.NoContent
           case ("foo", "bar", "baz")                => respond.NoContent
           case ("\"qfoo\"", "\"qbar\"", "\"qbaz\"") => respond.NoContent
           case _                                    => respond.BadRequest
         })
-      def putFoo(respond: Resource.putFooResponse.type)(path: String, query: String, form: String): Future[Resource.putFooResponse] =
+      def putFoo(respond: Resource.PutFooResponse.type)(path: String, query: String, form: String): Future[Resource.PutFooResponse] =
         Future.successful((path, query, form) match {
           case ("1234", "2345", "3456")             => respond.NoContent
           case ("foo", "bar", "baz")                => respond.NoContent
