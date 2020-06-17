@@ -652,8 +652,6 @@ object DropwizardServerGenerator {
           "javax.ws.rs.HttpMethod"
         ).traverse(safeParseRawImport)
 
-        shower <- SerializationHelpers.showerSupportDef
-
         jersey <- SerializationHelpers.guardrailJerseySupportDef
       } yield {
         def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
@@ -669,7 +667,6 @@ object DropwizardServerGenerator {
           SupportDefinition[JavaLanguage](new Name(name), annotationImports, List(annotationDecl))
         }
         List(
-          shower,
           jersey,
           httpMethodAnnotation("PATCH"),
           httpMethodAnnotation("TRACE")
