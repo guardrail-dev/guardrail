@@ -25,7 +25,7 @@ class Issue184Suite extends FunSuite with Matchers with EitherValues with ScalaF
   test("akka-http server request body validation") {
     import issues.issue184.server.akkaHttp.{ Handler, Resource }
     val route = Resource.routes(new Handler {
-      override def deleteFoo(respond: Resource.deleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.deleteFooResponse] =
+      override def deleteFoo(respond: Resource.DeleteFooResponse.type)(path: String, query: String, form: String): Future[Resource.DeleteFooResponse] =
         Future.successful(respond.NoContent)
     })
 

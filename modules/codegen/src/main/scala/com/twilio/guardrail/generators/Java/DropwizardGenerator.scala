@@ -1,26 +1,43 @@
 package com.twilio.guardrail.generators.Java
 
 import cats.implicits._
+import com.github.javaparser.ast.ImportDeclaration
+import com.github.javaparser.ast.body.BodyDeclaration
 import com.github.javaparser.ast.expr._
-import com.twilio.guardrail.Target
+import com.twilio.guardrail.{ SupportDefinition, Target }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.framework._
 
 object DropwizardGenerator {
   object FrameworkInterp extends FrameworkTerms[JavaLanguage, Target] {
-    implicit def MonadF                    = Target.targetInstances
+    implicit def MonadF = Target.targetInstances
+
+    private lazy val supportDefs: Target[List[SupportDefinition[JavaLanguage]]] = List(
+      SerializationHelpers.showerSupportDef
+    ).sequence
+
     def fileType(format: Option[String])   = safeParseType(format.getOrElse("java.io.InputStream"))
     def objectType(format: Option[String]) = safeParseType("com.fasterxml.jackson.databind.JsonNode")
 
-    def getFrameworkImports(tracing: Boolean) =
-      Target.pure(List.empty)
+    override def getFrameworkImports(tracing: Boolean): Target[List[ImportDeclaration]] =
+      supportDefs.map(_.flatMap(_.imports).distinct)
 
     def getFrameworkImplicits() =
       Target.pure(None)
 
-    def getFrameworkDefinitions(tracing: Boolean) =
-      Target.pure(List.empty)
+    override def getFrameworkDefinitions(tracing: Boolean): Target[List[(Name, List[BodyDeclaration[_ <: BodyDeclaration[_]]])]] =
+      supportDefs.map(
+        _.map(
+          supportDef =>
+            (
+              supportDef.className,
+              supportDef.definition.collect({
+                case bd: BodyDeclaration[_] => bd
+              })
+            )
+        )
+      )
 
     def lookupStatusCode(key: String) = {
       def parseStatusCode(code: Int, termName: String): Target[(Int, Name)] =

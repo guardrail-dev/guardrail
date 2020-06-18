@@ -31,7 +31,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] =
         Future.successful(respond.OK(s"Bar is '$bar'"))
     }))
 
@@ -46,7 +46,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] = {
         val msg = baz.map(s => s"present: '$s'").getOrElse("missing")
         Future.successful(respond.OK(s"Baz is $msg"))
       }
@@ -63,7 +63,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] =
         Future.successful(respond.OK(s"Bar is '$bar'"))
     }))
 
@@ -78,7 +78,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] = {
         val msg = baz.map(s => s"present: '$s'").getOrElse("missing")
         Future.successful(respond.OK(s"Baz is $msg"))
       }

@@ -29,14 +29,14 @@ object AkkaHttpServerGenerator {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[ScalaLanguage],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ) =
       for {
         _ <- Target.pure(())
-        responseSuperType = Type.Name(s"${operationId}Response")
-        responseSuperTerm = Term.Name(s"${operationId}Response")
+        responseSuperType = Type.Name(responseClsName)
+        responseSuperTerm = Term.Name(responseClsName)
         instances = responses.value
           .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
             case (acc, resp) =>
@@ -44,8 +44,8 @@ object AkkaHttpServerGenerator {
                 val statusCodeName = resp.statusCodeName
                 val statusCode     = q"StatusCodes.${statusCodeName}"
                 val valueType      = resp.value.map(_._1)
-                val responseTerm   = Term.Name(s"${operationId}Response${statusCodeName.value}")
-                val responseName   = Type.Name(s"${operationId}Response${statusCodeName.value}")
+                val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
+                val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
                 valueType.fold[(Defn, Defn, Case)](
                   (
                     q"case object $responseTerm                      extends $responseSuperType($statusCode)",
@@ -83,10 +83,10 @@ object AkkaHttpServerGenerator {
         companion = q"""
             object ${responseSuperTerm} {
               implicit val ${Pat
-          .Var(Term.Name(s"${operationId}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term
-          .Name(s"${operationId}TR")}(resp) }
+          .Var(Term.Name(s"${responseClsName.uncapitalized}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term
+          .Name(s"${responseClsName.uncapitalized}TR")}(resp) }
               implicit def ${Term
-          .Name(s"${operationId}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
+          .Name(s"${responseClsName.uncapitalized}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
                 ${Term.Match(Term.Name("value"), marshallers)}
 
               def apply[T](value: T)(implicit ev: T => ${responseSuperType}): ${responseSuperType} = ev(value)
@@ -122,16 +122,25 @@ object AkkaHttpServerGenerator {
     def generateRoutes(
         tracing: Boolean,
         resourceName: String,
+        handlerName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, LanguageParameters[ScalaLanguage], Responses[ScalaLanguage])],
+        routes: List[GenerateRouteMeta[ScalaLanguage]],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]],
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
     ) =
       for {
         renderedRoutes <- routes.traverse {
-          case (operationId, tracingFields, sr @ RouteMeta(path, method, operation, securityRequirements), parameters, responses) =>
+          case GenerateRouteMeta(
+              operationId,
+              methodName,
+              responseClsName,
+              tracingFields,
+              sr @ RouteMeta(path, method, operation, securityRequirements),
+              parameters,
+              responses
+              ) =>
             for {
-              rendered <- generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
+              rendered <- generateRoute(resourceName, basePath, methodName, responseClsName, sr, tracingFields, parameters, responses)
             } yield rendered
         }
         routeTerms = renderedRoutes.map(_.route)
@@ -281,11 +290,11 @@ object AkkaHttpServerGenerator {
           Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.paramName)))
       }
 
-    def bodyToAkka(operationId: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term]] =
+    def bodyToAkka(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term]] =
       Target.pure(
         body.map {
           case LanguageParameter(_, _, _, _, argType) =>
-            q"entity(as[${argType}](${Term.Name(s"${operationId.uncapitalized}Decoder")}))"
+            q"entity(as[${argType}](${Term.Name(s"${methodName}Decoder")}))"
         }
       )
 
@@ -357,7 +366,7 @@ object AkkaHttpServerGenerator {
       override def toString(): String = s"Binding($value)"
     }
 
-    def formToAkka(consumes: Tracker[NonEmptyList[ContentType]], operationId: String)(
+    def formToAkka(consumes: Tracker[NonEmptyList[ContentType]], methodName: String)(
         params: List[LanguageParameter[ScalaLanguage]]
     ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
       for {
@@ -375,7 +384,7 @@ object AkkaHttpServerGenerator {
         result <- NonEmptyList
           .fromList(params)
           .traverse({ params =>
-            val partsTerm = Term.Name(s"${operationId}Parts")
+            val partsTerm = Term.Name(s"${methodName}Parts")
             val (multipartContainers, unmarshallers, matchers, termPatterns, optionalTermPatterns, unpacks, termTypes, grabHeads) = params
               .map({
                 case rawParameter @ LanguageParameter(a, param, paramName, argName, argType) =>
@@ -423,8 +432,8 @@ object AkkaHttpServerGenerator {
                       interpolateUnmarshaller(
                         q"""
                           (
-                            handler.${Term.Name(s"${operationId}UnmarshalToFile")}[${targetFunctor}](${targetHashName}, handler.${Term
-                          .Name(s"${operationId}MapFileField")}(_, _, _))
+                            handler.${Term.Name(s"${methodName}UnmarshalToFile")}[${targetFunctor}](${targetHashName}, handler.${Term
+                          .Name(s"${methodName}MapFileField")}(_, _, _))
                               .map({ case (v1, v2, v3, v4) =>
                                 ${Term.Select(partsTerm, containerName.toTerm)}((..${List(q"v1", q"v2", q"v3") ++ rawParameter.hashAlgorithm
                               .map(Function.const(q"v4"))}))
@@ -508,11 +517,11 @@ object AkkaHttpServerGenerator {
               (
                 List(
                   q"""
-            def ${Term.Name(s"${operationId}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
+            def ${Term.Name(s"${methodName}MapFileField")}(fieldName: String, fileName: Option[String], contentType: ContentType): File
             """,
                   q"""
               def ${Term
-                    .Name(s"${operationId}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
+                    .Name(s"${methodName}UnmarshalToFile")}[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext => part =>
                 val dest = destFn(part.name, part.filename, part.entity.contentType)
                 val messageDigest = hashType.map(MessageDigest.getInstance(_))
                 val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
@@ -699,6 +708,8 @@ object AkkaHttpServerGenerator {
     def generateRoute(
         resourceName: String,
         basePath: Option[String],
+        methodName: String,
+        responseClsName: String,
         route: RouteMeta,
         tracingFields: Option[TracingField[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage],
@@ -716,11 +727,6 @@ object AkkaHttpServerGenerator {
                 .fromList(xs.flatMap(ContentType.unapply(_)))
                 .getOrElse(NonEmptyList.one(ApplicationJson))
           )
-        operationId <- operation
-          .downField("operationId", _.getOperationId())
-          .map(_.map(splitOperationParts).map(_._2))
-          .raiseErrorIfEmpty("Missing operationId")
-          .map(_.get)
 
         // special-case file upload stuff
         formArgs = parameters.formParams.map({ x =>
@@ -745,10 +751,11 @@ object AkkaHttpServerGenerator {
         akkaMethod                     <- httpMethodToAkka(method)
         akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
         akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
-        akkaBody                       <- bodyToAkka(operationId, bodyArgs)
-        (akkaForm, handlerDefinitions) <- formToAkka(consumes, operationId)(formArgs)
+        akkaBody                       <- bodyToAkka(methodName, bodyArgs)
+        (akkaForm, handlerDefinitions) <- formToAkka(consumes, methodName)(formArgs)
         akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
-        (responseCompanionTerm, responseCompanionType) = (Term.Name(s"${operationId}Response"), Type.Name(s"${operationId}Response"))
+        // We aren't capitalizing the response names in order to keep back compat
+        (responseCompanionTerm, responseCompanionType) = (Term.Name(responseClsName), Type.Name(responseClsName))
         responseType = if (ServerRawResponse(operation).getOrElse(false)) {
           t"HttpResponse"
         } else {
@@ -785,7 +792,7 @@ object AkkaHttpServerGenerator {
           pathMatcher compose methodMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-        fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(operationId)}(...${handlerCallArgs}))")))
+        fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(methodName)}(...${handlerCallArgs}))")))
 
         respond = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
 
@@ -809,14 +816,11 @@ object AkkaHttpServerGenerator {
                   )
               )
             )
-        codecs <- generateCodecs(operationId, bodyArgs, responses, consumes)
+        codecs <- generateCodecs(methodName, bodyArgs, responses, consumes)
       } yield {
         RenderedRoute(
           fullRoute,
-          q"""
-                def ${Term
-            .Name(operationId)}(...${params}): scala.concurrent.Future[${responseType}]
-              """,
+          q"""def ${Term.Name(methodName)}(...${params}): scala.concurrent.Future[${responseType}]""",
           codecs,
           handlerDefinitions
         )
@@ -829,15 +833,15 @@ object AkkaHttpServerGenerator {
       } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" })
 
     def generateCodecs(
-        operationId: String,
+        methodName: String,
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
         consumes: Tracker[NonEmptyList[ContentType]]
     ): Target[List[Defn.Val]] =
-      generateDecoders(operationId, bodyArgs, consumes)
+      generateDecoders(methodName, bodyArgs, consumes)
 
     def generateDecoders(
-        operationId: String,
+        methodName: String,
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         consumes: Tracker[NonEmptyList[ContentType]]
     ): Target[List[Defn.Val]] =
@@ -847,7 +851,7 @@ object AkkaHttpServerGenerator {
             (decoder, baseType) <- AkkaHttpHelper.generateDecoder(argType, consumes)
           } yield {
             q"""
-            val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId.uncapitalized}Decoder")), t"FromRequestUnmarshaller[$baseType]")} = {
+            val ${Pat.Typed(Pat.Var(Term.Name(s"${methodName}Decoder")), t"FromRequestUnmarshaller[$baseType]")} = {
               val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
               val unmarshalEntity = ${decoder}
               extractEntity.andThen(unmarshalEntity)

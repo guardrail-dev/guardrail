@@ -38,6 +38,7 @@ object Http4sClientGenerator {
 
     def generateClientOperation(
         className: List[String],
+        responseClsName: String,
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage]
@@ -174,6 +175,7 @@ object Http4sClientGenerator {
 
       def build(
           methodName: String,
+          responseClsName: String,
           httpMethod: HttpMethod,
           urlWithParams: Term,
           formDataParams: Option[Term],
@@ -237,9 +239,9 @@ object Http4sClientGenerator {
                 q"parseOptionalHeader(resp, $headerName)"
               }
             }
-          responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
+          responseCompanionTerm = Term.Name(responseClsName)
           isGeneric             = Http4sHelper.isDefinitionGeneric(responses)
-          baseResponseTypeRef   = Type.Name(s"${methodName.capitalize}Response")
+          baseResponseTypeRef   = Type.Name(responseClsName)
           cases <- responses.value.traverse[Target, Case]({ resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             val statusCode   = Term.Select(p"_root_.org.http4s.Status", resp.statusCodeName)
@@ -353,7 +355,18 @@ object Http4sClientGenerator {
         else List.empty
         extraImplicits = List.empty
 
-        renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+        renderedClientOperation <- build(
+          methodName,
+          responseClsName,
+          httpMethod,
+          urlWithParams,
+          formDataParams,
+          headerParams,
+          responses,
+          produces,
+          consumes,
+          tracing
+        )(
           tracingArgsPre,
           tracingArgsPost,
           pathArgs,
@@ -380,11 +393,11 @@ object Http4sClientGenerator {
       )
     }
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[ScalaLanguage],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ): Target[List[scala.meta.Defn]] =
-      Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
 
     def generateSupportDefinitions(
         tracing: Boolean,

@@ -70,6 +70,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
   ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
   ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
+  ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks(Set("dropwizard")),
   ExampleCase(sampleResource("formData.yaml"), "form"),
   ExampleCase(sampleResource("issues/issue45.yaml"), "issues.issue45"),
   ExampleCase(sampleResource("issues/issue121.yaml"), "issues.issue121"),
@@ -280,8 +281,8 @@ lazy val codegen = (project in file("modules/codegen"))
     libraryDependencies ++= testDependencies ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.3.15",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.21.0",
-      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.4.400",
+      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.22.0",
+      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.4.500",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.20",
       "org.tpolecat"                %% "atto-core"                    % "0.6.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
@@ -327,7 +328,6 @@ val akkaProjectDependencies = Seq(
   "com.typesafe.akka" %% "akka-http"         % akkaVersion,
   "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
   "io.circe"          %% "circe-core"        % circeVersion,
-  "io.circe"          %% "circe-generic"     % circeVersion,
   "io.circe"          %% "circe-jawn"        % circeVersion,
   "io.circe"          %% "circe-parser"      % circeVersion,
   "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
@@ -337,7 +337,6 @@ val akkaProjectDependencies = Seq(
 val http4sProjectDependencies = Seq(
   "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
   "io.circe"      %% "circe-core"          % circeVersion,
-  "io.circe"      %% "circe-generic"       % circeVersion,
   "io.circe"      %% "circe-parser"        % circeVersion,
   "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
   "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
@@ -357,8 +356,8 @@ val dropwizardProjectDependencies = Seq(
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13"             % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.14.4"           % Test,
-  "com.github.tomakehurst"     %  "wiremock"               % "2.26.3"             % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.14.7"           % Test,
+  "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
 )
@@ -367,7 +366,7 @@ val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.14.4"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.14.7"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
@@ -403,11 +402,9 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
   .settings(
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
       "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
@@ -423,11 +420,9 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
     codegenSettings,
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-generic"                 % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
       "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-json-schema-generic" % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
