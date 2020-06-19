@@ -12,9 +12,11 @@ import org.http4s.{ Header, HttpRoutes, Request }
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.syntax.StringSyntax
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class Http4sFullTracerTest extends FunSuite with Matchers with EitherValues with StringSyntax {
+class Http4sFullTracerTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
 
   val traceHeaderKey          = "tracer-label"
   def log(line: String): Unit = ()

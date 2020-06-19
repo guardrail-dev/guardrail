@@ -14,11 +14,14 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
 import org.scalatest.concurrent.{ IntegrationPatience, ScalaFutures }
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 
-class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
+class AkkaHttpFullTracerTest extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
 
   val traceHeaderKey          = "tracer-label"
   def log(line: String): Unit = ()

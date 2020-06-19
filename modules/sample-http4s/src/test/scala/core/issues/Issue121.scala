@@ -11,10 +11,13 @@ import org.http4s.multipart._
 import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import io.circe._
 
-class Issue121Suite extends FunSuite with Matchers with EitherValues with ScalaFutures {
+class Issue121Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("http4s server can respond with 204") {

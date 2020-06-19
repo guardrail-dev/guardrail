@@ -8,7 +8,10 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.Future
 import io.circe._
 import org.typelevel.jawn.IncompleteParseException
@@ -20,7 +23,7 @@ import org.typelevel.jawn.IncompleteParseException
   *   - No content vs Partial content vs Invalid content
   * - Polymorphic discriminator error messages
   */
-class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("akka-http server request body validation") {

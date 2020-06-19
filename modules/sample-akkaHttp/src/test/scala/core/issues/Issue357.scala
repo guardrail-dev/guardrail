@@ -9,11 +9,13 @@ import cats.instances.future._
 import io.circe._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSpec, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 import scala.concurrent.Future
 import scala.concurrent.duration.{ Duration, SECONDS }
 
-class Issue357Suite extends FunSpec with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class Issue357Suite extends AnyFunSpec with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   describe("akka-http server should") {
