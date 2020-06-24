@@ -6,6 +6,8 @@ Migrating to 0.59.0
 
 Fixing Java identifier escaping required some core changes in how various names (type, method, method argument, package) are generated.  This cascaded into all of the framework generators, so both Java and Scala clients may be affected.
 
+There is a Scalafix rule [here](https://github.com/blast-hardcheese/guardrail-scalafix-rules/) (`GuardrailScalaResponseTypes`) that can be used to automate the bulk of these changes.
+
 The most notable differences are:
 
 * The Scala client and server response class types used to be camelCased but are now PascalCased (which now conforms to Scala norms).  Since these types sometimes occur in type signatures of `Handler` classes, some names might need updating.
