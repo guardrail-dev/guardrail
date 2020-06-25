@@ -55,14 +55,14 @@ object DropwizardServerGenerator {
   private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
   private val FILE_TYPE             = StaticJavaParser.parseClassOrInterfaceType("java.io.File")
 
-  private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.InstantParam")
-  private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetDateTimeParam")
-  private val ZONED_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.ZonedDateTimeParam")
-  private val LOCAL_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalDateTimeParam")
-  private val LOCAL_DATE_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalDateParam")
-  private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalTimeParam")
-  private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
-  private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
+  private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.InstantParam")
+  private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.OffsetDateTimeParam")
+  private val ZONED_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.ZonedDateTimeParam")
+  private val LOCAL_DATE_TIME_PARAM_TYPE  = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.LocalDateTimeParam")
+  private val LOCAL_DATE_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.LocalDateParam")
+  private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.LocalTimeParam")
+  private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.jsr310.OffsetTimeParam")
+  private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("io.dropwizard.jersey.params.DurationParam")
 
   private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
   private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
@@ -540,7 +540,11 @@ object DropwizardServerGenerator {
               def transformHandlerArg(parameter: Parameter): Expression = {
                 val isOptional = parameter.getType.isOptional
                 val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
-                if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
+
+                val isJsr310Type = typeName.startsWith("io.dropwizard.jersey.jsr310.") ||
+                  typeName.startsWith("io.dropwizard.jersey.params.")
+
+                if (isJsr310Type && typeName.endsWith("Param")) {
                   if (isOptional) {
                     new MethodCallExpr(
                       parameter.getNameAsExpression,
@@ -651,8 +655,6 @@ object DropwizardServerGenerator {
           "java.lang.annotation.Target",
           "javax.ws.rs.HttpMethod"
         ).traverse(safeParseRawImport)
-
-        jersey <- SerializationHelpers.guardrailJerseySupportDef
       } yield {
         def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
           val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
@@ -667,7 +669,6 @@ object DropwizardServerGenerator {
           SupportDefinition[JavaLanguage](new Name(name), annotationImports, List(annotationDecl))
         }
         List(
-          jersey,
           httpMethodAnnotation("PATCH"),
           httpMethodAnnotation("TRACE")
         )
