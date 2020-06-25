@@ -542,7 +542,7 @@ object DropwizardServerGenerator {
                 val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
 
                 val isJsr310Type = typeName.startsWith("io.dropwizard.jersey.jsr310.") ||
-                  typeName.startsWith("io.dropwizard.jersey.params.")
+                    typeName.startsWith("io.dropwizard.jersey.params.")
 
                 if (isJsr310Type && typeName.endsWith("Param")) {
                   if (isOptional) {
