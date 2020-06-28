@@ -6,6 +6,19 @@ Migrating to 0.59.0
 
 Fixing Java identifier escaping required some core changes in how various names (type, method, method argument, package) are generated.  This cascaded into all of the framework generators, so both Java and Scala clients may be affected.
 
+
+### Scalafix
+
+There is a Scalafix rule, [`GuardrailScalaResponseTypes`](https://github.com/blast-hardcheese/guardrail-scalafix-rules/blob/master/rules/src/main/scala/fix/GuardrailScalaResponseTypes.scala), that can be used to automate the bulk of these changes.
+
+1. [Install scalafix](https://scalacenter.github.io/scalafix/docs/users/installation#sbt)
+1. Invoke scalafix at the SBT console:
+    ```
+    sbt> scalafix -r https://raw.githubusercontent.com/blast-hardcheese/guardrail-scalafix-rules/master/rules/src/main/scala/fix/GuardrailScalaResponseTypes.scala
+    ```
+1. If there are issues, please [report them](https://github.com/twilio/guardrail/issues).
+   We do our best to keep breaking changes to a minimum, but as this greatly simplified the casing heuristics, we decided to move forward. Thanks for your understanding.
+
 The most notable differences are:
 
 * The Scala client and server response class types used to be camelCased but are now PascalCased (which now conforms to Scala norms).  Since these types sometimes occur in type signatures of `Handler` classes, some names might need updating.
