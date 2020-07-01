@@ -6,11 +6,11 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server._
-import com.twilio.guardrail.terms.SecurityScheme
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, SecurityScheme }
 import com.twilio.guardrail.{ StrictProtocolElems, Target }
 
 object EndpointsServerGenerator {
-  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def generateResponseDefinitions(responseClsName: String, responses: Responses[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]) =
       Target.raiseUserError("endpoints server generation is not currently supported")

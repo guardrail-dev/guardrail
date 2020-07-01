@@ -15,14 +15,15 @@ import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, UrlencodedFormData }
 import com.twilio.guardrail.protocol.terms.server._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object AkkaHttpServerGenerator {
-  class ServerTermInterp(modelGeneratorType: ModelGeneratorType) extends ServerTerms[ScalaLanguage, Target] {
+  class ServerTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+      extends ServerTerms[ScalaLanguage, Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)

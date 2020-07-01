@@ -1,28 +1,41 @@
-package com.twilio.guardrail
-package generators
-package Java
+package com.twilio.guardrail.generators.Java
 
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
+import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
-import com.twilio.guardrail.Discriminator
+import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
+import com.github.javaparser.ast.Modifier._
+import com.github.javaparser.ast.{ Node, NodeList }
+import com.github.javaparser.ast.body._
+import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
+import com.github.javaparser.ast.stmt._
+import com.twilio.guardrail.{
+  DataRedacted,
+  DataVisible,
+  Discriminator,
+  EmptyIsEmpty,
+  ProtocolParameter,
+  RedactionBehaviour,
+  RuntimeFailure,
+  StaticDefns,
+  SuperClass,
+  SwaggerUtil,
+  Target,
+  UserError
+}
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
+import com.twilio.guardrail.generators.{ JavaGenerator, RawParameterName, RawParameterType }
+import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import scala.collection.JavaConverters._
-import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.{ Node, NodeList }
-import com.github.javaparser.ast.stmt._
-import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
-import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr._
-import com.twilio.guardrail.generators.helpers.JacksonHelpers
 
 object JacksonGenerator {
   private val BUILDER_TYPE        = StaticJavaParser.parseClassOrInterfaceType("Builder")
@@ -119,7 +132,7 @@ object JacksonGenerator {
       ).toNodeList
     )
 
-  object EnumProtocolTermInterp extends EnumProtocolTerms[JavaLanguage, Target] {
+  class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractEnum(swagger: Schema[_]) = {
       val enumEntries: Option[List[String]] = swagger match {
@@ -307,7 +320,7 @@ object JacksonGenerator {
       Target.pure(new Name(s"${clsName}.${termName}"))
   }
 
-  object ModelProtocolTermInterp extends ModelProtocolTerms[JavaLanguage, Target] {
+  class ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ModelProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def renderDTOClass(
@@ -315,7 +328,7 @@ object JacksonGenerator {
         supportPackage: List[String],
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]]
-    ) = {
+    ): Target[TypeDeclaration[_ <: TypeDeclaration[_]]] = {
       val parentsWithDiscriminators = parents.collect({ case p if p.discriminators.nonEmpty => p })
       for {
         dtoClassType <- safeParseClassOrInterfaceType(clsName)
@@ -873,12 +886,12 @@ object JacksonGenerator {
       Target.pure(StaticDefns(clsName, List.empty, List.empty))
   }
 
-  object ArrayProtocolTermInterp extends ArrayProtocolTerms[JavaLanguage, Target] {
+  class ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ArrayProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractArrayType(
         arr: SwaggerUtil.ResolvedType[JavaLanguage],
         concreteTypes: List[PropMeta[JavaLanguage]]
-    ) =
+    ): Target[Type] =
       for {
         result <- arr match {
           case SwaggerUtil.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
@@ -911,7 +924,7 @@ object JacksonGenerator {
       } yield result
   }
 
-  object ProtocolSupportTermInterp extends ProtocolSupportTerms[JavaLanguage, Target] {
+  class ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ProtocolSupportTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractConcreteTypes(definitions: Either[String, List[PropMeta[JavaLanguage]]]) =
       definitions.fold[Target[List[PropMeta[JavaLanguage]]]](Target.raiseUserError, Target.pure)
@@ -943,7 +956,7 @@ object JacksonGenerator {
       Target.pure(None)
   }
 
-  object PolyProtocolTermInterp extends PolyProtocolTerms[JavaLanguage, Target] {
+  class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends PolyProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def renderSealedTrait(

@@ -6,13 +6,13 @@ import com.twilio.guardrail.protocol.terms.client._
 import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.protocol.terms.Responses
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.StrictProtocolElems
 import java.net.URI
 
 object SpringMvcClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] {
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
     def MonadF = Target.targetInstances
     def generateClientOperation(
         className: List[String],

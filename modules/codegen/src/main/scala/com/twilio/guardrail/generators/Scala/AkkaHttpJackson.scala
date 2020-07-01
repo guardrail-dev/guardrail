@@ -12,6 +12,7 @@ import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 
 object AkkaHttpJackson extends Framework[ScalaLanguage, Target] {
+  implicit def CollectionsLibInterp  = ScalaCollectionsGenerator.ScalaCollectionsInterp
   implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
   implicit def ClientInterp          = new ClientTermInterp(JacksonModelGenerator)
   implicit def EnumProtocolInterp    = EnumProtocolTermInterp
@@ -22,5 +23,4 @@ object AkkaHttpJackson extends Framework[ScalaLanguage, Target] {
   implicit def ServerInterp          = new ServerTermInterp(JacksonModelGenerator)
   implicit def SwaggerInterp         = SwaggerGenerator[ScalaLanguage]
   implicit def LanguageInterp        = ScalaInterp
-  implicit def CollectionsLibInterp  = ScalaCollectionsGenerator.ScalaCollectionsInterp
 }

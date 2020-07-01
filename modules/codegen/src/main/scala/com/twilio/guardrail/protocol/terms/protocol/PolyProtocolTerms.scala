@@ -4,12 +4,13 @@ import cats.Monad
 import com.twilio.guardrail.{ Discriminator, ProtocolParameter, StaticDefns, SuperClass }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
 
 /**
   * Protocol for Polymorphic models
   */
-abstract class PolyProtocolTerms[L <: LA, F[_]] {
+abstract class PolyProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def extractSuperClass(
       swagger: Tracker[ComposedSchema],

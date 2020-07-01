@@ -31,7 +31,7 @@ import com.twilio.guardrail.protocol.terms.{
 }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -275,7 +275,7 @@ object SpringMvcServerGenerator {
     }
   }
 
-  object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       List(

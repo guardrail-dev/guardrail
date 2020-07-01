@@ -32,7 +32,7 @@ import com.twilio.guardrail.protocol.terms.{
 }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import _root_.io.swagger.v3.oas.models.Operation
@@ -196,7 +196,7 @@ object DropwizardServerGenerator {
     }
   }
 
-  object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
       List(

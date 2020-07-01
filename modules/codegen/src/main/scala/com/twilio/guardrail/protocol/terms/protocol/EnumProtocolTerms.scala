@@ -4,8 +4,9 @@ import _root_.io.swagger.v3.oas.models.media.Schema
 import cats.Monad
 import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.terms.CollectionsLibTerms
 
-abstract class EnumProtocolTerms[L <: LA, F[_]] {
+abstract class EnumProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def extractEnum(swagger: Schema[_]): F[Either[String, List[String]]]
   def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)]): F[Option[L#ObjectDefinition]]

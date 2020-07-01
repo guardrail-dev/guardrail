@@ -3,8 +3,9 @@ package terms.framework
 
 import cats.Monad
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.terms.CollectionsLibTerms
 
-abstract class FrameworkTerms[L <: LA, F[_]] {
+abstract class FrameworkTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def getFrameworkImports(tracing: Boolean): F[List[L#Import]]
   def getFrameworkImplicits(): F[Option[(L#TermName, L#ObjectDefinition)]]

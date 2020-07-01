@@ -16,13 +16,13 @@ import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerT
 
 object Dropwizard extends Framework[ScalaLanguage, Target] {
   override implicit def ArrayProtocolInterp: ArrayProtocolTerms[ScalaLanguage, Target]     = ArrayProtocolTermInterp
-  override implicit def ClientInterp: ClientTerms[ScalaLanguage, Target]                   = ClientTermInterp
+  override implicit def ClientInterp: ClientTerms[ScalaLanguage, Target]                   = new ClientTermInterp
   override implicit def EnumProtocolInterp: EnumProtocolTerms[ScalaLanguage, Target]       = EnumProtocolTermInterp
-  override implicit def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]             = DropwizardGenerator.FrameworkInterp
+  override implicit def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]             = new DropwizardGenerator.FrameworkInterp
   override implicit def ModelProtocolInterp: ModelProtocolTerms[ScalaLanguage, Target]     = ModelProtocolTermInterp
   override implicit def PolyProtocolInterp: PolyProtocolTerms[ScalaLanguage, Target]       = PolyProtocolTermInterp
   override implicit def ProtocolSupportInterp: ProtocolSupportTerms[ScalaLanguage, Target] = ProtocolSupportTermInterp
-  override implicit def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = ServerTermInterp
+  override implicit def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = new ServerTermInterp
   override implicit def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]()
   override implicit def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaInterp
   override implicit def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target]   = ScalaCollectionsGenerator.ScalaCollectionsInterp

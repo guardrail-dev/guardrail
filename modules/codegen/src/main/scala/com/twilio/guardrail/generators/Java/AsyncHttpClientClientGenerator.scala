@@ -28,7 +28,7 @@ import com.twilio.guardrail.protocol.terms.{
 }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, SwaggerUtil, Target }
 import java.net.URI
 
@@ -402,7 +402,7 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  object ClientTermInterp extends ClientTerms[JavaLanguage, Target] {
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def generateClientOperation(

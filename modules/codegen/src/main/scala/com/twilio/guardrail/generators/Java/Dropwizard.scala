@@ -11,15 +11,15 @@ import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
 import com.twilio.guardrail.languages.JavaLanguage
 
 object Dropwizard extends Framework[JavaLanguage, Target] {
-  implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
-  implicit def ClientInterp          = ClientTermInterp
-  implicit def EnumProtocolInterp    = EnumProtocolTermInterp
-  implicit def FrameworkInterp       = DropwizardFrameworkInterp
-  implicit def ModelProtocolInterp   = ModelProtocolTermInterp
-  implicit def PolyProtocolInterp    = PolyProtocolTermInterp
-  implicit def ProtocolSupportInterp = ProtocolSupportTermInterp
-  implicit def ServerInterp          = ServerTermInterp
+  implicit def CollectionsLibInterp  = JavaCollectionsInterp
+  implicit def ArrayProtocolInterp   = new ArrayProtocolTermInterp
+  implicit def ClientInterp          = new ClientTermInterp
+  implicit def EnumProtocolInterp    = new EnumProtocolTermInterp
+  implicit def FrameworkInterp       = new DropwizardFrameworkInterp
+  implicit def ModelProtocolInterp   = new ModelProtocolTermInterp
+  implicit def PolyProtocolInterp    = new PolyProtocolTermInterp
+  implicit def ProtocolSupportInterp = new ProtocolSupportTermInterp
+  implicit def ServerInterp          = new ServerTermInterp
   implicit def SwaggerInterp         = SwaggerGenerator[JavaLanguage]
   implicit def LanguageInterp        = JavaInterp
-  implicit def CollectionsLibInterp  = JavaCollectionsInterp
 }
