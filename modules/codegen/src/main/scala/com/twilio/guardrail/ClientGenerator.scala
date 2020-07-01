@@ -3,10 +3,10 @@ package com.twilio.guardrail
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.Responses
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
+import com.twilio.guardrail.terms._
 import java.net.URI
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
@@ -31,10 +31,10 @@ object ClientGenerator {
   )(
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
-  )(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Clients[L]] = {
+  )(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[Clients[L]] = {
     import C._
-    import Sw._
     import Sc._
+    import Sw._
     for {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)

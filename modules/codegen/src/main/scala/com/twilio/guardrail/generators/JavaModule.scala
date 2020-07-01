@@ -9,11 +9,11 @@ import com.twilio.guardrail.generators.Java.SpringMvcGenerator
 import com.twilio.guardrail.generators.Java.DropwizardServerGenerator
 import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator
 import cats.data.NonEmptyList
-
+import com.twilio.guardrail.generators.collections.JavaCollectionsGenerator
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 object JavaModule extends AbstractModule[JavaLanguage] {
@@ -57,5 +57,6 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def ServerInterp: ServerTerms[JavaLanguage, Target]                   = server
       def SwaggerInterp: SwaggerTerms[JavaLanguage, Target]                 = SwaggerGenerator[JavaLanguage]
       def LanguageInterp: LanguageTerms[JavaLanguage, Target]               = JavaGenerator.JavaInterp
+      def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target]   = JavaCollectionsGenerator.JavaCollectionsInterp
     }).runA(modules.toList.toSet)
 }

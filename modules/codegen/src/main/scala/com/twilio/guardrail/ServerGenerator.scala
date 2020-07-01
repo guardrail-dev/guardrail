@@ -7,7 +7,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
@@ -26,7 +26,7 @@ object ServerGenerator {
   )(
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): F[Servers[L]] = {
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): F[Servers[L]] = {
     import S._
     import Sw._
     import Sc._

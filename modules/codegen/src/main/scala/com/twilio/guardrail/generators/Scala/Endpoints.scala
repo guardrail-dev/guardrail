@@ -7,6 +7,7 @@ import com.twilio.guardrail.generators.Scala.EndpointsGenerator.{ FrameworkInter
 import com.twilio.guardrail.generators.Scala.EndpointsServerGenerator._
 import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.ScalaGenerator._
+import com.twilio.guardrail.generators.collections.ScalaCollectionsGenerator.ScalaCollectionsInterp
 import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 
@@ -21,4 +22,5 @@ object Endpoints extends Framework[ScalaLanguage, Target] {
   implicit def ServerInterp          = ServerTermInterp
   implicit def SwaggerInterp         = SwaggerGenerator[ScalaLanguage]
   implicit def LanguageInterp        = ScalaInterp
+  implicit def CollectionsLibInterp  = ScalaCollectionsInterp
 }

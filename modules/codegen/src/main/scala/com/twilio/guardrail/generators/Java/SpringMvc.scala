@@ -1,20 +1,14 @@
 package com.twilio.guardrail.generators.Java
 
-import com.twilio.guardrail.generators.Framework
+import com.twilio.guardrail.Target
+import com.twilio.guardrail.generators.Java.JacksonGenerator._
 import com.twilio.guardrail.generators.Java.SpringMvcClientGenerator.ClientTermInterp
 import com.twilio.guardrail.generators.Java.SpringMvcGenerator.{ FrameworkInterp => FrameworkTermInterp }
 import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator.ServerTermInterp
-import com.twilio.guardrail.generators.Java.JacksonGenerator.{
-  ArrayProtocolTermInterp,
-  EnumProtocolTermInterp,
-  ModelProtocolTermInterp,
-  PolyProtocolTermInterp,
-  ProtocolSupportTermInterp
-}
 import com.twilio.guardrail.generators.JavaGenerator.JavaInterp
-import com.twilio.guardrail.generators.SwaggerGenerator
+import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
+import com.twilio.guardrail.generators.collections.JavaCollectionsGenerator.JavaCollectionsInterp
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.Target
 
 object SpringMvc extends Framework[JavaLanguage, Target] {
   implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
@@ -27,4 +21,5 @@ object SpringMvc extends Framework[JavaLanguage, Target] {
   implicit def ServerInterp          = ServerTermInterp
   implicit def SwaggerInterp         = SwaggerGenerator[JavaLanguage]
   implicit def LanguageInterp        = JavaInterp
+  implicit def CollectionsLibInterp  = JavaCollectionsInterp
 }

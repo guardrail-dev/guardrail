@@ -173,6 +173,12 @@ object Java {
     new NodeList[Expression](param)
   )
 
+  def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
+    case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
+    case None                   => Target.pure(new MethodCallExpr(name))
+    case other                  => Target.raiseUserError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+  }
+
   val GENERATED_CODE_COMMENT: Comment = new BlockComment(GENERATED_CODE_COMMENT_LINES.mkString("\n * ", "\n * ", "\n"))
 
   // from https://en.wikipedia.org/wiki/List_of_Java_keywords

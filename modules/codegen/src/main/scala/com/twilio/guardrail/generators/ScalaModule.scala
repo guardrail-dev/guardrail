@@ -9,7 +9,8 @@ import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.generators.Scala._
 import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
-import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.generators.collections.ScalaCollectionsGenerator
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
@@ -130,5 +131,6 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = server
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator.ScalaInterp
+      def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target]   = ScalaCollectionsGenerator.ScalaCollectionsInterp
     }).runA(modules.toList.toSet)
 }
