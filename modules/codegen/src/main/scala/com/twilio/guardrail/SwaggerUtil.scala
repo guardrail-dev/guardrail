@@ -227,17 +227,21 @@ object SwaggerUtil {
           schema
             .refine({ case impl: Schema[_] if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) => impl })(
               impl =>
-                pureTypeName(clsName)
-                  .flatMap(widenTypeName)
-                  .map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None, None, None): SwaggerUtil.ResolvedType[L]))
+                for {
+                  formattedClsName <- formatTypeName(clsName)
+                  typeName         <- pureTypeName(formattedClsName)
+                  widenedTypeName  <- widenTypeName(typeName)
+                } yield (clsName, SwaggerUtil.Resolved[L](widenedTypeName, None, None, None, None): SwaggerUtil.ResolvedType[L])
             )
             .orRefine({ case comp: ComposedSchema => comp })(
               comp =>
                 for {
-                  x <- pureTypeName(clsName).flatMap(widenTypeName)
+                  formattedClsName <- formatTypeName(clsName)
+                  typeName         <- pureTypeName(formattedClsName)
+                  widenedTypeName  <- widenTypeName(typeName)
                   parentSimpleRef = comp.downField("allOf", _.getAllOf).map(_.headOption).flatDownField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last)
                   parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
-                  resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
+                  resolvedType = SwaggerUtil.Resolved[L](widenedTypeName, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
                 } yield (clsName, resolvedType)
             )
             .getOrElse(
