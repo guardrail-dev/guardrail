@@ -9,6 +9,7 @@ import com.twilio.guardrail.generators.Java.SpringMvcGenerator
 import com.twilio.guardrail.generators.Java.DropwizardServerGenerator
 import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator
 import cats.data.NonEmptyList
+import com.twilio.guardrail.generators.Java.collectionslib.{ CollectionsLibType, JavaStdLibCollections }
 import com.twilio.guardrail.generators.collections.JavaCollectionsGenerator
 import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
@@ -17,7 +18,7 @@ import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerT
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 object JavaModule extends AbstractModule[JavaLanguage] {
-  def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): (
+  def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ProtocolSupportTerms[JavaLanguage, Target],
       ModelProtocolTerms[JavaLanguage, Target],
       EnumProtocolTerms[JavaLanguage, Target],
@@ -43,7 +44,7 @@ object JavaModule extends AbstractModule[JavaLanguage] {
     new AsyncHttpClientClientGenerator.ClientTermInterp
 
   def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
-    implicit val collections = JavaCollectionsGenerator.JavaCollectionsInterp
+    implicit val collections = new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections
     (for {
       (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson))
       client                               <- popModule("client", ("async-http-client", asyncHttpClient))

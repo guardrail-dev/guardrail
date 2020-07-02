@@ -14,7 +14,7 @@ import com.twilio.guardrail.terms.CollectionsLibTerms
 
 object JavaCollectionsGenerator {
 
-  object JavaCollectionsInterp extends CollectionsLibTerms[JavaLanguage, Target] {
+  class JavaCollectionsInterp extends CollectionsLibTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-java", "x-jvm"))

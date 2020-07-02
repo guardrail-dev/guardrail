@@ -234,9 +234,9 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |        private URI baseUrl = DEFAULT_BASE_URL;
          |
-         |        private Optional<Function<Request, CompletionStage<Response>>> httpClient = Optional.empty();
+         |        private java.util.Optional<Function<Request, CompletionStage<Response>>> httpClient = java.util.Optional.empty();
          |
-         |        private Optional<ObjectMapper> objectMapper = Optional.empty();
+         |        private java.util.Optional<ObjectMapper> objectMapper = java.util.Optional.empty();
          |
          |        public Builder() {
          |        }
@@ -247,12 +247,12 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |        }
          |
          |        public Builder withHttpClient(final Function<Request, CompletionStage<Response>> httpClient) {
-         |            this.httpClient = Optional.of(requireNonNull(httpClient, "httpClient is required"));
+         |            this.httpClient = java.util.Optional.of(requireNonNull(httpClient, "httpClient is required"));
          |            return this;
          |        }
          |
          |        public Builder withObjectMapper(final ObjectMapper objectMapper) {
-         |            this.objectMapper = Optional.of(requireNonNull(JacksonSupport.configureObjectMapper(objectMapper), "configureObjectMapper is required"));
+         |            this.objectMapper = java.util.Optional.of(requireNonNull(JacksonSupport.configureObjectMapper(objectMapper), "configureObjectMapper is required"));
          |            return this;
          |        }
          |

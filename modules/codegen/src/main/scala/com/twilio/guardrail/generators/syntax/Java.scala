@@ -10,7 +10,7 @@ import com.github.javaparser.ast.nodeTypes.{ NodeWithName, NodeWithSimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
-import com.twilio.guardrail.{ SupportDefinition, Target }
+import com.twilio.guardrail.{ RuntimeFailure, SupportDefinition, Target }
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.reflect.ClassTag
@@ -18,6 +18,8 @@ import scala.util.{ Failure, Success, Try }
 
 object Java {
   implicit class RichType(private val tpe: Type) extends AnyVal {
+    // This should be replaced with something more generic that doesn't rely on type naming, but will
+    // likely require a bit of surgery to do so
     def isOptional: Boolean =
       tpe match {
         case cls: ClassOrInterfaceType =>
@@ -54,6 +56,13 @@ object Java {
 
     @deprecated("Just use Type#asString", "0.0.0")
     def name: Option[String] = Option(tpe.asString)
+  }
+
+  implicit class RichNode(private val n: Node) extends AnyVal {
+    def toExpression: Target[Expression] = n match {
+      case expr: Expression => Target.pure(expr)
+      case _                => Target.raiseError(RuntimeFailure(s"Node $n cannot be converted to an Expression"))
+    }
   }
 
   implicit class RichListOfNode[T <: Node](private val l: List[T]) extends AnyVal {
@@ -165,12 +174,6 @@ object Java {
     new NodeList[Expression](
       requireNonNullExpr(param)
     )
-  )
-
-  def optionalOfNullableExpr(param: Expression): Expression = new MethodCallExpr(
-    new NameExpr("Optional"),
-    "ofNullable",
-    new NodeList[Expression](param)
   )
 
   def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
