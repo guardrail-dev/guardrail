@@ -11,7 +11,9 @@ import scala.compat.java8.OptionConverters._
 
 sealed trait CollectionsLibType {
   def optionalSideEffect(on: Expression, sideEffectParamName: String, sideEffectBody: List[Statement]): Expression
+  def optionalGetOrElse: String
   def isOptionalType(tpe: Type): Boolean
+  def isArrayType(tpe: Type): Boolean
 }
 
 object CollectionsLibType {
@@ -30,10 +32,10 @@ object CollectionsLibType {
     )
   }
 
-  private[collectionslib] def isOptional(tpe: Type, optionalClsScope: String, optionalClsName: String): Boolean = tpe match {
+  private[collectionslib] def isContainerOfType(tpe: Type, containerClsScope: String, containerClsName: String): Boolean = tpe match {
     case cls: ClassOrInterfaceType =>
       val tpeScope = cls.getScope.asScala
-      cls.getNameAsString == optionalClsName && (tpeScope.isEmpty || tpeScope.map(_.asString).contains(optionalClsScope))
+      cls.getNameAsString == containerClsName && (tpeScope.isEmpty || tpeScope.map(_.asString).contains(containerClsScope))
     case _ => false
   }
 }
@@ -42,5 +44,7 @@ trait JavaStdLibCollections extends CollectionsLibType {
   override def optionalSideEffect(on: Expression, sideEffectParamName: String, sideEffectBody: List[Statement]): Expression =
     CollectionsLibType.lambdaMethodCall(on, sideEffectParamName, sideEffectBody, "ifPresent")
 
-  override def isOptionalType(tpe: Type): Boolean = CollectionsLibType.isOptional(tpe, "java.util", "Optional")
+  override def optionalGetOrElse: String          = "orElseGet"
+  override def isOptionalType(tpe: Type): Boolean = CollectionsLibType.isContainerOfType(tpe, "java.util", "Optional")
+  override def isArrayType(tpe: Type): Boolean    = CollectionsLibType.isContainerOfType(tpe, "java.util", "List")
 }

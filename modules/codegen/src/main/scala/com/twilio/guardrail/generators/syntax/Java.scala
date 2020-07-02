@@ -18,8 +18,9 @@ import scala.util.{ Failure, Success, Try }
 
 object Java {
   implicit class RichType(private val tpe: Type) extends AnyVal {
-    // This should be replaced with something more generic that doesn't rely on type naming, but will
+    // These two should be replaced with something more generic that doesn't rely on type naming, but will
     // likely require a bit of surgery to do so
+
     def isOptional: Boolean =
       tpe match {
         case cls: ClassOrInterfaceType =>
@@ -136,7 +137,7 @@ object Java {
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration] = safeParse("safeParseStaticImport")(StaticJavaParser.parseImport, s"import static ${s};")
 
   def completionStageType(of: Type): ClassOrInterfaceType     = StaticJavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
-  def optionalType(of: Type): ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Optional").setTypeArguments(of)
+  def javaOptionalType(of: Type): ClassOrInterfaceType        = StaticJavaParser.parseClassOrInterfaceType("java.util.Optional").setTypeArguments(of)
   def functionType(in: Type, out: Type): ClassOrInterfaceType = StaticJavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
   def supplierType(of: Type): ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
   def listType(of: Type): ClassOrInterfaceType                = StaticJavaParser.parseClassOrInterfaceType("List").setTypeArguments(of)
@@ -169,7 +170,7 @@ object Java {
   def requireNonNullExpr(paramName: String): Expression = requireNonNullExpr(new NameExpr(paramName))
 
   def optionalOfExpr(param: Expression): Expression = new MethodCallExpr(
-    new NameExpr("Optional"),
+    new NameExpr("java.util.Optional"),
     "of",
     new NodeList[Expression](
       requireNonNullExpr(param)

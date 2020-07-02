@@ -247,12 +247,12 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |        }
          |
          |        public Builder withHttpClient(final Function<Request, CompletionStage<Response>> httpClient) {
-         |            this.httpClient = java.util.Optional.of(requireNonNull(httpClient, "httpClient is required"));
+         |            this.httpClient = java.util.Optional.ofNullable(httpClient);
          |            return this;
          |        }
          |
          |        public Builder withObjectMapper(final ObjectMapper objectMapper) {
-         |            this.objectMapper = java.util.Optional.of(requireNonNull(JacksonSupport.configureObjectMapper(objectMapper), "configureObjectMapper is required"));
+         |            this.objectMapper = java.util.Optional.ofNullable(JacksonSupport.configureObjectMapper(objectMapper));
          |            return this;
          |        }
          |
