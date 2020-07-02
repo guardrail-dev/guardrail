@@ -302,7 +302,7 @@ object DropwizardServerGenerator {
                 val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
                 def transform(to: Type): Parameter = {
-                  parameter.setType(if (isOptional) optionalType(to) else to)
+                  parameter.setType(if (isOptional) javaOptionalType(to) else to)
                   if (!isOptional) {
                     parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                   }
@@ -333,7 +333,7 @@ object DropwizardServerGenerator {
               def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
                 (param.isFile, param.required) match {
                   case (true, true)  => parameter.setType(FILE_TYPE)
-                  case (true, false) => parameter.setType(optionalType(FILE_TYPE))
+                  case (true, false) => parameter.setType(javaOptionalType(FILE_TYPE))
                   case _             => parameter
                 }
 

@@ -4,29 +4,21 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
-import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, UnknownType, VoidType }
+import com.github.javaparser.ast.Modifier._
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
+import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
+import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers
-import com.twilio.guardrail.generators.{ JavaGenerator, LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.generators.syntax.Java._
+import com.twilio.guardrail.generators.{ JavaGenerator, LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{
-  ApplicationJson,
-  BinaryContent,
-  ContentType,
-  MultipartFormData,
-  Response,
-  Responses,
-  TextContent,
-  UrlencodedFormData
-}
 import com.twilio.guardrail.protocol.terms.client._
+import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, SwaggerUtil, Target }
@@ -47,7 +39,7 @@ object AsyncHttpClientClientGenerator {
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
 
-  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None): Expression = {
+  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None)(implicit Cl: CollectionsLibType): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
     new MethodCallExpr(
       new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
@@ -55,8 +47,8 @@ object AsyncHttpClientClientGenerator {
       new NodeList[Expression](new NameExpr(paramName))
     )
 
-    def doShow(tpe: Type): Expression = tpe match {
-      case cls: ClassOrInterfaceType if cls.isOptional || cls.isNamed("List") =>
+    def doShow(tpe: Type)(implicit Cl: CollectionsLibType): Expression = tpe match {
+      case cls: ClassOrInterfaceType if Cl.isOptionalType(cls) || Cl.isArrayType(cls) =>
         doShow(cls.containedType)
       case _ =>
         new MethodCallExpr(
@@ -70,10 +62,12 @@ object AsyncHttpClientClientGenerator {
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
-  private def generateBuilderMethodCall(param: LanguageParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean): Statement = {
+  private def generateBuilderMethodCall(param: LanguageParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean)(
+      implicit Cl: CollectionsLibType
+  ): Statement = {
     val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
     val argName         = param.paramName.asString
-    val isList          = param.argType.isNamed("List")
+    val isArray         = Cl.isArrayType(param.argType)
 
     val makeArgList: String => NodeList[Expression] = name =>
       if (param.isFile) {
@@ -103,7 +97,7 @@ object AsyncHttpClientClientGenerator {
         new NodeList[Expression](new StringLiteralExpr(param.argName.value), showParam(param, Some(name)))
       }
 
-    if (isList) {
+    if (isArray) {
       new ForEachStmt(
         new VariableDeclarationExpr(param.argType.containedType, "member", finalModifier),
         new NameExpr(argName),
@@ -320,7 +314,7 @@ object AsyncHttpClientClientGenerator {
           ("setMaxConnectionsPerHost", 1024)
         ).foldLeft[Expression](ahcConfigBuilder)({
           case (lastExpr, (name, arg)) =>
-            new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg)))
+            new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg.toString)))
         }),
         "build",
         new NodeList[Expression]()
@@ -402,7 +396,7 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ClientTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def generateClientOperation(
@@ -579,13 +573,8 @@ object AsyncHttpClientClientGenerator {
             case (LanguageParameter(_, param, _, _, argType), methodCall) =>
               val containedType = argType.containedType.unbox
 
-              val optionalOverrideMethod = if (argType.isOptional && !containedType.isOptional) {
+              val optionalOverrideMethod = if (Cl.isOptionalType(argType) && !Cl.isOptionalType(containedType)) {
                 val methodParamName = s"optional${param.getNameAsString.capitalize}"
-
-                val lambdaBody = methodCall match {
-                  case es: ExpressionStmt => es.clone()
-                  case stmt               => new BlockStmt(new NodeList(stmt.clone()))
-                }
 
                 Some(
                   new MethodDeclaration(
@@ -598,19 +587,7 @@ object AsyncHttpClientClientGenerator {
                   ).setBody(
                     new BlockStmt(
                       List(
-                        new ExpressionStmt(
-                          new MethodCallExpr(
-                            new NameExpr(methodParamName),
-                            "ifPresent",
-                            new NodeList[Expression](
-                              new LambdaExpr(
-                                new NodeList(new Parameter(new UnknownType, param.getNameAsString)),
-                                lambdaBody,
-                                false
-                              )
-                            )
-                          )
-                        ),
+                        new ExpressionStmt(Cl.optionalSideEffect(new NameExpr(methodParamName), param.getNameAsString, List(methodCall.clone()))),
                         new ReturnStmt(new ThisExpr)
                       ).toNodeList
                     )
@@ -683,7 +660,7 @@ object AsyncHttpClientClientGenerator {
                       responses.value.map(
                         response =>
                           new SwitchEntry(
-                            new NodeList(new IntegerLiteralExpr(response.statusCode)),
+                            new NodeList(new IntegerLiteralExpr(response.statusCode.toString)),
                             SwitchEntry.Type.BLOCK,
                             new NodeList(response.value match {
                               case None =>
@@ -845,7 +822,6 @@ object AsyncHttpClientClientGenerator {
         (List(
           "java.net.URI",
           "java.nio.charset.StandardCharsets",
-          "java.util.Optional",
           "java.util.concurrent.CompletionStage",
           "java.util.function.Function",
           "java.util.function.Supplier",
@@ -1030,272 +1006,285 @@ object AsyncHttpClientClientGenerator {
       com.github.javaparser.ast.body.ClassOrInterfaceDeclaration,
       com.github.javaparser.ast.body.TypeDeclaration[_ <: com.github.javaparser.ast.body.TypeDeclaration[_]]
     ]]] = {
-      val clientType = StaticJavaParser.parseClassOrInterfaceType(clientName)
-      val serverUrl  = serverUrls.map(_.head).map(uri => new URI(uri.toString + basePath.getOrElse("")))
-
-      val (baseUrlField, defaultBaseUrlField) = {
-        val (modifiers, declarator) = serverUrl.fold(
-          (new NodeList(privateModifier, finalModifier), new VariableDeclarator(URI_TYPE, "baseUrl"))
-        )(
-          _ => (new NodeList(privateModifier), new VariableDeclarator(URI_TYPE, "baseUrl", new NameExpr("DEFAULT_BASE_URL")))
-        )
-        (
-          new FieldDeclaration(modifiers, declarator),
-          serverUrl.map({ serverUrl =>
-            new FieldDeclaration(
-              new NodeList(privateModifier, staticModifier, finalModifier),
-              new VariableDeclarator(
-                URI_TYPE,
-                "DEFAULT_BASE_URL",
-                new MethodCallExpr(
-                  new NameExpr("URI"),
-                  "create",
-                  new NodeList[Expression](new StringLiteralExpr(serverUrl.toString))
-                )
-              )
-            )
-          })
-        )
-      }
-
-      val tracingFields = if (tracing) {
-        val (modifiers, declarator) = tracingName.fold(
-          (new NodeList(privateModifier, finalModifier), new VariableDeclarator(STRING_TYPE, "clientName"))
-        )(
-          _ => (new NodeList(privateModifier), new VariableDeclarator(STRING_TYPE, "clientName", new NameExpr("DEFAULT_CLIENT_NAME")))
-        )
-        val clientNameField = new FieldDeclaration(modifiers, declarator)
-        val defaultClientNameField = tracingName.map({ tracingName =>
-          new FieldDeclaration(
-            new NodeList(privateModifier, staticModifier, finalModifier),
-            new VariableDeclarator(
-              STRING_TYPE,
-              "DEFAULT_CLIENT_NAME",
-              new StringLiteralExpr(tracingName)
-            )
-          )
-        })
-
-        defaultClientNameField.toList :+ clientNameField
-      } else {
-        List.empty
-      }
-
-      val httpClientField = new FieldDeclaration(
-        new NodeList(privateModifier),
-        new VariableDeclarator(
-          optionalType(HTTP_CLIENT_FUNCTION_TYPE),
-          "httpClient",
-          new MethodCallExpr(new NameExpr("Optional"), "empty")
-        )
-      )
-      val objectMapperField = new FieldDeclaration(
-        new NodeList(privateModifier),
-        new VariableDeclarator(
-          optionalType(OBJECT_MAPPER_TYPE),
-          "objectMapper",
-          new MethodCallExpr(new NameExpr("Optional"), "empty")
-        )
-      )
-
-      val builderConstructor = new ConstructorDeclaration(new NodeList(publicModifier), "Builder")
-      def createConstructorParameter(tpe: Type, name: String): Parameter =
-        new Parameter(new NodeList(finalModifier), tpe, new SimpleName(name))
-      def createBuilderConstructorAssignment(name: String): Statement =
-        new ExpressionStmt(
-          new AssignExpr(new FieldAccessExpr(new ThisExpr, name), requireNonNullExpr(name), AssignExpr.Operator.ASSIGN)
-        )
-      (serverUrl, tracingName) match {
-        case (None, None) if tracing =>
-          builderConstructor.setParameters(
-            new NodeList(
-              createConstructorParameter(URI_TYPE, "baseUrl"),
-              createConstructorParameter(STRING_TYPE, "clientName")
-            )
-          )
-          builderConstructor.setBody(
-            new BlockStmt(
-              new NodeList(
-                createBuilderConstructorAssignment("baseUrl"),
-                createBuilderConstructorAssignment("clientName")
-              )
-            )
-          )
-
-        case (Some(_), None) if tracing =>
-          builderConstructor.setParameters(
-            new NodeList(
-              createConstructorParameter(STRING_TYPE, "clientName")
-            )
-          )
-          builderConstructor.setBody(
-            new BlockStmt(
-              new NodeList(
-                createBuilderConstructorAssignment("clientName")
-              )
-            )
-          )
-
-        case (None, _) =>
-          builderConstructor.setParameters(
-            new NodeList(
-              createConstructorParameter(URI_TYPE, "baseUrl")
-            )
-          )
-          builderConstructor.setBody(
-            new BlockStmt(
-              new NodeList(
-                createBuilderConstructorAssignment("baseUrl")
-              )
-            )
-          )
-
-        case (Some(_), Some(_)) => // no params
-
-        case (Some(_), _) if !tracing => // no params
-      }
-
-      def createSetter(tpe: Type, name: String, initializer: String => Expression): MethodDeclaration =
-        new MethodDeclaration(new NodeList(publicModifier), BUILDER_TYPE, s"with${name.capitalize}")
+      def createSetter(tpe: Type, name: String, initializer: String => Target[Expression]): Target[MethodDeclaration] =
+        for {
+          initializerExpr <- initializer(name)
+        } yield new MethodDeclaration(new NodeList(publicModifier), BUILDER_TYPE, s"with${name.capitalize}")
           .addParameter(new Parameter(new NodeList(finalModifier), tpe, new SimpleName(name)))
           .setBody(
             new BlockStmt(
               new NodeList(
-                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), initializer(name), AssignExpr.Operator.ASSIGN)),
+                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), initializerExpr, AssignExpr.Operator.ASSIGN)),
                 new ReturnStmt(new ThisExpr)
               )
             )
           )
-      val nonNullInitializer: String => Expression                                  = name => requireNonNullExpr(name)
-      def optionalInitializer(valueArg: String => Expression): String => Expression = name => optionalOfExpr(valueArg(name))
+      val nonNullInitializer: String => Target[Expression] = name => Target.pure(requireNonNullExpr(name))
+      def optionalInitializer(valueArg: String => Expression): String => Target[Expression] =
+        name => Cl.liftOptionalTerm(valueArg(name)).flatMap(_.toExpression)
 
-      val builderSetters = List(
-        if (serverUrl.isDefined) Some(createSetter(URI_TYPE, "baseUrl", nonNullInitializer)) else None,
-        if (tracing && tracingName.isDefined) Some(createSetter(STRING_TYPE, "clientName", nonNullInitializer)) else None,
-        Some(createSetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))),
-        Some(
-          createSetter(
-            OBJECT_MAPPER_TYPE,
+      val serverUrl = serverUrls.map(_.head).map(uri => new URI(uri.toString + basePath.getOrElse("")))
+
+      for {
+        optionalHttpClientFunctionType <- Cl.liftOptionalType(HTTP_CLIENT_FUNCTION_TYPE)
+        optionalObjectMapperType       <- Cl.liftOptionalType(OBJECT_MAPPER_TYPE)
+        emptyOptionalTerm              <- Cl.emptyOptionalTerm().flatMap(_.toExpression)
+
+        builderBaseUrlSetter    <- serverUrl.traverse(_ => createSetter(URI_TYPE, "baseUrl", nonNullInitializer))
+        builderClientNameSetter <- tracingName.filter(_ => tracing).traverse(_ => createSetter(STRING_TYPE, "clientName", nonNullInitializer))
+        builderHttpClientSetter <- createSetter(HTTP_CLIENT_FUNCTION_TYPE, "httpClient", optionalInitializer(new NameExpr(_)))
+        builderObjectMapperSetter <- createSetter(
+          OBJECT_MAPPER_TYPE,
+          "objectMapper",
+          optionalInitializer(
+            name => new MethodCallExpr(new NameExpr("JacksonSupport"), "configureObjectMapper", new NodeList[Expression](new NameExpr(name)))
+          )
+        )
+      } yield {
+        val clientType = StaticJavaParser.parseClassOrInterfaceType(clientName)
+
+        val (baseUrlField, defaultBaseUrlField) = {
+          val (modifiers, declarator) = serverUrl.fold(
+            (new NodeList(privateModifier, finalModifier), new VariableDeclarator(URI_TYPE, "baseUrl"))
+          )(
+            _ => (new NodeList(privateModifier), new VariableDeclarator(URI_TYPE, "baseUrl", new NameExpr("DEFAULT_BASE_URL")))
+          )
+          (
+            new FieldDeclaration(modifiers, declarator),
+            serverUrl.map({ serverUrl =>
+              new FieldDeclaration(
+                new NodeList(privateModifier, staticModifier, finalModifier),
+                new VariableDeclarator(
+                  URI_TYPE,
+                  "DEFAULT_BASE_URL",
+                  new MethodCallExpr(
+                    new NameExpr("URI"),
+                    "create",
+                    new NodeList[Expression](new StringLiteralExpr(serverUrl.toString))
+                  )
+                )
+              )
+            })
+          )
+        }
+
+        val tracingFields = if (tracing) {
+          val (modifiers, declarator) = tracingName.fold(
+            (new NodeList(privateModifier, finalModifier), new VariableDeclarator(STRING_TYPE, "clientName"))
+          )(
+            _ => (new NodeList(privateModifier), new VariableDeclarator(STRING_TYPE, "clientName", new NameExpr("DEFAULT_CLIENT_NAME")))
+          )
+          val clientNameField = new FieldDeclaration(modifiers, declarator)
+          val defaultClientNameField = tracingName.map({ tracingName =>
+            new FieldDeclaration(
+              new NodeList(privateModifier, staticModifier, finalModifier),
+              new VariableDeclarator(
+                STRING_TYPE,
+                "DEFAULT_CLIENT_NAME",
+                new StringLiteralExpr(tracingName)
+              )
+            )
+          })
+
+          defaultClientNameField.toList :+ clientNameField
+        } else {
+          List.empty
+        }
+
+        val httpClientField = new FieldDeclaration(
+          new NodeList(privateModifier),
+          new VariableDeclarator(
+            optionalHttpClientFunctionType,
+            "httpClient",
+            emptyOptionalTerm
+          )
+        )
+        val objectMapperField = new FieldDeclaration(
+          new NodeList(privateModifier),
+          new VariableDeclarator(
+            optionalObjectMapperType,
             "objectMapper",
-            optionalInitializer(
-              name => new MethodCallExpr(new NameExpr("JacksonSupport"), "configureObjectMapper", new NodeList[Expression](new NameExpr(name)))
-            )
-          )
-        )
-      ).flatten
-
-      val buildMethod = new MethodDeclaration(new NodeList(publicModifier), clientType, "build")
-        .setBody(
-          new BlockStmt(
-            new NodeList(
-              new ReturnStmt(new ObjectCreationExpr(null, clientType, new NodeList(new ThisExpr)))
-            )
+            emptyOptionalTerm
           )
         )
 
-      def createInternalGetter(tpe: Type, name: String, getterCall: Expression): MethodDeclaration =
-        new MethodDeclaration(new NodeList(privateModifier), tpe, s"get${name.capitalize}")
+        val builderConstructor = new ConstructorDeclaration(new NodeList(publicModifier), "Builder")
+        def createConstructorParameter(tpe: Type, name: String): Parameter =
+          new Parameter(new NodeList(finalModifier), tpe, new SimpleName(name))
+        def createBuilderConstructorAssignment(name: String): Statement =
+          new ExpressionStmt(
+            new AssignExpr(new FieldAccessExpr(new ThisExpr, name), requireNonNullExpr(name), AssignExpr.Operator.ASSIGN)
+          )
+        (serverUrl, tracingName) match {
+          case (None, None) if tracing =>
+            builderConstructor.setParameters(
+              new NodeList(
+                createConstructorParameter(URI_TYPE, "baseUrl"),
+                createConstructorParameter(STRING_TYPE, "clientName")
+              )
+            )
+            builderConstructor.setBody(
+              new BlockStmt(
+                new NodeList(
+                  createBuilderConstructorAssignment("baseUrl"),
+                  createBuilderConstructorAssignment("clientName")
+                )
+              )
+            )
+
+          case (Some(_), None) if tracing =>
+            builderConstructor.setParameters(
+              new NodeList(
+                createConstructorParameter(STRING_TYPE, "clientName")
+              )
+            )
+            builderConstructor.setBody(
+              new BlockStmt(
+                new NodeList(
+                  createBuilderConstructorAssignment("clientName")
+                )
+              )
+            )
+
+          case (None, _) =>
+            builderConstructor.setParameters(
+              new NodeList(
+                createConstructorParameter(URI_TYPE, "baseUrl")
+              )
+            )
+            builderConstructor.setBody(
+              new BlockStmt(
+                new NodeList(
+                  createBuilderConstructorAssignment("baseUrl")
+                )
+              )
+            )
+
+          case (Some(_), Some(_)) => // no params
+
+          case (Some(_), _) if !tracing => // no params
+        }
+
+        val builderSetters = List(
+          builderBaseUrlSetter,
+          builderClientNameSetter,
+          Some(builderHttpClientSetter),
+          Some(builderObjectMapperSetter)
+        ).flatten
+
+        val buildMethod = new MethodDeclaration(new NodeList(publicModifier), clientType, "build")
           .setBody(
             new BlockStmt(
               new NodeList(
-                new ReturnStmt(
-                  new MethodCallExpr(
-                    new FieldAccessExpr(new ThisExpr, name),
-                    "orElseGet",
-                    new NodeList[Expression](
-                      new LambdaExpr(new NodeList(), new ExpressionStmt(getterCall), true)
+                new ReturnStmt(new ObjectCreationExpr(null, clientType, new NodeList(new ThisExpr)))
+              )
+            )
+          )
+
+        def createInternalGetter(tpe: Type, name: String, getterCall: Expression): MethodDeclaration =
+          new MethodDeclaration(new NodeList(privateModifier), tpe, s"get${name.capitalize}")
+            .setBody(
+              new BlockStmt(
+                new NodeList(
+                  new ReturnStmt(
+                    new MethodCallExpr(
+                      new FieldAccessExpr(new ThisExpr, name),
+                      Cl.optionalGetOrElse,
+                      new NodeList[Expression](
+                        new LambdaExpr(new NodeList(), new ExpressionStmt(getterCall), true)
+                      )
                     )
                   )
                 )
               )
             )
-          )
-      val internalGetters = List(
-        createInternalGetter(
-          HTTP_CLIENT_FUNCTION_TYPE,
-          "httpClient",
-          new MethodCallExpr(
-            new NameExpr("AsyncHttpClientSupport"),
-            "createHttpClient",
-            new NodeList[Expression](
-              new MethodCallExpr(new NameExpr("AsyncHttpClientSupport"), "createDefaultAsyncHttpClient")
+        val internalGetters = List(
+          createInternalGetter(
+            HTTP_CLIENT_FUNCTION_TYPE,
+            "httpClient",
+            new MethodCallExpr(
+              new NameExpr("AsyncHttpClientSupport"),
+              "createHttpClient",
+              new NodeList[Expression](
+                new MethodCallExpr(new NameExpr("AsyncHttpClientSupport"), "createDefaultAsyncHttpClient")
+              )
             )
-          )
-        ),
-        createInternalGetter(
-          OBJECT_MAPPER_TYPE,
-          "objectMapper",
-          new MethodCallExpr(
-            new NameExpr("JacksonSupport"),
-            "configureObjectMapper",
-            new NodeList[Expression](new ObjectCreationExpr(null, OBJECT_MAPPER_TYPE, new NodeList()))
+          ),
+          createInternalGetter(
+            OBJECT_MAPPER_TYPE,
+            "objectMapper",
+            new MethodCallExpr(
+              new NameExpr("JacksonSupport"),
+              "configureObjectMapper",
+              new NodeList[Expression](new ObjectCreationExpr(null, OBJECT_MAPPER_TYPE, new NodeList()))
+            )
           )
         )
-      )
 
-      val builderClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, "Builder")
-      sortDefinitions(
-        tracingFields ++
-            builderSetters ++
-            internalGetters ++
-            defaultBaseUrlField ++
-            List(
-              baseUrlField,
-              httpClientField,
-              objectMapperField,
-              builderConstructor,
-              buildMethod
-            )
-      ).foreach(builderClass.addMember)
+        val builderClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, "Builder")
+        sortDefinitions(
+          tracingFields ++
+              builderSetters ++
+              internalGetters ++
+              defaultBaseUrlField ++
+              List(
+                baseUrlField,
+                httpClientField,
+                objectMapperField,
+                builderConstructor,
+                buildMethod
+              )
+        ).foreach(builderClass.addMember)
 
-      val clientFields = List(
-        Some((URI_TYPE, "baseUrl")),
-        if (tracing) Some((STRING_TYPE, "clientName")) else None,
-        Some((HTTP_CLIENT_FUNCTION_TYPE, "httpClient")),
-        Some((OBJECT_MAPPER_TYPE, "objectMapper"))
-      ).flatten.map({
-        case (tpe, name) =>
-          new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(tpe, name))
-      })
+        val clientFields = List(
+          Some((URI_TYPE, "baseUrl")),
+          if (tracing) Some((STRING_TYPE, "clientName")) else None,
+          Some((HTTP_CLIENT_FUNCTION_TYPE, "httpClient")),
+          Some((OBJECT_MAPPER_TYPE, "objectMapper"))
+        ).flatten.map({
+          case (tpe, name) =>
+            new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(tpe, name))
+        })
 
-      val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clientName)
-      constructor.addParameter(new Parameter(new NodeList(finalModifier), BUILDER_TYPE, new SimpleName("builder")))
-      def newFieldAccessExpr(scope: Expression, name: String): Expression = new FieldAccessExpr(scope, name)
-      def newMethodCallExpr(scope: Expression, name: String): Expression  = new MethodCallExpr(scope, s"get${name.capitalize}")
-      constructor.setBody(
-        new BlockStmt(
-          new NodeList(
-            List[Option[(String, (Expression, String) => Expression)]](
-              Some(("baseUrl", newFieldAccessExpr)),
-              if (tracing) Some(("clientName", newFieldAccessExpr)) else None,
-              Some(("httpClient", newMethodCallExpr)),
-              Some(("objectMapper", newMethodCallExpr))
-            ).flatten.map({
-              case (name, value) =>
-                new ExpressionStmt(
-                  new AssignExpr(
-                    new FieldAccessExpr(new ThisExpr, name),
-                    value(new NameExpr("builder"), name),
-                    AssignExpr.Operator.ASSIGN
+        val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clientName)
+        constructor.addParameter(new Parameter(new NodeList(finalModifier), BUILDER_TYPE, new SimpleName("builder")))
+        def newFieldAccessExpr(scope: Expression, name: String): Expression = new FieldAccessExpr(scope, name)
+        def newMethodCallExpr(scope: Expression, name: String): Expression  = new MethodCallExpr(scope, s"get${name.capitalize}")
+        constructor.setBody(
+          new BlockStmt(
+            new NodeList(
+              List[Option[(String, (Expression, String) => Expression)]](
+                Some(("baseUrl", newFieldAccessExpr)),
+                if (tracing) Some(("clientName", newFieldAccessExpr)) else None,
+                Some(("httpClient", newMethodCallExpr)),
+                Some(("objectMapper", newMethodCallExpr))
+              ).flatten.map({
+                case (name, value) =>
+                  new ExpressionStmt(
+                    new AssignExpr(
+                      new FieldAccessExpr(new ThisExpr, name),
+                      value(new NameExpr("builder"), name),
+                      AssignExpr.Operator.ASSIGN
+                    )
                   )
-                )
-            }): _*
+              }): _*
+            )
           )
         )
-      )
 
-      val clientClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, clientName)
-      sortDefinitions(
-        List(
-          builderClass,
-          constructor
-        ) ++
-            clientCalls ++
-            clientFields ++
-            supportDefinitions
-      ).foreach(clientClass.addMember)
+        val clientClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, clientName)
+        sortDefinitions(
+          List(
+            builderClass,
+            constructor
+          ) ++
+              clientCalls ++
+              clientFields ++
+              supportDefinitions
+        ).foreach(clientClass.addMember)
 
-      Target.pure(NonEmptyList(Right(clientClass), Nil))
+        NonEmptyList(Right(clientClass), Nil)
+      }
     }
   }
 }

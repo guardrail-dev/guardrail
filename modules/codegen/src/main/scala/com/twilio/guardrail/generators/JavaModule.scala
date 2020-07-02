@@ -40,7 +40,7 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
   ) = (new SpringMvcServerGenerator.ServerTermInterp, new SpringMvcGenerator.FrameworkInterp)
-  def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ClientTerms[JavaLanguage, Target] =
+  def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ClientTerms[JavaLanguage, Target] =
     new AsyncHttpClientClientGenerator.ClientTermInterp
 
   def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
