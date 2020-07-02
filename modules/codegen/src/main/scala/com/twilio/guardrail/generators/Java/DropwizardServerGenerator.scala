@@ -347,6 +347,13 @@ object DropwizardServerGenerator {
                 parameter
               }
 
+              def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
+                if (!param.required && parameter.getType.isNamed("List")) {
+                  parameter.setType(parameter.getType.containedType)
+                } else {
+                  parameter
+                }
+
               def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
                 parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
@@ -365,18 +372,20 @@ object DropwizardServerGenerator {
               ).flatMap({
                 case (params, annotationName) =>
                   params.map({ param =>
-                    val parameter       = param.param.clone()
-                    val annotated       = addParamAnnotation(parameter, param, annotationName)
-                    val dateTransformed = transformJsr310Params(annotated)
-                    val fileTransformed = transformMultipartFile(dateTransformed, param)
+                    val parameter                  = param.param.clone()
+                    val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                    val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
+                    val dateTransformed            = transformJsr310Params(annotated)
+                    val fileTransformed            = transformMultipartFile(dateTransformed, param)
                     addValidationAnnotations(fileTransformed, param)
                   })
               })
 
               val bareMethodParams: List[Parameter] = parameters.bodyParams.toList
                 .map({ param =>
-                  val parameter       = param.param.clone()
-                  val dateTransformed = transformJsr310Params(parameter)
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  val dateTransformed            = transformJsr310Params(optionalCollectionStripped)
                   addValidationAnnotations(dateTransformed, param)
                 })
 
@@ -547,9 +556,11 @@ object DropwizardServerGenerator {
               val futureResponseType = completionStageType(responseType.clone())
               val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (
-                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
-                    parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
-                    parameters.bodyParams.map(_.param.clone())
+                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams).map({ param =>
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  transformMultipartFile(optionalCollectionStripped, param)
+                }) ++ parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
               ).foreach(handlerMethodSig.addParameter)
               handlerMethodSig.setBody(null)
 

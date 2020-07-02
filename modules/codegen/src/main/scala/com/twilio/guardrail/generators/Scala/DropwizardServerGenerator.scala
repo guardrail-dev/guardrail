@@ -18,6 +18,7 @@ import scala.meta._
 object DropwizardServerGenerator {
   private val PLAIN_TYPES =
     Set("Boolean", "Byte", "Char", "Short", "Int", "Long", "BigInt", "Float", "Double", "BigDecimal", "String", "OffsetDateTime", "LocalDateTime")
+  private val CONTAINER_TYPES = Seq("Vector", "List", "Seq", "IndexedSeq", "Iterable", "Map")
 
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toJaxRsAnnotationName: Term = ct match {
@@ -93,6 +94,14 @@ object DropwizardServerGenerator {
       })
     )
 
+    def stripOptionFromCollections(param: Term.Param): Term.Param = param.copy(
+      decltpe = param.decltpe.map({
+        case Type.Apply(t"Option", List(Type.Apply(containerType, innerTypes))) if CONTAINER_TYPES.contains(containerType.toString) =>
+          t"$containerType[..$innerTypes]"
+        case other => other
+      })
+    )
+
     def replaceFileParam(in: Option[String], isFile: Boolean)(param: Term.Param): Term.Param =
       if (!in.contains("body") && isFile)
         param.copy(
@@ -110,6 +119,7 @@ object DropwizardServerGenerator {
     // one reason: https://github.com/eclipse-ee4j/jersey/issues/3632
     private def buildTransformers(param: LanguageParameter[ScalaLanguage], httpParameterAnnotation: Option[String]): List[Term.Param => Term.Param] = List(
       replaceFileParam(param.in, param.isFile),
+      stripOptionFromCollections,
       transformJsr310Param,
       handleDefaultValue(param.param.default),
       annotateHttpParameter(param.argName, httpParameterAnnotation),
@@ -322,7 +332,7 @@ object DropwizardServerGenerator {
                   parameters.queryStringParams.map(_.param) ++
                   parameters.formParams.map(param => paramTransformers.replaceFileParam(param.in, param.isFile)(param.param)) ++
                   parameters.bodyParams.filter(_ => parameters.formParams.isEmpty).map(_.param)
-            ).map(_.copy(default = None))
+            ).map(paramTransformers.stripOptionFromCollections).map(_.copy(default = None))
 
             val handlerArgs = handlerParams.map({ param =>
               val nameTerm = Term.Name(param.name.value)
