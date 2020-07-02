@@ -32,7 +32,7 @@ object JavaModule extends AbstractModule[JavaLanguage] {
     new JacksonGenerator.PolyProtocolTermInterp
   )
 
-  def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): (
+  def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
   ) = (new DropwizardServerGenerator.ServerTermInterp, new DropwizardGenerator.FrameworkInterp)
