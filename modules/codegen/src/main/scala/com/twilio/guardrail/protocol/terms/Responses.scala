@@ -1,12 +1,11 @@
 package com.twilio.guardrail.protocol.terms
 
 import cats.implicits._
-import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFrameworkTerms }
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFrameworkTerms }
 import io.swagger.v3.oas.models.Operation
 import scala.collection.JavaConverters._
 
@@ -52,7 +51,8 @@ object Responses {
                   headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
                     case (name, header) =>
                       for {
-                        termName   <- pureTermName(s"${name}Header".toCamelCase)
+                        argName    <- formatMethodArgName(s"${name}Header")
+                        termName   <- pureTermName(argName)
                         typeName   <- pureTypeName("String").flatMap(widenTypeName)
                         resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
                       } yield new Header(name, header.getRequired, resultType, termName)

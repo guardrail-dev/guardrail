@@ -1,3 +1,41 @@
+Migrating to 0.59.0
+===================
+
+0.59.0 may contain type and package naming changes that will require changes in consuming code
+----------------------------------------------------------------------------------------------
+
+Fixing Java identifier escaping required some core changes in how various names (type, method, method argument, package) are generated.  This cascaded into all of the framework generators, so both Java and Scala clients may be affected.
+
+
+### Scalafix
+
+There is a Scalafix rule, [`GuardrailScalaResponseTypes`](https://github.com/blast-hardcheese/guardrail-scalafix-rules/blob/master/rules/src/main/scala/fix/GuardrailScalaResponseTypes.scala), that can be used to automate the bulk of these changes.
+
+1. [Install scalafix](https://scalacenter.github.io/scalafix/docs/users/installation#sbt)
+1. Invoke scalafix at the SBT console:
+    ```
+    sbt> scalafix -r https://raw.githubusercontent.com/blast-hardcheese/guardrail-scalafix-rules/master/rules/src/main/scala/fix/GuardrailScalaResponseTypes.scala
+    ```
+1. If there are issues, please [report them](https://github.com/twilio/guardrail/issues).
+   We do our best to keep breaking changes to a minimum, but as this greatly simplified the casing heuristics, we decided to move forward. Thanks for your understanding.
+
+The most notable differences are:
+
+* The Scala client and server response class types used to be camelCased but are now PascalCased (which now conforms to Scala norms).  Since these types sometimes occur in type signatures of `Handler` classes, some names might need updating.
+* Operation IDs with mixed casing are now rewritten to generate nicer names.  For example an operation ID of `fooBar_0` would previously map to a method with the same name, but now the method will be named `fooBar0`.  There is a similar change with package names set using `tags` or `x-jvm-package`.
+
+In general, all names should now conform to the following convention for Java and Scala:
+
+* Package names are camelCased.
+* Type (class, interface, trait, enum) names are PascalCased.
+* Method names are camelCased.
+* Method argument names are camelCased.
+* For Java, enum values are UPPER_SNAKE_CASED.  (In Scala, enum values are case objects, which follow the same naming rules as types.)
+
+There is one exception: if generating names in these formats causes a conflict, the original names from the spec will be used if possible.  For example, if an object schema contains two properties, one named `FooBar` and the other named `foo_bar`, guardrail will first try to turn them *both* into `fooBar`.  It will notice the clash and just leave them as `FooBar` and `foo_bar`.
+
+If you find a case where a name is generated in a different way, please file an issue.
+
 Migrating to 0.55.0
 ===================
 

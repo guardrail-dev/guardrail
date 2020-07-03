@@ -46,9 +46,9 @@ class Issue416 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root =>
-              mapRoute("GetRoot", req, {
+              mapRoute("getRoot", req, {
                 req.decodeWith(getRootDecoder, strict = false) { body =>
-                  handler.GetRoot(GetRootResponse)(body) flatMap ({
+                  handler.getRoot(GetRootResponse)(body) flatMap ({
                     case GetRootResponse.Ok =>
                       F.pure(Response[F](status = org.http4s.Status.Ok))
                   })

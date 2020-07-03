@@ -11,7 +11,7 @@ import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, T
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target, TracingField }
+import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
@@ -304,22 +304,30 @@ object SpringMvcServerGenerator {
     def generateRoutes(
         tracing: Boolean,
         resourceName: String,
+        handlerName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, LanguageParameters[JavaLanguage], Responses[JavaLanguage])],
+        routes: List[GenerateRouteMeta[JavaLanguage]],
         protocolElems: List[StrictProtocolElems[JavaLanguage]],
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
     ) =
       for {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
-        handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
-        handlerType <- safeParseClassOrInterfaceType(handlerName)
+        handlerType  <- safeParseClassOrInterfaceType(handlerName)
       } yield {
         val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        val commonPathPrefix   = findPathPrefix(routes.map(_._3.path.get))
+        val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
 
         val (routeMethods, handlerMethodSigs) = routes
           .map({
-            case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation, securityRequirements), parameters, responses) =>
+            case GenerateRouteMeta(
+                operationId,
+                methodName,
+                responseClsName,
+                tracingFields,
+                sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
+                parameters,
+                responses
+                ) =>
               parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
               val httpMethodAnnotationName = s"${httpMethod.toString.toLowerCase.capitalize}Mapping"
@@ -327,7 +335,7 @@ object SpringMvcServerGenerator {
                 .drop(commonPathPrefix.length)
                 .mkString("/", "/", "")
 
-              val method   = new MethodDeclaration(new NodeList(publicModifier), ASYNC_RESPONSE_TYPE, operationId)
+              val method   = new MethodDeclaration(new NodeList(publicModifier), ASYNC_RESPONSE_TYPE, methodName)
               val nodeList = new NodeList[MemberValuePair]()
               if (pathSuffix.nonEmpty && pathSuffix != "/") {
                 nodeList.addLast(new MemberValuePair("path", new StringLiteralExpr(pathSuffix)))
@@ -456,7 +464,7 @@ object SpringMvcServerGenerator {
 
               val (responseName, responseType, resultResumeBody) =
                 hasServerRawResponse.fold({
-                  val responseName = s"${handlerName}.${operationId.capitalize}Response"
+                  val responseName = s"$handlerName.$responseClsName"
                   val responseType = StaticJavaParser.parseClassOrInterfaceType(responseName)
                   val entitySetterIfTree = NonEmptyList
                     .fromList(responses.value.collect({
@@ -568,7 +576,7 @@ object SpringMvcServerGenerator {
                               new NameExpr("logger"),
                               "error",
                               new NodeList[Expression](
-                                new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
+                                new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
                                 new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
                                 new MethodCallExpr(new NameExpr("err"), "getMessage"),
                                 new NameExpr("err")
@@ -605,7 +613,7 @@ object SpringMvcServerGenerator {
 
               val handlerCall = new MethodCallExpr(
                 new FieldAccessExpr(new ThisExpr, "handler"),
-                operationId,
+                methodName,
                 new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
               )
 
@@ -624,7 +632,7 @@ object SpringMvcServerGenerator {
               )
 
               val futureResponseType = completionStageType(responseType.clone())
-              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, operationId)
+              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
                 parameter =>
                   handlerMethodSig.addParameter(parameter.param.clone())
@@ -675,17 +683,16 @@ object SpringMvcServerGenerator {
       }
 
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[JavaLanguage],
         protocolElems: List[StrictProtocolElems[JavaLanguage]]
     ) =
       for {
-        abstractResponseClassName <- safeParseSimpleName(s"${operationId.capitalize}Response").map(_.asString)
-        abstractResponseClassType <- safeParseClassOrInterfaceType(abstractResponseClassName)
+        abstractResponseClassType <- safeParseClassOrInterfaceType(responseClsName)
 
         // TODO: verify valueTypes are in protocolElems
 
-        abstractResponseClass <- generateResponseSuperClass(abstractResponseClassName)
+        abstractResponseClass <- generateResponseSuperClass(responseClsName)
         responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
       } yield {
         sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))

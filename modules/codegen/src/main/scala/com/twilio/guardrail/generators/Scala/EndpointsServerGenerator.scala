@@ -1,28 +1,27 @@
 package com.twilio.guardrail.generators.Scala
 
-import cats.Monad
-import com.twilio.guardrail.{ Target, TracingField }
-import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.server._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import _root_.io.swagger.v3.oas.models.Operation
-import com.twilio.guardrail.StrictProtocolElems
+import cats.Monad
+import com.twilio.guardrail.{ StrictProtocolElems, Target }
 import com.twilio.guardrail.core.Tracker
+import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
-import com.twilio.guardrail.generators.LanguageParameters
+import com.twilio.guardrail.protocol.terms.server._
+import com.twilio.guardrail.terms.SecurityScheme
 
 object EndpointsServerGenerator {
   object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def generateResponseDefinitions(operationId: String, responses: Responses[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]) =
+    def generateResponseDefinitions(responseClsName: String, responses: Responses[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]) =
       Target.raiseUserError("endpoints server generation is not currently supported")
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.raiseUserError("endpoints server generation is not currently supported")
     def generateRoutes(
         tracing: Boolean,
         resourceName: String,
+        handlerName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, LanguageParameters[ScalaLanguage], Responses[ScalaLanguage])],
+        routes: List[GenerateRouteMeta[ScalaLanguage]],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]],
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
     ) =
