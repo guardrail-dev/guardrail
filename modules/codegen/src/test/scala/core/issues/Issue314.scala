@@ -234,7 +234,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |        private URI baseUrl = DEFAULT_BASE_URL;
          |
-         |        private java.util.Optional<Function<Request, CompletionStage<Response>>> httpClient = java.util.Optional.empty();
+         |        private java.util.Optional<Function<Request, java.util.concurrent.CompletionStage<Response>>> httpClient = java.util.Optional.empty();
          |
          |        private java.util.Optional<ObjectMapper> objectMapper = java.util.Optional.empty();
          |
@@ -246,7 +246,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |            return this;
          |        }
          |
-         |        public Builder withHttpClient(final Function<Request, CompletionStage<Response>> httpClient) {
+         |        public Builder withHttpClient(final Function<Request, java.util.concurrent.CompletionStage<Response>> httpClient) {
          |            this.httpClient = java.util.Optional.ofNullable(httpClient);
          |            return this;
          |        }
@@ -256,7 +256,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |            return this;
          |        }
          |
-         |        private Function<Request, CompletionStage<Response>> getHttpClient() {
+         |        private Function<Request, java.util.concurrent.CompletionStage<Response>> getHttpClient() {
          |            return this.httpClient.orElseGet(() -> AsyncHttpClientSupport.createHttpClient(AsyncHttpClientSupport.createDefaultAsyncHttpClient()));
          |        }
          |
@@ -273,11 +273,11 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |        private final RequestBuilder builder;
          |
-         |        private final Function<Request, CompletionStage<Response>> httpClient;
+         |        private final Function<Request, java.util.concurrent.CompletionStage<Response>> httpClient;
          |
          |        private final ObjectMapper objectMapper;
          |
-         |        private GetUserCallBuilder(final RequestBuilder builder, final Function<Request, CompletionStage<Response>> httpClient, final ObjectMapper objectMapper) {
+         |        private GetUserCallBuilder(final RequestBuilder builder, final Function<Request, java.util.concurrent.CompletionStage<Response>> httpClient, final ObjectMapper objectMapper) {
          |            this.builder = builder;
          |            this.httpClient = httpClient;
          |            this.objectMapper = objectMapper;
@@ -288,7 +288,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |            return this;
          |        }
          |
-         |        public CompletionStage<GetUserResponse> call() throws ClientException {
+         |        public java.util.concurrent.CompletionStage<GetUserResponse> call() throws ClientException {
          |            return this.httpClient.apply(builder.build()).thenApply((final Response response) -> {
          |                switch(response.getStatusCode()) {
          |                    case 200:
@@ -302,7 +302,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |    private final URI baseUrl;
          |
-         |    private final Function<Request, CompletionStage<Response>> httpClient;
+         |    private final Function<Request, java.util.concurrent.CompletionStage<Response>> httpClient;
          |
          |    private final ObjectMapper objectMapper;
          |
@@ -345,7 +345,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |        public static final Ok Ok = new Ok();
          |    }
          |
-         |    CompletionStage<${prefix}Handler.GetUserResponse> getUser(final String id);
+         |    java.util.concurrent.CompletionStage<${prefix}Handler.GetUserResponse> getUser(final String id);
          |}""".stripMargin
 
     def resource(prefix: String) =
@@ -363,7 +363,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |    @GET
          |    public void getUser(@NotNull @PathParam("id") final String id, @Suspended final AsyncResponse asyncResponse) {
-         |        this.handler.getUser(id).whenComplete((final ${prefix}Handler.GetUserResponse result, final Throwable err) -> {
+         |        this.handler.getUser(id).whenComplete((result, err) -> {
          |            if (err != null) {
          |                logger.error("${prefix}Handler.getUser threw an exception ({}): {}", err.getClass().getName(), err.getMessage(), err);
          |                asyncResponse.resume(Response.status(500).build());

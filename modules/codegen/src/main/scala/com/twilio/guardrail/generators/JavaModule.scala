@@ -1,21 +1,16 @@
 package com.twilio.guardrail
 package generators
 
-import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.generators.Java.JacksonGenerator
-import com.twilio.guardrail.generators.Java.AsyncHttpClientClientGenerator
-import com.twilio.guardrail.generators.Java.DropwizardGenerator
-import com.twilio.guardrail.generators.Java.SpringMvcGenerator
-import com.twilio.guardrail.generators.Java.DropwizardServerGenerator
-import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator
 import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.Java.collectionslib.{ CollectionsLibType, JavaStdLibCollections, JavaVavrCollections }
+import com.twilio.guardrail.generators.Java._
 import com.twilio.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
-import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
+import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object JavaModule extends AbstractModule[JavaLanguage] {
   def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
