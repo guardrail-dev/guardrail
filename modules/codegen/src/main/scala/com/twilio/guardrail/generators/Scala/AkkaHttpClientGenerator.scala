@@ -38,6 +38,7 @@ object AkkaHttpClientGenerator {
 
     def generateClientOperation(
         className: List[String],
+        responseClsName: String,
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage]
@@ -172,6 +173,7 @@ object AkkaHttpClientGenerator {
 
       def build(
           methodName: String,
+          responseClsName: String,
           httpMethod: HttpMethod,
           urlWithParams: Term,
           formDataParams: Option[Term],
@@ -256,7 +258,7 @@ object AkkaHttpClientGenerator {
         }
 
         val responseCompanionTerm =
-          Term.Name(s"${methodName.capitalize}Response")
+          Term.Name(responseClsName)
         val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             (resp.value, resp.headers.value) match {
@@ -368,7 +370,18 @@ object AkkaHttpClientGenerator {
           List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
         else List.empty
         extraImplicits = List.empty
-        renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+        renderedClientOperation <- build(
+          methodName,
+          responseClsName,
+          httpMethod,
+          urlWithParams,
+          formDataParams,
+          headerParams,
+          responses,
+          produces,
+          consumes,
+          tracing
+        )(
           tracingArgsPre,
           tracingArgsPost,
           pathArgs,
@@ -397,11 +410,11 @@ object AkkaHttpClientGenerator {
       )
     }
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[ScalaLanguage],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ): Target[List[scala.meta.Defn]] =
-      Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
     def generateSupportDefinitions(
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]

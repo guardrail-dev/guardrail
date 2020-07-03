@@ -31,30 +31,30 @@ class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val handler  = q"""
       trait StoreHandler {
-        def getRoot(respond: StoreResource.getRootResponse.type)(): scala.concurrent.Future[StoreResource.getRootResponse]
+        def getRoot(respond: StoreResource.GetRootResponse.type)(): scala.concurrent.Future[StoreResource.GetRootResponse]
       }
     """
     val resource = q"""
       object StoreResource {
         def routes(handler: StoreHandler)(implicit mat: akka.stream.Materializer): Route = {
           {
-            pathEndOrSingleSlash(options(discardEntity(complete(handler.getRoot(getRootResponse)()))))
+            pathEndOrSingleSlash(options(discardEntity(complete(handler.getRoot(GetRootResponse)()))))
           }
         }
-        sealed abstract class getRootResponse(val statusCode: StatusCode)
-        case object getRootResponseOK extends getRootResponse(StatusCodes.OK)
-        object getRootResponse {
-          implicit val getRootTRM: ToResponseMarshaller[getRootResponse] = Marshaller { implicit ec =>
-            resp => getRootTR(resp)
+        sealed abstract class GetRootResponse(val statusCode: StatusCode)
+        case object GetRootResponseOK extends GetRootResponse(StatusCodes.OK)
+        object GetRootResponse {
+          implicit val getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
+            resp => getRootResponseTR(resp)
           }
-          implicit def getRootTR(value: getRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r: getRootResponseOK.type =>
+          implicit def getRootResponseTR(value: GetRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: GetRootResponseOK.type =>
               scala.concurrent.Future.successful(Marshalling.Opaque {
                 () => HttpResponse(r.statusCode)
               } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => getRootResponse): getRootResponse = ev(value)
-          def OK: getRootResponse = getRootResponseOK
+          def apply[T](value: T)(implicit ev: T => GetRootResponse): GetRootResponse = ev(value)
+          def OK: GetRootResponse = GetRootResponseOK
         }
       }
     """

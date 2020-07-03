@@ -13,7 +13,7 @@ import akka.http.scaladsl.marshalling.Marshal
 class AkkaHttpRawServerTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   test("raw server response") {
     FooResource.routes(new FooHandler {
-      def doFoo(respond: FooResource.doFooResponse.type)(): scala.concurrent.Future[HttpResponse] =
+      def doFoo(respond: FooResource.DoFooResponse.type)(): scala.concurrent.Future[HttpResponse] =
         Marshal(respond.Created(sdefs.Foo(1234L))).to[HttpResponse]
     })
   }
