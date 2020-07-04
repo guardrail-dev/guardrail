@@ -5,7 +5,7 @@ import cats.implicits._
 import cats.Monad
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
-import com.twilio.guardrail.extract.{ PackageName, SecurityOptional }
+import com.twilio.guardrail.extract.{ ClassPrefix, PackageName, SecurityOptional }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms._
@@ -132,22 +132,26 @@ object SwaggerGenerator {
         Target.log.function("getClassName")(for {
           _ <- Target.log.debug(s"Args: ${operation.get.showNotNull}")
 
-          pkg = PackageName(operation, vendorPrefixes)
-            .map(_.split('.').toVector)
-            .orElse({
-              operation
-                .downField("tags", _.getTags)
-                .toNel
-                .indexedCosequence
-                .map { tags =>
-                  println(
-                    s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})"
-                  )
-                  tags.get.toList
-                }
-            })
-          opPkg     = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).get
-          className = pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
+          className = ClassPrefix(operation, vendorPrefixes) match {
+            case cls @ Some(_) => cls.toList
+            case None =>
+              val pkg = PackageName(operation, vendorPrefixes)
+                .map(_.split('.').toVector)
+                .orElse({
+                  operation
+                    .downField("tags", _.getTags)
+                    .toNel
+                    .indexedCosequence
+                    .map { tags =>
+                      println(
+                        s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})"
+                      )
+                      tags.get.toList
+                    }
+                })
+              val opPkg = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).get
+              pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
+          }
         } yield className)
 
       def getParameterName(parameter: Parameter) =
