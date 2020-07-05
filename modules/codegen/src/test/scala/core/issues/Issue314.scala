@@ -6,6 +6,7 @@ import com.twilio.guardrail.{ Client, Clients, Context, Server, Servers }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import support.SwaggerSpecRunner
+import org.scalactic.source
 
 import scala.meta._
 
@@ -129,12 +130,12 @@ class Issue314 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
        |  }
        |}""".stripMargin
 
-  private def verify(config: String, expectedClassPrefix: String): Unit = {
+  private def verify(config: String, expectedClassPrefix: String)(implicit pos: source.Position): Unit = {
     verifyClient(config, expectedClassPrefix)
     verifyServer(config, expectedClassPrefix)
   }
 
-  private def verifyClient(config: String, expectedClassPrefix: String): Unit = {
+  private def verifyClient(config: String, expectedClassPrefix: String)(implicit pos: source.Position): Unit = {
     val (
       _,
       Clients(Client(_, _, _, staticDefns, cls, _) :: _, Nil),
@@ -146,7 +147,7 @@ class Issue314 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     verifyTree(cmp, companion(expectedClassPrefix))
   }
 
-  private def verifyServer(config: String, expectedClassPrefix: String): Unit = {
+  private def verifyServer(config: String, expectedClassPrefix: String)(implicit pos: source.Position): Unit = {
     val (
       _,
       _,
@@ -157,7 +158,7 @@ class Issue314 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     verifyTree(genResource, resource(expectedClassPrefix))
   }
 
-  private def verifyTree(tree: scala.meta.Tree, expectedSyntax: String): Unit =
+  private def verifyTree(tree: scala.meta.Tree, expectedSyntax: String)(implicit pos: source.Position): Unit =
     normalized(tree.syntax) shouldBe normalized(expectedSyntax)
 
   private def normalized(s: String): String = s.replaceAll("(?s)\\s+", " ").trim
