@@ -8,13 +8,16 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.{ ExecutionContext, Future }
 import io.circe._
 import cats.implicits._
 import cats.data.OptionT
 
-class Issue325Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class Issue325Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   def multipartChunk(key: String, value: String, contentType: ContentType): Multipart.FormData.BodyPart.Strict =

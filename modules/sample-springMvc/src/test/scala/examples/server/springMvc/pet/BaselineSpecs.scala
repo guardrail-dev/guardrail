@@ -8,7 +8,10 @@ import examples.server.springMvc.pet.PetHandler.{FindPetsByStatusEnumResponse, F
 import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
 import org.mockito.{ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar}
-import org.scalatest.{BeforeAndAfterAll, FreeSpec, Matchers}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -33,7 +36,7 @@ import scala.collection.JavaConverters._
 @AutoConfigureMockMvc
 @ComponentScan
 @EnableAutoConfiguration
-class BaselineSpecs extends FreeSpec with Matchers with BeforeAndAfterAll with MockitoSugar with ArgumentMatchersSugar {
+class BaselineSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll with MockitoSugar with ArgumentMatchersSugar {
   @Autowired var mvc: MockMvc               = _
   @Autowired var handlerMock: PetHandler = _
 

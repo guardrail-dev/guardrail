@@ -2,7 +2,10 @@ package core.issues
 
 import cats.implicits._
 import org.http4s.implicits._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import scala.concurrent.Future
@@ -12,7 +15,7 @@ import cats.effect.implicits._
 import cats.effect.IO
 import org.http4s.client.{ Client => Http4sClient }
 
-class Issue455Suite extends FunSuite with Matchers with EitherValues with ScalaFutures {
+class Issue455Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("Circe NPE: https://github.com/circe/circe/issues/561") {

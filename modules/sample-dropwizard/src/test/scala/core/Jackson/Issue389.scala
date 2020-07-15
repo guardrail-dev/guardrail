@@ -3,11 +3,12 @@ package core.Jackson
 import com.fasterxml.jackson.databind.ObjectMapper
 import issues.issue389.client.dropwizard.definitions.{ Bar, Foo }
 import java.util
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 import scala.collection.JavaConverters._
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 
-class Issue389 extends FreeSpec with Matchers {
+class Issue389 extends AnyFreeSpec with Matchers {
   "x-jvm-type in Array should use the correct type in the array" in {
     val mapper = new ObjectMapper().registerModule(new Jdk8Module())
     val foo = new Foo.Builder()

@@ -3,7 +3,9 @@ package core.issues
 import io.circe._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 /** Changes
   *
@@ -12,7 +14,7 @@ import org.scalatest.{ EitherValues, FunSuite, Matchers }
   *   - No content vs Partial content vs Invalid content
   * - Polymorphic discriminator error messages
   */
-class Issue148Suite extends FunSuite with Matchers with EitherValues with ScalaFutures {
+class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("http4s server request body validation") {

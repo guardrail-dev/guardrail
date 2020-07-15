@@ -1,11 +1,12 @@
 package swagger
 
-import org.scalatest.{ FunSuite, Matchers }
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funsuite.AnyFunSuite
 import examples.client.endpoints.Implicits
 import examples.client.endpoints.EndpointsImplicits._
 import endpoints.{ algebra, xhr }
 
-class EscapingTest extends FunSuite with Matchers {
+class EscapingTest extends AnyFunSuite with Matchers {
   object Instances
       extends algebra.circe.JsonEntitiesFromCodec
       with xhr.JsonEntitiesFromCodec
