@@ -1,6 +1,6 @@
 language: scala
 scala:
-- 2.12.10
+- 2.12.12
 
 # Currently skip building on non-PR and non-release builds (ie: Skip on master)
 # PR validation and release attempts are the gatekeepers for test validation.
