@@ -14,10 +14,13 @@ import javax.xml.bind.DatatypeConverter.printHexBinary
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import examples.support.PositiveLong
 
-class Http4sRoundTripTest extends FunSuite with Matchers with EitherValues {
+class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
 
   // Placeholder until property testing
   val id: Option[Long]             = None

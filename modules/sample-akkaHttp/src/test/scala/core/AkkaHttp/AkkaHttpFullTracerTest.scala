@@ -14,11 +14,14 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
 import org.scalatest.concurrent.{ IntegrationPatience, ScalaFutures }
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 
-class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
+class AkkaHttpFullTracerTest extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest with IntegrationPatience {
 
   val traceHeaderKey          = "tracer-label"
   def log(line: String): Unit = ()
@@ -53,11 +56,11 @@ class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues wi
     val server2: HttpRequest => Future[HttpResponse] = Route.asyncHandler(
       AddressesResource.routes(
         new AddressesHandler {
-          def getAddress(respond: AddressesResource.getAddressResponse.type)(id: String)(traceBuilder: TraceBuilder) =
+          def getAddress(respond: AddressesResource.GetAddressResponse.type)(id: String)(traceBuilder: TraceBuilder) =
             Future.successful(if (id == "addressId") {
               respond.OK(sdefs.Address(Some("line1"), Some("line2"), Some("line3")))
             } else respond.NotFound)
-          def getAddresses(respond: AddressesResource.getAddressesResponse.type)()(traceBuilder: TraceBuilder) =
+          def getAddresses(respond: AddressesResource.GetAddressesResponse.type)()(traceBuilder: TraceBuilder) =
             Future.successful(respond.NotFound)
         },
         trace
@@ -70,7 +73,7 @@ class AkkaHttpFullTracerTest extends FunSuite with Matchers with EitherValues wi
         new UsersHandler {
           // ... using the "Address" server explicitly in the addressesClient
           val addressesClient = AddressesClient.httpClient(server2)
-          def getUser(respond: UsersResource.getUserResponse.type)(id: String)(traceBuilder: TraceBuilder) =
+          def getUser(respond: UsersResource.GetUserResponse.type)(id: String)(traceBuilder: TraceBuilder) =
             addressesClient
               .getAddress(traceBuilder, "addressId")
               .fold(

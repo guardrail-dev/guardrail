@@ -28,11 +28,11 @@ object Http4sServerGenerator {
     }
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[ScalaLanguage],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ) =
-      Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
 
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.log.function("buildTracingFields")(for {
@@ -56,16 +56,25 @@ object Http4sServerGenerator {
     def generateRoutes(
         tracing: Boolean,
         resourceName: String,
+        handlerName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[ScalaLanguage]], RouteMeta, LanguageParameters[ScalaLanguage], Responses[ScalaLanguage])],
+        routes: List[GenerateRouteMeta[ScalaLanguage]],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]],
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
     ) =
       for {
         renderedRoutes <- routes
           .traverse {
-            case (operationId, tracingFields, sr @ RouteMeta(path, method, operation, securityRequirements), parameters, responses) =>
-              generateRoute(resourceName, basePath, sr, tracingFields, parameters, responses)
+            case GenerateRouteMeta(
+                operationId,
+                methodName,
+                responseClsName,
+                tracingFields,
+                sr @ RouteMeta(path, method, operation, securityRequirements),
+                parameters,
+                responses
+                ) =>
+              generateRoute(resourceName, basePath, methodName, responseClsName, sr, tracingFields, parameters, responses)
           }
           .map(_.flatten)
         routeTerms = renderedRoutes.map(_.route)
@@ -196,11 +205,11 @@ object Http4sServerGenerator {
         }
       } yield directives
 
-    def bodyToHttp4s(operationId: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
+    def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
       Target.pure(
         body.map {
           case LanguageParameter(_, _, paramName, _, _) =>
-            content => q"req.decodeWith(${Term.Name(s"${operationId.uncapitalized}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
+            content => q"req.decodeWith(${Term.Name(s"${methodName.uncapitalized}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
         }
       )
 
@@ -235,13 +244,13 @@ object Http4sServerGenerator {
         }
       )
 
-    def qsToHttp4s(operationId: String): List[LanguageParameter[ScalaLanguage]] => Target[Option[Pat]] =
+    def qsToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[Option[Pat]] =
       params =>
         directivesFromParams(
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-          arg => _ => Target.pure(p"${Term.Name(s"${operationId.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
+          arg => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
+          arg => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
         )(params).map {
           case Nil => Option.empty
           case x :: xs =>
@@ -323,7 +332,7 @@ object Http4sServerGenerator {
         }
       )
 
-    def asyncFormToHttp4s(operationId: String): List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
+    def asyncFormToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
       directivesFromParams(
         arg =>
           elemType =>
@@ -458,6 +467,8 @@ object Http4sServerGenerator {
     def generateRoute(
         resourceName: String,
         basePath: Option[String],
+        methodName: String,
+        responseClsName: String,
         route: RouteMeta,
         tracingFields: Option[TracingField[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage],
@@ -467,11 +478,6 @@ object Http4sServerGenerator {
       Target.log.function("generateRoute")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${basePath}, ${route}, ${tracingFields}")
         RouteMeta(path, method, operation, securityRequirements) = route
-        operationId <- operation
-          .downField("operationId", _.getOperationId())
-          .map(_.map(splitOperationParts).map(_._2))
-          .raiseErrorIfEmpty("Missing operationId")
-          .map(_.get)
 
         formArgs   <- prepareParameters(parameters.formParams)
         headerArgs <- prepareParameters(parameters.headerParams)
@@ -482,15 +488,15 @@ object Http4sServerGenerator {
         http4sMethod <- httpMethodToHttp4s(method)
         pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
         (http4sPath, additionalQs) = pathWithQs
-        http4sQs   <- qsToHttp4s(operationId)(qsArgs)
-        http4sBody <- bodyToHttp4s(operationId, bodyArgs)
+        http4sQs   <- qsToHttp4s(methodName)(qsArgs)
+        http4sBody <- bodyToHttp4s(methodName, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile)
-        http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(operationId)(formArgs) else formToHttp4s(formArgs)
+        http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(methodName)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
         supportDefinitions <- generateSupportDefinitions(route, parameters)
       } yield {
         val (responseCompanionTerm, responseCompanionType) =
-          (Term.Name(s"${operationId.capitalize}Response"), Type.Name(s"${operationId.capitalize}Response"))
+          (Term.Name(responseClsName), Type.Name(responseClsName))
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Type](t"$responseCompanionType")(Function.const(t"Response[F]"))
@@ -507,12 +513,12 @@ object Http4sServerGenerator {
             p"$http4sMethod -> $http4sPath :? ${qs.reduceLeft((a, n) => p"$a :& $n")}"
           }
         val fullRouteWithTracingMatcher = tracingFields
-          .map(_ => p"$fullRouteMatcher ${Term.Name(s"usingFor${operationId.capitalize}")}(traceBuilder)")
+          .map(_ => p"$fullRouteMatcher ${Term.Name(s"usingFor${methodName.capitalize}")}(traceBuilder)")
           .getOrElse(fullRouteMatcher)
         val handlerCallArgs: List[List[Term]] = List(List(responseCompanionTerm)) ++ List(
                 (pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName) ++ (http4sForm ++ http4sHeaders).map(_.handlerCallArg)
               ) ++ tracingFields.map(_.param.paramName).map(List(_))
-        val handlerCall = q"handler.${Term.Name(operationId)}(...${handlerCallArgs})"
+        val handlerCall = q"handler.${Term.Name(methodName)}(...${handlerCallArgs})"
         val isGeneric   = Http4sHelper.isDefinitionGeneric(responses)
         val responseExpr = ServerRawResponse(operation)
           .filter(_ == true)
@@ -522,8 +528,8 @@ object Http4sServerGenerator {
                 val responseTerm  = Term.Name(s"${statusCodeName.value}")
                 val baseRespType  = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
                 val respType      = if (isGeneric) Type.Apply(baseRespType, List(t"F")) else baseRespType
-                val generatorName = Term.Name(s"$operationId${statusCodeName}EntityResponseGenerator")
-                val encoderName   = Term.Name(s"$operationId${statusCodeName}Encoder")
+                val generatorName = Term.Name(s"$methodName${statusCodeName}EntityResponseGenerator")
+                val encoderName   = Term.Name(s"$methodName${statusCodeName}Encoder")
                 (valueType, headers.value) match {
                   case (None, Nil) =>
                     p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
@@ -581,7 +587,7 @@ object Http4sServerGenerator {
 
         val fullRoute: Case =
           p"""case req @ $fullRouteWithTracingMatcher =>
-             mapRoute($operationId, req, {$routeBody})
+             mapRoute($methodName, req, {$routeBody})
             """
 
         val respond: List[List[Term.Param]] = List(List(param"respond: $responseCompanionTerm.type"))
@@ -608,15 +614,15 @@ object Http4sServerGenerator {
 
         val consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
         val produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
-        val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(operationId, bodyArgs, responses, consumes, produces)
+        val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(methodName, bodyArgs, responses, consumes, produces)
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
           RenderedRoute(
             fullRoute,
-            q"""def ${Term.Name(operationId)}(...${params}): F[$respType]""",
-            supportDefinitions ++ generateQueryParamMatchers(operationId, qsArgs) ++ codecs ++ tracingFields
+            q"""def ${Term.Name(methodName)}(...${params}): F[$respType]""",
+            supportDefinitions ++ generateQueryParamMatchers(methodName, qsArgs) ++ codecs ++ tracingFields
                   .map(_.term)
-                  .map(generateTracingExtractor(operationId, _)),
+                  .map(generateTracingExtractor(methodName, _)),
             List.empty //handlerDefinitions
           )
         )
@@ -682,7 +688,7 @@ object Http4sServerGenerator {
           """
         })
 
-    def generateQueryParamMatchers(operationId: String, qsArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] = {
+    def generateQueryParamMatchers(methodName: String, qsArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] = {
       val (decoders, matchers) = qsArgs
         .traverse({
           case LanguageParameter(_, param, _, argName, argType) =>
@@ -693,7 +699,7 @@ object Http4sServerGenerator {
               "Seq"        -> (term => q"$term.toSeq"),
               "IndexedSeq" -> (term => q"$term.toIndexedSeq")
             )
-            val matcherName = Term.Name(s"${operationId.capitalize}${argName.value.capitalize}Matcher")
+            val matcherName = Term.Name(s"${methodName.capitalize}${argName.value.capitalize}Matcher")
             val (queryParamMatcher, elemType) = param match {
               case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
                 (q"""
@@ -785,47 +791,47 @@ object Http4sServerGenerator {
       }
 
     def generateCodecs(
-        operationId: String,
+        methodName: String,
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
         consumes: Seq[ContentType],
         produces: Seq[ContentType]
     ): List[Defn.Val] =
-      generateDecoders(operationId, bodyArgs, consumes) ++ generateEncoders(operationId, responses, produces) ++ generateResponseGenerators(
-            operationId,
+      generateDecoders(methodName, bodyArgs, consumes) ++ generateEncoders(methodName, responses, produces) ++ generateResponseGenerators(
+            methodName,
             responses
           )
 
-    def generateDecoders(operationId: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
+    def generateDecoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
       bodyArgs.toList.flatMap {
         case LanguageParameter(_, _, _, _, argType) =>
           List(
-            q"private[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${operationId.uncapitalized}Decoder")), t"EntityDecoder[F, $argType]")} = ${Http4sHelper
+            q"private[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${methodName.uncapitalized}Decoder")), t"EntityDecoder[F, $argType]")} = ${Http4sHelper
               .generateDecoder(argType, consumes)}"
           )
       }
 
-    def generateEncoders(operationId: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
+    def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
         response        <- responses.value
         typeDefaultPair <- response.value
         (tpe, _) = typeDefaultPair
       } yield {
-        q"private[this] val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
+        q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }
 
-    def generateResponseGenerators(operationId: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =
+    def generateResponseGenerators(methodName: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =
       for {
         response <- responses.value
         if response.value.nonEmpty
       } yield {
-        q"private[this] val ${Pat.Var(Term.Name(s"$operationId${response.statusCodeName}EntityResponseGenerator"))} = ${Http4sHelper
+        q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}EntityResponseGenerator"))} = ${Http4sHelper
           .generateEntityResponseGenerator(q"org.http4s.Status.${response.statusCodeName}")}"
       }
 
-    def generateTracingExtractor(operationId: String, tracingField: Term): Defn.Object =
+    def generateTracingExtractor(methodName: String, tracingField: Term): Defn.Object =
       q"""
-         object ${Term.Name(s"usingFor${operationId.capitalize}")} {
+         object ${Term.Name(s"usingFor${methodName.capitalize}")} {
            def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
          }
        """

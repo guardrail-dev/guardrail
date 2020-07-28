@@ -5,7 +5,9 @@ import akka.http.scaladsl.server.{ RejectionHandler, Route }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import akka.http.scaladsl.model.FormData
 import akka.http.scaladsl.server.Directives.complete
 
@@ -16,7 +18,7 @@ import scala.concurrent.Future
   * - Required String form param should accept empty string
   * - Option String for param should accept emtpy string
   */
-class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class Issue405 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   implicit val rejectionHandler: RejectionHandler = RejectionHandler
@@ -31,7 +33,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] =
         Future.successful(respond.OK(s"Bar is '$bar'"))
     }))
 
@@ -46,7 +48,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] = {
         val msg = baz.map(s => s"present: '$s'").getOrElse("missing")
         Future.successful(respond.OK(s"Baz is $msg"))
       }
@@ -63,7 +65,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] =
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] =
         Future.successful(respond.OK(s"Bar is '$bar'"))
     }))
 
@@ -78,7 +80,7 @@ class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFuture
     import issues.issue405.server.akkaHttp.{ Handler, Resource }
 
     val route = Route.seal(Resource.routes(new Handler {
-      override def foo(respond: Resource.fooResponse.type)(bar: String, baz: Option[String]): Future[Resource.fooResponse] = {
+      override def foo(respond: Resource.FooResponse.type)(bar: String, baz: Option[String]): Future[Resource.FooResponse] = {
         val msg = baz.map(s => s"present: '$s'").getOrElse("missing")
         Future.successful(respond.OK(s"Baz is $msg"))
       }

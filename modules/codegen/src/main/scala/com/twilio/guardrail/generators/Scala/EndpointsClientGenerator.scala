@@ -31,6 +31,7 @@ object EndpointsClientGenerator {
 
     def generateClientOperation(
         className: List[String],
+        responseClsName: String,
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage]
@@ -131,6 +132,7 @@ object EndpointsClientGenerator {
 
       def build(
           methodName: String,
+          responseClsName: String,
           httpMethod: HttpMethod,
           pathPattern: Term,
           formDataParams: Option[Term],
@@ -209,8 +211,8 @@ object EndpointsClientGenerator {
             (None, None)
           }
 
-        val responseCompanionTerm = Term.Name(s"${methodName.capitalize}Response")
-        val responseCompanionType = Type.Name(s"${methodName.capitalize}Response")
+        val responseCompanionTerm = Term.Name(responseClsName)
+        val responseCompanionType = Type.Name(responseClsName)
 
         val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
@@ -407,6 +409,7 @@ object EndpointsClientGenerator {
           extraImplicits = List.empty
           renderedClientOperation = build(
             methodName,
+            responseClsName,
             httpMethod,
             pathPattern,
             formDataParams,
@@ -434,11 +437,11 @@ object EndpointsClientGenerator {
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] =
       Target.pure(List(List(formatHost(serverUrls)) ++ (if (tracing) Some(formatClientName(tracingName)) else None)))
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[ScalaLanguage],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ): Target[List[scala.meta.Defn]] =
-      Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
     def generateSupportDefinitions(
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]

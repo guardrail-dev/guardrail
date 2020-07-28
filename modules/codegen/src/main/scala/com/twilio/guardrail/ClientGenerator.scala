@@ -34,28 +34,26 @@ object ClientGenerator {
   )(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Clients[L]] = {
     import C._
     import Sw._
+    import Sc._
     for {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       clients <- groupedRoutes.traverse({
         case (className, unsortedRoutes) =>
-          val routes     = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
-          val clientName = s"${className.lastOption.getOrElse("").capitalize}Client"
-          def splitOperationParts(operationId: String): (List[String], String) = {
-            val parts = operationId.split('.')
-            (parts.drop(1).toList, parts.last)
-          }
-
+          val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
           for {
+            clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
             responseClientPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
                   operationId         <- getOperationId(operation)
                   responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
-                  responseDefinitions <- generateResponseDefinitions(operationId, responses, protocolElems)
+                  responseClsName     <- formatTypeName(operationId, Some("Response"))
+                  responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
                   parameters          <- route.getParameters[L, F](protocolElems)
-                  clientOp            <- generateClientOperation(className, context.tracing, securitySchemes, parameters)(route, operationId, responses)
+                  methodName          <- formatMethodName(operationId)
+                  clientOp            <- generateClientOperation(className, responseClsName, context.tracing, securitySchemes, parameters)(route, methodName, responses)
                 } yield (responseDefinitions, clientOp)
             }
             (responseDefinitions, clientOperations) = responseClientPair.unzip

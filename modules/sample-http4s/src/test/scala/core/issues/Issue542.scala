@@ -10,10 +10,13 @@ import org.http4s.implicits._
 import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers, OptionValues }
+import org.scalatest.EitherValues
+import org.scalatest.OptionValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import tests.scalatest.EitherTValues
 
-class Issue542Suite extends FunSuite with Matchers with EitherValues with ScalaFutures with EitherTValues with OptionValues {
+class Issue542Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with EitherTValues with OptionValues {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("base64 bytes can be sent") {

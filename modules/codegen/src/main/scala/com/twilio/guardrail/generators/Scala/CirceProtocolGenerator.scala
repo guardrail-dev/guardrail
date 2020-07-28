@@ -22,7 +22,6 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
-import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
@@ -142,10 +141,10 @@ object CirceProtocolGenerator {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[ScalaLanguage]]
     )(
         name: String,
+        fieldName: String,
         property: Schema[_],
         meta: ResolvedType[ScalaLanguage],
         requirement: PropertyRequirement,
@@ -156,7 +155,6 @@ object CirceProtocolGenerator {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
@@ -200,7 +198,7 @@ object CirceProtocolGenerator {
             case PropertyRequirement.OptionalNullable =>
               t"$presenceType[Option[$tpe]]" -> defaultValue.map(t => q"$presence.Present($t)")
           }
-          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+          term = param"${Term.Name(fieldName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
         } yield ProtocolParameter[ScalaLanguage](
           term,
@@ -264,7 +262,6 @@ object CirceProtocolGenerator {
     def encodeModel(
         clsName: String,
         dtoPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
     ) = {
@@ -365,7 +362,6 @@ object CirceProtocolGenerator {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
     ) = {
@@ -539,7 +535,6 @@ object CirceProtocolGenerator {
           q"import cats.syntax.either._",
           q"import io.circe._",
           q"import io.circe.syntax._",
-          q"import io.circe.generic.semiauto._",
           q"import cats.implicits._"
         )
       )

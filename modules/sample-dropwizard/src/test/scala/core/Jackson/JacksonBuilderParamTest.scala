@@ -2,9 +2,10 @@ package core.Jackson
 
 import examples.client.dropwizard.definitions.{ Category, Pet }
 import java.util.Optional
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class JacksonBuilderParamTest extends FreeSpec with Matchers {
+class JacksonBuilderParamTest extends AnyFreeSpec with Matchers {
   "POJO builders should not accept nulls for required params" in {
     assertThrows[NullPointerException] {
       new Pet.Builder(null: String)
