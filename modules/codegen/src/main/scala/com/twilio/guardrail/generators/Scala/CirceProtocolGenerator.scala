@@ -62,13 +62,13 @@ object CirceProtocolGenerator {
           }
         """))
 
-    def encodeEnum(clsName: String) =
+    def encodeEnum(clsName: String): Target[Option[Defn]] =
       Target.pure(Some(q"""
             implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
               Encoder[String].contramap(_.value)
           """))
 
-    def decodeEnum(clsName: String) =
+    def decodeEnum(clsName: String): Target[Option[Defn]] =
       Target.pure(Some(q"""
         implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
           Decoder[String].emap(value => parse(value).toRight(${Term
@@ -86,9 +86,9 @@ object CirceProtocolGenerator {
         clsName: String,
         members: Option[scala.meta.Defn.Object],
         accessors: List[scala.meta.Term.Name],
-        encoder: Option[scala.meta.Defn.Val],
-        decoder: Option[scala.meta.Defn.Val]
-    ) = {
+        encoder: Option[scala.meta.Defn],
+        decoder: Option[scala.meta.Defn]
+    ): Target[StaticDefns[ScalaLanguage]] = {
       val terms: List[Defn.Val] = accessors
         .map({ pascalValue =>
           q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"

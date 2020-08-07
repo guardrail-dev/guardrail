@@ -140,10 +140,10 @@ object JacksonGenerator {
     ) =
       Target.pure(None)
 
-    def encodeEnum(clsName: String) =
+    def encodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
-    def decodeEnum(clsName: String) =
+    def decodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
     def renderClass(
@@ -292,9 +292,9 @@ object JacksonGenerator {
         clsName: String,
         members: Option[Nothing],
         accessors: List[com.github.javaparser.ast.expr.Name],
-        encoder: Option[com.github.javaparser.ast.body.VariableDeclarator],
-        decoder: Option[com.github.javaparser.ast.body.VariableDeclarator]
-    ) =
+        encoder: Option[com.github.javaparser.ast.body.BodyDeclaration[_ <: BodyDeclaration[_]]],
+        decoder: Option[com.github.javaparser.ast.body.BodyDeclaration[_ <: BodyDeclaration[_]]]
+    ): Target[StaticDefns[JavaLanguage]] =
       for {
         extraImports <- List(
           "com.fasterxml.jackson.annotation.JsonCreator",
