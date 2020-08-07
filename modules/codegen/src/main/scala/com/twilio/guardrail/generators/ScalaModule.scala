@@ -48,6 +48,20 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     CirceProtocolGenerator.PolyProtocolTermInterp
   )
 
+  def jackson: (
+      ProtocolSupportTerms[ScalaLanguage, Target],
+      ModelProtocolTerms[ScalaLanguage, Target],
+      EnumProtocolTerms[ScalaLanguage, Target],
+      ArrayProtocolTerms[ScalaLanguage, Target],
+      PolyProtocolTerms[ScalaLanguage, Target]
+  ) = (
+    JacksonProtocolGenerator.ProtocolSupportTermInterp,
+    JacksonProtocolGenerator.ModelProtocolTermInterp,
+    JacksonProtocolGenerator.EnumProtocolTermInterp,
+    JacksonProtocolGenerator.ArrayProtocolTermInterp,
+    JacksonProtocolGenerator.PolyProtocolTermInterp
+  )
+
   def akkaHttp(circeVersion: CirceVersion): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
@@ -80,7 +94,8 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         "json",
         ("circe-java8", (CirceVersion.V011, circeJava8(CirceVersion.V011))),
         ("circe-0.11", (CirceVersion.V011, circe(CirceVersion.V011))),
-        ("circe", (CirceVersion.V012, circe(CirceVersion.V012)))
+        ("circe", (CirceVersion.V012, circe(CirceVersion.V012))),
+        ("jackson", (CirceVersion.V012, jackson))
       )
       (client, server, framework) <- popModule(
         "framework",
