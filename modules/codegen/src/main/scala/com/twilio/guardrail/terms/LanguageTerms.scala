@@ -2,12 +2,11 @@ package com.twilio.guardrail
 package terms
 
 import cats.Monad
+import cats.data.NonEmptyList
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
-
-import cats.data.NonEmptyList
 
 abstract class LanguageTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
@@ -106,6 +105,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def writePackageObject(
       dtoPackagePath: Path,
+      pkgComponents: List[String],
       dtoComponents: Option[NonEmptyList[String]],
       customImports: List[L#Import],
       packageObjectImports: List[L#Import],
@@ -207,6 +207,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
+          List[String],
           Option[NonEmptyList[String]],
           List[L#Import],
           List[L#Import],
@@ -307,13 +308,24 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     ) = newRenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
     def writePackageObject(
         dtoPackagePath: Path,
+        pkgComponents: List[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[L#Import],
         packageObjectImports: List[L#Import],
         protocolImports: List[L#Import],
         packageObjectContents: List[L#Statement],
         extraTypes: List[L#Statement]
-    ) = newWritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
+    ) =
+      newWritePackageObject(
+        dtoPackagePath,
+        pkgComponents,
+        dtoComponents,
+        customImports,
+        packageObjectImports,
+        protocolImports,
+        packageObjectContents,
+        extraTypes
+      )
     def writeProtocolDefinition(
         outputPath: Path,
         pkgName: List[String],

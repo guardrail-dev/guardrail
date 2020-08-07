@@ -147,6 +147,7 @@ object Common {
       (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
       packageObject <- writePackageObject(
         dtoPackagePath,
+        formattedPkgName,
         filteredDtoComponents,
         customImports,
         packageObjectImports,

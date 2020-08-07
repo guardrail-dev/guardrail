@@ -347,6 +347,7 @@ object JavaGenerator {
 
     def writePackageObject(
         dtoPackagePath: Path,
+        pkgComponents: List[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],

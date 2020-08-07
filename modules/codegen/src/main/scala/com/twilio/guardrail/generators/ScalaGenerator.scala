@@ -273,13 +273,6 @@ object ScalaGenerator {
               object Base64String {
                 def apply(bytes: Array[Byte]): Base64String = new Base64String(bytes)
                 def unapply(value: Base64String): Option[Array[Byte]] = Some(value.data)
-                private[this] val encoder = java.util.Base64.getEncoder
-                implicit val encode: Encoder[Base64String] =
-                  Encoder[String].contramap[Base64String](v => new String(encoder.encode(v.data)))
-
-                private[this] val decoder = java.util.Base64.getDecoder
-                implicit val decode: Decoder[Base64String] =
-                  Decoder[String].emapTry(v => scala.util.Try(decoder.decode(v))).map(new Base64String(_))
               }
 
             }
@@ -335,13 +328,15 @@ object ScalaGenerator {
 
     def writePackageObject(
         dtoPackagePath: Path,
+        pkgComponents: List[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[scala.meta.Import],
         packageObjectImports: List[scala.meta.Import],
         protocolImports: List[scala.meta.Import],
         packageObjectContents: List[scala.meta.Stat],
         extraTypes: List[scala.meta.Stat]
-    ): Target[Option[WriteTree]] =
+    ): Target[Option[WriteTree]] = {
+      val pkgImplicitsImport = q"import ${buildPkgTerm("_root_" +: pkgComponents)}.Implicits._"
       dtoComponents.traverse({
         case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
           for (dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))) yield {
@@ -361,7 +356,7 @@ object ScalaGenerator {
               sourceToBytes(source"""
                 package $dtoPkg
 
-                ..${customImports ++ packageObjectImports ++ protocolImports}
+                ..${customImports ++ packageObjectImports ++ protocolImports :+ pkgImplicitsImport}
 
                 object $companion {
                   ..${implicits.map(_.copy(mods = List.empty))}
@@ -374,6 +369,8 @@ object ScalaGenerator {
             )
           }
       })
+    }
+
     def writeProtocolDefinition(
         outputPath: Path,
         pkgName: List[String],
