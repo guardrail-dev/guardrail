@@ -43,19 +43,19 @@ assemblyMergeStrategy in assembly := {
 
 val exampleFrameworkSuites = Map(
   "scala" -> List(
-    ("akka-http", "akkaHttp", List("client", "server")),
-    ("endpoints", "endpoints", List("client")),
-    ("http4s", "http4s", List("client", "server"))
+    ExampleFramework("akka-http", "akkaHttp"),
+    ExampleFramework("endpoints", "endpoints", List("client")),
+    ExampleFramework("http4s", "http4s")
   ),
   "java" -> List(
-    ("dropwizard", "dropwizard", List("client", "server")),
-    ("spring-mvc", "springMvc", List("server"))
+    ExampleFramework("dropwizard", "dropwizard"),
+    ExampleFramework("spring-mvc", "springMvc", List("server"))
   )
 )
 
 
-val scalaFrameworks = exampleFrameworkSuites("scala").map(_._2)
-val javaFrameworks = exampleFrameworkSuites("java").map(_._2)
+val scalaFrameworks = exampleFrameworkSuites("scala").map(_.projectName)
+val javaFrameworks = exampleFrameworkSuites("java").map(_.projectName)
 
 import scoverage.ScoverageKeys
 
@@ -136,8 +136,8 @@ def exampleArgs(language: String, framework: Option[String] = None): List[List[S
   .foldLeft(List[List[String]](List(language)))({
     case (acc, ExampleCase(path, prefix, extra, onlyFrameworks)) =>
       acc ++ (for {
-        frameworkSuite <- exampleFrameworkSuites(language).filter(efs => framework.forall(_ == efs._1))
-        (frameworkName, frameworkPackage, kinds) = frameworkSuite
+        frameworkSuite <- exampleFrameworkSuites(language).filter(efs => framework.forall(_ == efs.name))
+        ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
         if onlyFrameworks.forall(_.contains(frameworkName))
         kind <- kinds
         filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
@@ -147,7 +147,8 @@ def exampleArgs(language: String, framework: Option[String] = None): List[List[S
             List("--specPath", path.toString()) ++
             List("--outputPath", s"modules/sample-${frameworkPackage}/target/generated") ++
             List("--packageName", s"${prefix}.${kind}.${frameworkPackage}") ++
-            List("--framework", frameworkName)
+            List("--framework", frameworkName) ++
+            modules.flatMap(module => List("--module", module))
         ) ++ filteredExtra)
   })
 
