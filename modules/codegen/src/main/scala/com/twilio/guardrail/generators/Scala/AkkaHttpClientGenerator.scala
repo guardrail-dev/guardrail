@@ -15,11 +15,12 @@ import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+import com.twilio.guardrail.generators.Scala.model.ModelGeneratorType
 import java.net.URI
 
 object AkkaHttpClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
+  class ClientTermInterp(modelGeneratorType: ModelGeneratorType) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
@@ -531,7 +532,7 @@ object AkkaHttpClientGenerator {
         tpe  <- resp.value.map(_._1).toList
       } yield {
         for {
-          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces)
+          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
         } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
       }).sequence
   }

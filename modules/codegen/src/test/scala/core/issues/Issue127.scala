@@ -148,7 +148,7 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         sealed abstract class UploadFileResponse(val statusCode: StatusCode)
         case object UploadFileResponseCreated extends UploadFileResponse(StatusCodes.Created)
         object UploadFileResponse {
-          implicit val uploadFileResponseTRM: ToResponseMarshaller[UploadFileResponse] = Marshaller { implicit ec =>
+          implicit def uploadFileResponseTRM: ToResponseMarshaller[UploadFileResponse] = Marshaller { implicit ec =>
             resp => uploadFileResponseTR(resp)
           }
           implicit def uploadFileResponseTR(value: UploadFileResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {

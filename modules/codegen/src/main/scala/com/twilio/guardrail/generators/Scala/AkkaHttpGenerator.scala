@@ -249,11 +249,11 @@ object AkkaHttpGenerator {
               }
          """,
         q"""
-            // Translate [A] => HttpEntity
-            implicit final def jsonEntityMarshaller[A](
+            // Translate [A: GuardrailEncoder] => HttpEntity
+            implicit final def jsonEntityMarshaller[A: GuardrailEncoder](
                 implicit mapper: com.fasterxml.jackson.databind.ObjectMapper
             ): ToEntityMarshaller[A] =
-              jsonMarshaller.compose(mapper.valueToTree)
+              jsonMarshaller.compose(implicitly[GuardrailEncoder[A]].encode)
          """,
         q"""
             // Translate HttpEntity => JsonNode (for `text/plain`)
@@ -312,21 +312,21 @@ object AkkaHttpGenerator {
                 }
          """,
         q"""
-            // Translate HttpEntity => [A] (for `application/json` or `text/plain`)
-            implicit def jsonEntityUnmarshaller[A](
+            // Translate HttpEntity => [A: GuardrailDecoder] (for `application/json` or `text/plain`)
+            implicit def jsonEntityUnmarshaller[A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag](
                 implicit mapper: com.fasterxml.jackson.databind.ObjectMapper,
-                tag: scala.reflect.ClassTag[A]
+                validator: javax.validation.Validator
             ): FromEntityUnmarshaller[A] = {
               Unmarshaller.firstOf(structuredJsonEntityUnmarshaller, stringyJsonEntityUnmarshaller)
-                .flatMap(_ => _ => json => FastFuture(scala.util.Try(mapper.treeToValue(json, tag.runtimeClass.asInstanceOf[Class[A]]))))
+                .flatMap(_ => _ => json => FastFuture(implicitly[GuardrailDecoder[A]].decode(json)))
             }
          """,
         q"""
-            def unmarshallJson[A](
+            def unmarshallJson[A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag](
                 implicit mapper: com.fasterxml.jackson.databind.ObjectMapper,
-                tag: scala.reflect.ClassTag[A]
+                validator: javax.validation.Validator
             ): Unmarshaller[${jsonType}, A] =
-              Unmarshaller { _ => value => FastFuture(scala.util.Try(mapper.treeToValue(value, tag.runtimeClass.asInstanceOf[Class[A]]))) }
+              Unmarshaller { _ => value => FastFuture(implicitly[GuardrailDecoder[A]].decode(value)) }
          """,
         q"""
             // Translate String => JsonNode by parsing
@@ -344,13 +344,13 @@ object AkkaHttpGenerator {
             }
          """,
         q"""
-            // Translate String => [A]
-            def jsonDecoderUnmarshaller[A](
+            // Translate String => [A: GuardrailDecoder]
+            def jsonDecoderUnmarshaller[A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag](
                 implicit mapper: com.fasterxml.jackson.databind.ObjectMapper,
-                tag: scala.reflect.ClassTag[A]
+                validator: javax.validation.Validator
             ): Unmarshaller[${jsonType}, A] =
               Unmarshaller { _ => json =>
-                FastFuture(scala.util.Try(mapper.treeToValue(json, tag.runtimeClass.asInstanceOf[Class[A]])))
+                FastFuture(implicitly[GuardrailDecoder[A]].decode(json))
               }
          """
       )

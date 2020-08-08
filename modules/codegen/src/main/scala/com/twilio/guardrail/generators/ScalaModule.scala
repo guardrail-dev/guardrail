@@ -65,7 +65,11 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
-  ) = (AkkaHttpClientGenerator.ClientTermInterp, AkkaHttpServerGenerator.ServerTermInterp, new AkkaHttpGenerator.FrameworkInterp(modelGeneratorType))
+  ) = (
+    new AkkaHttpClientGenerator.ClientTermInterp(modelGeneratorType),
+    new AkkaHttpServerGenerator.ServerTermInterp(modelGeneratorType),
+    new AkkaHttpGenerator.FrameworkInterp(modelGeneratorType)
+  )
 
   def endpoints(modelGeneratorType: ModelGeneratorType): (
       ClientTerms[ScalaLanguage, Target],

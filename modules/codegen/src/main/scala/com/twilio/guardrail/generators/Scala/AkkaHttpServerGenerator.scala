@@ -7,6 +7,7 @@ import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SwaggerUtil, 
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import com.twilio.guardrail.generators.Scala.model.ModelGeneratorType
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
@@ -21,7 +22,7 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object AkkaHttpServerGenerator {
-  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
+  class ServerTermInterp(modelGeneratorType: ModelGeneratorType) extends ServerTerms[ScalaLanguage, Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -80,13 +81,19 @@ object AkkaHttpServerGenerator {
             case (tpe, name) =>
               q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)"
           }
+        toResponseImplicits = List(param"implicit ec: scala.concurrent.ExecutionContext") ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
         companion = q"""
             object ${responseSuperTerm} {
-              implicit val ${Pat
-          .Var(Term.Name(s"${responseClsName.uncapitalized}TRM"))}: ToResponseMarshaller[${responseSuperType}] = Marshaller { implicit ec => resp => ${Term
-          .Name(s"${responseClsName.uncapitalized}TR")}(resp) }
+            ${Defn.Def(
+          List(mod"implicit"),
+          Term.Name(s"${responseClsName.uncapitalized}TRM"),
+          tparams = List.empty,
+          NonEmptyList.fromList(AkkaHttpHelper.protocolImplicits(modelGeneratorType)).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
+          Some(t"ToResponseMarshaller[${responseSuperType}]"),
+          q"""Marshaller { implicit ec => resp => ${Term.Name(s"${responseClsName.uncapitalized}TR")}(resp) }"""
+        )}
               implicit def ${Term
-          .Name(s"${responseClsName.uncapitalized}TR")}(value: ${responseSuperType})(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
+          .Name(s"${responseClsName.uncapitalized}TR")}(value: ${responseSuperType})(..$toResponseImplicits): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
                 ${Term.Match(Term.Name("value"), marshallers)}
 
               def apply[T](value: T)(implicit ev: T => ${responseSuperType}): ${responseSuperType} = ev(value)
@@ -187,16 +194,19 @@ object AkkaHttpServerGenerator {
       for {
         _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
         routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
-      } yield List(q"""
+      } yield {
+        val routeImplicits = List(param"implicit mat: akka.stream.Materializer") ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+        List(q"""
           object ${Term.Name(resourceName)} {
             ..${supportDefinitions};
-            def routes(..${routesParams})(implicit mat: akka.stream.Materializer): Route = {
+            def routes(..${routesParams})(..$routeImplicits): Route = {
               ..${combinedRouteTerms}
             }
 
             ..${responseDefinitions}
           }
         """)
+      }
     def getExtraImports(tracing: Boolean) =
       for {
         _ <- Target.log.debug(s"getExtraImports(${tracing})")
@@ -237,7 +247,7 @@ object AkkaHttpServerGenerator {
       ((basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
         case "" => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
         case fullPath =>
-          SwaggerUtil.paths.generateUrlAkkaPathExtractors(Tracker.cloneHistory(path, fullPath), pathArgs)
+          SwaggerUtil.paths.generateUrlAkkaPathExtractors(Tracker.cloneHistory(path, fullPath), pathArgs, modelGeneratorType)
       })
     }
 
@@ -619,11 +629,13 @@ object AkkaHttpServerGenerator {
                   }
 
                   case UrlencodedFormData => {
-                    val unmarshallerTerm = q"FormDataUnmarshaller"
+                    val unmarshallerTerm               = q"FormDataUnmarshaller"
+                    val unmarshalFieldTypeParam        = AkkaHttpHelper.unmarshalFieldTypeParam(modelGeneratorType)
+                    val unmarshalFieldUnmarshallerType = AkkaHttpHelper.unmarshalFieldUnmarshallerType(modelGeneratorType)
                     val fru = q"""
                   implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
                     implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
-                      def unmarshalField[A: Decoder](name: String, value: String, unmarshaller: Unmarshaller[String, io.circe.Json]): Future[A] =
+                      def unmarshalField[${unmarshalFieldTypeParam}](name: String, value: String, unmarshaller: Unmarshaller[String, ${unmarshalFieldUnmarshallerType}]): Future[A] =
                         unmarshaller.andThen(jsonDecoderUnmarshaller[A]).apply(value).recoverWith({
                           case ex =>
                             Future.failed(RejectionError(MalformedFormFieldRejection(name, ex.getMessage, Some(ex))))
@@ -837,26 +849,32 @@ object AkkaHttpServerGenerator {
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         responses: Responses[ScalaLanguage],
         consumes: Tracker[NonEmptyList[ContentType]]
-    ): Target[List[Defn.Val]] =
+    ): Target[List[Defn.Def]] =
       generateDecoders(methodName, bodyArgs, consumes)
 
     def generateDecoders(
         methodName: String,
         bodyArgs: Option[LanguageParameter[ScalaLanguage]],
         consumes: Tracker[NonEmptyList[ContentType]]
-    ): Target[List[Defn.Val]] =
+    ): Target[List[Defn.Def]] =
       bodyArgs.toList.traverse {
         case LanguageParameter(_, _, _, _, argType) =>
           for {
-            (decoder, baseType) <- AkkaHttpHelper.generateDecoder(argType, consumes)
+            (decoder, baseType) <- AkkaHttpHelper.generateDecoder(argType, consumes, modelGeneratorType)
           } yield {
-            q"""
-            val ${Pat.Typed(Pat.Var(Term.Name(s"${methodName}Decoder")), t"FromRequestUnmarshaller[$baseType]")} = {
-              val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
-              val unmarshalEntity = ${decoder}
-              extractEntity.andThen(unmarshalEntity)
-            }
-          """
+            val decoderImplicits = AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+            Defn.Def(
+              mods = List.empty,
+              Term.Name(s"${methodName}Decoder"),
+              tparams = List.empty,
+              NonEmptyList.fromList(decoderImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
+              Some(t"FromRequestUnmarshaller[$baseType]"),
+              q"""
+                val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
+                val unmarshalEntity = ${decoder}
+                extractEntity.andThen(unmarshalEntity)
+              """
+            )
           }
       }
   }

@@ -54,7 +54,7 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
         sealed abstract class GetFoo2Response(val statusCode: StatusCode)
         case object GetFoo2ResponseOK extends GetFoo2Response(StatusCodes.OK)
         object GetFoo2Response {
-          implicit val getFoo2ResponseTRM: ToResponseMarshaller[GetFoo2Response] = Marshaller { implicit ec =>
+          implicit def getFoo2ResponseTRM: ToResponseMarshaller[GetFoo2Response] = Marshaller { implicit ec =>
             resp => getFoo2ResponseTR(resp)
           }
           implicit def getFoo2ResponseTR(value: GetFoo2Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -69,7 +69,7 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
         sealed abstract class GetFoo1Response(val statusCode: StatusCode)
         case object GetFoo1ResponseOK extends GetFoo1Response(StatusCodes.OK)
         object GetFoo1Response {
-          implicit val getFoo1ResponseTRM: ToResponseMarshaller[GetFoo1Response] = Marshaller { implicit ec =>
+          implicit def getFoo1ResponseTRM: ToResponseMarshaller[GetFoo1Response] = Marshaller { implicit ec =>
             resp => getFoo1ResponseTR(resp)
           }
           implicit def getFoo1ResponseTR(value: GetFoo1Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
