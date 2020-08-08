@@ -12,22 +12,25 @@ git.useGitDescribe := true
 
 crossScalaVersions in ThisBuild := Seq("2.12.12")
 
-val akkaVersion          = "10.0.15"
-val catsVersion          = "2.1.1"
-val catsEffectVersion    = "2.1.4"
-val circeVersion         = "0.13.0"
-val http4sVersion        = "0.21.7"
-val scalacheckVersion    = "1.14.3"
-val scalatestVersion     = "3.2.0"
-val scalatestPlusVersion = "3.1.0.0-RC2"
-val javaparserVersion    = "3.16.1"
-val endpointsVersion     = "0.8.0"
-val ahcVersion           = "2.8.1"
-val dropwizardVersion    = "1.3.24"
-val jerseyVersion        = "2.25.1"
-val kindProjectorVersion = "0.10.3"
-val jaxbApiVersion       = "2.3.1"
-val springBootVersion    = "2.3.3.RELEASE"
+val akkaVersion            = "10.0.15"
+val catsVersion            = "2.1.1"
+val catsEffectVersion      = "2.1.4"
+val circeVersion           = "0.13.0"
+val http4sVersion          = "0.21.7"
+val scalacheckVersion      = "1.14.3"
+val scalatestVersion       = "3.2.0"
+val scalatestPlusVersion   = "3.1.0.0-RC2"
+val javaparserVersion      = "3.16.1"
+val endpointsVersion       = "0.8.0"
+val ahcVersion             = "2.8.1"
+val dropwizardVersion      = "1.3.24"
+val jerseyVersion          = "2.25.1"
+val kindProjectorVersion   = "0.10.3"
+val jaxbApiVersion         = "2.3.1"
+val springBootVersion      = "2.3.3.RELEASE"
+val jacksonVersion         = "2.11.2"
+val hibernateVersion       = "5.4.3.Final"
+val javaxElVersion         = "3.0.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -45,7 +48,8 @@ val exampleFrameworkSuites = Map(
   "scala" -> List(
     ExampleFramework("akka-http", "akkaHttp"),
     ExampleFramework("endpoints", "endpoints", List("client")),
-    ExampleFramework("http4s", "http4s")
+    ExampleFramework("http4s", "http4s"),
+    ExampleFramework("akka-http-jackson", "akkaHttpJackson", modules = List("akka-http", "jackson")),
   ),
   "java" -> List(
     ExampleFramework("dropwizard", "dropwizard"),
@@ -270,6 +274,7 @@ lazy val allDeps = (project in file("modules/alldeps"))
   .settings(
     skip in publish := true,
     libraryDependencies ++= akkaProjectDependencies,
+    libraryDependencies ++= akkaJacksonProjectDependencies,
     libraryDependencies ++= http4sProjectDependencies,
     libraryDependencies ++= springProjectDependencies,
     libraryDependencies ++= dropwizardProjectDependencies,
@@ -335,6 +340,21 @@ val akkaProjectDependencies = Seq(
   "org.typelevel"     %% "cats-core"         % catsVersion
 )
 
+val akkaJacksonProjectDependencies = Seq(
+  "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
+  "com.typesafe.akka"              %% "akka-http"               % akkaVersion,
+  "com.fasterxml.jackson.core"     %  "jackson-core"            % jacksonVersion,
+  "com.fasterxml.jackson.core"     %  "jackson-databind"        % jacksonVersion,
+  "com.fasterxml.jackson.core"     %  "jackson-annotations"     % jacksonVersion,
+  "com.fasterxml.jackson.datatype" %  "jackson-datatype-jsr310" % jacksonVersion,
+  "com.fasterxml.jackson.module"   %% "jackson-module-scala"    % jacksonVersion,
+  "org.hibernate"                  %  "hibernate-validator"     % hibernateVersion,
+  "org.glassfish"                  %  "javax.el"                % javaxElVersion,
+  "org.typelevel"                  %% "cats-core"               % catsVersion,
+  "org.scalatest"                  %% "scalatest"               % scalatestVersion % Test,
+  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaVersion % Test,
+)
+
 val http4sProjectDependencies = Seq(
   "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
   "io.circe"      %% "circe-core"          % circeVersion,
@@ -383,6 +403,8 @@ def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.libraryma
     )
 
 lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies)
+
+lazy val akkaHttpJacksonSample = buildSampleProject("akkaHttpJackson", akkaJacksonProjectDependencies)
 
 lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
 
