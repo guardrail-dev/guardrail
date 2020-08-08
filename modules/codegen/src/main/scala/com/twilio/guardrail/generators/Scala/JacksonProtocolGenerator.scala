@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.Scala
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.{ Discriminator, ProtocolParameter, RuntimeFailure, Target }
-import com.twilio.guardrail.circe.CirceVersion
+import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.ScalaGenerator
 import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -139,7 +139,7 @@ object JacksonProtocolGenerator {
       }
 
     val jsonIgnoreProperties = mod"""@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)"""
-    val baseInterp           = new CirceProtocolGenerator.ModelProtocolTermInterp(CirceVersion.V012)
+    val baseInterp           = new CirceProtocolGenerator.ModelProtocolTermInterp(CirceModelGenerator.V012)
     baseInterp.copy(
       newRenderDTOClass = (className, supportPackage, terms, parents) =>
         for {

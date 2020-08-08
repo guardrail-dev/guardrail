@@ -17,7 +17,6 @@ import com.twilio.guardrail.{
   Target,
   UserError
 }
-import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
@@ -25,7 +24,7 @@ import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, Sca
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
-
+import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -119,7 +118,7 @@ object CirceProtocolGenerator {
       Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
   }
 
-  class ModelProtocolTermInterp(circeVersion: CirceVersion) extends ModelProtocolTerms[ScalaLanguage, Target] {
+  class ModelProtocolTermInterp(circeVersion: CirceModelGenerator) extends ModelProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractProperties(swagger: Tracker[Schema[_]]) =
       swagger
