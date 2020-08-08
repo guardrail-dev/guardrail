@@ -397,16 +397,17 @@ object AkkaHttpClientGenerator {
     def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
     def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
-      val ihc =
-        param"implicit httpClient: HttpRequest => Future[HttpResponse]"
-      val iec  = param"implicit ec: ExecutionContext"
-      val imat = param"implicit mat: Materializer"
+      val implicits = List(
+          param"implicit httpClient: HttpRequest => Future[HttpResponse]",
+          param"implicit ec: ExecutionContext",
+          param"implicit mat: Materializer"
+        ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
       Target.pure(
         List(
           List(formatHost(serverUrls)) ++ (if (tracing)
                                              Some(formatClientName(tracingName))
                                            else None),
-          List(ihc, iec, imat)
+          implicits
         )
       )
     }
@@ -435,8 +436,10 @@ object AkkaHttpClientGenerator {
           ctorCall: Term.New,
           tracing: Boolean
       ): List[Defn] = {
-        val iec  = param"implicit ec: ExecutionContext"
-        val imat = param"implicit mat: Materializer"
+        val implicits = List(
+            param"implicit ec: ExecutionContext",
+            param"implicit mat: Materializer"
+          ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
         val tracingParams: List[Term.Param] = if (tracing) {
           List(formatClientName(tracingName))
         } else {
@@ -445,7 +448,7 @@ object AkkaHttpClientGenerator {
 
         List(
           q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)($iec, $imat): $tpe = $ctorCall
+              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)(..$implicits): $tpe = $ctorCall
             """
         )
       }
