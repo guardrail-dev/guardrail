@@ -22,7 +22,8 @@ case class ProtocolDefinitions[L <: LA](
     elems: List[StrictProtocolElems[L]],
     protocolImports: List[L#Import],
     packageObjectImports: List[L#Import],
-    packageObjectContents: List[L#Statement]
+    packageObjectContents: List[L#Statement],
+    implicitsObject: Option[(L#TermName, L#ObjectDefinition)]
 )
 sealed trait EmptyToNullBehaviour
 case object EmptyIsNull  extends EmptyToNullBehaviour
@@ -773,10 +774,11 @@ object ProtocolGenerator {
       protoImports      <- protocolImports()
       pkgImports        <- packageObjectImports()
       pkgObjectContents <- packageObjectContents()
+      implicitsObject   <- implicitsObject()
 
       polyADTElems <- ProtocolElems.resolve[L, F](polyADTs)
       strictElems  <- ProtocolElems.resolve[L, F](elems)
-    } yield ProtocolDefinitions[L](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents))
+    } yield ProtocolDefinitions[L](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents, implicitsObject))
   }
 
   private def defaultValue[L <: LA, F[_]](

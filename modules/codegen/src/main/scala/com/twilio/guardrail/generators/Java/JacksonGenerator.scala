@@ -966,6 +966,9 @@ object JacksonGenerator {
 
     def packageObjectContents() =
       Target.pure(List.empty)
+
+    def implicitsObject() =
+      Target.pure(None)
   }
 
   object PolyProtocolTermInterp extends PolyProtocolTerms[JavaLanguage, Target] {

@@ -11,6 +11,7 @@ abstract class ProtocolSupportTerms[L <: LA, F[_]] {
   def protocolImports(): F[List[L#Import]]
   def packageObjectImports(): F[List[L#Import]]
   def packageObjectContents(): F[List[L#Statement]]
+  def implicitsObject(): F[Option[(L#TermName, L#ObjectDefinition)]]
   def generateSupportDefinitions(): F[List[SupportDefinition[L]]]
 
   def copy(
@@ -20,6 +21,7 @@ abstract class ProtocolSupportTerms[L <: LA, F[_]] {
       newProtocolImports: (() => F[List[L#Import]]) = this.protocolImports _,
       newPackageObjectImports: (() => F[List[L#Import]]) = this.packageObjectImports _,
       newPackageObjectContents: (() => F[List[L#Statement]]) = this.packageObjectContents _,
+      newImplicitsObject: () => F[Option[(L#TermName, L#ObjectDefinition)]] = this.implicitsObject _,
       newGenerateSupportDefinitions: (() => F[List[SupportDefinition[L]]]) = this.generateSupportDefinitions _
   ): ProtocolSupportTerms[L, F] = new ProtocolSupportTerms[L, F] {
     def MonadF                                                          = newMonadF
@@ -28,6 +30,7 @@ abstract class ProtocolSupportTerms[L <: LA, F[_]] {
     def protocolImports()                                               = newProtocolImports()
     def packageObjectImports()                                          = newPackageObjectImports()
     def packageObjectContents()                                         = newPackageObjectContents()
+    def implicitsObject()                                               = newImplicitsObject()
     def generateSupportDefinitions()                                    = newGenerateSupportDefinitions()
   }
 }

@@ -318,6 +318,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
+        frameworkImplicitImportNames: List[com.github.javaparser.ast.expr.Name],
         jsonImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkImplicits: Nothing,
         frameworkImplicitName: com.github.javaparser.ast.expr.Name
@@ -376,6 +377,7 @@ object JavaGenerator {
         definitions: List[String],
         dtoComponents: List[String],
         imports: List[com.github.javaparser.ast.ImportDeclaration],
+        protoImplicitName: Option[com.github.javaparser.ast.expr.Name],
         elem: StrictProtocolElems[JavaLanguage]
     ): Target[(List[WriteTree], List[com.github.javaparser.ast.stmt.Statement])] =
       for {
@@ -427,7 +429,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
-        frameworkImplicitName: Option[com.github.javaparser.ast.expr.Name],
+        frameworkImplicitNames: List[com.github.javaparser.ast.expr.Name],
         dtoComponents: Option[List[String]],
         _client: Client[JavaLanguage]
     ): Target[List[WriteTree]] = {
@@ -445,7 +447,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
-        frameworkImplicitName: Option[com.github.javaparser.ast.expr.Name],
+        frameworkImplicitNames: List[com.github.javaparser.ast.expr.Name],
         dtoComponents: Option[List[String]],
         server: Server[JavaLanguage]
     ): Target[List[WriteTree]] = {

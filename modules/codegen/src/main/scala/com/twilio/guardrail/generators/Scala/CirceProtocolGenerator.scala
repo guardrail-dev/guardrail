@@ -609,6 +609,8 @@ object CirceProtocolGenerator {
           q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]"
         )
       )
+
+    def implicitsObject() = Target.pure(None)
   }
 
   object PolyProtocolTermInterp extends PolyProtocolTerms[ScalaLanguage, Target] {

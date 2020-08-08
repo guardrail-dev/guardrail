@@ -44,7 +44,7 @@ object Common {
     import Sw._
 
     Sw.log.function("prepareDefinitions")(for {
-      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) <- ProtocolGenerator
+      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- ProtocolGenerator
         .fromSwagger[L, F](swagger, dtoPackage, supportPackage, context.propertyRequirement)
 
       serverUrls = NonEmptyList.fromList(
@@ -128,9 +128,10 @@ object Common {
 
       definitions: List[String] = formattedPkgName :+ "definitions"
 
-      ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents) = proto
-      CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                     = codegen
-      frameworkImplicitName                                                                            = frameworkImplicits.map(_._1)
+      ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, protoImplicits) = proto
+      protoImplicitName                                                                                                = protoImplicits.map(_._1)
+      CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                                     = codegen
+      frameworkImplicitName                                                                                            = frameworkImplicits.map(_._1)
 
       dtoComponents: List[String] = definitions ++ dtoPackage
 
@@ -140,7 +141,9 @@ object Common {
         .fromList(dtoComponents)
         .filter(_ => protocolElems.exists({ case _: RandomType[_] => false; case _ => true }))
 
-      protoOut <- protocolElems.traverse(writeProtocolDefinition(outputPath, formattedPkgName, definitions, dtoComponents, customImports ++ protocolImports, _))
+      protoOut <- protocolElems.traverse(
+        writeProtocolDefinition(outputPath, formattedPkgName, definitions, dtoComponents, customImports ++ protocolImports, protoImplicitName, _)
+      )
       (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
       packageObject <- writePackageObject(
         dtoPackagePath,
@@ -155,16 +158,24 @@ object Common {
       frameworkImports     <- getFrameworkImports(context.tracing)
       frameworkDefinitions <- getFrameworkDefinitions(context.tracing)
 
+      frameworkImplicitNames = frameworkImplicitName.toList ++ protoImplicitName.toList
+
       files <- (
-        clients.flatTraverse(writeClient(pkgPath, formattedPkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _)),
-        servers.flatTraverse(writeServer(pkgPath, formattedPkgName, customImports, frameworkImplicitName, filteredDtoComponents.map(_.toList), _))
+        clients.flatTraverse(writeClient(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents.map(_.toList), _)),
+        servers.flatTraverse(writeServer(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents.map(_.toList), _))
       ).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F])({
-        case (name, defn) => renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, defn, name).map(Option.apply)
+        case (name, defn) =>
+          renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
+            .map(Option.apply)
       })
-
+      protocolImplicitsFile <- protoImplicits.fold(Option.empty[WriteTree].pure[F])({
+        case (name, defn) =>
+          renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
+            .map(Option.apply)
+      })
       frameworkDefinitionsFiles <- frameworkDefinitions.traverse({
         case (name, defn) => renderFrameworkDefinitions(pkgPath, formattedPkgName, frameworkImports, defn, name)
       })
@@ -181,6 +192,7 @@ object Common {
           files ++
           implicits.toList ++
           frameworkImplicitsFile.toList ++
+          protocolImplicitsFile.toList ++
           frameworkDefinitionsFiles ++
           supportDefinitionsFiles
     ).toList

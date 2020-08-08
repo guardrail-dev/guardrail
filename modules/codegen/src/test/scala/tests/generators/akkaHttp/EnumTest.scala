@@ -56,7 +56,7 @@ class EnumTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate enums") {
     val (
-      ProtocolDefinitions(EnumDefinition(_, _, _, _, cls, staticDefns) :: Nil, _, _, _),
+      ProtocolDefinitions(EnumDefinition(_, _, _, _, cls, staticDefns) :: Nil, _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

@@ -71,7 +71,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate JSON alias definitions") {
     val (
-      ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _),
+      ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
@@ -81,7 +81,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Handle json subvalues") {
     val (
-      ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _),
+      ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, Http4s)
