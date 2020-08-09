@@ -11,6 +11,7 @@ import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMet
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
+case class CustomExtractionField[L <: LA](param: LanguageParameter[L], term: L#Term)
 case class TracingField[L <: LA](param: LanguageParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
     routes: List[L#Statement],
@@ -43,19 +44,29 @@ object ServerGenerator {
             responseServerPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
-                  operationId         <- getOperationId(operation)
-                  responses           <- Responses.getResponses(operationId, operation, protocolElems)
-                  responseClsName     <- formatTypeName(operationId, Some("Response"))
-                  responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
-                  methodName          <- formatMethodName(operationId)
-                  parameters          <- route.getParameters[L, F](protocolElems)
-                  tracingField        <- buildTracingFields(operation, className, context.tracing)
-                } yield (responseDefinitions, GenerateRouteMeta(operationId, methodName, responseClsName, tracingField, route, parameters, responses))
+                  operationId           <- getOperationId(operation)
+                  responses             <- Responses.getResponses(operationId, operation, protocolElems)
+                  responseClsName       <- formatTypeName(operationId, Some("Response"))
+                  responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+                  methodName            <- formatMethodName(operationId)
+                  parameters            <- route.getParameters[L, F](protocolElems)
+                  customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
+                  tracingField          <- buildTracingFields(operation, className, context.tracing)
+                } yield (
+                  responseDefinitions,
+                  GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
+                )
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes   <- generateRoutes(context.tracing, resourceName, handlerName, basePath, serverOperations, protocolElems, securitySchemes)
-            handlerSrc       <- renderHandler(handlerName, renderedRoutes.methodSigs, renderedRoutes.handlerDefinitions, responseDefinitions.flatten)
-            extraRouteParams <- getExtraRouteParams(context.tracing)
+            renderedRoutes <- generateRoutes(context.tracing, resourceName, handlerName, basePath, serverOperations, protocolElems, securitySchemes)
+            handlerSrc <- renderHandler(
+              handlerName,
+              renderedRoutes.methodSigs,
+              renderedRoutes.handlerDefinitions,
+              responseDefinitions.flatten,
+              context.customExtraction
+            )
+            extraRouteParams <- getExtraRouteParams(context.customExtraction, context.tracing)
             classSrc <- renderClass(
               resourceName,
               handlerName,
@@ -63,7 +74,8 @@ object ServerGenerator {
               renderedRoutes.routes,
               extraRouteParams,
               responseDefinitions.flatten,
-              renderedRoutes.supportDefinitions
+              renderedRoutes.supportDefinitions,
+              context.customExtraction
             )
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)

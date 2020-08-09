@@ -11,6 +11,7 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
@@ -216,6 +217,17 @@ object DropwizardServerGenerator {
         "org.slf4j.LoggerFactory"
       ).traverse(safeParseRawImport)
 
+    override def buildCustomExtractionFields(
+        operation: Tracker[Operation],
+        resourceName: List[String],
+        customExtraction: Boolean
+    ): Target[Option[CustomExtractionField[JavaLanguage]]] =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
+
     override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[JavaLanguage]]] =
       if (tracing) {
         Target.raiseUserError(s"Tracing is not yet supported by this framework")
@@ -243,6 +255,7 @@ object DropwizardServerGenerator {
                 operationId,
                 methodName,
                 responseClsName,
+                customExtractionFields,
                 tracingFields,
                 sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
                 parameters,
@@ -598,12 +611,16 @@ object DropwizardServerGenerator {
         RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
       }
 
-    override def getExtraRouteParams(tracing: Boolean): Target[List[Parameter]] =
-      if (tracing) {
-        Target.raiseUserError(s"Tracing is not yet supported by this framework")
-      } else {
-        Target.pure(List.empty)
-      }
+    override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
+      for {
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
+
+        tracing <- if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
+      } yield (customExtraction ::: tracing)
 
     override def generateResponseDefinitions(
         responseClsName: String,
@@ -665,7 +682,8 @@ object DropwizardServerGenerator {
         combinedRouteTerms: List[com.github.javaparser.ast.Node],
         extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        customExtraction: Boolean
     ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       safeParseSimpleName(className) >>
           safeParseSimpleName(handlerName) >>
@@ -675,7 +693,8 @@ object DropwizardServerGenerator {
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
         handlerDefinitions: List[com.github.javaparser.ast.Node],
-        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        customExtraction: Boolean
     ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
       sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)
