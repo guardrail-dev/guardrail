@@ -12,7 +12,6 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.syntax.Java._
-import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import scala.collection.JavaConverters._
@@ -23,9 +22,7 @@ import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, P
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
-import java.math.BigInteger
-import java.util.Locale
-import scala.util.Try
+import com.twilio.guardrail.generators.helpers.JacksonHelpers
 
 object JacksonGenerator {
   private val BUILDER_TYPE        = StaticJavaParser.parseClassOrInterfaceType("Builder")
@@ -348,64 +345,38 @@ object JacksonGenerator {
                 .collectFirst({ case (value, elem) if elem.name == clsName => value })
                 .getOrElse(clsName)
 
-              def parseLiteral(parser: String => Expression, friendlyName: String): Target[Expression] =
-                Try(parser(discriminatorValue)).fold(
-                  t => Target.raiseUserError[Expression](s"Unable to parse '$discriminatorValue' as '$friendlyName': ${t.getMessage}"),
-                  Target.pure[Expression]
-                )
-
-              val discriminatorValueExpr = term.rawType.tpe match {
-                case Some(tpe @ "string") =>
-                  term.rawType.format match {
-                    case Some("date") | Some("date-time") | Some("byte") | Some("binary") =>
-                      Target.raiseUserError[Expression](
-                        s"Unsupported discriminator type '$tpe' with format '${term.rawType.format.getOrElse("unknown")}' for property '${term.propertyName}'"
-                      )
-                    case _ => Target.pure[Expression](new StringLiteralExpr(discriminatorValue))
-                  }
-                case Some(tpe @ "boolean") => parseLiteral(x => new BooleanLiteralExpr(x.toBoolean), tpe)
-                case Some(tpe @ "integer") =>
-                  term.rawType.format match {
-                    case Some(fmt @ "int32") => parseLiteral(x => new IntegerLiteralExpr(x.toInt), fmt)
-                    case Some(fmt @ "int64") => parseLiteral(x => new LongLiteralExpr(x.toLong), fmt)
-                    case Some(fmt) =>
-                      Target.raiseUserError[Expression](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '${term.propertyName}'")
-                    case None =>
-                      parseLiteral(
-                        x => new ObjectCreationExpr(null, BIG_INTEGER_FQ_TYPE, new NodeList(new StringLiteralExpr(new BigInteger(x).toString))),
-                        "BigInteger"
-                      )
-                  }
-                case Some(tpe @ "number") =>
-                  term.rawType.format match {
-                    case Some(fmt @ "float")  => parseLiteral(x => new DoubleLiteralExpr(x.toFloat), fmt)
-                    case Some(fmt @ "double") => parseLiteral(x => new DoubleLiteralExpr(x.toDouble), fmt)
-                    case Some(fmt) =>
-                      Target.raiseUserError[Expression](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '${term.propertyName}'")
-                    case None =>
-                      parseLiteral(
-                        x => new ObjectCreationExpr(null, BIG_DECIMAL_FQ_TYPE, new NodeList(new StringLiteralExpr(new java.math.BigDecimal(x).toString))),
-                        "BigDecimal"
-                      )
-                  }
-                case Some(tpe) =>
-                  Target.raiseUserError[Expression](s"Unsupported discriminator type '$tpe' for property '${term.propertyName}'")
-                case None =>
-                  term.fieldType match {
-                    case cls: ClassOrInterfaceType =>
-                      // hopefully it's an enum type; nothing else really makes sense here
-                      Target.pure[Expression](new FieldAccessExpr(cls.getNameAsExpression, discriminatorValue.toSnakeCase.toUpperCase(Locale.US)))
-                    case tpe =>
-                      Target.raiseUserError[Expression](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
-                  }
-              }
-
-              discriminatorValueExpr.map((term.propertyName, _))
+              JacksonHelpers
+                .discriminatorExpression[JavaLanguage](
+                  discriminator.propertyName,
+                  discriminatorValue,
+                  term.rawType.tpe,
+                  term.rawType.format
+                )(
+                  v => Target.pure[Node](new ObjectCreationExpr(null, BIG_INTEGER_FQ_TYPE, new NodeList(new StringLiteralExpr(v)))),
+                  v => Target.pure[Node](new ObjectCreationExpr(null, BIG_DECIMAL_FQ_TYPE, new NodeList(new StringLiteralExpr(v)))),
+                  v =>
+                    term.fieldType match {
+                      case cls: ClassOrInterfaceType =>
+                        // hopefully it's an enum type; nothing else really makes sense here
+                        JavaGenerator.JavaInterp.formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
+                      case tpe =>
+                        Target.raiseUserError[Node](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
+                    }
+                )(JavaGenerator.JavaInterp)
+                .flatMap[Expression]({
+                  case expr: Expression => Target.pure(expr)
+                  case node =>
+                    Target.raiseError(
+                      RuntimeFailure(s"BUG: JacksonHelpers.discriminatorExpression() returned a ${node.getClass.getSimpleName} when we need an Expression")
+                    )
+                })
+                .map((term.propertyName, _))
           })
           .map(_.toMap)
       } yield {
         val params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(
-                param => discriminatorNames.contains(param.term.getName.getIdentifier) || parentParamNames.contains(param.term.getName.getIdentifier)
+                param =>
+                  discriminatorNames.contains(param.term.getName.getIdentifier) || parentParamNames.map(_.value).contains(param.term.getName.getIdentifier)
               )
         val (requiredTerms, optionalTerms) = sortParams(params)
         val terms                          = requiredTerms ++ optionalTerms
