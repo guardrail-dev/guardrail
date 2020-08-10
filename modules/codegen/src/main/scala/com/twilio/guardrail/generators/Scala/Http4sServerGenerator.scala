@@ -123,11 +123,11 @@ object Http4sServerGenerator {
         resourceName: String,
         handlerName: String,
         annotations: List[scala.meta.Mod.Annot],
-        combinedRouteTerms: List[scala.meta.Term],
+        combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
         supportDefinitions: List[scala.meta.Defn]
-    ) =
+    ): Target[List[Defn]] =
       Target.log.function("renderClass")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         routesParams = List(param"handler: ${Type.Name(handlerName)}[F]")

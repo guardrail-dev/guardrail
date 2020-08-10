@@ -352,8 +352,8 @@ object JavaGenerator {
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],
         protocolImports: List[com.github.javaparser.ast.ImportDeclaration],
-        packageObjectContents: List[com.github.javaparser.ast.stmt.Statement],
-        extraTypes: List[com.github.javaparser.ast.stmt.Statement]
+        packageObjectContents: List[com.github.javaparser.ast.Node],
+        extraTypes: List[com.github.javaparser.ast.Node]
     ): Target[Option[WriteTree]] =
       for {
         pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
@@ -380,7 +380,7 @@ object JavaGenerator {
         imports: List[com.github.javaparser.ast.ImportDeclaration],
         protoImplicitName: Option[com.github.javaparser.ast.expr.Name],
         elem: StrictProtocolElems[JavaLanguage]
-    ): Target[(List[WriteTree], List[com.github.javaparser.ast.stmt.Statement])] =
+    ): Target[(List[WriteTree], List[com.github.javaparser.ast.Node])] =
       for {
         pkgDecl      <- buildPkgDecl(dtoComponents)
         showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))

@@ -38,7 +38,7 @@ abstract class ServerTerms[L <: LA, F[_]] {
       resourceName: String,
       handlerName: String,
       annotations: List[L#Annotation],
-      combinedRouteTerms: List[L#Term],
+      combinedRouteTerms: List[L#Statement],
       extraRouteParams: List[L#MethodParameter],
       responseDefinitions: List[L#Definition],
       supportDefinitions: List[L#Definition]
@@ -70,7 +70,7 @@ abstract class ServerTerms[L <: LA, F[_]] {
           String,
           String,
           List[L#Annotation],
-          List[L#Term],
+          List[L#Statement],
           List[L#MethodParameter],
           List[L#Definition],
           List[L#Definition]
@@ -98,11 +98,12 @@ abstract class ServerTerms[L <: LA, F[_]] {
         resourceName: String,
         handlerName: String,
         annotations: List[L#Annotation],
-        combinedRouteTerms: List[L#Term],
+        combinedRouteTerms: List[L#Statement],
         extraRouteParams: List[L#MethodParameter],
         responseDefinitions: List[L#Definition],
         supportDefinitions: List[L#Definition]
-    ) = newRenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
+    ): F[List[L#Definition]] =
+      newRenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
     def renderHandler(
         handlerName: String,
         methodSigs: List[L#MethodDeclaration],

@@ -2,12 +2,12 @@ package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.Operation
 import cats.Monad
-import com.twilio.guardrail.{ StrictProtocolElems, Target }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.SecurityScheme
+import com.twilio.guardrail.{ StrictProtocolElems, Target }
 
 object EndpointsServerGenerator {
   object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
@@ -44,7 +44,7 @@ object EndpointsServerGenerator {
         resourceName: String,
         handlerName: String,
         annotations: List[scala.meta.Mod.Annot],
-        combinedRouteTerms: List[scala.meta.Term],
+        combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
         supportDefinitions: List[scala.meta.Defn]

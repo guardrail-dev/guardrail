@@ -13,7 +13,7 @@ case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[S
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
 case class TracingField[L <: LA](param: LanguageParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
-    routes: List[L#Term],
+    routes: List[L#Statement],
     classAnnotations: List[L#Annotation],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],

@@ -186,11 +186,11 @@ object AkkaHttpServerGenerator {
         resourceName: String,
         handlerName: String,
         annotations: List[scala.meta.Mod.Annot],
-        combinedRouteTerms: List[scala.meta.Term],
+        combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
         supportDefinitions: List[scala.meta.Defn]
-    ) =
+    ): Target[List[Defn]] =
       for {
         _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
         routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
