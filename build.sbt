@@ -49,7 +49,7 @@ val exampleFrameworkSuites = Map(
     ExampleFramework("akka-http", "akkaHttp"),
     ExampleFramework("endpoints", "endpoints", List("client")),
     ExampleFramework("http4s", "http4s"),
-    ExampleFramework("akka-http-jackson", "akkaHttpJackson", modules = List("akka-http", "jackson")),
+    ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
   ),
   "java" -> List(
     ExampleFramework("dropwizard", "dropwizard"),
