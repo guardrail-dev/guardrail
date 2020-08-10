@@ -68,13 +68,13 @@ def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/
 val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
   ExampleCase(sampleResource("alias.yaml"), "alias"),
-  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks(Set("dropwizard")),
-  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks(Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks("java" -> Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks("java"-> Set("dropwizard")),
   ExampleCase(sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain"),
   ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
   ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
   ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
-  ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks(Set("dropwizard")),
+  ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks("java" -> Set("dropwizard")),
   ExampleCase(sampleResource("formData.yaml"), "form"),
   ExampleCase(sampleResource("issues/issue45.yaml"), "issues.issue45"),
   ExampleCase(sampleResource("issues/issue121.yaml"), "issues.issue121"),
@@ -130,10 +130,10 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
-  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks(Set("dropwizard", "http4s")),
-  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks(Set("dropwizard", "http4s")),
+  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s")),
+  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
-  ExampleCase(sampleResource("base64.yaml"), "base64").frameworks(scalaFrameworks.toSet),
+  ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.toSet),
 )
 
 def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
@@ -142,7 +142,7 @@ def exampleArgs(language: String, framework: Option[String] = None): List[List[S
       acc ++ (for {
         frameworkSuite <- exampleFrameworkSuites(language).filter(efs => framework.forall(_ == efs.name))
         ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
-        if onlyFrameworks.forall(_.contains(frameworkName))
+        if onlyFrameworks.forall(_.exists({ case (onlyLanguage, onlyFrameworks) => onlyLanguage == language && onlyFrameworks.contains(frameworkName) }))
         kind <- kinds
         filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
       } yield
