@@ -15,6 +15,7 @@ import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefini
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.LanguageParameter
+import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -63,32 +64,6 @@ object DropwizardServerGenerator {
   private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalTimeParam")
   private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
   private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
-
-  private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
-  private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
-
-  private def findPathPrefix(routePaths: List[String]): List[String] = {
-    def getHeads(sss: List[List[String]]): (List[Option[String]], List[List[String]]) =
-      (sss.map(_.headOption), sss.map(_.drop(1)))
-
-    def checkMatch(matching: List[String], headsToCheck: List[Option[String]], restOfHeads: List[List[String]]): List[String] =
-      headsToCheck match {
-        case Nil => matching
-        case x :: xs =>
-          x.fold(matching) { first =>
-            if (xs.forall(_.contains(first))) {
-              val (nextHeads, nextRest) = getHeads(restOfHeads)
-              checkMatch(matching :+ first, nextHeads, nextRest)
-            } else {
-              matching
-            }
-          }
-      }
-
-    val splitRoutePaths             = routePaths.map(splitPathComponents)
-    val (initialHeads, initialRest) = getHeads(splitRoutePaths)
-    checkMatch(List.empty, initialHeads, initialRest)
-  }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
     Target.log.function("generateResponseSuperClass") {
@@ -296,7 +271,7 @@ object DropwizardServerGenerator {
               }
 
               val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-              val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
+              val consumes    = getBestConsumes(operation, allConsumes, parameters)
               consumes
                 .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                 .foreach(method.addAnnotation)
@@ -305,7 +280,7 @@ object DropwizardServerGenerator {
               NonEmptyList
                 .fromList(
                   responses.value
-                    .flatMap(DropwizardHelpers.getBestProduces(operationId, allProduces, _))
+                    .flatMap(getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
                     .distinct
                     .map(_.toJaxRsAnnotationName)
                 )
