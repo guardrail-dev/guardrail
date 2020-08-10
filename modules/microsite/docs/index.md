@@ -12,6 +12,7 @@ guardrail is a code generation tool, capable of reading from OpenAPI/Swagger spe
 Getting started:
 - Scala
   - [akka-http](scala/akka-http)
+  - [akka-http-jackson](scala/akka-http-jackson)
   - [http4s](scala/http4s)
 - ScalaJS
   - [endpoints](scalajs/endpoints)
