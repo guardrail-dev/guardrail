@@ -91,6 +91,16 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     Http4sGenerator.FrameworkInterp
   )
 
+  def dropwizard: (
+      ClientTerms[ScalaLanguage, Target],
+      ServerTerms[ScalaLanguage, Target],
+      FrameworkTerms[ScalaLanguage, Target]
+  ) = (
+    DropwizardClientGenerator.ClientTermInterp,
+    DropwizardServerGenerator.ServerTermInterp,
+    DropwizardGenerator.FrameworkInterp
+  )
+
   def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] =
     (for {
       (modelGeneratorType, (protocol, model, enum, array, poly)) <- popModule(
@@ -104,7 +114,8 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         "framework",
         ("akka-http", akkaHttp(modelGeneratorType)),
         ("http4s", http4s),
-        ("endpoints", endpoints(modelGeneratorType))
+        ("endpoints", endpoints(modelGeneratorType)),
+        ("dropwizard", dropwizard)
       )
       // parser             =  or interpFramework
       // codegenApplication = ScalaGenerator.ScalaInterp or parser

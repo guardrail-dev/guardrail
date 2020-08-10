@@ -24,6 +24,7 @@ val javaparserVersion      = "3.16.1"
 val endpointsVersion       = "0.8.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.24"
+val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
@@ -50,6 +51,7 @@ val exampleFrameworkSuites = Map(
     ExampleFramework("endpoints", "endpoints", List("client")),
     ExampleFramework("http4s", "http4s"),
     ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
+    ExampleFramework("dropwizard", "dropwizardScala", List("server")),
   ),
   "java" -> List(
     ExampleFramework("dropwizard", "dropwizard"),
@@ -68,8 +70,8 @@ def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/
 val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
   ExampleCase(sampleResource("alias.yaml"), "alias"),
-  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks("java" -> Set("dropwizard")),
-  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks("java"-> Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks("java" -> Set("dropwizard"), "scala" -> Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks("java"-> Set("dropwizard"), "scala" -> Set("dropwizard")),
   ExampleCase(sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain"),
   ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
   ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
@@ -130,7 +132,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
-  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s")),
+  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s", "dropwizard")),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
   ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.toSet),
@@ -278,6 +280,7 @@ lazy val allDeps = (project in file("modules/alldeps"))
     libraryDependencies ++= http4sProjectDependencies,
     libraryDependencies ++= springProjectDependencies,
     libraryDependencies ++= dropwizardProjectDependencies,
+    libraryDependencies ++= dropwizardScalaProjectDependencies,
   )
 
 lazy val codegen = (project in file("modules/codegen"))
@@ -383,6 +386,24 @@ val dropwizardProjectDependencies = Seq(
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
 )
 
+val dropwizardScalaProjectDependencies = Seq(
+  "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
+  "io.dropwizard"                  %  "dropwizard-core"         % dropwizardVersion,
+  "io.dropwizard"                  %  "dropwizard-forms"        % dropwizardVersion,
+  "com.datasift.dropwizard.scala"  %% "dropwizard-scala-core"   % dropwizardScalaVersion,
+  "com.fasterxml.jackson.datatype" %  "jackson-datatype-jsr310" % jacksonVersion,
+  "com.fasterxml.jackson.module"   %% "jackson-module-scala"    % jacksonVersion,
+  "org.typelevel"                  %% "cats-core"               % catsVersion,
+  "org.scala-lang.modules"         %% "scala-java8-compat"      % "0.9.1"            % Test,
+  "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
+  "junit"                          %  "junit"                   % "4.13"             % Test,
+  "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
+  "org.mockito"                    %% "mockito-scala-scalatest" % "1.14.8"           % Test,
+  "com.github.tomakehurst"         %  "wiremock"                % "1.58"             % Test,
+  "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
+  "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
+)
+
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "javax.validation"           %  "validation-api"           % "1.1.0.Final",
@@ -405,6 +426,8 @@ def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.libraryma
 lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies)
 
 lazy val akkaHttpJacksonSample = buildSampleProject("akkaHttpJackson", akkaJacksonProjectDependencies)
+
+lazy val dropwizardScalaSample = buildSampleProject("dropwizardScala", dropwizardScalaProjectDependencies)
 
 lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
 
