@@ -354,7 +354,7 @@ object ProtocolGenerator {
         supportPackage,
         defaultPropertyRequirement
       )
-      defn        <- renderDTOClass(clsName.last, params, parents)
+      defn        <- renderDTOClass(clsName.last, supportPackage, params, parents)
       encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
       decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
       tpe         <- parseTypeName(clsName.last)

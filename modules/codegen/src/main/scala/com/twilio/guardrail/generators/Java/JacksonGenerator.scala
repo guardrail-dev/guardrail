@@ -312,6 +312,7 @@ object JacksonGenerator {
 
     def renderDTOClass(
         clsName: String,
+        supportPackage: List[String],
         selfParams: List[ProtocolParameter[JavaLanguage]],
         parents: List[SuperClass[JavaLanguage]]
     ) = {

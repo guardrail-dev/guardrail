@@ -216,6 +216,7 @@ object CirceProtocolGenerator {
 
     def renderDTOClass(
         clsName: String,
+        supportPackage: List[String],
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
     ) = {
