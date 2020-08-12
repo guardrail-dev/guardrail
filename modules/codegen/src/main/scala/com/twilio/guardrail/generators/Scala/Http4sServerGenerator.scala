@@ -141,7 +141,7 @@ object Http4sServerGenerator {
         }
       """ +: responseDefinitions)
 
-    def getExtraImports(tracing: Boolean) =
+    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       Target.log.function("getExtraImports")(
         for {
           _ <- Target.log.debug(s"Args: ${tracing}")

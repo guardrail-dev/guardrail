@@ -198,7 +198,7 @@ object DropwizardServerGenerator {
 
   object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    override def getExtraImports(tracing: Boolean): Target[List[ImportDeclaration]] =
+    override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
       List(
         "javax.inject.Inject",
         "javax.validation.constraints.NotNull",

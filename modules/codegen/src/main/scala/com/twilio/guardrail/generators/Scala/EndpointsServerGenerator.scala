@@ -50,7 +50,7 @@ object EndpointsServerGenerator {
         supportDefinitions: List[scala.meta.Defn]
     ) =
       Target.raiseUserError("endpoints server generation is not currently supported")
-    def getExtraImports(tracing: Boolean) =
+    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       Target.raiseUserError("endpoints server generation is not currently supported")
   }
 }

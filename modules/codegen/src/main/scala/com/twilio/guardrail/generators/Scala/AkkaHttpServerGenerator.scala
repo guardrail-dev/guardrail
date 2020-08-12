@@ -207,7 +207,7 @@ object AkkaHttpServerGenerator {
           }
         """)
       }
-    def getExtraImports(tracing: Boolean) =
+    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       for {
         _ <- Target.log.debug(s"getExtraImports(${tracing})")
       } yield {
