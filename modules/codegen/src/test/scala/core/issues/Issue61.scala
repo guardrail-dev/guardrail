@@ -29,7 +29,7 @@ class Issue61 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate plain array alias definition") {
     val (
-      ProtocolDefinitions(RandomType(_, tpe) :: _ :: Nil, _, _, _),
+      ProtocolDefinitions(RandomType(_, tpe) :: _ :: Nil, _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -39,7 +39,7 @@ class Issue61 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate primitive type aliases") {
     val (
-      ProtocolDefinitions(_ :: RandomType(_, tpe) :: Nil, _, _, _),
+      ProtocolDefinitions(_ :: RandomType(_, tpe) :: Nil, _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)

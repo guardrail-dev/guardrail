@@ -277,7 +277,7 @@ object SpringMvcServerGenerator {
 
   object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def getExtraImports(tracing: Boolean) =
+    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       List(
         "java.util.Optional",
         "java.util.concurrent.CompletionStage",
@@ -724,7 +724,7 @@ object SpringMvcServerGenerator {
     def renderHandler(
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
-        handlerDefinitions: List[com.github.javaparser.ast.stmt.Statement],
+        handlerDefinitions: List[com.github.javaparser.ast.Node],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
     ) = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)

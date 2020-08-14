@@ -55,8 +55,8 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         )
     )
 
-    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _) = proto
-    val CodegenDefinitions(Nil, Nil, Nil, None)                                  = codegen
+    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _, _) = proto
+    val CodegenDefinitions(Nil, Nil, Nil, None)                                     = codegen
 
     val definition = q"""
       case class Blix(map: String)

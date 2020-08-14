@@ -38,7 +38,7 @@ abstract class ServerTerms[L <: LA, F[_]] {
       resourceName: String,
       handlerName: String,
       annotations: List[L#Annotation],
-      combinedRouteTerms: List[L#Term],
+      combinedRouteTerms: List[L#Statement],
       extraRouteParams: List[L#MethodParameter],
       responseDefinitions: List[L#Definition],
       supportDefinitions: List[L#Definition]
@@ -49,7 +49,7 @@ abstract class ServerTerms[L <: LA, F[_]] {
       handlerDefinitions: List[L#Statement],
       responseDefinitions: List[L#Definition]
   ): F[L#Definition]
-  def getExtraImports(tracing: Boolean): F[List[L#Import]]
+  def getExtraImports(tracing: Boolean, supportPackage: List[String]): F[List[L#Import]]
 
   def copy(
       newMonadF: Monad[F] = MonadF,
@@ -70,13 +70,13 @@ abstract class ServerTerms[L <: LA, F[_]] {
           String,
           String,
           List[L#Annotation],
-          List[L#Term],
+          List[L#Statement],
           List[L#MethodParameter],
           List[L#Definition],
           List[L#Definition]
       ) => F[List[L#Definition]] = renderClass _,
       newRenderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition]) => F[L#Definition] = renderHandler _,
-      newGetExtraImports: Boolean => F[List[L#Import]] = getExtraImports _
+      newGetExtraImports: (Boolean, List[String]) => F[List[L#Import]] = getExtraImports _
   ) = new ServerTerms[L, F] {
     def MonadF = newMonadF
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
@@ -98,17 +98,18 @@ abstract class ServerTerms[L <: LA, F[_]] {
         resourceName: String,
         handlerName: String,
         annotations: List[L#Annotation],
-        combinedRouteTerms: List[L#Term],
+        combinedRouteTerms: List[L#Statement],
         extraRouteParams: List[L#MethodParameter],
         responseDefinitions: List[L#Definition],
         supportDefinitions: List[L#Definition]
-    ) = newRenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
+    ): F[List[L#Definition]] =
+      newRenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions)
     def renderHandler(
         handlerName: String,
         methodSigs: List[L#MethodDeclaration],
         handlerDefinitions: List[L#Statement],
         responseDefinitions: List[L#Definition]
-    )                                     = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)
-    def getExtraImports(tracing: Boolean) = newGetExtraImports(tracing)
+    )                                                                   = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions)
+    def getExtraImports(tracing: Boolean, supportPackage: List[String]) = newGetExtraImports(tracing, supportPackage)
   }
 }

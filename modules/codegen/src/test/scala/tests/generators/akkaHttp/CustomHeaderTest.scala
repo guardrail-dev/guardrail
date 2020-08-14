@@ -61,7 +61,7 @@ class CustomHeaderTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         sealed abstract class GetFooResponse(val statusCode: StatusCode)
         case object GetFooResponseOK extends GetFooResponse(StatusCodes.OK)
         object GetFooResponse {
-          implicit val getFooResponseTRM: ToResponseMarshaller[GetFooResponse] = Marshaller { implicit ec =>
+          implicit def getFooResponseTRM: ToResponseMarshaller[GetFooResponse] = Marshaller { implicit ec =>
             resp => getFooResponseTR(resp)
           }
           implicit def getFooResponseTR(value: GetFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {

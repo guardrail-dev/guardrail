@@ -2,12 +2,11 @@ package com.twilio.guardrail
 package terms
 
 import cats.Monad
+import cats.data.NonEmptyList
 import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
-
-import cats.data.NonEmptyList
 
 abstract class LanguageTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
@@ -91,6 +90,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       pkgPath: Path,
       pkgName: List[String],
       frameworkImports: List[L#Import],
+      frameworkImplicitImportNames: List[L#TermName],
       jsonImports: List[L#Import],
       frameworkImplicits: L#ObjectDefinition,
       frameworkImplicitName: L#TermName
@@ -105,6 +105,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def writePackageObject(
       dtoPackagePath: Path,
+      pkgComponents: List[String],
       dtoComponents: Option[NonEmptyList[String]],
       customImports: List[L#Import],
       packageObjectImports: List[L#Import],
@@ -118,13 +119,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       definitions: List[String],
       dtoComponents: List[String],
       imports: List[L#Import],
+      protoImplicitName: Option[L#TermName],
       elem: StrictProtocolElems[L]
   ): F[(List[WriteTree], List[L#Statement])]
   def writeClient(
       pkgPath: Path,
       pkgName: List[String],
       customImports: List[L#Import],
-      frameworkImplicitName: Option[L#TermName],
+      frameworkImplicitNames: List[L#TermName],
       dtoComponents: Option[List[String]],
       client: Client[L]
   ): F[List[WriteTree]]
@@ -132,7 +134,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       pkgPath: Path,
       pkgName: List[String],
       customImports: List[L#Import],
-      frameworkImplicitName: Option[L#TermName],
+      frameworkImplicitNames: List[L#TermName],
       dtoComponents: Option[List[String]],
       server: Server[L]
   ): F[List[WriteTree]]
@@ -200,11 +202,12 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newFindCommonDefaultValue: (String, Option[L#Term], Option[L#Term]) => F[Option[L#Term]] = findCommonDefaultValue _,
       newFindCommonRawType: (String, RawParameterType, RawParameterType) => F[RawParameterType] = findCommonRawType _,
       newRenderImplicits: (Path, List[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
-      newRenderFrameworkImplicits: (Path, List[String], List[L#Import], List[L#Import], L#ObjectDefinition, L#TermName) => F[WriteTree] =
+      newRenderFrameworkImplicits: (Path, List[String], List[L#Import], List[L#TermName], List[L#Import], L#ObjectDefinition, L#TermName) => F[WriteTree] =
         renderFrameworkImplicits _,
       newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
+          List[String],
           Option[NonEmptyList[String]],
           List[L#Import],
           List[L#Import],
@@ -218,10 +221,11 @@ abstract class LanguageTerms[L <: LA, F[_]] {
           List[String],
           List[String],
           List[L#Import],
+          Option[L#TermName],
           StrictProtocolElems[L]
       ) => F[(List[WriteTree], List[L#Statement])] = writeProtocolDefinition _,
-      newWriteClient: (Path, List[String], List[L#Import], Option[L#TermName], Option[List[String]], Client[L]) => F[List[WriteTree]] = writeClient _,
-      newWriteServer: (Path, List[String], List[L#Import], Option[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
+      newWriteClient: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Client[L]) => F[List[WriteTree]] = writeClient _,
+      newWriteServer: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
       newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = wrapToObject _
   ) = new LanguageTerms[L, F] {
     def MonadF                                                   = newMonadF
@@ -290,10 +294,11 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[L#Import],
+        frameworkImplicitImportNames: List[L#TermName],
         jsonImports: List[L#Import],
         frameworkImplicits: L#ObjectDefinition,
         frameworkImplicitName: L#TermName
-    ) = newRenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, jsonImports, frameworkImplicits, frameworkImplicitName)
+    ) = newRenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, frameworkImplicitImportNames, jsonImports, frameworkImplicits, frameworkImplicitName)
     def renderFrameworkDefinitions(
         pkgPath: Path,
         pkgName: List[String],
@@ -303,37 +308,49 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     ) = newRenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
     def writePackageObject(
         dtoPackagePath: Path,
+        pkgComponents: List[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[L#Import],
         packageObjectImports: List[L#Import],
         protocolImports: List[L#Import],
         packageObjectContents: List[L#Statement],
         extraTypes: List[L#Statement]
-    ) = newWritePackageObject(dtoPackagePath, dtoComponents, customImports, packageObjectImports, protocolImports, packageObjectContents, extraTypes)
+    ) =
+      newWritePackageObject(
+        dtoPackagePath,
+        pkgComponents,
+        dtoComponents,
+        customImports,
+        packageObjectImports,
+        protocolImports,
+        packageObjectContents,
+        extraTypes
+      )
     def writeProtocolDefinition(
         outputPath: Path,
         pkgName: List[String],
         definitions: List[String],
         dtoComponents: List[String],
         imports: List[L#Import],
+        protoImplicitName: Option[L#TermName],
         elem: StrictProtocolElems[L]
-    ) = newWriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, elem)
+    ) = newWriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, protoImplicitName, elem)
     def writeClient(
         pkgPath: Path,
         pkgName: List[String],
         customImports: List[L#Import],
-        frameworkImplicitName: Option[L#TermName],
+        frameworkImplicitNames: List[L#TermName],
         dtoComponents: Option[List[String]],
         client: Client[L]
-    ) = newWriteClient(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, client)
+    ) = newWriteClient(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, client)
     def writeServer(
         pkgPath: Path,
         pkgName: List[String],
         customImports: List[L#Import],
-        frameworkImplicitName: Option[L#TermName],
+        frameworkImplicitNames: List[L#TermName],
         dtoComponents: Option[List[String]],
         server: Server[L]
-    )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitName, dtoComponents, server)
+    )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, server)
     def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)
   }
 }

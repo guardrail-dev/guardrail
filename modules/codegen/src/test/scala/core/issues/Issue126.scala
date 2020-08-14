@@ -44,7 +44,7 @@ class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         sealed abstract class GetRootResponse(val statusCode: StatusCode)
         case object GetRootResponseOK extends GetRootResponse(StatusCodes.OK)
         object GetRootResponse {
-          implicit val getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
+          implicit def getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
             resp => getRootResponseTR(resp)
           }
           implicit def getRootResponseTR(value: GetRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
