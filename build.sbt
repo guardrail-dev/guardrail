@@ -364,6 +364,7 @@ val dropwizardProjectDependencies = Seq(
 
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
+  "javax.validation"           %  "validation-api"           % "1.1.0.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
   "org.mockito"                %% "mockito-scala"            % "1.14.8"           % Test,
