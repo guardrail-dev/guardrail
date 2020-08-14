@@ -1,17 +1,20 @@
 package com.twilio.guardrail.generators.Scala
 
 import com.twilio.guardrail.Target
-import com.twilio.guardrail.circe.CirceVersion
-import com.twilio.guardrail.terms.framework._
-
-import scala.meta._
+import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.terms.framework._
+import scala.meta._
 
 object AkkaHttpGenerator {
-  class FrameworkInterp(circeVersion: CirceVersion) extends FrameworkTerms[ScalaLanguage, Target] {
-    implicit def MonadF                    = Target.targetInstances
-    def fileType(format: Option[String])   = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
-    def objectType(format: Option[String]) = Target.pure(t"io.circe.Json")
+  class FrameworkInterp(modelGeneratorType: ModelGeneratorType) extends FrameworkTerms[ScalaLanguage, Target] {
+    implicit def MonadF                  = Target.targetInstances
+    def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
+    def objectType(format: Option[String]) =
+      Target.pure(modelGeneratorType match {
+        case _: CirceModelGenerator => t"io.circe.Json"
+        case JacksonModelGenerator  => t"com.fasterxml.jackson.databind.JsonNode"
+      })
 
     def getFrameworkImports(tracing: Boolean) =
       Target.pure(
@@ -26,7 +29,6 @@ object AkkaHttpGenerator {
           q"import akka.stream.{IOResult, Materializer}",
           q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
           q"import akka.util.ByteString",
-          q"import io.circe.Decoder",
           q"import cats.{Functor, Id}",
           q"import cats.data.EitherT",
           q"import cats.implicits._",
@@ -37,14 +39,18 @@ object AkkaHttpGenerator {
           q"import java.security.MessageDigest",
           q"import java.util.concurrent.atomic.AtomicReference",
           q"import scala.util.{Failure, Success}"
-        )
+        ) ++ (modelGeneratorType match {
+              case _: CirceModelGenerator => List(q"import io.circe.Decoder")
+              case JacksonModelGenerator  => List()
+            })
       )
 
     def getFrameworkImplicits() = {
-      val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
-      val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
-      val jsonType: Type             = t"io.circe.Json"
-      val defn                       = q"""
+      val protocolImplicits = modelGeneratorType match {
+        case circe: CirceModelGenerator => circeImplicits(circe)
+        case JacksonModelGenerator      => jacksonImplicits
+      }
+      val defn = q"""
           object AkkaHttpImplicits {
             private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
@@ -69,81 +75,6 @@ object AkkaHttpGenerator {
               val empty: IgnoredEntity = new IgnoredEntity {}
             }
 
-            // Translate Json => HttpEntity
-            implicit final def jsonMarshaller(
-                implicit printer: Printer = Printer.noSpaces
-            ): ToEntityMarshaller[${jsonType}] =
-              Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
-                HttpEntity(MediaTypes.`application/json`, ${Term.Select(q"printer", circeVersion.print)}(json))
-              }
-
-            // Translate [A: Encoder] => HttpEntity
-            implicit final def jsonEntityMarshaller[A](
-                implicit J: ${jsonEncoderTypeclass}[A],
-                         printer: Printer = Printer.noSpaces
-            ): ToEntityMarshaller[A] =
-              jsonMarshaller(printer).compose(J.apply)
-
-            // Translate HttpEntity => Json (for `text/plain`)
-            final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
-              Unmarshaller.byteStringUnmarshaller
-                .forContentTypes(MediaTypes.`text/plain`)
-                .map({
-                  case ByteString.empty =>
-                    throw Unmarshaller.NoContentException
-                  case data =>
-                    Json.fromString(data.decodeString("utf-8"))
-                })
-
-            // Translate HttpEntity => Json (for `text/plain`, relying on the Decoder to reject incorrect types.
-            //   This permits not having to manually construct ToStringMarshaller/FromStringUnmarshallers.
-            //   This is definitely lazy, but lets us save a lot of scalar parsers as circe decoders are fairly common.)
-            final val sneakyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
-              Unmarshaller.byteStringUnmarshaller
-                .forContentTypes(MediaTypes.`text/plain`)
-                .flatMapWithInput { (httpEntity, byteString) =>
-                  if (byteString.isEmpty) {
-                    FastFuture.failed(Unmarshaller.NoContentException)
-                  } else {
-                    val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
-                      case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
-                      case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
-                    }
-                    parseResult.fold(FastFuture.failed, FastFuture.successful)
-                  }
-                }
-
-            final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
-              Unmarshaller.strict(value => Json.fromString(value))
-
-            // Translate HttpEntity => Json (for `application/json`)
-            implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
-              Unmarshaller.byteStringUnmarshaller
-                .forContentTypes(MediaTypes.`application/json`)
-                .flatMapWithInput { (httpEntity, byteString) =>
-                  if (byteString.isEmpty) {
-                    FastFuture.failed(Unmarshaller.NoContentException)
-                  } else {
-                    val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
-                      case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
-                      case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
-                    }
-                    parseResult.fold(FastFuture.failed, FastFuture.successful)
-                  }
-                }
-
-            // Translate HttpEntity => [A: Decoder] (for `application/json` or `text/plain`)
-            implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
-              Unmarshaller.firstOf(structuredJsonEntityUnmarshaller, stringyJsonEntityUnmarshaller)
-                .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
-            }
-
-            def unmarshallJson[A](implicit J: ${jsonDecoderTypeclass}[A]): Unmarshaller[${jsonType}, A] =
-              Unmarshaller { _ => value =>
-                J.decodeJson(value)
-                  .fold(FastFuture.failed, FastFuture.successful)
-              }
-
             // Translate String => Json (by either successfully parsing or string literalizing (Dangerous!))
             final val contentRequiredUnmarshaller: FromStringUnmarshaller[String] = Unmarshaller.strict {
               case "" =>
@@ -151,23 +82,6 @@ object AkkaHttpGenerator {
               case data =>
                 data
             }
-
-            // Translate String => Json by parsing
-            final val jsonParsingUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller {
-              _ => data => jawn.parse(data).fold(FastFuture.failed, FastFuture.successful)
-            }
-
-            // Translate String => Json by treaing as a JSON literal
-            final val jsonStringyUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
-              case data =>
-                Json.fromString(data)
-            }
-
-            // Translate String => [A: Decoder]
-            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): Unmarshaller[${jsonType}, A] =
-              Unmarshaller { _ => json =>
-                J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful)
-              }
 
             implicit val ignoredUnmarshaller: FromEntityUnmarshaller[IgnoredEntity] =
               Unmarshaller.strict(_ => IgnoredEntity.empty)
@@ -206,9 +120,240 @@ object AkkaHttpGenerator {
                 Directive.Empty
               }
             }
+
+            ..$protocolImplicits
           }
         """
       Target.pure(Some((q"AkkaHttpImplicits", defn)))
+    }
+
+    private def circeImplicits(circeVersion: CirceModelGenerator): List[Defn] = {
+      val jsonEncoderTypeclass: Type = t"io.circe.Encoder"
+      val jsonDecoderTypeclass: Type = t"io.circe.Decoder"
+      val jsonType: Type             = t"io.circe.Json"
+      List(
+        q"""
+            // Translate Json => HttpEntity
+            implicit final def jsonMarshaller(
+                implicit printer: Printer = Printer.noSpaces
+            ): ToEntityMarshaller[${jsonType}] =
+              Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
+                HttpEntity(MediaTypes.`application/json`, ${Term.Select(q"printer", circeVersion.print)}(json))
+              }
+         """,
+        q"""
+            // Translate [A: Encoder] => HttpEntity
+            implicit final def jsonEntityMarshaller[A](
+                implicit J: ${jsonEncoderTypeclass}[A],
+                         printer: Printer = Printer.noSpaces
+            ): ToEntityMarshaller[A] =
+              jsonMarshaller(printer).compose(J.apply)
+         """,
+        q"""
+            // Translate HttpEntity => Json (for `text/plain`)
+            final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`text/plain`)
+                .map({
+                  case ByteString.empty =>
+                    throw Unmarshaller.NoContentException
+                  case data =>
+                    Json.fromString(data.decodeString("utf-8"))
+                })
+         """,
+        q"""
+            // Translate HttpEntity => Json (for `text/plain`, relying on the Decoder to reject incorrect types.
+            //   This permits not having to manually construct ToStringMarshaller/FromStringUnmarshallers.
+            //   This is definitely lazy, but lets us save a lot of scalar parsers as circe decoders are fairly common.)
+            final val sneakyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`text/plain`)
+                .flatMapWithInput { (httpEntity, byteString) =>
+                  if (byteString.isEmpty) {
+                    FastFuture.failed(Unmarshaller.NoContentException)
+                  } else {
+                    val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
+                      case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
+                      case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
+                    }
+                    parseResult.fold(FastFuture.failed, FastFuture.successful)
+                  }
+                }
+         """,
+        q"""
+            final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
+              Unmarshaller.strict(value => Json.fromString(value))
+         """,
+        q"""
+            // Translate HttpEntity => Json (for `application/json`)
+            implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`application/json`)
+                .flatMapWithInput { (httpEntity, byteString) =>
+                  if (byteString.isEmpty) {
+                    FastFuture.failed(Unmarshaller.NoContentException)
+                  } else {
+                    val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
+                      case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
+                      case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
+                    }
+                    parseResult.fold(FastFuture.failed, FastFuture.successful)
+                  }
+                }
+         """,
+        q"""
+            // Translate HttpEntity => [A: Decoder] (for `application/json` or `text/plain`)
+            implicit def jsonEntityUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): FromEntityUnmarshaller[A] = {
+              Unmarshaller.firstOf(structuredJsonEntityUnmarshaller, stringyJsonEntityUnmarshaller)
+                .flatMap(_ => _ => json => J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful))
+            }
+         """,
+        q"""
+            def unmarshallJson[A](implicit J: ${jsonDecoderTypeclass}[A]): Unmarshaller[${jsonType}, A] =
+              Unmarshaller { _ => value =>
+                J.decodeJson(value)
+                  .fold(FastFuture.failed, FastFuture.successful)
+              }
+         """,
+        q"""
+            // Translate String => Json by parsing
+            final val jsonParsingUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller {
+              _ => data => jawn.parse(data).fold(FastFuture.failed, FastFuture.successful)
+            }
+         """,
+        q"""
+            // Translate String => Json by treaing as a JSON literal
+            final val jsonStringyUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
+              case data =>
+                Json.fromString(data)
+            }
+         """,
+        q"""
+            // Translate String => [A: Decoder]
+            def jsonDecoderUnmarshaller[A](implicit J: ${jsonDecoderTypeclass}[A]): Unmarshaller[${jsonType}, A] =
+              Unmarshaller { _ => json =>
+                J.decodeJson(json).fold(FastFuture.failed, FastFuture.successful)
+              }
+         """
+      )
+    }
+
+    private def jacksonImplicits: List[Defn] = {
+      val jsonType: Type = t"com.fasterxml.jackson.databind.JsonNode"
+      List(
+        q"""
+            // Translate JsonNode => HttpEntity
+            implicit final def jsonMarshaller: ToEntityMarshaller[${jsonType}] =
+              Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
+                HttpEntity(MediaTypes.`application/json`, json.toString)
+              }
+         """,
+        q"""
+            // Translate [A: GuardrailEncoder] => HttpEntity
+            implicit final def jsonEntityMarshaller[A: GuardrailEncoder](
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper
+            ): ToEntityMarshaller[A] =
+              jsonMarshaller.compose(implicitly[GuardrailEncoder[A]].encode)
+         """,
+        q"""
+            // Translate HttpEntity => JsonNode (for `text/plain`)
+            final val stringyJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`text/plain`)
+                .map({
+                  case ByteString.empty =>
+                    throw Unmarshaller.NoContentException
+                  case data =>
+                    new com.fasterxml.jackson.databind.node.TextNode(data.decodeString("utf-8"))
+                })
+         """,
+        q"""
+            // Translate HttpEntity => JsonNode (for `text/plain`, relying on the Decoder to reject incorrect types.
+            //   This permits not having to manually construct ToStringMarshaller/FromStringUnmarshallers.
+            //   This is definitely lazy, but lets us save a lot of scalar parsers as circe decoders are fairly common.)
+            def sneakyJsonEntityUnmarshaller(
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper
+            ): FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`text/plain`)
+                .flatMapWithInput { (httpEntity, byteString) =>
+                  if (byteString.isEmpty) {
+                    FastFuture.failed(Unmarshaller.NoContentException)
+                  } else {
+                    val jsonStr = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
+                      case HttpCharsets.`UTF-8` => byteString.utf8String
+                      case otherCharset => byteString.decodeString(otherCharset.nioCharset.name)
+                    }
+                    FastFuture(scala.util.Try(mapper.readTree(jsonStr)))
+                  }
+                }
+         """,
+        q"""
+            final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
+              Unmarshaller.strict(value => new com.fasterxml.jackson.databind.node.TextNode(value))
+         """,
+        q"""
+            // Translate HttpEntity => JsonNode (for `application/json`)
+            implicit def structuredJsonEntityUnmarshaller(
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper
+            ): FromEntityUnmarshaller[${jsonType}] =
+              Unmarshaller.byteStringUnmarshaller
+                .forContentTypes(MediaTypes.`application/json`)
+                .flatMapWithInput { (httpEntity, byteString) =>
+                  if (byteString.isEmpty) {
+                    FastFuture.failed(Unmarshaller.NoContentException)
+                  } else {
+                    val jsonStr = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
+                      case HttpCharsets.`UTF-8` => byteString.utf8String
+                      case otherCharset => byteString.decodeString(otherCharset.nioCharset.name)
+                    }
+                    FastFuture(scala.util.Try(mapper.readTree(jsonStr)))
+                  }
+                }
+         """,
+        q"""
+            // Translate HttpEntity => [A: GuardrailDecoder] (for `application/json` or `text/plain`)
+            implicit def jsonEntityUnmarshaller[A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag](
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper,
+                validator: javax.validation.Validator
+            ): FromEntityUnmarshaller[A] = {
+              Unmarshaller.firstOf(structuredJsonEntityUnmarshaller, stringyJsonEntityUnmarshaller)
+                .flatMap(_ => _ => json => FastFuture(implicitly[GuardrailDecoder[A]].decode(json)))
+            }
+         """,
+        q"""
+            def unmarshallJson[A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag](
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper,
+                validator: javax.validation.Validator
+            ): Unmarshaller[${jsonType}, A] =
+              Unmarshaller { _ => value => FastFuture(implicitly[GuardrailDecoder[A]].decode(value)) }
+         """,
+        q"""
+            // Translate String => JsonNode by parsing
+            def jsonParsingUnmarshaller(
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper
+            ): FromStringUnmarshaller[${jsonType}] = Unmarshaller {
+              _ => data => FastFuture(scala.util.Try(mapper.readTree(data)))
+            }
+         """,
+        q"""
+            // Translate String => JsonNode by treaing as a JSON literal
+            final val jsonStringyUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
+              case data =>
+                new com.fasterxml.jackson.databind.node.TextNode(data)
+            }
+         """,
+        q"""
+            // Translate String => [A: GuardrailDecoder]
+            def jsonDecoderUnmarshaller[A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag](
+                implicit mapper: com.fasterxml.jackson.databind.ObjectMapper,
+                validator: javax.validation.Validator
+            ): Unmarshaller[${jsonType}, A] =
+              Unmarshaller { _ => json =>
+                FastFuture(implicitly[GuardrailDecoder[A]].decode(json))
+              }
+         """
+      )
     }
 
     def getFrameworkDefinitions(tracing: Boolean) =

@@ -12,6 +12,7 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
+import com.twilio.guardrail.generators.helpers.DropwizardHelpers
 import com.twilio.guardrail.generators.{ JavaGenerator, LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
@@ -484,7 +485,9 @@ object AsyncHttpClientClientGenerator {
         val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
         val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
         val produces =
-          responses.value.map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces(operation.get.getOperationId, allProduces, resp))).toMap
+          responses.value
+            .map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces[JavaLanguage](operation.get.getOperationId, allProduces, resp, _.isPlain)))
+            .toMap
 
         val builderMethodCalls: List[(LanguageParameter[JavaLanguage], Statement)] = builderParamsMethodNames
             .flatMap({

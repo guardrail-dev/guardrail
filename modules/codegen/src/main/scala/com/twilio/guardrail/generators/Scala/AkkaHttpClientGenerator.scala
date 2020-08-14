@@ -15,11 +15,12 @@ import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+import com.twilio.guardrail.generators.Scala.model.ModelGeneratorType
 import java.net.URI
 
 object AkkaHttpClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
+  class ClientTermInterp(modelGeneratorType: ModelGeneratorType) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
@@ -396,16 +397,17 @@ object AkkaHttpClientGenerator {
     def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
     def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
-      val ihc =
-        param"implicit httpClient: HttpRequest => Future[HttpResponse]"
-      val iec  = param"implicit ec: ExecutionContext"
-      val imat = param"implicit mat: Materializer"
+      val implicits = List(
+          param"implicit httpClient: HttpRequest => Future[HttpResponse]",
+          param"implicit ec: ExecutionContext",
+          param"implicit mat: Materializer"
+        ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
       Target.pure(
         List(
           List(formatHost(serverUrls)) ++ (if (tracing)
                                              Some(formatClientName(tracingName))
                                            else None),
-          List(ihc, iec, imat)
+          implicits
         )
       )
     }
@@ -434,8 +436,10 @@ object AkkaHttpClientGenerator {
           ctorCall: Term.New,
           tracing: Boolean
       ): List[Defn] = {
-        val iec  = param"implicit ec: ExecutionContext"
-        val imat = param"implicit mat: Materializer"
+        val implicits = List(
+            param"implicit ec: ExecutionContext",
+            param"implicit mat: Materializer"
+          ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
         val tracingParams: List[Term.Param] = if (tracing) {
           List(formatClientName(tracingName))
         } else {
@@ -444,7 +448,7 @@ object AkkaHttpClientGenerator {
 
         List(
           q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)($iec, $imat): $tpe = $ctorCall
+              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)(..$implicits): $tpe = $ctorCall
             """
         )
       }
@@ -531,7 +535,7 @@ object AkkaHttpClientGenerator {
         tpe  <- resp.value.map(_._1).toList
       } yield {
         for {
-          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces)
+          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
         } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
       }).sequence
   }

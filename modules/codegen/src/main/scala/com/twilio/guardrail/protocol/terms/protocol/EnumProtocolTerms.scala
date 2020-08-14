@@ -9,15 +9,15 @@ abstract class EnumProtocolTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
   def extractEnum(swagger: Schema[_]): F[Either[String, List[String]]]
   def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)]): F[Option[L#ObjectDefinition]]
-  def encodeEnum(clsName: String): F[Option[L#ValueDefinition]]
-  def decodeEnum(clsName: String): F[Option[L#ValueDefinition]]
+  def encodeEnum(clsName: String): F[Option[L#Definition]]
+  def decodeEnum(clsName: String): F[Option[L#Definition]]
   def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]): F[L#ClassDefinition]
   def renderStaticDefns(
       clsName: String,
       members: Option[L#ObjectDefinition],
       accessors: List[L#TermName],
-      encoder: Option[L#ValueDefinition],
-      decoder: Option[L#ValueDefinition]
+      encoder: Option[L#Definition],
+      decoder: Option[L#Definition]
   ): F[StaticDefns[L]]
   def buildAccessor(clsName: String, termName: String): F[L#TermSelect]
 
@@ -25,26 +25,26 @@ abstract class EnumProtocolTerms[L <: LA, F[_]] {
       newMonadF: Monad[F] = MonadF,
       newExtractEnum: Schema[_] => F[Either[String, List[String]]] = extractEnum _,
       newRenderMembers: (String, List[(String, L#TermName, L#TermSelect)]) => F[Option[L#ObjectDefinition]] = renderMembers _,
-      newEncodeEnum: String => F[Option[L#ValueDefinition]] = encodeEnum _,
-      newDecodeEnum: String => F[Option[L#ValueDefinition]] = decodeEnum _,
+      newEncodeEnum: String => F[Option[L#Definition]] = encodeEnum _,
+      newDecodeEnum: String => F[Option[L#Definition]] = decodeEnum _,
       newRenderClass: (String, L#Type, List[(String, L#TermName, L#TermSelect)]) => F[L#ClassDefinition] = renderClass _,
-      newRenderStaticDefns: (String, Option[L#ObjectDefinition], List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition]) => F[StaticDefns[L]] =
+      newRenderStaticDefns: (String, Option[L#ObjectDefinition], List[L#TermName], Option[L#Definition], Option[L#Definition]) => F[StaticDefns[L]] =
         renderStaticDefns _,
       newBuildAccessor: (String, String) => F[L#TermSelect] = buildAccessor _
   ) = new EnumProtocolTerms[L, F] {
     def MonadF                                                                                     = newMonadF
     def extractEnum(swagger: Schema[_])                                                            = newExtractEnum(swagger)
     def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)])            = newRenderMembers(clsName, elems)
-    def encodeEnum(clsName: String)                                                                = newEncodeEnum(clsName)
-    def decodeEnum(clsName: String)                                                                = newDecodeEnum(clsName)
+    def encodeEnum(clsName: String): F[Option[L#Definition]]                                       = newEncodeEnum(clsName)
+    def decodeEnum(clsName: String): F[Option[L#Definition]]                                       = newDecodeEnum(clsName)
     def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]) = newRenderClass(clsName, tpe, elems)
     def renderStaticDefns(
         clsName: String,
         members: Option[L#ObjectDefinition],
         accessors: List[L#TermName],
-        encoder: Option[L#ValueDefinition],
-        decoder: Option[L#ValueDefinition]
-    )                                                    = newRenderStaticDefns(clsName, members, accessors, encoder, decoder)
+        encoder: Option[L#Definition],
+        decoder: Option[L#Definition]
+    ): F[StaticDefns[L]]                                 = newRenderStaticDefns(clsName, members, accessors, encoder, decoder)
     def buildAccessor(clsName: String, termName: String) = newBuildAccessor(clsName, termName)
   }
 }

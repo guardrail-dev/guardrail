@@ -158,7 +158,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class GetRootResponse(val statusCode: StatusCode)
         case object GetRootResponseOK extends GetRootResponse(StatusCodes.OK)
         object GetRootResponse {
-          implicit val getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
+          implicit def getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
             resp => getRootResponseTR(resp)
           }
           implicit def getRootResponseTR(value: GetRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -173,7 +173,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class PutBarResponse(val statusCode: StatusCode)
         case class PutBarResponseOK(value: Boolean) extends PutBarResponse(StatusCodes.OK)
         object PutBarResponse {
-          implicit val putBarResponseTRM: ToResponseMarshaller[PutBarResponse] = Marshaller { implicit ec =>
+          implicit def putBarResponseTRM: ToResponseMarshaller[PutBarResponse] = Marshaller { implicit ec =>
             resp => putBarResponseTR(resp)
           }
           implicit def putBarResponseTR(value: PutBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -191,7 +191,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class GetFooResponse(val statusCode: StatusCode)
         case class GetFooResponseOK(value: Boolean) extends GetFooResponse(StatusCodes.OK)
         object GetFooResponse {
-          implicit val getFooResponseTRM: ToResponseMarshaller[GetFooResponse] = Marshaller { implicit ec =>
+          implicit def getFooResponseTRM: ToResponseMarshaller[GetFooResponse] = Marshaller { implicit ec =>
             resp => getFooResponseTR(resp)
           }
           implicit def getFooResponseTR(value: GetFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -209,7 +209,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class GetFooBarResponse(val statusCode: StatusCode)
         case class GetFooBarResponseOK(value: Boolean) extends GetFooBarResponse(StatusCodes.OK)
         object GetFooBarResponse {
-          implicit val getFooBarResponseTRM: ToResponseMarshaller[GetFooBarResponse] = Marshaller { implicit ec =>
+          implicit def getFooBarResponseTRM: ToResponseMarshaller[GetFooBarResponse] = Marshaller { implicit ec =>
             resp => getFooBarResponseTR(resp)
           }
           implicit def getFooBarResponseTR(value: GetFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -229,7 +229,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         case object GetOrderByIdResponseBadRequest extends GetOrderByIdResponse(StatusCodes.BadRequest)
         case object GetOrderByIdResponseNotFound extends GetOrderByIdResponse(StatusCodes.NotFound)
         object GetOrderByIdResponse {
-          implicit val getOrderByIdResponseTRM: ToResponseMarshaller[GetOrderByIdResponse] = Marshaller { implicit ec =>
+          implicit def getOrderByIdResponseTRM: ToResponseMarshaller[GetOrderByIdResponse] = Marshaller { implicit ec =>
             resp => getOrderByIdResponseTR(resp)
           }
           implicit def getOrderByIdResponseTR(value: GetOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -295,7 +295,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class GetRootResponse(val statusCode: StatusCode)
         case object GetRootResponseOK extends GetRootResponse(StatusCodes.OK)
         object GetRootResponse {
-          implicit val getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
+          implicit def getRootResponseTRM: ToResponseMarshaller[GetRootResponse] = Marshaller { implicit ec =>
             resp => getRootResponseTR(resp)
           }
           implicit def getRootResponseTR(value: GetRootResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -310,7 +310,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class PutBarResponse(val statusCode: StatusCode)
         case class PutBarResponseOK(value: Boolean) extends PutBarResponse(StatusCodes.OK)
         object PutBarResponse {
-          implicit val putBarResponseTRM: ToResponseMarshaller[PutBarResponse] = Marshaller { implicit ec =>
+          implicit def putBarResponseTRM: ToResponseMarshaller[PutBarResponse] = Marshaller { implicit ec =>
             resp => putBarResponseTR(resp)
           }
           implicit def putBarResponseTR(value: PutBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -328,7 +328,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class GetFooResponse(val statusCode: StatusCode)
         case class GetFooResponseOK(value: Boolean) extends GetFooResponse(StatusCodes.OK)
         object GetFooResponse {
-          implicit val getFooResponseTRM: ToResponseMarshaller[GetFooResponse] = Marshaller { implicit ec =>
+          implicit def getFooResponseTRM: ToResponseMarshaller[GetFooResponse] = Marshaller { implicit ec =>
             resp => getFooResponseTR(resp)
           }
           implicit def getFooResponseTR(value: GetFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -346,7 +346,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         sealed abstract class GetFooBarResponse(val statusCode: StatusCode)
         case class GetFooBarResponseOK(value: Boolean) extends GetFooBarResponse(StatusCodes.OK)
         object GetFooBarResponse {
-          implicit val getFooBarResponseTRM: ToResponseMarshaller[GetFooBarResponse] = Marshaller { implicit ec =>
+          implicit def getFooBarResponseTRM: ToResponseMarshaller[GetFooBarResponse] = Marshaller { implicit ec =>
             resp => getFooBarResponseTR(resp)
           }
           implicit def getFooBarResponseTR(value: GetFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
@@ -366,7 +366,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
         case object GetOrderByIdResponseBadRequest extends GetOrderByIdResponse(StatusCodes.BadRequest)
         case object GetOrderByIdResponseNotFound extends GetOrderByIdResponse(StatusCodes.NotFound)
         object GetOrderByIdResponse {
-          implicit val getOrderByIdResponseTRM: ToResponseMarshaller[GetOrderByIdResponse] = Marshaller { implicit ec =>
+          implicit def getOrderByIdResponseTRM: ToResponseMarshaller[GetOrderByIdResponse] = Marshaller { implicit ec =>
             resp => getOrderByIdResponseTR(resp)
           }
           implicit def getOrderByIdResponseTR(value: GetOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {

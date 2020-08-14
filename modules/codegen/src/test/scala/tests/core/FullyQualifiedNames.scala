@@ -1,13 +1,11 @@
 package tests.core
 
 import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions, Server, Servers }
-import support.SwaggerSpecRunner
-
-import scala.meta._
+import com.twilio.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import scala.meta._
+import support.SwaggerSpecRunner
 
 class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
@@ -39,7 +37,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
 
   test("Test that fully qualified names are used") {
     val (
-      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _),
+      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _, _),
       Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
       _
     ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, Http4s)

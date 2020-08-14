@@ -24,7 +24,7 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
       isCustomType: Boolean,
       defaultValue: Option[L#Term]
   ): F[ProtocolParameter[L]]
-  def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil): F[L#ClassDefinition]
+  def renderDTOClass(clsName: String, supportPackage: List[String], terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil): F[L#ClassDefinition]
   def encodeModel(
       clsName: String,
       dtoPackage: List[String],
@@ -49,7 +49,7 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
           List[String],
           List[PropMeta[L]]
       ) => (String, String, Schema[_], ResolvedType[L], PropertyRequirement, Boolean, Option[L#Term]) => F[ProtocolParameter[L]] = transformProperty _,
-      newRenderDTOClass: (String, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = renderDTOClass _,
+      newRenderDTOClass: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = renderDTOClass _,
       newDecodeModel: (String, List[String], List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = decodeModel _,
       newEncodeModel: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = encodeModel _,
       newRenderDTOStaticDefns: (String, List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition]) => F[StaticDefns[L]] = renderDTOStaticDefns _
@@ -79,7 +79,8 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
         isCustomType,
         defaultValue
       )
-    def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) = newRenderDTOClass(clsName, terms, parents)
+    def renderDTOClass(clsName: String, supportPackage: List[String], terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) =
+      newRenderDTOClass(clsName, supportPackage, terms, parents)
     def encodeModel(
         clsName: String,
         dtoPackage: List[String],

@@ -17,6 +17,9 @@ options:
       - title: akka-http
         url: scala/akka-http
 
+      - title: akka-http-jackson
+        url: scala/akka-http-jackson
+
       - title: http4s
         url: scala/http4s
 

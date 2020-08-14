@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.{ SwaggerUtil, Target }
 import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
 import com.twilio.guardrail.generators.LanguageParameter
+import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, ModelGeneratorType }
 import com.twilio.guardrail.generators.syntax.Scala._
 import org.scalatest.{ EitherValues, OptionValues }
 import support.ScalaMetaMatchers._
@@ -20,6 +21,8 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
     LanguageParameter.fromParam(param"fooBar: Int = 1").withRawName("foo_bar"),
     LanguageParameter.fromParam(param"barBaz: Int = 1").withRawName("bar_baz")
   )
+
+  implicit val modelGeneratorType: ModelGeneratorType = CirceModelGenerator.V012
 
   List[(String, Term)](
     ("", q""" host + basePath """),
@@ -59,7 +62,7 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
   ).foreach {
     case (str, expected) =>
       test(s"Server ${str}") {
-        val NonEmptyList((gen, _), _) = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(Tracker(str), args))
+        val NonEmptyList((gen, _), _) = Target.unsafeExtract(SwaggerUtil.paths.generateUrlAkkaPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
         gen.toString shouldBe ((expected.toString))
       }
   }
