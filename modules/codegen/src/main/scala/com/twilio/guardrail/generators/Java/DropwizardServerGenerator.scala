@@ -350,6 +350,11 @@ object DropwizardServerGenerator {
                   // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
                   // https://github.com/eclipse-ee4j/jersey/issues/3632
                   parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
+
+                  // Vavr's validation support for some reason requires this.
+                  if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
+                    parameter.getAnnotations.add(1, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                  }
                 }
                 parameter
               }
