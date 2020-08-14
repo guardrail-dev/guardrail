@@ -12,7 +12,8 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
-import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import com.twilio.guardrail.generators.helpers.DropwizardHelpers
+import com.twilio.guardrail.generators.{ JavaGenerator, LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -406,6 +407,7 @@ object AsyncHttpClientClientGenerator {
 
     def generateClientOperation(
         className: List[String],
+        responseClsName: String,
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
         parameters: LanguageParameters[JavaLanguage]
@@ -416,10 +418,9 @@ object AsyncHttpClientClientGenerator {
     ): Target[RenderedClientOperation[JavaLanguage]] = {
       val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
 
-      val responseParentName = s"${operation.get.getOperationId.capitalize}Response"
-      val callBuilderName    = s"${operation.get.getOperationId.capitalize}CallBuilder"
       for {
-        responseParentType <- safeParseClassOrInterfaceType(responseParentName)
+        callBuilderName    <- JavaGenerator.JavaInterp.formatTypeName(methodName, Some("CallBuilder"))
+        responseParentType <- safeParseClassOrInterfaceType(responseClsName)
         callBuilderType    <- safeParseClassOrInterfaceType(callBuilderName)
 
         pathExprNode <- SwaggerUtil.paths.generateUrlPathParams[JavaLanguage](
@@ -484,7 +485,9 @@ object AsyncHttpClientClientGenerator {
         val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
         val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
         val produces =
-          responses.value.map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces(operation.get.getOperationId, allProduces, resp))).toMap
+          responses.value
+            .map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces[JavaLanguage](operation.get.getOperationId, allProduces, resp, _.isPlain)))
+            .toMap
 
         val builderMethodCalls: List[(LanguageParameter[JavaLanguage], Statement)] = builderParamsMethodNames
             .flatMap({
@@ -687,7 +690,7 @@ object AsyncHttpClientClientGenerator {
                                 new ReturnStmt(
                                   new ObjectCreationExpr(
                                     null,
-                                    StaticJavaParser.parseClassOrInterfaceType(s"${responseParentName}.${response.statusCodeName.asString}"),
+                                    StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
                                     new NodeList()
                                   )
                                 )
@@ -775,7 +778,7 @@ object AsyncHttpClientClientGenerator {
                                             new ReturnStmt(
                                               new ObjectCreationExpr(
                                                 null,
-                                                StaticJavaParser.parseClassOrInterfaceType(s"${responseParentName}.${response.statusCodeName.asString}"),
+                                                StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
                                                 new NodeList[Expression](new NameExpr("result"))
                                               )
                                             )
@@ -867,12 +870,11 @@ object AsyncHttpClientClientGenerator {
       Target.pure(List.empty)
 
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[JavaLanguage],
         protocolElems: List[StrictProtocolElems[JavaLanguage]]
     ): Target[List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]] = {
-      val abstractClassName = s"${operationId.capitalize}Response"
-      val genericTypeParam  = StaticJavaParser.parseClassOrInterfaceType("T")
+      val genericTypeParam = StaticJavaParser.parseClassOrInterfaceType("T")
 
       val responseData = responses.value.map({
         case Response(statusCodeName, valueType, _) =>
@@ -881,7 +883,7 @@ object AsyncHttpClientClientGenerator {
           val responseLambdaName   = s"handle${responseName}"
 
           val responseInnerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, responseName);
-          responseInnerClass.addExtendedType(abstractClassName)
+          responseInnerClass.addExtendedType(responseClsName)
           val (foldMethodParamType, foldMethodApplier, foldMethodArgs) = valueType.fold(
             (supplierType(genericTypeParam), "get", new NodeList[Expression]())
           )({
@@ -946,7 +948,7 @@ object AsyncHttpClientClientGenerator {
           (responseInnerClass, foldMethodParameter, foldMethodBranch)
       })
 
-      val abstractResponseClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, abstractModifier), false, abstractClassName)
+      val abstractResponseClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, abstractModifier), false, responseClsName)
 
       val (innerClasses, foldMethodParameters, foldMethodIfBranches) = responseData.unzip3
 
@@ -990,7 +992,6 @@ object AsyncHttpClientClientGenerator {
         jacksonSupport <- generateJacksonSupportClass()
         (jacksonSupportImports, jacksonSupportClass) = jacksonSupport
         asyncHttpclientUtils <- asyncHttpClientUtilsSupportDef
-        shower               <- SerializationHelpers.showerSupportDef
       } yield {
         exceptionClasses.map({
           case (imports, cls) =>
@@ -998,8 +999,7 @@ object AsyncHttpClientClientGenerator {
         }) ++ List(
           SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, List(ahcSupportClass)),
           SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, List(jacksonSupportClass)),
-          asyncHttpclientUtils,
-          shower
+          asyncHttpclientUtils
         )
       }
     def buildStaticDefns(

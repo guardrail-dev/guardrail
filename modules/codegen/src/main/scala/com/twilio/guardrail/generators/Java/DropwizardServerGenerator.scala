@@ -14,7 +14,8 @@ import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import com.twilio.guardrail.generators.LanguageParameter
+import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -63,32 +64,6 @@ object DropwizardServerGenerator {
   private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalTimeParam")
   private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
   private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
-
-  private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
-  private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
-
-  private def findPathPrefix(routePaths: List[String]): List[String] = {
-    def getHeads(sss: List[List[String]]): (List[Option[String]], List[List[String]]) =
-      (sss.map(_.headOption), sss.map(_.drop(1)))
-
-    def checkMatch(matching: List[String], headsToCheck: List[Option[String]], restOfHeads: List[List[String]]): List[String] =
-      headsToCheck match {
-        case Nil => matching
-        case x :: xs =>
-          x.fold(matching) { first =>
-            if (xs.forall(_.contains(first))) {
-              val (nextHeads, nextRest) = getHeads(restOfHeads)
-              checkMatch(matching :+ first, nextHeads, nextRest)
-            } else {
-              matching
-            }
-          }
-      }
-
-    val splitRoutePaths             = routePaths.map(splitPathComponents)
-    val (initialHeads, initialRest) = getHeads(splitRoutePaths)
-    checkMatch(List.empty, initialHeads, initialRest)
-  }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
     Target.log.function("generateResponseSuperClass") {
@@ -223,7 +198,7 @@ object DropwizardServerGenerator {
 
   object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    override def getExtraImports(tracing: Boolean): Target[List[ImportDeclaration]] =
+    override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
       List(
         "javax.inject.Inject",
         "javax.validation.constraints.NotNull",
@@ -262,24 +237,32 @@ object DropwizardServerGenerator {
     override def generateRoutes(
         tracing: Boolean,
         resourceName: String,
+        handlerName: String,
         basePath: Option[String],
-        routes: List[(String, Option[TracingField[JavaLanguage]], RouteMeta, LanguageParameters[JavaLanguage], Responses[JavaLanguage])],
+        routes: List[GenerateRouteMeta[JavaLanguage]],
         protocolElems: List[StrictProtocolElems[JavaLanguage]],
         securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
     ): Target[RenderedRoutes[JavaLanguage]] =
       for {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
-        handlerName = s"${resourceName.replaceAll("Resource$", "")}Handler"
-        handlerType <- safeParseClassOrInterfaceType(handlerName)
+        handlerType  <- safeParseClassOrInterfaceType(handlerName)
       } yield {
         val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        val commonPathPrefix   = findPathPrefix(routes.map(_._3.path.get))
+        val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
         val (routeMethods, handlerMethodSigs) = routes
           .map({
-            case (operationId, tracingFields, sr @ RouteMeta(path, httpMethod, operation, securityRequirements), parameters, responses) =>
+            case GenerateRouteMeta(
+                operationId,
+                methodName,
+                responseClsName,
+                tracingFields,
+                sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
+                parameters,
+                responses
+                ) =>
               parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
-              val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, operationId)
+              val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, methodName)
                 .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
               val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
@@ -288,7 +271,7 @@ object DropwizardServerGenerator {
               }
 
               val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-              val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
+              val consumes    = getBestConsumes(operation, allConsumes, parameters)
               consumes
                 .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                 .foreach(method.addAnnotation)
@@ -297,7 +280,7 @@ object DropwizardServerGenerator {
               NonEmptyList
                 .fromList(
                   responses.value
-                    .flatMap(DropwizardHelpers.getBestProduces(operationId, allProduces, _))
+                    .flatMap(getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
                     .distinct
                     .map(_.toJaxRsAnnotationName)
                 )
@@ -407,7 +390,7 @@ object DropwizardServerGenerator {
                 ServerRawResponse(operation)
                   .filter(_ == true)
                   .fold({
-                    val responseName = s"${handlerName}.${operationId.capitalize}Response"
+                    val responseName = s"$handlerName.$responseClsName"
                     val entitySetterIfTree = NonEmptyList
                       .fromList(responses.value.collect({
                         case Response(statusCodeName, Some(_), _) => statusCodeName
@@ -497,7 +480,7 @@ object DropwizardServerGenerator {
                               new NameExpr("logger"),
                               "error",
                               new NodeList[Expression](
-                                new StringLiteralExpr(s"${handlerName}.${operationId} threw an exception ({}): {}"),
+                                new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
                                 new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
                                 new MethodCallExpr(new NameExpr("err"), "getMessage"),
                                 new NameExpr("err")
@@ -549,7 +532,7 @@ object DropwizardServerGenerator {
 
               val handlerCall = new MethodCallExpr(
                 new FieldAccessExpr(new ThisExpr, "handler"),
-                operationId,
+                methodName,
                 new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
               )
 
@@ -562,7 +545,7 @@ object DropwizardServerGenerator {
               )
 
               val futureResponseType = completionStageType(responseType.clone())
-              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, operationId)
+              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (
                 (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
                     parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
@@ -613,17 +596,16 @@ object DropwizardServerGenerator {
       }
 
     override def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[JavaLanguage],
         protocolElems: List[StrictProtocolElems[JavaLanguage]]
     ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       for {
-        abstractResponseClassName <- safeParseSimpleName(s"${operationId.capitalize}Response").map(_.asString)
-        abstractResponseClassType <- safeParseClassOrInterfaceType(abstractResponseClassName)
+        abstractResponseClassType <- safeParseClassOrInterfaceType(responseClsName)
 
         // TODO: verify valueTypes are in protocolElems
 
-        abstractResponseClass <- generateResponseSuperClass(abstractResponseClassName)
+        abstractResponseClass <- generateResponseSuperClass(responseClsName)
         responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
       } yield {
         sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))
@@ -645,8 +627,6 @@ object DropwizardServerGenerator {
           "javax.ws.rs.HttpMethod"
         ).traverse(safeParseRawImport)
 
-        shower <- SerializationHelpers.showerSupportDef
-
         jersey <- SerializationHelpers.guardrailJerseySupportDef
       } yield {
         def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
@@ -662,7 +642,6 @@ object DropwizardServerGenerator {
           SupportDefinition[JavaLanguage](new Name(name), annotationImports, List(annotationDecl))
         }
         List(
-          shower,
           jersey,
           httpMethodAnnotation("PATCH"),
           httpMethodAnnotation("TRACE")
@@ -685,7 +664,7 @@ object DropwizardServerGenerator {
     override def renderHandler(
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
-        handlerDefinitions: List[com.github.javaparser.ast.stmt.Statement],
+        handlerDefinitions: List[com.github.javaparser.ast.Node],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
     ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)

@@ -89,7 +89,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       |      - requiredArray
       |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -103,7 +103,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         bool: Option[Boolean] = None,
         string: Option[String] = None,
         date: Option[java.time.LocalDate] = None,
-        date_time: Option[java.time.OffsetDateTime] = None,
+        dateTime: Option[java.time.OffsetDateTime] = None,
         byte: Option[Base64String] = None,
         long: Option[Long] = None,
         int: Option[Int] = None,
@@ -124,7 +124,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       object Types {
         implicit val encodeTypes: Encoder.AsObject[Types] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Types](a => JsonObject.fromIterable(Vector(("array", a.array.asJson), ("map", a.map.asJson), ("obj", a.obj.asJson), ("bool", a.bool.asJson), ("string", a.string.asJson), ("date", a.date.asJson), ("date_time", a.date_time.asJson), ("byte", a.byte.asJson), ("long", a.long.asJson), ("int", a.int.asJson), ("float", a.float.asJson), ("double", a.double.asJson), ("number", a.number.asJson), ("integer", a.integer.asJson), ("untyped", a.untyped.asJson), ("custom", a.custom.asJson), ("customComplex", a.customComplex.asJson), ("nested", a.nested.asJson), ("nestedArray", a.nestedArray.asJson), ("requiredArray", a.requiredArray.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[Types](a => JsonObject.fromIterable(Vector(("array", a.array.asJson), ("map", a.map.asJson), ("obj", a.obj.asJson), ("bool", a.bool.asJson), ("string", a.string.asJson), ("date", a.date.asJson), ("date_time", a.dateTime.asJson), ("byte", a.byte.asJson), ("long", a.long.asJson), ("int", a.int.asJson), ("float", a.float.asJson), ("double", a.double.asJson), ("number", a.number.asJson), ("integer", a.integer.asJson), ("untyped", a.untyped.asJson), ("custom", a.custom.asJson), ("customComplex", a.customComplex.asJson), ("nested", a.nested.asJson), ("nestedArray", a.nestedArray.asJson), ("requiredArray", a.requiredArray.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeTypes: Decoder[Types] = new Decoder[Types] { final def apply(c: HCursor): Decoder.Result[Types] = for (v0 <- c.downField("array").as[Option[Vector[Boolean]]]; v1 <- c.downField("map").as[Option[Map[String, Boolean]]]; v2 <- c.downField("obj").as[Option[io.circe.Json]]; v3 <- c.downField("bool").as[Option[Boolean]]; v4 <- c.downField("string").as[Option[String]]; v5 <- c.downField("date").as[Option[java.time.LocalDate]]; v6 <- c.downField("date_time").as[Option[java.time.OffsetDateTime]]; v7 <- c.downField("byte").as[Option[Base64String]]; v8 <- c.downField("long").as[Option[Long]]; v9 <- c.downField("int").as[Option[Int]]; v10 <- c.downField("float").as[Option[Float]]; v11 <- c.downField("double").as[Option[Double]]; v12 <- c.downField("number").as[Option[BigDecimal]]; v13 <- c.downField("integer").as[Option[BigInt]]; v14 <- c.downField("untyped").as[Option[io.circe.Json]]; v15 <- c.downField("custom").as[Option[Foo]]; v16 <- c.downField("customComplex").as[Option[Foo[Bar]]]; v17 <- c.downField("nested").as[Option[Types.Nested]]; v18 <- c.downField("nestedArray").as[Option[Vector[Types.NestedArray]]]; v19 <- c.downField("requiredArray").as[Vector[String]]) yield Types(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19) }
         case class Nested(prop1: Option[String] = None)
@@ -177,7 +177,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       |
       |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, _, _) :: ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, _, _, _) :: ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -229,33 +229,33 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       |                type: string
       |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
     )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
-    val definition = q"""case class First(Second: Option[First.Second] = None)"""
+    val definition = q"""case class First(second: Option[First.Second] = None)"""
 
     val companion = q"""
       object First {
         implicit val encodeFirst: Encoder.AsObject[First] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[First](a => JsonObject.fromIterable(Vector(("Second", a.Second.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          Encoder.AsObject.instance[First](a => JsonObject.fromIterable(Vector(("Second", a.second.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeFirst: Decoder[First] = new Decoder[First] { final def apply(c: HCursor): Decoder.Result[First] = for (v0 <- c.downField("Second").as[Option[First.Second]]) yield First(v0) }
-        case class Second(Third: Option[First.Second.Third] = None)
+        case class Second(third: Option[First.Second.Third] = None)
         object Second {
           implicit val encodeSecond: Encoder.AsObject[Second] = {
             val readOnlyKeys = Set[String]()
-            Encoder.AsObject.instance[Second](a => JsonObject.fromIterable(Vector(("Third", a.Third.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            Encoder.AsObject.instance[Second](a => JsonObject.fromIterable(Vector(("Third", a.third.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeSecond: Decoder[Second] = new Decoder[Second] { final def apply(c: HCursor): Decoder.Result[Second] = for (v0 <- c.downField("Third").as[Option[First.Second.Third]]) yield Second(v0) }
-          case class Third(Fourth: Option[String] = None)
+          case class Third(fourth: Option[String] = None)
           object Third {
             implicit val encodeThird: Encoder.AsObject[Third] = {
               val readOnlyKeys = Set[String]()
-              Encoder.AsObject.instance[Third](a => JsonObject.fromIterable(Vector(("Fourth", a.Fourth.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+              Encoder.AsObject.instance[Third](a => JsonObject.fromIterable(Vector(("Fourth", a.fourth.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }
             implicit val decodeThird: Decoder[Third] = new Decoder[Third] { final def apply(c: HCursor): Decoder.Result[Third] = for (v0 <- c.downField("Fourth").as[Option[String]]) yield Third(v0) }
           }
@@ -291,7 +291,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
          |            type: boolean
          |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -352,7 +352,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
          |        type: string
          |""".stripMargin
     val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)

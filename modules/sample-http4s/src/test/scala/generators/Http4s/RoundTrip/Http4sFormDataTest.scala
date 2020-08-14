@@ -8,9 +8,11 @@ import form.server.{ http4s => sdefs }
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.{ Method, Request, Status, Uri, UrlForm }
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class Http4sFormDataTest extends FunSuite with Matchers with EitherValues {
+class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("present required form param") {
     val fooClient = FooClient.httpClient(

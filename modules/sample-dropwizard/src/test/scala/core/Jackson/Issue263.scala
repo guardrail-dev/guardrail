@@ -2,9 +2,10 @@ package core.Jackson
 
 import additionalProperties.client.dropwizard.definitions.{ Foo, FooMapValues }
 import java.util
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class Issue263 extends FreeSpec with Matchers {
+class Issue263 extends AnyFreeSpec with Matchers {
   "additionalProperties with a $ref should emit a Map" in {
     val stuff = new util.HashMap[String, FooMapValues]
     stuff.put("yeah", new FooMapValues.Builder("no", 42).build())

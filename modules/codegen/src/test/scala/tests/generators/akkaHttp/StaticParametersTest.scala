@@ -37,8 +37,8 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
 
     val handler = q"""
       trait Handler {
-        def getFoo2(respond: Resource.getFoo2Response.type)(): scala.concurrent.Future[Resource.getFoo2Response]
-        def getFoo1(respond: Resource.getFoo1Response.type)(): scala.concurrent.Future[Resource.getFoo1Response]
+        def getFoo2(respond: Resource.GetFoo2Response.type)(): scala.concurrent.Future[Resource.GetFoo2Response]
+        def getFoo1(respond: Resource.GetFoo1Response.type)(): scala.concurrent.Future[Resource.GetFoo1Response]
       }
     """
 
@@ -46,40 +46,40 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
       object Resource {
         def routes(handler: Handler)(implicit mat: akka.stream.Materializer): Route = {
           {
-            (pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2"))(get(discardEntity(complete(handler.getFoo2(getFoo2Response)()))))
+            (pathPrefix("foo") & pathEndOrSingleSlash & parameter("bar").require(_ == "2"))(get(discardEntity(complete(handler.getFoo2(GetFoo2Response)()))))
           } ~ {
-            (path("foo") & parameter("bar").require(_ == "1"))(get(discardEntity(complete(handler.getFoo1(getFoo1Response)()))))
+            (path("foo") & parameter("bar").require(_ == "1"))(get(discardEntity(complete(handler.getFoo1(GetFoo1Response)()))))
           }
         }
-        sealed abstract class getFoo2Response(val statusCode: StatusCode)
-        case object getFoo2ResponseOK extends getFoo2Response(StatusCodes.OK)
-        object getFoo2Response {
-          implicit val getFoo2TRM: ToResponseMarshaller[getFoo2Response] = Marshaller { implicit ec =>
-            resp => getFoo2TR(resp)
+        sealed abstract class GetFoo2Response(val statusCode: StatusCode)
+        case object GetFoo2ResponseOK extends GetFoo2Response(StatusCodes.OK)
+        object GetFoo2Response {
+          implicit def getFoo2ResponseTRM: ToResponseMarshaller[GetFoo2Response] = Marshaller { implicit ec =>
+            resp => getFoo2ResponseTR(resp)
           }
-          implicit def getFoo2TR(value: getFoo2Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r: getFoo2ResponseOK.type =>
+          implicit def getFoo2ResponseTR(value: GetFoo2Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: GetFoo2ResponseOK.type =>
               scala.concurrent.Future.successful(Marshalling.Opaque {
                 () => HttpResponse(r.statusCode)
               } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => getFoo2Response): getFoo2Response = ev(value)
-          def OK: getFoo2Response = getFoo2ResponseOK
+          def apply[T](value: T)(implicit ev: T => GetFoo2Response): GetFoo2Response = ev(value)
+          def OK: GetFoo2Response = GetFoo2ResponseOK
         }
-        sealed abstract class getFoo1Response(val statusCode: StatusCode)
-        case object getFoo1ResponseOK extends getFoo1Response(StatusCodes.OK)
-        object getFoo1Response {
-          implicit val getFoo1TRM: ToResponseMarshaller[getFoo1Response] = Marshaller { implicit ec =>
-            resp => getFoo1TR(resp)
+        sealed abstract class GetFoo1Response(val statusCode: StatusCode)
+        case object GetFoo1ResponseOK extends GetFoo1Response(StatusCodes.OK)
+        object GetFoo1Response {
+          implicit def getFoo1ResponseTRM: ToResponseMarshaller[GetFoo1Response] = Marshaller { implicit ec =>
+            resp => getFoo1ResponseTR(resp)
           }
-          implicit def getFoo1TR(value: getFoo1Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r: getFoo1ResponseOK.type =>
+          implicit def getFoo1ResponseTR(value: GetFoo1Response)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: GetFoo1ResponseOK.type =>
               scala.concurrent.Future.successful(Marshalling.Opaque {
                 () => HttpResponse(r.statusCode)
               } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => getFoo1Response): getFoo1Response = ev(value)
-          def OK: getFoo1Response = getFoo1ResponseOK
+          def apply[T](value: T)(implicit ev: T => GetFoo1Response): GetFoo1Response = ev(value)
+          def OK: GetFoo1Response = GetFoo1ResponseOK
         }
       }
     """

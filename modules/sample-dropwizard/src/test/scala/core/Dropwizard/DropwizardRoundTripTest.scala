@@ -12,10 +12,11 @@ import java.util.concurrent.{ CompletableFuture, CompletionStage }
 import org.asynchttpclient.{ Request, Response }
 import org.mockito.{ ArgumentMatchersSugar, MockitoSugar }
 import org.scalatest.concurrent.Waiters
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 import scala.compat.java8.FunctionConverters._
 
-class DropwizardRoundTripTest extends FreeSpec with Matchers with Waiters with MockitoSugar with ArgumentMatchersSugar {
+class DropwizardRoundTripTest extends AnyFreeSpec with Matchers with Waiters with MockitoSugar with ArgumentMatchersSugar {
   private implicit val mapper = new ObjectMapper
 
   "Test server" in {

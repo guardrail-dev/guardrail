@@ -11,7 +11,7 @@ object JavaLanguage {
 
 class JavaLanguage extends LanguageAbstraction {
 
-  type Statement = com.github.javaparser.ast.stmt.Statement
+  type Statement = com.github.javaparser.ast.Node
 
   type Import = com.github.javaparser.ast.ImportDeclaration
 

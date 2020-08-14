@@ -11,7 +11,13 @@ import java.net.URI
 
 abstract class ClientTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
-  def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
+  def generateClientOperation(
+      className: List[String],
+      responseClsName: String,
+      tracing: Boolean,
+      securitySchemes: Map[String, SecurityScheme[L]],
+      parameters: LanguageParameters[L]
+  )(
       route: RouteMeta,
       methodName: String,
       responses: Responses[L]
@@ -19,7 +25,7 @@ abstract class ClientTerms[L <: LA, F[_]] {
   def getImports(tracing: Boolean): F[List[L#Import]]
   def getExtraImports(tracing: Boolean): F[List[L#Import]]
   def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): F[List[List[L#MethodParameter]]]
-  def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]]
+  def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]]
   def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]]
   def buildStaticDefns(
       clientName: String,
@@ -41,7 +47,7 @@ abstract class ClientTerms[L <: LA, F[_]] {
 
   def copy(
       newMonadF: Monad[F] = this.MonadF,
-      newGenerateClientOperation: (List[String], Boolean, Map[String, SecurityScheme[L]], LanguageParameters[L]) => (
+      newGenerateClientOperation: (List[String], String, Boolean, Map[String, SecurityScheme[L]], LanguageParameters[L]) => (
           RouteMeta,
           String,
           Responses[L]
@@ -65,17 +71,23 @@ abstract class ClientTerms[L <: LA, F[_]] {
       ) => F[NonEmptyList[Either[L#Trait, L#ClassDefinition]]] = buildClient _
   ): ClientTerms[L, F] = new ClientTerms[L, F] {
     def MonadF = newMonadF
-    def generateClientOperation(className: List[String], tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]], parameters: LanguageParameters[L])(
+    def generateClientOperation(
+        className: List[String],
+        responseClsName: String,
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[L]],
+        parameters: LanguageParameters[L]
+    )(
         route: RouteMeta,
         methodName: String,
         responses: Responses[L]
     ) =
-      newGenerateClientOperation(className, tracing, securitySchemes, parameters)(route, methodName, responses)
+      newGenerateClientOperation(className, responseClsName, tracing, securitySchemes, parameters)(route, methodName, responses)
     def getImports(tracing: Boolean)                                                                        = newGetImports(tracing)
     def getExtraImports(tracing: Boolean)                                                                   = newGetExtraImports(tracing)
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean) = newClientClsArgs(tracingName, serverUrls, tracing)
-    def generateResponseDefinitions(operationId: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]) =
-      newGenerateResponseDefinitions(operationId, responses, protocolElems)
+    def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]) =
+      newGenerateResponseDefinitions(responseClsName, responses, protocolElems)
     def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]] =
       newGenerateSupportDefinitions(tracing, securitySchemes)
 

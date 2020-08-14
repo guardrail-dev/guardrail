@@ -19,11 +19,14 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import cats.instances.future._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.Future
 import examples.support.PositiveLong
 
-class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Placeholder until property testing
@@ -42,7 +45,7 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
 
   test("round-trip: definition query, unit response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet): Future[PetResource.addPetResponse] =
+      def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet): Future[PetResource.AddPetResponse] =
         body match {
           case sdefs.Pet(
               `id`,
@@ -56,17 +59,17 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
           case _ => failTest("Parameters didn't match")
         }
       def deletePet(
-          respond: PetResource.deletePetResponse.type
+          respond: PetResource.DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
-      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
+      def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
+      def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+      def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
@@ -98,8 +101,8 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
   test("round-trip: enum query, Vector of definition response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
       def findPetsByStatusEnum(
-          respond: PetResource.findPetsByStatusEnumResponse.type
-      )(_status: sdefs.PetStatus): Future[PetResource.findPetsByStatusEnumResponse] =
+          respond: PetResource.FindPetsByStatusEnumResponse.type
+      )(_status: sdefs.PetStatus): Future[PetResource.FindPetsByStatusEnumResponse] =
         Future.successful(petStatus.fold(Vector.empty[sdefs.Pet])({ value =>
           if (_status.value == value) {
             Vector(
@@ -117,18 +120,18 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
           }
         }))
 
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
-          respond: PetResource.deletePetResponse.type
+          respond: PetResource.DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
+      def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+      def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
@@ -162,21 +165,21 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
 
   test("round-trip: 404 response") {
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.findPetsByStatusResponse] =
+      def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String]): Future[PetResource.FindPetsByStatusResponse] =
         Future.successful(respond.NotFound)
 
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
-          respond: PetResource.deletePetResponse.type
+          respond: PetResource.DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
+      def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
+      def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+      def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
@@ -201,26 +204,26 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
     val petId: Long    = 123L
     val apiKey: String = "foobar"
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def deletePet(respond: PetResource.deletePetResponse.type)(
+      def deletePet(respond: PetResource.DeletePetResponse.type)(
           _petId: Long,
           includeChildren: Option[Boolean],
           status: Option[sdefs.PetStatus],
           _apiKey: Option[String] = None
-      ): Future[PetResource.deletePetResponse] =
+      ): Future[PetResource.DeletePetResponse] =
         if (_petId == petId && _apiKey.contains(apiKey) && status.contains(sdefs.PetStatus.Pending))
           Future.successful(respond.OK)
         else Future.successful(respond.NotFound)
 
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet)                                                                               = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
-      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet)                                                                               = ???
+      def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
+      def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
+      def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+      def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],
@@ -249,19 +252,19 @@ class AkkaHttpRoundTripTest extends FunSuite with Matchers with EitherValues wit
     val petId: Long    = 123L
     val apiKey: String = "foobar"
     val httpClient = Route.asyncHandler(PetResource.routes(new PetHandler {
-      def addPet(respond: PetResource.addPetResponse.type)(body: sdefs.Pet) = ???
+      def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
-          respond: PetResource.deletePetResponse.type
+          respond: PetResource.DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
-      def findPetsByStatus(respond: PetResource.findPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
-      def findPetsByStatusEnum(respond: PetResource.findPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
-      def findPetsByTags(respond: PetResource.findPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
-      def getPetById(respond: PetResource.getPetByIdResponse.type)(petId: Long)                                                                           = ???
-      def updatePet(respond: PetResource.updatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
-      def updatePetWithForm(respond: PetResource.updatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
+      def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
+      def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
+      def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
+      def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
+      def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
+      def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
       def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
-      def uploadFile(respond: PetResource.uploadFileResponse.type)(
+      def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
           additionalMetadata: Option[String],
           file: Option[(java.io.File, Option[String], akka.http.scaladsl.model.ContentType)],

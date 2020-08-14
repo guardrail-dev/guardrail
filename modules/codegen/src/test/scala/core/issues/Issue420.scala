@@ -29,7 +29,7 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Test ordering") {
     val (
-      ProtocolDefinitions(List(bar: ClassDefinition[ScalaLanguage], foo: ClassDefinition[ScalaLanguage]), _, _, _),
+      ProtocolDefinitions(List(bar: ClassDefinition[ScalaLanguage], foo: ClassDefinition[ScalaLanguage]), _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, Http4s)

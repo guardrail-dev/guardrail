@@ -17,16 +17,14 @@ import com.twilio.guardrail.{
   Target,
   UserError
 }
-import com.twilio.guardrail.circe.CirceVersion
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
-import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
-
+import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -63,13 +61,13 @@ object CirceProtocolGenerator {
           }
         """))
 
-    def encodeEnum(clsName: String) =
+    def encodeEnum(clsName: String): Target[Option[Defn]] =
       Target.pure(Some(q"""
             implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
               Encoder[String].contramap(_.value)
           """))
 
-    def decodeEnum(clsName: String) =
+    def decodeEnum(clsName: String): Target[Option[Defn]] =
       Target.pure(Some(q"""
         implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
           Decoder[String].emap(value => parse(value).toRight(${Term
@@ -87,9 +85,9 @@ object CirceProtocolGenerator {
         clsName: String,
         members: Option[scala.meta.Defn.Object],
         accessors: List[scala.meta.Term.Name],
-        encoder: Option[scala.meta.Defn.Val],
-        decoder: Option[scala.meta.Defn.Val]
-    ) = {
+        encoder: Option[scala.meta.Defn],
+        decoder: Option[scala.meta.Defn]
+    ): Target[StaticDefns[ScalaLanguage]] = {
       val terms: List[Defn.Val] = accessors
         .map({ pascalValue =>
           q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
@@ -120,7 +118,7 @@ object CirceProtocolGenerator {
       Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
   }
 
-  class ModelProtocolTermInterp(circeVersion: CirceVersion) extends ModelProtocolTerms[ScalaLanguage, Target] {
+  class ModelProtocolTermInterp(circeVersion: CirceModelGenerator) extends ModelProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractProperties(swagger: Tracker[Schema[_]]) =
       swagger
@@ -142,10 +140,10 @@ object CirceProtocolGenerator {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[ScalaLanguage]]
     )(
         name: String,
+        fieldName: String,
         property: Schema[_],
         meta: ResolvedType[ScalaLanguage],
         requirement: PropertyRequirement,
@@ -156,7 +154,6 @@ object CirceProtocolGenerator {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          argName = if (needCamelSnakeConversion) name.toCamelCase else name
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
           readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
@@ -200,7 +197,7 @@ object CirceProtocolGenerator {
             case PropertyRequirement.OptionalNullable =>
               t"$presenceType[Option[$tpe]]" -> defaultValue.map(t => q"$presence.Present($t)")
           }
-          term = param"${Term.Name(argName)}: ${finalDeclType}".copy(default = finalDefaultValue)
+          term = param"${Term.Name(fieldName)}: ${finalDeclType}".copy(default = finalDefaultValue)
           dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
         } yield ProtocolParameter[ScalaLanguage](
           term,
@@ -218,6 +215,7 @@ object CirceProtocolGenerator {
 
     def renderDTOClass(
         clsName: String,
+        supportPackage: List[String],
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
     ) = {
@@ -264,7 +262,6 @@ object CirceProtocolGenerator {
     def encodeModel(
         clsName: String,
         dtoPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
     ) = {
@@ -365,7 +362,6 @@ object CirceProtocolGenerator {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         selfParams: List[ProtocolParameter[ScalaLanguage]],
         parents: List[SuperClass[ScalaLanguage]] = Nil
     ) = {
@@ -539,7 +535,6 @@ object CirceProtocolGenerator {
           q"import cats.syntax.either._",
           q"import io.circe._",
           q"import io.circe.syntax._",
-          q"import io.circe.generic.semiauto._",
           q"import cats.implicits._"
         )
       )
@@ -606,14 +601,18 @@ object CirceProtocolGenerator {
           q"implicit val guardrailDecodeLocalTime: Decoder[LocalTime] = Decoder[LocalTime]",
           q"implicit val guardrailDecodeOffsetDateTime: Decoder[OffsetDateTime] = Decoder[OffsetDateTime].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
           q"implicit val guardrailDecodeZonedDateTime: Decoder[ZonedDateTime] = Decoder[ZonedDateTime]",
+          q"implicit val guardrailDecodeBase64String: Decoder[Base64String] = Decoder[String].emapTry(v => scala.util.Try(java.util.Base64.getDecoder.decode(v))).map(new Base64String(_))",
           q"implicit val guardrailEncodeInstant: Encoder[Instant] = Encoder[Instant]",
           q"implicit val guardrailEncodeLocalDate: Encoder[LocalDate] = Encoder[LocalDate]",
           q"implicit val guardrailEncodeLocalDateTime: Encoder[LocalDateTime] = Encoder[LocalDateTime]",
           q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
           q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
-          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]"
+          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
+          q"implicit val guardrailEncodeBase64String: Encoder[Base64String] = Encoder[String].contramap[Base64String](v => new String(java.util.Base64.getEncoder.encode(v.data)))"
         )
       )
+
+    def implicitsObject() = Target.pure(None)
   }
 
   object PolyProtocolTermInterp extends PolyProtocolTerms[ScalaLanguage, Target] {

@@ -41,6 +41,7 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         ClassDefinition(namePet, tpePet, _, clsPet, staticDefnsPet, catParents) :: Nil,
         _,
         _,
+        _,
         _
       ),
       _,

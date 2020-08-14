@@ -52,7 +52,7 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
 
     val handler  = q"""
       trait Handler {
-        def putFoo(respond: Resource.putFooResponse.type)(foo: String, bar: Long, baz: (File, Option[String], ContentType, String)): scala.concurrent.Future[Resource.putFooResponse]
+        def putFoo(respond: Resource.PutFooResponse.type)(foo: String, bar: Long, baz: (File, Option[String], ContentType, String)): scala.concurrent.Future[Resource.PutFooResponse]
         def putFooMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File
         def putFooUnmarshalToFile[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext =>
           part => {
@@ -177,23 +177,23 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
                   }
                   maybe.fold(reject(_), tprovide(_))
               }))
-            }: Directive[(String, Long, (File, Option[String], ContentType, String))]).apply((foo, bar, baz) => complete(handler.putFoo(putFooResponse)(foo, bar, baz)))))
+            }: Directive[(String, Long, (File, Option[String], ContentType, String))]).apply((foo, bar, baz) => complete(handler.putFoo(PutFooResponse)(foo, bar, baz)))))
           }
         }
-        sealed abstract class putFooResponse(val statusCode: StatusCode)
-        case object putFooResponseOK extends putFooResponse(StatusCodes.OK)
-        object putFooResponse {
-          implicit val putFooTRM: ToResponseMarshaller[putFooResponse] = Marshaller { implicit ec =>
-            resp => putFooTR(resp)
+        sealed abstract class PutFooResponse(val statusCode: StatusCode)
+        case object PutFooResponseOK extends PutFooResponse(StatusCodes.OK)
+        object PutFooResponse {
+          implicit def putFooResponseTRM: ToResponseMarshaller[PutFooResponse] = Marshaller { implicit ec =>
+            resp => putFooResponseTR(resp)
           }
-          implicit def putFooTR(value: putFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r: putFooResponseOK.type =>
+          implicit def putFooResponseTR(value: PutFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
+            case r: PutFooResponseOK.type =>
               scala.concurrent.Future.successful(Marshalling.Opaque {
                 () => HttpResponse(r.statusCode)
               } :: Nil)
           }
-          def apply[T](value: T)(implicit ev: T => putFooResponse): putFooResponse = ev(value)
-          def OK: putFooResponse = putFooResponseOK
+          def apply[T](value: T)(implicit ev: T => PutFooResponse): PutFooResponse = ev(value)
+          def OK: PutFooResponse = PutFooResponseOK
         }
       }
     """

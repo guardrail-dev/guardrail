@@ -4,14 +4,17 @@ import _root_.tests.contentTypes.textPlain.client.http4s.foo.FooClient
 import _root_.tests.contentTypes.textPlain.client.{ http4s => cdefs }
 import _root_.tests.contentTypes.textPlain.server.http4s.foo.{ DoBarResponse, DoBazResponse, DoFooResponse, FooHandler, FooResource }
 import _root_.tests.contentTypes.textPlain.server.{ http4s => sdefs }
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import org.http4s.dsl.io._
 import org.http4s.headers._
 import cats.effect.IO
 import org.http4s.client.Client
 import org.http4s.{ Charset, HttpRoutes, MediaType }
 
-class Http4sTextPlainTest extends FunSuite with Matchers with EitherValues {
+class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
   import org.http4s.implicits._
   test("Plain text should be emitted for required parameters (raw)") {
     val route: HttpRoutes[IO] = HttpRoutes.of {

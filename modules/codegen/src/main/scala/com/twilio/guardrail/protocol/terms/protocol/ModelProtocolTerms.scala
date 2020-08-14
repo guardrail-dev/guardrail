@@ -14,21 +14,20 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
       clsName: String,
       dtoPackage: List[String],
       supportPackage: List[String],
-      needCamelSnakeConversion: Boolean,
       concreteTypes: List[PropMeta[L]]
   )(
       name: String,
+      fieldName: String,
       prop: Schema[_],
       meta: ResolvedType[L],
       requirement: PropertyRequirement,
       isCustomType: Boolean,
       defaultValue: Option[L#Term]
   ): F[ProtocolParameter[L]]
-  def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil): F[L#ClassDefinition]
+  def renderDTOClass(clsName: String, supportPackage: List[String], terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil): F[L#ClassDefinition]
   def encodeModel(
       clsName: String,
       dtoPackage: List[String],
-      needCamelSnakeConversion: Boolean,
       params: List[ProtocolParameter[L]],
       parents: List[SuperClass[L]] = Nil
   ): F[Option[L#ValueDefinition]]
@@ -36,7 +35,6 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
       clsName: String,
       dtoPackage: List[String],
       supportPackage: List[String],
-      needCamelSnakeConversion: Boolean,
       params: List[ProtocolParameter[L]],
       parents: List[SuperClass[L]] = Nil
   ): F[Option[L#ValueDefinition]]
@@ -49,13 +47,11 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
           String,
           List[String],
           List[String],
-          Boolean,
           List[PropMeta[L]]
-      ) => (String, Schema[_], ResolvedType[L], PropertyRequirement, Boolean, Option[L#Term]) => F[ProtocolParameter[L]] = transformProperty _,
-      newRenderDTOClass: (String, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = renderDTOClass _,
-      newDecodeModel: (String, List[String], List[String], Boolean, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] =
-        decodeModel _,
-      newEncodeModel: (String, List[String], Boolean, List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = encodeModel _,
+      ) => (String, String, Schema[_], ResolvedType[L], PropertyRequirement, Boolean, Option[L#Term]) => F[ProtocolParameter[L]] = transformProperty _,
+      newRenderDTOClass: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = renderDTOClass _,
+      newDecodeModel: (String, List[String], List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = decodeModel _,
+      newEncodeModel: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = encodeModel _,
       newRenderDTOStaticDefns: (String, List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition]) => F[StaticDefns[L]] = renderDTOStaticDefns _
   ) = new ModelProtocolTerms[L, F] {
     def MonadF                                         = newMonadF
@@ -64,35 +60,42 @@ abstract class ModelProtocolTerms[L <: LA, F[_]] {
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         concreteTypes: List[PropMeta[L]]
-    )(name: String, prop: Schema[_], meta: ResolvedType[L], requirement: PropertyRequirement, isCustomType: Boolean, defaultValue: Option[L#Term]) =
-      newTransformProperty(clsName, dtoPackage, supportPackage, needCamelSnakeConversion, concreteTypes)(
+    )(
+        name: String,
+        fieldName: String,
+        prop: Schema[_],
+        meta: ResolvedType[L],
+        requirement: PropertyRequirement,
+        isCustomType: Boolean,
+        defaultValue: Option[L#Term]
+    ) =
+      newTransformProperty(clsName, dtoPackage, supportPackage, concreteTypes)(
         name,
+        fieldName,
         prop,
         meta,
         requirement,
         isCustomType,
         defaultValue
       )
-    def renderDTOClass(clsName: String, terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) = newRenderDTOClass(clsName, terms, parents)
+    def renderDTOClass(clsName: String, supportPackage: List[String], terms: List[ProtocolParameter[L]], parents: List[SuperClass[L]] = Nil) =
+      newRenderDTOClass(clsName, supportPackage, terms, parents)
     def encodeModel(
         clsName: String,
         dtoPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         params: List[ProtocolParameter[L]],
         parents: List[SuperClass[L]] = Nil
     ) =
-      newEncodeModel(clsName, dtoPackage, needCamelSnakeConversion, params, parents)
+      newEncodeModel(clsName, dtoPackage, params, parents)
     def decodeModel(
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
-        needCamelSnakeConversion: Boolean,
         params: List[ProtocolParameter[L]],
         parents: List[SuperClass[L]] = Nil
     ) =
-      newDecodeModel(clsName, dtoPackage, supportPackage, needCamelSnakeConversion, params, parents)
+      newDecodeModel(clsName, dtoPackage, supportPackage, params, parents)
     def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
       newRenderDTOStaticDefns(clsName, deps, encoder, decoder)
   }

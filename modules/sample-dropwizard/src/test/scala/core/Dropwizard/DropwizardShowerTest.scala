@@ -4,10 +4,11 @@ import alias.client.dropwizard.Shower
 import java.math
 import java.net.{ URI, URL }
 import java.time.{ LocalDate, OffsetDateTime }
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 import scala.util.{ Failure, Success, Try }
 
-class DropwizardShowerTest extends FreeSpec with Matchers {
+class DropwizardShowerTest extends AnyFreeSpec with Matchers {
   private val shower = Shower.getInstance
 
   "Showers should be able to show for each builtin type" - {

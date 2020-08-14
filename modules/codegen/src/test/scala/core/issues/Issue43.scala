@@ -91,6 +91,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             ) :: Nil,
         _,
         _,
+        _,
         _
       ),
       _,
@@ -272,6 +273,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
           :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
+        _,
         _
       ),
       _,
@@ -412,7 +414,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       |    - type: object""".stripMargin
 
     val (
-      ProtocolDefinitions(ClassDefinition(cls, _, _, defCls, _, _) :: ADT(_, _, _, _, _) :: Nil, _, _, _),
+      ProtocolDefinitions(ClassDefinition(cls, _, _, defCls, _, _) :: ADT(_, _, _, _, _) :: Nil, _, _, _, _),
       _,
       _
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
@@ -468,6 +470,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         ClassDefinition(nameDog, tpeDog, fullTypeDog, clsDog, staticDefnsDog, dogParents)
           :: ClassDefinition(namePersianCat, tpePersianCat, fullTypePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
           :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
+        _,
         _,
         _,
         _
@@ -567,6 +570,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(
         ClassDefinition(nameCat, tpeCat, fullTypeCat, clsCat, staticDefnsCat, catParents)
           :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameMammal, tpeMammal, fullTypeMammal, trtMammal, staticDefnsMammal) :: Nil,
+        _,
         _,
         _,
         _

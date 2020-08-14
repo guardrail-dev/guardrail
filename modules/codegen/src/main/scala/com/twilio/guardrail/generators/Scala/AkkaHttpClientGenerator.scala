@@ -15,11 +15,12 @@ import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+import com.twilio.guardrail.generators.Scala.model.ModelGeneratorType
 import java.net.URI
 
 object AkkaHttpClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
+  class ClientTermInterp(modelGeneratorType: ModelGeneratorType) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
@@ -38,6 +39,7 @@ object AkkaHttpClientGenerator {
 
     def generateClientOperation(
         className: List[String],
+        responseClsName: String,
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage]
@@ -172,6 +174,7 @@ object AkkaHttpClientGenerator {
 
       def build(
           methodName: String,
+          responseClsName: String,
           httpMethod: HttpMethod,
           urlWithParams: Term,
           formDataParams: Option[Term],
@@ -256,7 +259,7 @@ object AkkaHttpClientGenerator {
         }
 
         val responseCompanionTerm =
-          Term.Name(s"${methodName.capitalize}Response")
+          Term.Name(responseClsName)
         val cases = responses.value.map { resp =>
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             (resp.value, resp.headers.value) match {
@@ -368,7 +371,18 @@ object AkkaHttpClientGenerator {
           List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
         else List.empty
         extraImplicits = List.empty
-        renderedClientOperation <- build(methodName, httpMethod, urlWithParams, formDataParams, headerParams, responses, produces, consumes, tracing)(
+        renderedClientOperation <- build(
+          methodName,
+          responseClsName,
+          httpMethod,
+          urlWithParams,
+          formDataParams,
+          headerParams,
+          responses,
+          produces,
+          consumes,
+          tracing
+        )(
           tracingArgsPre,
           tracingArgsPost,
           pathArgs,
@@ -383,25 +397,26 @@ object AkkaHttpClientGenerator {
     def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
     def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
-      val ihc =
-        param"implicit httpClient: HttpRequest => Future[HttpResponse]"
-      val iec  = param"implicit ec: ExecutionContext"
-      val imat = param"implicit mat: Materializer"
+      val implicits = List(
+          param"implicit httpClient: HttpRequest => Future[HttpResponse]",
+          param"implicit ec: ExecutionContext",
+          param"implicit mat: Materializer"
+        ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
       Target.pure(
         List(
           List(formatHost(serverUrls)) ++ (if (tracing)
                                              Some(formatClientName(tracingName))
                                            else None),
-          List(ihc, iec, imat)
+          implicits
         )
       )
     }
     def generateResponseDefinitions(
-        operationId: String,
+        responseClsName: String,
         responses: Responses[ScalaLanguage],
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ): Target[List[scala.meta.Defn]] =
-      Target.pure(Http4sHelper.generateResponseDefinitions(operationId, responses, protocolElems))
+      Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
     def generateSupportDefinitions(
         tracing: Boolean,
         securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
@@ -421,8 +436,10 @@ object AkkaHttpClientGenerator {
           ctorCall: Term.New,
           tracing: Boolean
       ): List[Defn] = {
-        val iec  = param"implicit ec: ExecutionContext"
-        val imat = param"implicit mat: Materializer"
+        val implicits = List(
+            param"implicit ec: ExecutionContext",
+            param"implicit mat: Materializer"
+          ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
         val tracingParams: List[Term.Param] = if (tracing) {
           List(formatClientName(tracingName))
         } else {
@@ -431,7 +448,7 @@ object AkkaHttpClientGenerator {
 
         List(
           q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)($iec, $imat): $tpe = $ctorCall
+              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)(..$implicits): $tpe = $ctorCall
             """
         )
       }
@@ -518,7 +535,7 @@ object AkkaHttpClientGenerator {
         tpe  <- resp.value.map(_._1).toList
       } yield {
         for {
-          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces)
+          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
         } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
       }).sequence
   }

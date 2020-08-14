@@ -187,9 +187,11 @@ object CLI extends CLICommon {
   val scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
     ScalaModule.extract, {
-      case "akka-http" => Scala.AkkaHttp
-      case "endpoints" => Scala.Endpoints
-      case "http4s"    => Scala.Http4s
+      case "akka-http"         => Scala.AkkaHttp
+      case "endpoints"         => Scala.Endpoints
+      case "http4s"            => Scala.Http4s
+      case "akka-http-jackson" => Scala.AkkaHttpJackson
+      case "dropwizard"        => Scala.Dropwizard
     }, {
       _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
     }

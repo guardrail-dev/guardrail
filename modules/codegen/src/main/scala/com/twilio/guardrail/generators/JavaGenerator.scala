@@ -31,7 +31,8 @@ import scala.concurrent.Future
 import scala.language.existentials
 
 object JavaGenerator {
-  def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] = safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
+  def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] =
+    safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
 
   def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
     case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
@@ -170,7 +171,15 @@ object JavaGenerator {
         case _ =>
           Target.raiseUserError(s"Enumeration $tpe somehow has a default value that isn't a string")
       }
-    def formatEnumName(enumValue: String): Target[String] = Target.pure(enumValue.toSnakeCase.toUpperCase(Locale.US))
+
+    def formatPackageName(packageName: List[String]): Target[List[String]] =
+      Target.pure(packageName.map(_.escapeInvalidCharacters.toCamelCase.escapeIdentifier))
+    def formatTypeName(typeName: String, suffix: Option[String] = None): Target[String] =
+      Target.pure(typeName.escapeInvalidCharacters.toPascalCase.escapeIdentifier + suffix.fold("")(_.escapeInvalidCharacters.toPascalCase.escapeIdentifier))
+    def formatFieldName(fieldName: String): Target[String]         = Target.pure(fieldName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
+    def formatMethodName(methodName: String): Target[String]       = Target.pure(methodName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
+    def formatMethodArgName(methodArgName: String): Target[String] = Target.pure(methodArgName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
+    def formatEnumName(enumValue: String): Target[String]          = Target.pure(enumValue.escapeInvalidCharacters.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
 
     def embedArray(tpe: LazyResolvedType[JavaLanguage], containerTpe: Option[com.github.javaparser.ast.`type`.Type]): Target[LazyResolvedType[JavaLanguage]] =
       tpe match {
@@ -201,7 +210,7 @@ object JavaGenerator {
         })
     def parseTypeName(tpe: String): Target[Option[JavaTypeName]] = Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
     def pureTermName(tpe: String): Target[com.github.javaparser.ast.expr.Name] =
-      Option(tpe).map(_.trim).filterNot(_.isEmpty).map(_.escapeIdentifier).map(safeParseName).getOrElse(Target.raiseUserError("A structure's name is empty"))
+      Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseUserError("A structure's name is empty"))
     def pureTypeName(tpe: String): Target[JavaTypeName] =
       Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseTypeName).getOrElse(Target.raiseUserError("A structure's name is empty"))
 
@@ -210,7 +219,7 @@ object JavaGenerator {
         tpe: com.github.javaparser.ast.`type`.Type,
         default: Option[com.github.javaparser.ast.Node]
     ): Target[com.github.javaparser.ast.body.Parameter] =
-      safeParseSimpleName(nameStr.asString.escapeIdentifier).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
+      safeParseSimpleName(nameStr.asString).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
     def typeNamesEqual(a: JavaTypeName, b: JavaTypeName): Target[Boolean]                                               = Target.pure(a.asString == b.asString)
     def typesEqual(a: com.github.javaparser.ast.`type`.Type, b: com.github.javaparser.ast.`type`.Type): Target[Boolean] = Target.pure(a.equals(b))
     def extractTypeName(tpe: com.github.javaparser.ast.`type`.Type): Target[Option[JavaTypeName]] = {
@@ -226,15 +235,17 @@ object JavaGenerator {
       }
       extractTypeName(tpe).map(Option.apply)
     }
-    def extractTermName(term: com.github.javaparser.ast.expr.Name): Target[String]                 = Target.pure(term.asString)
-    def selectType(typeNames: NonEmptyList[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType(typeNames.toList.mkString("."))
+    def extractTermName(term: com.github.javaparser.ast.expr.Name): Target[String] = Target.pure(term.asString)
+    def extractTermNameFromParam(param: Parameter): Target[String]                 = Target.pure(param.getNameAsString)
+    def selectType(typeNames: NonEmptyList[String]): Target[com.github.javaparser.ast.`type`.Type] =
+      safeParseType(typeNames.toList.mkString("."))
     def selectTerm(termNames: NonEmptyList[String]): Target[com.github.javaparser.ast.Node] =
       safeParseExpression[Expression](termNames.toList.mkString(".")).map(v => v: Node)
     def alterMethodParameterName(
         param: com.github.javaparser.ast.body.Parameter,
         name: com.github.javaparser.ast.expr.Name
     ): Target[com.github.javaparser.ast.body.Parameter] =
-      safeParseSimpleName(name.asString.escapeIdentifier).map(
+      safeParseSimpleName(name.asString).map(
         new Parameter(
           param.getTokenRange.orElse(null),
           param.getModifiers,
@@ -307,6 +318,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
+        frameworkImplicitImportNames: List[com.github.javaparser.ast.expr.Name],
         jsonImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkImplicits: Nothing,
         frameworkImplicitName: com.github.javaparser.ast.expr.Name
@@ -335,12 +347,13 @@ object JavaGenerator {
 
     def writePackageObject(
         dtoPackagePath: Path,
+        pkgComponents: List[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],
         protocolImports: List[com.github.javaparser.ast.ImportDeclaration],
-        packageObjectContents: List[com.github.javaparser.ast.stmt.Statement],
-        extraTypes: List[com.github.javaparser.ast.stmt.Statement]
+        packageObjectContents: List[com.github.javaparser.ast.Node],
+        extraTypes: List[com.github.javaparser.ast.Node]
     ): Target[Option[WriteTree]] =
       for {
         pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
@@ -365,8 +378,9 @@ object JavaGenerator {
         definitions: List[String],
         dtoComponents: List[String],
         imports: List[com.github.javaparser.ast.ImportDeclaration],
+        protoImplicitName: Option[com.github.javaparser.ast.expr.Name],
         elem: StrictProtocolElems[JavaLanguage]
-    ): Target[(List[WriteTree], List[com.github.javaparser.ast.stmt.Statement])] =
+    ): Target[(List[WriteTree], List[com.github.javaparser.ast.Node])] =
       for {
         pkgDecl      <- buildPkgDecl(dtoComponents)
         showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
@@ -416,7 +430,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
-        frameworkImplicitName: Option[com.github.javaparser.ast.expr.Name],
+        frameworkImplicitNames: List[com.github.javaparser.ast.expr.Name],
         dtoComponents: Option[List[String]],
         _client: Client[JavaLanguage]
     ): Target[List[WriteTree]] = {
@@ -434,7 +448,7 @@ object JavaGenerator {
         pkgPath: Path,
         pkgName: List[String],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
-        frameworkImplicitName: Option[com.github.javaparser.ast.expr.Name],
+        frameworkImplicitNames: List[com.github.javaparser.ast.expr.Name],
         dtoComponents: Option[List[String]],
         server: Server[JavaLanguage]
     ): Target[List[WriteTree]] = {

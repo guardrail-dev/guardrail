@@ -7,7 +7,7 @@ import scala.meta._
 
 object Http4sHelper {
   def generateResponseDefinitions(
-      operationId: String,
+      responseClsName: String,
       responses: Responses[ScalaLanguage],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
   ): List[Defn] = {
@@ -15,8 +15,8 @@ object Http4sHelper {
     val extraTypes: List[Type]            = if (isGeneric) List(t"F") else Nil
     val extraTypeParams: List[Type.Param] = if (isGeneric) List(tparam"F[_]") else Nil
 
-    val responseSuperType     = Type.Name(s"${operationId.capitalize}Response")
-    val responseSuperTerm     = Term.Name(s"${operationId.capitalize}Response")
+    val responseSuperType     = Type.Name(responseClsName)
+    val responseSuperTerm     = Term.Name(responseClsName)
     val responseSuperTemplate = template"${Init(if (isGeneric) Type.Apply(responseSuperType, extraTypes) else responseSuperType, Name(""), List.empty)}"
 
     val (terms, foldPair) = responses.value
@@ -48,7 +48,7 @@ object Http4sHelper {
     val (foldParams, foldCases) = foldPair.unzip
 
     val companion = q"""
-            object ${Term.Name(s"${operationId.capitalize}Response")} {
+            object ${Term.Name(responseClsName)} {
               ..$terms
             }
           """
