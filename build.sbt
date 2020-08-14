@@ -30,7 +30,7 @@ val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
 val springBootVersion      = "2.3.3.RELEASE"
 val jacksonVersion         = "2.11.2"
-val hibernateVersion       = "5.4.3.Final"
+val hibernateVersion       = "6.1.5.Final"
 val javaxElVersion         = "3.0.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
