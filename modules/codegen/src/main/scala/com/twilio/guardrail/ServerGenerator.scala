@@ -13,7 +13,7 @@ case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[S
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
 case class TracingField[L <: LA](param: LanguageParameter[L], term: L#Term)
 case class RenderedRoutes[L <: LA](
-    routes: List[L#Term],
+    routes: List[L#Statement],
     classAnnotations: List[L#Annotation],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],
@@ -21,7 +21,7 @@ case class RenderedRoutes[L <: LA](
 )
 
 object ServerGenerator {
-  def fromSwagger[L <: LA, F[_]](context: Context, basePath: Option[String], frameworkImports: List[L#Import])(
+  def fromSwagger[L <: LA, F[_]](context: Context, supportPackage: List[String], basePath: Option[String], frameworkImports: List[L#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],
@@ -32,7 +32,7 @@ object ServerGenerator {
     import Sc._
 
     for {
-      extraImports       <- getExtraImports(context.tracing)
+      extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
       servers <- groupedRoutes.traverse {
         case (className, unsortedRoutes) =>

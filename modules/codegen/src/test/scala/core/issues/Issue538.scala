@@ -38,6 +38,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _,
+        _,
         _
       ),
       _,
@@ -74,6 +75,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           _: ClassDefinition[ScalaLanguage], //baz
           foo: ClassDefinition[ScalaLanguage]
         ),
+        _,
         _,
         _,
         _
@@ -114,6 +116,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _,
+        _,
         _
       ),
       _,
@@ -150,6 +153,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           _: ClassDefinition[ScalaLanguage], //baz
           foo: ClassDefinition[ScalaLanguage]
         ),
+        _,
         _,
         _,
         _

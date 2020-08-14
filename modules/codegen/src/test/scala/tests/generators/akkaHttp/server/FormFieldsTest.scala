@@ -183,7 +183,7 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
         sealed abstract class PutFooResponse(val statusCode: StatusCode)
         case object PutFooResponseOK extends PutFooResponse(StatusCodes.OK)
         object PutFooResponse {
-          implicit val putFooResponseTRM: ToResponseMarshaller[PutFooResponse] = Marshaller { implicit ec =>
+          implicit def putFooResponseTRM: ToResponseMarshaller[PutFooResponse] = Marshaller { implicit ec =>
             resp => putFooResponseTR(resp)
           }
           implicit def putFooResponseTR(value: PutFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
