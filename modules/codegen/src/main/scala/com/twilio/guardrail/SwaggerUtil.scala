@@ -289,7 +289,7 @@ object SwaggerUtil {
             case (Some("string"), Some("date-time"))    => dateTimeType()
             case (Some("string"), Some("byte"))         => bytesType()
             case (Some("string"), fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
-            case (Some("string"), fmt)                  => stringType(fmt).map(log(fmt, _))
+            case (Some("string"), fmt)                  => stringType(None).map(log(fmt, _))
             case (Some("number"), Some("float"))        => floatType()
             case (Some("number"), Some("double"))       => doubleType()
             case (Some("number"), fmt)                  => numberType(fmt).map(log(fmt, _))
