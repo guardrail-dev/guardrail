@@ -158,6 +158,33 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
         build tool plugins or at the CLI.
       </td>
     </tr>
+    <tr>
+      <td nowrap><code>x-scala-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating Scala code. See also <code>x-jvm-class-prefix</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-java-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating Java code. See also <code>x-jvm-class-prefix</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-jvm-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating JVM code. See also <code>x-scala-class-prefix</code>.
+      </td>
+    </tr>    
   </tbody>
 </table>
 
