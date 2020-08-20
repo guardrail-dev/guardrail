@@ -118,7 +118,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |  sealed abstract class GetUserResponse(val statusCode: StatusCode)
          |  case object GetUserResponseOK extends GetUserResponse(StatusCodes.OK)
          |  object GetUserResponse {
-         |    implicit val getUserResponseTRM: ToResponseMarshaller[GetUserResponse] = Marshaller { implicit ec =>
+         |    implicit def getUserResponseTRM: ToResponseMarshaller[GetUserResponse] = Marshaller { implicit ec =>
          |      resp => getUserResponseTR(resp)
          |    }
          |    implicit def getUserResponseTR(value: GetUserResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
