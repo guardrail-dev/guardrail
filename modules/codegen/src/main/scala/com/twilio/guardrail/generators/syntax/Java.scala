@@ -46,6 +46,12 @@ object Java {
         case other                     => other.asString == name
       }
 
+    // Heuristicly guess if the type could be reasonably used as a text/plain body
+    def isPlain: Boolean =
+      tpe.isPrimitiveType || tpe.isNamed("BigInteger") || tpe.isNamed("BigDecimal") || tpe.isNamed("String") || tpe.isNamed("OffsetDateTime") || tpe.isNamed(
+          "LocalDate"
+        )
+
     @deprecated("Just use Type#asString", "0.0.0")
     def name: Option[String] = Option(tpe.asString)
   }

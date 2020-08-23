@@ -5,7 +5,10 @@ import akka.http.scaladsl.server.{ Route }
 import akka.stream.ActorMaterializer
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FlatSpec, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import tests.customTypes.customHeader.client.akkaHttp.Client
 import tests.customTypes.customHeader.client.akkaHttp.{ definitions => cdefs }
@@ -13,7 +16,7 @@ import tests.customTypes.customHeader.server.akkaHttp.Implicits.Formatter
 import tests.customTypes.customHeader.server.akkaHttp.{ definitions => sdefs, Handler, Resource }
 import scala.concurrent.Future
 
-class AkkaHttpCustomHeadersTest extends FlatSpec with Matchers with ScalaFutures with EitherValues {
+class AkkaHttpCustomHeadersTest extends AnyFlatSpec with Matchers with ScalaFutures with EitherValues {
 
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 

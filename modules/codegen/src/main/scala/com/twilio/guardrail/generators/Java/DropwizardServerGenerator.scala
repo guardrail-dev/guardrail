@@ -15,6 +15,7 @@ import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefini
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
 import com.twilio.guardrail.generators.LanguageParameter
+import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.{
@@ -63,32 +64,6 @@ object DropwizardServerGenerator {
   private val LOCAL_TIME_PARAM_TYPE       = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.LocalTimeParam")
   private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
   private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
-
-  private def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
-  private def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
-
-  private def findPathPrefix(routePaths: List[String]): List[String] = {
-    def getHeads(sss: List[List[String]]): (List[Option[String]], List[List[String]]) =
-      (sss.map(_.headOption), sss.map(_.drop(1)))
-
-    def checkMatch(matching: List[String], headsToCheck: List[Option[String]], restOfHeads: List[List[String]]): List[String] =
-      headsToCheck match {
-        case Nil => matching
-        case x :: xs =>
-          x.fold(matching) { first =>
-            if (xs.forall(_.contains(first))) {
-              val (nextHeads, nextRest) = getHeads(restOfHeads)
-              checkMatch(matching :+ first, nextHeads, nextRest)
-            } else {
-              matching
-            }
-          }
-      }
-
-    val splitRoutePaths             = routePaths.map(splitPathComponents)
-    val (initialHeads, initialRest) = getHeads(splitRoutePaths)
-    checkMatch(List.empty, initialHeads, initialRest)
-  }
 
   def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
     Target.log.function("generateResponseSuperClass") {
@@ -223,7 +198,7 @@ object DropwizardServerGenerator {
 
   object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    override def getExtraImports(tracing: Boolean): Target[List[ImportDeclaration]] =
+    override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
       List(
         "javax.inject.Inject",
         "javax.validation.constraints.NotNull",
@@ -296,7 +271,7 @@ object DropwizardServerGenerator {
               }
 
               val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-              val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
+              val consumes    = getBestConsumes(operation, allConsumes, parameters)
               consumes
                 .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
                 .foreach(method.addAnnotation)
@@ -305,7 +280,7 @@ object DropwizardServerGenerator {
               NonEmptyList
                 .fromList(
                   responses.value
-                    .flatMap(DropwizardHelpers.getBestProduces(operationId, allProduces, _))
+                    .flatMap(getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
                     .distinct
                     .map(_.toJaxRsAnnotationName)
                 )
@@ -372,6 +347,13 @@ object DropwizardServerGenerator {
                 parameter
               }
 
+              def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
+                if (!param.required && parameter.getType.isNamed("List")) {
+                  parameter.setType(parameter.getType.containedType)
+                } else {
+                  parameter
+                }
+
               def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
                 parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
@@ -390,18 +372,20 @@ object DropwizardServerGenerator {
               ).flatMap({
                 case (params, annotationName) =>
                   params.map({ param =>
-                    val parameter       = param.param.clone()
-                    val annotated       = addParamAnnotation(parameter, param, annotationName)
-                    val dateTransformed = transformJsr310Params(annotated)
-                    val fileTransformed = transformMultipartFile(dateTransformed, param)
+                    val parameter                  = param.param.clone()
+                    val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                    val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
+                    val dateTransformed            = transformJsr310Params(annotated)
+                    val fileTransformed            = transformMultipartFile(dateTransformed, param)
                     addValidationAnnotations(fileTransformed, param)
                   })
               })
 
               val bareMethodParams: List[Parameter] = parameters.bodyParams.toList
                 .map({ param =>
-                  val parameter       = param.param.clone()
-                  val dateTransformed = transformJsr310Params(parameter)
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  val dateTransformed            = transformJsr310Params(optionalCollectionStripped)
                   addValidationAnnotations(dateTransformed, param)
                 })
 
@@ -572,9 +556,11 @@ object DropwizardServerGenerator {
               val futureResponseType = completionStageType(responseType.clone())
               val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (
-                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
-                    parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
-                    parameters.bodyParams.map(_.param.clone())
+                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams).map({ param =>
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  transformMultipartFile(optionalCollectionStripped, param)
+                }) ++ parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
               ).foreach(handlerMethodSig.addParameter)
               handlerMethodSig.setBody(null)
 
@@ -689,7 +675,7 @@ object DropwizardServerGenerator {
     override def renderHandler(
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
-        handlerDefinitions: List[com.github.javaparser.ast.stmt.Statement],
+        handlerDefinitions: List[com.github.javaparser.ast.Node],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
     ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)

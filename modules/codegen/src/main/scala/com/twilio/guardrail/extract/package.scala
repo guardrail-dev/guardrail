@@ -34,6 +34,9 @@ package object extract {
   def PackageName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
     extractFromNames[F, String](v, vendorPrefixes.map(_ + "-package"))
 
+  def ClassPrefix[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =
+    extractFromNames[F, String](v, vendorPrefixes.map(_ + "-class-prefix"))
+
   def ServerRawResponse[F: VendorExtension.VendorExtensible](v: F): Option[Boolean] =
     VendorExtension(v).extract[Boolean]("x-server-raw-response")
 

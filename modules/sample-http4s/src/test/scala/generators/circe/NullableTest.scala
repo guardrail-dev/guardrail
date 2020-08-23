@@ -1,11 +1,14 @@
 package generators.circe
 
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import issues.issue315.client.http4s.definitions._
 import issues.issue315.client.http4s.support._
 import io.circe._
 import io.circe.syntax._
-class NullableTest extends FunSuite with Matchers with EitherValues {
+class NullableTest extends AnyFunSuite with Matchers with EitherValues {
   val constant   = "constant"
   val defaultObj = TestObject(required = constant, optionalNullable = Presence.Absent)
 

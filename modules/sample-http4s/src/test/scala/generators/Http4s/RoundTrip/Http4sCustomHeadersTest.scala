@@ -3,12 +3,15 @@ package generators.Http4s.RoundTrip
 import cats.effect.IO
 import org.http4s.client.{ Client => Http4sClient }
 import org.http4s.implicits._
-import org.scalatest.{ EitherValues, FlatSpec, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+
 import tests.customTypes.customHeader.client.http4s.{ definitions => cdefs, Client }
 import tests.customTypes.customHeader.server.http4s.Implicits.Formatter
 import tests.customTypes.customHeader.server.http4s.{ definitions => sdefs, GetFooResponse, Handler, Resource }
 
-class Http4sCustomHeadersTest extends FlatSpec with Matchers with EitherValues {
+class Http4sCustomHeadersTest extends AnyFlatSpec with Matchers with EitherValues {
 
   it should "encode custom headers" in {
     Formatter.show(sdefs.Bar.V1) shouldBe "v1"

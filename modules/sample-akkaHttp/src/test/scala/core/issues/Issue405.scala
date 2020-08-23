@@ -5,7 +5,9 @@ import akka.http.scaladsl.server.{ RejectionHandler, Route }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
-import org.scalatest.{ EitherValues, FunSuite, Matchers }
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import akka.http.scaladsl.model.FormData
 import akka.http.scaladsl.server.Directives.complete
 
@@ -16,7 +18,7 @@ import scala.concurrent.Future
   * - Required String form param should accept empty string
   * - Option String for param should accept emtpy string
   */
-class Issue405 extends FunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class Issue405 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   implicit val rejectionHandler: RejectionHandler = RejectionHandler

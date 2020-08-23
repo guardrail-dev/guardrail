@@ -2,10 +2,11 @@ package core.Dropwizard
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import helpers.WireMockSupport
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 import tests.contentTypes.textPlain.client.dropwizard.foo.FooClient
 
-class AsyncHttpClientContentHeaderTest extends FreeSpec with Matchers with WireMockSupport {
+class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with WireMockSupport {
   private val MOCK_REQUEST_BODY  = "abcd"
   private val MOCK_RESPONSE_BODY = "efgh"
 

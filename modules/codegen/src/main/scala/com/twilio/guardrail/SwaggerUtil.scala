@@ -14,6 +14,7 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
 import com.twilio.guardrail.extract.VendorExtension.VendorExtensible._
 import com.twilio.guardrail.generators.LanguageParameter
+import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, ModelGeneratorType }
 import com.twilio.guardrail.languages.{ LA, ScalaLanguage }
 import scala.meta._
 import com.twilio.guardrail.protocol.terms.protocol.PropMeta
@@ -227,17 +228,21 @@ object SwaggerUtil {
           schema
             .refine({ case impl: Schema[_] if (Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined) => impl })(
               impl =>
-                pureTypeName(clsName)
-                  .flatMap(widenTypeName)
-                  .map(x => (clsName, SwaggerUtil.Resolved[L](x, None, None, None, None): SwaggerUtil.ResolvedType[L]))
+                for {
+                  formattedClsName <- formatTypeName(clsName)
+                  typeName         <- pureTypeName(formattedClsName)
+                  widenedTypeName  <- widenTypeName(typeName)
+                } yield (clsName, SwaggerUtil.Resolved[L](widenedTypeName, None, None, None, None): SwaggerUtil.ResolvedType[L])
             )
             .orRefine({ case comp: ComposedSchema => comp })(
               comp =>
                 for {
-                  x <- pureTypeName(clsName).flatMap(widenTypeName)
+                  formattedClsName <- formatTypeName(clsName)
+                  typeName         <- pureTypeName(formattedClsName)
+                  widenedTypeName  <- widenTypeName(typeName)
                   parentSimpleRef = comp.downField("allOf", _.getAllOf).map(_.headOption).flatDownField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last)
                   parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
-                  resolvedType = SwaggerUtil.Resolved[L](x, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
+                  resolvedType = SwaggerUtil.Resolved[L](widenedTypeName, parentTerm, None, None, None): SwaggerUtil.ResolvedType[L]
                 } yield (clsName, resolvedType)
             )
             .getOrElse(
@@ -284,7 +289,7 @@ object SwaggerUtil {
             case (Some("string"), Some("date-time"))    => dateTimeType()
             case (Some("string"), Some("byte"))         => bytesType()
             case (Some("string"), fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
-            case (Some("string"), fmt)                  => stringType(fmt).map(log(fmt, _))
+            case (Some("string"), fmt)                  => stringType(None).map(log(fmt, _))
             case (Some("number"), Some("float"))        => floatType()
             case (Some("number"), Some("double"))       => doubleType()
             case (Some("number"), fmt)                  => numberType(fmt).map(log(fmt, _))
@@ -541,7 +546,7 @@ object SwaggerUtil {
     }
 
     class Extractors[T, TN <: T](
-        pathSegmentConverter: (LanguageParameter[ScalaLanguage], Option[T]) => Either[String, T],
+        pathSegmentConverter: (LanguageParameter[ScalaLanguage], Option[T], ModelGeneratorType) => Either[String, T],
         buildParamConstraint: ((String, String)) => T,
         joinParams: (T, T) => T,
         stringPath: String => T,
@@ -555,23 +560,23 @@ object SwaggerUtil {
       val plainString: Parser[String]   = many(noneOf("{}/?")).map(_.mkString)
       val plainNEString: Parser[String] = many1(noneOf("{}/?")).map(_.toList.mkString)
       val stringSegment: P              = plainNEString.map(s => (None, stringPath(s)))
-      def regexSegment(implicit pathArgs: List[LanguageParameter[ScalaLanguage]]): P =
+      def regexSegment(implicit pathArgs: List[LanguageParameter[ScalaLanguage]], modelGeneratorType: ModelGeneratorType): P =
         (plainString ~ variable ~ plainString).flatMap {
           case ((before, binding), after) =>
             lookupName[ScalaLanguage, (Option[TN], T)](binding, pathArgs) {
               case param @ LanguageParameter(_, _, paramName, argName, _) =>
                 val value = if (before.nonEmpty || after.nonEmpty) {
-                  pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString)))
+                  pathSegmentConverter(param, Some(litRegex(before.mkString, paramName, after.mkString)), modelGeneratorType)
                     .fold(err, ok)
                 } else {
-                  pathSegmentConverter(param, None).fold(err, ok)
+                  pathSegmentConverter(param, None, modelGeneratorType).fold(err, ok)
                 }
                 value.map((Some(liftBinding(paramName)), _))
             }
         }
 
-      def segments(implicit pathArgs: List[LanguageParameter[ScalaLanguage]]): LP =
-        sepBy1(choice(regexSegment(pathArgs), stringSegment), char('/'))
+      def segments(implicit pathArgs: List[LanguageParameter[ScalaLanguage]], modelGeneratorType: ModelGeneratorType): LP =
+        sepBy1(choice(regexSegment(pathArgs, modelGeneratorType), stringSegment), char('/'))
           .map(_.toList)
 
       val qsValueOnly: Parser[(String, String)] = ok("") ~ (char('=') ~> opt(many(noneOf("&")))
@@ -587,10 +592,17 @@ object SwaggerUtil {
       val staticQS: Parser[Option[T]]                                        = (char('?') ~> queryPart.map(Option.apply _)) | char('?').map(_ => Option.empty[T]) | ok(Option.empty[T])
       val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = ok((List.empty[(Option[TN], T)], (false, None)))
       val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
-      def pattern(implicit pathArgs: List[LanguageParameter[ScalaLanguage]]): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+      def pattern(
+          implicit pathArgs: List[LanguageParameter[ScalaLanguage]],
+          modelGeneratorType: ModelGeneratorType
+      ): Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] =
         opt(leadingSlash) ~> ((segments ~ (trailingSlash ~ staticQS)) | emptyPathQS | emptyPath) <~ endOfInput
-      def runParse(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
-        pattern(pathArgs)
+      def runParse(
+          path: Tracker[String],
+          pathArgs: List[LanguageParameter[ScalaLanguage]],
+          modelGeneratorType: ModelGeneratorType
+      ): Target[(List[(Option[TN], T)], (Boolean, Option[T]))] =
+        pattern(pathArgs, modelGeneratorType)
           .parse(path.unwrapTracker)
           .done match {
           case ParseResult.Done(input, result)         => Target.pure(result)
@@ -602,7 +614,8 @@ object SwaggerUtil {
     object akkaExtractor
         extends Extractors[Term, Term.Name](
           pathSegmentConverter = {
-            case (LanguageParameter(_, param, _, argName, argType), base) =>
+            case (LanguageParameter(_, param, _, argName, argType), base, modelGeneratorType) =>
+              import com.twilio.guardrail.generators.Scala.AkkaHttpHelper.fromStringConverter
               base.fold {
                 argType match {
                   case t"String" => Right(q"Segment")
@@ -613,7 +626,7 @@ object SwaggerUtil {
                   case t"Long"   => Right(q"LongNumber")
                   case t"BigInt" => Right(q"Segment.map(BigInt.apply _)")
                   case tpe =>
-                    Right(q"Segment.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
+                    Right(q"Segment.flatMap(str => ${fromStringConverter(tpe, modelGeneratorType)})")
                 }
               } { segment =>
                 argType match {
@@ -622,7 +635,7 @@ object SwaggerUtil {
                     Right(q"${segment}.map(BigDecimal.apply _)")
                   case t"BigInt" => Right(q"${segment}.map(BigInt.apply _)")
                   case tpe =>
-                    Right(q"${segment}.flatMap(str => io.circe.Json.fromString(str).as[${tpe}].toOption)")
+                    Right(q"${segment}.flatMap(str => ${fromStringConverter(tpe, modelGeneratorType)})")
                 }
               }
           },
@@ -644,7 +657,7 @@ object SwaggerUtil {
     object http4sExtractor
         extends Extractors[Pat, Term.Name](
           pathSegmentConverter = {
-            case (LanguageParameter(_, param, paramName, argName, argType), base) =>
+            case (LanguageParameter(_, param, paramName, argName, argType), base, _) =>
               base.fold[Either[String, Pat]] {
                 argType match {
                   case t"Int"                         => Right(p"IntVar(${Pat.Var(paramName)})")
@@ -680,7 +693,7 @@ object SwaggerUtil {
     object endpointsExtractor
         extends Extractors[Term, Term.Name](
           pathSegmentConverter = {
-            case (LanguageParameter(_, param, paramName, argName, argType), base) =>
+            case (LanguageParameter(_, param, paramName, argName, argType), base, _) =>
               base.fold[Either[String, Term]] {
                 import com.twilio.guardrail.generators.syntax.Scala._
                 Right(q"showSegment[$argType](${argName.toLit}, None)")
@@ -705,11 +718,12 @@ object SwaggerUtil {
 
     def generateUrlAkkaPathExtractors(
         path: Tracker[String],
-        pathArgs: List[LanguageParameter[ScalaLanguage]]
+        pathArgs: List[LanguageParameter[ScalaLanguage]],
+        modelGeneratorType: ModelGeneratorType
     ): Target[NonEmptyList[(Term, List[Term.Name])]] = {
       import akkaExtractor._
       for {
-        (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
+        (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs, modelGeneratorType)
         allPairs = parts
           .foldLeft[NonEmptyList[(Term, List[Term.Name])]](NonEmptyList.one((q"pathEnd", List.empty)))({
             case (NonEmptyList((q"pathEnd   ", bindings), xs), (termName, b)) =>
@@ -738,7 +752,7 @@ object SwaggerUtil {
     def generateUrlHttp4sPathExtractors(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
       import http4sExtractor._
       for {
-        (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs)
+        (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs, CirceModelGenerator.V012)
         (directive, bindings) = parts
           .foldLeft[(Pat, List[Term.Name])]((p"${Term.Name("Root")}", List.empty))({
             case ((acc, bindings), (termName, c)) =>
@@ -753,7 +767,7 @@ object SwaggerUtil {
     def generateUrlEndpointsPathExtractors(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Term, Option[Term])] = {
       import endpointsExtractor._
       for {
-        (parts, (trailingSlash, queryParams)) <- path.map(pattern(pathArgs).parseOnly(_).either).raiseErrorIfLeft.map(_.unwrapTracker)
+        (parts, (trailingSlash, queryParams)) <- path.map(pattern(pathArgs, CirceModelGenerator.V012).parseOnly(_).either).raiseErrorIfLeft.map(_.unwrapTracker)
         (directive, bindings) = parts
           .foldLeft[(Term, List[Term.Name])]((q"pathRoot", List.empty))({
             case ((acc, bindings), (termName, c)) =>
