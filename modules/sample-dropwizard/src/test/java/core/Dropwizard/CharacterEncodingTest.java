@@ -18,7 +18,6 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -38,17 +37,26 @@ public class CharacterEncodingTest {
             0xc3, 0xac, 0xc3, 0xb2, 0xc3, 0xa7
     };
 
+    private static byte[] intArrayToByteArray(final int[] ia) {
+        final byte[] ba = new byte[ia.length];
+        for (int i = 0; i < ia.length; ++i) {
+            ba[i] = (byte) ia[i];
+        }
+        return ba;
+    }
+
     private static String testString(final InputStream stream) {
         try {
-            final byte[] charBuf = new byte[STRING_DATA_UTF8.length];
+            final int[] charBuf = new int[STRING_DATA_UTF8.length];
             for (int i = 0; i <  STRING_DATA_UTF8.length; ++i) {
                 final int input = stream.read();
-                charBuf[i] = (byte) input;
+                assertThat(input).isNotEqualTo(-1);
+                charBuf[i] = input;
             }
-            assertThat(charBuf).isEqualTo(Arrays.stream(STRING_DATA_UTF8).boxed().map(Integer::byteValue).toArray());
+            assertThat(charBuf).isEqualTo(STRING_DATA_UTF8);
             assertThat(stream.read()).isEqualTo(-1);  // should have hit the end
 
-            final String receivedStr = new String(charBuf, StandardCharsets.UTF_8);
+            final String receivedStr = new String(intArrayToByteArray(charBuf), StandardCharsets.UTF_8);
             assertThat(receivedStr).isEqualTo(STRING_DATA);
 
             return receivedStr;
