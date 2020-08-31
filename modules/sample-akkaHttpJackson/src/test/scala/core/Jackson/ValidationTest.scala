@@ -28,17 +28,17 @@ class ValidationTest extends AnyFreeSpec with Matchers with TryValues with TestI
 
     "fails on bad data" in {
       val user = User(id = null)
-      implicitly[GuardrailValidator[User]].validate(user).failure.exception must have message "Validation of User failed: id: may not be null"
+      implicitly[GuardrailValidator[User]].validate(user).failure.exception must have message "Validation of User failed: id: must not be null"
     }
 
     "fails on bad data in containers" in {
       val user = User(id = null)
-      implicitly[GuardrailValidator[Option[User]]].validate(Option(user)).failure.exception must have message "Validation of User failed: id: may not be null"
-      implicitly[GuardrailValidator[Vector[User]]].validate(Vector(user)).failure.exception must have message "Validation of User failed: id: may not be null"
+      implicitly[GuardrailValidator[Option[User]]].validate(Option(user)).failure.exception must have message "Validation of User failed: id: must not be null"
+      implicitly[GuardrailValidator[Vector[User]]].validate(Vector(user)).failure.exception must have message "Validation of User failed: id: must not be null"
       implicitly[GuardrailValidator[Map[String, User]]]
         .validate(Map("root" -> user))
         .failure
-        .exception must have message "Validation of User failed: id: may not be null"
+        .exception must have message "Validation of User failed: id: must not be null"
     }
   }
 }
