@@ -348,7 +348,7 @@ object DropwizardServerGenerator {
               }
 
               def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
-                if (!param.required && parameter.getType.isNamed("List")) {
+                if (!param.required && parameter.getType.containedType.isNamed("List")) {
                   parameter.setType(parameter.getType.containedType)
                 } else {
                   parameter
