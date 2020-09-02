@@ -36,7 +36,7 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
   ) = (new DropwizardServerGenerator.ServerTermInterp, new DropwizardGenerator.FrameworkInterp)
-  def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): (
+  def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
   ) = (new SpringMvcServerGenerator.ServerTermInterp, new SpringMvcGenerator.FrameworkInterp)
