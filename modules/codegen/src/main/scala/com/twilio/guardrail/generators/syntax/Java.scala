@@ -18,17 +18,6 @@ import scala.util.{ Failure, Success, Try }
 
 object Java {
   implicit class RichType(private val tpe: Type) extends AnyVal {
-    // These two should be replaced with something more generic that doesn't rely on type naming, but will
-    // likely require a bit of surgery to do so
-
-    def isOptional: Boolean =
-      tpe match {
-        case cls: ClassOrInterfaceType =>
-          val scope = cls.getScope.asScala
-          cls.getNameAsString == "Optional" && (scope.isEmpty || scope.map(_.asString).contains("java.util"))
-        case _ => false
-      }
-
     def containedType: Type =
       tpe match {
         case cls: ClassOrInterfaceType => cls.getTypeArguments.asScala.filter(_.size == 1).fold(tpe)(_.get(0))
@@ -140,10 +129,6 @@ object Java {
   def javaOptionalType(of: Type): ClassOrInterfaceType        = StaticJavaParser.parseClassOrInterfaceType("java.util.Optional").setTypeArguments(of)
   def functionType(in: Type, out: Type): ClassOrInterfaceType = StaticJavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
   def supplierType(of: Type): ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
-  def listType(of: Type): ClassOrInterfaceType                = StaticJavaParser.parseClassOrInterfaceType("List").setTypeArguments(of)
-  def mapType(key: Type, value: Type): ClassOrInterfaceType   = StaticJavaParser.parseClassOrInterfaceType("Map").setTypeArguments(key, value)
-  def mapEntryType(key: Type, value: Type): ClassOrInterfaceType =
-    StaticJavaParser.parseClassOrInterfaceType("Map.Entry").setTypeArguments(new NodeList(key, value))
 
   val VOID_TYPE: ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Void")
   val OBJECT_TYPE: ClassOrInterfaceType          = StaticJavaParser.parseClassOrInterfaceType("Object")
