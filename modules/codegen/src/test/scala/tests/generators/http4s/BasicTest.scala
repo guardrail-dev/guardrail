@@ -132,7 +132,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def getBar(headers: List[Header] = List.empty): F[GetBarResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(GetBarResponse.Ok): F[GetBarResponse]
           case resp =>
@@ -142,7 +142,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def getBaz(headers: List[Header] = List.empty): F[GetBazResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(resp) =>
             F.map(getBazOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetBazResponse.Ok.apply): F[GetBazResponse]
           case resp =>
@@ -152,7 +152,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def postFoo(headers: List[Header] = List.empty): F[PostFooResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(PostFooResponse.Ok): F[PostFooResponse]
           case resp =>
@@ -162,7 +162,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def getFoo(headers: List[Header] = List.empty): F[GetFooResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(GetFooResponse.Ok): F[GetFooResponse]
           case resp =>
@@ -172,7 +172,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def putFoo(headers: List[Header] = List.empty): F[PutFooResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(PutFooResponse.Ok): F[PutFooResponse]
           case resp =>
@@ -182,7 +182,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def patchFoo(headers: List[Header] = List.empty): F[PatchFooResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(PatchFooResponse.Ok): F[PatchFooResponse]
           case resp =>
@@ -192,7 +192,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def deleteFoo(headers: List[Header] = List.empty): F[DeleteFooResponse] = {
         val allHeaders = headers ++ List[Option[Header]]().flatten
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
-        httpClient.fetch(req)({
+        httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(DeleteFooResponse.Ok): F[DeleteFooResponse]
           case resp =>

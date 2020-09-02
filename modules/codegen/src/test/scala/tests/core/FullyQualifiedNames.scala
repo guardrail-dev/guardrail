@@ -52,7 +52,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
          def getUser(id: String, headers: List[Header] = List.empty): F[GetUserResponse] = {
            val allHeaders = headers ++ List[Option[Header]]().flatten
            val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/user/" + Formatter.addPath(id)), headers = Headers(allHeaders))
-           httpClient.fetch(req)({
+           httpClient.req(req).use({
              case _root_.org.http4s.Status.Ok(resp) =>
                F.map(getUserOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetUserResponse.Ok.apply): F[GetUserResponse]
              case resp =>
