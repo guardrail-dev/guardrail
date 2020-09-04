@@ -1,21 +1,17 @@
 package core.DropwizardVavr;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import form.server.dropwizardVavr.foo.FooHandler;
 import form.server.dropwizardVavr.foo.FooResource;
-import io.dropwizard.jersey.validation.Validators;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import io.dropwizard.vavr.jersey.*;
-import io.dropwizard.vavr.validation.ValueValidatedValueUnwrapper;
 import io.vavr.collection.Vector;
 import io.vavr.concurrent.Future;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
-import io.vavr.jackson.datatype.VavrModule;
-import org.glassfish.jersey.test.grizzly.GrizzlyTestContainerFactory;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
+import support.VavrHelpers;
 
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Form;
@@ -65,10 +61,7 @@ public class DropwizardVavrRoundTripTest {
     }
 
     @ClassRule
-    public static final ResourceTestRule resources = new ResourceTestRule.Builder()
-        .setTestContainerFactory(new GrizzlyTestContainerFactory())
-        .setMapper(new ObjectMapper().registerModule(new VavrModule()))
-        .setValidator(Validators.newConfiguration().addValidatedValueHandler(new ValueValidatedValueUnwrapper()).buildValidatorFactory().getValidator())
+    public static final ResourceTestRule resources = VavrHelpers.newResourceTestRuleBuilder()
         .addProvider(new EmptyValueExceptionMapper())
         .addProvider(new LazyParamFeature())
         .addProvider(new OptionParamFeature())
