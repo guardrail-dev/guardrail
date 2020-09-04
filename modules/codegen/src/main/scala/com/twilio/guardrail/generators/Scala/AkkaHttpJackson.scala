@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators.Scala
 
 import com.twilio.guardrail.Target
+import com.twilio.guardrail.generators.collections.ScalaCollectionsGenerator
 import com.twilio.guardrail.generators.Scala.AkkaHttpClientGenerator._
 import com.twilio.guardrail.generators.Scala.AkkaHttpGenerator._
 import com.twilio.guardrail.generators.Scala.AkkaHttpServerGenerator._
@@ -11,6 +12,7 @@ import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 
 object AkkaHttpJackson extends Framework[ScalaLanguage, Target] {
+  implicit def CollectionsLibInterp  = ScalaCollectionsGenerator.ScalaCollectionsInterp
   implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
   implicit def ClientInterp          = new ClientTermInterp(JacksonModelGenerator)
   implicit def EnumProtocolInterp    = EnumProtocolTermInterp

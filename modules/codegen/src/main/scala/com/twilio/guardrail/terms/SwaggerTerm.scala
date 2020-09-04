@@ -14,10 +14,9 @@ import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media._
-import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
-import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.security.{ OAuthFlows, SecurityRequirement, SecurityScheme => SwSecurityScheme }
-import io.swagger.v3.oas.models.{ Components, Operation, PathItem }
+import io.swagger.v3.oas.models.Operation
 import java.net.URI
 import scala.collection.JavaConverters._
 import scala.collection.immutable.TreeMap
@@ -237,7 +236,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[LanguageParameters[L]] =
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[LanguageParameters[L]] =
     for {
       a <- LanguageParameter.fromParameters(protocolElems).apply(parameters)
     } yield new LanguageParameters[L](a)

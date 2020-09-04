@@ -4,7 +4,6 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.twilio.guardrail.Common.resolveFile
-import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.generators.syntax.Scala._
@@ -33,25 +32,14 @@ object ScalaGenerator {
     val buildPkgTerm: List[String] => Term.Ref =
       _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
-    implicit def MonadF: Monad[Target]         = Target.targetInstances
-    def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-scala", "x-jvm"))
+    implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    def litString(value: String): Target[scala.meta.Term]                 = Target.pure(Lit.String(value))
-    def litFloat(value: Float): Target[scala.meta.Term]                   = Target.pure(Lit.Float(value))
-    def litDouble(value: Double): Target[scala.meta.Term]                 = Target.pure(Lit.Double(value))
-    def litInt(value: Int): Target[scala.meta.Term]                       = Target.pure(Lit.Int(value))
-    def litLong(value: Long): Target[scala.meta.Term]                     = Target.pure(Lit.Long(value))
-    def litBoolean(value: Boolean): Target[scala.meta.Term]               = Target.pure(Lit.Boolean(value))
-    def liftOptionalType(value: scala.meta.Type): Target[scala.meta.Type] = Target.pure(t"Option[$value]")
-    def liftOptionalTerm(value: scala.meta.Term): Target[scala.meta.Term] = Target.pure(q"Option($value)")
-    def emptyArray(): Target[scala.meta.Term]                             = Target.pure(q"Vector.empty")
-    def emptyMap(): Target[scala.meta.Term]                               = Target.pure(q"Map.empty")
-    def emptyOptionalTerm(): Target[scala.meta.Term]                      = Target.pure(q"None")
-    def liftVectorType(value: scala.meta.Type, customTpe: Option[scala.meta.Type]): Target[scala.meta.Type] =
-      Target.pure(t"${customTpe.getOrElse(t"Vector")}[$value]")
-    def liftVectorTerm(value: scala.meta.Term): Target[scala.meta.Term] = Target.pure(q"Vector($value)")
-    def liftMapType(value: scala.meta.Type, customTpe: Option[scala.meta.Type]): Target[scala.meta.Type] =
-      Target.pure(t"${customTpe.getOrElse(t"Map")}[String, $value]")
+    def litString(value: String): Target[scala.meta.Term]   = Target.pure(Lit.String(value))
+    def litFloat(value: Float): Target[scala.meta.Term]     = Target.pure(Lit.Float(value))
+    def litDouble(value: Double): Target[scala.meta.Term]   = Target.pure(Lit.Double(value))
+    def litInt(value: Int): Target[scala.meta.Term]         = Target.pure(Lit.Int(value))
+    def litLong(value: Long): Target[scala.meta.Term]       = Target.pure(Lit.Long(value))
+    def litBoolean(value: Boolean): Target[scala.meta.Term] = Target.pure(Lit.Boolean(value))
 
     def fullyQualifyPackageName(rawPkgName: List[String]): Target[List[String]] = Target.pure("_root_" +: rawPkgName)
 
@@ -75,23 +63,6 @@ object ScalaGenerator {
     def formatMethodName(methodName: String): Target[String]                            = Target.pure(methodName.toCamelCase)
     def formatMethodArgName(methodArgName: String): Target[String]                      = Target.pure(methodArgName.toCamelCase)
     def formatEnumName(enumValue: String): Target[String]                               = Target.pure(enumValue.toPascalCase)
-
-    def embedArray(tpe: LazyResolvedType[ScalaLanguage], containerTpe: Option[scala.meta.Type]): Target[LazyResolvedType[ScalaLanguage]] = tpe match {
-      case SwaggerUtil.Deferred(tpe) =>
-        Target.pure(SwaggerUtil.DeferredArray[ScalaLanguage](tpe, containerTpe))
-      case SwaggerUtil.DeferredArray(_, _) =>
-        Target.raiseUserError("FIXME: Got an Array of Arrays, currently not supported")
-      case SwaggerUtil.DeferredMap(_, _) =>
-        Target.raiseUserError("FIXME: Got an Array of Maps, currently not supported")
-    }
-    def embedMap(tpe: LazyResolvedType[ScalaLanguage], containerTpe: Option[scala.meta.Type]): Target[LazyResolvedType[ScalaLanguage]] = tpe match {
-      case SwaggerUtil.Deferred(inner) =>
-        Target.pure(SwaggerUtil.DeferredMap[ScalaLanguage](inner, containerTpe))
-      case SwaggerUtil.DeferredMap(_, _) =>
-        Target.raiseUserError("FIXME: Got a map of maps, currently not supported")
-      case SwaggerUtil.DeferredArray(_, _) =>
-        Target.raiseUserError("FIXME: Got a map of arrays, currently not supported")
-    }
 
     def parseType(tpe: String): Target[Option[scala.meta.Type]] =
       Target.pure(
@@ -157,7 +128,6 @@ object ScalaGenerator {
     def longType(): Target[scala.meta.Type]                                                = Target.pure(t"Long")
     def integerType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"BigInt")
     def booleanType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"Boolean")
-    def arrayType(format: Option[String]): Target[scala.meta.Type]                         = Target.pure(t"Iterable[String]")
     def fallbackType(tpe: Option[String], format: Option[String]): Target[scala.meta.Type] = Target.fromOption(tpe, UserError("Missing type")).map(Type.Name(_))
 
     def widenTypeName(tpe: scala.meta.Type.Name): Target[scala.meta.Type]             = Target.pure(tpe)

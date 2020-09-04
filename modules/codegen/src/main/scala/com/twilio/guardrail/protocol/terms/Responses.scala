@@ -4,7 +4,7 @@ import cats.implicits._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFrameworkTerms }
 import io.swagger.v3.oas.models.Operation
 import scala.collection.JavaConverters._
@@ -24,8 +24,10 @@ object Responses {
   def getResponses[L <: LA, F[_]](operationId: String, operation: Tracker[Operation], protocolElems: List[StrictProtocolElems[L]])(
       implicit Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[Responses[L]] = Sw.log.function("getResponses") {
+    import Cl._
     import Fw._
     import Sc._
     for {

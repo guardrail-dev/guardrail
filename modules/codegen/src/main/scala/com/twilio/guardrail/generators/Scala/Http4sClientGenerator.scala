@@ -11,7 +11,7 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ContentType, Header, MultipartFormData, Responses }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -19,7 +19,7 @@ import java.net.URI
 
 object Http4sClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {

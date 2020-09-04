@@ -3,11 +3,13 @@ package com.twilio.guardrail.generators.Scala
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.framework._
 import scala.meta._
 
 object AkkaHttpGenerator {
-  class FrameworkInterp(modelGeneratorType: ModelGeneratorType) extends FrameworkTerms[ScalaLanguage, Target] {
+  class FrameworkInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+      extends FrameworkTerms[ScalaLanguage, Target] {
     implicit def MonadF                  = Target.targetInstances
     def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
     def objectType(format: Option[String]) =

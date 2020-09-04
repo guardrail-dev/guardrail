@@ -17,14 +17,15 @@ import com.twilio.guardrail.{
   Target,
   UserError
 }
+import com.twilio.guardrail.SwaggerUtil.ResolvedType
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
+import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.SwaggerUtil.ResolvedType
-import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import scala.collection.JavaConverters._
 import scala.meta._
 
@@ -37,7 +38,7 @@ object CirceProtocolGenerator {
       .map(_.tpe)
       .map(f)
 
-  object EnumProtocolTermInterp extends EnumProtocolTerms[ScalaLanguage, Target] {
+  class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractEnum(swagger: Schema[_]) = {
       val enumEntries: Option[List[String]] = swagger match {
@@ -118,7 +119,8 @@ object CirceProtocolGenerator {
       Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
   }
 
-  class ModelProtocolTermInterp(circeVersion: CirceModelGenerator) extends ModelProtocolTerms[ScalaLanguage, Target] {
+  class ModelProtocolTermInterp(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+      extends ModelProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractProperties(swagger: Tracker[Schema[_]]) =
       swagger
@@ -149,7 +151,7 @@ object CirceProtocolGenerator {
         requirement: PropertyRequirement,
         isCustomType: Boolean,
         defaultValue: Option[scala.meta.Term]
-    ) =
+    ): Target[ProtocolParameter[ScalaLanguage]] =
       Target.log.function(s"transformProperty") {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
@@ -502,7 +504,7 @@ object CirceProtocolGenerator {
     }
   }
 
-  object ArrayProtocolTermInterp extends ArrayProtocolTerms[ScalaLanguage, Target] {
+  class ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ArrayProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractArrayType(arr: SwaggerUtil.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
       for {
@@ -524,7 +526,7 @@ object CirceProtocolGenerator {
       } yield result
   }
 
-  object ProtocolSupportTermInterp extends ProtocolSupportTerms[ScalaLanguage, Target] {
+  class ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ProtocolSupportTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
       definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
@@ -615,7 +617,7 @@ object CirceProtocolGenerator {
     def implicitsObject() = Target.pure(None)
   }
 
-  object PolyProtocolTermInterp extends PolyProtocolTerms[ScalaLanguage, Target] {
+  class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends PolyProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractSuperClass(
         swagger: Tracker[ComposedSchema],

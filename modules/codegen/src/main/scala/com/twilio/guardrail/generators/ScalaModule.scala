@@ -1,53 +1,58 @@
 package com.twilio.guardrail
 package generators
 
-import com.twilio.guardrail.languages.ScalaLanguage
 import cats.data.NonEmptyList
 import cats.implicits._
-import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
-import com.twilio.guardrail.protocol.terms.client.ClientTerms
-import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.generators.Scala._
 import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
-import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.generators.collections.ScalaCollectionsGenerator
+import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
-  def circe(circeModelGenerator: CirceModelGenerator): (
+  def circe(circeModelGenerator: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ProtocolSupportTerms[ScalaLanguage, Target],
       ModelProtocolTerms[ScalaLanguage, Target],
       EnumProtocolTerms[ScalaLanguage, Target],
       ArrayProtocolTerms[ScalaLanguage, Target],
       PolyProtocolTerms[ScalaLanguage, Target]
   ) = (
-    CirceProtocolGenerator.ProtocolSupportTermInterp,
+    new CirceProtocolGenerator.ProtocolSupportTermInterp,
     new CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
-    CirceProtocolGenerator.EnumProtocolTermInterp,
-    CirceProtocolGenerator.ArrayProtocolTermInterp,
-    CirceProtocolGenerator.PolyProtocolTermInterp
+    new CirceProtocolGenerator.EnumProtocolTermInterp,
+    new CirceProtocolGenerator.ArrayProtocolTermInterp,
+    new CirceProtocolGenerator.PolyProtocolTermInterp
   )
 
-  def circeJava8(circeModelGenerator: CirceModelGenerator): (
+  def circeJava8(circeModelGenerator: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ProtocolSupportTerms[ScalaLanguage, Target],
       ModelProtocolTerms[ScalaLanguage, Target],
       EnumProtocolTerms[ScalaLanguage, Target],
       ArrayProtocolTerms[ScalaLanguage, Target],
       PolyProtocolTerms[ScalaLanguage, Target]
-  ) = (
-    CirceProtocolGenerator.ProtocolSupportTermInterp.copy(newPackageObjectImports =
-      () =>
-        CirceProtocolGenerator.ProtocolSupportTermInterp.packageObjectImports().map { values =>
+  ) = {
+    val stockProtocolSupportInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
+    val protocolSupportInterp = stockProtocolSupportInterp.copy(
+      newPackageObjectImports = () =>
+        stockProtocolSupportInterp.packageObjectImports().map { values =>
           import scala.meta._
           values :+ q"import io.circe.java8.time._"
         }
-    ),
-    new CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
-    CirceProtocolGenerator.EnumProtocolTermInterp,
-    CirceProtocolGenerator.ArrayProtocolTermInterp,
-    CirceProtocolGenerator.PolyProtocolTermInterp
-  )
+    )
+    (
+      protocolSupportInterp,
+      new CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
+      new CirceProtocolGenerator.EnumProtocolTermInterp,
+      new CirceProtocolGenerator.ArrayProtocolTermInterp,
+      new CirceProtocolGenerator.PolyProtocolTermInterp
+    )
+  }
 
-  def jackson: (
+  def jackson(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ProtocolSupportTerms[ScalaLanguage, Target],
       ModelProtocolTerms[ScalaLanguage, Target],
       EnumProtocolTerms[ScalaLanguage, Target],
@@ -61,7 +66,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     JacksonProtocolGenerator.PolyProtocolTermInterp
   )
 
-  def akkaHttp(modelGeneratorType: ModelGeneratorType): (
+  def akkaHttp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
@@ -71,37 +76,38 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     new AkkaHttpGenerator.FrameworkInterp(modelGeneratorType)
   )
 
-  def endpoints(modelGeneratorType: ModelGeneratorType): (
+  def endpoints(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    EndpointsClientGenerator.ClientTermInterp,
-    EndpointsServerGenerator.ServerTermInterp,
-    EndpointsGenerator.FrameworkInterp
+    new EndpointsClientGenerator.ClientTermInterp,
+    new EndpointsServerGenerator.ServerTermInterp,
+    new EndpointsGenerator.FrameworkInterp
   )
 
-  def http4s: (
+  def http4s(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    Http4sClientGenerator.ClientTermInterp,
-    Http4sServerGenerator.ServerTermInterp,
-    Http4sGenerator.FrameworkInterp
+    new Http4sClientGenerator.ClientTermInterp,
+    new Http4sServerGenerator.ServerTermInterp,
+    new Http4sGenerator.FrameworkInterp
   )
 
-  def dropwizard: (
+  def dropwizard(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    DropwizardClientGenerator.ClientTermInterp,
-    DropwizardServerGenerator.ServerTermInterp,
-    DropwizardGenerator.FrameworkInterp
+    new DropwizardClientGenerator.ClientTermInterp,
+    new DropwizardServerGenerator.ServerTermInterp,
+    new DropwizardGenerator.FrameworkInterp
   )
 
-  def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] =
+  def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] = {
+    implicit val collections = ScalaCollectionsGenerator.ScalaCollectionsInterp
     (for {
       (modelGeneratorType, (protocol, model, enum, array, poly)) <- popModule(
         "json",
@@ -130,5 +136,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = server
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator.ScalaInterp
+      def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target]   = collections
     }).runA(modules.toList.toSet)
+  }
 }

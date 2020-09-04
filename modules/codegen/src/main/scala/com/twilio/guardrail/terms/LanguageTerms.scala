@@ -3,14 +3,12 @@ package terms
 
 import cats.Monad
 import cats.data.NonEmptyList
-import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
 
 abstract class LanguageTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
-  def vendorPrefixes(): F[List[String]]
 
   def litString(value: String): F[L#Term]
   def litFloat(value: Float): F[L#Term]
@@ -18,14 +16,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def litInt(value: Int): F[L#Term]
   def litLong(value: Long): F[L#Term]
   def litBoolean(value: Boolean): F[L#Term]
-  def liftOptionalType(value: L#Type): F[L#Type]
-  def liftOptionalTerm(value: L#Term): F[L#Term]
-  def emptyArray(): F[L#Term]
-  def emptyMap(): F[L#Term]
-  def emptyOptionalTerm(): F[L#Term]
-  def liftVectorType(value: L#Type, customTpe: Option[L#Type]): F[L#Type]
-  def liftVectorTerm(value: L#Term): F[L#Term]
-  def liftMapType(value: L#Type, customTpe: Option[L#Type]): F[L#Type]
 
   def fullyQualifyPackageName(rawPkgName: List[String]): F[List[String]]
 
@@ -37,9 +27,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def formatMethodName(methodName: String): F[String]
   def formatMethodArgName(methodArgName: String): F[String]
   def formatEnumName(enumValue: String): F[String]
-
-  def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): F[LazyResolvedType[L]]
-  def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): F[LazyResolvedType[L]]
 
   def parseType(value: String): F[Option[L#Type]]
   def parseTypeName(value: String): F[Option[L#TypeName]]
@@ -68,7 +55,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def longType(): F[L#Type]
   def integerType(format: Option[String]): F[L#Type]
   def booleanType(format: Option[String]): F[L#Type]
-  def arrayType(format: Option[String]): F[L#Type]
   def fallbackType(tpe: Option[String], format: Option[String]): F[L#Type]
 
   def widenTypeName(tpe: L#TypeName): F[L#Type]
@@ -143,21 +129,12 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def copy(
       newMonadF: Monad[F] = MonadF,
-      newVendorPrefixes: () => F[List[String]] = vendorPrefixes _,
       newLitString: String => F[L#Term] = litString _,
       newLitFloat: Float => F[L#Term] = litFloat _,
       newLitDouble: Double => F[L#Term] = litDouble _,
       newLitInt: Int => F[L#Term] = litInt _,
       newLitLong: Long => F[L#Term] = litLong _,
       newLitBoolean: Boolean => F[L#Term] = litBoolean _,
-      newLiftOptionalType: L#Type => F[L#Type] = liftOptionalType _,
-      newLiftOptionalTerm: L#Term => F[L#Term] = liftOptionalTerm _,
-      newEmptyArray: () => F[L#Term] = emptyArray _,
-      newEmptyMap: () => F[L#Term] = emptyMap _,
-      newEmptyOptionalTerm: () => F[L#Term] = emptyOptionalTerm _,
-      newLiftVectorType: (L#Type, Option[L#Type]) => F[L#Type] = liftVectorType _,
-      newLiftVectorTerm: L#Term => F[L#Term] = liftVectorTerm _,
-      newLiftMapType: (L#Type, Option[L#Type]) => F[L#Type] = liftMapType _,
       newFullyQualifyPackageName: List[String] => F[List[String]] = fullyQualifyPackageName _,
       newLookupEnumDefaultValue: (L#TypeName, L#Term, List[(String, L#TermName, L#TermSelect)]) => F[L#TermSelect] = lookupEnumDefaultValue _,
       newFormatPackageName: List[String] => F[List[String]] = formatPackageName _,
@@ -166,8 +143,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newFormatMethodName: String => F[String] = formatMethodName _,
       newFormatMethodArgName: String => F[String] = formatMethodArgName _,
       newFormatEnumName: String => F[String] = formatEnumName _,
-      newEmbedArray: (LazyResolvedType[L], Option[L#Type]) => F[LazyResolvedType[L]] = embedArray _,
-      newEmbedMap: (LazyResolvedType[L], Option[L#Type]) => F[LazyResolvedType[L]] = embedMap _,
       newParseType: String => F[Option[L#Type]] = parseType _,
       newParseTypeName: String => F[Option[L#TypeName]] = parseTypeName _,
       newPureTermName: String => F[L#TermName] = pureTermName _,
@@ -193,7 +168,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newLongType: () => F[L#Type] = longType _,
       newIntegerType: Option[String] => F[L#Type] = integerType _,
       newBooleanType: Option[String] => F[L#Type] = booleanType _,
-      newArrayType: Option[String] => F[L#Type] = arrayType _,
       newFallbackType: (Option[String], Option[String]) => F[L#Type] = fallbackType _,
       newWidenTypeName: L#TypeName => F[L#Type] = widenTypeName _,
       newWidenTermSelect: L#TermSelect => F[L#Term] = widenTermSelect _,
@@ -228,23 +202,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newWriteServer: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
       newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = wrapToObject _
   ) = new LanguageTerms[L, F] {
-    def MonadF                                                   = newMonadF
-    def vendorPrefixes()                                         = newVendorPrefixes()
-    def litString(value: String)                                 = newLitString(value)
-    def litFloat(value: Float)                                   = newLitFloat(value)
-    def litDouble(value: Double)                                 = newLitDouble(value)
-    def litInt(value: Int)                                       = newLitInt(value)
-    def litLong(value: Long)                                     = newLitLong(value)
-    def litBoolean(value: Boolean)                               = newLitBoolean(value)
-    def liftOptionalType(value: L#Type)                          = newLiftOptionalType(value)
-    def liftOptionalTerm(value: L#Term)                          = newLiftOptionalTerm(value)
-    def emptyArray()                                             = newEmptyArray()
-    def emptyMap()                                               = newEmptyMap()
-    def emptyOptionalTerm()                                      = newEmptyOptionalTerm()
-    def liftVectorType(value: L#Type, customTpe: Option[L#Type]) = newLiftVectorType(value, customTpe)
-    def liftVectorTerm(value: L#Term)                            = newLiftVectorTerm(value)
-    def liftMapType(value: L#Type, customTpe: Option[L#Type])    = newLiftMapType(value, customTpe)
-    def fullyQualifyPackageName(rawPkgName: List[String])        = newFullyQualifyPackageName(rawPkgName)
+    def MonadF                                            = newMonadF
+    def litString(value: String)                          = newLitString(value)
+    def litFloat(value: Float)                            = newLitFloat(value)
+    def litDouble(value: Double)                          = newLitDouble(value)
+    def litInt(value: Int)                                = newLitInt(value)
+    def litLong(value: Long)                              = newLitLong(value)
+    def litBoolean(value: Boolean)                        = newLitBoolean(value)
+    def fullyQualifyPackageName(rawPkgName: List[String]) = newFullyQualifyPackageName(rawPkgName)
     def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]) =
       newLookupEnumDefaultValue(tpe, defaultValue, values)
     def formatPackageName(packageName: List[String]): F[List[String]]                 = newFormatPackageName(packageName)
@@ -253,8 +218,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def formatMethodName(methodName: String): F[String]                               = newFormatMethodName(methodName)
     def formatMethodArgName(methodArgName: String): F[String]                         = newFormatMethodArgName(methodArgName)
     def formatEnumName(enumValue: String)                                             = newFormatEnumName(enumValue)
-    def embedArray(tpe: LazyResolvedType[L], customTpe: Option[L#Type])               = newEmbedArray(tpe, customTpe)
-    def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type])                 = newEmbedMap(tpe, customTpe)
     def parseType(value: String)                                                      = newParseType(value)
     def parseTypeName(value: String)                                                  = newParseTypeName(value)
     def pureTermName(value: String)                                                   = newPureTermName(value)
@@ -280,7 +243,6 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def longType()                                                                    = newLongType()
     def integerType(format: Option[String])                                           = newIntegerType(format)
     def booleanType(format: Option[String])                                           = newBooleanType(format)
-    def arrayType(format: Option[String])                                             = newArrayType(format)
     def fallbackType(tpe: Option[String], format: Option[String])                     = newFallbackType(tpe, format)
     def widenTypeName(tpe: L#TypeName)                                                = newWidenTypeName(tpe)
     def widenTermSelect(value: L#TermSelect)                                          = newWidenTermSelect(value)

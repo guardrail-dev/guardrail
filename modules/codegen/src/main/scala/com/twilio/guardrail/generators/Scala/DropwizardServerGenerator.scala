@@ -10,9 +10,10 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
 import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import io.swagger.v3.oas.models.Operation
+
 import scala.meta._
 
 object DropwizardServerGenerator {
@@ -130,7 +131,7 @@ object DropwizardServerGenerator {
       buildTransformers(param, httpParameterAnnotation).foldLeft(param.param)((accum, next) => next(accum))
   }
 
-  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
     override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[Import]] =

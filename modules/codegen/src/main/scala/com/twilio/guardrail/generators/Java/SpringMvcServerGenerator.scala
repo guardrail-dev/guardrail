@@ -4,40 +4,30 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.{ Node, NodeList }
+import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
+import com.github.javaparser.ast.{ Node, NodeList }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.syntax.Java._
+import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{
-  ApplicationJson,
-  BinaryContent,
-  ContentType,
-  MultipartFormData,
-  OctetStream,
-  Response,
-  Responses,
-  TextContent,
-  TextPlain,
-  UrlencodedFormData
-}
+import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
+import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.responses.ApiResponse
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
-import _root_.io.swagger.v3.oas.models.Operation
 
 object SpringMvcServerGenerator {
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
@@ -275,7 +265,7 @@ object SpringMvcServerGenerator {
     }
   }
 
-  object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       List(
@@ -380,7 +370,7 @@ object SpringMvcServerGenerator {
               }
 
               def transformJsr310Params(parameter: Parameter): Parameter = {
-                val isOptional = parameter.getType.isOptional
+                val isOptional = Cl.isOptionalType(parameter.getType)
                 val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
                 def transform(dateTimeFormat: String): Parameter = {
                   parameter.getAnnotations.addLast(

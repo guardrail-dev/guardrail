@@ -5,7 +5,7 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
 import io.swagger.v3.oas.models.Operation
 
@@ -19,7 +19,7 @@ case class GenerateRouteMeta[L <: LA](
     responses: Responses[L]
 )
 
-abstract class ServerTerms[L <: LA, F[_]] {
+abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): F[Option[TracingField[L]]]
   def generateRoutes(

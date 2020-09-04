@@ -10,7 +10,7 @@ import com.github.javaparser.ast.nodeTypes.{ NodeWithName, NodeWithSimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
-import com.twilio.guardrail.{ SupportDefinition, Target }
+import com.twilio.guardrail.{ RuntimeFailure, SupportDefinition, Target }
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.reflect.ClassTag
@@ -18,14 +18,6 @@ import scala.util.{ Failure, Success, Try }
 
 object Java {
   implicit class RichType(private val tpe: Type) extends AnyVal {
-    def isOptional: Boolean =
-      tpe match {
-        case cls: ClassOrInterfaceType =>
-          val scope = cls.getScope.asScala
-          cls.getNameAsString == "Optional" && (scope.isEmpty || scope.map(_.asString).contains("java.util"))
-        case _ => false
-      }
-
     def containedType: Type =
       tpe match {
         case cls: ClassOrInterfaceType => cls.getTypeArguments.asScala.filter(_.size == 1).fold(tpe)(_.get(0))
@@ -54,6 +46,13 @@ object Java {
 
     @deprecated("Just use Type#asString", "0.0.0")
     def name: Option[String] = Option(tpe.asString)
+  }
+
+  implicit class RichNode(private val n: Node) extends AnyVal {
+    def toExpression: Target[Expression] = n match {
+      case expr: Expression => Target.pure(expr)
+      case _                => Target.raiseError(RuntimeFailure(s"Node $n cannot be converted to an Expression"))
+    }
   }
 
   implicit class RichListOfNode[T <: Node](private val l: List[T]) extends AnyVal {
@@ -127,13 +126,9 @@ object Java {
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration] = safeParse("safeParseStaticImport")(StaticJavaParser.parseImport, s"import static ${s};")
 
   def completionStageType(of: Type): ClassOrInterfaceType     = StaticJavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
-  def optionalType(of: Type): ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Optional").setTypeArguments(of)
+  def javaOptionalType(of: Type): ClassOrInterfaceType        = StaticJavaParser.parseClassOrInterfaceType("java.util.Optional").setTypeArguments(of)
   def functionType(in: Type, out: Type): ClassOrInterfaceType = StaticJavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
   def supplierType(of: Type): ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
-  def listType(of: Type): ClassOrInterfaceType                = StaticJavaParser.parseClassOrInterfaceType("List").setTypeArguments(of)
-  def mapType(key: Type, value: Type): ClassOrInterfaceType   = StaticJavaParser.parseClassOrInterfaceType("Map").setTypeArguments(key, value)
-  def mapEntryType(key: Type, value: Type): ClassOrInterfaceType =
-    StaticJavaParser.parseClassOrInterfaceType("Map.Entry").setTypeArguments(new NodeList(key, value))
 
   val VOID_TYPE: ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Void")
   val OBJECT_TYPE: ClassOrInterfaceType          = StaticJavaParser.parseClassOrInterfaceType("Object")
@@ -160,18 +155,18 @@ object Java {
   def requireNonNullExpr(paramName: String): Expression = requireNonNullExpr(new NameExpr(paramName))
 
   def optionalOfExpr(param: Expression): Expression = new MethodCallExpr(
-    new NameExpr("Optional"),
+    new NameExpr("java.util.Optional"),
     "of",
     new NodeList[Expression](
       requireNonNullExpr(param)
     )
   )
 
-  def optionalOfNullableExpr(param: Expression): Expression = new MethodCallExpr(
-    new NameExpr("Optional"),
-    "ofNullable",
-    new NodeList[Expression](param)
-  )
+  def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
+    case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
+    case None                   => Target.pure(new MethodCallExpr(name))
+    case other                  => Target.raiseUserError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
+  }
 
   val GENERATED_CODE_COMMENT: Comment = new BlockComment(GENERATED_CODE_COMMENT_LINES.mkString("\n * ", "\n * ", "\n"))
 
