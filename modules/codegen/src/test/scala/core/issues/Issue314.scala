@@ -289,7 +289,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |        }
          |
          |        public java.util.concurrent.CompletionStage<GetUserResponse> call() throws ClientException {
-         |            return this.httpClient.apply(builder.build()).thenApply((final Response response) -> {
+         |            return this.httpClient.apply(builder.build()).thenApply(response -> {
          |                switch(response.getStatusCode()) {
          |                    case 200:
          |                        return new GetUserResponse.Ok();
