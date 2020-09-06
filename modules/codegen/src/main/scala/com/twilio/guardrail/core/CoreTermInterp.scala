@@ -131,6 +131,8 @@ class CoreTermInterp[L <: LA](
                 Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
               case (sofar :: already, "--module" :: value :: xs) =>
                 Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
+              case (sofar :: already, "--custom-extraction" :: xs) =>
+                Continue((sofar.copyContext(customExtraction = true) :: already, xs))
               case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
                 for {
                   propertyRequirement <- parseOptionalProperty(arg, value)
