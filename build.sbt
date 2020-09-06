@@ -146,7 +146,7 @@ def exampleArgs(language: String, framework: Option[String] = None): List[List[S
         ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
         if onlyFrameworks.forall(_.exists({ case (onlyLanguage, onlyFrameworks) => onlyLanguage == language && onlyFrameworks.contains(frameworkName) }))
         kind <- kinds
-        filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
+        filteredExtra = extra.filterNot(if (language == "java" || (language == "scala" && frameworkName == "dropwizard")) _ == "--tracing" else Function.const(false) _)
       } yield
         (
           List(s"--${kind}") ++
