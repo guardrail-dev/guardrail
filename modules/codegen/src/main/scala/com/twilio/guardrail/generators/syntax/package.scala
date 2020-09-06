@@ -18,6 +18,7 @@ package syntax {
   }
 
   class RichCollection[A, Repr](xs: IterableLike[A, Repr]) {
+    @SuppressWarnings(Array("org.wartremover.warts.Var"))
     def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]): That = {
       val builder = cbf(xs.repr)
       val i       = xs.iterator
