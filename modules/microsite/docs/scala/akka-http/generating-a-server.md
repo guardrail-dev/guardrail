@@ -83,7 +83,7 @@ val userRoutes = UserResource.routes(new UserApi, extractXUserId)
 
 ```
 
-Because `E` is an arbitrary type, you may extract anything, including the full `HttpRequest` itself. Multiple values may be extracted using tuples. If you do not wish to extract anything, perhaps because the `Directive` acts as a gate which `pass`es some requests and `reject`s others, simply provide `String => Directive1[Unit]` and write your handler implementation to extend `Handler[Any]`.
+Because `E` is an arbitrary type, you may extract anything, including the full `HttpRequest` itself. Multiple values may be extracted using tuples. If you do not wish to extract anything, perhaps because the `Directive` acts as a gate which `pass`es some requests and `reject`s others, simply provide `String => Directive1[Unit]` and write your handler implementation to extend `Handler[Unit]`.
 
 Generating test-only (real) server mocks for unit tests
 -------------------------------------------------------
