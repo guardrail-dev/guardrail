@@ -65,6 +65,8 @@ object UserResource {
 
 You may now provide a function that accepts the `operationId` of the route, and returns a `Directive1[E]`, where, `E` is an arbitrary type that will be passed through to your handlers. The `Directive1[E]` will be injected into the generated routes _after_ the path and method `Directive`s.
 
+_Note:_ If you have any `Directive` with an arity different to `Directive1` (for instance, `Directive0` or `Directive5`) you must convert it into a `Directive1` via `myCoolDirective.tmap(Tuple1(_))` or similar. This is done to provide a consistent user experience, without the added complexity of the so-called "magnet pattern".
+
 For example, to extract an `X-User-Id` header value from an incoming request, your code might look like this:
 
 ```scala
