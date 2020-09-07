@@ -33,7 +33,8 @@ class Issue121Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     val req = Request[IO](method = Method.DELETE, uri = Uri.unsafeFromString("/entity")).withEntity(UrlForm("id" -> "1234"))
 
     client
-      .run(req).use({
+      .run(req)
+      .use({
         case Status.NoContent(resp) =>
           IO.pure({
             resp.status should equal(Status.NoContent)

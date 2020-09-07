@@ -33,7 +33,8 @@ class Issue542Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     val req = Request[IO](method = Method.GET, uri = Uri.unsafeFromString("/foo"))
 
     client
-      .run(req).use({
+      .run(req)
+      .use({
         case Status.Ok(resp) =>
           resp.status should equal(Status.Ok)
           resp.contentType should equal(Some(`Content-Type`(MediaType.application.json)))
