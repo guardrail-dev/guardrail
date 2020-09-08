@@ -34,6 +34,13 @@ object Http4sServerGenerator {
     ) =
       Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
 
+    def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
+
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.log.function("buildTracingFields")(for {
         _ <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
@@ -69,6 +76,7 @@ object Http4sServerGenerator {
                 operationId,
                 methodName,
                 responseClsName,
+                customExtractionFields,
                 tracingFields,
                 sr @ RouteMeta(path, method, operation, securityRequirements),
                 parameters,
@@ -94,7 +102,8 @@ object Http4sServerGenerator {
         handlerName: String,
         methodSigs: List[scala.meta.Decl.Def],
         handlerDefinitions: List[scala.meta.Stat],
-        responseDefinitions: List[scala.meta.Defn]
+        responseDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ) =
       Target.log.function("renderHandler")(for {
         _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
@@ -104,14 +113,17 @@ object Http4sServerGenerator {
       }
     """)
 
-    def getExtraRouteParams(tracing: Boolean) =
+    def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
       Target.log.function("getExtraRouteParams")(for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
         mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
         tracing <- if (tracing) {
           Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
         } else Target.pure(Option.empty)
-      } yield tracing.toList ::: List(mapRoute))
+      } yield customExtraction ::: tracing.toList ::: List(mapRoute))
 
     def generateSupportDefinitions(
         tracing: Boolean,
@@ -126,7 +138,8 @@ object Http4sServerGenerator {
         combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
-        supportDefinitions: List[scala.meta.Defn]
+        supportDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ): Target[List[Defn]] =
       Target.log.function("renderClass")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")

@@ -2,7 +2,6 @@ package com.twilio.guardrail
 package generators
 
 import cats.data.NonEmptyList
-import cats.implicits._
 import com.twilio.guardrail.generators.Scala._
 import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
 import com.twilio.guardrail.generators.collections.ScalaCollectionsGenerator
