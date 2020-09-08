@@ -115,14 +115,14 @@ object AkkaHttpServerGenerator {
 
     def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
       for {
-        _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.get.showNotNull}, ${resourceName}, ${customExtraction})")
+        _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
         res <- if (customExtraction) {
           for {
             operationId <- operation
               .downField("operationId", _.getOperationId())
               .map(_.map(splitOperationParts(_)._2))
               .raiseErrorIfEmpty("Missing operationId")
-            operationIdTarget <- Target.pure(Lit.String(operationId.get))
+            operationIdTarget <- Target.pure(Lit.String(operationId.unwrapTracker))
           } yield Some(
             CustomExtractionField[ScalaLanguage](
               LanguageParameter.fromParam(Term.Param(List(), Term.Name("extracted"), Some(customExtractionTypeName), None)),
