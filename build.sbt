@@ -12,7 +12,8 @@ git.useGitDescribe := true
 
 crossScalaVersions in ThisBuild := Seq("2.12.12")
 
-val akkaVersion            = "10.0.15"
+val akkaVersion            = "2.6.8"
+val akkaHttpVersion        = "10.2.0"
 val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
 val circeVersion           = "0.13.0"
@@ -335,8 +336,10 @@ lazy val codegen = (project in file("modules/codegen"))
 
 val akkaProjectDependencies = Seq(
   "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka" %% "akka-http"         % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http"         % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-stream"       % akkaVersion,
+  "com.typesafe.akka" %% "akka-testkit"      % akkaVersion,
   "io.circe"          %% "circe-core"        % circeVersion,
   "io.circe"          %% "circe-jawn"        % circeVersion,
   "io.circe"          %% "circe-parser"      % circeVersion,
@@ -346,7 +349,10 @@ val akkaProjectDependencies = Seq(
 
 val akkaJacksonProjectDependencies = Seq(
   "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka"              %% "akka-http"               % akkaVersion,
+  "com.typesafe.akka"              %% "akka-http"               % akkaHttpVersion,
+  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaHttpVersion,
+  "com.typesafe.akka"              %% "akka-stream"             % akkaVersion,
+  "com.typesafe.akka"              %% "akka-testkit"            % akkaVersion,
   "com.fasterxml.jackson.core"     %  "jackson-core"            % jacksonVersion,
   "com.fasterxml.jackson.core"     %  "jackson-databind"        % jacksonVersion,
   "com.fasterxml.jackson.core"     %  "jackson-annotations"     % jacksonVersion,
@@ -356,7 +362,6 @@ val akkaJacksonProjectDependencies = Seq(
   "org.glassfish"                  %  "javax.el"                % javaxElVersion,
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion % Test,
-  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaVersion % Test,
 )
 
 val http4sProjectDependencies = Seq(
