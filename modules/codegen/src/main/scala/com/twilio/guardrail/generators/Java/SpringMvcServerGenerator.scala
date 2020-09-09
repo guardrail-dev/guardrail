@@ -284,6 +284,13 @@ object SpringMvcServerGenerator {
         "org.springframework.web.multipart.MultipartFile"
       ).traverse(safeParseRawImport)
 
+    def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
+
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       if (tracing) {
         Target.raiseUserError(s"Tracing is not yet supported by this framework")
@@ -313,6 +320,7 @@ object SpringMvcServerGenerator {
                 operationId,
                 methodName,
                 responseClsName,
+                customExtractionFields,
                 tracingFields,
                 sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
                 parameters,
@@ -665,12 +673,16 @@ object SpringMvcServerGenerator {
         RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
       }
 
-    def getExtraRouteParams(tracing: Boolean) =
-      if (tracing) {
-        Target.raiseUserError(s"Tracing is not yet supported by this framework")
-      } else {
-        Target.pure(List.empty)
-      }
+    def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
+      for {
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
+
+        tracing <- if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
+      } yield (customExtraction ::: tracing)
 
     def generateResponseDefinitions(
         responseClsName: String,
@@ -705,7 +717,8 @@ object SpringMvcServerGenerator {
         combinedRouteTerms: List[com.github.javaparser.ast.Node],
         extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        customExtraction: Boolean
     ) =
       safeParseSimpleName(className) >>
           safeParseSimpleName(handlerName) >>
@@ -715,7 +728,8 @@ object SpringMvcServerGenerator {
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
         handlerDefinitions: List[com.github.javaparser.ast.Node],
-        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        customExtraction: Boolean
     ) = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
       sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

@@ -15,6 +15,7 @@ case class Args(
 ) { self =>
   def copyContext(
       framework: Option[String] = self.context.framework,
+      customExtraction: Boolean = self.context.customExtraction,
       tracing: Boolean = self.context.tracing,
       modules: List[String] = self.context.modules,
       propertyRequirement: PropertyRequirement.Configured = self.context.propertyRequirement
@@ -22,6 +23,7 @@ case class Args(
     self.copy(
       context = self.context.copy(
         framework = framework,
+        customExtraction = customExtraction,
         tracing = tracing,
         modules = modules,
         propertyRequirement = propertyRequirement

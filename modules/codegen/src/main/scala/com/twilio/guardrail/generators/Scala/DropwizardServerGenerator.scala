@@ -11,7 +11,7 @@ import com.twilio.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTer
 import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.shims.OperationExt
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import io.swagger.v3.oas.models.Operation
 
 import scala.meta._
@@ -226,6 +226,17 @@ object DropwizardServerGenerator {
         )
       )
 
+    override def buildCustomExtractionFields(
+        operation: Tracker[Operation],
+        resourceName: List[String],
+        customExtraction: Boolean
+    ): Target[Option[CustomExtractionField[ScalaLanguage]]] =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
+
     override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[ScalaLanguage]]] =
       Target.pure(None)
 
@@ -285,6 +296,7 @@ object DropwizardServerGenerator {
               operationId,
               methodName,
               responseClsName,
+              customExtractionFields,
               _,
               RouteMeta(path, method, operation, _),
               parameters,
@@ -398,7 +410,16 @@ object DropwizardServerGenerator {
       )
     }
 
-    override def getExtraRouteParams(tracing: Boolean): Target[List[Term.Param]] = Target.pure(List.empty)
+    override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Term.Param]] =
+      for {
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
+
+        tracing <- if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
+      } yield (customExtraction ::: tracing)
 
     override def renderClass(
         resourceName: String,
@@ -407,7 +428,8 @@ object DropwizardServerGenerator {
         combinedRouteTerms: List[Stat],
         extraRouteParams: List[Term.Param],
         responseDefinitions: List[Defn],
-        supportDefinitions: List[Defn]
+        supportDefinitions: List[Defn],
+        customExtraction: Boolean
     ): Target[List[Defn]] = {
       val routeParams = param"handler: ${Type.Name(handlerName)}" +: extraRouteParams
       Target.pure(
@@ -428,7 +450,13 @@ object DropwizardServerGenerator {
       )
     }
 
-    override def renderHandler(handlerName: String, methodSigs: List[Decl.Def], handlerDefinitions: List[Stat], responseDefinitions: List[Defn]): Target[Defn] =
+    override def renderHandler(
+        handlerName: String,
+        methodSigs: List[Decl.Def],
+        handlerDefinitions: List[Stat],
+        responseDefinitions: List[Defn],
+        customExtraction: Boolean
+    ): Target[Defn] =
       Target.pure(
         q"""
           trait ${Type.Name(handlerName)} {

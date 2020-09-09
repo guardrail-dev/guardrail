@@ -12,9 +12,10 @@ git.useGitDescribe := true
 
 crossScalaVersions in ThisBuild := Seq("2.12.12")
 
-val akkaVersion            = "10.0.15"
-val catsVersion            = "2.2.0"
-val catsEffectVersion      = "2.1.4"
+val akkaVersion            = "2.6.8"
+val akkaHttpVersion        = "10.2.0"
+val catsVersion            = "2.1.1"
+val catsEffectVersion      = "2.2.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.7"
 val scalacheckVersion      = "1.14.3"
@@ -146,7 +147,7 @@ def exampleArgs(language: String, framework: Option[String] = None): List[List[S
         ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
         if onlyFrameworks.forall(_.exists({ case (onlyLanguage, onlyFrameworks) => onlyLanguage == language && onlyFrameworks.contains(frameworkName) }))
         kind <- kinds
-        filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
+        filteredExtra = extra.filterNot(if (language == "java" || (language == "scala" && frameworkName == "dropwizard")) _ == "--tracing" else Function.const(false) _)
       } yield
         (
           List(s"--${kind}") ++
@@ -241,6 +242,7 @@ val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, 
 val codegenSettings = Seq(
   ScoverageKeys.coverageMinimum := 81.0,
   ScoverageKeys.coverageFailOnMinimum := true,
+  ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
   addCompilerPlugin(scalafixSemanticdb),
@@ -334,8 +336,10 @@ lazy val codegen = (project in file("modules/codegen"))
 
 val akkaProjectDependencies = Seq(
   "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka" %% "akka-http"         % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http"         % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-stream"       % akkaVersion,
+  "com.typesafe.akka" %% "akka-testkit"      % akkaVersion,
   "io.circe"          %% "circe-core"        % circeVersion,
   "io.circe"          %% "circe-jawn"        % circeVersion,
   "io.circe"          %% "circe-parser"      % circeVersion,
@@ -345,7 +349,10 @@ val akkaProjectDependencies = Seq(
 
 val akkaJacksonProjectDependencies = Seq(
   "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka"              %% "akka-http"               % akkaVersion,
+  "com.typesafe.akka"              %% "akka-http"               % akkaHttpVersion,
+  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaHttpVersion,
+  "com.typesafe.akka"              %% "akka-stream"             % akkaVersion,
+  "com.typesafe.akka"              %% "akka-testkit"            % akkaVersion,
   "com.fasterxml.jackson.core"     %  "jackson-core"            % jacksonVersion,
   "com.fasterxml.jackson.core"     %  "jackson-databind"        % jacksonVersion,
   "com.fasterxml.jackson.core"     %  "jackson-annotations"     % jacksonVersion,
@@ -355,7 +362,6 @@ val akkaJacksonProjectDependencies = Seq(
   "org.glassfish"                  %  "javax.el"                % javaxElVersion,
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion % Test,
-  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaVersion % Test,
 )
 
 val http4sProjectDependencies = Seq(

@@ -39,7 +39,8 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     val client = Client.fromHttpApp[IO](route.orNotFound)
     def failedResponseBody(req: Request[IO]): String =
       client
-        .fetch(req)({
+        .run(req)
+        .use({
           case Status.BadRequest(resp) =>
             resp.as[String]
           case Status.UnprocessableEntity(resp) =>

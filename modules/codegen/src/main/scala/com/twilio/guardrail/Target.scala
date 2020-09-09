@@ -33,10 +33,8 @@ object Target {
     }
     def raiseError[A](e: Error): Target[A] = new TargetError(e, StructuredLogger.Empty)
 
-    def flatMap[A, B](fa: Target[A])(f: A => Target[B]): Target[B] = fa match {
-      case TargetValue(a, la)   => f(a).prependLogger(la)
-      case TargetError(err, la) => new TargetError(err, la)
-    }
+    def flatMap[A, B](fa: Target[A])(f: A => Target[B]): Target[B] = fa.flatMap(f)
+
     @scala.annotation.tailrec
     def tailRecM[A, B](a: A)(f: A => Target[Either[A, B]]): Target[B] =
       f(a) match {
@@ -88,6 +86,8 @@ sealed abstract class Target[A](val logEntries: StructuredLogger) {
   def fold[B](fail: Error => B, pass: A => B): B
   def prependLogger(lastLogs: StructuredLogger): Target[A]
   def leftFlatMap[AA >: A](f: Error => Target[AA]): Target[AA]
+  def flatMap[B](f: A => Target[B]): Target[B]
+  def map[B](f: A => B): Target[B]
 }
 object TargetValue {
   def unapply[A](x: TargetValue[A]): Option[(A, StructuredLogger)] = Some((x.value, x.logEntries))
@@ -98,6 +98,8 @@ class TargetValue[A](val value: A, logEntries: StructuredLogger) extends Target[
   def fold[B](fail: Error => B, pass: A => B): B               = pass(value)
   def prependLogger(lastLogs: StructuredLogger): Target[A]     = new TargetValue(value, lastLogs |+| logEntries)
   def leftFlatMap[AA >: A](f: Error => Target[AA]): Target[AA] = new TargetValue(value, logEntries)
+  def flatMap[B](f: A => Target[B]): Target[B]                 = f(value).prependLogger(logEntries)
+  def map[B](f: A => B): Target[B]                             = new TargetValue(f(value), logEntries)
 }
 object TargetError {
   def unapply[A](x: TargetError[A]): Option[(Error, StructuredLogger)] = Some((x.error, x.logEntries))
@@ -108,4 +110,6 @@ class TargetError[A](val error: Error, logEntries: StructuredLogger) extends Tar
   def fold[B](fail: Error => B, pass: A => B): B               = fail(error)
   def prependLogger(lastLogs: StructuredLogger): Target[A]     = new TargetError(error, lastLogs |+| logEntries)
   def leftFlatMap[AA >: A](f: Error => Target[AA]): Target[AA] = f(error).prependLogger(logEntries)
+  def flatMap[B](f: A => Target[B]): Target[B]                 = new TargetError(error, logEntries)
+  def map[B](f: A => B): Target[B]                             = new TargetError(error, logEntries)
 }

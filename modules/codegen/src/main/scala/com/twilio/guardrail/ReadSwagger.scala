@@ -1,7 +1,5 @@
 package com.twilio.guardrail
 
-import cats.implicits._
-
 import java.nio.file.Path
 import java.util
 
