@@ -21,6 +21,8 @@ paths:
       responses:
         201:
           description: "Created"
+          schema:
+            type: string
         406:
           description: "Invalid"
   /bar:
