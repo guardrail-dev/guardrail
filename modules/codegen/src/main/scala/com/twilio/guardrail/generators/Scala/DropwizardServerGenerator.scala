@@ -256,7 +256,7 @@ object DropwizardServerGenerator {
             q"def ${response.statusCodeName}: $responseClsType = $responseClsSubTerm"
           )
         )({
-          case (valueType, _) =>
+          case (contentType, valueType, _) =>
             (
               q"case class $responseClsSubType(value: $valueType) extends $responseClsType($statusCodeTerm)",
               q"def ${response.statusCodeName}(value: $valueType): $responseClsType = $responseClsSubTerm(value)"

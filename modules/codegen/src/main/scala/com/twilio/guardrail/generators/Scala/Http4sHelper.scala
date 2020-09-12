@@ -106,7 +106,7 @@ object Http4sHelper {
   def isDefinitionGeneric(responses: Responses[ScalaLanguage]): Boolean =
     responses.value.exists { response =>
       response.value.exists {
-        case (tpe, _) =>
+        case (_, tpe, _) =>
           tpe match {
             case t"fs2.Stream[F,Byte]" => true
             case _                     => false

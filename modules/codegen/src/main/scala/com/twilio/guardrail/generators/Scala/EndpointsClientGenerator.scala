@@ -232,7 +232,7 @@ object EndpointsClientGenerator {
                 p"""case ${Lit.Int(resp.statusCode)} =>
                   Right($responseCompanionTerm.$responseTerm(..$params))
                 """
-              case (Some((tpe, _)), headers) =>
+              case (Some((_, tpe, _)), headers) =>
                 val params = Term.Name("v") :: headers.map { header =>
                         val lit  = Lit.String(header.name)
                         val expr = q"xhr.getResponseHeader($lit)"

@@ -826,9 +826,8 @@ object Http4sServerGenerator {
 
     def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
-        response        <- responses.value
-        typeDefaultPair <- response.value
-        (tpe, _) = typeDefaultPair
+        response    <- responses.value
+        (_, tpe, _) <- response.value
       } yield {
         q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }
