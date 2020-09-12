@@ -65,7 +65,7 @@ class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
 
     // The following workaround seems to work:
 
-    val resp = Route.asyncHandler(route).apply(req).futureValue
+    val resp = Route.toFunction(route).apply(req).futureValue
     resp.status should equal(StatusCodes.RequestEntityTooLarge)
     eventually {
       tempDest.exists() should equal(false)
