@@ -18,7 +18,6 @@ import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
 import scala.meta._
-import scala.meta.Mod.Contravariant
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
