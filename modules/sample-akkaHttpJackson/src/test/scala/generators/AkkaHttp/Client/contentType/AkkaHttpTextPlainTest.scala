@@ -42,7 +42,7 @@ class AkkaHttpTextPlainTest
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe DoFooResponse.Created
+    fooClient.doFoo("sample").rightValue.futureValue shouldBe DoFooResponse.Created
   }
 
   test("Plain text should be emitted for optional parameters (raw)") {
@@ -57,7 +57,7 @@ class AkkaHttpTextPlainTest
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe DoBarResponse.Created
+    fooClient.doBar(Some("sample")).rightValue.futureValue shouldBe DoBarResponse.Created
   }
 
   test("Plain text should be emitted for required parameters") {
@@ -80,7 +80,7 @@ class AkkaHttpTextPlainTest
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe DoFooResponse.Created
+    fooClient.doFoo("sample").rightValue.futureValue shouldBe DoFooResponse.Created
   }
 
   test("Plain text should be emitted for present optional parameters") {
@@ -103,7 +103,7 @@ class AkkaHttpTextPlainTest
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe DoBarResponse.Created
+    fooClient.doBar(Some("sample")).rightValue.futureValue shouldBe DoBarResponse.Created
   }
 
   test("Plain text should be emitted for missing optional parameters") {
@@ -126,6 +126,6 @@ class AkkaHttpTextPlainTest
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(None)).rightValue.futureValue shouldBe DoBarResponse.Created
+    fooClient.doBar(None).rightValue.futureValue shouldBe DoBarResponse.Created
   }
 }
