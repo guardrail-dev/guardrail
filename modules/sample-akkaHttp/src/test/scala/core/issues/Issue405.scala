@@ -40,7 +40,7 @@ class Issue405 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
     /* Pass empty string to required Bar param */
     Post("/v1/Foo", FormData(Map("Bar" -> ""))) ~> route ~> check {
       response.status shouldBe (StatusCodes.OK)
-      responseAs[String] shouldBe "\"Bar is ''\""
+      responseAs[String] shouldBe "Bar is ''"
     }
   }
 
@@ -57,7 +57,7 @@ class Issue405 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
     /* Pass empty string to required Bar param */
     Post("/v1/Foo", FormData(Map("Bar" -> "whatevs", "Baz" -> ""))) ~> route ~> check {
       response.status shouldBe (StatusCodes.OK)
-      responseAs[String] shouldBe "\"Baz is present: ''\""
+      responseAs[String] shouldBe "Baz is present: ''"
     }
   }
 
@@ -89,7 +89,7 @@ class Issue405 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
     /* Pass empty string to required Bar param */
     Post("/v1/Foo", FormData(Map("Bar" -> "yo"))) ~> route ~> check {
       response.status shouldBe (StatusCodes.OK)
-      responseAs[String] shouldBe "\"Baz is missing\""
+      responseAs[String] shouldBe "Baz is missing"
     }
   }
 }
