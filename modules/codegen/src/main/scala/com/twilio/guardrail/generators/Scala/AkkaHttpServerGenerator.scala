@@ -13,7 +13,16 @@ import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  Responses,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
@@ -55,10 +64,14 @@ object AkkaHttpServerGenerator {
               )
             ) {
               case (contentType, valueType, _) =>
+                val transformer: Term => Term = contentType match {
+                  case TextPlain => x => q"TextPlain($x)"
+                  case _         => identity _
+                }
                 (
                   q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
                   q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                  p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                  p"case r@$responseTerm(value) => Marshal(${transformer(q"value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
                 )
             }
         }
