@@ -34,35 +34,34 @@ object Responses {
       responses <- Sw.getResponses(operationId, operation)
 
       instances <- responses
-        .foldLeft[List[F[Response[L]]]](List.empty)({
-          case (acc, (key, resp)) =>
-            acc :+ (for {
-                  httpCode <- lookupStatusCode(key)
-                  (statusCode, statusCodeName) = httpCode
-                  valueTypes <- (for {
-                    (_, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
-                    schema       <- content.downField("schema", _.getSchema()).indexedDistribute.toList
-                  } yield schema).traverse { prop =>
-                    for {
-                      meta     <- SwaggerUtil.propMeta[L, F](prop)
-                      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-                      SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+        .traverse {
+          case (key, resp) =>
+            for {
+              httpCode <- lookupStatusCode(key)
+              (statusCode, statusCodeName) = httpCode
+              valueTypes <- (for {
+                (_, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
+                schema       <- content.downField("schema", _.getSchema()).indexedDistribute.toList
+              } yield schema).traverse { prop =>
+                for {
+                  meta     <- SwaggerUtil.propMeta[L, F](prop)
+                  resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+                  SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
 
-                    } yield (baseType, baseDefaultValue)
-                  }
-                  headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
-                    case (name, header) =>
-                      for {
-                        argName    <- formatMethodArgName(s"${name}Header")
-                        termName   <- pureTermName(argName)
-                        typeName   <- pureTypeName("String").flatMap(widenTypeName)
-                        resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
-                      } yield new Header(name, header.getRequired, resultType, termName)
-                  }
-                } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers))) // FIXME: headOption
-        })
-        .sequence
-    } yield new Responses[L](instances)
+                } yield (baseType, baseDefaultValue)
+              }
+              headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
+                case (name, header) =>
+                  for {
+                    argName    <- formatMethodArgName(s"${name}Header")
+                    termName   <- pureTermName(argName)
+                    typeName   <- pureTypeName("String").flatMap(widenTypeName)
+                    resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
+                  } yield new Header(name, header.getRequired, resultType, termName)
+              }
+            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers)) // FIXME: headOption
+        }
+    } yield new Responses[L](instances.toList)
   }
 
 }

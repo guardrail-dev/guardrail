@@ -41,30 +41,27 @@ object AkkaHttpServerGenerator {
         _ <- Target.pure(())
         responseSuperType = Type.Name(responseClsName)
         responseSuperTerm = Term.Name(responseClsName)
-        instances = responses.value
-          .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
-            case (acc, resp) =>
-              acc :+ ({
-                val statusCodeName = resp.statusCodeName
-                val statusCode     = q"StatusCodes.${statusCodeName}"
-                val valueType      = resp.value.map(_._1)
-                val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
-                val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
-                valueType.fold[(Defn, Defn, Case)](
-                  (
-                    q"case object $responseTerm                      extends $responseSuperType($statusCode)",
-                    q"def $statusCodeName: $responseSuperType = $responseTerm",
-                    p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
-                  )
-                ) { valueType =>
-                  (
-                    q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
-                    q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                    p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
-                  )
-                }
-              })
-          })
+        instances = responses.value.map {
+          case resp =>
+            val statusCodeName = resp.statusCodeName
+            val statusCode     = q"StatusCodes.${statusCodeName}"
+            val valueType      = resp.value.map(_._1)
+            val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
+            val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
+            valueType.fold[(Defn, Defn, Case)](
+              (
+                q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                q"def $statusCodeName: $responseSuperType = $responseTerm",
+                p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+              )
+            ) { valueType =>
+              (
+                q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
+                q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
+                p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+              )
+            }
+        }
         (terms, aliases, marshallers) = instances.unzip3
         convenienceConstructors = aliases.flatMap({
           case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }
