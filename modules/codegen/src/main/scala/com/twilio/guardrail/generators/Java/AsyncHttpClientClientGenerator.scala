@@ -671,7 +671,7 @@ object AsyncHttpClientClientGenerator {
                                     new NodeList()
                                   )
                                 )
-                              case Some((valueType, _)) =>
+                              case Some((contentType, valueType, _)) =>
                                 new TryStmt(
                                   new BlockStmt(
                                     new NodeList(

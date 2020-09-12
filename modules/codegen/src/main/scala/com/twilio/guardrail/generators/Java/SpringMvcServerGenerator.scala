@@ -179,7 +179,7 @@ object SpringMvcServerGenerator {
         .setExtendedTypes(new NodeList(superClassType))
 
       val (classDecls, creator) = response.value
-        .map(_._1)
+        .map(_._2)
         .orElse({
           if (response.statusCode >= 400 && response.statusCode <= 599) {
             errorEntityFallbackType

@@ -23,7 +23,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
       complete({
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
-          StatusCodes.Created
+          HttpResponse(StatusCodes.Created).withEntity(HttpEntity(ContentTypes.`text/plain(UTF-8)`, "response"))
         } else {
           StatusCodes.NotAcceptable
         }
@@ -31,14 +31,14 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe DoFooResponse.Created
+    fooClient.doFoo("sample").rightValue.futureValue shouldBe DoFooResponse.Created("response")
   }
 
   test("Plain text should be emitted for optional parameters (raw)") {
     val route: Route = (path("bar") & extractRequestEntity & entity(as[String])) { (entity, value) =>
       complete({
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
-          StatusCodes.Created
+          HttpResponse(StatusCodes.Created).withEntity(HttpEntity(ContentTypes.`text/plain(UTF-8)`, "response"))
         } else {
           StatusCodes.NotAcceptable
         }
@@ -46,7 +46,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
     }
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe DoBarResponse.Created
+    fooClient.doBar(Some("sample")).rightValue.futureValue shouldBe DoBarResponse.Created("response")
   }
 
   test("Plain text should be emitted for required parameters") {
@@ -55,7 +55,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
           respond: tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.DoFooResponse.type
       )(body: String): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.DoFooResponse] =
         if (body == "sample") {
-          Future.successful(respond.Created)
+          Future.successful(respond.Created("response"))
         } else {
           Future.successful(respond.NotAcceptable)
         }
@@ -69,7 +69,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doFoo("sample")).rightValue.futureValue shouldBe DoFooResponse.Created
+    fooClient.doFoo("sample").rightValue.futureValue shouldBe DoFooResponse.Created("response")
   }
 
   test("Plain text should be emitted for present optional parameters") {
@@ -81,7 +81,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
           body: Option[String]
       ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.DoBarResponse] =
         if (body.contains("sample")) {
-          Future.successful(respond.Created)
+          Future.successful(respond.Created("response"))
         } else {
           Future.successful(respond.NotAcceptable)
         }
@@ -92,7 +92,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(Some("sample"))).rightValue.futureValue shouldBe DoBarResponse.Created
+    fooClient.doBar(Some("sample")).rightValue.futureValue shouldBe DoBarResponse.Created("response")
   }
 
   test("Plain text should be emitted for missing optional parameters") {
@@ -104,7 +104,7 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
           body: Option[String]
       ): scala.concurrent.Future[tests.contentTypes.textPlain.server.akkaHttp.foo.FooResource.DoBarResponse] =
         if (body.isEmpty) {
-          Future.successful(respond.Created)
+          Future.successful(respond.Created("response"))
         } else {
           Future.successful(respond.NotAcceptable)
         }
@@ -115,6 +115,6 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
 
     val client: HttpRequest => Future[HttpResponse] = Route.asyncHandler(route)
     val fooClient                                   = FooClient.httpClient(client)
-    new EitherTValuable(fooClient.doBar(None)).rightValue.futureValue shouldBe DoBarResponse.Created
+    fooClient.doBar(None).rightValue.futureValue shouldBe DoBarResponse.Created("response")
   }
 }

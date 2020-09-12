@@ -13,12 +13,20 @@ import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  Responses,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
 import scala.meta._
-import scala.meta.Mod.Contravariant
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
@@ -42,30 +50,31 @@ object AkkaHttpServerGenerator {
         _ <- Target.pure(())
         responseSuperType = Type.Name(responseClsName)
         responseSuperTerm = Term.Name(responseClsName)
-        instances = responses.value
-          .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
-            case (acc, resp) =>
-              acc :+ ({
-                val statusCodeName = resp.statusCodeName
-                val statusCode     = q"StatusCodes.${statusCodeName}"
-                val valueType      = resp.value.map(_._1)
-                val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
-                val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
-                valueType.fold[(Defn, Defn, Case)](
-                  (
-                    q"case object $responseTerm                      extends $responseSuperType($statusCode)",
-                    q"def $statusCodeName: $responseSuperType = $responseTerm",
-                    p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
-                  )
-                ) { valueType =>
-                  (
-                    q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
-                    q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                    p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
-                  )
+        instances = responses.value.map {
+          case resp =>
+            val statusCodeName = resp.statusCodeName
+            val statusCode     = q"StatusCodes.${statusCodeName}"
+            val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
+            val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
+            resp.value.fold[(Defn, Defn, Case)](
+              (
+                q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                q"def $statusCodeName: $responseSuperType = $responseTerm",
+                p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+              )
+            ) {
+              case (contentType, valueType, _) =>
+                val transformer: Term => Term = contentType match {
+                  case TextPlain => x => q"TextPlain($x)"
+                  case _         => identity _
                 }
-              })
-          })
+                (
+                  q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
+                  q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
+                  p"case r@$responseTerm(value) => Marshal(${transformer(q"value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                )
+            }
+        }
         (terms, aliases, marshallers) = instances.unzip3
         convenienceConstructors = aliases.flatMap({
           case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }

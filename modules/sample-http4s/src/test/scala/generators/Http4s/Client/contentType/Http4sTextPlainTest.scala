@@ -22,13 +22,13 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
         if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
           for {
             value <- req.as[String]
-            resp  <- if (value == "sample") Created() else NotAcceptable()
+            resp  <- if (value == "sample") Created("response") else NotAcceptable()
           } yield resp
         } else NotAcceptable()
     }
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
-    fooClient.doFoo("sample").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Created
+    fooClient.doFoo("sample").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Created("response")
   }
 
   test("Plain text should be emitted for optional parameters (raw)") {
@@ -37,20 +37,20 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
         if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
           for {
             value <- req.as[String]
-            resp  <- if (value == "sample") Created() else NotAcceptable()
+            resp  <- if (value == "sample") Created("response") else NotAcceptable()
           } yield resp
         } else NotAcceptable()
     }
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
-    fooClient.doBar(Some("sample")).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created
+    fooClient.doBar(Some("sample")).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created("response")
   }
 
   test("Plain text should be emitted for required parameters") {
     val route: HttpRoutes[IO] = new FooResource[IO]().routes(new FooHandler[IO] {
       def doFoo(respond: DoFooResponse.type)(body: String): IO[sdefs.foo.DoFooResponse] =
         if (body == "sample") {
-          IO.pure(respond.Created)
+          IO.pure(respond.Created("response"))
         } else {
           IO.pure(respond.NotAcceptable)
         }
@@ -60,7 +60,7 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
-    fooClient.doFoo("sample").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Created
+    fooClient.doFoo("sample").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Created("response")
   }
 
   test("Plain text should be emitted for present optional parameters") {
@@ -68,7 +68,7 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
       def doFoo(respond: DoFooResponse.type)(body: String): IO[sdefs.foo.DoFooResponse] = ???
       def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[sdefs.foo.DoBarResponse] =
         if (body.contains("sample")) {
-          IO.pure(respond.Created)
+          IO.pure(respond.Created("response"))
         } else {
           IO.pure(respond.NotAcceptable)
         }
@@ -77,7 +77,7 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
-    fooClient.doBar(Some("sample")).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created
+    fooClient.doBar(Some("sample")).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created("response")
   }
 
   test("Plain text should be emitted for missing optional parameters") {
@@ -85,7 +85,7 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
       def doFoo(respond: DoFooResponse.type)(body: String): IO[sdefs.foo.DoFooResponse] = ???
       def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[sdefs.foo.DoBarResponse] =
         if (body.isEmpty) {
-          IO.pure(respond.Created)
+          IO.pure(respond.Created("response"))
         } else {
           IO.pure(respond.NotAcceptable)
         }
@@ -94,6 +94,6 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
-    fooClient.doBar(None).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created
+    fooClient.doBar(None).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Created("response")
   }
 }

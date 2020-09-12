@@ -514,7 +514,7 @@ object Http4sClientGenerator {
     def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
         resp <- responses.value
-        tpe  <- resp.value.map(_._1)
+        tpe  <- resp.value.map(_._2)
       } yield q"private[this] val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, produces)}"
   }
 
