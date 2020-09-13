@@ -509,9 +509,9 @@ object JacksonGenerator {
                 )
               case _ =>
                 new MethodCallExpr(
-                  parameterGetterCall(term),
+                  new NameExpr("java.util.Objects"),
                   "equals",
-                  new NodeList[Expression](parameterGetterCall(term, Some("other")))
+                  new NodeList[Expression](new FieldAccessExpr(new ThisExpr, term.parameterName), parameterGetterCall(term, Some("other")))
                 )
             }
         )
