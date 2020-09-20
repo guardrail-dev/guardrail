@@ -38,6 +38,7 @@ object CirceProtocolGenerator {
       .map(_.tpe)
       .map(f)
 
+  def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractEnum(swagger: Schema[_]) = {
@@ -119,6 +120,10 @@ object CirceProtocolGenerator {
       Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
   }
 
+  def ModelProtocolTermInterp(
+      circeVersion: CirceModelGenerator
+  )(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ModelProtocolTerms[ScalaLanguage, Target] =
+    new ModelProtocolTermInterp(circeVersion)
   class ModelProtocolTermInterp(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
       extends ModelProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -504,6 +509,7 @@ object CirceProtocolGenerator {
     }
   }
 
+  def ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ArrayProtocolTerms[ScalaLanguage, Target] = new ArrayProtocolTermInterp
   class ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ArrayProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractArrayType(arr: SwaggerUtil.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
@@ -526,6 +532,8 @@ object CirceProtocolGenerator {
       } yield result
   }
 
+  def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] =
+    new ProtocolSupportTermInterp
   class ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ProtocolSupportTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
@@ -617,6 +625,8 @@ object CirceProtocolGenerator {
     def implicitsObject() = Target.pure(None)
   }
 
+  def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] =
+    new PolyProtocolTermInterp
   class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends PolyProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractSuperClass(

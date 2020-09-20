@@ -131,6 +131,8 @@ object DropwizardServerGenerator {
       buildTransformers(param, httpParameterAnnotation).foldLeft(param.param)((accum, next) => next(accum))
   }
 
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 

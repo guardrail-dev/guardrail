@@ -25,23 +25,23 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       ArrayProtocolTerms[JavaLanguage, Target],
       PolyProtocolTerms[JavaLanguage, Target]
   ) = (
-    new JacksonGenerator.ProtocolSupportTermInterp,
-    new JacksonGenerator.ModelProtocolTermInterp,
-    new JacksonGenerator.EnumProtocolTermInterp,
-    new JacksonGenerator.ArrayProtocolTermInterp,
-    new JacksonGenerator.PolyProtocolTermInterp
+    JacksonGenerator.ProtocolSupportTermInterp,
+    JacksonGenerator.ModelProtocolTermInterp,
+    JacksonGenerator.EnumProtocolTermInterp,
+    JacksonGenerator.ArrayProtocolTermInterp,
+    JacksonGenerator.PolyProtocolTermInterp
   )
 
   def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
-  ) = (new DropwizardServerGenerator.ServerTermInterp, new DropwizardGenerator.FrameworkInterp)
+  ) = (DropwizardServerGenerator.ServerTermInterp, DropwizardGenerator.FrameworkInterp)
   def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
-  ) = (new SpringMvcServerGenerator.ServerTermInterp, new SpringMvcGenerator.FrameworkInterp)
+  ) = (SpringMvcServerGenerator.ServerTermInterp, SpringMvcGenerator.FrameworkInterp)
   def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ClientTerms[JavaLanguage, Target] =
-    new AsyncHttpClientClientGenerator.ClientTermInterp
+    AsyncHttpClientClientGenerator.ClientTermInterp
 
   def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
     implicit val collections = new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections

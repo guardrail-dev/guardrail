@@ -138,6 +138,7 @@ object JacksonGenerator {
       ).toNodeList
     )
 
+  def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractEnum(swagger: Schema[_]) = {
@@ -326,6 +327,8 @@ object JacksonGenerator {
       Target.pure(new Name(s"${clsName}.${termName}"))
   }
 
+  def ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ModelProtocolTerms[JavaLanguage, Target] =
+    new ModelProtocolTermInterp
   class ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType)
       extends ModelProtocolTerms[JavaLanguage, Target] {
 
@@ -893,6 +896,7 @@ object JacksonGenerator {
       Target.pure(StaticDefns(clsName, List.empty, List.empty))
   }
 
+  def ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ArrayProtocolTerms[JavaLanguage, Target] = new ArrayProtocolTermInterp
   class ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ArrayProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractArrayType(
@@ -915,6 +919,8 @@ object JacksonGenerator {
       } yield result
   }
 
+  def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ProtocolSupportTerms[JavaLanguage, Target] =
+    new ProtocolSupportTermInterp
   class ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ProtocolSupportTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractConcreteTypes(definitions: Either[String, List[PropMeta[JavaLanguage]]]) =
@@ -946,6 +952,8 @@ object JacksonGenerator {
       Target.pure(None)
   }
 
+  def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): PolyProtocolTerms[JavaLanguage, Target] =
+    new PolyProtocolTermInterp
   class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends PolyProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 

@@ -7,6 +7,8 @@ import com.twilio.guardrail.terms.framework._
 import scala.meta._
 
 object Http4sGenerator {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new FrameworkInterp
   class FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
     implicit def MonadF = Target.targetInstances
     def fileType(format: Option[String]) =

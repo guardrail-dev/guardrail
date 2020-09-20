@@ -265,6 +265,7 @@ object SpringMvcServerGenerator {
     }
   }
 
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
