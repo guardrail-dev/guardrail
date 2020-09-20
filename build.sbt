@@ -292,7 +292,7 @@ lazy val codegen = (project in file("modules/codegen"))
     libraryDependencies ++= testDependencies ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.3.21",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.22.0",
+      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.23.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.21",
       "org.tpolecat"                %% "atto-core"                    % "0.8.0",
@@ -385,7 +385,7 @@ val dropwizardProjectDependencies = Seq(
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13"             % Test,
-  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.4.2"            % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.4.3"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.15.0"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
