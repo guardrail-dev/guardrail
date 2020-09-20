@@ -385,7 +385,7 @@ val dropwizardProjectDependencies = Seq(
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13"             % Test,
-  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.4.2"            % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.4.3"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.15.0"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
