@@ -31,6 +31,8 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object AkkaHttpServerGenerator {
+  def ServerTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp(modelGeneratorType)
   class ServerTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
       extends ServerTerms[ScalaLanguage, Target] {
     val customExtractionTypeName: Type.Name = Type.Name("E")

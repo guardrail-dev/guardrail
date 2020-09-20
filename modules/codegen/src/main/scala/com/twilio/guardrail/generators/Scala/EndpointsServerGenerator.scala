@@ -10,6 +10,8 @@ import com.twilio.guardrail.terms.{ CollectionsLibTerms, SecurityScheme }
 import com.twilio.guardrail.{ StrictProtocolElems, Target }
 
 object EndpointsServerGenerator {
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def generateResponseDefinitions(responseClsName: String, responses: Responses[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]) =

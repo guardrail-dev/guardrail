@@ -8,6 +8,8 @@ import com.twilio.guardrail.terms.framework._
 import scala.meta._
 
 object AkkaHttpGenerator {
+  def FrameworkInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new FrameworkInterp(modelGeneratorType)
   class FrameworkInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
       extends FrameworkTerms[ScalaLanguage, Target] {
     implicit def MonadF                  = Target.targetInstances
