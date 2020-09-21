@@ -7,6 +7,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.scaladsl.Source
 import cats.implicits._
 import java.io.File
+import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
@@ -15,7 +16,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
+class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with Eventually with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10.seconds, 1.second)
 
   override def testConfigSource =
@@ -66,6 +67,8 @@ class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
 
     val resp = Route.asyncHandler(route).apply(req).futureValue
     resp.status should equal(StatusCodes.RequestEntityTooLarge)
-    tempDest.exists() should equal(false)
+    eventually {
+      tempDest.exists() should equal(false)
+    }
   }
 }
