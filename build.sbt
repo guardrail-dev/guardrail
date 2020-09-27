@@ -29,6 +29,7 @@ val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
+val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.3.6.RELEASE"
 val jacksonVersion         = "2.11.3"
 val hibernateVersion       = "6.1.6.Final"
@@ -335,19 +336,21 @@ lazy val codegen = (project in file("modules/codegen"))
   )
 
 val akkaProjectDependencies = Seq(
-  "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka" %% "akka-http"         % akkaHttpVersion,
-  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion,
-  "com.typesafe.akka" %% "akka-stream"       % akkaVersion,
-  "com.typesafe.akka" %% "akka-testkit"      % akkaVersion,
-  "io.circe"          %% "circe-core"        % circeVersion,
-  "io.circe"          %% "circe-jawn"        % circeVersion,
-  "io.circe"          %% "circe-parser"      % circeVersion,
-  "org.scalatest"     %% "scalatest"         % scalatestVersion % Test,
-  "org.typelevel"     %% "cats-core"         % catsVersion
+  "javax.annotation"  %  "javax.annotation-api" % javaxAnnotationVersion, // for jdk11
+  "javax.xml.bind"    %  "jaxb-api"             % jaxbApiVersion, // for jdk11
+  "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
+  "com.typesafe.akka" %% "akka-testkit"         % akkaVersion,
+  "io.circe"          %% "circe-core"           % circeVersion,
+  "io.circe"          %% "circe-jawn"           % circeVersion,
+  "io.circe"          %% "circe-parser"         % circeVersion,
+  "org.scalatest"     %% "scalatest"            % scalatestVersion % Test,
+  "org.typelevel"     %% "cats-core"            % catsVersion
 )
 
 val akkaJacksonProjectDependencies = Seq(
+  "javax.annotation"               %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
   "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
   "com.typesafe.akka"              %% "akka-http"               % akkaHttpVersion,
   "com.typesafe.akka"              %% "akka-http-testkit"       % akkaHttpVersion,
@@ -365,19 +368,21 @@ val akkaJacksonProjectDependencies = Seq(
 )
 
 val http4sProjectDependencies = Seq(
-  "javax.xml.bind" % "jaxb-api"            % jaxbApiVersion, // for jdk11
-  "io.circe"      %% "circe-core"          % circeVersion,
-  "io.circe"      %% "circe-parser"        % circeVersion,
-  "org.http4s"    %% "http4s-blaze-client" % http4sVersion,
-  "org.http4s"    %% "http4s-blaze-server" % http4sVersion,
-  "org.http4s"    %% "http4s-circe"        % http4sVersion,
-  "org.http4s"    %% "http4s-dsl"          % http4sVersion,
-  "org.scalatest" %% "scalatest"           % scalatestVersion % Test,
-  "org.typelevel" %% "cats-core"           % catsVersion,
-  "org.typelevel" %% "cats-effect"         % catsEffectVersion
+  "javax.annotation" %  "javax.annotation-api"  % javaxAnnotationVersion, // for jdk11
+  "javax.xml.bind"   % "jaxb-api"               % jaxbApiVersion, // for jdk11
+  "io.circe"         %% "circe-core"            % circeVersion,
+  "io.circe"         %% "circe-parser"          % circeVersion,
+  "org.http4s"       %% "http4s-blaze-client"   % http4sVersion,
+  "org.http4s"       %% "http4s-blaze-server"   % http4sVersion,
+  "org.http4s"       %% "http4s-circe"          % http4sVersion,
+  "org.http4s"       %% "http4s-dsl"            % http4sVersion,
+  "org.scalatest"    %% "scalatest"             % scalatestVersion % Test,
+  "org.typelevel"    %% "cats-core"             % catsVersion,
+  "org.typelevel"    %% "cats-effect"           % catsEffectVersion
 )
 
 val dropwizardProjectDependencies = Seq(
+  "javax.annotation"           %  "javax.annotation-api"   % javaxAnnotationVersion, // for jdk11
   "javax.xml.bind"             %  "jaxb-api"               % jaxbApiVersion, // for jdk11
   "io.dropwizard"              %  "dropwizard-core"        % dropwizardVersion,
   "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
@@ -394,6 +399,7 @@ val dropwizardProjectDependencies = Seq(
 )
 
 val dropwizardScalaProjectDependencies = Seq(
+  "javax.annotation"               %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
   "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
   "io.dropwizard"                  %  "dropwizard-core"         % dropwizardVersion,
   "io.dropwizard"                  %  "dropwizard-forms"        % dropwizardVersion,
@@ -413,6 +419,7 @@ val dropwizardScalaProjectDependencies = Seq(
 
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
+  "javax.annotation"           %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,

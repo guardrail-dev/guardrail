@@ -364,4 +364,16 @@ object Java {
               )
           )
     }
+
+  def generatedAnnotation(clazz: Class[_]) = new NormalAnnotationExpr(
+    new Name("javax.annotation.Generated"),
+    new NodeList(
+      new MemberValuePair(
+        "value",
+        new StringLiteralExpr(clazz.getName)
+      )
+    )
+  )
+
+  def generatedAnnotationString(clazz: Class[_]) = s"""@javax.annotation.Generated("${clazz.getName}")"""
 }
