@@ -1,10 +1,6 @@
 package com.twilio.guardrail.generators.Java
 
 import com.twilio.guardrail.Target
-import com.twilio.guardrail.generators.Java.JacksonGenerator._
-import com.twilio.guardrail.generators.Java.SpringMvcClientGenerator.ClientTermInterp
-import com.twilio.guardrail.generators.Java.SpringMvcGenerator.{ FrameworkInterp => FrameworkTermInterp }
-import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator.ServerTermInterp
 import com.twilio.guardrail.generators.Java.collectionslib.JavaStdLibCollections
 import com.twilio.guardrail.generators.JavaGenerator.JavaInterp
 import com.twilio.guardrail.generators.collections.JavaCollectionsGenerator.JavaCollectionsInterp
@@ -13,14 +9,14 @@ import com.twilio.guardrail.languages.JavaLanguage
 
 object SpringMvc extends Framework[JavaLanguage, Target] {
   implicit def CollectionsLibInterp  = new JavaCollectionsInterp with JavaStdLibCollections
-  implicit def ArrayProtocolInterp   = new ArrayProtocolTermInterp
-  implicit def ClientInterp          = new ClientTermInterp
-  implicit def EnumProtocolInterp    = new EnumProtocolTermInterp
-  implicit def FrameworkInterp       = new FrameworkTermInterp
-  implicit def ModelProtocolInterp   = new ModelProtocolTermInterp
-  implicit def PolyProtocolInterp    = new PolyProtocolTermInterp
-  implicit def ProtocolSupportInterp = new ProtocolSupportTermInterp
-  implicit def ServerInterp          = new ServerTermInterp
+  implicit def ArrayProtocolInterp   = JacksonGenerator.ArrayProtocolTermInterp
+  implicit def ClientInterp          = SpringMvcClientGenerator.ClientTermInterp
+  implicit def EnumProtocolInterp    = JacksonGenerator.EnumProtocolTermInterp
+  implicit def FrameworkInterp       = SpringMvcGenerator.FrameworkInterp
+  implicit def ModelProtocolInterp   = JacksonGenerator.ModelProtocolTermInterp
+  implicit def PolyProtocolInterp    = JacksonGenerator.PolyProtocolTermInterp
+  implicit def ProtocolSupportInterp = JacksonGenerator.ProtocolSupportTermInterp
+  implicit def ServerInterp          = SpringMvcServerGenerator.ServerTermInterp
   implicit def SwaggerInterp         = SwaggerGenerator[JavaLanguage]
   implicit def LanguageInterp        = JavaInterp
 }

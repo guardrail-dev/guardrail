@@ -42,7 +42,7 @@ object DropwizardHelpers {
       fallbackIsString: L#Type => Boolean
   ): Option[ContentType] =
     response.value
-      .map(_._1)
+      .map(_._2)
       .flatMap({ valueType =>
         PRODUCES_PRIORITY
           .collectFirstSome(ct => contentTypes.find(_ == ct))

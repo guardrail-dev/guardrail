@@ -396,6 +396,7 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ClientTerms[JavaLanguage, Target] = new ClientTermInterp
   class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ClientTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -671,7 +672,7 @@ object AsyncHttpClientClientGenerator {
                                     new NodeList()
                                   )
                                 )
-                              case Some((valueType, _)) =>
+                              case Some((contentType, valueType, _)) =>
                                 new TryStmt(
                                   new BlockStmt(
                                     new NodeList(
