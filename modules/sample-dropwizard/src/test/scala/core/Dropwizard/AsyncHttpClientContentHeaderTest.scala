@@ -49,6 +49,7 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
           .willReturn(
             aResponse()
               .withStatus(201)
+              .withBody(MOCK_RESPONSE_BODY)
           )
       )
       val client = new FooClient.Builder().withBaseUrl(wireMockBaseUrl).build()
@@ -57,8 +58,10 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
         .call()
         .toCompletableFuture
         .get()
-        .fold(
-          () => (), { () =>
+        .fold({
+          case MOCK_RESPONSE_BODY => ()
+          case other              => fail(s"Unexpected response: ${other}")
+        }, { () =>
             fail("Should have gotten 201 response"); ()
           }
         )

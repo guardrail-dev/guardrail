@@ -101,7 +101,7 @@ object DropwizardServerGenerator {
         .setExtendedTypes(new NodeList(superClassType))
 
       val (classDecls, creator) = response.value
-        .map(_._1)
+        .map(_._2)
         .orElse({
           if (response.statusCode >= 400 && response.statusCode <= 599) {
             errorEntityFallbackType
@@ -187,6 +187,7 @@ object DropwizardServerGenerator {
     }
   }
 
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =

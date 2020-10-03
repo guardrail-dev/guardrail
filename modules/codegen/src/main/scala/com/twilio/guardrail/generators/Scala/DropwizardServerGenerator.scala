@@ -131,6 +131,8 @@ object DropwizardServerGenerator {
       buildTransformers(param, httpParameterAnnotation).foldLeft(param.param)((accum, next) => next(accum))
   }
 
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
@@ -256,7 +258,7 @@ object DropwizardServerGenerator {
             q"def ${response.statusCodeName}: $responseClsType = $responseClsSubTerm"
           )
         )({
-          case (valueType, _) =>
+          case (contentType, valueType, _) =>
             (
               q"case class $responseClsSubType(value: $valueType) extends $responseClsType($statusCodeTerm)",
               q"def ${response.statusCodeName}(value: $valueType): $responseClsType = $responseClsSubTerm(value)"

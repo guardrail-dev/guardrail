@@ -13,6 +13,7 @@ import java.net.URI
 import scala.meta.{ Defn, Import, Term }
 
 object DropwizardClientGenerator {
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] = new ClientTermInterp
   class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target]                                   = Target.targetInstances
     override def getImports(tracing: Boolean): Target[List[Import]]      = Target.raiseError(RuntimeFailure("Dropwizard Scala clients are not yet supported"))

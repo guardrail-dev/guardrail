@@ -12,6 +12,7 @@ import java.net.URI
 
 object SpringMvcClientGenerator {
 
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ClientTerms[JavaLanguage, Target] = new ClientTermInterp
   class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
     def MonadF = Target.targetInstances
     def generateClientOperation(

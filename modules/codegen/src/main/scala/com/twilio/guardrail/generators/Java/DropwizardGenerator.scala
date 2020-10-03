@@ -11,6 +11,8 @@ import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.framework._
 
 object DropwizardGenerator {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): FrameworkTerms[JavaLanguage, Target] =
+    new FrameworkInterp
   class FrameworkInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
     implicit def MonadF = Target.targetInstances
 

@@ -9,12 +9,17 @@ import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFramewor
 import io.swagger.v3.oas.models.Operation
 import scala.collection.JavaConverters._
 
-class Response[L <: LA](val statusCodeName: L#TermName, val statusCode: Int, val value: Option[(L#Type, Option[L#Term])], val headers: Headers[L]) {
+class Response[L <: LA](
+    val statusCodeName: L#TermName,
+    val statusCode: Int,
+    val value: Option[(ContentType, L#Type, Option[L#Term])],
+    val headers: Headers[L]
+) {
   override def toString: String = s"Response($statusCodeName, $statusCode, $value, $headers)"
 }
 object Response {
   def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type], Headers[L])] =
-    Some((value.statusCodeName, value.value.map(_._1), value.headers))
+    Some((value.statusCodeName, value.value.map(_._2), value.headers))
 }
 
 class Responses[L <: LA](val value: List[Response[L]]) {
@@ -34,35 +39,35 @@ object Responses {
       responses <- Sw.getResponses(operationId, operation)
 
       instances <- responses
-        .foldLeft[List[F[Response[L]]]](List.empty)({
-          case (acc, (key, resp)) =>
-            acc :+ (for {
-                  httpCode <- lookupStatusCode(key)
-                  (statusCode, statusCodeName) = httpCode
-                  valueTypes <- (for {
-                    (_, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
-                    schema       <- content.downField("schema", _.getSchema()).indexedDistribute.toList
-                  } yield schema).traverse { prop =>
-                    for {
-                      meta     <- SwaggerUtil.propMeta[L, F](prop)
-                      resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
-                      SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
-
-                    } yield (baseType, baseDefaultValue)
-                  }
-                  headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
-                    case (name, header) =>
-                      for {
-                        argName    <- formatMethodArgName(s"${name}Header")
-                        termName   <- pureTermName(argName)
-                        typeName   <- pureTypeName("String").flatMap(widenTypeName)
-                        resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
-                      } yield new Header(name, header.getRequired, resultType, termName)
-                  }
-                } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers))) // FIXME: headOption
-        })
-        .sequence
-    } yield new Responses[L](instances)
+        .traverse {
+          case (key, resp) =>
+            for {
+              httpCode <- lookupStatusCode(key)
+              (statusCode, statusCodeName) = httpCode
+              valueTypes <- (for {
+                (rawContentType, content) <- resp.downField("content", _.getContent()).indexedDistribute.value
+                contentType               <- ContentType.unapply(rawContentType).toList
+                schema                    <- content.downField("schema", _.getSchema()).indexedDistribute.toList
+              } yield (contentType, schema)).traverse {
+                case (contentType, prop) =>
+                  for {
+                    meta     <- SwaggerUtil.propMeta[L, F](prop)
+                    resolved <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
+                    SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+                  } yield (contentType, baseType, baseDefaultValue)
+              }
+              headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
+                case (name, header) =>
+                  for {
+                    argName    <- formatMethodArgName(s"${name}Header")
+                    termName   <- pureTermName(argName)
+                    typeName   <- pureTypeName("String").flatMap(widenTypeName)
+                    resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
+                  } yield new Header(name, header.getRequired, resultType, termName)
+              }
+            } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers)) // FIXME: headOption
+        }
+    } yield new Responses[L](instances.toList)
   }
 
 }

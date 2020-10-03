@@ -10,6 +10,8 @@ import scala.meta._
 import scala.util.Try
 
 object DropwizardGenerator {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new FrameworkInterp
   class FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
