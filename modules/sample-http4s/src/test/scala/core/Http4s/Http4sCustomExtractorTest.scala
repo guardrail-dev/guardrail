@@ -1,10 +1,14 @@
 package core.Http4s
 
+import _root_.customExtraction.client.{ http4s => cdefs }
+import _root_.customExtraction.server.http4s.users.{ GetUserResponse, UsersHandler, UsersResource }
 import cats.effect.IO
+import customExtraction.client.http4s.users.UsersClient
+import customExtraction.server.http4s.definitions.{ User, UserAddress }
+import org.http4s.{ HttpRoutes, Request }
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.syntax.StringSyntax
-import org.http4s.{ HttpRoutes, Request }
 import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
