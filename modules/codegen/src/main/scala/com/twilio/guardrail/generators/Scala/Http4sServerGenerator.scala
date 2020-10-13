@@ -4,7 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.Traverse
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SwaggerUtil, Target, TracingField, UserError }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SwaggerUtil, Target, TracingField, UserError }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
@@ -16,7 +16,8 @@ import com.twilio.guardrail.protocol.terms.{ ContentType, Header, Response, Resp
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import scala.meta.{ Term, _ }
+
+import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
@@ -24,6 +25,8 @@ object Http4sServerGenerator {
   def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
     new ServerTermInterp
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
+    val customExtractionTypeName: Type.Name = Type.Name("E")
+
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -37,11 +40,23 @@ object Http4sServerGenerator {
       Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
 
     def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
-      if (customExtraction) {
-        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
-      } else {
-        Target.pure(Option.empty)
-      }
+      for {
+        _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
+        res <- if (customExtraction) {
+          for {
+            operationId <- operation
+              .downField("operationId", _.getOperationId())
+              .map(_.map(splitOperationParts(_)._2))
+              .raiseErrorIfEmpty("Missing operationId")
+            operationIdTarget <- Target.pure(Lit.String(operationId.unwrapTracker))
+          } yield Some(
+            CustomExtractionField[ScalaLanguage](
+              LanguageParameter.fromParam(param"extracted: $customExtractionTypeName"),
+              q"""customExtract(${operationIdTarget})"""
+            )
+          )
+        } else Target.pure(None)
+      } yield res
 
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.log.function("buildTracingFields")(for {
@@ -84,7 +99,7 @@ object Http4sServerGenerator {
                 parameters,
                 responses
                 ) =>
-              generateRoute(resourceName, basePath, methodName, responseClsName, sr, tracingFields, parameters, responses)
+              generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
           }
           .map(_.flatten)
         routeTerms = renderedRoutes.map(_.route)
@@ -109,8 +124,10 @@ object Http4sServerGenerator {
     ) =
       Target.log.function("renderHandler")(for {
         _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
+        extractType = Option(customExtractionTypeName).map(x => tparam"-$x").filter(_ => customExtraction)
+        tParams     = List(tparam"F[_]") ++ extractType.map(x => List(x)).getOrElse(List.empty)
       } yield q"""
-      trait ${Type.Name(handlerName)}[F[_]] {
+      trait ${Type.Name(handlerName)}[..$tParams] {
         ..${methodSigs ++ handlerDefinitions}
       }
     """)
@@ -120,12 +137,12 @@ object Http4sServerGenerator {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
         mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
         customExtraction <- if (customExtraction) {
-          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
-        } else Target.pure(List.empty)
+          Target.pure(Option(param"""customExtract: String => Request[F] => $customExtractionTypeName"""))
+        } else Target.pure(Option.empty)
         tracing <- if (tracing) {
           Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
         } else Target.pure(Option.empty)
-      } yield customExtraction ::: tracing.toList ::: List(mapRoute))
+      } yield customExtraction.toList ::: tracing.toList ::: List(mapRoute))
 
     def generateSupportDefinitions(
         tracing: Boolean,
@@ -145,9 +162,15 @@ object Http4sServerGenerator {
     ): Target[List[Defn]] =
       Target.log.function("renderClass")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
-        routesParams = List(param"handler: ${Type.Name(handlerName)}[F]")
+        extractType     = Option(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
+        resourceTParams = List(tparam"F[_]") ++ extractType.map(x => List(x)).getOrElse(List.empty)
+        handlerTParams = List(Type.Name("F")) ++ Option(customExtractionTypeName)
+              .filter(_ => customExtraction)
+              .map(x => List(x))
+              .getOrElse(List.empty)
+        routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield q"""
-        class ${Type.Name(resourceName)}[F[_]](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
+        class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
 
           ..${supportDefinitions};
           def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
@@ -485,6 +508,7 @@ object Http4sServerGenerator {
         methodName: String,
         responseClsName: String,
         route: RouteMeta,
+        customExtractionFields: Option[CustomExtractionField[ScalaLanguage]],
         tracingFields: Option[TracingField[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage],
         responses: Responses[ScalaLanguage]
@@ -515,8 +539,11 @@ object Http4sServerGenerator {
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Type](t"$responseCompanionType")(Function.const(t"Response[F]"))
-        val orderedParameters
-            : List[List[LanguageParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
+        val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++
+              tracingFields
+                .map(_.param)
+                .map(List(_)) ++
+              customExtractionFields
                 .map(_.param)
                 .map(List(_))
 
@@ -530,9 +557,14 @@ object Http4sServerGenerator {
         val fullRouteWithTracingMatcher = tracingFields
           .map(_ => p"$fullRouteMatcher ${Term.Name(s"usingFor${methodName.capitalize}")}(traceBuilder)")
           .getOrElse(fullRouteMatcher)
+        val fullRouteWithTracingAndExtraction = customExtractionFields
+          .map(_ => p"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
+          .getOrElse(fullRouteWithTracingMatcher)
         val handlerCallArgs: List[List[Term]] = List(List(responseCompanionTerm)) ++ List(
                 (pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName) ++ (http4sForm ++ http4sHeaders).map(_.handlerCallArg)
-              ) ++ tracingFields.map(_.param.paramName).map(List(_))
+              ) ++
+              tracingFields.map(_.param.paramName).map(List(_)) ++
+              customExtractionFields.map(_.param.paramName).map(List(_))
         val handlerCall = q"handler.${Term.Name(methodName)}(...${handlerCallArgs})"
         val isGeneric   = Http4sHelper.isDefinitionGeneric(responses)
         val responseExpr = ServerRawResponse(operation)
@@ -601,7 +633,7 @@ object Http4sServerGenerator {
         val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
         val fullRoute: Case =
-          p"""case req @ $fullRouteWithTracingMatcher =>
+          p"""case req @ $fullRouteWithTracingAndExtraction =>
              mapRoute($methodName, req, {$routeBody})
             """
 
@@ -635,9 +667,13 @@ object Http4sServerGenerator {
           RenderedRoute(
             fullRoute,
             q"""def ${Term.Name(methodName)}(...${params}): F[$respType]""",
-            supportDefinitions ++ generateQueryParamMatchers(methodName, qsArgs) ++ codecs ++ tracingFields
+            supportDefinitions ++ generateQueryParamMatchers(methodName, qsArgs) ++ codecs ++
+                tracingFields
                   .map(_.term)
-                  .map(generateTracingExtractor(methodName, _)),
+                  .map(generateTracingExtractor(methodName, _)) ++
+                customExtractionFields
+                  .map(_.term)
+                  .map(generateCustomExtractionFieldsExtractor(methodName, _)),
             List.empty //handlerDefinitions
           )
         )
@@ -850,5 +886,11 @@ object Http4sServerGenerator {
          }
        """
 
+    def generateCustomExtractionFieldsExtractor(methodName: String, extractField: Term): Defn.Object =
+      q"""
+         object ${Term.Name(s"extractorFor${methodName.capitalize}")} {
+           def unapply(r: Request[F]): Option[(Request[F], $customExtractionTypeName)] = Some(r -> $extractField(r))
+         }
+       """
   }
 }
