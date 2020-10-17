@@ -24,3 +24,6 @@ definitions:
       id:
         type: integer
         format: int64
+      url:
+        type: string
+        format: url

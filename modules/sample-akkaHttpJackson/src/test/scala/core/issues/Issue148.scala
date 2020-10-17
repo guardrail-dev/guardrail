@@ -109,7 +109,7 @@ class Issue148Suite extends AnyFunSuite with TestImplicits with Matchers with Ei
       .withHeaders(RawHeader("x-header", "false"))
       .withEntity(ContentTypes.`application/json`, """{"type": "Bar"}""") ~> route ~> check {
       rejection match {
-        case ex: MalformedRequestContentRejection => ex.message shouldBe "Validation of Bar failed: name: may not be null"
+        case ex: MalformedRequestContentRejection => ex.message shouldBe "Validation of Bar failed: name: must not be null"
       }
     }
 
@@ -263,7 +263,7 @@ class Issue148Suite extends AnyFunSuite with TestImplicits with Matchers with Ei
      * Missing "name" field
      */
     Client.httpClient(jsonResponse("""{"type": "Bar"}"""), "http://localhost:80").getFoo().value.futureValue match {
-      case Left(Left(e: ValidationException)) => e.getMessage shouldBe "Validation of Bar failed: name: may not be null"
+      case Left(Left(e: ValidationException)) => e.getMessage shouldBe "Validation of Bar failed: name: must not be null"
       case ex                                 => failTest(s"Unknown: ${ex}")
     }
   }

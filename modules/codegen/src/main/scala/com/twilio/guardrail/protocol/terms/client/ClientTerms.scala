@@ -5,11 +5,11 @@ import cats.data.NonEmptyList
 import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.Responses
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
 import java.net.URI
 
-abstract class ClientTerms[L <: LA, F[_]] {
+abstract class ClientTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def generateClientOperation(
       className: List[String],

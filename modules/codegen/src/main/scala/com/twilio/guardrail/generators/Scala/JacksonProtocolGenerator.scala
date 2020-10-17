@@ -9,58 +9,63 @@ import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import com.twilio.guardrail.protocol.terms.protocol._
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import scala.meta._
 
 object JacksonProtocolGenerator {
-  val EnumProtocolTermInterp: EnumProtocolTerms[ScalaLanguage, Target] = CirceProtocolGenerator.EnumProtocolTermInterp.copy(
-    newRenderClass = (className, tpe, elems) =>
-      for {
-        renderedClass <- CirceProtocolGenerator.EnumProtocolTermInterp.renderClass(className, tpe, elems)
-      } yield renderedClass.copy(
-        mods = List(
-            mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Serializer"))}])",
-            mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
-          ) ++ renderedClass.mods
-      ),
-    newEncodeEnum = className =>
-      Target.pure(
-        Some(
-          q"""
+  def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = {
+    val baseInterp = new CirceProtocolGenerator.EnumProtocolTermInterp
+    import baseInterp.MonadF
+    baseInterp.copy(
+      newRenderClass = (className, tpe, elems) =>
+        for {
+          renderedClass <- baseInterp.renderClass(className, tpe, elems)
+        } yield renderedClass.copy(
+          mods = List(
+              mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Serializer"))}])",
+              mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
+            ) ++ renderedClass.mods
+        ),
+      newEncodeEnum = className =>
+        Target.pure(
+          Some(
+            q"""
          class ${Type.Name(className + "Serializer")} extends com.fasterxml.jackson.databind.JsonSerializer[${Type.Name(className)}] {
            override def serialize(value: ${Type
-            .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.writeString(value.value)
+              .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.writeString(value.value)
          }
        """
-        )
-      ),
-    newDecodeEnum = className =>
-      Target.pure(
-        Some(
-          q"""
+          )
+        ),
+      newDecodeEnum = className =>
+        Target.pure(
+          Some(
+            q"""
          class ${Type.Name(className + "Deserializer")} extends com.fasterxml.jackson.databind.JsonDeserializer[${Type.Name(className)}] {
            override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
-            className
-          )} =
+              className
+            )} =
             ${Term.Select(Term.Name(className), Term.Name("parse"))}(p.getText)
               .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.getText}' for " + ${Lit.String(className)}) })
          }
        """
+          )
+        ),
+      newRenderStaticDefns = (className, members, accessors, encoder, decoder) =>
+        for {
+          renderedStaticDefns <- baseInterp.renderStaticDefns(className, members, accessors, encoder, decoder)
+          classType = Type.Name(className)
+        } yield renderedStaticDefns.copy(
+          definitions = renderedStaticDefns.definitions ++ List(
+                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
+                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
+                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.noop"
+                )
         )
-      ),
-    newRenderStaticDefns = (className, members, accessors, encoder, decoder) =>
-      for {
-        renderedStaticDefns <- CirceProtocolGenerator.EnumProtocolTermInterp.renderStaticDefns(className, members, accessors, encoder, decoder)
-        classType = Type.Name(className)
-      } yield renderedStaticDefns.copy(
-        definitions = renderedStaticDefns.definitions ++ List(
-                q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
-                q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
-                q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.noop"
-              )
-      )
-  )
+    )
+  }
 
-  val ModelProtocolTermInterp: ModelProtocolTerms[ScalaLanguage, Target] = {
+  def ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ModelProtocolTerms[ScalaLanguage, Target] = {
     def paramAnnotations(
         param: ProtocolParameter[ScalaLanguage],
         presenceSerType: Type,
@@ -140,6 +145,7 @@ object JacksonProtocolGenerator {
 
     val jsonIgnoreProperties = mod"""@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)"""
     val baseInterp           = new CirceProtocolGenerator.ModelProtocolTermInterp(CirceModelGenerator.V012)
+    import baseInterp.MonadF
     baseInterp.copy(
       newRenderDTOClass = (className, supportPackage, terms, parents) =>
         for {
@@ -222,23 +228,27 @@ object JacksonProtocolGenerator {
     )
   }
 
-  val ArrayProtocolTermInterp: ArrayProtocolTerms[ScalaLanguage, Target] = CirceProtocolGenerator.ArrayProtocolTermInterp
+  def ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ArrayProtocolTerms[ScalaLanguage, Target] =
+    new CirceProtocolGenerator.ArrayProtocolTermInterp
 
-  val ProtocolSupportTermInterp: ProtocolSupportTerms[ScalaLanguage, Target] = CirceProtocolGenerator.ProtocolSupportTermInterp.copy(
-    newProtocolImports = () =>
-      Target.pure(
-        List(
-          q"import cats.implicits._"
-        )
-      ),
-    newPackageObjectImports = () => Target.pure(List.empty),
-    newPackageObjectContents = () => Target.pure(List.empty),
-    newImplicitsObject = () =>
-      Target.pure(
-        Some(
-          (
-            q"JacksonImplicits",
-            q"""
+  def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] = {
+    val baseInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
+    import baseInterp.MonadF
+    baseInterp.copy(
+      newProtocolImports = () =>
+        Target.pure(
+          List(
+            q"import cats.implicits._"
+          )
+        ),
+      newPackageObjectImports = () => Target.pure(List.empty),
+      newPackageObjectContents = () => Target.pure(List.empty),
+      newImplicitsObject = () =>
+        Target.pure(
+          Some(
+            (
+              q"JacksonImplicits",
+              q"""
             object JacksonImplicits {
               object constraints {
                 type NotNull = javax.validation.constraints.NotNull @scala.annotation.meta.field @scala.annotation.meta.param
@@ -386,21 +396,21 @@ object JacksonProtocolGenerator {
               }
             }
          """
+            )
           )
-        )
-      ),
-    newGenerateSupportDefinitions = () =>
-      for {
-        generatedSupportDefinitions <- CirceProtocolGenerator.ProtocolSupportTermInterp.generateSupportDefinitions()
-      } yield {
-        val (presence, others) = generatedSupportDefinitions.partition(_.className.value == "Presence")
-        presence.headOption
-          .map(
-            defn =>
-              defn.copy(
-                definition = defn.definition.map({
-                  case q"object Presence { ..$stmts }" =>
-                    q"""
+        ),
+      newGenerateSupportDefinitions = () =>
+        for {
+          generatedSupportDefinitions <- baseInterp.generateSupportDefinitions()
+        } yield {
+          val (presence, others) = generatedSupportDefinitions.partition(_.className.value == "Presence")
+          presence.headOption
+            .map(
+              defn =>
+                defn.copy(
+                  definition = defn.definition.map({
+                    case q"object Presence { ..$stmts }" =>
+                      q"""
                   object Presence {
                     import com.fasterxml.jackson.annotation.JsonInclude
                     import com.fasterxml.jackson.core.{JsonGenerator, JsonParser, JsonToken}
@@ -541,61 +551,66 @@ object JacksonProtocolGenerator {
                     ..$stmts
                   }
                """
-                  case other => other
-                })
-              )
+                    case other => other
+                  })
+                )
+            )
+            .toList ++ others
+        }
+    )
+  }
+
+  def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] = {
+    val baseInterp = new CirceProtocolGenerator.PolyProtocolTermInterp
+    import baseInterp.MonadF
+    baseInterp.copy(
+      newRenderSealedTrait = (className, params, discriminator, parents, children) =>
+        for {
+          renderedTrait      <- baseInterp.renderSealedTrait(className, params, discriminator, parents, children)
+          discriminatorParam <- Target.pure(params.find(_.name.value == discriminator.propertyName))
+        } yield {
+          val subTypes = children.map(
+            child =>
+              q"new com.fasterxml.jackson.annotation.JsonSubTypes.Type(name = ${Lit.String(discriminatorValue(discriminator, child))}, value = classOf[${Type.Name(child)}])"
           )
-          .toList ++ others
-      }
-  )
 
-  val PolyProtocolTermInterp: PolyProtocolTerms[ScalaLanguage, Target] = CirceProtocolGenerator.PolyProtocolTermInterp.copy(
-    newRenderSealedTrait = (className, params, discriminator, parents, children) =>
-      for {
-        renderedTrait      <- CirceProtocolGenerator.PolyProtocolTermInterp.renderSealedTrait(className, params, discriminator, parents, children)
-        discriminatorParam <- Target.pure(params.find(_.name.value == discriminator.propertyName))
-      } yield {
-        val subTypes = children.map(
-          child =>
-            q"new com.fasterxml.jackson.annotation.JsonSubTypes.Type(name = ${Lit.String(discriminatorValue(discriminator, child))}, value = classOf[${Type.Name(child)}])"
-        )
-
-        renderedTrait.copy(
-          mods = List(
-              mod"""
+          renderedTrait.copy(
+            mods = List(
+                mod"""
         @com.fasterxml.jackson.annotation.JsonTypeInfo(
           use = com.fasterxml.jackson.annotation.JsonTypeInfo.Id.NAME,
           include = com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY,
           property = ${Lit.String(discriminator.propertyName)}
         )
         """,
-              mod"""
+                mod"""
         @com.fasterxml.jackson.annotation.JsonSubTypes(Array(
           ..$subTypes
         ))
          """
-            ) ++ renderedTrait.mods,
-          templ = renderedTrait.templ.copy(
-            stats = renderedTrait.templ.stats ++ discriminatorParam.map(
-                    param => q"def ${Term.Name(param.term.name.value)}: ${param.term.decltpe.getOrElse(t"Any")}"
-                  )
+              ) ++ renderedTrait.mods,
+            templ = renderedTrait.templ.copy(
+              stats = renderedTrait.templ.stats ++ discriminatorParam.map(
+                      param => q"def ${Term.Name(param.term.name.value)}: ${param.term.decltpe.getOrElse(t"Any")}"
+                    )
+            )
           )
+        },
+      newEncodeADT = (_, _, _) => Target.pure(None),
+      newDecodeADT = (_, _, _) => Target.pure(None),
+      newRenderADTStaticDefns = (className, discriminator, encoder, decoder) =>
+        for {
+          renderedADTStaticDefns <- baseInterp.renderADTStaticDefns(className, discriminator, encoder, decoder)
+          classType = Type.Name(className)
+        } yield renderedADTStaticDefns.copy(
+          definitions = renderedADTStaticDefns.definitions ++ List(
+                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
+                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
+                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
+                )
         )
-      },
-    newEncodeADT = (_, _, _) => Target.pure(None),
-    newDecodeADT = (_, _, _) => Target.pure(None),
-    newRenderADTStaticDefns = (className, discriminator, encoder, decoder) =>
-      for {
-        renderedADTStaticDefns <- CirceProtocolGenerator.PolyProtocolTermInterp.renderADTStaticDefns(className, discriminator, encoder, decoder)
-        classType = Type.Name(className)
-      } yield renderedADTStaticDefns.copy(
-        definitions = renderedADTStaticDefns.definitions ++ List(
-                q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
-                q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
-                q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
-              )
-      )
-  )
+    )
+  }
 
   private def discriminatorValue(discriminator: Discriminator[ScalaLanguage], className: String): String =
     discriminator.mapping

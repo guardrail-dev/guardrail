@@ -10,14 +10,16 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
 import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import io.swagger.v3.oas.models.Operation
+
 import scala.meta._
 
 object DropwizardServerGenerator {
   private val PLAIN_TYPES =
     Set("Boolean", "Byte", "Char", "Short", "Int", "Long", "BigInt", "Float", "Double", "BigDecimal", "String", "OffsetDateTime", "LocalDateTime")
+  private val CONTAINER_TYPES = Seq("Vector", "List", "Seq", "IndexedSeq", "Iterable", "Map")
 
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toJaxRsAnnotationName: Term = ct match {
@@ -93,6 +95,14 @@ object DropwizardServerGenerator {
       })
     )
 
+    def stripOptionFromCollections(param: Term.Param): Term.Param = param.copy(
+      decltpe = param.decltpe.map({
+        case Type.Apply(t"Option", List(Type.Apply(containerType, innerTypes))) if CONTAINER_TYPES.contains(containerType.toString) =>
+          t"$containerType[..$innerTypes]"
+        case other => other
+      })
+    )
+
     def replaceFileParam(in: Option[String], isFile: Boolean)(param: Term.Param): Term.Param =
       if (!in.contains("body") && isFile)
         param.copy(
@@ -110,6 +120,7 @@ object DropwizardServerGenerator {
     // one reason: https://github.com/eclipse-ee4j/jersey/issues/3632
     private def buildTransformers(param: LanguageParameter[ScalaLanguage], httpParameterAnnotation: Option[String]): List[Term.Param => Term.Param] = List(
       replaceFileParam(param.in, param.isFile),
+      stripOptionFromCollections,
       transformJsr310Param,
       handleDefaultValue(param.param.default),
       annotateHttpParameter(param.argName, httpParameterAnnotation),
@@ -120,7 +131,9 @@ object DropwizardServerGenerator {
       buildTransformers(param, httpParameterAnnotation).foldLeft(param.param)((accum, next) => next(accum))
   }
 
-  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
     override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[Import]] =
@@ -215,6 +228,17 @@ object DropwizardServerGenerator {
         )
       )
 
+    override def buildCustomExtractionFields(
+        operation: Tracker[Operation],
+        resourceName: List[String],
+        customExtraction: Boolean
+    ): Target[Option[CustomExtractionField[ScalaLanguage]]] =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
+
     override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[ScalaLanguage]]] =
       Target.pure(None)
 
@@ -234,7 +258,7 @@ object DropwizardServerGenerator {
             q"def ${response.statusCodeName}: $responseClsType = $responseClsSubTerm"
           )
         )({
-          case (valueType, _) =>
+          case (contentType, valueType, _) =>
             (
               q"case class $responseClsSubType(value: $valueType) extends $responseClsType($statusCodeTerm)",
               q"def ${response.statusCodeName}(value: $valueType): $responseClsType = $responseClsSubTerm(value)"
@@ -274,6 +298,7 @@ object DropwizardServerGenerator {
               operationId,
               methodName,
               responseClsName,
+              customExtractionFields,
               _,
               RouteMeta(path, method, operation, _),
               parameters,
@@ -322,7 +347,7 @@ object DropwizardServerGenerator {
                   parameters.queryStringParams.map(_.param) ++
                   parameters.formParams.map(param => paramTransformers.replaceFileParam(param.in, param.isFile)(param.param)) ++
                   parameters.bodyParams.filter(_ => parameters.formParams.isEmpty).map(_.param)
-            ).map(_.copy(default = None))
+            ).map(paramTransformers.stripOptionFromCollections).map(_.copy(default = None))
 
             val handlerArgs = handlerParams.map({ param =>
               val nameTerm = Term.Name(param.name.value)
@@ -387,7 +412,16 @@ object DropwizardServerGenerator {
       )
     }
 
-    override def getExtraRouteParams(tracing: Boolean): Target[List[Term.Param]] = Target.pure(List.empty)
+    override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Term.Param]] =
+      for {
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
+
+        tracing <- if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
+      } yield (customExtraction ::: tracing)
 
     override def renderClass(
         resourceName: String,
@@ -396,7 +430,8 @@ object DropwizardServerGenerator {
         combinedRouteTerms: List[Stat],
         extraRouteParams: List[Term.Param],
         responseDefinitions: List[Defn],
-        supportDefinitions: List[Defn]
+        supportDefinitions: List[Defn],
+        customExtraction: Boolean
     ): Target[List[Defn]] = {
       val routeParams = param"handler: ${Type.Name(handlerName)}" +: extraRouteParams
       Target.pure(
@@ -417,7 +452,13 @@ object DropwizardServerGenerator {
       )
     }
 
-    override def renderHandler(handlerName: String, methodSigs: List[Decl.Def], handlerDefinitions: List[Stat], responseDefinitions: List[Defn]): Target[Defn] =
+    override def renderHandler(
+        handlerName: String,
+        methodSigs: List[Decl.Def],
+        handlerDefinitions: List[Stat],
+        responseDefinitions: List[Defn],
+        customExtraction: Boolean
+    ): Target[Defn] =
       Target.pure(
         q"""
           trait ${Type.Name(handlerName)} {

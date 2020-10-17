@@ -6,7 +6,7 @@ title: "guardrail extensions - akka-http - scala - guardrail"
 guardrail Extensions
 ====================
 
-Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrail/blob/cbf9acd9e8ff226cc0f4bbf2f278669071126d5e/modules/codegen/src/main/scala/com/twilio/guardrail/extract/package.scala) designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.
+guardrail has [a number of vendor extensions](https://github.com/twilio/guardrail/blob/cbf9acd9e8ff226cc0f4bbf2f278669071126d5e/modules/codegen/src/main/scala/com/twilio/guardrail/extract/package.scala) designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.
 
 <table>
   <thead>
@@ -158,6 +158,33 @@ Guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
         build tool plugins or at the CLI.
       </td>
     </tr>
+    <tr>
+      <td nowrap><code>x-scala-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating Scala code. See also <code>x-jvm-class-prefix</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-java-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating Java code. See also <code>x-jvm-class-prefix</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap><code>x-jvm-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap>clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating JVM code. See also <code>x-scala-class-prefix</code>.
+      </td>
+    </tr>    
   </tbody>
 </table>
 

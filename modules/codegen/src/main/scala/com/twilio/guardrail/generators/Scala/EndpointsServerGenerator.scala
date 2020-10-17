@@ -6,13 +6,17 @@ import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.Responses
 import com.twilio.guardrail.protocol.terms.server._
-import com.twilio.guardrail.terms.SecurityScheme
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, SecurityScheme }
 import com.twilio.guardrail.{ StrictProtocolElems, Target }
 
 object EndpointsServerGenerator {
-  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def generateResponseDefinitions(responseClsName: String, responses: Responses[ScalaLanguage], protocolElems: List[StrictProtocolElems[ScalaLanguage]]) =
+      Target.raiseUserError("endpoints server generation is not currently supported")
+    def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
       Target.raiseUserError("endpoints server generation is not currently supported")
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.raiseUserError("endpoints server generation is not currently supported")
@@ -30,10 +34,11 @@ object EndpointsServerGenerator {
         handlerName: String,
         methodSigs: List[scala.meta.Decl.Def],
         handlerDefinitions: List[scala.meta.Stat],
-        responseDefinitions: List[scala.meta.Defn]
+        responseDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ) =
       Target.raiseUserError("endpoints server generation is not currently supported")
-    def getExtraRouteParams(tracing: Boolean) =
+    def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
       Target.raiseUserError("endpoints server generation is not currently supported")
     def generateSupportDefinitions(
         tracing: Boolean,
@@ -47,7 +52,8 @@ object EndpointsServerGenerator {
         combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
-        supportDefinitions: List[scala.meta.Defn]
+        supportDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ) =
       Target.raiseUserError("endpoints server generation is not currently supported")
     def getExtraImports(tracing: Boolean, supportPackage: List[String]) =

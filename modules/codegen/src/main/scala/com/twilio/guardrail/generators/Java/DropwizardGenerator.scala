@@ -7,10 +7,13 @@ import com.github.javaparser.ast.expr._
 import com.twilio.guardrail.{ SupportDefinition, Target }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.framework._
 
 object DropwizardGenerator {
-  object FrameworkInterp extends FrameworkTerms[JavaLanguage, Target] {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): FrameworkTerms[JavaLanguage, Target] =
+    new FrameworkInterp
+  class FrameworkInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
     implicit def MonadF = Target.targetInstances
 
     private lazy val supportDefs: Target[List[SupportDefinition[JavaLanguage]]] = List(

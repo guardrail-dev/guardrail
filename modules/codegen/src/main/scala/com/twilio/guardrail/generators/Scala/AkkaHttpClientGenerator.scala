@@ -11,7 +11,7 @@ import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.languages.ScalaLanguage
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -20,7 +20,10 @@ import java.net.URI
 
 object AkkaHttpClientGenerator {
 
-  class ClientTermInterp(modelGeneratorType: ModelGeneratorType) extends ClientTerms[ScalaLanguage, Target] {
+  def ClientTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+    new ClientTermInterp(modelGeneratorType)
+  class ClientTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+      extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
@@ -265,7 +268,7 @@ object AkkaHttpClientGenerator {
             (resp.value, resp.headers.value) match {
               case (None, Nil) =>
                 p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
-              case (Some((tpe, _)), Nil) =>
+              case (Some((_, tpe, _)), Nil) =>
                 p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
                   .Name(s"$methodName${resp.statusCodeName}Decoder")}, implicitly, implicitly).map(x => Right($responseCompanionTerm.$responseTerm(x)))"
               case (None, headers) =>
@@ -277,7 +280,7 @@ object AkkaHttpClientGenerator {
                    ..$optionalVals
                    resp.discardEntityBytes().future.map(_ => $body)
                 """
-              case (Some((tpe, _)), headers) =>
+              case (Some((_, tpe, _)), headers) =>
                 val (optionalVals, body) = buildHeaders(
                   headers,
                   q"$responseCompanionTerm.$responseTerm(..${Term
@@ -532,7 +535,7 @@ object AkkaHttpClientGenerator {
     def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Tracker[NonEmptyList[ContentType]]): Target[List[Defn.Val]] =
       (for {
         resp <- responses.value
-        tpe  <- resp.value.map(_._1).toList
+        tpe  <- resp.value.map(_._2).toList
       } yield {
         for {
           (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)

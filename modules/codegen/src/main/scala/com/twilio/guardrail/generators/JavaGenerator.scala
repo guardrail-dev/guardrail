@@ -3,7 +3,6 @@ package com.twilio.guardrail.generators
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import com.twilio.guardrail.SwaggerUtil.LazyResolvedType
 import com.github.javaparser.ast._
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, ArrayType => AstArrayType }
@@ -19,7 +18,6 @@ import com.twilio.guardrail.terms._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Locale
-import com.github.javaparser.StaticJavaParser
 import com.twilio.guardrail.languages.JavaLanguage.JavaTypeName
 import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
 import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
@@ -33,12 +31,6 @@ import scala.language.existentials
 object JavaGenerator {
   def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] =
     safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
-
-  def buildMethodCall(name: String, arg: Option[Node] = None): Target[Node] = arg match {
-    case Some(expr: Expression) => Target.pure(new MethodCallExpr(name, expr))
-    case None                   => Target.pure(new MethodCallExpr(name))
-    case other                  => Target.raiseUserError(s"Need expression to call '${name}' but got a ${other.getClass.getName} instead")
-  }
 
   private val formatter = ToolFactory.createCodeFormatter(
     Map(
@@ -108,8 +100,7 @@ object JavaGenerator {
     }
 
   object JavaInterp extends LanguageTerms[JavaLanguage, Target] {
-    implicit def MonadF: Monad[Target]         = Target.targetInstances
-    def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-java", "x-jvm"))
+    implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def litString(value: String): Target[com.github.javaparser.ast.Node]   = Target.pure(new StringLiteralExpr(value))
     def litFloat(value: Float): Target[com.github.javaparser.ast.Node]     = Target.pure(new DoubleLiteralExpr(value))
@@ -117,44 +108,6 @@ object JavaGenerator {
     def litInt(value: Int): Target[com.github.javaparser.ast.Node]         = Target.pure(new IntegerLiteralExpr(value))
     def litLong(value: Long): Target[com.github.javaparser.ast.Node]       = Target.pure(new LongLiteralExpr(value))
     def litBoolean(value: Boolean): Target[com.github.javaparser.ast.Node] = Target.pure(new BooleanLiteralExpr(value))
-    def liftOptionalType(value: com.github.javaparser.ast.`type`.Type): Target[com.github.javaparser.ast.`type`.Type] =
-      safeParseClassOrInterfaceType(s"java.util.Optional").map(_.setTypeArguments(new NodeList(value)))
-    def liftOptionalTerm(value: com.github.javaparser.ast.Node): Target[com.github.javaparser.ast.Node] =
-      buildMethodCall("java.util.Optional.ofNullable", Some(value))
-    def emptyArray(): Target[com.github.javaparser.ast.Node] = for (cls <- safeParseClassOrInterfaceType("java.util.ArrayList")) yield {
-      new ObjectCreationExpr(null, cls.setTypeArguments(new NodeList[Type]), new NodeList())
-    }
-    def emptyMap(): Target[com.github.javaparser.ast.Node] =
-      Target.pure(
-        new ObjectCreationExpr(null, StaticJavaParser.parseClassOrInterfaceType("java.util.HashMap").setTypeArguments(new NodeList[Type]), new NodeList())
-      )
-    def emptyOptionalTerm(): Target[com.github.javaparser.ast.Node] = buildMethodCall("java.util.Optional.empty")
-    def liftVectorType(
-        value: com.github.javaparser.ast.`type`.Type,
-        customTpe: Option[com.github.javaparser.ast.`type`.Type]
-    ): Target[com.github.javaparser.ast.`type`.Type] =
-      customTpe
-        .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.List").map(identity))({
-          case t: ClassOrInterfaceType =>
-            Target.pure(t)
-          case x =>
-            Target.raiseUserError(s"Unsure how to map $x")
-        })
-        .map(_.setTypeArguments(new NodeList(value)))
-    def liftVectorTerm(value: com.github.javaparser.ast.Node): Target[com.github.javaparser.ast.Node] =
-      buildMethodCall("java.util.Collections.singletonList", Some(value))
-    def liftMapType(
-        value: com.github.javaparser.ast.`type`.Type,
-        customTpe: Option[com.github.javaparser.ast.`type`.Type]
-    ): Target[com.github.javaparser.ast.`type`.Type] =
-      customTpe
-        .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.Map").map(identity))({
-          case t: ClassOrInterfaceType =>
-            Target.pure(t)
-          case x =>
-            Target.raiseUserError(s"Unsure how to map $x")
-        })
-        .map(_.setTypeArguments(STRING_TYPE, value))
 
     def fullyQualifyPackageName(rawPkgName: List[String]): Target[List[String]] = Target.pure(rawPkgName)
 
@@ -180,25 +133,6 @@ object JavaGenerator {
     def formatMethodName(methodName: String): Target[String]       = Target.pure(methodName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
     def formatMethodArgName(methodArgName: String): Target[String] = Target.pure(methodArgName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
     def formatEnumName(enumValue: String): Target[String]          = Target.pure(enumValue.escapeInvalidCharacters.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
-
-    def embedArray(tpe: LazyResolvedType[JavaLanguage], containerTpe: Option[com.github.javaparser.ast.`type`.Type]): Target[LazyResolvedType[JavaLanguage]] =
-      tpe match {
-        case SwaggerUtil.Deferred(tpe) =>
-          Target.pure(SwaggerUtil.DeferredArray[JavaLanguage](tpe, containerTpe))
-        case SwaggerUtil.DeferredArray(_, _) =>
-          Target.raiseUserError("FIXME: Got an Array of Arrays, currently not supported")
-        case SwaggerUtil.DeferredMap(_, _) =>
-          Target.raiseUserError("FIXME: Got an Array of Maps, currently not supported")
-      }
-    def embedMap(tpe: LazyResolvedType[JavaLanguage], containerTpe: Option[com.github.javaparser.ast.`type`.Type]): Target[LazyResolvedType[JavaLanguage]] =
-      tpe match {
-        case SwaggerUtil.Deferred(inner) =>
-          Target.pure(SwaggerUtil.DeferredMap[JavaLanguage](inner, containerTpe))
-        case SwaggerUtil.DeferredMap(_, _) =>
-          Target.raiseUserError("FIXME: Got a map of maps, currently not supported")
-        case SwaggerUtil.DeferredArray(_, _) =>
-          Target.raiseUserError("FIXME: Got a map of arrays, currently not supported")
-      }
 
     def parseType(tpe: String): Target[Option[com.github.javaparser.ast.`type`.Type]] =
       safeParseType(tpe)
@@ -269,8 +203,6 @@ object JavaGenerator {
     def longType(): Target[com.github.javaparser.ast.`type`.Type]                          = safeParseType("Long")
     def integerType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("java.math.BigInteger")
     def booleanType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("Boolean")
-    def arrayType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] =
-      safeParseClassOrInterfaceType("java.util.List").map(_.setTypeArguments(new NodeList[Type](STRING_TYPE)))
     def fallbackType(tpe: Option[String], format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] =
       Target.fromOption(tpe, UserError("Missing type")).flatMap(safeParseType)
 

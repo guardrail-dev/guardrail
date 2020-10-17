@@ -11,7 +11,7 @@ import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import cats.Foldable
 import com.twilio.guardrail.extract.Default
 import scala.collection.JavaConverters._
@@ -112,6 +112,7 @@ object ProtocolGenerator {
       implicit E: EnumProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[Either[String, EnumDefinition[L]]] = {
     import E._
@@ -181,6 +182,7 @@ object ProtocolGenerator {
       E: EnumProtocolTerms[L, F],
       M: ModelProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolElems[L]] = {
     import M._
@@ -254,6 +256,7 @@ object ProtocolGenerator {
       E: EnumProtocolTerms[L, F],
       P: PolyProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[List[SuperClass[L]]] = {
     import M._
@@ -335,6 +338,7 @@ object ProtocolGenerator {
       E: EnumProtocolTerms[L, F],
       P: PolyProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[Either[String, ClassDefinition[L]]] = {
     import M._
@@ -402,6 +406,7 @@ object ProtocolGenerator {
       E: EnumProtocolTerms[L, F],
       P: PolyProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[(List[ProtocolParameter[L]], List[NestedProtocolElems[L]])] = {
     import M._
@@ -537,6 +542,7 @@ object ProtocolGenerator {
       implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolElems[L]] = {
     import Fw._
@@ -585,6 +591,7 @@ object ProtocolGenerator {
       F: FrameworkTerms[L, F],
       P: ProtocolSupportTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolElems[L]] = {
     import R._
@@ -684,6 +691,7 @@ object ProtocolGenerator {
       F: FrameworkTerms[L, F],
       P: PolyProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolDefinitions[L]] = {
     import S._
@@ -787,9 +795,11 @@ object ProtocolGenerator {
       requirement: PropertyRequirement,
       definitions: List[(String, Schema[_])]
   )(
-      implicit Sc: LanguageTerms[L, F]
+      implicit Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F]
   ): F[Option[L#Term]] = {
     import Sc._
+    import Cl._
     val empty = Option.empty[L#Term].pure[F]
     Option(schema.get$ref()) match {
       case Some(ref) =>

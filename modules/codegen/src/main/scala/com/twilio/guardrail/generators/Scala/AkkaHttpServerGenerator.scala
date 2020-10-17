@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.Scala
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SwaggerUtil, Target, TracingField, UserError }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SwaggerUtil, Target, TracingField, UserError }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.{ ServerRawResponse, TracingLabel }
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
@@ -13,16 +13,30 @@ import com.twilio.guardrail.generators.syntax.RichOperation
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.generators.operations.TracingLabelFormatter
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  Responses,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import com.twilio.guardrail.protocol.terms.server._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object AkkaHttpServerGenerator {
-  class ServerTermInterp(modelGeneratorType: ModelGeneratorType) extends ServerTerms[ScalaLanguage, Target] {
+  def ServerTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp(modelGeneratorType)
+  class ServerTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+      extends ServerTerms[ScalaLanguage, Target] {
+    val customExtractionTypeName: Type.Name = Type.Name("E")
+
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -38,30 +52,31 @@ object AkkaHttpServerGenerator {
         _ <- Target.pure(())
         responseSuperType = Type.Name(responseClsName)
         responseSuperTerm = Term.Name(responseClsName)
-        instances = responses.value
-          .foldLeft[List[(Defn, Defn, Case)]](List.empty)({
-            case (acc, resp) =>
-              acc :+ ({
-                val statusCodeName = resp.statusCodeName
-                val statusCode     = q"StatusCodes.${statusCodeName}"
-                val valueType      = resp.value.map(_._1)
-                val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
-                val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
-                valueType.fold[(Defn, Defn, Case)](
-                  (
-                    q"case object $responseTerm                      extends $responseSuperType($statusCode)",
-                    q"def $statusCodeName: $responseSuperType = $responseTerm",
-                    p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
-                  )
-                ) { valueType =>
-                  (
-                    q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
-                    q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                    p"case r@$responseTerm(value) => Marshal(value).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
-                  )
+        instances = responses.value.map {
+          case resp =>
+            val statusCodeName = resp.statusCodeName
+            val statusCode     = q"StatusCodes.${statusCodeName}"
+            val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
+            val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
+            resp.value.fold[(Defn, Defn, Case)](
+              (
+                q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                q"def $statusCodeName: $responseSuperType = $responseTerm",
+                p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+              )
+            ) {
+              case (contentType, valueType, _) =>
+                val transformer: Term => Term = contentType match {
+                  case TextPlain => x => q"TextPlain($x)"
+                  case _         => identity _
                 }
-              })
-          })
+                (
+                  q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
+                  q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
+                  p"case r@$responseTerm(value) => Marshal(${transformer(q"value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                )
+            }
+        }
         (terms, aliases, marshallers) = instances.unzip3
         convenienceConstructors = aliases.flatMap({
           case q"def $name(value: $tpe): $_ = $_" => tpe.map { (_, name) }
@@ -108,6 +123,26 @@ object AkkaHttpServerGenerator {
       ) ++ terms ++ List[Defn](
             companion
           )
+
+    def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+      for {
+        _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
+        res <- if (customExtraction) {
+          for {
+            operationId <- operation
+              .downField("operationId", _.getOperationId())
+              .map(_.map(splitOperationParts(_)._2))
+              .raiseErrorIfEmpty("Missing operationId")
+            operationIdTarget <- Target.pure(Lit.String(operationId.unwrapTracker))
+          } yield Some(
+            CustomExtractionField[ScalaLanguage](
+              LanguageParameter.fromParam(Term.Param(List(), Term.Name("extracted"), Some(customExtractionTypeName), None)),
+              q"""customExtract(${operationIdTarget})"""
+            )
+          )
+        } else Target.pure(None)
+      } yield res
+
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       for {
         _ <- Target.log.debug(s"buildTracingFields(${operation.get.showNotNull}, ${resourceName}, ${tracing})")
@@ -141,13 +176,14 @@ object AkkaHttpServerGenerator {
               operationId,
               methodName,
               responseClsName,
+              customExtractionFields,
               tracingFields,
               sr @ RouteMeta(path, method, operation, securityRequirements),
               parameters,
               responses
               ) =>
             for {
-              rendered <- generateRoute(resourceName, basePath, methodName, responseClsName, sr, tracingFields, parameters, responses)
+              rendered <- generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
             } yield rendered
         }
         routeTerms = renderedRoutes.map(_.route)
@@ -166,22 +202,29 @@ object AkkaHttpServerGenerator {
         handlerName: String,
         methodSigs: List[scala.meta.Decl.Def],
         handlerDefinitions: List[scala.meta.Stat],
-        responseDefinitions: List[scala.meta.Defn]
+        responseDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ) =
       for {
         _ <- Target.log.debug(s"renderHandler(${handlerName}, ${methodSigs}")
-      } yield q"""
-          trait ${Type.Name(handlerName)} {
+      } yield {
+        val tParams = if (customExtraction) List(tparam"-$customExtractionTypeName") else List()
+        q"""
+          trait ${Type.Name(handlerName)}[..${tParams}] {
             ..${methodSigs ++ handlerDefinitions}
           }
         """
-    def getExtraRouteParams(tracing: Boolean) =
+      }
+    def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
       for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
-        res <- if (tracing) {
+        extractParam <- if (customExtraction) {
+          Target.pure(List(param"""customExtract: String => Directive1[$customExtractionTypeName]"""))
+        } else Target.pure(List.empty)
+        traceParam <- if (tracing) {
           Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
         } else Target.pure(List.empty)
-      } yield res
+      } yield extractParam ::: traceParam
     def renderClass(
         resourceName: String,
         handlerName: String,
@@ -189,17 +232,27 @@ object AkkaHttpServerGenerator {
         combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
-        supportDefinitions: List[scala.meta.Defn]
+        supportDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ): Target[List[Defn]] =
       for {
         _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
-        routesParams = List(param"handler: ${Type.Name(handlerName)}") ++ extraRouteParams
       } yield {
+        val handlerType = {
+          val baseHandlerType = Type.Name(handlerName)
+          if (customExtraction) {
+            t"${baseHandlerType}[${customExtractionTypeName}]"
+          } else {
+            baseHandlerType
+          }
+        }
+        val typeParams     = if (customExtraction) List(tparam"$customExtractionTypeName") else List()
+        val routesParams   = List(param"handler: $handlerType") ++ extraRouteParams
         val routeImplicits = List(param"implicit mat: akka.stream.Materializer") ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
         List(q"""
           object ${Term.Name(resourceName)} {
             ..${supportDefinitions};
-            def routes(..${routesParams})(..$routeImplicits): Route = {
+            def routes[..${typeParams}](..${routesParams})(..$routeImplicits): Route = {
               ..${combinedRouteTerms}
             }
 
@@ -723,13 +776,14 @@ object AkkaHttpServerGenerator {
         methodName: String,
         responseClsName: String,
         route: RouteMeta,
+        customExtractionFields: Option[CustomExtractionField[ScalaLanguage]],
         tracingFields: Option[TracingField[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage],
         responses: Responses[ScalaLanguage]
     ): Target[RenderedRoute] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       for {
-        _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${tracingFields})")
+        _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${customExtractionFields}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
         consumes = operation
           .downField("consumes", _.consumes)
@@ -760,8 +814,8 @@ object AkkaHttpServerGenerator {
         qsArgs     = parameters.queryStringParams
         bodyArgs   = parameters.bodyParams
 
-        akkaMethod                     <- httpMethodToAkka(method)
         akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
+        akkaMethod                     <- httpMethodToAkka(method)
         akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
         akkaBody                       <- bodyToAkka(methodName, bodyArgs)
         (akkaForm, handlerDefinitions) <- formToAkka(consumes, methodName)(formArgs)
@@ -773,9 +827,11 @@ object AkkaHttpServerGenerator {
         } else {
           t"${Term.Name(resourceName)}.${responseCompanionType}"
         }
-        orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ tracingFields
-              .map(_.param)
-              .map(List(_))
+        extractionTracingParameters = (tracingFields.map(_.param).toList ::: customExtractionFields.map(_.param).toList) match {
+          case Nil => None
+          case l   => Some(l)
+        }
+        orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ extractionTracingParameters
 
         entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
         fullRouteMatcher = {
@@ -794,14 +850,15 @@ object AkkaHttpServerGenerator {
                         )
                   }
               }))
-          val methodMatcher  = bindParams(List((akkaMethod, List.empty)))
-          val pathMatcher    = bindParams(akkaPath.toList)
-          val qsMatcher      = bindParams(akkaQs)
-          val headerMatcher  = bindParams(akkaHeaders)
-          val tracingMatcher = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
-          val bodyMatcher    = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
+          val pathMatcher             = bindParams(akkaPath.toList)
+          val methodMatcher           = bindParams(List((akkaMethod, List.empty)))
+          val customExtractionMatcher = bindParams(customExtractionFields.map(t => (t.term, List(t.param.paramName))).toList)
+          val qsMatcher               = bindParams(akkaQs)
+          val headerMatcher           = bindParams(akkaHeaders)
+          val tracingMatcher          = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
+          val bodyMatcher             = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
 
-          pathMatcher compose methodMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
+          pathMatcher compose methodMatcher compose customExtractionMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
         }
         handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
         fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(methodName)}(...${handlerCallArgs}))")))

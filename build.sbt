@@ -12,25 +12,26 @@ git.useGitDescribe := true
 
 crossScalaVersions in ThisBuild := Seq("2.12.12")
 
-val akkaVersion            = "10.0.15"
+val akkaVersion            = "2.6.8"
+val akkaHttpVersion        = "10.2.1"
 val catsVersion            = "2.1.1"
-val catsEffectVersion      = "2.1.4"
+val catsEffectVersion      = "2.2.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.7"
 val scalacheckVersion      = "1.14.3"
-val scalatestVersion       = "3.2.0"
+val scalatestVersion       = "3.2.2"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
-val javaparserVersion      = "3.16.1"
-val endpointsVersion       = "0.15.0"
+val javaparserVersion      = "3.16.2"
+val endpointsVersion       = "0.8.0"
 val ahcVersion             = "2.8.1"
-val dropwizardVersion      = "1.3.24"
+val dropwizardVersion      = "1.3.25"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
-val springBootVersion      = "2.3.3.RELEASE"
-val jacksonVersion         = "2.11.2"
-val hibernateVersion       = "5.4.3.Final"
+val springBootVersion      = "2.3.4.RELEASE"
+val jacksonVersion         = "2.11.3"
+val hibernateVersion       = "6.1.6.Final"
 val javaxElVersion         = "3.0.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
@@ -146,7 +147,7 @@ def exampleArgs(language: String, framework: Option[String] = None): List[List[S
         ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
         if onlyFrameworks.forall(_.exists({ case (onlyLanguage, onlyFrameworks) => onlyLanguage == language && onlyFrameworks.contains(frameworkName) }))
         kind <- kinds
-        filteredExtra = extra.filterNot(if (language == "java") _ == "--tracing" else Function.const(false) _)
+        filteredExtra = extra.filterNot(if (language == "java" || (language == "scala" && frameworkName == "dropwizard")) _ == "--tracing" else Function.const(false) _)
       } yield
         (
           List(s"--${kind}") ++
@@ -226,7 +227,7 @@ addCommandAlias(
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
 addCompilerPlugin(scalafixSemanticdb)
-scalafixDependencies in ThisBuild += "org.scalatest" %% "autofix" % "3.1.0.0"
+scalafixDependencies in ThisBuild += "org.scalatest" %% "autofix" % "3.1.0.1"
 scalacOptions += "-Yrangepos"
 
 publishMavenStyle := true
@@ -241,6 +242,7 @@ val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, 
 val codegenSettings = Seq(
   ScoverageKeys.coverageMinimum := 81.0,
   ScoverageKeys.coverageFailOnMinimum := true,
+  ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
   addCompilerPlugin(scalafixSemanticdb),
@@ -288,11 +290,11 @@ lazy val codegen = (project in file("modules/codegen"))
     (name := "guardrail") +:
       codegenSettings,
     libraryDependencies ++= testDependencies ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.3.20",
+      "org.scalameta"               %% "scalameta"                    % "4.3.24",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.22.0",
-      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.4.500",
-      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.21",
+      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.23.0",
+      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.22",
       "org.tpolecat"                %% "atto-core"                    % "0.8.0",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
@@ -334,8 +336,10 @@ lazy val codegen = (project in file("modules/codegen"))
 
 val akkaProjectDependencies = Seq(
   "javax.xml.bind"    %  "jaxb-api"          % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka" %% "akka-http"         % akkaVersion,
-  "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http"         % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-stream"       % akkaVersion,
+  "com.typesafe.akka" %% "akka-testkit"      % akkaVersion,
   "io.circe"          %% "circe-core"        % circeVersion,
   "io.circe"          %% "circe-jawn"        % circeVersion,
   "io.circe"          %% "circe-parser"      % circeVersion,
@@ -345,7 +349,10 @@ val akkaProjectDependencies = Seq(
 
 val akkaJacksonProjectDependencies = Seq(
   "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
-  "com.typesafe.akka"              %% "akka-http"               % akkaVersion,
+  "com.typesafe.akka"              %% "akka-http"               % akkaHttpVersion,
+  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaHttpVersion,
+  "com.typesafe.akka"              %% "akka-stream"             % akkaVersion,
+  "com.typesafe.akka"              %% "akka-testkit"            % akkaVersion,
   "com.fasterxml.jackson.core"     %  "jackson-core"            % jacksonVersion,
   "com.fasterxml.jackson.core"     %  "jackson-databind"        % jacksonVersion,
   "com.fasterxml.jackson.core"     %  "jackson-annotations"     % jacksonVersion,
@@ -355,7 +362,6 @@ val akkaJacksonProjectDependencies = Seq(
   "org.glassfish"                  %  "javax.el"                % javaxElVersion,
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion % Test,
-  "com.typesafe.akka"              %% "akka-http-testkit"       % akkaVersion % Test,
 )
 
 val http4sProjectDependencies = Seq(
@@ -378,9 +384,10 @@ val dropwizardProjectDependencies = Seq(
   "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-  "junit"                      %  "junit"                  % "4.13"             % Test,
+  "junit"                      %  "junit"                  % "4.13.1"             % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.4.3"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.14.8"           % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.16.0"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
@@ -396,9 +403,9 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scala-lang.modules"         %% "scala-java8-compat"      % "0.9.1"            % Test,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
-  "junit"                          %  "junit"                   % "4.13"             % Test,
+  "junit"                          %  "junit"                   % "4.13.1"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
-  "org.mockito"                    %% "mockito-scala-scalatest" % "1.14.8"           % Test,
+  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.0"           % Test,
   "com.github.tomakehurst"         %  "wiremock"                % "1.58"             % Test,
   "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
@@ -409,7 +416,7 @@ val springProjectDependencies = Seq(
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.14.8"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.16.0"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 

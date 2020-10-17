@@ -1,13 +1,14 @@
 package com.twilio.guardrail.protocol.terms.protocol
 
-import io.swagger.v3.oas.models.media.Schema
 import cats.Monad
-import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
+import com.twilio.guardrail.SwaggerUtil.ResolvedType
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.SwaggerUtil.ResolvedType
+import com.twilio.guardrail.terms.CollectionsLibTerms
+import com.twilio.guardrail.{ ProtocolParameter, StaticDefns, SuperClass }
+import io.swagger.v3.oas.models.media.Schema
 
-abstract class ModelProtocolTerms[L <: LA, F[_]] {
+abstract class ModelProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def extractProperties(swagger: Tracker[Schema[_]]): F[List[(String, Tracker[Schema[_]])]]
   def transformProperty(

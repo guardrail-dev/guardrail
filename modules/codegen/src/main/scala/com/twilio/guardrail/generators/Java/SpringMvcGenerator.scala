@@ -5,10 +5,13 @@ import com.github.javaparser.ast.expr.Name
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.generators.syntax.Java.{ safeParseName, safeParseType }
 import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 
 object SpringMvcGenerator {
-  object FrameworkInterp extends FrameworkTerms[JavaLanguage, Target] {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): FrameworkTerms[JavaLanguage, Target] =
+    new FrameworkInterp
+  class FrameworkInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
     implicit def MonadF                    = Target.targetInstances
     def fileType(format: Option[String])   = safeParseType(format.getOrElse("MultipartFile"))
     def objectType(format: Option[String]) = safeParseType("com.fasterxml.jackson.databind.JsonNode")

@@ -15,13 +15,15 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ContentType, Header, Response, Responses }
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import scala.meta.{ Term, _ }
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object Http4sServerGenerator {
-  object ServerTermInterp extends ServerTerms[ScalaLanguage, Target] {
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new ServerTermInterp
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     def splitOperationParts(operationId: String): (List[String], String) = {
       val parts = operationId.split('.')
       (parts.drop(1).toList, parts.last)
@@ -33,6 +35,13 @@ object Http4sServerGenerator {
         protocolElems: List[StrictProtocolElems[ScalaLanguage]]
     ) =
       Target.pure(Http4sHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
+
+    def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
 
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.log.function("buildTracingFields")(for {
@@ -69,6 +78,7 @@ object Http4sServerGenerator {
                 operationId,
                 methodName,
                 responseClsName,
+                customExtractionFields,
                 tracingFields,
                 sr @ RouteMeta(path, method, operation, securityRequirements),
                 parameters,
@@ -94,7 +104,8 @@ object Http4sServerGenerator {
         handlerName: String,
         methodSigs: List[scala.meta.Decl.Def],
         handlerDefinitions: List[scala.meta.Stat],
-        responseDefinitions: List[scala.meta.Defn]
+        responseDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ) =
       Target.log.function("renderHandler")(for {
         _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
@@ -104,14 +115,17 @@ object Http4sServerGenerator {
       }
     """)
 
-    def getExtraRouteParams(tracing: Boolean) =
+    def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
       Target.log.function("getExtraRouteParams")(for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
         mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
         tracing <- if (tracing) {
           Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
         } else Target.pure(Option.empty)
-      } yield tracing.toList ::: List(mapRoute))
+      } yield customExtraction ::: tracing.toList ::: List(mapRoute))
 
     def generateSupportDefinitions(
         tracing: Boolean,
@@ -126,7 +140,8 @@ object Http4sServerGenerator {
         combinedRouteTerms: List[scala.meta.Stat],
         extraRouteParams: List[scala.meta.Term.Param],
         responseDefinitions: List[scala.meta.Defn],
-        supportDefinitions: List[scala.meta.Defn]
+        supportDefinitions: List[scala.meta.Defn],
+        customExtraction: Boolean
     ): Target[List[Defn]] =
       Target.log.function("renderClass")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
@@ -813,9 +828,8 @@ object Http4sServerGenerator {
 
     def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
-        response        <- responses.value
-        typeDefaultPair <- response.value
-        (tpe, _) = typeDefaultPair
+        response    <- responses.value
+        (_, tpe, _) <- response.value
       } yield {
         q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${Http4sHelper.generateEncoder(tpe, produces)}"
       }

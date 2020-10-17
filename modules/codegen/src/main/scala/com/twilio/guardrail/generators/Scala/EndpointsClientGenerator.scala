@@ -11,13 +11,14 @@ import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ContentType, MultipartFormData, Responses, TextPlain }
 import com.twilio.guardrail.protocol.terms.client._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.shims._
 import java.net.URI
 import scala.meta._
 
 object EndpointsClientGenerator {
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] = new ClientTermInterp
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     private[this] def formatClientName(clientName: Option[String]): Term.Param =
@@ -232,7 +233,7 @@ object EndpointsClientGenerator {
                 p"""case ${Lit.Int(resp.statusCode)} =>
                   Right($responseCompanionTerm.$responseTerm(..$params))
                 """
-              case (Some((tpe, _)), headers) =>
+              case (Some((_, tpe, _)), headers) =>
                 val params = Term.Name("v") :: headers.map { header =>
                         val lit  = Lit.String(header.name)
                         val expr = q"xhr.getResponseHeader($lit)"

@@ -6,7 +6,7 @@ import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ CoreTerms, LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SwaggerTerms }
 
 package guardrail {
   case class CodegenDefinitions[L <: LA](
@@ -17,7 +17,10 @@ package guardrail {
   )
 }
 
-trait MonadChain11 {
+trait MonadChain12 {
+  implicit def monadForCollectionsLib[L <: LA, F[_]](implicit ev: CollectionsLibTerms[L, F]): Monad[F] = ev.MonadF
+}
+trait MonadChain11 extends MonadChain12 {
   implicit def monadForProtocolSupportTerms[L <: LA, F[_]](implicit ev: ProtocolSupportTerms[L, F]): Monad[F] = ev.MonadF
 }
 trait MonadChain10 extends MonadChain11 {

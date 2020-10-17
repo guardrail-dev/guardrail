@@ -4,38 +4,29 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.Modifier.Keyword._
-import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
+import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
 import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr._
+import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
+import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
+import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.protocol.terms.{
-  ApplicationJson,
-  BinaryContent,
-  ContentType,
-  MultipartFormData,
-  OctetStream,
-  Response,
-  Responses,
-  TextContent,
-  TextPlain,
-  UrlencodedFormData
-}
+import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
+import io.swagger.v3.oas.models.Operation
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
-import _root_.io.swagger.v3.oas.models.Operation
 
 object DropwizardServerGenerator {
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
@@ -110,7 +101,7 @@ object DropwizardServerGenerator {
         .setExtendedTypes(new NodeList(superClassType))
 
       val (classDecls, creator) = response.value
-        .map(_._1)
+        .map(_._2)
         .orElse({
           if (response.statusCode >= 400 && response.statusCode <= 599) {
             errorEntityFallbackType
@@ -126,7 +117,7 @@ object DropwizardServerGenerator {
                 new ExpressionStmt(
                   new MethodCallExpr(
                     "super",
-                    new IntegerLiteralExpr(response.statusCode)
+                    new IntegerLiteralExpr(response.statusCode.toString)
                   )
                 )
               )
@@ -150,7 +141,7 @@ object DropwizardServerGenerator {
                   new ExpressionStmt(
                     new MethodCallExpr(
                       "super",
-                      new IntegerLiteralExpr(response.statusCode)
+                      new IntegerLiteralExpr(response.statusCode.toString)
                     )
                   ),
                   new ExpressionStmt(
@@ -196,7 +187,8 @@ object DropwizardServerGenerator {
     }
   }
 
-  object ServerTermInterp extends ServerTerms[JavaLanguage, Target] {
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ServerTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
       List(
@@ -219,13 +211,23 @@ object DropwizardServerGenerator {
         "javax.ws.rs.container.Suspended",
         "javax.ws.rs.core.MediaType",
         "javax.ws.rs.core.Response",
-        "java.util.Optional",
         "java.util.concurrent.CompletionStage",
         "org.glassfish.jersey.media.multipart.FormDataParam",
         "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
         "org.slf4j.Logger",
         "org.slf4j.LoggerFactory"
       ).traverse(safeParseRawImport)
+
+    override def buildCustomExtractionFields(
+        operation: Tracker[Operation],
+        resourceName: List[String],
+        customExtraction: Boolean
+    ): Target[Option[CustomExtractionField[JavaLanguage]]] =
+      if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else {
+        Target.pure(Option.empty)
+      }
 
     override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[JavaLanguage]]] =
       if (tracing) {
@@ -246,15 +248,15 @@ object DropwizardServerGenerator {
       for {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
         handlerType  <- safeParseClassOrInterfaceType(handlerName)
-      } yield {
-        val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
-        val (routeMethods, handlerMethodSigs) = routes
-          .map({
+        basePathComponents = basePath.toList.flatMap(splitPathComponents)
+        commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
+        routeMethodsAndHandlerMethodSigs <- routes
+          .traverse({
             case GenerateRouteMeta(
                 operationId,
                 methodName,
                 responseClsName,
+                customExtractionFields,
                 tracingFields,
                 sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
                 parameters,
@@ -297,17 +299,20 @@ object DropwizardServerGenerator {
                     )
                 )
 
-              def transformJsr310Params(parameter: Parameter): Parameter = {
-                val isOptional = parameter.getType.isOptional
+              def transformJsr310Params(parameter: Parameter): Target[Parameter] = {
+                val isOptional = Cl.isOptionalType(parameter.getType)
                 val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
-                def transform(to: Type): Parameter = {
-                  parameter.setType(if (isOptional) optionalType(to) else to)
-                  if (!isOptional) {
-                    parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                def transform(to: Type): Target[Parameter] =
+                  for {
+                    optionalToType <- Cl.liftOptionalType(to)
+                  } yield {
+                    parameter.setType(if (isOptional) optionalToType else to)
+                    if (!isOptional) {
+                      parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                    }
+                    parameter
                   }
-                  parameter
-                }
 
                 tpe match {
                   case cls: ClassOrInterfaceType if cls.getScope.asScala.forall(_.asString == "java.time") =>
@@ -320,9 +325,9 @@ object DropwizardServerGenerator {
                       case "LocalTime"      => transform(LOCAL_TIME_PARAM_TYPE)
                       case "OffsetTime"     => transform(OFFSET_TIME_PARAM_TYPE)
                       case "Duration"       => transform(DURATION_PARAM_TYPE)
-                      case _                => parameter
+                      case _                => Target.pure(parameter)
                     }
-                  case _ => parameter
+                  case _ => Target.pure(parameter)
                 }
               }
 
@@ -330,11 +335,11 @@ object DropwizardServerGenerator {
               // because that will require the server to buffer the entire contents in memory as it
               // reads in the entire body.  Instead we instruct Dropwizard to write it out to a file
               // on disk and use java.io.File.
-              def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
+              def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Target[Parameter] =
                 (param.isFile, param.required) match {
-                  case (true, true)  => parameter.setType(FILE_TYPE)
-                  case (true, false) => parameter.setType(optionalType(FILE_TYPE))
-                  case _             => parameter
+                  case (true, true)  => Target.pure(parameter.setType(FILE_TYPE))
+                  case (true, false) => Cl.liftOptionalType(FILE_TYPE).map(parameter.setType)
+                  case _             => Target.pure(parameter)
                 }
 
               def addValidationAnnotations(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter = {
@@ -347,6 +352,13 @@ object DropwizardServerGenerator {
                 parameter
               }
 
+              def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
+                if (!param.required && Cl.isArrayType(parameter.getType.containedType)) {
+                  parameter.setType(parameter.getType.containedType)
+                } else {
+                  parameter
+                }
+
               def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
                 parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
@@ -357,37 +369,59 @@ object DropwizardServerGenerator {
                 parameter
               }
 
-              val annotatedMethodParams: List[Parameter] = List(
-                (parameters.pathParams, "PathParam"),
-                (parameters.headerParams, "HeaderParam"),
-                (parameters.queryStringParams, "QueryParam"),
-                (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
-              ).flatMap({
-                case (params, annotationName) =>
-                  params.map({ param =>
-                    val parameter       = param.param.clone()
-                    val annotated       = addParamAnnotation(parameter, param, annotationName)
-                    val dateTransformed = transformJsr310Params(annotated)
-                    val fileTransformed = transformMultipartFile(dateTransformed, param)
-                    addValidationAnnotations(fileTransformed, param)
-                  })
-              })
+              def transformHandlerArg(parameter: Parameter): Expression = {
+                val isOptional = Cl.isOptionalType(parameter.getType)
+                val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
+                if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
+                  if (isOptional) {
+                    new MethodCallExpr(
+                      parameter.getNameAsExpression,
+                      "map",
+                      new NodeList[Expression](new MethodReferenceExpr(new NameExpr(typeName), new NodeList, "get"))
+                    )
+                  } else {
+                    new MethodCallExpr(parameter.getNameAsExpression, "get")
+                  }
+                } else {
+                  parameter.getNameAsExpression
+                }
+              }
 
-              val bareMethodParams: List[Parameter] = parameters.bodyParams.toList
-                .map({ param =>
-                  val parameter       = param.param.clone()
-                  val dateTransformed = transformJsr310Params(parameter)
-                  addValidationAnnotations(dateTransformed, param)
+              for {
+                annotatedMethodParams <- List(
+                  (parameters.pathParams, "PathParam"),
+                  (parameters.headerParams, "HeaderParam"),
+                  (parameters.queryStringParams, "QueryParam"),
+                  (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
+                ).flatTraverse({
+                  case (params, annotationName) =>
+                    params.traverse({ param =>
+                      val parameter                  = param.param.clone()
+                      val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                      val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
+                      for {
+                        dateTransformed <- transformJsr310Params(annotated)
+                        fileTransformed <- transformMultipartFile(dateTransformed, param)
+                      } yield addValidationAnnotations(fileTransformed, param)
+                    })
                 })
 
-              val methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
-              methodParams.foreach(method.addParameter)
-              method.addParameter(
-                new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
-              )
+                bareMethodParams <- parameters.bodyParams.toList
+                  .traverse({ param =>
+                    val parameter                  = param.param.clone()
+                    val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                    for {
+                      dateTransformed <- transformJsr310Params(optionalCollectionStripped)
+                    } yield addValidationAnnotations(dateTransformed, param)
+                  })
 
-              val (responseName, responseType, resultResumeBody) =
-                ServerRawResponse(operation)
+                methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
+                _            = methodParams.foreach(method.addParameter)
+                _ = method.addParameter(
+                  new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
+                )
+
+                (responseType, resultResumeBody) = ServerRawResponse(operation)
                   .filter(_ == true)
                   .fold({
                     val responseName = s"$handlerName.$responseClsName"
@@ -420,7 +454,6 @@ object DropwizardServerGenerator {
                           )
                       }))
                     (
-                      responseName,
                       StaticJavaParser.parseClassOrInterfaceType(responseName),
                       (
                         List[Statement](
@@ -451,7 +484,6 @@ object DropwizardServerGenerator {
                     )
                   })({ _ =>
                     (
-                      "Response",
                       RESPONSE_TYPE,
                       new NodeList(
                         new ExpressionStmt(
@@ -464,99 +496,91 @@ object DropwizardServerGenerator {
                       )
                     )
                   })
-              val whenCompleteLambda = new LambdaExpr(
-                new NodeList(
-                  new Parameter(new NodeList(finalModifier), responseType, new SimpleName("result")),
-                  new Parameter(new NodeList(finalModifier), THROWABLE_TYPE, new SimpleName("err"))
-                ),
-                new BlockStmt(
+                whenCompleteLambda = new LambdaExpr(
                   new NodeList(
-                    new IfStmt(
-                      new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
-                      new BlockStmt(
-                        new NodeList(
-                          new ExpressionStmt(
-                            new MethodCallExpr(
-                              new NameExpr("logger"),
-                              "error",
-                              new NodeList[Expression](
-                                new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
-                                new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
-                                new MethodCallExpr(new NameExpr("err"), "getMessage"),
-                                new NameExpr("err")
+                    new Parameter(new NodeList(finalModifier), responseType, new SimpleName("result")),
+                    new Parameter(new NodeList(finalModifier), THROWABLE_TYPE, new SimpleName("err"))
+                  ),
+                  new BlockStmt(
+                    new NodeList(
+                      new IfStmt(
+                        new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
+                        new BlockStmt(
+                          new NodeList(
+                            new ExpressionStmt(
+                              new MethodCallExpr(
+                                new NameExpr("logger"),
+                                "error",
+                                new NodeList[Expression](
+                                  new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
+                                  new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
+                                  new MethodCallExpr(new NameExpr("err"), "getMessage"),
+                                  new NameExpr("err")
+                                )
                               )
-                            )
-                          ),
-                          new ExpressionStmt(
-                            new MethodCallExpr(
-                              new NameExpr("asyncResponse"),
-                              "resume",
-                              new NodeList[Expression](
-                                new MethodCallExpr(
+                            ),
+                            new ExpressionStmt(
+                              new MethodCallExpr(
+                                new NameExpr("asyncResponse"),
+                                "resume",
+                                new NodeList[Expression](
                                   new MethodCallExpr(
-                                    new NameExpr("Response"),
-                                    "status",
-                                    new NodeList[Expression](new IntegerLiteralExpr(500))
-                                  ),
-                                  "build"
+                                    new MethodCallExpr(
+                                      new NameExpr("Response"),
+                                      "status",
+                                      new NodeList[Expression](new IntegerLiteralExpr("500"))
+                                    ),
+                                    "build"
+                                  )
                                 )
                               )
                             )
                           )
-                        )
-                      ),
-                      new BlockStmt(resultResumeBody)
+                        ),
+                        new BlockStmt(resultResumeBody)
+                      )
                     )
-                  )
-                ),
-                true
-              )
+                  ),
+                  true
+                )
 
-              def transformHandlerArg(parameter: Parameter): Expression = {
-                val isOptional = parameter.getType.isOptional
-                val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
-                if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
-                  if (isOptional) {
-                    new MethodCallExpr(
-                      parameter.getNameAsExpression,
-                      "map",
-                      new NodeList[Expression](new MethodReferenceExpr(new NameExpr(typeName), new NodeList, "get"))
+                handlerCall = new MethodCallExpr(
+                  new FieldAccessExpr(new ThisExpr, "handler"),
+                  methodName,
+                  new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
+                )
+
+                _ = method.setBody(
+                  new BlockStmt(
+                    new NodeList(
+                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
                     )
-                  } else {
-                    new MethodCallExpr(parameter.getNameAsExpression, "get")
-                  }
-                } else {
-                  parameter.getNameAsExpression
-                }
-              }
-
-              val handlerCall = new MethodCallExpr(
-                new FieldAccessExpr(new ThisExpr, "handler"),
-                methodName,
-                new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
-              )
-
-              method.setBody(
-                new BlockStmt(
-                  new NodeList(
-                    new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
                   )
                 )
-              )
 
-              val futureResponseType = completionStageType(responseType.clone())
-              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
-              (
-                (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams).map(_.param.clone()) ++
-                    parameters.formParams.map(param => transformMultipartFile(param.param.clone(), param)) ++
-                    parameters.bodyParams.map(_.param.clone())
-              ).foreach(handlerMethodSig.addParameter)
-              handlerMethodSig.setBody(null)
+                transformedAnnotatedParams <- (
+                  parameters.pathParams ++
+                      parameters.headerParams ++
+                      parameters.queryStringParams ++
+                      parameters.formParams
+                ).traverse({ param =>
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  transformMultipartFile(optionalCollectionStripped, param)
+                })
+                transformedBodyParams = parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
+              } yield {
+                val futureResponseType = completionStageType(responseType.clone())
+                val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
+                (transformedAnnotatedParams ++ transformedBodyParams).foreach(handlerMethodSig.addParameter)
+                handlerMethodSig.setBody(null)
 
-              (method, handlerMethodSig)
+                (method, handlerMethodSig)
+              }
           })
-          .unzip
-
+          .map(_.unzip)
+        (routeMethods, handlerMethodSigs) = routeMethodsAndHandlerMethodSigs
+      } yield {
         val resourceConstructor = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
         resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
         resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
@@ -588,12 +612,16 @@ object DropwizardServerGenerator {
         RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
       }
 
-    override def getExtraRouteParams(tracing: Boolean): Target[List[Parameter]] =
-      if (tracing) {
-        Target.raiseUserError(s"Tracing is not yet supported by this framework")
-      } else {
-        Target.pure(List.empty)
-      }
+    override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
+      for {
+        customExtraction <- if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
+
+        tracing <- if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
+      } yield (customExtraction ::: tracing)
 
     override def generateResponseDefinitions(
         responseClsName: String,
@@ -655,7 +683,8 @@ object DropwizardServerGenerator {
         combinedRouteTerms: List[com.github.javaparser.ast.Node],
         extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
         responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        customExtraction: Boolean
     ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       safeParseSimpleName(className) >>
           safeParseSimpleName(handlerName) >>
@@ -665,7 +694,8 @@ object DropwizardServerGenerator {
         handlerName: String,
         methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
         handlerDefinitions: List[com.github.javaparser.ast.Node],
-        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+        customExtraction: Boolean
     ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
       val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
       sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

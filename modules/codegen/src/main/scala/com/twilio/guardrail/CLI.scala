@@ -28,6 +28,7 @@ object CLICommon {
     |   --tracing                                              : Pass through tracing context to all requests
     |   --framework <framework name>                           : Use one of the pre-composed frameworks
     |   --module <module name>                                 : Explicitly select libraries to satisfy composition requirements
+    |   --custom-extraction                                    : Permit supplying an akka-http Directive into the generated guardrail routing layer (server only)
     |
     |Examples:
     |  Generate a client, put it in src/main/scala under the com.twilio.messaging.console.clients package, with OpenTracing support:

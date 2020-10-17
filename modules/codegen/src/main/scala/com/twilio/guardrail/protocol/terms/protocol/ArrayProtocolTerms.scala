@@ -3,8 +3,9 @@ package com.twilio.guardrail.protocol.terms.protocol
 import cats.Monad
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.SwaggerUtil
+import com.twilio.guardrail.terms.CollectionsLibTerms
 
-abstract class ArrayProtocolTerms[L <: LA, F[_]] {
+abstract class ArrayProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def extractArrayType(arr: SwaggerUtil.ResolvedType[L], concreteTypes: List[PropMeta[L]]): F[L#Type]
 

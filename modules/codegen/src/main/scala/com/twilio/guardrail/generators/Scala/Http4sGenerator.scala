@@ -2,11 +2,14 @@ package com.twilio.guardrail.generators.Scala
 
 import com.twilio.guardrail.Target
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.framework._
 import scala.meta._
 
 object Http4sGenerator {
-  object FrameworkInterp extends FrameworkTerms[ScalaLanguage, Target] {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new FrameworkInterp
+  class FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
     implicit def MonadF = Target.targetInstances
     def fileType(format: Option[String]) =
       Target.pure(format.fold[Type](t"fs2.Stream[F,Byte]")(Type.Name(_)))

@@ -3,8 +3,9 @@ package com.twilio.guardrail.protocol.terms.protocol
 import cats.Monad
 import com.twilio.guardrail.SupportDefinition
 import com.twilio.guardrail.languages.LA
+import com.twilio.guardrail.terms.CollectionsLibTerms
 
-abstract class ProtocolSupportTerms[L <: LA, F[_]] {
+abstract class ProtocolSupportTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
   def extractConcreteTypes(models: Either[String, List[PropMeta[L]]]): F[List[PropMeta[L]]]
   def staticProtocolImports(pkgName: List[String]): F[List[L#Import]]

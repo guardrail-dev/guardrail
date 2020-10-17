@@ -11,7 +11,7 @@ import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.{ ContentType, Header, MultipartFormData, Responses }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.shims._
-import com.twilio.guardrail.terms.{ RouteMeta, SecurityScheme }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -19,7 +19,8 @@ import java.net.URI
 
 object Http4sClientGenerator {
 
-  object ClientTermInterp extends ClientTerms[ScalaLanguage, Target] {
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] = new ClientTermInterp
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def splitOperationParts(operationId: String): (List[String], String) = {
@@ -279,7 +280,7 @@ object Http4sClientGenerator {
           else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status))"
           responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
           executeReqExpr = if (isGeneric) List(q"""$httpClientName.run(req).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
-          else List(q"""$httpClientName.fetch(req)(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+          else List(q"""$httpClientName.run(req).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           methodBody: Term = q"""
               {
                 ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
@@ -514,7 +515,7 @@ object Http4sClientGenerator {
     def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
       for {
         resp <- responses.value
-        tpe  <- resp.value.map(_._1)
+        tpe  <- resp.value.map(_._2)
       } yield q"private[this] val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, produces)}"
   }
 

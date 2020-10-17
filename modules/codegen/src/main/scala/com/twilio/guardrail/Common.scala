@@ -11,7 +11,7 @@ import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumPr
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
 import java.net.URI
 
@@ -36,11 +36,12 @@ object Common {
       Pol: PolyProtocolTerms[L, F],
       S: ProtocolSupportTerms[L, F],
       Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw._
-    import Sc._
+    import Cl._
     import Sw._
 
     Sw.log.function("prepareDefinitions")(for {

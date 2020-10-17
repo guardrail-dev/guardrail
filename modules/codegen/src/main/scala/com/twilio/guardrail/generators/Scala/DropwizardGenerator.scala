@@ -3,12 +3,16 @@ package com.twilio.guardrail.generators.Scala
 import cats.Monad
 import com.twilio.guardrail.{ Target, UserError }
 import com.twilio.guardrail.languages.ScalaLanguage
+import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+
 import scala.meta._
 import scala.util.Try
 
 object DropwizardGenerator {
-  object FrameworkInterp extends FrameworkTerms[ScalaLanguage, Target] {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new FrameworkInterp
+  class FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
     override def objectType(format: Option[String]): Target[Type] = Target.pure(t"com.fasterxml.jackson.databind.JsonNode")

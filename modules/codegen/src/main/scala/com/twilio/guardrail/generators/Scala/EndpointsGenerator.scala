@@ -4,9 +4,12 @@ import com.twilio.guardrail.terms.framework._
 import scala.meta._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.Target
+import com.twilio.guardrail.terms.CollectionsLibTerms
 
 object EndpointsGenerator {
-  object FrameworkInterp extends FrameworkTerms[ScalaLanguage, Target] {
+  def FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new FrameworkInterp
+  class FrameworkInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
     implicit def MonadF                    = Target.targetInstances
     def fileType(format: Option[String])   = Target.pure(format.fold[Type](t"org.scalajs.dom.raw.File")(Type.Name(_)))
     def objectType(format: Option[String]) = Target.pure(t"io.circe.Json")
