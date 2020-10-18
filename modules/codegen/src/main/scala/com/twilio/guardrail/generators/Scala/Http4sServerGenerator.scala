@@ -46,13 +46,12 @@ object Http4sServerGenerator {
           for {
             operationId <- operation
               .downField("operationId", _.getOperationId())
-              .map(_.map(splitOperationParts(_)._2))
               .raiseErrorIfEmpty("Missing operationId")
-            operationIdTarget <- Target.pure(Lit.String(operationId.unwrapTracker))
+            operationId_ = Lit.String(splitOperationParts(operationId.unwrapTracker)._2)
           } yield Some(
             CustomExtractionField[ScalaLanguage](
               LanguageParameter.fromParam(param"extracted: $customExtractionTypeName"),
-              q"""customExtract(${operationIdTarget})"""
+              q"""customExtract(${operationId_})"""
             )
           )
         } else Target.pure(None)
