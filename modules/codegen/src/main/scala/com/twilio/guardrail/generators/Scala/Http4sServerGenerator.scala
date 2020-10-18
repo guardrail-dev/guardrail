@@ -135,13 +135,13 @@ object Http4sServerGenerator {
       Target.log.function("getExtraRouteParams")(for {
         _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
         mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
-        customExtraction <- if (customExtraction) {
-          Target.pure(Option(param"""customExtract: String => Request[F] => $customExtractionTypeName"""))
-        } else Target.pure(Option.empty)
-        tracing <- if (tracing) {
-          Target.pure(Option(param"""trace: String => Request[F] => TraceBuilder[F]"""))
-        } else Target.pure(Option.empty)
-      } yield customExtraction.toList ::: tracing.toList ::: List(mapRoute))
+        customExtraction_ = if (customExtraction) {
+          Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
+        } else Option.empty
+        tracing_ = if (tracing) {
+          Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
+        } else Option.empty
+      } yield customExtraction_.toList ::: tracing_.toList ::: List(mapRoute))
 
     def generateSupportDefinitions(
         tracing: Boolean,
