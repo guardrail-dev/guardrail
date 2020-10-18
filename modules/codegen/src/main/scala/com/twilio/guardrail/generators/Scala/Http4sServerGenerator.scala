@@ -123,8 +123,8 @@ object Http4sServerGenerator {
     ) =
       Target.log.function("renderHandler")(for {
         _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
-        extractType = Option(customExtractionTypeName).map(x => tparam"-$x").filter(_ => customExtraction)
-        tParams     = List(tparam"F[_]") ++ extractType.map(x => List(x)).getOrElse(List.empty)
+        extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
+        tParams     = List(tparam"F[_]") ++ extractType
       } yield q"""
       trait ${Type.Name(handlerName)}[..$tParams] {
         ..${methodSigs ++ handlerDefinitions}
@@ -161,13 +161,10 @@ object Http4sServerGenerator {
     ): Target[List[Defn]] =
       Target.log.function("renderClass")(for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
-        extractType     = Option(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
-        resourceTParams = List(tparam"F[_]") ++ extractType.map(x => List(x)).getOrElse(List.empty)
-        handlerTParams = List(Type.Name("F")) ++ Option(customExtractionTypeName)
-              .filter(_ => customExtraction)
-              .map(x => List(x))
-              .getOrElse(List.empty)
-        routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
+        extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
+        resourceTParams = List(tparam"F[_]") ++ extractType
+        handlerTParams  = List(Type.Name("F")) ++ List(customExtractionTypeName).filter(_ => customExtraction)
+        routesParams    = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield q"""
         class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
 
