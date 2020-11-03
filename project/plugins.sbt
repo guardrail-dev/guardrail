@@ -10,7 +10,7 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 
 addSbtPlugin("io.crashbox" % "sbt-gpg" % "0.2.1")
 
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.4")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.5")
 
 addSbtPlugin("ohnosequences" % "sbt-github-release" % "0.7.0")
 
