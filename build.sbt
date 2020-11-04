@@ -294,7 +294,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.23.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
-      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.22",
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.23",
       "org.tpolecat"                %% "atto-core"                    % "0.8.0",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
