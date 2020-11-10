@@ -18,13 +18,13 @@ val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.7"
-val scalacheckVersion      = "1.14.3"
+val scalacheckVersion      = "1.15.0"
 val scalatestVersion       = "3.2.2"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
-val javaparserVersion      = "3.16.2"
-val endpointsVersion       = "0.15.0"
+val javaparserVersion      = "3.16.3"
+val endpointsVersion       = "0.8.0"
 val ahcVersion             = "2.8.1"
-val dropwizardVersion      = "1.3.25"
+val dropwizardVersion      = "1.3.27"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.10.3"
@@ -294,7 +294,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.23.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
-      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.22",
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.23",
       "org.tpolecat"                %% "atto-core"                    % "0.8.0",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
@@ -385,9 +385,9 @@ val dropwizardProjectDependencies = Seq(
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13.1"             % Test,
-  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.4.3"            % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.16.0"           % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.16.1"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
@@ -405,7 +405,7 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
   "junit"                          %  "junit"                   % "4.13.1"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
-  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.0"           % Test,
+  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.1"           % Test,
   "com.github.tomakehurst"         %  "wiremock"                % "1.58"             % Test,
   "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
@@ -416,7 +416,7 @@ val springProjectDependencies = Seq(
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.16.0"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.16.1"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
