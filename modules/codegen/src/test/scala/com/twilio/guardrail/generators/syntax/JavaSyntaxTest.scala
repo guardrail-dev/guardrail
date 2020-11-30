@@ -15,12 +15,16 @@ object JavaSyntaxTest {
     "else",
     "throw"
   )
+
+  val TEST_PARAMETER_NAMES = Map(
+    "class_" -> "getClass_"
+  )
 }
 
 class JavaSyntaxTest extends AnyFreeSpec with Matchers {
   import JavaSyntaxTest._
 
-  "Reserved work escaper should" - {
+  "Reserved word escaper should" - {
     "Escape reserved words" in {
       TEST_RESERVED_WORDS.foreach({ word =>
         word.escapeReservedWord shouldBe (word + "_")
@@ -98,5 +102,12 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
       val result     = formatException("my prefix")(e)
       result shouldBe """my prefix: Unexpected "}" at character 2 (valid: "enum", "strictfp", "yield", "requires", "to", "with", "open", "opens", "uses", "module", "exports", "provides", "transitive", <IDENTIFIER>)"""
     }
+  }
+
+  "Reserved method names should be escaped" in {
+    TEST_PARAMETER_NAMES.foreach({
+      case (name, escapedName) =>
+        getterMethodNameForParameter(name) shouldBe escapedName
+    })
   }
 }
