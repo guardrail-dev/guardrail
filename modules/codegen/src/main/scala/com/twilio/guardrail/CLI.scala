@@ -129,8 +129,8 @@ trait CLICommon {
           case UnconsumedModules(modules) =>
             println(s"${AnsiColor.RED}Error: Unconsumed modules: ${modules.mkString(", ")}${AnsiColor.RESET}")
             fallback
-          case MissingModule(section) =>
-            println(s"${AnsiColor.RED}Error: Missing module ${section}${AnsiColor.RESET}")
+          case MissingModule(section, choices) =>
+            println(s"${AnsiColor.RED}Error: Missing module ${section} (options are: ${choices.mkString(",")})${AnsiColor.RESET}")
             fallback
           case ModuleConflict(section) =>
             println(s"${AnsiColor.RED}Error: Too many modules specified for ${section}${AnsiColor.RESET}")

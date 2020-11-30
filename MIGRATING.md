@@ -1,9 +1,17 @@
 Migrating to 0.62.0
 ===================
 
-Generated code is annotated with `@javax.annotations.Generated` annotation to exclude generated code from test coverage analysis. 
+Dependencies
+------------
+
+Generated Java code is annotated with `@javax.annotations.Generated` annotation to exclude generated code from test coverage analysis.
 
 For JDK9+ it may be required to add `javax.annotation:javax.annotation-api:1.3.2` dependency to your project. For JDK 8 and below no new dependency is needed.
+
+Configuration
+-------------
+
+If you are using guardrail's `module` system (rather than specifying an all-in-one `framework`, you will now need to specify a collections module when building Java projects.  The new options are `java-stdlib` and `java-vavr`.
 
 Migrating to 0.59.0
 ===================

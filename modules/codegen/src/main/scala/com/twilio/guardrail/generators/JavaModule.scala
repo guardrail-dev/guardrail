@@ -13,6 +13,11 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object JavaModule extends AbstractModule[JavaLanguage] {
+  def stdlib: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType =
+    new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections
+  def vavr: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType =
+    new JavaVavrCollectionsGenerator.JavaVavrCollectionsInterp with JavaVavrCollections
+
   def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ProtocolSupportTerms[JavaLanguage, Target],
       ModelProtocolTerms[JavaLanguage, Target],
@@ -40,13 +45,8 @@ object JavaModule extends AbstractModule[JavaLanguage] {
 
   def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] =
     (for {
-      collections <- popModule(
-        "collections",
-        Some(new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections),
-        ("java-stdlib", new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections),
-        ("java-vavr", new JavaVavrCollectionsGenerator.JavaVavrCollectionsInterp with JavaVavrCollections)
-      )
-      (protocol, model, enum, array, poly) <- popModule("json", Some(jackson(collections)), ("jackson", jackson(collections)))
+      collections                          <- popModule("collections", ("java-stdlib", stdlib), ("java-vavr", vavr))
+      (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson(collections)))
       client                               <- popModule("client", ("async-http-client", asyncHttpClient(collections)))
       (server, framework)                  <- popModule("server", ("dropwizard", dropwizard(collections)), ("spring-mvc", spring(collections)))
     } yield new Framework[JavaLanguage, Target] {
