@@ -21,8 +21,8 @@ val http4sVersion          = "0.21.7"
 val scalacheckVersion      = "1.15.1"
 val scalatestVersion       = "3.2.3"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
-val javaparserVersion      = "3.17.0"
-val endpointsVersion       = "0.15.0"
+val javaparserVersion      = "3.18.0"
+val endpointsVersion       = "0.8.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.27"
 val dropwizardScalaVersion = "1.3.7-1"
@@ -388,7 +388,7 @@ val dropwizardProjectDependencies = Seq(
   "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.16.3"           % Test,
-  "com.github.tomakehurst"     %  "wiremock"               % "1.58"             % Test,
+  "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
 )
@@ -406,7 +406,7 @@ val dropwizardScalaProjectDependencies = Seq(
   "junit"                          %  "junit"                   % "4.13.1"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
   "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.3"           % Test,
-  "com.github.tomakehurst"         %  "wiremock"                % "1.58"             % Test,
+  "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
   "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
 )

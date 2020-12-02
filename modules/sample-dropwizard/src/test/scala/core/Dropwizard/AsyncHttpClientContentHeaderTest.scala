@@ -14,13 +14,13 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
     "in both req/resp bodies has Content-Type and Accept headers set" in {
       wireMockServer.stubFor(
         post(urlPathEqualTo("/baz"))
-          .withHeader("Content-Type", equalTo("text/plain; charset=utf-8"))
+          .withHeader("Content-Type", equalTo("text/plain; charset=UTF-8"))
           .withHeader("Accept", equalTo("text/plain; q=1.0, */*; q=0.1"))
           .withRequestBody(equalTo(MOCK_REQUEST_BODY))
           .willReturn(
             aResponse()
               .withStatus(201)
-              .withHeader("Content-Type", "text/plain; charset=utf-8")
+              .withHeader("Content-Type", "text/plain; charset=UTF-8")
               .withBody(MOCK_RESPONSE_BODY)
           )
       )
@@ -44,7 +44,7 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
     "in req body has Content-Type header set" in {
       wireMockServer.stubFor(
         post(urlPathEqualTo("/foo"))
-          .withHeader("Content-Type", equalTo("text/plain; charset=utf-8"))
+          .withHeader("Content-Type", equalTo("text/plain; charset=UTF-8"))
           .withRequestBody(equalTo(MOCK_REQUEST_BODY))
           .willReturn(
             aResponse()
