@@ -1,6 +1,7 @@
 .DS_Store
 target/
 .bloop/
+.bsp/
 .metals/
 
 .idea
