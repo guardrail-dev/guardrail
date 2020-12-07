@@ -31,7 +31,7 @@ val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.3.6.RELEASE"
-val jacksonVersion         = "2.11.3"
+val jacksonVersion         = "2.12.0"
 val hibernateVersion       = "6.1.6.Final"
 val javaxElVersion         = "3.0.0"
 
