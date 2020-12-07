@@ -95,7 +95,7 @@ object JacksonGenerator {
   // TODO: handle emptyToNull in the return for the getters
   private def addParameterGetter(cls: ClassOrInterfaceDeclaration, param: ParameterTerm): Unit = {
     val _ = cls
-      .addMethod(s"get${param.parameterName.unescapeIdentifier.capitalize}", PUBLIC)
+      .addMethod(getterMethodNameForParameter(param.parameterName), PUBLIC)
       .setType(param.fieldType)
       .setBody(
         new BlockStmt(
@@ -348,7 +348,7 @@ object JacksonGenerator {
         terms.filterNot(term => discriminatorNames.contains(term.propertyName))
 
       def parameterGetterCall(term: ParameterTerm, scope: Option[String] = None): MethodCallExpr = {
-        val methodName = s"get${term.parameterName.unescapeIdentifier.capitalize}"
+        val methodName = getterMethodNameForParameter(term.parameterName)
         scope.fold(new MethodCallExpr(methodName))(s => new MethodCallExpr(new NameExpr(s), methodName))
       }
 
@@ -430,6 +430,9 @@ object JacksonGenerator {
                 )
               )
             )
+          )
+          .addAnnotation(
+            generatedAnnotation(JacksonGenerator.getClass)
           )
 
         _ = addParents(dtoClass, parentOpt)

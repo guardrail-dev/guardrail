@@ -19,7 +19,7 @@ import cats.Functor
   *
   * val tracker:        Tracker[        OpenAPI  ] = Tracker(openAPI)
   * val servers:        Tracker[List[   Server  ]] = tracker.downField("servers", _.getServers)
-  * val firstServer:    Tracker[Option[ Server  ]] = tracker.map(_.headOption)
+  * val firstServer:    Tracker[Option[ Server  ]] = servers.map(_.headOption)
   * val firstServerUrl: Tracker[Option[ String  ]] = firstServer.flatDownField("url", _.getUrl)
   *
   * val trackedUrl:     Tracker[Option[ URL     ]] = firstServerUrl.map(_.map(new URL(_)))
