@@ -4,7 +4,7 @@ Makefile
 A simple `Makefile` follows:
 
 ```
-GUARDRAIL_VERSION=0.36.1
+GUARDRAIL_VERSION=0.62.0
 SWAGGER_TARGET=src/main/scala/swagger
 SWAGGER_TEST_TARGET=src/test/scala/swagger
 

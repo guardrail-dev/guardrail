@@ -5,15 +5,14 @@ The [`twilio/guardrail-maven-plugin`](https://github.com/twilio/guardrail-maven-
 
 By putting the following in your `pom.xml`, generated classes for petstore and github clients and `myserver` server routes are available the next time the `compile` or `generate-sources` goals are run. The motivation for generating servers in your test sources is to facilitate [generating "real" mock downstream servers](https://guardrail.dev/scala/akka-http/generating-a-server#generating-test-only-real-server-mocks-for-unit-tests).
 
-```sbt
-
+```xml
 <build>
   <plugins>
     ...
     <plugin>
       <groupId>com.twilio</groupId>
       <artifactId>guardrail-maven-plugin</artifactId>
-      <version>0.34.0</version>
+      <version>0.62.0</version>
       <executions>
         <execution>
           <id>generate-petstore-client</id>
