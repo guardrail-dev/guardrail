@@ -62,6 +62,8 @@ object DropwizardServerGenerator {
         _ <- Target.log.info(s"Name: ${name}")
         cls = new ClassOrInterfaceDeclaration(new NodeList(abstractModifier), false, name)
 
+        _ = cls.addAnnotation(generatedAnnotation(getClass))
+
         _ = cls.addField(PrimitiveType.intType, "statusCode", PRIVATE, FINAL)
 
         _ = cls
@@ -99,6 +101,7 @@ object DropwizardServerGenerator {
     } yield {
       val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, clsName)
         .setExtendedTypes(new NodeList(superClassType))
+        .addAnnotation(generatedAnnotation(getClass))
 
       val (classDecls, creator) = response.value
         .map(_._2)

@@ -170,6 +170,19 @@ object Java {
 
   val GENERATED_CODE_COMMENT: Comment = new BlockComment(GENERATED_CODE_COMMENT_LINES.mkString("\n * ", "\n * ", "\n"))
 
+  private val reservedMethodNames = Set(
+    "getClass"
+  )
+
+  def getterMethodNameForParameter(parameterName: String): String = {
+    val name = s"get${parameterName.unescapeIdentifier.capitalize}"
+    if (reservedMethodNames.contains(name)) {
+      name + "_"
+    } else {
+      name
+    }
+  }
+
   // from https://en.wikipedia.org/wiki/List_of_Java_keywords
   private val reservedWords = Set(
     "abstract",
@@ -351,4 +364,16 @@ object Java {
               )
           )
     }
+
+  def generatedAnnotation(clazz: Class[_]) = new NormalAnnotationExpr(
+    new Name("javax.annotation.Generated"),
+    new NodeList(
+      new MemberValuePair(
+        "value",
+        new StringLiteralExpr(clazz.getName)
+      )
+    )
+  )
+
+  def generatedAnnotationString(clazz: Class[_]) = s"""@javax.annotation.Generated("${clazz.getName}")"""
 }
