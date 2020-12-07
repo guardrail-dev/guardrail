@@ -1,3 +1,10 @@
+Migrating to 0.62.0
+===================
+
+Generated code is annotated with `@javax.annotations.Generated` annotation to exclude generated code from test coverage analysis. 
+
+For JDK9+ it may be required to add `javax.annotation:javax.annotation-api:1.3.2` dependency to your project. For JDK 8 and below no new dependency is needed.
+
 Migrating to 0.59.0
 ===================
 
@@ -35,13 +42,6 @@ In general, all names should now conform to the following convention for Java an
 There is one exception: if generating names in these formats causes a conflict, the original names from the spec will be used if possible.  For example, if an object schema contains two properties, one named `FooBar` and the other named `foo_bar`, guardrail will first try to turn them *both* into `fooBar`.  It will notice the clash and just leave them as `FooBar` and `foo_bar`.
 
 If you find a case where a name is generated in a different way, please file an issue.
-
-Migrating to 0.62.0
-===================
-
-Generated code is annotated with `@javax.annotations.Generated` annotation to exclude generated code from test coverage analysis. 
-
-For JDK9+ it may be required to add `javax.annotation:javax.annotation-api:1.3.2` dependency to your project. For JDK 8 and below no new dependency is needed.
 
 Migrating to 0.55.0
 ===================
