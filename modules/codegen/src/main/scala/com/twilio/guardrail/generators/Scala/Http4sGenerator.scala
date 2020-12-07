@@ -39,7 +39,13 @@ object Http4sGenerator {
           q"import fs2.Stream",
           q"import io.circe.Json",
           q"import scala.language.higherKinds",
-          q"import scala.language.implicitConversions"
+          q"import scala.language.implicitConversions",
+          q"import shapeless.{Segment => _, _}",
+          q"import shapeless.labelled.FieldType",
+          q"import shapeless.ops.record.Selector",
+          q"import shapeless.record._",
+          q"import shapeless.syntax.singleton._",
+          q"import shapeless.union._"
         )
       )
     def getFrameworkImplicits() =

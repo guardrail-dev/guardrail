@@ -183,12 +183,32 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
             case GetOrderByIdResponse.NotFound =>
               handleNotFound
           }
+
+          import GetOrderByIdResponse._
+          def toUnion: UnionType = fold(value => Coproduct[UnionType](200 ->> createOkRecord(value)), Coproduct[UnionType](400 ->> createBadRequestRecord(())), Coproduct[UnionType](404 ->> createNotFoundRecord(())))
+          def toCoproduct = {
+            type CoproductType = Order :+: Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+              implicit def handleBadRequestRecord = at[(Witness.`400`.T, BadRequestRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+              implicit def handleNotFoundRecord = at[(Witness.`404`.T, NotFoundRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
       q"""object GetOrderByIdResponse {
       case class Ok(value: Order) extends GetOrderByIdResponse
       case object BadRequest extends GetOrderByIdResponse
       case object NotFound extends GetOrderByIdResponse
+
+      type OkRecord = FieldType[Witness.`"value"`.T, Order] :: HNil
+      type BadRequestRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+      type NotFoundRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+      def createOkRecord(value: Order): OkRecord = ("value" ->> value) :: HNil
+      def createBadRequestRecord(value: Unit): BadRequestRecord = ("value" ->> value) :: HNil
+      def createNotFoundRecord(value: Unit): NotFoundRecord = ("value" ->> value) :: HNil
+      type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: FieldType[Witness.`400`.T, BadRequestRecord] :+: FieldType[Witness.`404`.T, NotFoundRecord] :+: CNil
     }""",
       q"""
         sealed abstract class DeleteOrderResponse {
@@ -196,11 +216,28 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
             case DeleteOrderResponse.BadRequest => handleBadRequest
             case DeleteOrderResponse.NotFound => handleNotFound
           }
+
+          import DeleteOrderResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](400 ->> createBadRequestRecord(())), Coproduct[UnionType](404 ->> createNotFoundRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleBadRequestRecord = at[(Witness.`400`.T, BadRequestRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+              implicit def handleNotFoundRecord = at[(Witness.`404`.T, NotFoundRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
       q"""object DeleteOrderResponse {
       case object BadRequest extends DeleteOrderResponse
       case object NotFound extends DeleteOrderResponse
+
+      type BadRequestRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+      type NotFoundRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+      def createBadRequestRecord(value: Unit): BadRequestRecord = ("value" ->> value) :: HNil
+      def createNotFoundRecord(value: Unit): NotFoundRecord = ("value" ->> value) :: HNil
+      type UnionType = FieldType[Witness.`400`.T, BadRequestRecord] :+: FieldType[Witness.`404`.T, NotFoundRecord] :+: CNil
     }"""
     )
 
