@@ -36,6 +36,13 @@ There is one exception: if generating names in these formats causes a conflict, 
 
 If you find a case where a name is generated in a different way, please file an issue.
 
+Migrating to 0.62.0
+===================
+
+Generated code is annotated with `@javax.annotations.Generated` annotation to exclude generated code from test coverage analysis. 
+
+For JDK9+ it may be required to add `javax.annotation:javax.annotation-api:1.3.2` dependency to your project. For JDK 8 and below no new dependency is needed.
+
 Migrating to 0.55.0
 ===================
 

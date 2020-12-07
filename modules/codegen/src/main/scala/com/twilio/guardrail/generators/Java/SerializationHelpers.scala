@@ -7,7 +7,8 @@ import com.twilio.guardrail.languages.JavaLanguage
 object SerializationHelpers {
   def showerSupportDef: Target[SupportDefinition[JavaLanguage]] = loadSupportDefinitionFromString(
     "Shower",
-    """
+    s"""
+      ${generatedAnnotationString(getClass)}
       public class Shower {
           @SuppressWarnings("serial")
           public static class UnshowableInstanceException extends RuntimeException {
@@ -93,7 +94,7 @@ object SerializationHelpers {
 
   def guardrailJerseySupportDef: Target[SupportDefinition[JavaLanguage]] = loadSupportDefinitionFromString(
     "GuardrailJerseySupport",
-    """
+    s"""
       import io.dropwizard.jersey.params.AbstractParam;
       import io.dropwizard.setup.Bootstrap;
       import io.dropwizard.setup.Environment;
@@ -111,6 +112,7 @@ object SerializationHelpers {
       import java.time.ZonedDateTime;
       import java.util.Objects;
 
+      ${generatedAnnotationString(getClass)}
       public class GuardrailJerseySupport {
           public static class Jsr310 {
               public abstract static class GuardrailAbstractParam<T> extends AbstractParam<T> {

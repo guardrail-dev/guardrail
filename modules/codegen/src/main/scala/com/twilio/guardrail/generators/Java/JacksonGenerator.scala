@@ -431,6 +431,9 @@ object JacksonGenerator {
               )
             )
           )
+          .addAnnotation(
+            generatedAnnotation(JacksonGenerator.getClass)
+          )
 
         _ = addParents(dtoClass, parentOpt)
 
