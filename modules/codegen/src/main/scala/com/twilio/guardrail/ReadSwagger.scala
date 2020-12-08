@@ -1,5 +1,7 @@
 package com.twilio.guardrail
 
+import scala.collection.JavaConverters._
+
 import java.nio.file.Path
 import java.util
 
@@ -13,9 +15,11 @@ object ReadSwagger {
     if (rs.path.toFile.exists()) {
       val opts = new ParseOptions()
       opts.setResolve(true)
+      val result = new OpenAPIParser().readLocation(rs.path.toAbsolutePath.toString, new util.LinkedList(), opts)
+      Option(result.getMessages()).foreach(_.asScala.foreach(println))
       Target
         .fromOption(
-          Option(new OpenAPIParser().readLocation(rs.path.toAbsolutePath.toString, new util.LinkedList(), opts).getOpenAPI),
+          Option(result.getOpenAPI),
           UserError(s"Spec file ${rs.path} is incorrectly formatted.")
         )
         .flatMap(rs.next(_))
