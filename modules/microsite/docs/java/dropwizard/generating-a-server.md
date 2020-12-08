@@ -13,26 +13,26 @@ As we saw in [Installation](installation), guardrail is run as part of maven. It
 
 Lets take another look at the maven config for guardrail:
 
-``` 
-    <plugin>
-        <groupId>com.twilio</groupId>
-        <artifactId>guardrail-maven-plugin_2.12</artifactId>
-        <version>0.57.2</version>
-        <executions>
-                <id>generate-simple-server</id>           <!-- to identify this execution. there can be more than one. -->
-                <goals>
-                    <goal>generate-sources</goal>         <!-- always hook to generate-sources goal -->
-                </goals>
-                <configuration>
-                    <language>java</language>             <!-- source code language to generate -->
-                    <framework>dropwizard</framework>     <!-- framework code to generate -->
-                    <kind>server</kind>                   <!-- to generate server routes or a http client -->
-                    <specPath>simple-spec.yaml</specPath> <!-- the Swagger/OpenAPI file for input -->
-                    <packageName>MyPackage</packageName>  <!-- all generated code will be in this jvm package -->
-                </configuration>
-            </execution>
-        </executions>
-    </plugin>
+```xml 
+<plugin>
+    <groupId>com.twilio</groupId>
+    <artifactId>guardrail-maven-plugin_2.12</artifactId>
+    <version>0.62.0</version>
+    <executions>
+            <id>generate-simple-server</id>           <!-- to identify this execution. there can be more than one. -->
+            <goals>
+                <goal>generate-sources</goal>         <!-- always hook to generate-sources goal -->
+            </goals>
+            <configuration>
+                <language>java</language>             <!-- source code language to generate -->
+                <framework>dropwizard</framework>     <!-- framework code to generate -->
+                <kind>server</kind>                   <!-- to generate server routes or a http client -->
+                <specPath>simple-spec.yaml</specPath> <!-- the Swagger/OpenAPI file for input -->
+                <packageName>MyPackage</packageName>  <!-- all generated code will be in this jvm package -->
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
 ``` 
 
 Once configured, you can manually invoke guardrail with `mvn generate-sources`. 

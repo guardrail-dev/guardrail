@@ -3,12 +3,14 @@ package support
 import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
+import cats.data.NonEmptyList
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.{ StructuredLogger, Tracker }
 import com.twilio.guardrail.generators.Framework
 import com.twilio.guardrail.languages.LA
 import org.scalactic.Equality
 import org.scalatest.{ EitherValues, OptionValues }
+
 import scala.meta.Tree
 
 trait SwaggerSpecRunner extends EitherValues with OptionValues {
@@ -28,7 +30,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
   )(
       context: Context,
       framework: Framework[L, Target],
-      targets: List[CodegenTarget] = List(CodegenTarget.Client, CodegenTarget.Server)
+      targets: NonEmptyList[CodegenTarget] = NonEmptyList.of(CodegenTarget.Client, CodegenTarget.Server)
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
@@ -43,7 +45,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
       swagger: OpenAPI,
       dtoPackage: List[String],
       supportPackage: List[String]
-  )(context: Context, framework: Framework[L, Target], targets: List[CodegenTarget]): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
+  )(context: Context, framework: Framework[L, Target], targets: NonEmptyList[CodegenTarget]): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     import framework._
     targets
       .map(
