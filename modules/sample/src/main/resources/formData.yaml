@@ -47,7 +47,7 @@ paths:
   /baz:
     post:
       operationId: doBaz
-      x-scala-package: foo
+      x-jvm-package: foo
       consumes:
         - application/x-www-form-urlencoded
       parameters:

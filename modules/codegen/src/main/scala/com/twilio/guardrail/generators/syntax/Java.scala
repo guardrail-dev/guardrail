@@ -125,8 +125,6 @@ object Java {
   def safeParseRawImport(s: String): Target[ImportDeclaration]       = safeParse("safeParseRawImport")(StaticJavaParser.parseImport, s"import ${s};")
   def safeParseRawStaticImport(s: String): Target[ImportDeclaration] = safeParse("safeParseStaticImport")(StaticJavaParser.parseImport, s"import static ${s};")
 
-  def completionStageType(of: Type): ClassOrInterfaceType     = StaticJavaParser.parseClassOrInterfaceType("CompletionStage").setTypeArguments(of)
-  def javaOptionalType(of: Type): ClassOrInterfaceType        = StaticJavaParser.parseClassOrInterfaceType("java.util.Optional").setTypeArguments(of)
   def functionType(in: Type, out: Type): ClassOrInterfaceType = StaticJavaParser.parseClassOrInterfaceType("Function").setTypeArguments(in, out)
   def supplierType(of: Type): ClassOrInterfaceType            = StaticJavaParser.parseClassOrInterfaceType("Supplier").setTypeArguments(of)
 
