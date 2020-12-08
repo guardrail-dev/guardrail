@@ -32,7 +32,7 @@ val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.3.6.RELEASE"
 val jacksonVersion         = "2.11.3"
-val hibernateVersion       = "6.1.6.Final"
+val hibernateVersion       = "6.2.0.CR1"
 val javaxElVersion         = "3.0.0"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
