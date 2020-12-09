@@ -13,6 +13,7 @@ import scala.compat.java8.OptionConverters._
 sealed trait CollectionsLibType {
   def optionalSideEffect(on: Expression, sideEffectParamName: String, sideEffectBody: List[Statement]): Expression
   def optionalGetOrElse: String
+  def optionalGetOrNull(on: Expression): Expression
   def isOptionalType(tpe: Type): Boolean
   def isArrayType(tpe: Type): Boolean
 
@@ -55,7 +56,10 @@ trait JavaStdLibCollections extends CollectionsLibType {
   override def optionalSideEffect(on: Expression, sideEffectParamName: String, sideEffectBody: List[Statement]): Expression =
     CollectionsLibType.lambdaMethodCall(on, sideEffectParamName, sideEffectBody, "ifPresent")
 
-  override def optionalGetOrElse: String          = "orElseGet"
+  override def optionalGetOrElse: String = "orElseGet"
+
+  override def optionalGetOrNull(on: Expression): Expression = new MethodCallExpr(on, "orElse", new NodeList[Expression](new NullLiteralExpr))
+
   override def isOptionalType(tpe: Type): Boolean = CollectionsLibType.isContainerOfType(tpe, "java.util", "Optional")
   override def isArrayType(tpe: Type): Boolean    = CollectionsLibType.isContainerOfType(tpe, "java.util", "List")
 
@@ -97,7 +101,10 @@ trait JavaVavrCollections extends CollectionsLibType {
   override def optionalSideEffect(on: Expression, sideEffectParamName: String, sideEffectBody: List[Statement]): Expression =
     CollectionsLibType.lambdaMethodCall(on, sideEffectParamName, sideEffectBody, "forEach")
 
-  override def optionalGetOrElse: String          = "getOrElse"
+  override def optionalGetOrElse: String = "getOrElse"
+
+  override def optionalGetOrNull(on: Expression): Expression = new MethodCallExpr(on, "getOrNull")
+
   override def isOptionalType(tpe: Type): Boolean = CollectionsLibType.isContainerOfType(tpe, "io.vavr.control", "Option")
   override def isArrayType(tpe: Type): Boolean    = CollectionsLibType.isContainerOfType(tpe, "io.vavr.collection", "Vector")
 
