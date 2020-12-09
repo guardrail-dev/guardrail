@@ -344,7 +344,7 @@ object AsyncHttpClientClientGenerator {
                 new LambdaExpr(
                   new NodeList(new Parameter(new NodeList(finalModifier), REQUEST_TYPE, new SimpleName("request"))),
                   new ExpressionStmt(
-                    Cl.completionStageToFutureType(
+                    Cl.completionStageTermToFutureTerm(
                       new MethodCallExpr(
                         new MethodCallExpr(
                           new NameExpr("client"),
@@ -653,7 +653,7 @@ object AsyncHttpClientClientGenerator {
           new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
         )
         val requestCall = Cl.futureMap(
-          Cl.completionStageToFutureType(httpMethodCallExpr),
+          Cl.completionStageTermToFutureTerm(httpMethodCallExpr),
           "response",
           List(
             new SwitchStmt(

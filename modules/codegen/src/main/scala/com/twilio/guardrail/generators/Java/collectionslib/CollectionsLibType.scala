@@ -16,7 +16,7 @@ sealed trait CollectionsLibType {
   def isOptionalType(tpe: Type): Boolean
   def isArrayType(tpe: Type): Boolean
 
-  def completionStageToFutureType(completionStageExpr: Expression): Expression
+  def completionStageTermToFutureTerm(completionStageExpr: Expression): Expression
   def liftFutureType(tpe: Type): Type
   def futureMap(on: Expression, resultParamName: String, mapBody: List[Statement]): Expression
   def futureSideEffect(on: Expression, resultParamName: String, resultBody: List[Statement], errorParamName: String, errorBody: List[Statement]): Expression
@@ -58,7 +58,7 @@ trait JavaStdLibCollections extends CollectionsLibType {
   override def isOptionalType(tpe: Type): Boolean = CollectionsLibType.isContainerOfType(tpe, "java.util", "Optional")
   override def isArrayType(tpe: Type): Boolean    = CollectionsLibType.isContainerOfType(tpe, "java.util", "List")
 
-  def completionStageToFutureType(completionStageExpr: Expression): Expression = completionStageExpr
+  override def completionStageTermToFutureTerm(completionStageExpr: Expression): Expression = completionStageExpr
 
   override def liftFutureType(tpe: Type): Type =
     StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(tpe)
@@ -99,7 +99,7 @@ trait JavaVavrCollections extends CollectionsLibType {
   override def isOptionalType(tpe: Type): Boolean = CollectionsLibType.isContainerOfType(tpe, "io.vavr.control", "Option")
   override def isArrayType(tpe: Type): Boolean    = CollectionsLibType.isContainerOfType(tpe, "io.vavr.collection", "Vector")
 
-  def completionStageToFutureType(completionStageExpr: Expression): Expression =
+  override def completionStageTermToFutureTerm(completionStageExpr: Expression): Expression =
     new MethodCallExpr(
       new NameExpr("io.vavr.concurrent.Future"),
       "fromCompletableFuture",
