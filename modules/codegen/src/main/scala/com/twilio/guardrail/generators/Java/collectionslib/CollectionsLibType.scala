@@ -17,6 +17,7 @@ sealed trait CollectionsLibType {
   def isArrayType(tpe: Type): Boolean
 
   def completionStageTermToFutureTerm(completionStageExpr: Expression): Expression
+  def futureTermToCompletionStageTerm(futureExpr: Expression): Expression
   def liftFutureType(tpe: Type): Type
   def futureMap(on: Expression, resultParamName: String, mapBody: List[Statement]): Expression
   def futureSideEffect(on: Expression, resultParamName: String, resultBody: List[Statement], errorParamName: String, errorBody: List[Statement]): Expression
@@ -59,6 +60,7 @@ trait JavaStdLibCollections extends CollectionsLibType {
   override def isArrayType(tpe: Type): Boolean    = CollectionsLibType.isContainerOfType(tpe, "java.util", "List")
 
   override def completionStageTermToFutureTerm(completionStageExpr: Expression): Expression = completionStageExpr
+  override def futureTermToCompletionStageTerm(futureExpr: Expression): Expression          = futureExpr
 
   override def liftFutureType(tpe: Type): Type =
     StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(tpe)
@@ -105,6 +107,9 @@ trait JavaVavrCollections extends CollectionsLibType {
       "fromCompletableFuture",
       new NodeList[Expression](new MethodCallExpr(completionStageExpr, "toCompletableFuture"))
     )
+
+  override def futureTermToCompletionStageTerm(futureExpr: Expression): Expression =
+    new MethodCallExpr(futureExpr, "toCompletableFuture")
 
   override def liftFutureType(tpe: Type): Type =
     StaticJavaParser.parseClassOrInterfaceType("io.vavr.concurrent.Future").setTypeArguments(tpe)
