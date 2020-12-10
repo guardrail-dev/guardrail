@@ -22,6 +22,8 @@ sealed trait CollectionsLibType {
   def liftFutureType(tpe: Type): Type
   def futureMap(on: Expression, resultParamName: String, mapBody: List[Statement]): Expression
   def futureSideEffect(on: Expression, resultParamName: String, resultBody: List[Statement], errorParamName: String, errorBody: List[Statement]): Expression
+
+  def asMonadicInstance(expr: Expression): Expression
 }
 
 object CollectionsLibType {
@@ -95,6 +97,8 @@ trait JavaStdLibCollections extends CollectionsLibType {
         )
       )
     )
+
+  override def asMonadicInstance(expr: Expression): Expression = new MethodCallExpr(expr, "stream")
 }
 
 trait JavaVavrCollections extends CollectionsLibType {
@@ -140,4 +144,6 @@ trait JavaVavrCollections extends CollectionsLibType {
       "onSuccess",
       new NodeList[Expression](CollectionsLibType.buildLambdaExpr(List(resultParamName), resultBody))
     )
+
+  override def asMonadicInstance(expr: Expression): Expression = expr
 }
