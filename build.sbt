@@ -228,6 +228,10 @@ addCommandAlias(
   "publishLocal",
   "; package ; codegen/publishLocal"
 )
+addCommandAlias(
+  "publishM2",
+  "; package ; codegen/publishM2"
+)
 
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
