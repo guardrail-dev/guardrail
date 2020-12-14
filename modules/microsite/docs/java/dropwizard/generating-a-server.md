@@ -35,6 +35,8 @@ Lets take another look at the maven config for guardrail:
 </plugin>
 ``` 
 
+**NB**: if you prefer to use Vavr instead of Java's standard library collections, see the [generic Java instructions](../) for appropriate configuration options.
+
 Once configured, you can manually invoke guardrail with `mvn generate-sources`. 
 
 Server Handlers, Resources
