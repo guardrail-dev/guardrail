@@ -15,7 +15,7 @@ In addition to standard Dropwizard dependencies, you'll need:
 * `io.dropwizard:dropwizard-forms`
 * `com.datasift.dropwizard.scala:dropwizard-scala-core`
 * `com.fasterxml.jackson.datatype:jackson-datatype-jsr310`
-* `com.fasterxml.jackson.module:jackson-module-scala`
+* `com.fasterxml.jackson.module:jackson-module-scala_${scala.compat.version}`
 * `org.typelevel:cats-core_${scala_binary_version}`
 
 The `ScalaBundle` from `dropwizard-scala` should be added in your
@@ -73,7 +73,7 @@ specify and handle this properly by including those response codes in
 your spec, and handling the appropriate exceptions in your exception
 mapper.
 
-We recommend that you avoid thrown exceptions for signaling errors, and
+We recommend that you avoid throwing exceptions to signal errors, and
 instead carefully define expected error response codes in your spec.
 From there, you can use the `respond` parameter passed to your handler
 methods to return errors of the proper form.  The generated resource

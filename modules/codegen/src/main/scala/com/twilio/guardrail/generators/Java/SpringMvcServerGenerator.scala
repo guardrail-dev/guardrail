@@ -630,7 +630,7 @@ object SpringMvcServerGenerator {
                 )
               )
 
-              val futureResponseType = completionStageType(responseType.clone())
+              val futureResponseType = Cl.liftFutureType(responseType.clone())
               val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
                 parameter =>

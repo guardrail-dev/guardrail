@@ -24,16 +24,18 @@ val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.18.0"
 val endpointsVersion       = "0.8.0"
 val ahcVersion             = "2.8.1"
-val dropwizardVersion      = "1.3.27"
+val dropwizardVersion      = "1.3.28"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.3.6.RELEASE"
-val jacksonVersion         = "2.12.0"
+val springBootVersion      = "2.3.7.RELEASE"
+val jacksonVersion         = "2.11.4"
 val hibernateVersion       = "6.1.6.Final"
 val javaxElVersion         = "3.0.0"
+val vavrVersion            = "0.10.3"
+val dropwizardVavrVersion  = "1.3.0-4"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -57,6 +59,7 @@ val exampleFrameworkSuites = Map(
   ),
   "java" -> List(
     ExampleFramework("dropwizard", "dropwizard"),
+    ExampleFramework("dropwizard-vavr", "dropwizardVavr", modules = List("java-vavr", "jackson", "async-http-client", "dropwizard")),
     ExampleFramework("spring-mvc", "springMvc", List("server"))
   )
 )
@@ -72,13 +75,13 @@ def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/
 val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
   ExampleCase(sampleResource("alias.yaml"), "alias"),
-  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks("java" -> Set("dropwizard"), "scala" -> Set("dropwizard")),
-  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks("java"-> Set("dropwizard"), "scala" -> Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("dropwizard")),
+  ExampleCase(sampleResource("char-encoding/char-encoding-response-stream.yaml"), "charEncoding.responseStream").frameworks("java"-> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("dropwizard")),
   ExampleCase(sampleResource("contentType-textPlain.yaml"), "tests.contentTypes.textPlain"),
   ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
   ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
   ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
-  ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks("java" -> Set("dropwizard")),
+  ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks("java" -> Set("dropwizard", "dropwizard-vavr")),
   ExampleCase(sampleResource("formData.yaml"), "form"),
   ExampleCase(sampleResource("issues/issue45.yaml"), "issues.issue45"),
   ExampleCase(sampleResource("issues/issue121.yaml"), "issues.issue121"),
@@ -134,10 +137,11 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
-  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s", "dropwizard")),
-  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard"), "scala" -> Set("http4s")),
+  ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "dropwizard")),
+  ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
   ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.toSet),
+  ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s"))
 )
 
 def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
@@ -223,6 +227,10 @@ addCommandAlias(
 addCommandAlias(
   "publishLocal",
   "; package ; codegen/publishLocal"
+)
+addCommandAlias(
+  "publishM2",
+  "; package ; codegen/publishM2"
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
@@ -417,6 +425,12 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
 )
 
+val dropwizardVavrProjectDependencies = dropwizardProjectDependencies ++ Seq(
+  "io.vavr"               % "vavr"            % vavrVersion,
+  "io.vavr"               % "vavr-jackson"    % vavrVersion,
+  "io.dropwizard.modules" % "dropwizard-vavr" % dropwizardVavrVersion,
+)
+
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "javax.annotation"           %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
@@ -453,6 +467,9 @@ val javaSampleSettings = Seq(
   )
 
 lazy val dropwizardSample = buildSampleProject("dropwizard", dropwizardProjectDependencies)
+  .settings(javaSampleSettings)
+
+lazy val dropwizardVavrSample = buildSampleProject("dropwizardVavr", dropwizardVavrProjectDependencies)
   .settings(javaSampleSettings)
 
 lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)

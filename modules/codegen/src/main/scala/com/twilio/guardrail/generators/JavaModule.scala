@@ -1,23 +1,23 @@
 package com.twilio.guardrail
 package generators
 
-import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.generators.Java.JacksonGenerator
-import com.twilio.guardrail.generators.Java.AsyncHttpClientClientGenerator
-import com.twilio.guardrail.generators.Java.DropwizardGenerator
-import com.twilio.guardrail.generators.Java.SpringMvcGenerator
-import com.twilio.guardrail.generators.Java.DropwizardServerGenerator
-import com.twilio.guardrail.generators.Java.SpringMvcServerGenerator
 import cats.data.NonEmptyList
-import com.twilio.guardrail.generators.Java.collectionslib.{ CollectionsLibType, JavaStdLibCollections }
-import com.twilio.guardrail.generators.collections.JavaCollectionsGenerator
-import com.twilio.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
+import com.twilio.guardrail.generators.Java.collectionslib.{ CollectionsLibType, JavaStdLibCollections, JavaVavrCollections }
+import com.twilio.guardrail.generators.Java._
+import com.twilio.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
+import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
+import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object JavaModule extends AbstractModule[JavaLanguage] {
+  def stdlib: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType =
+    new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections
+  def vavr: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType =
+    new JavaVavrCollectionsGenerator.JavaVavrCollectionsInterp with JavaVavrCollections
+
   def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
       ProtocolSupportTerms[JavaLanguage, Target],
       ModelProtocolTerms[JavaLanguage, Target],
@@ -43,12 +43,12 @@ object JavaModule extends AbstractModule[JavaLanguage] {
   def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ClientTerms[JavaLanguage, Target] =
     AsyncHttpClientClientGenerator.ClientTermInterp
 
-  def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
-    implicit val collections = new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections
+  def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] =
     (for {
-      (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson))
-      client                               <- popModule("client", ("async-http-client", asyncHttpClient))
-      (server, framework)                  <- popModule("server", ("dropwizard", dropwizard), ("spring-mvc", spring))
+      collections                          <- popModule("collections", ("java-stdlib", stdlib), ("java-vavr", vavr))
+      (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson(collections)))
+      client                               <- popModule("client", ("async-http-client", asyncHttpClient(collections)))
+      (server, framework)                  <- popModule("server", ("dropwizard", dropwizard(collections)), ("spring-mvc", spring(collections)))
     } yield new Framework[JavaLanguage, Target] {
       def ArrayProtocolInterp: ArrayProtocolTerms[JavaLanguage, Target]     = array
       def ClientInterp: ClientTerms[JavaLanguage, Target]                   = client
@@ -62,5 +62,4 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def LanguageInterp: LanguageTerms[JavaLanguage, Target]               = JavaGenerator.JavaInterp
       def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target]   = collections
     }).runA(modules.toList.toSet)
-  }
 }
