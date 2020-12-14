@@ -214,7 +214,6 @@ object DropwizardServerGenerator {
         "javax.ws.rs.container.Suspended",
         "javax.ws.rs.core.MediaType",
         "javax.ws.rs.core.Response",
-        "java.util.concurrent.CompletionStage",
         "org.glassfish.jersey.media.multipart.FormDataParam",
         "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
         "org.slf4j.Logger",
@@ -351,6 +350,11 @@ object DropwizardServerGenerator {
                   // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
                   // https://github.com/eclipse-ee4j/jersey/issues/3632
                   parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
+
+                  // Vavr's validation support for some reason requires this.
+                  if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
+                    parameter.getAnnotations.add(1, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                  }
                 }
                 parameter
               }
@@ -499,52 +503,36 @@ object DropwizardServerGenerator {
                       )
                     )
                   })
-                whenCompleteLambda = new LambdaExpr(
-                  new NodeList(
-                    new Parameter(new NodeList(finalModifier), responseType, new SimpleName("result")),
-                    new Parameter(new NodeList(finalModifier), THROWABLE_TYPE, new SimpleName("err"))
-                  ),
-                  new BlockStmt(
-                    new NodeList(
-                      new IfStmt(
-                        new BinaryExpr(new NameExpr("err"), new NullLiteralExpr, BinaryExpr.Operator.NOT_EQUALS),
-                        new BlockStmt(
-                          new NodeList(
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new NameExpr("logger"),
-                                "error",
-                                new NodeList[Expression](
-                                  new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
-                                  new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
-                                  new MethodCallExpr(new NameExpr("err"), "getMessage"),
-                                  new NameExpr("err")
-                                )
-                              )
-                            ),
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new NameExpr("asyncResponse"),
-                                "resume",
-                                new NodeList[Expression](
-                                  new MethodCallExpr(
-                                    new MethodCallExpr(
-                                      new NameExpr("Response"),
-                                      "status",
-                                      new NodeList[Expression](new IntegerLiteralExpr("500"))
-                                    ),
-                                    "build"
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        ),
-                        new BlockStmt(resultResumeBody)
+
+                resultErrorBody = List(
+                  new ExpressionStmt(
+                    new MethodCallExpr(
+                      new NameExpr("logger"),
+                      "error",
+                      new NodeList[Expression](
+                        new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
+                        new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
+                        new MethodCallExpr(new NameExpr("err"), "getMessage"),
+                        new NameExpr("err")
                       )
                     )
                   ),
-                  true
+                  new ExpressionStmt(
+                    new MethodCallExpr(
+                      new NameExpr("asyncResponse"),
+                      "resume",
+                      new NodeList[Expression](
+                        new MethodCallExpr(
+                          new MethodCallExpr(
+                            new NameExpr("Response"),
+                            "status",
+                            new NodeList[Expression](new IntegerLiteralExpr("500"))
+                          ),
+                          "build"
+                        )
+                      )
+                    )
+                  )
                 )
 
                 handlerCall = new MethodCallExpr(
@@ -556,7 +544,7 @@ object DropwizardServerGenerator {
                 _ = method.setBody(
                   new BlockStmt(
                     new NodeList(
-                      new ExpressionStmt(new MethodCallExpr(handlerCall, "whenComplete", new NodeList[Expression](whenCompleteLambda)))
+                      new ExpressionStmt(Cl.futureSideEffect(handlerCall, "result", resultResumeBody.toList, "err", resultErrorBody))
                     )
                   )
                 )
@@ -573,7 +561,7 @@ object DropwizardServerGenerator {
                 })
                 transformedBodyParams = parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
               } yield {
-                val futureResponseType = completionStageType(responseType.clone())
+                val futureResponseType = Cl.liftFutureType(responseType.clone())
                 val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
                 (transformedAnnotatedParams ++ transformedBodyParams).foreach(handlerMethodSig.addParameter)
                 handlerMethodSig.setBody(null)
