@@ -13,13 +13,13 @@ import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ Node, NodeList }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
+import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
 import io.swagger.v3.oas.models.Operation
@@ -265,9 +265,15 @@ object SpringMvcServerGenerator {
     }
   }
 
-  def ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
-  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ServerTerms[JavaLanguage, Target] {
+  def ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ServerTerms[JavaLanguage, Target] =
+    new ServerTermInterp
+
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+      extends ServerTerms[JavaLanguage, Target] {
+    import Ca._
+
     implicit def MonadF: Monad[Target] = Target.targetInstances
+
     def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
       List(
         "java.util.Optional",
@@ -379,7 +385,7 @@ object SpringMvcServerGenerator {
               }
 
               def transformJsr310Params(parameter: Parameter): Parameter = {
-                val isOptional = Cl.isOptionalType(parameter.getType)
+                val isOptional = parameter.getType.isOptionalType
                 val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
                 def transform(dateTimeFormat: String): Parameter = {
                   parameter.getAnnotations.addLast(
@@ -630,7 +636,7 @@ object SpringMvcServerGenerator {
                 )
               )
 
-              val futureResponseType = Cl.liftFutureType(responseType.clone())
+              val futureResponseType = responseType.liftFutureType
               val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
               (parameters.pathParams ++ parameters.headerParams ++ parameters.queryStringParams ++ parameters.formParams ++ parameters.bodyParams).foreach({
                 parameter =>
