@@ -45,6 +45,9 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, B] =
       doMethodCall(fa.value, "orElseGet", f.value)
 
+    override def getOrElseNull[From <: Expression, A](fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, A] =
+      doMethodCall(fa.value, "orElse", new NullLiteralExpr)
+
     override def getOrElseThrow[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, () => B]
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, A] =
