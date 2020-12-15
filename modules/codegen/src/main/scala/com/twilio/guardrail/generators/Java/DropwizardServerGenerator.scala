@@ -6,15 +6,13 @@ import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
-import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.ServerRawResponse
-import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.generators.syntax.Java._
@@ -22,10 +20,12 @@ import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.protocol.terms.server._
 import com.twilio.guardrail.shims.OperationExt
+import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import com.twilio.guardrail.{ RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
+import com.twilio.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
 import io.swagger.v3.oas.models.Operation
 import scala.compat.java8.OptionConverters._
+import scala.concurrent.Future
 import scala.language.existentials
 
 object DropwizardServerGenerator {
@@ -190,9 +190,17 @@ object DropwizardServerGenerator {
     }
   }
 
-  def ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
-  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ServerTerms[JavaLanguage, Target] {
+  def ServerTermInterp(
+      implicit Cl: CollectionsLibTerms[JavaLanguage, Target],
+      Ca: CollectionsAbstraction[JavaLanguage]
+  ): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
+
+  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+      extends ServerTerms[JavaLanguage, Target] {
+    import Ca._
+
     implicit def MonadF: Monad[Target] = Target.targetInstances
+
     override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
       List(
         "javax.inject.Inject",
@@ -302,19 +310,16 @@ object DropwizardServerGenerator {
                 )
 
               def transformJsr310Params(parameter: Parameter): Target[Parameter] = {
-                val isOptional = Cl.isOptionalType(parameter.getType)
+                val isOptional = parameter.getType.isOptionalType
                 val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
-                def transform(to: Type): Target[Parameter] =
-                  for {
-                    optionalToType <- Cl.liftOptionalType(to)
-                  } yield {
-                    parameter.setType(if (isOptional) optionalToType else to)
-                    if (!isOptional) {
-                      parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
-                    }
-                    parameter
+                def transform(to: Type): Target[Parameter] = {
+                  parameter.setType(if (isOptional) to.liftOptionalType else to)
+                  if (!isOptional) {
+                    parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                   }
+                  Target.pure(parameter)
+                }
 
                 tpe match {
                   case cls: ClassOrInterfaceType if cls.getScope.asScala.forall(_.asString == "java.time") =>
@@ -360,7 +365,7 @@ object DropwizardServerGenerator {
               }
 
               def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
-                if (!param.required && Cl.isArrayType(parameter.getType.containedType)) {
+                if (!param.required && parameter.getType.containedType.isVectorType) {
                   parameter.setType(parameter.getType.containedType)
                 } else {
                   parameter
@@ -377,7 +382,7 @@ object DropwizardServerGenerator {
               }
 
               def transformHandlerArg(parameter: Parameter): Expression = {
-                val isOptional = Cl.isOptionalType(parameter.getType)
+                val isOptional = parameter.getType.isOptionalType
                 val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
                 if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
                   if (isOptional) {
@@ -504,7 +509,7 @@ object DropwizardServerGenerator {
                     )
                   })
 
-                resultErrorBody = List(
+                resultErrorBody = List[Statement](
                   new ExpressionStmt(
                     new MethodCallExpr(
                       new NameExpr("logger"),
@@ -544,7 +549,21 @@ object DropwizardServerGenerator {
                 _ = method.setBody(
                   new BlockStmt(
                     new NodeList(
-                      new ExpressionStmt(Cl.futureSideEffect(handlerCall, "result", resultResumeBody.toList, "err", resultErrorBody))
+                      new ExpressionStmt(
+                        handlerCall
+                          .lift[Future[Any]]
+                          .onComplete[Throwable, Expression](
+                            new LambdaExpr(
+                              new Parameter(new UnknownType, "result"),
+                              new BlockStmt(resultResumeBody)
+                            ).lift[Any => Unit],
+                            new LambdaExpr(
+                              new Parameter(new UnknownType, "err"),
+                              new BlockStmt(resultErrorBody.toNodeList)
+                            ).lift[Throwable => Unit]
+                          )
+                          .value
+                      )
                     )
                   )
                 )
@@ -561,7 +580,7 @@ object DropwizardServerGenerator {
                 })
                 transformedBodyParams = parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
               } yield {
-                val futureResponseType = Cl.liftFutureType(responseType.clone())
+                val futureResponseType = responseType.liftFutureType
                 val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
                 (transformedAnnotatedParams ++ transformedBodyParams).foreach(handlerMethodSig.addParameter)
                 handlerMethodSig.setBody(null)

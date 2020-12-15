@@ -6,13 +6,12 @@ import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, VoidType }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, UnknownType, VoidType }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
 import com.twilio.guardrail.generators.Java.AsyncHttpClientHelpers._
-import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.{ JavaGenerator, LanguageParameter, LanguageParameters }
@@ -20,9 +19,12 @@ import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.protocol.terms._
 import com.twilio.guardrail.shims._
+import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, SwaggerUtil, Target }
 import java.net.URI
+import java.util.concurrent.CompletionStage
+import scala.annotation.tailrec
 
 object AsyncHttpClientClientGenerator {
   private val URI_TYPE                       = StaticJavaParser.parseClassOrInterfaceType("URI")
@@ -34,12 +36,17 @@ object AsyncHttpClientClientGenerator {
   private val JSON_PROCESSING_EXCEPTION_TYPE = StaticJavaParser.parseClassOrInterfaceType("JsonProcessingException")
   private val CLIENT_EXCEPTION_TYPE          = StaticJavaParser.parseClassOrInterfaceType("ClientException")
 
-  private def httpClientFunctionType(implicit Cl: CollectionsLibType) = functionType(REQUEST_TYPE, Cl.liftFutureType(RESPONSE_TYPE))
+  private def httpClientFunctionType(implicit Ca: CollectionsAbstraction[JavaLanguage]) = {
+    import Ca._
+    functionType(REQUEST_TYPE, RESPONSE_TYPE.liftFutureType)
+  }
 
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
 
-  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None)(implicit Cl: CollectionsLibType): Expression = {
+  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None)(
+      implicit Ca: CollectionsAbstraction[JavaLanguage]
+  ): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
     new MethodCallExpr(
       new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
@@ -47,15 +54,19 @@ object AsyncHttpClientClientGenerator {
       new NodeList[Expression](new NameExpr(paramName))
     )
 
-    def doShow(tpe: Type)(implicit Cl: CollectionsLibType): Expression = tpe match {
-      case cls: ClassOrInterfaceType if Cl.isOptionalType(cls) || Cl.isArrayType(cls) =>
-        doShow(cls.containedType)
-      case _ =>
-        new MethodCallExpr(
-          new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
-          "show",
-          new NodeList[Expression](new NameExpr(paramName))
-        )
+    @tailrec
+    def doShow(tpe: Type)(implicit Ca: CollectionsAbstraction[JavaLanguage]): Expression = {
+      import Ca._
+      tpe match {
+        case cls: ClassOrInterfaceType if cls.isOptionalType || cls.isVectorType =>
+          doShow(cls.containedType)
+        case _ =>
+          new MethodCallExpr(
+            new MethodCallExpr(new NameExpr("Shower"), "getInstance"),
+            "show",
+            new NodeList[Expression](new NameExpr(paramName))
+          )
+      }
     }
 
     doShow(param.argType)
@@ -63,11 +74,13 @@ object AsyncHttpClientClientGenerator {
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private def generateBuilderMethodCall(param: LanguageParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean)(
-      implicit Cl: CollectionsLibType
+      implicit Ca: CollectionsAbstraction[JavaLanguage]
   ): Statement = {
+    import Ca._
+
     val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
     val argName         = param.paramName.asString
-    val isArray         = Cl.isArrayType(param.argType)
+    val isArray         = param.argType.isVectorType
 
     val makeArgList: String => NodeList[Expression] = name =>
       if (param.isFile) {
@@ -122,37 +135,41 @@ object AsyncHttpClientClientGenerator {
       contentType match {
         case Some(ApplicationJson) =>
           Option(
-            new TryStmt(
-              new BlockStmt(
-                new NodeList(
-                  new ExpressionStmt(
-                    wrapSetBody(
-                      new MethodCallExpr(
-                        new FieldAccessExpr(new ThisExpr, "objectMapper"),
-                        "writeValueAsString",
-                        new NodeList[Expression](new NameExpr(param.paramName.asString))
-                      )
-                    )
-                  )
-                )
-              ),
+            new BlockStmt(
               new NodeList(
-                new CatchClause(
-                  new Parameter(new NodeList(finalModifier), JSON_PROCESSING_EXCEPTION_TYPE, new SimpleName("e")),
+                new TryStmt(
                   new BlockStmt(
                     new NodeList(
-                      new ThrowStmt(
-                        new ObjectCreationExpr(
-                          null,
-                          MARSHALLING_EXCEPTION_TYPE,
-                          new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                      new ExpressionStmt(
+                        wrapSetBody(
+                          new MethodCallExpr(
+                            new FieldAccessExpr(new ThisExpr, "objectMapper"),
+                            "writeValueAsString",
+                            new NodeList[Expression](new NameExpr(param.paramName.asString))
+                          )
                         )
                       )
                     )
-                  )
+                  ),
+                  new NodeList(
+                    new CatchClause(
+                      new Parameter(new NodeList(finalModifier), JSON_PROCESSING_EXCEPTION_TYPE, new SimpleName("e")),
+                      new BlockStmt(
+                        new NodeList(
+                          new ThrowStmt(
+                            new ObjectCreationExpr(
+                              null,
+                              MARSHALLING_EXCEPTION_TYPE,
+                              new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                            )
+                          )
+                        )
+                      )
+                    )
+                  ),
+                  null
                 )
-              ),
-              null
+              )
             )
           )
 
@@ -287,7 +304,7 @@ object AsyncHttpClientClientGenerator {
       )
     }
 
-  def generateAsyncHttpClientSupportClass()(implicit Cl: CollectionsLibType): Target[(List[ImportDeclaration], ClassOrInterfaceDeclaration)] =
+  def generateAsyncHttpClientSupportClass()(implicit Ca: CollectionsAbstraction[JavaLanguage]): Target[(List[ImportDeclaration], ClassOrInterfaceDeclaration)] =
     for {
       imports <- List(
         "java.util.function.Function",
@@ -299,6 +316,8 @@ object AsyncHttpClientClientGenerator {
         "org.asynchttpclient.Response"
       ).traverse(safeParseRawImport)
     } yield {
+      import Ca._
+
       val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, abstractModifier), false, "AsyncHttpClientSupport")
       cls.addConstructor(PRIVATE)
 
@@ -344,16 +363,14 @@ object AsyncHttpClientClientGenerator {
                 new LambdaExpr(
                   new NodeList(new Parameter(new NodeList(finalModifier), REQUEST_TYPE, new SimpleName("request"))),
                   new ExpressionStmt(
-                    Cl.completionStageToFutureType(
+                    new MethodCallExpr(
                       new MethodCallExpr(
-                        new MethodCallExpr(
-                          new NameExpr("client"),
-                          "executeRequest",
-                          new NodeList[Expression](new NameExpr("request"))
-                        ),
-                        "toCompletableFuture"
-                      )
-                    )
+                        new NameExpr("client"),
+                        "executeRequest",
+                        new NodeList[Expression](new NameExpr("request"))
+                      ),
+                      "toCompletableFuture"
+                    ).lift[CompletionStage[Any]].toFuture.value
                   ),
                   true
                 )
@@ -401,8 +418,13 @@ object AsyncHttpClientClientGenerator {
       (imports, cls)
     }
 
-  def ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ClientTerms[JavaLanguage, Target] = new ClientTermInterp
-  class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends ClientTerms[JavaLanguage, Target] {
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ClientTerms[JavaLanguage, Target] =
+    new ClientTermInterp
+
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+      extends ClientTerms[JavaLanguage, Target] {
+    import Ca._
+
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def generateClientOperation(
@@ -579,7 +601,7 @@ object AsyncHttpClientClientGenerator {
             case (LanguageParameter(_, param, _, _, argType), methodCall) =>
               val containedType = argType.containedType.unbox
 
-              val optionalOverrideMethod = if (Cl.isOptionalType(argType) && !Cl.isOptionalType(containedType)) {
+              val optionalOverrideMethod = if (argType.isOptionalType && !containedType.isOptionalType) {
                 val methodParamName = s"optional${param.getNameAsString.capitalize}"
 
                 Some(
@@ -593,7 +615,14 @@ object AsyncHttpClientClientGenerator {
                   ).setBody(
                     new BlockStmt(
                       List(
-                        new ExpressionStmt(Cl.optionalSideEffect(new NameExpr(methodParamName), param.getNameAsString, List(methodCall.clone()))),
+                        new ExpressionStmt(
+                          new NameExpr(methodParamName)
+                            .lift[Option[Any]]
+                            .foreach(
+                              new LambdaExpr(new NodeList(new Parameter(new UnknownType, param.getNameAsString)), methodCall.clone(), false).lift[Any => Unit]
+                            )
+                            .value
+                        ),
                         new ReturnStmt(new ThisExpr)
                       ).toNodeList
                     )
@@ -652,161 +681,169 @@ object AsyncHttpClientClientGenerator {
           "apply",
           new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
         )
-        val requestCall = Cl.futureMap(
-          Cl.completionStageToFutureType(httpMethodCallExpr),
-          "response",
-          List(
-            new SwitchStmt(
-              new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
-              new NodeList(
-                responses.value.map(
-                  response =>
-                    new SwitchEntry(
-                      new NodeList(new IntegerLiteralExpr(response.statusCode.toString)),
-                      SwitchEntry.Type.BLOCK,
-                      new NodeList(response.value match {
-                        case None =>
-                          new ReturnStmt(
-                            new ObjectCreationExpr(
-                              null,
-                              StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
-                              new NodeList()
-                            )
-                          )
-                        case Some((contentType, valueType, _)) =>
-                          new TryStmt(
-                            new BlockStmt(
-                              new NodeList(
-                                new ExpressionStmt(
-                                  produces
-                                    .get(response.statusCode)
-                                    .flatten
-                                    .getOrElse({
-                                      println(
-                                        s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
-                                      )
-                                      ApplicationJson
-                                    }) match {
-                                    case ApplicationJson =>
-                                      new AssignExpr(
-                                        new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                        new MethodCallExpr(
-                                          new FieldAccessExpr(new ThisExpr, "objectMapper"),
-                                          "readValue",
-                                          new NodeList[Expression](
-                                            new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
-                                            jacksonTypeReferenceFor(valueType)
-                                          )
-                                        ),
-                                        AssignExpr.Operator.ASSIGN
-                                      )
-
-                                    case contentType =>
-                                      val bodyGetter = valueType match {
-                                        case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
-                                        case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
-                                        case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
-                                        case _ if valueType.isNamed("String")      => "getResponseBody"
-                                        case _ =>
-                                          println(
-                                            s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
-                                          )
-                                          "getResponseBody"
-                                      }
-                                      val bodyGetterExpr = new MethodCallExpr(
-                                        new NameExpr("response"),
-                                        bodyGetter,
-                                        bodyGetter match {
-                                          case "getResponseBody" =>
-                                            new NodeList[Expression](
-                                              new MethodCallExpr(
+        val requestCall =
+          httpMethodCallExpr
+            .lift[CompletionStage[Any]]
+            .toFuture
+            .map(
+              new LambdaExpr(
+                new Parameter(new UnknownType, "response"),
+                new BlockStmt(
+                  new NodeList(
+                    new SwitchStmt(
+                      new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
+                      new NodeList(
+                        responses.value.map(
+                          response =>
+                            new SwitchEntry(
+                              new NodeList(new IntegerLiteralExpr(response.statusCode.toString)),
+                              SwitchEntry.Type.BLOCK,
+                              new NodeList(response.value match {
+                                case None =>
+                                  new ReturnStmt(
+                                    new ObjectCreationExpr(
+                                      null,
+                                      StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
+                                      new NodeList()
+                                    )
+                                  )
+                                case Some((contentType, valueType, _)) =>
+                                  new TryStmt(
+                                    new BlockStmt(
+                                      new NodeList(
+                                        new ExpressionStmt(
+                                          produces
+                                            .get(response.statusCode)
+                                            .flatten
+                                            .getOrElse({
+                                              println(
+                                                s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
+                                              )
+                                              ApplicationJson
+                                            }) match {
+                                            case ApplicationJson =>
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
                                                 new MethodCallExpr(
-                                                  new NameExpr("AsyncHttpClientUtils"),
-                                                  "getResponseCharset",
-                                                  new NodeList[Expression](new NameExpr("response"))
+                                                  new FieldAccessExpr(new ThisExpr, "objectMapper"),
+                                                  "readValue",
+                                                  new NodeList[Expression](
+                                                    new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
+                                                    jacksonTypeReferenceFor(valueType)
+                                                  )
                                                 ),
-                                                "orElse",
-                                                new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+
+                                            case contentType =>
+                                              val bodyGetter = valueType match {
+                                                case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
+                                                case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
+                                                case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
+                                                case _ if valueType.isNamed("String")      => "getResponseBody"
+                                                case _ =>
+                                                  println(
+                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
+                                                  )
+                                                  "getResponseBody"
+                                              }
+                                              val bodyGetterExpr = new MethodCallExpr(
+                                                new NameExpr("response"),
+                                                bodyGetter,
+                                                bodyGetter match {
+                                                  case "getResponseBody" =>
+                                                    new NodeList[Expression](
+                                                      new MethodCallExpr(
+                                                        new MethodCallExpr(
+                                                          new NameExpr("AsyncHttpClientUtils"),
+                                                          "getResponseCharset",
+                                                          new NodeList[Expression](new NameExpr("response"))
+                                                        ),
+                                                        "orElse",
+                                                        new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                                      )
+                                                    )
+                                                  case _ => new NodeList[Expression]
+                                                }
+                                              )
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
+                                                bodyGetterExpr,
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+                                          }
+                                        ),
+                                        new IfStmt(
+                                          new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
+                                          new BlockStmt(
+                                            new NodeList(
+                                              new ThrowStmt(
+                                                new ObjectCreationExpr(
+                                                  null,
+                                                  MARSHALLING_EXCEPTION_TYPE,
+                                                  new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
+                                                )
                                               )
                                             )
-                                          case _ => new NodeList[Expression]
-                                        }
-                                      )
-                                      new AssignExpr(
-                                        new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                        bodyGetterExpr,
-                                        AssignExpr.Operator.ASSIGN
-                                      )
-                                  }
-                                ),
-                                new IfStmt(
-                                  new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
-                                  new BlockStmt(
-                                    new NodeList(
-                                      new ThrowStmt(
-                                        new ObjectCreationExpr(
-                                          null,
-                                          MARSHALLING_EXCEPTION_TYPE,
-                                          new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
+                                          ),
+                                          new BlockStmt(
+                                            new NodeList(
+                                              new ReturnStmt(
+                                                new ObjectCreationExpr(
+                                                  null,
+                                                  StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
+                                                  new NodeList[Expression](new NameExpr("result"))
+                                                )
+                                              )
+                                            )
+                                          )
                                         )
                                       )
-                                    )
-                                  ),
-                                  new BlockStmt(
+                                    ),
                                     new NodeList(
-                                      new ReturnStmt(
-                                        new ObjectCreationExpr(
-                                          null,
-                                          StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
-                                          new NodeList[Expression](new NameExpr("result"))
+                                      new CatchClause(
+                                        new Parameter(new NodeList(finalModifier), MARSHALLING_EXCEPTION_TYPE, new SimpleName("e")),
+                                        new BlockStmt(
+                                          new NodeList(
+                                            new ThrowStmt(new NameExpr("e"))
+                                          )
+                                        )
+                                      ),
+                                      new CatchClause(
+                                        new Parameter(new NodeList(finalModifier), EXCEPTION_TYPE, new SimpleName("e")),
+                                        new BlockStmt(
+                                          new NodeList(
+                                            new ThrowStmt(
+                                              new ObjectCreationExpr(
+                                                null,
+                                                MARSHALLING_EXCEPTION_TYPE,
+                                                new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                                              )
+                                            )
+                                          )
                                         )
                                       )
-                                    )
+                                    ),
+                                    null
                                   )
-                                )
-                              )
-                            ),
-                            new NodeList(
-                              new CatchClause(
-                                new Parameter(new NodeList(finalModifier), MARSHALLING_EXCEPTION_TYPE, new SimpleName("e")),
-                                new BlockStmt(
-                                  new NodeList(
-                                    new ThrowStmt(new NameExpr("e"))
-                                  )
-                                )
-                              ),
-                              new CatchClause(
-                                new Parameter(new NodeList(finalModifier), EXCEPTION_TYPE, new SimpleName("e")),
-                                new BlockStmt(
-                                  new NodeList(
-                                    new ThrowStmt(
-                                      new ObjectCreationExpr(
-                                        null,
-                                        MARSHALLING_EXCEPTION_TYPE,
-                                        new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                            ),
-                            null
-                          )
-                      })
+                              })
+                            )
+                        ) :+ new SwitchEntry(
+                              new NodeList(),
+                              SwitchEntry.Type.BLOCK,
+                              new NodeList(new ThrowStmt(new ObjectCreationExpr(null, HTTP_ERROR_TYPE, new NodeList(new NameExpr("response")))))
+                            ): _*
+                      )
                     )
-                ) :+ new SwitchEntry(
-                      new NodeList(),
-                      SwitchEntry.Type.BLOCK,
-                      new NodeList(new ThrowStmt(new ObjectCreationExpr(null, HTTP_ERROR_TYPE, new NodeList(new NameExpr("response")))))
-                    ): _*
-              )
+                  )
+                )
+              ).lift[Any => Any]
             )
-          )
-        )
+            .value
 
         callBuilderCls
           .addMethod("call", PUBLIC)
-          .setType(Cl.liftFutureType(responseParentType))
+          .setType(responseParentType.liftFutureType)
           .addThrownException(CLIENT_EXCEPTION_TYPE)
           .setBody(new BlockStmt(List[Statement](new ReturnStmt(requestCall)).toNodeList))
 
@@ -1184,13 +1221,10 @@ object AsyncHttpClientClientGenerator {
               new BlockStmt(
                 new NodeList(
                   new ReturnStmt(
-                    new MethodCallExpr(
-                      new FieldAccessExpr(new ThisExpr, name),
-                      Cl.optionalGetOrElse,
-                      new NodeList[Expression](
-                        new LambdaExpr(new NodeList(), new ExpressionStmt(getterCall), true)
-                      )
-                    )
+                    new FieldAccessExpr(new ThisExpr, name)
+                      .lift[Option[Any]]
+                      .getOrElse(new LambdaExpr(new NodeList[Parameter], getterCall).lift[() => Any])
+                      .value
                   )
                 )
               )

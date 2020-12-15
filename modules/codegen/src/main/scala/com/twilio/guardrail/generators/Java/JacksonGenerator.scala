@@ -5,7 +5,7 @@ import cats.{ FlatMap, Monad }
 import cats.data.NonEmptyList
 import cats.implicits._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
 import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.{ Node, NodeList }
@@ -29,14 +29,13 @@ import com.twilio.guardrail.{
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
-import com.twilio.guardrail.generators.Java.collectionslib.CollectionsLibType
 import com.twilio.guardrail.generators.{ JavaGenerator, RawParameterName, RawParameterType }
 import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.CollectionsLibTerms
-
+import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 import scala.collection.JavaConverters._
 
 object JacksonGenerator {
@@ -56,7 +55,11 @@ object JacksonGenerator {
 
   // returns a tuple of (requiredTerms, optionalTerms)
   // note that required terms _that have a default value_ are conceptually optional.
-  private def sortParams(params: List[ProtocolParameter[JavaLanguage]])(implicit Cl: CollectionsLibType): (List[ParameterTerm], List[ParameterTerm]) = {
+  private def sortParams(
+      params: List[ProtocolParameter[JavaLanguage]]
+  )(implicit Ca: CollectionsAbstraction[JavaLanguage]): (List[ParameterTerm], List[ParameterTerm]) = {
+    import Ca._
+
     def defaultValueToExpression(defaultValue: Option[Node]): Option[Expression] = defaultValue match {
       case Some(expr: Expression) => Some(expr)
       case _                      => None
@@ -64,7 +67,7 @@ object JacksonGenerator {
 
     params
       .map({ param =>
-        val parameterType = if (Cl.isOptionalType(param.term.getType)) {
+        val parameterType = if (param.term.getType.isOptionalType) {
           param.term.getType.containedType.unbox
         } else {
           param.term.getType.unbox
@@ -74,7 +77,7 @@ object JacksonGenerator {
         ParameterTerm(param.name.value, param.term.getNameAsString, param.term.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction)
       })
       .partition(
-        pt => !Cl.isOptionalType(pt.fieldType) && pt.defaultValue.isEmpty
+        pt => !pt.fieldType.isOptionalType && pt.defaultValue.isEmpty
       )
   }
 
@@ -109,7 +112,8 @@ object JacksonGenerator {
   private def dtoConstructorBody(
       superCall: Expression,
       terms: List[ParameterTerm]
-  )(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType, fm: FlatMap[Target]): Target[BlockStmt] =
+  )(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage], fm: FlatMap[Target]): Target[BlockStmt] = {
+    import Ca._
     for {
       emptyOptional <- Cl.emptyOptionalTerm().flatMap(_.toExpression)
     } yield new BlockStmt(
@@ -123,7 +127,7 @@ object JacksonGenerator {
                       new FieldAccessExpr(new ThisExpr, term.parameterName),
                       term.fieldType match {
                         case _: PrimitiveType => new NameExpr(term.parameterName)
-                        case ft if Cl.isOptionalType(ft) =>
+                        case ft if ft.isOptionalType =>
                           new ConditionalExpr(
                             new BinaryExpr(new NameExpr(term.parameterName), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
                             emptyOptional,
@@ -137,6 +141,7 @@ object JacksonGenerator {
               )
       ).toNodeList
     )
+  }
 
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
@@ -327,10 +332,15 @@ object JacksonGenerator {
       Target.pure(new Name(s"${clsName}.${termName}"))
   }
 
-  def ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ModelProtocolTerms[JavaLanguage, Target] =
+  def ModelProtocolTermInterp(
+      implicit Cl: CollectionsLibTerms[JavaLanguage, Target],
+      Ca: CollectionsAbstraction[JavaLanguage]
+  ): ModelProtocolTerms[JavaLanguage, Target] =
     new ModelProtocolTermInterp
-  class ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType)
+
+  class ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
       extends ModelProtocolTerms[JavaLanguage, Target] {
+    import Ca._
 
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -598,7 +608,7 @@ object JacksonGenerator {
                 Cl.emptyOptionalTerm().flatMap(_.toExpression)
               )(
                 dv =>
-                  if (Cl.isOptionalType(fieldType)) {
+                  if (fieldType.isOptionalType) {
                     Cl.liftOptionalTerm(dv).flatMap(_.toExpression)
                   } else {
                     Target.pure(dv)
@@ -666,9 +676,9 @@ object JacksonGenerator {
               fieldInitializer <- (fieldType, parameterType) match {
                 case (_: PrimitiveType, _) =>
                   Target.pure[Expression](new NameExpr(parameterName))
-                case (ft, pt) if Cl.isOptionalType(ft) && pt.isPrimitiveType =>
+                case (ft, pt) if ft.isOptionalType && pt.isPrimitiveType =>
                   Cl.liftSomeTerm(new NameExpr(parameterName)).flatMap(_.toExpression)
-                case (ft, _) if Cl.isOptionalType(ft) =>
+                case (ft, _) if ft.isOptionalType =>
                   Cl.liftOptionalTerm(new NameExpr(parameterName)).flatMap(_.toExpression)
                 case _ =>
                   Target.pure(requireNonNullExpr(parameterName))
@@ -693,13 +703,13 @@ object JacksonGenerator {
                   )
                 )
 
-              _ = if (!Cl.isOptionalType(parameterType)) {
+              _ = if (!parameterType.isOptionalType) {
                 val newParameterName = s"optional${parameterName.unescapeIdentifier.capitalize}"
                 for {
                   newParameterType <- (fieldType match {
-                    case pt: PrimitiveType           => Cl.liftOptionalType(pt.toBoxedType)
-                    case ft if Cl.isOptionalType(ft) => Target.pure(ft)
-                    case ft                          => Cl.liftOptionalType(ft)
+                    case pt: PrimitiveType       => Cl.liftOptionalType(pt.toBoxedType)
+                    case ft if ft.isOptionalType => Target.pure(ft)
+                    case ft                      => Cl.liftOptionalType(ft)
                   })
                 } yield {
                   builderClass
@@ -710,26 +720,26 @@ object JacksonGenerator {
                       new BlockStmt(
                         new NodeList(
                           new ExpressionStmt(
-                            if (Cl.isOptionalType(fieldType)) {
+                            if (fieldType.isOptionalType) {
                               new AssignExpr(
                                 new FieldAccessExpr(new ThisExpr, parameterName),
                                 requireNonNullExpr(newParameterName),
                                 AssignExpr.Operator.ASSIGN
                               )
                             } else {
-                              Cl.optionalSideEffect(
-                                requireNonNullExpr(newParameterName),
-                                parameterName,
-                                List(
-                                  new ExpressionStmt(
+                              requireNonNullExpr(newParameterName)
+                                .lift[Option[Any]]
+                                .foreach(
+                                  new LambdaExpr(
+                                    new Parameter(new UnknownType, parameterName),
                                     new AssignExpr(
                                       new FieldAccessExpr(new ThisExpr, parameterName),
                                       new NameExpr(parameterName),
                                       AssignExpr.Operator.ASSIGN
                                     )
-                                  )
+                                  ).lift[Any => Unit]
                                 )
-                              )
+                                .value
                             }
                           ),
                           new ReturnStmt(new ThisExpr)
@@ -955,9 +965,13 @@ object JacksonGenerator {
       Target.pure(None)
   }
 
-  def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): PolyProtocolTerms[JavaLanguage, Target] =
+  def PolyProtocolTermInterp(
+      implicit Cl: CollectionsLibTerms[JavaLanguage, Target],
+      Ca: CollectionsAbstraction[JavaLanguage]
+  ): PolyProtocolTerms[JavaLanguage, Target] =
     new PolyProtocolTermInterp
-  class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType) extends PolyProtocolTerms[JavaLanguage, Target] {
+  class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+      extends PolyProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
     def renderSealedTrait(
