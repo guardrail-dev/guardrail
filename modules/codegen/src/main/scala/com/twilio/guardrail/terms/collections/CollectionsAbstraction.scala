@@ -63,6 +63,8 @@ trait OptionF[L <: LA] extends MonadF[L, Option] with EmptyF[L, Option] {
       fa: TermHolder[L, From, Option[A]]
   ): TermHolder[L, L#Apply, B]
 
+  def getOrElseNull[From <: L#Expression, A](fa: TermHolder[L, From, Option[A]]): TermHolder[L, L#Apply, A]
+
   def getOrElseThrow[From <: L#Expression, A, X <: Throwable, Func <: L#Expression](f: TermHolder[L, Func, () => X])(
       fa: TermHolder[L, From, Option[A]]
   ): TermHolder[L, L#Apply, A]
@@ -71,6 +73,7 @@ trait OptionF[L <: LA] extends MonadF[L, Option] with EmptyF[L, Option] {
 trait OptionFSyntax[L <: LA] {
   implicit class TermHolderSyntaxOptionF[From <: L#Expression, A](fa: TermHolder[L, From, Option[A]])(implicit ev: OptionF[L]) {
     def getOrElse[Func <: L#Expression, B >: A](f: TermHolder[L, Func, () => B]): TermHolder[L, L#Apply, B]              = ev.getOrElse(f)(fa)
+    def getOrElseNull: TermHolder[L, L#Apply, A]                                                                         = ev.getOrElseNull(fa)
     def getOrElseThrow[Func <: L#Expression, X <: Throwable](f: TermHolder[L, Func, () => X]): TermHolder[L, L#Apply, A] = ev.getOrElseThrow(f)(fa)
   }
 

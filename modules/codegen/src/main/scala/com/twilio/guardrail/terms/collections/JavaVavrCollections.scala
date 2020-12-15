@@ -42,6 +42,9 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, B] =
       doMethodCall(fa.value, "getOrElse", f.value)
 
+    override def getOrElseNull[From <: Expression, A](fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, A] =
+      TermHolder[JavaLanguage, MethodCallExpr, A](new MethodCallExpr(fa.value, "getOrNull"))
+
     override def getOrElseThrow[From <: Expression, A, X <: Throwable, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, () => X]
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, A] =
