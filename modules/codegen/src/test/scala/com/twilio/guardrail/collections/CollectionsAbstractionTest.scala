@@ -51,7 +51,12 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("1"), BinaryExpr.Operator.PLUS)
     ).lift[Int => Int]
 
-    fa.map(f)
+    val f1 = new LambdaExpr(
+      new Parameter(new UnknownType, "a"),
+      new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("5"), BinaryExpr.Operator.MULTIPLY)
+    ).lift[Int => Int]
+
+    fa.map(f).map(f1)
   }
 
   def futurePipeline(implicit Ca: CollectionsAbstraction[JavaLanguage]): TermHolder[JavaLanguage, MethodCallExpr, Future[Int]] = {
@@ -109,7 +114,7 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
     }
 
     "Vector pipelines should render" in {
-      vectorPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).collect(java.util.stream.Collectors.toList())"
+      vectorPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).collect(java.util.stream.Collectors.toList())"
     }
 
     "Future pipelines should render" in {
@@ -156,7 +161,7 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
     }
 
     "Vector pipelines should render" in {
-      vectorPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1)"
+      vectorPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5)"
     }
 
     "Future pipelines should render" in {

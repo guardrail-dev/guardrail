@@ -9,10 +9,22 @@ import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers._
+import com.twilio.guardrail.terms.collections.JavaStdLibCollectionsHelpers.JavaStdLibTermHolder
 import java.util.concurrent.CompletionStage
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.reflect.ClassTag
+
+object JavaStdLibCollectionsHelpers {
+  // This exists because the Java stdlib collections do not have operations like map and flatMap on
+  // the collections class itself.  You must call stream() first, and then when you want a collection
+  // back, call collect().  What we want to do is call stream() the first time a "monadic" operation is
+  // called, and not call it again until we want to pull the collection "out" of the term holder.  So
+  // _value will be the Stream instance, and value will return a collected List instance.
+  case class JavaStdLibTermHolder[HeldType](_value: MethodCallExpr) extends TermHolder[JavaLanguage, MethodCallExpr, HeldType](_value) {
+    override lazy val value: MethodCallExpr = doCollect(_value)
+  }
+}
 
 trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
   override implicit val optionInstances: OptionF[JavaLanguage] = new OptionF[JavaLanguage] {
@@ -74,37 +86,44 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
     )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       TermHolder[JavaLanguage, MethodCallExpr, Unit](
         new MethodCallExpr(
-          fa.value,
+          // forEach() exists on both Stream and List; if we're already a Stream, stick with the Stream,
+          // as converting to a List is unnecessary and expensive.
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => th.value
+          },
           "forEach",
           new NodeList[Expression](f.value)
         )
       )
 
-    // FIXME: wrapStream() and doCollect() are likely inefficient if more operations will be done
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
     )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[B]](
-        doCollect(
-          new MethodCallExpr(
-            wrapStream(fa.value),
-            "map",
-            new NodeList[Expression](f.value)
-          )
+      JavaStdLibTermHolder[Vector[B]](
+        new MethodCallExpr(
+          // If we already are a Stream, use it as-is.  Otherwise call stream()
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => wrapStream(th.value)
+          },
+          "map",
+          new NodeList[Expression](f.value)
         )
       )
 
-    // FIXME: wrapStream() and doCollect() are likely inefficient if more operations will be done
     override def flatMap[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Vector[B]]
     )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[B]](
-        doCollect(
-          new MethodCallExpr(
-            wrapStream(fa.value),
-            "flatMap",
-            new NodeList[Expression](f.value)
-          )
+      JavaStdLibTermHolder[Vector[B]](
+        new MethodCallExpr(
+          // If we already are a Stream, use it as-is.  Otherwise call stream()
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => wrapStream(th.value)
+          },
+          "flatMap",
+          new NodeList[Expression](f.value)
         )
       )
   }
