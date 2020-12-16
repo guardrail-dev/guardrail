@@ -2,14 +2,15 @@ package com.twilio.guardrail.terms.collections
 
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.finalModifier
-import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.`type`.{ PrimitiveType, Type, UnknownType }
+import com.github.javaparser.ast.`type`.{ ArrayType, Type, UnknownType }
 import com.github.javaparser.ast.body.{ Parameter, VariableDeclarator }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
+import com.github.javaparser.ast.{ ArrayCreationLevel, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers._
 import com.twilio.guardrail.terms.collections.JavaStdLibCollectionsHelpers.JavaStdLibTermHolder
+
 import java.util.concurrent.CompletionStage
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
@@ -66,7 +67,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
       doMethodCall(fa.value, "orElseThrow", f.value)
   }
 
-  override implicit val vectorInstances: MonadF[JavaLanguage, Vector] = new MonadF[JavaLanguage, Vector] {
+  override implicit val vectorInstances: VectorF[JavaLanguage] = new VectorF[JavaLanguage] {
     override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(tpe)
     override def isType(tpe: Type): Boolean =
       isContainerOfType(tpe, "java.util", "List") ||
@@ -79,6 +80,11 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
           "singletonList",
           new NodeList[Expression](fa.value)
         )
+      )
+
+    override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
+        new MethodCallExpr(new NameExpr("java.util.Collections"), "emptyList")
       )
 
     override def foreach[From <: Expression, A, Func <: Expression](
@@ -125,6 +131,28 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
           "flatMap",
           new NodeList[Expression](f.value)
         )
+      )
+
+    override def toArray[From <: Expression, A](
+        fa: TermHolder[JavaLanguage, From, Vector[A]]
+    )(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Array[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, Array[A]](
+        fa match {
+          case jslth: JavaStdLibTermHolder[_] =>
+            val resultType = typeFromClass(clsA.runtimeClass)
+            new MethodCallExpr(
+              jslth._value,
+              "toArray",
+              new NodeList[Expression](new MethodReferenceExpr(new TypeExpr(new ArrayType(resultType)), null, "new"))
+            )
+          case th =>
+            val resultType = typeFromClass(clsA.runtimeClass, boxPrimitives = false)
+            new MethodCallExpr(
+              th.value,
+              "toArray",
+              new NodeList[Expression](new ArrayCreationExpr(resultType, new NodeList(new ArrayCreationLevel(new IntegerLiteralExpr("0"))), null))
+            )
+        }
       )
   }
 
@@ -287,19 +315,6 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
         (new BlockStmt(new NodeList(new ExpressionStmt(other))), fallbackParamName)
     }
   }
-
-  private def typeFromClass(cls: Class[_]): Type = cls match {
-    case java.lang.Boolean.TYPE   => PrimitiveType.booleanType.toBoxedType
-    case java.lang.Byte.TYPE      => PrimitiveType.byteType.toBoxedType
-    case java.lang.Character.TYPE => PrimitiveType.charType.toBoxedType
-    case java.lang.Short.TYPE     => PrimitiveType.shortType.toBoxedType
-    case java.lang.Integer.TYPE   => PrimitiveType.intType.toBoxedType
-    case java.lang.Long.TYPE      => PrimitiveType.longType.toBoxedType
-    case java.lang.Float.TYPE     => PrimitiveType.floatType.toBoxedType
-    case java.lang.Double.TYPE    => PrimitiveType.doubleType.toBoxedType
-    case other                    => StaticJavaParser.parseClassOrInterfaceType(other.getName)
-  }
-
 }
 
 object JavaStdLibCollections extends JavaStdLibCollections

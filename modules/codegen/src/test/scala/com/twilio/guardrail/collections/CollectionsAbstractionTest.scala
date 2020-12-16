@@ -117,6 +117,15 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       vectorPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).collect(java.util.stream.Collectors.toList())"
     }
 
+    "Vector pipeline with toArray() should render" in {
+      import Ca._
+
+      vectorPipeline.toArray.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).toArray(Integer[]::new)"
+
+      val vectorOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftVector
+      vectorOfOneFive.toArray.value.toString mustBe "java.util.Collections.singletonList(5).toArray(new int[0])"
+    }
+
     "Future pipelines should render" in {
       futurePipeline.value.toString mustBe
         """java.util.concurrent.CompletableFuture.completedFuture(5).thenCompose(a -> a >= 0 ? java.util.concurrent.CompletableFuture.completedFuture(a) : ((java.util.function.Supplier<java.util.concurrent.CompletionStage<Integer>>) () -> {
@@ -162,6 +171,15 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
 
     "Vector pipelines should render" in {
       vectorPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5)"
+    }
+
+    "Vector pipeline with toArray() should render" in {
+      import Ca._
+
+      vectorPipeline.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).asJava().toArray(new int[0])"
+
+      val vectorOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftVector
+      vectorOfOneFive.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).asJava().toArray(new int[0])"
     }
 
     "Future pipelines should render" in {

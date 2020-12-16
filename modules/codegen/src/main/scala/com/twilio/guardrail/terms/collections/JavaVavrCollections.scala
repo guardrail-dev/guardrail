@@ -1,11 +1,11 @@
 package com.twilio.guardrail.terms.collections
 
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.{ ArrayCreationLevel, NodeList }
 import com.github.javaparser.ast.`type`.Type
-import com.github.javaparser.ast.expr.{ Expression, MethodCallExpr, NameExpr }
+import com.github.javaparser.ast.expr.{ ArrayCreationExpr, Expression, IntegerLiteralExpr, MethodCallExpr, NameExpr }
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers.{ doMethodCall, isContainerOfType }
+import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers.{ doMethodCall, isContainerOfType, typeFromClass }
 
 import java.util.concurrent.CompletionStage
 import scala.concurrent.Future
@@ -51,7 +51,7 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
       doMethodCall(fa.value, "getOrElseThrow", f.value)
   }
 
-  override implicit val vectorInstances: MonadF[JavaLanguage, Vector] = new MonadF[JavaLanguage, Vector] {
+  override implicit val vectorInstances: VectorF[JavaLanguage] = new VectorF[JavaLanguage] {
     override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("io.vavr.collection.Vector").setTypeArguments(tpe)
 
     override def isType(tpe: Type): Boolean =
@@ -66,6 +66,11 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
           "of",
           new NodeList[Expression](fa.value)
         )
+      )
+
+    override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
+        new MethodCallExpr(new NameExpr("Vector"), "empty")
       )
 
     override def foreach[From <: Expression, A, Func <: Expression](
@@ -100,6 +105,22 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
           new NodeList[Expression](f.value)
         )
       )
+
+    override def toArray[From <: Expression, A](
+        fa: TermHolder[JavaLanguage, From, Vector[A]]
+    )(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Array[A]] = {
+      val resultType = typeFromClass(clsA.runtimeClass, boxPrimitives = false)
+      TermHolder[JavaLanguage, MethodCallExpr, Array[A]](
+        new MethodCallExpr(
+          new MethodCallExpr(
+            fa.value,
+            "asJava"
+          ),
+          "toArray",
+          new NodeList[Expression](new ArrayCreationExpr(resultType, new NodeList(new ArrayCreationLevel(new IntegerLiteralExpr("0"))), null))
+        )
+      )
+    }
   }
 
   override implicit val futureInstances: FutureF[JavaLanguage] = new FutureF[JavaLanguage] {
