@@ -27,6 +27,11 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       doMethodCall(fa.value, "forEach", f.value)
 
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Option[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Option[A]] =
+      doMethodCall(fa.value, "filter", f.value)
+
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, Option[B]] =
@@ -84,6 +89,11 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
         )
       )
 
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Vector[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
+      doMethodCall(fa.value, "filter", f.value)
+
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
     )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
@@ -134,6 +144,11 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
         f: TermHolder[JavaLanguage, Func, A => Unit]
     )(fa: TermHolder[JavaLanguage, From, Future[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       doMethodCall(fa.value, "onSuccess", f.value)
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Future[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Future[A]] =
+      doMethodCall(fa.value, "filter", f.value)
 
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]

@@ -34,13 +34,17 @@ trait MonadF[L <: LA, F[_]] {
   def liftType(tpe: L#Type): L#Type
   def isType(tpe: L#Type): Boolean
   def pure[From <: L#Expression, A](fa: TermHolder[L, From, A]): TermHolder[L, L#Apply, F[A]]
+  def filter[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Boolean])(fa: TermHolder[L, From, F[A]])(
+      implicit clsA: ClassTag[A]
+  ): TermHolder[L, L#Apply, F[A]]
   def foreach[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Unit])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, Unit]
   def map[From <: L#Expression, A, B, Func <: L#Expression](f: TermHolder[L, Func, A => B])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, F[B]]
   def flatMap[From <: L#Expression, A, B, Func <: L#Expression](f: TermHolder[L, Func, A => F[B]])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, F[B]]
 }
 
 trait MonadFSyntax[L <: LA] {
-  implicit class TermHolderSyntaxMonadF[From <: L#Expression, F[_], A](fa: TermHolder[L, From, F[A]])(implicit ev: MonadF[L, F]) {
+  implicit class TermHolderSyntaxMonadF[From <: L#Expression, F[_], A: ClassTag](fa: TermHolder[L, From, F[A]])(implicit ev: MonadF[L, F]) {
+    def filter[Func <: L#Expression](f: TermHolder[L, Func, A => Boolean]): TermHolder[L, L#Apply, F[A]]  = ev.filter(f)(fa)
     def foreach[Func <: L#Expression](f: TermHolder[L, Func, A => Unit]): TermHolder[L, L#Apply, Unit]    = ev.foreach(f)(fa)
     def map[Func <: L#Expression, B](f: TermHolder[L, Func, A => B]): TermHolder[L, L#Apply, F[B]]        = ev.map(f)(fa)
     def flatMap[Func <: L#Expression, B](f: TermHolder[L, Func, A => F[B]]): TermHolder[L, L#Apply, F[B]] = ev.flatMap(f)(fa)

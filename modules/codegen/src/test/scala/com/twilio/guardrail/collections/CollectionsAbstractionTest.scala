@@ -34,9 +34,14 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("1"), BinaryExpr.Operator.PLUS)
     ).lift[Int => Int]
 
-    val f3 = new LambdaExpr(new NodeList[Parameter], new IntegerLiteralExpr("42")).lift[() => Int]
+    val f3 = new LambdaExpr(
+      new Parameter(new UnknownType, "a"),
+      new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("3"), BinaryExpr.Operator.GREATER)
+    ).lift[Int => Boolean]
 
-    fa.flatMap(f).map(f2).getOrElse(f3)
+    val f4 = new LambdaExpr(new NodeList[Parameter], new IntegerLiteralExpr("42")).lift[() => Int]
+
+    fa.flatMap(f).map(f2).filter(f3).getOrElse(f4)
   }
 
   def vectorPipeline(implicit Ca: CollectionsAbstraction[JavaLanguage]): TermHolder[JavaLanguage, MethodCallExpr, Vector[Int]] = {
@@ -56,7 +61,12 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("5"), BinaryExpr.Operator.MULTIPLY)
     ).lift[Int => Int]
 
-    fa.map(f).map(f1)
+    val f2 = new LambdaExpr(
+      new Parameter(new UnknownType, "a"),
+      new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("3"), BinaryExpr.Operator.GREATER)
+    ).lift[Int => Boolean]
+
+    fa.map(f).map(f1).filter(f2)
   }
 
   def futurePipeline(implicit Ca: CollectionsAbstraction[JavaLanguage]): TermHolder[JavaLanguage, MethodCallExpr, Future[Int]] = {
@@ -79,7 +89,12 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       )
     ).lift[Int => Future[Int]]
 
-    fa.flatMap(f)
+    val f1 = new LambdaExpr(
+      new Parameter(new UnknownType, "a"),
+      new BinaryExpr(new NameExpr("a"), new IntegerLiteralExpr("3"), BinaryExpr.Operator.GREATER)
+    ).lift[Int => Boolean]
+
+    fa.flatMap(f).filter(f1)
   }
 
   def failedFuture(implicit Ca: CollectionsAbstraction[JavaLanguage]): TermHolder[JavaLanguage, Expression, Future[Int]] = {
@@ -110,17 +125,17 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
     }
 
     "Optional pipelines should render" in {
-      optionalPipeline.value.toString mustBe "java.util.Optional.ofNullable(5).flatMap(a -> a >= 0 ? java.util.Optional.ofNullable(a) : java.util.Optional.empty()).map(a -> a + 1).orElseGet(() -> 42)"
+      optionalPipeline.value.toString mustBe "java.util.Optional.ofNullable(5).flatMap(a -> a >= 0 ? java.util.Optional.ofNullable(a) : java.util.Optional.empty()).map(a -> a + 1).filter(a -> a > 3).orElseGet(() -> 42)"
     }
 
     "Vector pipelines should render" in {
-      vectorPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).collect(java.util.stream.Collectors.toList())"
+      vectorPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).collect(java.util.stream.Collectors.toList())"
     }
 
     "Vector pipeline with toArray() should render" in {
       import Ca._
 
-      vectorPipeline.toArray.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).toArray(Integer[]::new)"
+      vectorPipeline.toArray.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).toArray(Integer[]::new)"
 
       val vectorOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftVector
       vectorOfOneFive.toArray.value.toString mustBe "java.util.Collections.singletonList(5).toArray(new int[0])"
@@ -132,7 +147,17 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
         |    final java.util.concurrent.CompletableFuture<Integer> _failedFuture = new java.util.concurrent.CompletableFuture<>();
         |    _failedFuture.completeExceptionally(new IllegalStateException("Negative!"));
         |    return _failedFuture;
-        |}).get())""".stripMargin
+        |}).get()).thenCompose(_result -> {
+        |    if (((java.util.function.Predicate<Integer>) a -> a > 3).test(_result)) {
+        |        return java.util.concurrent.CompletableFuture.completedFuture(_result);
+        |    } else {
+        |        return ((java.util.function.Supplier<java.util.concurrent.CompletionStage<Integer>>) () -> {
+        |            final java.util.concurrent.CompletableFuture<Integer> _failedFuture = new java.util.concurrent.CompletableFuture<>();
+        |            _failedFuture.completeExceptionally(new NoSuchElementException("Filter predicate did not match"));
+        |            return _failedFuture;
+        |        }).get();
+        |    }
+        |})""".stripMargin
     }
 
     "Failed future should render" in {
@@ -166,24 +191,24 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
     }
 
     "Optional pipelines should render" in {
-      optionalPipeline.value.toString mustBe "io.vavr.control.Option.of(5).flatMap(a -> a >= 0 ? io.vavr.control.Option.of(a) : io.vavr.control.Option.none()).map(a -> a + 1).getOrElse(() -> 42)"
+      optionalPipeline.value.toString mustBe "io.vavr.control.Option.of(5).flatMap(a -> a >= 0 ? io.vavr.control.Option.of(a) : io.vavr.control.Option.none()).map(a -> a + 1).filter(a -> a > 3).getOrElse(() -> 42)"
     }
 
     "Vector pipelines should render" in {
-      vectorPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5)"
+      vectorPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3)"
     }
 
     "Vector pipeline with toArray() should render" in {
       import Ca._
 
-      vectorPipeline.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).asJava().toArray(new int[0])"
+      vectorPipeline.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).asJava().toArray(new int[0])"
 
       val vectorOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftVector
       vectorOfOneFive.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).asJava().toArray(new int[0])"
     }
 
     "Future pipelines should render" in {
-      futurePipeline.value.toString mustBe """io.vavr.concurrent.Future.successful(5).flatMap(a -> a >= 0 ? io.vavr.concurrent.Future.successful(a) : io.vavr.concurrent.Future.failed(new IllegalStateException("Negative!")))"""
+      futurePipeline.value.toString mustBe """io.vavr.concurrent.Future.successful(5).flatMap(a -> a >= 0 ? io.vavr.concurrent.Future.successful(a) : io.vavr.concurrent.Future.failed(new IllegalStateException("Negative!"))).filter(a -> a > 3)"""
     }
 
     "Failed future should render" in {

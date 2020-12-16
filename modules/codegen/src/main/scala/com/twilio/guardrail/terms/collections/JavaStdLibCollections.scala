@@ -38,6 +38,11 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
     override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, Option[A]] =
       TermHolder[JavaLanguage, MethodCallExpr, Option[A]](new MethodCallExpr(new NameExpr("java.util.Optional"), "empty"))
 
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Option[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Option[A]] =
+      doMethodCall(fa.value, "filter", f.value)
+
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
@@ -85,6 +90,21 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
     override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
       TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
         new MethodCallExpr(new NameExpr("java.util.Collections"), "emptyList")
+      )
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Vector[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
+      JavaStdLibTermHolder[Vector[A]](
+        new MethodCallExpr(
+          // If we already are a Stream, use it as-is.  Otherwise call stream()
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => wrapStream(th.value)
+          },
+          "filter",
+          new NodeList[Expression](f.value)
+        )
       )
 
     override def foreach[From <: Expression, A, Func <: Expression](
@@ -164,6 +184,56 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
 
     override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, Future[A]] =
       doMethodCall(new NameExpr("java.util.concurrent.CompletableFuture"), "completedFuture", fa.value)
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Future[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Future[A]] = {
+      val resultType                 = typeFromClass(clsA.runtimeClass)
+      val predicateResultType        = StaticJavaParser.parseClassOrInterfaceType("java.util.function.Predicate").setTypeArguments(resultType)
+      val noSuchElementExceptionType = StaticJavaParser.parseClassOrInterfaceType("NoSuchElementException")
+      TermHolder[JavaLanguage, MethodCallExpr, Future[A]](
+        new MethodCallExpr(
+          fa.value,
+          "thenCompose",
+          new NodeList[Expression](
+            new LambdaExpr(
+              new Parameter(new UnknownType, "_result"),
+              new BlockStmt(
+                new NodeList(
+                  new IfStmt(
+                    new MethodCallExpr(
+                      new EnclosedExpr(new CastExpr(predicateResultType, f.value)),
+                      "test",
+                      new NodeList[Expression](new NameExpr("_result"))
+                    ),
+                    new BlockStmt(
+                      new NodeList(
+                        new ReturnStmt(pure(TermHolder[JavaLanguage, NameExpr, A](new NameExpr("_result"))).value)
+                      )
+                    ),
+                    new BlockStmt(
+                      new NodeList(
+                        new ReturnStmt(
+                          failedFuture(
+                            TermHolder[JavaLanguage, ObjectCreationExpr, NoSuchElementException](
+                              new ObjectCreationExpr(
+                                null,
+                                noSuchElementExceptionType,
+                                new NodeList[Expression](new StringLiteralExpr("Filter predicate did not match"))
+                              )
+                            )
+                          ).value
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    }
 
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
