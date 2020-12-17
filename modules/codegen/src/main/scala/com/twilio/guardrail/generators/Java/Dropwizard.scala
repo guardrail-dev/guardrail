@@ -5,14 +5,16 @@ import com.twilio.guardrail.generators.Java.AsyncHttpClientClientGenerator.Clien
 import com.twilio.guardrail.generators.Java.DropwizardGenerator.{ FrameworkInterp => DropwizardFrameworkInterp }
 import com.twilio.guardrail.generators.Java.DropwizardServerGenerator.ServerTermInterp
 import com.twilio.guardrail.generators.Java.JacksonGenerator._
-import com.twilio.guardrail.generators.Java.collectionslib.JavaStdLibCollections
 import com.twilio.guardrail.generators.JavaGenerator.JavaInterp
 import com.twilio.guardrail.generators.collections.JavaCollectionsGenerator.JavaCollectionsInterp
 import com.twilio.guardrail.generators.{ Framework, SwaggerGenerator }
 import com.twilio.guardrail.languages.JavaLanguage
+import com.twilio.guardrail.terms.collections.JavaStdLibCollections
 
 object Dropwizard extends Framework[JavaLanguage, Target] {
-  implicit def CollectionsLibInterp  = new JavaCollectionsInterp with JavaStdLibCollections
+  private implicit val col = JavaStdLibCollections
+
+  implicit def CollectionsLibInterp  = new JavaCollectionsInterp
   implicit def ArrayProtocolInterp   = ArrayProtocolTermInterp
   implicit def ClientInterp          = ClientTermInterp
   implicit def EnumProtocolInterp    = EnumProtocolTermInterp

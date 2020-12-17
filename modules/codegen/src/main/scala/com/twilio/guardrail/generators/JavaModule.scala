@@ -2,23 +2,23 @@ package com.twilio.guardrail
 package generators
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.generators.Java.collectionslib.{ CollectionsLibType, JavaStdLibCollections, JavaVavrCollections }
 import com.twilio.guardrail.generators.Java._
 import com.twilio.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.client.ClientTerms
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.protocol.terms.server.ServerTerms
+import com.twilio.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object JavaModule extends AbstractModule[JavaLanguage] {
-  def stdlib: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType =
-    new JavaCollectionsGenerator.JavaCollectionsInterp with JavaStdLibCollections
-  def vavr: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType =
-    new JavaVavrCollectionsGenerator.JavaVavrCollectionsInterp with JavaVavrCollections
+  def stdlib: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
+    (new JavaCollectionsGenerator.JavaCollectionsInterp, JavaStdLibCollections)
+  def vavr: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
+    (new JavaVavrCollectionsGenerator.JavaVavrCollectionsInterp, JavaVavrCollections)
 
-  def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
+  def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
       ProtocolSupportTerms[JavaLanguage, Target],
       ModelProtocolTerms[JavaLanguage, Target],
       EnumProtocolTerms[JavaLanguage, Target],
@@ -32,23 +32,24 @@ object JavaModule extends AbstractModule[JavaLanguage] {
     JacksonGenerator.PolyProtocolTermInterp
   )
 
-  def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
+  def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
   ) = (DropwizardServerGenerator.ServerTermInterp, DropwizardGenerator.FrameworkInterp)
-  def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): (
+  def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
   ) = (SpringMvcServerGenerator.ServerTermInterp, SpringMvcGenerator.FrameworkInterp)
-  def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target] with CollectionsLibType): ClientTerms[JavaLanguage, Target] =
+  def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ClientTerms[JavaLanguage, Target] =
     AsyncHttpClientClientGenerator.ClientTermInterp
 
-  def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] =
+  def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
+    implicit val col = JavaStdLibCollections
     (for {
-      collections                          <- popModule("collections", ("java-stdlib", stdlib), ("java-vavr", vavr))
-      (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson(collections)))
-      client                               <- popModule("client", ("async-http-client", asyncHttpClient(collections)))
-      (server, framework)                  <- popModule("server", ("dropwizard", dropwizard(collections)), ("spring-mvc", spring(collections)))
+      (collections, col)                   <- popModule("collections", ("java-stdlib", stdlib), ("java-vavr", vavr))
+      (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson(collections, col)))
+      client                               <- popModule("client", ("async-http-client", asyncHttpClient(collections, col)))
+      (server, framework)                  <- popModule("server", ("dropwizard", dropwizard(collections, col)), ("spring-mvc", spring(collections, col)))
     } yield new Framework[JavaLanguage, Target] {
       def ArrayProtocolInterp: ArrayProtocolTerms[JavaLanguage, Target]     = array
       def ClientInterp: ClientTerms[JavaLanguage, Target]                   = client
@@ -62,4 +63,5 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def LanguageInterp: LanguageTerms[JavaLanguage, Target]               = JavaGenerator.JavaInterp
       def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target]   = collections
     }).runA(modules.toList.toSet)
+  }
 }
