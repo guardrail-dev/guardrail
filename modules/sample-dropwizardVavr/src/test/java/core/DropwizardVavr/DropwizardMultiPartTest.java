@@ -3,7 +3,6 @@ package core.DropwizardVavr;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import io.vavr.concurrent.Future;
 import io.vavr.control.Option;
-import multipartFormData.server.dropwizardVavr.GuardrailJerseySupport;
 import multipartFormData.server.dropwizardVavr.definitions.Foo;
 import multipartFormData.server.dropwizardVavr.foo.FooHandler;
 import multipartFormData.server.dropwizardVavr.foo.FooResource;
@@ -38,7 +37,6 @@ public class DropwizardMultiPartTest {
     @ClassRule
     public static final ResourceTestRule resources = VavrHelpers.newResourceTestRuleBuilder()
             .addProvider(new MultiPartFeature())
-            .addProvider(new GuardrailJerseySupport.Jsr310.Binder())
             .addResource(new FooResource(fooHandler))
             .build();
 

@@ -11,6 +11,8 @@ class LanguageAbstraction {
   type Term
   type TermName
   type TermSelect
+  type Expression
+  type Apply
 
   // Declarations
   type MethodDeclaration
