@@ -1,7 +1,6 @@
 package core.Dropwizard;
 
 import io.dropwizard.testing.junit.ResourceTestRule;
-import multipartFormData.server.dropwizard.GuardrailJerseySupport;
 import multipartFormData.server.dropwizard.definitions.Foo;
 import multipartFormData.server.dropwizard.foo.FooHandler;
 import multipartFormData.server.dropwizard.foo.FooResource;
@@ -40,7 +39,6 @@ public class DropwizardMultiPartTest {
     public static final ResourceTestRule resources = ResourceTestRule.builder()
             .setTestContainerFactory(new GrizzlyTestContainerFactory())
             .addProvider(new MultiPartFeature())
-            .addProvider(new GuardrailJerseySupport.Jsr310.Binder())
             .addResource(new FooResource(fooHandler))
             .build();
 

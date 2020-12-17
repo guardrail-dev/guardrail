@@ -20,6 +20,8 @@ class JavaLanguage extends LanguageAbstraction {
   type Term       = com.github.javaparser.ast.Node
   type TermName   = com.github.javaparser.ast.expr.Name
   type TermSelect = com.github.javaparser.ast.expr.Name
+  type Expression = com.github.javaparser.ast.expr.Expression
+  type Apply      = com.github.javaparser.ast.expr.MethodCallExpr
 
   // Declarations
   type MethodDeclaration = com.github.javaparser.ast.body.MethodDeclaration
