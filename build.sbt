@@ -17,8 +17,8 @@ val akkaHttpVersion        = "10.2.1"
 val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
 val circeVersion           = "0.13.0"
-val http4sVersion          = "0.21.14"
-val scalacheckVersion      = "1.15.1"
+val http4sVersion          = "0.21.13"
+val scalacheckVersion      = "1.15.2"
 val scalatestVersion       = "3.2.3"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.18.0"
@@ -30,9 +30,9 @@ val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.10.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.3.6.RELEASE"
-val jacksonVersion         = "2.11.3"
-val hibernateVersion       = "6.1.6.Final"
+val springBootVersion      = "2.3.7.RELEASE"
+val jacksonVersion         = "2.11.4"
+val hibernateVersion       = "6.1.7.Final"
 val javaxElVersion         = "3.0.0"
 val vavrVersion            = "0.10.3"
 val dropwizardVavrVersion  = "1.3.0-4"
@@ -301,7 +301,7 @@ lazy val codegen = (project in file("modules/codegen"))
     libraryDependencies ++= testDependencies ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.1",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.23.0",
+      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.24",
       "org.tpolecat"                %% "atto-core"                    % "0.8.0",
