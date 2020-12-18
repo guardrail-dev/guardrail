@@ -58,7 +58,7 @@ object AsyncHttpClientClientGenerator {
     def doShow(tpe: Type)(implicit Ca: CollectionsAbstraction[JavaLanguage]): Expression = {
       import Ca._
       tpe match {
-        case cls: ClassOrInterfaceType if cls.isOptionalType || cls.isVectorType =>
+        case cls: ClassOrInterfaceType if cls.isOptionalType || cls.isListType =>
           doShow(cls.containedType)
         case _ =>
           new MethodCallExpr(
@@ -80,7 +80,7 @@ object AsyncHttpClientClientGenerator {
 
     val finalMethodName = if (needsMultipart) "addBodyPart" else builderMethodName
     val argName         = param.paramName.asString
-    val isArray         = param.argType.isVectorType
+    val isArray         = param.argType.isListType
 
     val makeArgList: String => NodeList[Expression] = name =>
       if (param.isFile) {

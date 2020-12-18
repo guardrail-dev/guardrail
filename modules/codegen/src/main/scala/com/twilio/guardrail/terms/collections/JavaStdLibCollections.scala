@@ -72,14 +72,14 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
       doMethodCall(fa.value, "orElseThrow", f.value)
   }
 
-  override implicit val vectorInstances: VectorF[JavaLanguage] = new VectorF[JavaLanguage] {
+  override implicit val listInstances: ListF[JavaLanguage] = new ListF[JavaLanguage] {
     override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(tpe)
     override def isType(tpe: Type): Boolean =
       isContainerOfType(tpe, "java.util", "List") ||
-        isContainerOfType(tpe, "java.util", "Vector")
+        isContainerOfType(tpe, "java.util", "List")
 
-    override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
+    override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[A]](
         new MethodCallExpr(
           new NameExpr("java.util.Collections"),
           "singletonList",
@@ -87,15 +87,15 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
         )
       )
 
-    override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
+    override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[A]](
         new MethodCallExpr(new NameExpr("java.util.Collections"), "emptyList")
       )
 
     override def filter[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Boolean]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
-      JavaStdLibTermHolder[Vector[A]](
+    )(fa: TermHolder[JavaLanguage, From, List[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      JavaStdLibTermHolder[List[A]](
         new MethodCallExpr(
           // If we already are a Stream, use it as-is.  Otherwise call stream()
           fa match {
@@ -109,7 +109,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
 
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       TermHolder[JavaLanguage, MethodCallExpr, Unit](
         new MethodCallExpr(
           // forEach() exists on both Stream and List; if we're already a Stream, stick with the Stream,
@@ -125,8 +125,8 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
 
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      JavaStdLibTermHolder[Vector[B]](
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, List[B]] =
+      JavaStdLibTermHolder[List[B]](
         new MethodCallExpr(
           // If we already are a Stream, use it as-is.  Otherwise call stream()
           fa match {
@@ -139,9 +139,9 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
       )
 
     override def flatMap[From <: Expression, A, B, Func <: Expression](
-        f: TermHolder[JavaLanguage, Func, A => Vector[B]]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      JavaStdLibTermHolder[Vector[B]](
+        f: TermHolder[JavaLanguage, Func, A => List[B]]
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, List[B]] =
+      JavaStdLibTermHolder[List[B]](
         new MethodCallExpr(
           // If we already are a Stream, use it as-is.  Otherwise call stream()
           fa match {
@@ -154,7 +154,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
       )
 
     override def toArray[From <: Expression, A](
-        fa: TermHolder[JavaLanguage, From, Vector[A]]
+        fa: TermHolder[JavaLanguage, From, List[A]]
     )(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Array[A]] =
       TermHolder[JavaLanguage, MethodCallExpr, Array[A]](
         fa match {

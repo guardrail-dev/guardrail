@@ -365,7 +365,7 @@ object DropwizardServerGenerator {
               }
 
               def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
-                if (!param.required && parameter.getType.containedType.isVectorType) {
+                if (!param.required && parameter.getType.containedType.isListType) {
                   parameter.setType(parameter.getType.containedType)
                 } else {
                   parameter

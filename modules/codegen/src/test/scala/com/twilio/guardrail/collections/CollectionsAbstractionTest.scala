@@ -44,12 +44,12 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
     fa.flatMap(f).map(f2).filter(f3).getOrElse(f4)
   }
 
-  def vectorPipeline(implicit Ca: CollectionsAbstraction[JavaLanguage]): TermHolder[JavaLanguage, MethodCallExpr, Vector[Int]] = {
+  def listPipeline(implicit Ca: CollectionsAbstraction[JavaLanguage]): TermHolder[JavaLanguage, MethodCallExpr, List[Int]] = {
     import Ca._
 
     val a = new IntegerLiteralExpr("5").lift[Int]
 
-    val fa = a.liftVector
+    val fa = a.liftList
 
     val f = new LambdaExpr(
       new Parameter(new UnknownType, "a"),
@@ -111,16 +111,16 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       import Ca._
 
       val optionalType  = StaticJavaParser.parseClassOrInterfaceType("java.util.Optional").setTypeArguments(PrimitiveType.intType.toBoxedType)
-      val vectorType    = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(PrimitiveType.intType.toBoxedType)
+      val listType      = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(PrimitiveType.intType.toBoxedType)
       val futureType    = StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(PrimitiveType.intType.toBoxedType)
       val exceptionType = StaticJavaParser.parseClassOrInterfaceType("Exception")
 
       optionalType.isOptionalType mustBe true
-      vectorType.isVectorType mustBe true
+      listType.isListType mustBe true
       futureType.isFutureType mustBe true
 
       exceptionType.isOptionalType mustBe false
-      exceptionType.isVectorType mustBe false
+      exceptionType.isListType mustBe false
       exceptionType.isFutureType mustBe false
     }
 
@@ -128,17 +128,17 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       optionalPipeline.value.toString mustBe "java.util.Optional.ofNullable(5).flatMap(a -> a >= 0 ? java.util.Optional.ofNullable(a) : java.util.Optional.empty()).map(a -> a + 1).filter(a -> a > 3).orElseGet(() -> 42)"
     }
 
-    "Vector pipelines should render" in {
-      vectorPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).collect(java.util.stream.Collectors.toList())"
+    "List pipelines should render" in {
+      listPipeline.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).collect(java.util.stream.Collectors.toList())"
     }
 
-    "Vector pipeline with toArray() should render" in {
+    "List pipeline with toArray() should render" in {
       import Ca._
 
-      vectorPipeline.toArray.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).toArray(Integer[]::new)"
+      listPipeline.toArray.value.toString mustBe "java.util.Collections.singletonList(5).stream().map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).toArray(Integer[]::new)"
 
-      val vectorOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftVector
-      vectorOfOneFive.toArray.value.toString mustBe "java.util.Collections.singletonList(5).toArray(new int[0])"
+      val listOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftList
+      listOfOneFive.toArray.value.toString mustBe "java.util.Collections.singletonList(5).toArray(new int[0])"
     }
 
     "Future pipelines should render" in {
@@ -177,16 +177,16 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       import Ca._
 
       val optionalType  = StaticJavaParser.parseClassOrInterfaceType("io.vavr.control.Option").setTypeArguments(PrimitiveType.intType.toBoxedType)
-      val vectorType    = StaticJavaParser.parseClassOrInterfaceType("io.vavr.collection.Vector").setTypeArguments(PrimitiveType.intType.toBoxedType)
+      val listType      = StaticJavaParser.parseClassOrInterfaceType("io.vavr.collection.Vector").setTypeArguments(PrimitiveType.intType.toBoxedType)
       val futureType    = StaticJavaParser.parseClassOrInterfaceType("io.vavr.concurrent.Future").setTypeArguments(PrimitiveType.intType.toBoxedType)
       val exceptionType = StaticJavaParser.parseClassOrInterfaceType("Exception")
 
       optionalType.isOptionalType mustBe true
-      vectorType.isVectorType mustBe true
+      listType.isListType mustBe true
       futureType.isFutureType mustBe true
 
       exceptionType.isOptionalType mustBe false
-      exceptionType.isVectorType mustBe false
+      exceptionType.isListType mustBe false
       exceptionType.isFutureType mustBe false
     }
 
@@ -194,17 +194,17 @@ class CollectionsAbstractionTest extends AnyFreeSpec with Matchers {
       optionalPipeline.value.toString mustBe "io.vavr.control.Option.of(5).flatMap(a -> a >= 0 ? io.vavr.control.Option.of(a) : io.vavr.control.Option.none()).map(a -> a + 1).filter(a -> a > 3).getOrElse(() -> 42)"
     }
 
-    "Vector pipelines should render" in {
-      vectorPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3)"
+    "List pipelines should render" in {
+      listPipeline.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3)"
     }
 
-    "Vector pipeline with toArray() should render" in {
+    "List pipeline with toArray() should render" in {
       import Ca._
 
-      vectorPipeline.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).asJava().toArray(new int[0])"
+      listPipeline.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).map(a -> a + 1).map(a -> a * 5).filter(a -> a > 3).asJava().toArray(new int[0])"
 
-      val vectorOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftVector
-      vectorOfOneFive.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).asJava().toArray(new int[0])"
+      val listOfOneFive = new IntegerLiteralExpr("5").lift[Int].liftList
+      listOfOneFive.toArray.value.toString mustBe "io.vavr.collection.Vector.of(5).asJava().toArray(new int[0])"
     }
 
     "Future pipelines should render" in {

@@ -52,7 +52,7 @@ trait MonadFSyntax[L <: LA] {
 
   implicit class TermHolderExpressionSyntaxMonadF[From <: L#Expression, A](fa: TermHolder[L, From, A]) {
     def liftOptional(implicit ev: MonadF[L, Option]): TermHolder[L, L#Apply, Option[A]]  = ev.pure(fa)
-    def liftVector(implicit ev: MonadF[L, Vector]): TermHolder[L, L#Apply, Vector[A]]    = ev.pure(fa)
+    def liftList(implicit ev: MonadF[L, List]): TermHolder[L, L#Apply, List[A]]          = ev.pure(fa)
     def liftMap(implicit ev: MonadF[L, StringMap]): TermHolder[L, L#Apply, StringMap[A]] = ev.pure(fa)
     def liftFuture(implicit ev: MonadF[L, Future]): TermHolder[L, L#Apply, Future[A]]    = ev.pure(fa)
   }
@@ -74,16 +74,16 @@ trait EmptyF[L <: LA, F[_]] {
 
 trait EmptyFBuilders[L <: LA] {
   def emptyOptional[A](implicit ev: EmptyF[L, Option]): TermHolder[L, L#Apply, Option[A]]  = ev.empty
-  def emptyVector[A](implicit ev: EmptyF[L, Vector]): TermHolder[L, L#Apply, Vector[A]]    = ev.empty
+  def emptyList[A](implicit ev: EmptyF[L, List]): TermHolder[L, L#Apply, List[A]]          = ev.empty
   def emptyMap[A](implicit ev: EmptyF[L, StringMap]): TermHolder[L, L#Apply, StringMap[A]] = ev.empty
 }
 
-trait VectorF[L <: LA] extends MonadF[L, Vector] with EmptyF[L, Vector] with ToArrayF[L, Vector]
+trait ListF[L <: LA] extends MonadF[L, List] with EmptyF[L, List] with ToArrayF[L, List]
 
-trait VectorFSyntax[L <: LA] {
-  implicit class VectorTypeSyntaxMonadF(tpe: L#Type)(implicit ev: VectorF[L]) {
-    def liftVectorType: L#Type = ev.liftType(tpe)
-    def isVectorType: Boolean  = ev.isType(tpe)
+trait ListFSyntax[L <: LA] {
+  implicit class ListTypeSyntaxMonadF(tpe: L#Type)(implicit ev: ListF[L]) {
+    def liftListType: L#Type = ev.liftType(tpe)
+    def isListType: Boolean  = ev.isType(tpe)
   }
 }
 
@@ -146,7 +146,7 @@ trait FutureFSyntax[L <: LA] {
 trait CollectionsAbstractionSyntax[L <: LA]
     extends MonadFSyntax[L]
     with ToArrayFSyntax[L]
-    with VectorFSyntax[L]
+    with ListFSyntax[L]
     with OptionFSyntax[L]
     with FutureFSyntax[L]
     with EmptyFBuilders[L] {
@@ -157,16 +157,16 @@ trait CollectionsAbstractionSyntax[L <: LA]
 
 trait CollectionsAbstraction[L <: LA] extends CollectionsAbstractionSyntax[L] {
   implicit def optionInstances: OptionF[L]
-  implicit def vectorInstances: VectorF[L]
+  implicit def listInstances: ListF[L]
   implicit def futureInstances: FutureF[L]
 
   def copy(
       newOptionInstances: OptionF[L] = optionInstances,
-      newVectorInstances: VectorF[L] = vectorInstances,
+      newListInstances: ListF[L] = listInstances,
       newFutureInstances: FutureF[L] = futureInstances
   ): CollectionsAbstraction[L] = new CollectionsAbstraction[L] {
     override implicit def optionInstances: OptionF[L] = newOptionInstances
-    override implicit def vectorInstances: VectorF[L] = newVectorInstances
+    override implicit def listInstances: ListF[L]     = newListInstances
     override implicit def futureInstances: FutureF[L] = newFutureInstances
   }
 }
