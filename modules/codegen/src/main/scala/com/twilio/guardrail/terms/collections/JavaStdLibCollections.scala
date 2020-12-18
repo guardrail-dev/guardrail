@@ -2,17 +2,30 @@ package com.twilio.guardrail.terms.collections
 
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.finalModifier
-import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.`type`.{ PrimitiveType, Type, UnknownType }
+import com.github.javaparser.ast.`type`.{ ArrayType, Type, UnknownType }
 import com.github.javaparser.ast.body.{ Parameter, VariableDeclarator }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
+import com.github.javaparser.ast.{ ArrayCreationLevel, NodeList }
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers._
+import com.twilio.guardrail.terms.collections.JavaStdLibCollectionsHelpers.JavaStdLibTermHolder
+
 import java.util.concurrent.CompletionStage
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.reflect.ClassTag
+
+object JavaStdLibCollectionsHelpers {
+  // This exists because the Java stdlib collections do not have operations like map and flatMap on
+  // the collections class itself.  You must call stream() first, and then when you want a collection
+  // back, call collect().  What we want to do is call stream() the first time a "monadic" operation is
+  // called, and not call it again until we want to pull the collection "out" of the term holder.  So
+  // _value will be the Stream instance, and value will return a collected List instance.
+  case class JavaStdLibTermHolder[HeldType](_value: MethodCallExpr) extends TermHolder[JavaLanguage, MethodCallExpr, HeldType](_value) {
+    override lazy val value: MethodCallExpr = doCollect(_value)
+  }
+}
 
 trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
   override implicit val optionInstances: OptionF[JavaLanguage] = new OptionF[JavaLanguage] {
@@ -24,6 +37,11 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
 
     override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, Option[A]] =
       TermHolder[JavaLanguage, MethodCallExpr, Option[A]](new MethodCallExpr(new NameExpr("java.util.Optional"), "empty"))
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Option[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Option[A]] =
+      doMethodCall(fa.value, "filter", f.value)
 
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
@@ -54,14 +72,14 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
       doMethodCall(fa.value, "orElseThrow", f.value)
   }
 
-  override implicit val vectorInstances: MonadF[JavaLanguage, Vector] = new MonadF[JavaLanguage, Vector] {
+  override implicit val listInstances: ListF[JavaLanguage] = new ListF[JavaLanguage] {
     override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(tpe)
     override def isType(tpe: Type): Boolean =
       isContainerOfType(tpe, "java.util", "List") ||
-        isContainerOfType(tpe, "java.util", "Vector")
+        isContainerOfType(tpe, "java.util", "List")
 
-    override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
+    override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[A]](
         new MethodCallExpr(
           new NameExpr("java.util.Collections"),
           "singletonList",
@@ -69,43 +87,92 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
         )
       )
 
+    override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[A]](
+        new MethodCallExpr(new NameExpr("java.util.Collections"), "emptyList")
+      )
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, List[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      JavaStdLibTermHolder[List[A]](
+        new MethodCallExpr(
+          // If we already are a Stream, use it as-is.  Otherwise call stream()
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => wrapStream(th.value)
+          },
+          "filter",
+          new NodeList[Expression](f.value)
+        )
+      )
+
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       TermHolder[JavaLanguage, MethodCallExpr, Unit](
         new MethodCallExpr(
-          fa.value,
+          // forEach() exists on both Stream and List; if we're already a Stream, stick with the Stream,
+          // as converting to a List is unnecessary and expensive.
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => th.value
+          },
           "forEach",
           new NodeList[Expression](f.value)
         )
       )
 
-    // FIXME: wrapStream() and doCollect() are likely inefficient if more operations will be done
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[B]](
-        doCollect(
-          new MethodCallExpr(
-            wrapStream(fa.value),
-            "map",
-            new NodeList[Expression](f.value)
-          )
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, List[B]] =
+      JavaStdLibTermHolder[List[B]](
+        new MethodCallExpr(
+          // If we already are a Stream, use it as-is.  Otherwise call stream()
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => wrapStream(th.value)
+          },
+          "map",
+          new NodeList[Expression](f.value)
         )
       )
 
-    // FIXME: wrapStream() and doCollect() are likely inefficient if more operations will be done
     override def flatMap[From <: Expression, A, B, Func <: Expression](
-        f: TermHolder[JavaLanguage, Func, A => Vector[B]]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[B]](
-        doCollect(
-          new MethodCallExpr(
-            wrapStream(fa.value),
-            "flatMap",
-            new NodeList[Expression](f.value)
-          )
+        f: TermHolder[JavaLanguage, Func, A => List[B]]
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, List[B]] =
+      JavaStdLibTermHolder[List[B]](
+        new MethodCallExpr(
+          // If we already are a Stream, use it as-is.  Otherwise call stream()
+          fa match {
+            case jslth: JavaStdLibTermHolder[_] => jslth._value
+            case th                             => wrapStream(th.value)
+          },
+          "flatMap",
+          new NodeList[Expression](f.value)
         )
+      )
+
+    override def toArray[From <: Expression, A](
+        fa: TermHolder[JavaLanguage, From, List[A]]
+    )(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Array[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, Array[A]](
+        fa match {
+          case jslth: JavaStdLibTermHolder[_] =>
+            val resultType = typeFromClass(clsA.runtimeClass)
+            new MethodCallExpr(
+              jslth._value,
+              "toArray",
+              new NodeList[Expression](new MethodReferenceExpr(new TypeExpr(new ArrayType(resultType)), null, "new"))
+            )
+          case th =>
+            val resultType = typeFromClass(clsA.runtimeClass, boxPrimitives = false)
+            new MethodCallExpr(
+              th.value,
+              "toArray",
+              new NodeList[Expression](new ArrayCreationExpr(resultType, new NodeList(new ArrayCreationLevel(new IntegerLiteralExpr("0"))), null))
+            )
+        }
       )
   }
 
@@ -117,6 +184,56 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
 
     override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, Future[A]] =
       doMethodCall(new NameExpr("java.util.concurrent.CompletableFuture"), "completedFuture", fa.value)
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Future[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Future[A]] = {
+      val resultType                 = typeFromClass(clsA.runtimeClass)
+      val predicateResultType        = StaticJavaParser.parseClassOrInterfaceType("java.util.function.Predicate").setTypeArguments(resultType)
+      val noSuchElementExceptionType = StaticJavaParser.parseClassOrInterfaceType("NoSuchElementException")
+      TermHolder[JavaLanguage, MethodCallExpr, Future[A]](
+        new MethodCallExpr(
+          fa.value,
+          "thenCompose",
+          new NodeList[Expression](
+            new LambdaExpr(
+              new Parameter(new UnknownType, "_result"),
+              new BlockStmt(
+                new NodeList(
+                  new IfStmt(
+                    new MethodCallExpr(
+                      new EnclosedExpr(new CastExpr(predicateResultType, f.value)),
+                      "test",
+                      new NodeList[Expression](new NameExpr("_result"))
+                    ),
+                    new BlockStmt(
+                      new NodeList(
+                        new ReturnStmt(pure(TermHolder[JavaLanguage, NameExpr, A](new NameExpr("_result"))).value)
+                      )
+                    ),
+                    new BlockStmt(
+                      new NodeList(
+                        new ReturnStmt(
+                          failedFuture(
+                            TermHolder[JavaLanguage, ObjectCreationExpr, NoSuchElementException](
+                              new ObjectCreationExpr(
+                                null,
+                                noSuchElementExceptionType,
+                                new NodeList[Expression](new StringLiteralExpr("Filter predicate did not match"))
+                              )
+                            )
+                          ).value
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    }
 
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
@@ -268,19 +385,6 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
         (new BlockStmt(new NodeList(new ExpressionStmt(other))), fallbackParamName)
     }
   }
-
-  private def typeFromClass(cls: Class[_]): Type = cls match {
-    case java.lang.Boolean.TYPE   => PrimitiveType.booleanType.toBoxedType
-    case java.lang.Byte.TYPE      => PrimitiveType.byteType.toBoxedType
-    case java.lang.Character.TYPE => PrimitiveType.charType.toBoxedType
-    case java.lang.Short.TYPE     => PrimitiveType.shortType.toBoxedType
-    case java.lang.Integer.TYPE   => PrimitiveType.intType.toBoxedType
-    case java.lang.Long.TYPE      => PrimitiveType.longType.toBoxedType
-    case java.lang.Float.TYPE     => PrimitiveType.floatType.toBoxedType
-    case java.lang.Double.TYPE    => PrimitiveType.doubleType.toBoxedType
-    case other                    => StaticJavaParser.parseClassOrInterfaceType(other.getName)
-  }
-
 }
 
 object JavaStdLibCollections extends JavaStdLibCollections

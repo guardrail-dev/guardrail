@@ -6,9 +6,22 @@ import java.util.concurrent.CompletionStage
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-case class TermHolder[L <: LA, +A, HeldType](value: A)
+class TermHolder[L <: LA, +A, HeldType](_value: A) {
+  def value: A = _value
+
+  override def equals(obj: Any): Boolean = Option(obj) match {
+    case Some(other: TermHolder[_, _, _]) => value.equals(other.value)
+    case _                                => false
+  }
+  override def hashCode(): Int  = value.hashCode()
+  override def toString: String = value.toString
+}
+
 object TermHolder {
   type StringMap[A] = Map[String, A]
+
+  def apply[L <: LA, A, HeldType](value: A): TermHolder[L, A, HeldType] = new TermHolder[L, A, HeldType](value)
+  def unapply[A](th: TermHolder[_, A, _]): Option[A]                    = Some(th.value)
 
   final private[collections] class TermHolderPartiallyApplied[L <: LA, HeldType] private[TermHolder] (private val dummy: Boolean = true) extends AnyVal {
     def apply[A <: L#Expression](fa: A): TermHolder[L, A, HeldType] = TermHolder[L, A, HeldType](fa)
@@ -21,13 +34,17 @@ trait MonadF[L <: LA, F[_]] {
   def liftType(tpe: L#Type): L#Type
   def isType(tpe: L#Type): Boolean
   def pure[From <: L#Expression, A](fa: TermHolder[L, From, A]): TermHolder[L, L#Apply, F[A]]
+  def filter[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Boolean])(fa: TermHolder[L, From, F[A]])(
+      implicit clsA: ClassTag[A]
+  ): TermHolder[L, L#Apply, F[A]]
   def foreach[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Unit])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, Unit]
   def map[From <: L#Expression, A, B, Func <: L#Expression](f: TermHolder[L, Func, A => B])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, F[B]]
   def flatMap[From <: L#Expression, A, B, Func <: L#Expression](f: TermHolder[L, Func, A => F[B]])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, F[B]]
 }
 
 trait MonadFSyntax[L <: LA] {
-  implicit class TermHolderSyntaxMonadF[From <: L#Expression, F[_], A](fa: TermHolder[L, From, F[A]])(implicit ev: MonadF[L, F]) {
+  implicit class TermHolderSyntaxMonadF[From <: L#Expression, F[_], A: ClassTag](fa: TermHolder[L, From, F[A]])(implicit ev: MonadF[L, F]) {
+    def filter[Func <: L#Expression](f: TermHolder[L, Func, A => Boolean]): TermHolder[L, L#Apply, F[A]]  = ev.filter(f)(fa)
     def foreach[Func <: L#Expression](f: TermHolder[L, Func, A => Unit]): TermHolder[L, L#Apply, Unit]    = ev.foreach(f)(fa)
     def map[Func <: L#Expression, B](f: TermHolder[L, Func, A => B]): TermHolder[L, L#Apply, F[B]]        = ev.map(f)(fa)
     def flatMap[Func <: L#Expression, B](f: TermHolder[L, Func, A => F[B]]): TermHolder[L, L#Apply, F[B]] = ev.flatMap(f)(fa)
@@ -35,16 +52,19 @@ trait MonadFSyntax[L <: LA] {
 
   implicit class TermHolderExpressionSyntaxMonadF[From <: L#Expression, A](fa: TermHolder[L, From, A]) {
     def liftOptional(implicit ev: MonadF[L, Option]): TermHolder[L, L#Apply, Option[A]]  = ev.pure(fa)
-    def liftVector(implicit ev: MonadF[L, Vector]): TermHolder[L, L#Apply, Vector[A]]    = ev.pure(fa)
+    def liftList(implicit ev: MonadF[L, List]): TermHolder[L, L#Apply, List[A]]          = ev.pure(fa)
     def liftMap(implicit ev: MonadF[L, StringMap]): TermHolder[L, L#Apply, StringMap[A]] = ev.pure(fa)
     def liftFuture(implicit ev: MonadF[L, Future]): TermHolder[L, L#Apply, Future[A]]    = ev.pure(fa)
   }
 }
 
-trait VectorFSyntax[L <: LA] {
-  implicit class VectorTypeSyntaxMonadF(tpe: L#Type)(implicit ev: MonadF[L, Vector]) {
-    def liftVectorType: L#Type = ev.liftType(tpe)
-    def isVectorType: Boolean  = ev.isType(tpe)
+trait ToArrayF[L <: LA, F[_]] {
+  def toArray[From <: L#Expression, A](fa: TermHolder[L, From, F[A]])(implicit clsA: ClassTag[A]): TermHolder[L, L#Apply, Array[A]]
+}
+
+trait ToArrayFSyntax[L <: LA] {
+  implicit class TermHolderSyntaxToArrayF[From <: L#Expression, F[_], A: ClassTag](fa: TermHolder[L, From, F[A]])(implicit ev: ToArrayF[L, F]) {
+    def toArray: TermHolder[L, L#Apply, Array[A]] = ev.toArray(fa)
   }
 }
 
@@ -54,8 +74,17 @@ trait EmptyF[L <: LA, F[_]] {
 
 trait EmptyFBuilders[L <: LA] {
   def emptyOptional[A](implicit ev: EmptyF[L, Option]): TermHolder[L, L#Apply, Option[A]]  = ev.empty
-  def emptyVector[A](implicit ev: EmptyF[L, Vector]): TermHolder[L, L#Apply, Vector[A]]    = ev.empty
+  def emptyList[A](implicit ev: EmptyF[L, List]): TermHolder[L, L#Apply, List[A]]          = ev.empty
   def emptyMap[A](implicit ev: EmptyF[L, StringMap]): TermHolder[L, L#Apply, StringMap[A]] = ev.empty
+}
+
+trait ListF[L <: LA] extends MonadF[L, List] with EmptyF[L, List] with ToArrayF[L, List]
+
+trait ListFSyntax[L <: LA] {
+  implicit class ListTypeSyntaxMonadF(tpe: L#Type)(implicit ev: ListF[L]) {
+    def liftListType: L#Type = ev.liftType(tpe)
+    def isListType: Boolean  = ev.isType(tpe)
+  }
 }
 
 trait OptionF[L <: LA] extends MonadF[L, Option] with EmptyF[L, Option] {
@@ -114,7 +143,13 @@ trait FutureFSyntax[L <: LA] {
   }
 }
 
-trait CollectionsAbstractionSyntax[L <: LA] extends MonadFSyntax[L] with VectorFSyntax[L] with OptionFSyntax[L] with FutureFSyntax[L] with EmptyFBuilders[L] {
+trait CollectionsAbstractionSyntax[L <: LA]
+    extends MonadFSyntax[L]
+    with ToArrayFSyntax[L]
+    with ListFSyntax[L]
+    with OptionFSyntax[L]
+    with FutureFSyntax[L]
+    with EmptyFBuilders[L] {
   implicit class ExpressionLiftSyntax[From <: L#Expression](a: From) {
     def lift[HeldType]: TermHolder[L, From, HeldType] = TermHolder.lift[L, HeldType](a)
   }
@@ -122,16 +157,16 @@ trait CollectionsAbstractionSyntax[L <: LA] extends MonadFSyntax[L] with VectorF
 
 trait CollectionsAbstraction[L <: LA] extends CollectionsAbstractionSyntax[L] {
   implicit def optionInstances: OptionF[L]
-  implicit def vectorInstances: MonadF[L, Vector]
+  implicit def listInstances: ListF[L]
   implicit def futureInstances: FutureF[L]
 
   def copy(
       newOptionInstances: OptionF[L] = optionInstances,
-      newVectorInstances: MonadF[L, Vector] = vectorInstances,
+      newListInstances: ListF[L] = listInstances,
       newFutureInstances: FutureF[L] = futureInstances
   ): CollectionsAbstraction[L] = new CollectionsAbstraction[L] {
-    override implicit def optionInstances: OptionF[L]        = newOptionInstances
-    override implicit def vectorInstances: MonadF[L, Vector] = newVectorInstances
-    override implicit def futureInstances: FutureF[L]        = newFutureInstances
+    override implicit def optionInstances: OptionF[L] = newOptionInstances
+    override implicit def listInstances: ListF[L]     = newListInstances
+    override implicit def futureInstances: FutureF[L] = newFutureInstances
   }
 }

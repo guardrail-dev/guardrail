@@ -1,9 +1,11 @@
 package com.twilio.guardrail.terms.collections
 
+import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.expr.{ Expression, MethodCallExpr, NameExpr }
 import com.twilio.guardrail.languages.JavaLanguage
+
 import scala.compat.java8.OptionConverters._
 
 object JavaCollectionsHelpers {
@@ -13,6 +15,22 @@ object JavaCollectionsHelpers {
       cls.getNameAsString == containerClsName && (tpeScope.isEmpty || tpeScope.map(_.asString).contains(containerClsScope))
     case _ => false
   }
+
+  private[collections] def typeFromClass(cls: Class[_], boxPrimitives: Boolean = true): Type =
+    (cls match {
+      case java.lang.Boolean.TYPE   => PrimitiveType.booleanType
+      case java.lang.Byte.TYPE      => PrimitiveType.byteType
+      case java.lang.Character.TYPE => PrimitiveType.charType
+      case java.lang.Short.TYPE     => PrimitiveType.shortType
+      case java.lang.Integer.TYPE   => PrimitiveType.intType
+      case java.lang.Long.TYPE      => PrimitiveType.longType
+      case java.lang.Float.TYPE     => PrimitiveType.floatType
+      case java.lang.Double.TYPE    => PrimitiveType.doubleType
+      case other                    => StaticJavaParser.parseClassOrInterfaceType(other.getName)
+    }) match {
+      case pt: PrimitiveType if boxPrimitives => pt.toBoxedType
+      case other                              => other
+    }
 
   private[collections] def doMethodCall[A](callee: Expression, methodName: String, argument: Expression): TermHolder[JavaLanguage, MethodCallExpr, A] =
     TermHolder[JavaLanguage, MethodCallExpr, A](

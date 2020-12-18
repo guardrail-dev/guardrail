@@ -1,11 +1,11 @@
 package com.twilio.guardrail.terms.collections
 
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.{ ArrayCreationLevel, NodeList }
 import com.github.javaparser.ast.`type`.Type
-import com.github.javaparser.ast.expr.{ Expression, MethodCallExpr, NameExpr }
+import com.github.javaparser.ast.expr.{ ArrayCreationExpr, Expression, IntegerLiteralExpr, MethodCallExpr, NameExpr }
 import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers.{ doMethodCall, isContainerOfType }
+import com.twilio.guardrail.terms.collections.JavaCollectionsHelpers.{ doMethodCall, isContainerOfType, typeFromClass }
 
 import java.util.concurrent.CompletionStage
 import scala.concurrent.Future
@@ -26,6 +26,11 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
         f: TermHolder[JavaLanguage, Func, A => Unit]
     )(fa: TermHolder[JavaLanguage, From, Option[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       doMethodCall(fa.value, "forEach", f.value)
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Option[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Option[A]] =
+      doMethodCall(fa.value, "filter", f.value)
 
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
@@ -51,16 +56,16 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
       doMethodCall(fa.value, "getOrElseThrow", f.value)
   }
 
-  override implicit val vectorInstances: MonadF[JavaLanguage, Vector] = new MonadF[JavaLanguage, Vector] {
+  override implicit val listInstances: ListF[JavaLanguage] = new ListF[JavaLanguage] {
     override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("io.vavr.collection.Vector").setTypeArguments(tpe)
 
     override def isType(tpe: Type): Boolean =
       isContainerOfType(tpe, "io.vavr.collection", "Vector") ||
-        isContainerOfType(tpe, "io.vavr.collection", "Vector") ||
+        isContainerOfType(tpe, "io.vavr.collection", "List") ||
         isContainerOfType(tpe, "io.vavr.collection", "Seq")
 
-    override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, Vector[A]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[A]](
+    override def pure[From <: Expression, A](fa: TermHolder[JavaLanguage, From, A]): TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[A]](
         new MethodCallExpr(
           new NameExpr("io.vavr.collection.Vector"),
           "of",
@@ -68,9 +73,14 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
         )
       )
 
+    override def empty[A]: TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[A]](
+        new MethodCallExpr(new NameExpr("List"), "empty")
+      )
+
     override def foreach[From <: Expression, A, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => Unit]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       TermHolder[JavaLanguage, MethodCallExpr, Unit](
         new MethodCallExpr(
           fa.value,
@@ -79,10 +89,15 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
         )
       )
 
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, List[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, List[A]] =
+      doMethodCall(fa.value, "filter", f.value)
+
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[B]](
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, List[B]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[B]](
         new MethodCallExpr(
           fa.value,
           "map",
@@ -91,15 +106,31 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
       )
 
     override def flatMap[From <: Expression, A, B, Func <: Expression](
-        f: TermHolder[JavaLanguage, Func, A => Vector[B]]
-    )(fa: TermHolder[JavaLanguage, From, Vector[A]]): TermHolder[JavaLanguage, MethodCallExpr, Vector[B]] =
-      TermHolder[JavaLanguage, MethodCallExpr, Vector[B]](
+        f: TermHolder[JavaLanguage, Func, A => List[B]]
+    )(fa: TermHolder[JavaLanguage, From, List[A]]): TermHolder[JavaLanguage, MethodCallExpr, List[B]] =
+      TermHolder[JavaLanguage, MethodCallExpr, List[B]](
         new MethodCallExpr(
           fa.value,
           "flatMap",
           new NodeList[Expression](f.value)
         )
       )
+
+    override def toArray[From <: Expression, A](
+        fa: TermHolder[JavaLanguage, From, List[A]]
+    )(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Array[A]] = {
+      val resultType = typeFromClass(clsA.runtimeClass, boxPrimitives = false)
+      TermHolder[JavaLanguage, MethodCallExpr, Array[A]](
+        new MethodCallExpr(
+          new MethodCallExpr(
+            fa.value,
+            "asJava"
+          ),
+          "toArray",
+          new NodeList[Expression](new ArrayCreationExpr(resultType, new NodeList(new ArrayCreationLevel(new IntegerLiteralExpr("0"))), null))
+        )
+      )
+    }
   }
 
   override implicit val futureInstances: FutureF[JavaLanguage] = new FutureF[JavaLanguage] {
@@ -113,6 +144,11 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
         f: TermHolder[JavaLanguage, Func, A => Unit]
     )(fa: TermHolder[JavaLanguage, From, Future[A]]): TermHolder[JavaLanguage, MethodCallExpr, Unit] =
       doMethodCall(fa.value, "onSuccess", f.value)
+
+    override def filter[From <: Expression, A, Func <: Expression](
+        f: TermHolder[JavaLanguage, Func, A => Boolean]
+    )(fa: TermHolder[JavaLanguage, From, Future[A]])(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, MethodCallExpr, Future[A]] =
+      doMethodCall(fa.value, "filter", f.value)
 
     override def map[From <: Expression, A, B, Func <: Expression](
         f: TermHolder[JavaLanguage, Func, A => B]
