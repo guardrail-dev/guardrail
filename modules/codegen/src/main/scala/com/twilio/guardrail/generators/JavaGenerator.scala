@@ -32,22 +32,21 @@ object JavaGenerator {
   def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] =
     safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
 
-  private val formatter = ToolFactory.createCodeFormatter(
-    Map(
-      JavaCore.COMPILER_SOURCE                                                     -> JavaCore.VERSION_1_8,
-      JavaCore.COMPILER_COMPLIANCE                                                 -> JavaCore.VERSION_1_8,
-      JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM                                    -> JavaCore.VERSION_1_8,
-      DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR                             -> JavaCore.SPACE,
-      DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE                             -> "4",
-      DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_CASE    -> DefaultCodeFormatterConstants.FALSE,
-      DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_DEFAULT -> DefaultCodeFormatterConstants.FALSE
-    ).asJava
-  )
+  private val FORMATTER_OPTIONS = Map(
+    JavaCore.COMPILER_SOURCE                                                     -> JavaCore.VERSION_1_8,
+    JavaCore.COMPILER_COMPLIANCE                                                 -> JavaCore.VERSION_1_8,
+    JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM                                    -> JavaCore.VERSION_1_8,
+    DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR                             -> JavaCore.SPACE,
+    DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE                             -> "4",
+    DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_CASE    -> DefaultCodeFormatterConstants.FALSE,
+    DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_DEFAULT -> DefaultCodeFormatterConstants.FALSE
+  ).asJava
 
   def prettyPrintSource(source: CompilationUnit): Target[Future[Array[Byte]]] = {
     val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
     val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
     val sourceStr = source.toString
+    val formatter = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
     Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
       .fold(
         Target.raiseUserError[Future[Array[Byte]]](s"Failed to format class '$className'")
