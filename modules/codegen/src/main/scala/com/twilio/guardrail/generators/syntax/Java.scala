@@ -219,11 +219,14 @@ object Java {
     "new",
     "null",
     "package",
+    "permits",
     "private",
     "protected",
     "public",
+    "record",
     "requires",
     "return",
+    "sealed",
     "short",
     "static",
     "strictfp",
@@ -239,7 +242,8 @@ object Java {
     "var",
     "void",
     "volatile",
-    "while"
+    "while",
+    "yield"
   )
 
   implicit class RichJavaString(private val s: String) extends AnyVal {

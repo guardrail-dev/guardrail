@@ -13,6 +13,8 @@ object JavaSyntaxTest {
     "public",
     "if",
     "else",
+    "enum",
+    "record",
     "throw"
   )
 
@@ -39,7 +41,8 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
         "monkey",
         "cheese",
         "blah-moo",
-        "aasdad2"
+        "aasdad2",
+        "record123"
       ).foreach({ word =>
         word.escapeReservedWord shouldBe word
       })
