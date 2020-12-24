@@ -5,7 +5,6 @@ name := projectName
 organization in ThisBuild := "com.twilio"
 licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
 // Project version is determined by sbt-git based on the most recent tag
-// Publishing information is defined in `bintray.sbt`
 
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
@@ -217,10 +216,6 @@ addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scala
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
-  "publishBintray",
-  "; set publishTo in codegen := (publishTo in bintray in codegen).value; codegen/publish"
-)
-addCommandAlias(
   "publishSonatype",
   "; set publishTo in codegen := (sonatypePublishToBundle in codegen).value; codegen/publish"
 )
@@ -315,15 +310,6 @@ lazy val codegen = (project in file("modules/codegen"))
       "-language:higherKinds",
       "-Ywarn-unused-import",
       "-Xlint:_,-missing-interpolator"
-    ),
-    bintrayRepository := {
-      if (isSnapshot.value) "snapshots"
-      else "releases"
-    },
-    bintrayPackageLabels := Seq(
-      "codegen",
-      "openapi",
-      "swagger"
     ),
     description := "Principled code generation for Scala services from OpenAPI specifications",
     homepage := Some(url("https://github.com/twilio/guardrail")),
