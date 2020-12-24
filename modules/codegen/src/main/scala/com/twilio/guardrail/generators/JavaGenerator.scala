@@ -42,25 +42,31 @@ object JavaGenerator {
     DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_DEFAULT -> DefaultCodeFormatterConstants.FALSE
   ).asJava
 
-  def prettyPrintSource(path: Path, source: CompilationUnit): Target[WriteTree] = {
-    val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
-    val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
-    val sourceStr = source.toString
-    val formatter = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
-    Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
-      .fold(
-        Target.raiseUserError[WriteTree](s"Failed to format class '$className'")
-      )({ textEdit =>
-        val doc = new Document(sourceStr)
-        Try(textEdit.apply(doc)).fold(
-          t => Target.raiseUserError[WriteTree](s"Failed to format class '$className': $t"),
-          _ =>
-            Target.pure(WriteTree(path, Future {
-              doc.get.getBytes(StandardCharsets.UTF_8)
-            }))
-        )
-      })
-  }
+  def prettyPrintSource(path: Path, source: CompilationUnit): Target[WriteTree] =
+    Target.pure(
+      WriteTree(
+        path, {
+          val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
+          val sourceStr = source.toString
+          Future {
+            val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
+            val formatter = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
+            val result: Either[Option[Throwable], Array[Byte]] = for {
+              textEdit <- Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n")).toRight(None)
+              doc = new Document(sourceStr)
+              _ <- Try(textEdit.apply(doc)).toEither.leftMap(Some(_))
+            } yield doc.get.getBytes(StandardCharsets.UTF_8)
+            result
+              .fold(
+                _.fold(throw new Exception(s"Failed to format class '$className'")) { t =>
+                  throw new Exception(s"Failed to format class '$className': $t")
+                },
+                identity _
+              )
+          }
+        }
+      )
+    )
 
   def writeClientTree(
       pkgPath: Path,
