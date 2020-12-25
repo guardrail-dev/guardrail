@@ -476,6 +476,9 @@ lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependen
   .settings(javaSampleSettings)
 
 lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
+  .settings(
+    skip in publish := true
+  )
   .enablePlugins(ScalaJSPlugin)
   .settings(
     libraryDependencies ++= Seq(
@@ -513,6 +516,9 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
   )
 
 lazy val microsite = (project in file("modules/microsite"))
+  .settings(
+    skip in publish := true
+  )
   .dependsOn(codegen)
   .settings(
     addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
