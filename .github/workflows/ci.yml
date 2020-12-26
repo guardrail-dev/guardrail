@@ -27,7 +27,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage checkFormatting testSuite codegen/coverageReport
+      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage checkFormatting codegen/test runtimeSuite codegen/coverageReport
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
