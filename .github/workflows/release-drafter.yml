@@ -1,0 +1,16 @@
+name: Release Drafter
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish:
+    name: Publish release
+    needs: []
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: release-drafter/release-drafter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
