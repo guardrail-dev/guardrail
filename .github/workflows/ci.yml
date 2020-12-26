@@ -6,7 +6,33 @@ on:
       - master
 
 jobs:
-  build:
+  core:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '15' ]
+        scala: [ '2.12.12' ]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{ matrix.java }}
+    - name: print Java version
+      run: java -version
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cache/coursier
+        key: ${{ runner.os }}-scala-${{ matrix.scala }}-${{ hashFiles('**/*.sbt') }}
+        restore-keys: |
+          ${{ runner.os }}-scala-${{ matrix.scala }}-
+    - name: Run tests
+      run:  sbt ++${{ matrix.scala }} clean codegen/clean checkFormatting coverage codegen/test codegen/coverageReport
+    - uses: codecov/codecov-action@v1
+      with:
+        file: ./modules/codegen/target/scala-2.12/scoverage-report/scoverage.xml
+        fail_ci_if_error: true
+  java:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,7 +53,34 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage checkFormatting codegen/test runtimeSuite codegen/coverageReport
+      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage runtimeJavaSuite codegen/coverageReport
+    - uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./modules/codegen/target/scala-2.12/scoverage-report/scoverage.xml
+        fail_ci_if_error: true
+  scala:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '15' ]
+        scala: [ '2.12.12' ]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{ matrix.java }}
+    - name: print Java version
+      run: java -version
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cache/coursier
+        key: ${{ runner.os }}-scala-${{ matrix.scala }}-${{ hashFiles('**/*.sbt') }}
+        restore-keys: |
+          ${{ runner.os }}-scala-${{ matrix.scala }}-
+    - name: Run tests
+      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage runtimeScalaSuite codegen/coverageReport
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}

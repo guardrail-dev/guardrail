@@ -244,8 +244,6 @@ val testDependencies = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
-  ScoverageKeys.coverageMinimum := 81.0,
-  ScoverageKeys.coverageFailOnMinimum := true,
   ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
