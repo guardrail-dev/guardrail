@@ -5,3 +5,9 @@ coverage:
   precision: 2
   round: down
   range: "81...90"
+
+  status:
+    project:
+      default:
+        target: 90%
+        if_ci_failed: error
