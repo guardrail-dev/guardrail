@@ -1,4 +1,4 @@
-guardrail [![Build Status](https://github.com/twilio/guardrail/workflows/Scala%20CI/badge.svg)](https://github.com/twilio/guardrail/actions?query=workflow%3A%22Scala+CI%22) | [![codecov](https://codecov.io/gh/twilio/guardrail/branch/master/graph/badge.svg)](https://codecov.io/gh/twilio/guardrail)
+guardrail [![Build Status](https://github.com/twilio/guardrail/workflows/Scala%20CI/badge.svg)](https://github.com/twilio/guardrail/actions?query=workflow%3A%22Scala+CI%22) | [![codecov](https://codecov.io/gh/twilio/guardrail/branch/master/graph/badge.svg)](https://codecov.io/gh/twilio/guardrail) | [![maven central](https://maven-badges.herokuapp.com/maven-central/com.twilio/guardrail_2.12/badge.svg)](https://search.maven.org/search?q=g:com.twilio%20a:guardrail_2.12)
 ===
 
 guardrail is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating Scala source code, primarily targeting the akka-http and http4s web frameworks, using circe for JSON encoding/decoding.
