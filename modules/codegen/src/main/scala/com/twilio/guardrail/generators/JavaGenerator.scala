@@ -57,11 +57,11 @@ object JavaGenerator {
               _ <- Try(textEdit.apply(doc)).toEither.leftMap(Some(_))
             } yield doc.get.getBytes(StandardCharsets.UTF_8)
             result
-              .fold(
-                _.fold(throw new Exception(s"Failed to format class '$className'")) { t =>
-                  throw new Exception(s"Failed to format class '$className': $t")
+              .fold[Target[Array[Byte]]](
+                _.fold[Target[Array[Byte]]](Target.raiseUserError(s"Failed to format class '$className'")) { t =>
+                  Target.raiseUserError(s"Failed to format class '$className': $t")
                 },
-                identity _
+                Target.pure _
               )
           }
         }

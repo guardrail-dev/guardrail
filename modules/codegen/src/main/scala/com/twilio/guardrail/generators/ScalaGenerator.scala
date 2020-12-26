@@ -19,7 +19,7 @@ import scala.meta._
 object ScalaGenerator {
   private def sourceToBytes(path: Path, source: Source): WriteTree =
     WriteTree(path, Future {
-      (GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8)
+      Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))
     })
 
   object ScalaInterp extends LanguageTerms[ScalaLanguage, Target] {
