@@ -9,5 +9,5 @@
 
 3. `sbt githubRelease` to push the release to github
 
-4. Once the tag is pushed, travis-ci will start building a release immediately.
-   Artifacts should be published to bintray and sonatype automatically.
+4. Once the tag is pushed, Github Actions will start building a release immediately.
+   Artifacts should be published to sonatype automatically.
