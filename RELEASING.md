@@ -1,6 +1,6 @@
 # Releasing
 
-The guardrail release process is entirely governed by GitHub Actions, no direct commits or tags are be required by maintainers.
+The guardrail release process is entirely governed by GitHub Actions, no direct commits or tags are required by maintainers.
 
 ## Release steps
 
