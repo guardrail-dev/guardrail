@@ -77,7 +77,7 @@ class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       }
     """
 
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 
   test("Generate non-conflicting names in definitions") {

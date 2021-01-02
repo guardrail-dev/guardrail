@@ -177,7 +177,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
     """
 
     cmp.structure should equal(companion.structure)
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 
   test("Ensure traced responses are generated") {
@@ -249,6 +249,6 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
     """
 
     cmp.structure should equal(companion.structure)
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 }

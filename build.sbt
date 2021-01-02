@@ -1,15 +1,10 @@
 import complete.DefaultParsers._
 
-val projectName = "guardrail-root"
-name := projectName
-organization in ThisBuild := "com.twilio"
-licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
+name := "guardrail-root"
 // Project version is determined by sbt-git based on the most recent tag
 
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
-
-crossScalaVersions in ThisBuild := Seq("2.12.12")
 
 val akkaVersion            = "2.6.10"
 val akkaHttpVersion        = "10.2.1"
@@ -26,7 +21,7 @@ val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.28"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
-val kindProjectorVersion   = "0.10.3"
+val kindProjectorVersion   = "0.11.2"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.3.7.RELEASE"
@@ -229,9 +224,6 @@ addCommandAlias(
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
-addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
-addCompilerPlugin(scalafixSemanticdb)
-scalafixDependencies in ThisBuild += "org.scalatest" %% "autofix" % "3.1.0.1"
 scalacOptions += "-Yrangepos"
 
 publishMavenStyle := true
@@ -242,16 +234,21 @@ val testDependencies = Seq(
   "org.scalatestplus" %% "scalatestplus-scalacheck" % scalatestPlusVersion % Test
 )
 
-val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
-val codegenSettings = Seq(
-  ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
-  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
-  addCompilerPlugin(scalafixSemanticdb),
-  wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
-  wartremoverWarnings in Test := List.empty,
-  scalacOptions in ThisBuild ++= Seq(
-    "-Ypartial-unification",
+def ifScalaVersion[A](minorPred: Int => Boolean = _ => true)(value: List[A]): Def.Initialize[Seq[A]] = Def.setting {
+  scalaVersion.value.split('.') match {
+    case Array("2", minor, bugfix) if minorPred(minor.toInt) => value
+    case _                                                   => Nil
+  }
+}
+
+val commonSettings = Seq(
+  organization := "com.twilio",
+  licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
+
+  crossScalaVersions := Seq("2.12.12", "2.13.4"),
+  scalaVersion := "2.12.12",
+
+  scalacOptions ++= Seq(
     "-Ydelambdafy:method",
     "-Yrangepos",
     // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/twilio/guardrail/pull/282
@@ -260,23 +257,32 @@ val codegenSettings = Seq(
     "-deprecation",
     "-encoding",
     "utf8"
-  ) ++ (if (scalaVersion.value.startsWith("2.11.")) {
-          List("-Xexperimental", "-Xlint:-missing-interpolator,_")
-        } else {
-          List("-Xlint:-unused,-missing-interpolator,_")
-        }),
-  parallelExecution in Test := true
+  ),
+  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental", "-Xlint:-missing-interpolator,_")).value,
+  scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+  scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+  parallelExecution in Test := true,
+  addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.full),
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+  addCompilerPlugin(scalafixSemanticdb),
+)
+
+val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
+val codegenSettings = Seq(
+  ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
+  wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
+  wartremoverWarnings in Test := List.empty,
 )
 
 lazy val root = (project in file("."))
-  .settings(
-    libraryDependencies ++= testDependencies,
-    skip in publish := true
-  )
+  .settings(commonSettings)
+  .settings(skip in publish := true)
   .dependsOn(codegen, microsite)
   .aggregate(allDeps, codegen, microsite, endpointsDependencies)
 
 lazy val allDeps = (project in file("modules/alldeps"))
+  .settings(commonSettings)
   .settings(
     skip in publish := true,
     libraryDependencies ++= akkaProjectDependencies,
@@ -288,10 +294,14 @@ lazy val allDeps = (project in file("modules/alldeps"))
   )
 
 lazy val codegen = (project in file("modules/codegen"))
+  .settings(commonSettings)
   .settings(
-    (name := "guardrail") +:
-      codegenSettings,
-    libraryDependencies ++= testDependencies ++ Seq(
+    name := "guardrail"
+  )
+  .settings(codegenSettings)
+  .settings(libraryDependencies ++= testDependencies)
+  .settings(
+    libraryDependencies ++= Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.1",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
@@ -306,7 +316,6 @@ lazy val codegen = (project in file("modules/codegen"))
     ),
     scalacOptions ++= List(
       "-language:higherKinds",
-      "-Ywarn-unused-import",
       "-Xlint:_,-missing-interpolator"
     ),
     description := "Principled code generation for Scala services from OpenAPI specifications",
@@ -427,8 +436,9 @@ val springProjectDependencies = Seq(
 
 def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
   Project(s"${name}Sample", file(s"modules/sample-${name}"))
+    .settings(commonSettings)
+    .settings(codegenSettings)
     .settings(
-      codegenSettings,
       libraryDependencies ++= extraLibraryDependencies,
       unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
       skip in publish := true,
@@ -460,6 +470,7 @@ lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependen
   .settings(javaSampleSettings)
 
 lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
+  .settings(commonSettings)
   .settings(
     skip in publish := true
   )
@@ -480,6 +491,7 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
 
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
   .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings)
   .settings(
     coverageEnabled := false,  // scoverage issue @ commit 28b0cc55: Found a dangling UndefinedParam at Position(file:.../modules/sample-endpoints/target/generated/issues/issue351/client/endpoints/EndpointsImplicits.scala,91,34). This is likely due to a bad interaction between a macro or a compiler plugin and the Scala.js compiler plugin. If you hit this, please let us know.
     codegenSettings,
@@ -500,13 +512,11 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
   )
 
 lazy val microsite = (project in file("modules/microsite"))
+  .settings(commonSettings)
   .settings(
     skip in publish := true
   )
   .dependsOn(codegen)
-  .settings(
-    addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.binary)
-  )
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get

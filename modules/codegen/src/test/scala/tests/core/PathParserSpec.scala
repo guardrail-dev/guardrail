@@ -74,45 +74,44 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
 
     implicit val params: List[LanguageParameter[ScalaLanguage]] = List.empty
 
-    plainString.parseOnly("foo/").either.right.value shouldBe "foo"
-    plainNEString.parseOnly("foo/").either.right.value shouldBe "foo"
+    plainString.parseOnly("foo/").either.value shouldBe "foo"
+    plainNEString.parseOnly("foo/").either.value shouldBe "foo"
     plainNEString.parseOnly("").either.isLeft shouldBe true
     stringSegment.parseOnly("").either.isLeft shouldBe true
-    stringSegment.parseOnly("foo").either.right.value should matchPattern {
+    stringSegment.parseOnly("foo").either.value should matchPattern {
       case (None, Lit.String("foo")) =>
     }
-    segments.parseOnly("foo").either.right.value should matchPattern {
+    segments.parseOnly("foo").either.value should matchPattern {
       case (None, Lit.String("foo")) :: Nil =>
     }
-    segments.parseOnly("foo/bar").either.right.value should matchPattern {
+    segments.parseOnly("foo/bar").either.value should matchPattern {
       case (None, Lit.String("foo")) :: (None, Lit.String("bar")) :: Nil =>
     }
     qsValueOnly.parseOnly("").either.isLeft shouldBe true
     qsValueOnly.parseOnly("a=b").either.isLeft shouldBe true
-    qsValueOnly.parseOnly("=").either.right.value shouldBe (("", ""))
-    qsValueOnly.parseOnly("=b").either.right.value shouldBe (("", "b"))
+    qsValueOnly.parseOnly("=").either.value shouldBe (("", ""))
+    qsValueOnly.parseOnly("=b").either.value shouldBe (("", "b"))
     staticQSArg.parseOnly("=b").either.isLeft shouldBe true
-    staticQSArg.parseOnly("a").either.right.value shouldBe (("a", ""))
-    staticQSArg.parseOnly("a=").either.right.value shouldBe (("a", ""))
-    staticQSArg.parseOnly("a=b").either.right.value shouldBe (("a", "b"))
-    staticQSTerm.parseOnly("a").either.right.value should matchStructure(q""" parameter("a").require(_ == "") """)
-    staticQSTerm.parseOnly("a=b").either.right.value should matchStructure(q""" parameter("a").require(_ == "b") """)
-    staticQSTerm.parseOnly("=b").either.right.value should matchStructure(q""" parameter("").require(_ == "b") """)
-    staticQS.parseOnly("?").either.right.value.isEmpty shouldBe true
-    staticQS.parseOnly("?=").either.right.value.value should matchStructure(q""" parameter("").require(_ == "") """)
-    staticQS.parseOnly("?a=").either.right.value.value should matchStructure(q""" parameter("a").require(_ == "") """)
-    staticQS.parseOnly("?=b").either.right.value.value should matchStructure(q""" parameter("").require(_ == "b") """)
-    staticQS.parseOnly("?a=b").either.right.value.value should matchStructure(q""" parameter("a").require(_ == "b") """)
+    staticQSArg.parseOnly("a").either.value shouldBe (("a", ""))
+    staticQSArg.parseOnly("a=").either.value shouldBe (("a", ""))
+    staticQSArg.parseOnly("a=b").either.value shouldBe (("a", "b"))
+    staticQSTerm.parseOnly("a").either.value should matchStructure(q""" parameter("a").require(_ == "") """)
+    staticQSTerm.parseOnly("a=b").either.value should matchStructure(q""" parameter("a").require(_ == "b") """)
+    staticQSTerm.parseOnly("=b").either.value should matchStructure(q""" parameter("").require(_ == "b") """)
+    staticQS.parseOnly("?").either.value.isEmpty shouldBe true
+    staticQS.parseOnly("?=").either.value.value should matchStructure(q""" parameter("").require(_ == "") """)
+    staticQS.parseOnly("?a=").either.value.value should matchStructure(q""" parameter("a").require(_ == "") """)
+    staticQS.parseOnly("?=b").either.value.value should matchStructure(q""" parameter("").require(_ == "b") """)
+    staticQS.parseOnly("?a=b").either.value.value should matchStructure(q""" parameter("a").require(_ == "b") """)
     staticQS
       .parseOnly("?a=b&c=d")
       .either
-      .right
       .value
       .value should matchStructure(q""" parameter("a").require(_ == "b") & parameter("c").require(_ == "d") """)
-    pattern.parseOnly("").either.right.value should matchPattern {
+    pattern.parseOnly("").either.value should matchPattern {
       case (Nil, (false, None)) =>
     }
-    pattern.parseOnly("?").either.right.value should matchPattern {
+    pattern.parseOnly("?").either.value should matchPattern {
       case (Nil, (false, None)) =>
     }
   }

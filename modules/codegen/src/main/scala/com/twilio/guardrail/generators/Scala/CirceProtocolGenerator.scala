@@ -59,7 +59,7 @@ object CirceProtocolGenerator {
           case (value, termName, defaultTerm) =>
             q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.String(value)})"""
         })
-        .to[List]}
+        .toList}
           }
         """))
 
@@ -94,7 +94,7 @@ object CirceProtocolGenerator {
         .map({ pascalValue =>
           q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
         })
-        .to[List]
+        .toList
       val values: Defn.Val = q"val values = Vector(..$accessors)"
       val implicits: List[Defn.Val] = List(
         q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)",
@@ -104,7 +104,7 @@ object CirceProtocolGenerator {
         StaticDefns[ScalaLanguage](
           className = clsName,
           extraImports = List.empty[Import],
-          definitions = members.to[List] ++
+          definitions = members.toList ++
                 terms ++
                 List(Some(values), encoder, decoder).flatten ++
                 implicits ++
@@ -287,7 +287,7 @@ object CirceProtocolGenerator {
         if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
-            .to[List]
+            .toList
             .unzip
           val List(name)  = names
           val List(field) = fields
@@ -299,13 +299,13 @@ object CirceProtocolGenerator {
         } else if (paramCount >= 2 && paramCount <= 22) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
             .map(param => (Lit.String(param.name), Term.Name(param.term.name.value)))
-            .to[List]
+            .toList
             .unzip
           val tupleFields = fields
             .map({ field =>
               Term.Select(Term.Name("o"), field)
             })
-            .to[List]
+            .toList
 
           val unapply: Term.Function = Term.Function(
             List(param"o: ${Type.Name(clsName)}"),
@@ -386,7 +386,7 @@ object CirceProtocolGenerator {
         } else
           /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
           if (paramCount <= 22 && !needsEmptyToNull) {
-            val names: List[Lit] = params.map(_.name).map(Lit.String(_)).to[List]
+            val names: List[Lit] = params.map(_.name).map(Lit.String(_)).toList
             Target.pure(
               Option(
                 q"""

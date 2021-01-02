@@ -63,7 +63,7 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       }
     """
 
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 
   test("Manage child span with tags") {
@@ -119,6 +119,6 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       }
     """
 
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 }

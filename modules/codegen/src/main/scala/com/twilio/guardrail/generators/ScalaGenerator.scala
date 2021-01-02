@@ -333,7 +333,7 @@ object ScalaGenerator {
                 }
 
                 package object ${Term.Name(dtoComponents.last)} {
-                  ..${(mirroredImplicits ++ statements ++ extraTypes).to[List]}
+                  ..${(mirroredImplicits ++ statements ++ extraTypes).toList}
                 }
                 """)
             )

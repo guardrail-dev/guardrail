@@ -36,7 +36,7 @@ class Http4sCustomHeadersTest extends AnyFlatSpec with Matchers with EitherValue
       )
     )
 
-    client.getFoo("foo", 5L, cdefs.Bar.V1, Some(cdefs.Bar.V2), None).attempt.unsafeRunSync().right.value
+    client.getFoo("foo", 5L, cdefs.Bar.V1, Some(cdefs.Bar.V2), None).attempt.unsafeRunSync().value
   }
 
 }

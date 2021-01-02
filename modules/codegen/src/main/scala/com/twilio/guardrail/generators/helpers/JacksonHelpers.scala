@@ -1,8 +1,6 @@
 package com.twilio.guardrail.generators.helpers
 
-import cats.implicits._
 import com.twilio.guardrail.Target
-import com.twilio.guardrail.Target.targetInstances
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.LanguageTerms
 import scala.util.Try

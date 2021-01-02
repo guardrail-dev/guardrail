@@ -72,7 +72,7 @@ class Http4sFullTracerTest extends AnyFunSuite with Matchers with EitherValues w
     val testTrace = traceBuilder("top-level-request")
 
     // Make a request against the mock servers using a hard-coded user ID
-    val retrieved: cdefs.users.GetUserResponse = usersClient.getUser(testTrace, "1234").attempt.unsafeRunSync().right.value
+    val retrieved: cdefs.users.GetUserResponse = usersClient.getUser(testTrace, "1234").attempt.unsafeRunSync().value
 
     retrieved shouldBe cdefs.users.GetUserResponse
       .Ok(cdefs.definitions.User("1234", cdefs.definitions.UserAddress(Some("line1"), Some("line2"), Some("line3"))))

@@ -849,12 +849,12 @@ object JacksonGenerator {
 
           rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
 
-          expressionDefaultValue <- defaultValue match {
+          expressionDefaultValue <- (defaultValue match {
             case Some(e: Expression) => Target.pure(Some(e))
             case Some(_) =>
               Target.log.warning(s"Can't generate default value for class $clsName and property $name.") >> Target.pure(None)
             case None => Target.pure(None)
-          }
+          }): Target[Option[Expression]]
           finalDefaultTypeValue <- Option(requirement)
             .filter {
               case PropertyRequirement.Required => true

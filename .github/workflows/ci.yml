@@ -7,11 +7,13 @@ on:
 
 jobs:
   core:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         java: [ '15' ]
-        scala: [ '2.12.12' ]
+        scala: [
+            { version: '2.12.12', bincompat: '2.12' }
+          ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK
@@ -23,22 +25,24 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.cache/coursier
-        key: ${{ runner.os }}-scala-${{ matrix.scala }}-${{ hashFiles('**/*.sbt') }}
+        key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
         restore-keys: |
-          ${{ runner.os }}-scala-${{ matrix.scala }}-
+          ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean codegen/clean checkFormatting coverage codegen/test codegen/coverageReport microsite/compile
+      run:  sbt ++${{ matrix.scala.version }} clean codegen/clean checkFormatting coverage codegen/test codegen/coverageReport microsite/compile
     - uses: codecov/codecov-action@v1
       with:
-        file: ./modules/codegen/target/scala-2.12/scoverage-report/scoverage.xml
+        file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
   java:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [core]
     strategy:
       matrix:
         java: [ '8', '11', '13', '14', '15' ]
-        scala: [ '2.12.12' ]
+        scala: [
+            { version: '2.12.12', bincompat: '2.12' }
+          ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK
@@ -50,24 +54,39 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.cache/coursier
-        key: ${{ runner.os }}-scala-${{ matrix.scala }}-${{ hashFiles('**/*.sbt') }}
+        key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
         restore-keys: |
-          ${{ runner.os }}-scala-${{ matrix.scala }}-
+          ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage runtimeJavaSuite codegen/coverageReport
+      run:  sbt ++${{ matrix.scala.version }} clean codegen/clean coverage runtimeJavaSuite codegen/coverageReport
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./modules/codegen/target/scala-2.12/scoverage-report/scoverage.xml
+        file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
   scala:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [core]
     strategy:
       matrix:
-        java: [ '15' ]
-        scala: [ '2.12.12' ]
+        java: [ '8', '15' ]
+        scala: [
+            { version: '2.12.12', bincompat: '2.12' },
+            { version: '2.13.4', bincompat: '2.13' }
+          ]
+        framework: [
+            { framework: 'akka-http',         project: 'akkaHttpSample'        },
+            { framework: 'endpoints',         project: 'endpointsSample'       },
+            { framework: 'http4s',            project: 'http4sSample'          },
+            { framework: 'akka-http-jackson', project: 'akkaHttpJacksonSample' },
+            { framework: 'dropwizard',        project: 'dropwizardScalaSample' }
+          ]
     steps:
+    - run: echo 'combo_enabled=true' >> $GITHUB_ENV
+    - run: echo 'combo_enabled=false' >> $GITHUB_ENV
+      if: ${{ matrix.java == '15' && matrix.scala.bincompat == '2.12' }}
+    - run: echo 'combo_enabled=false' >> $GITHUB_ENV
+      if: matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' )
     - uses: actions/checkout@v2
     - name: Set up JDK
       uses: actions/setup-java@v1
@@ -78,13 +97,15 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.cache/coursier
-        key: ${{ runner.os }}-scala-${{ matrix.scala }}-${{ hashFiles('**/*.sbt') }}
+        key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
         restore-keys: |
-          ${{ runner.os }}-scala-${{ matrix.scala }}-
+          ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage runtimeScalaSuite codegen/coverageReport
+      if: ${{ env.combo_enabled == 'true' }}
+      run:  sbt ++${{ matrix.scala.version }} clean codegen/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test codegen/coverageReport
     - uses: codecov/codecov-action@v1
+      if: ${{ env.combo_enabled == 'true' }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./modules/codegen/target/scala-2.12/scoverage-report/scoverage.xml
+        file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
