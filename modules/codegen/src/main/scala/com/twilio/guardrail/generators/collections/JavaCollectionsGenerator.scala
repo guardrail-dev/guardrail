@@ -1,7 +1,6 @@
 package com.twilio.guardrail.generators.collections
 
 import cats.Monad
-import cats.implicits._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.{ Node, NodeList }
