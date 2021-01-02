@@ -96,8 +96,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
+      if: ${{ ! ( matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' ) ) }}
       run:  sbt ++${{ matrix.scala.version }} clean codegen/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test codegen/coverageReport
     - uses: codecov/codecov-action@v1
+      if: ${{ ! ( matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' ) ) }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
