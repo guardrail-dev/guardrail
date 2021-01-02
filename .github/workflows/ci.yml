@@ -65,7 +65,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '15' ]
+        java: [ '8', '15' ]
         scala: [ '2.12.12' ]
     steps:
     - uses: actions/checkout@v2
