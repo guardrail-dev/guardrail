@@ -636,7 +636,7 @@ object AkkaHttpServerGenerator {
 
             for {
               (handlers, unmarshallerTerms) <- consumes.get.distinct
-                .traverse[(List[Stat], ?), Target[NonEmptyList[Term.Name]]]({
+                .traverse[(List[Stat], *), Target[NonEmptyList[Term.Name]]]({
                   case MultipartFormData => {
                     val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
                     val fru = q"""

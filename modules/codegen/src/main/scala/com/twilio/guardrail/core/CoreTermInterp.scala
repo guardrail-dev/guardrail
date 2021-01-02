@@ -233,7 +233,7 @@ class CoreTermInterp[L <: LA](
                 val stackTrace =
                   ex.getStackTrace()
                     .toList
-                    .foldLeftM[State[Option[String], ?], List[String]](List.empty)({
+                    .foldLeftM[State[Option[String], *], List[String]](List.empty)({
                       case (acc, next) =>
                         for {
                           lastClassName <- State.get

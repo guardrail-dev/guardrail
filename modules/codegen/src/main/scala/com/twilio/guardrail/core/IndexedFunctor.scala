@@ -13,7 +13,7 @@ trait IndexedFunctor[F[_]] {
 }
 
 object IndexedFunctor {
-  implicit def indexedMap: IndexedFunctor[Map[String, ?]] = new IndexedFunctor[Map[String, ?]] {
+  implicit def indexedMap: IndexedFunctor[Map[String, *]] = new IndexedFunctor[Map[String, *]] {
     type I = String
     def map[A, B](fa: Map[String, A])(f: (I, A) => B): Map[String, B] = fa.map({ case (k, v) => (k, f(k, v)) })
     def label(i: String)                                              = Some('.' +: i)

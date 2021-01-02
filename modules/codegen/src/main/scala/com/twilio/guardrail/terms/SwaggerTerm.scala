@@ -192,7 +192,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
             Tracker.cloneHistory(mt, p)
           }
       })
-      .traverse[State[ParameterCountState, ?], Tracker[Parameter]] { p =>
+      .traverse[State[ParameterCountState, *], Tracker[Parameter]] { p =>
         State[ParameterCountState, Tracker[Parameter]]({
           case (maxCount, instances) =>
             val updated = instances.updated(p.get.hashCode, instances.getOrElse(p.get.hashCode, 0) + 1)
