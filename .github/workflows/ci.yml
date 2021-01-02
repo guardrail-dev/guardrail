@@ -7,7 +7,7 @@ on:
 
 jobs:
   core:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         java: [ '15' ]
@@ -35,7 +35,7 @@ jobs:
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
   java:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [core]
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
   scala:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [core]
     strategy:
       matrix:
