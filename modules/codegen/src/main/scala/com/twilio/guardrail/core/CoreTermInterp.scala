@@ -124,9 +124,9 @@ class CoreTermInterp[L <: LA](
               case (sofar :: already, "--outputPath" :: value :: xs) =>
                 Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
               case (sofar :: already, "--packageName" :: value :: xs) =>
-                Continue((sofar.copy(packageName = Option(value.trim.split('.').to[List])) :: already, xs))
+                Continue((sofar.copy(packageName = Option(value.trim.split('.').toList)) :: already, xs))
               case (sofar :: already, "--dtoPackage" :: value :: xs) =>
-                Continue((sofar.copy(dtoPackage = value.trim.split('.').to[List]) :: already, xs))
+                Continue((sofar.copy(dtoPackage = value.trim.split('.').toList) :: already, xs))
               case (sofar :: already, "--import" :: value :: xs) =>
                 Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
               case (sofar :: already, "--module" :: value :: xs) =>

@@ -587,9 +587,9 @@ object AsyncHttpClientClientGenerator {
             new BlockStmt(
               (
                 callBuilderFinalFields
-                  .map[Statement, List[Statement]]({
+                  .map({
                     case (_, name) =>
-                      new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN))
+                      new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN)): Statement
                   }) ++ callBuilderInitContentType ++ callBuilderInitAccept
               ).toNodeList
             )

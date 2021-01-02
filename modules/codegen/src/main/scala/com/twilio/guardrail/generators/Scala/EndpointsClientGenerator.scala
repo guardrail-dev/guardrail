@@ -460,9 +460,9 @@ object EndpointsClientGenerator {
           .map({
             _.map(_.name.value)
               .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
-              .to[List]
+              .toList
           })
-          .to[List]
+          .toList
 
       val ctorCall: Term.New = {
         q"""
