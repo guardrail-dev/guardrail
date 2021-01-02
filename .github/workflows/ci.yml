@@ -67,6 +67,13 @@ jobs:
       matrix:
         java: [ '8', '15' ]
         scala: [ '2.12.12' ]
+        framework: [
+            { framework: 'akka-http',         project: 'akkaHttpSample'        },
+            { framework: 'endpoints',         project: 'endpointsSample'       },
+            { framework: 'http4s',            project: 'http4sSample'          },
+            { framework: 'akka-http-jackson', project: 'akkaHttpJacksonSample' },
+            { framework: 'dropwizard',        project: 'dropwizardScalaSample' }
+          ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK
@@ -82,7 +89,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage runtimeScalaSuite codegen/coverageReport
+      run:  sbt ++${{ matrix.scala }} clean codegen/clean coverage "runExample scala ${{ matrix.framework.framework }}" {{ matrix.framework.project }}/test codegen/coverageReport
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
