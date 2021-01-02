@@ -16,7 +16,7 @@ val scalacheckVersion      = "1.15.2"
 val scalatestVersion       = "3.2.3"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.18.0"
-val endpointsVersion       = "0.8.0"
+val endpointsVersion       = "0.9.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.28"
 val dropwizardScalaVersion = "1.3.7-1"
@@ -479,7 +479,7 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
     libraryDependencies ++= Seq(
       "io.circe"          %%% "circe-core"                    % circeVersion,
       "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.1.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
