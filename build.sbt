@@ -8,7 +8,7 @@ git.useGitDescribe := true
 
 val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.3"
-val catsVersion            = "2.1.1"
+val catsVersion            = "2.3.1"
 val catsEffectVersion      = "2.2.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.15"
@@ -311,7 +311,6 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.tpolecat"                %% "atto-core"                    % "0.9.1",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
-      "org.typelevel"               %% "cats-macros"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
       "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.1",
     ),
