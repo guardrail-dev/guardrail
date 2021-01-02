@@ -28,6 +28,7 @@ val springBootVersion      = "2.3.7.RELEASE"
 val jacksonVersion         = "2.11.4"
 val hibernateVersion       = "7.0.0.Final"
 val javaxElVersion         = "3.0.0"
+val javaxValidationVersion = "2.0.1.Final"
 val vavrVersion            = "0.10.3"
 val dropwizardVavrVersion  = "1.3.0-4"
 
@@ -352,6 +353,7 @@ val akkaProjectDependencies = Seq(
 
 val akkaJacksonProjectDependencies = Seq(
   "javax.annotation"               %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
+  "javax.validation"               %  "validation-api"          % javaxValidationVersion,
   "javax.xml.bind"                 %  "jaxb-api"                % jaxbApiVersion, // for jdk11
   "com.typesafe.akka"              %% "akka-http"               % akkaHttpVersion,
   "com.typesafe.akka"              %% "akka-http-testkit"       % akkaHttpVersion,
@@ -427,7 +429,7 @@ val dropwizardVavrProjectDependencies = dropwizardProjectDependencies ++ Seq(
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "javax.annotation"           %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
-  "javax.validation"           %  "validation-api"           % "2.0.1.Final",
+  "javax.validation"           %  "validation-api"           % javaxValidationVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
   "org.mockito"                %% "mockito-scala"            % "1.16.12"           % Test,
