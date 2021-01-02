@@ -242,6 +242,13 @@ val testDependencies = Seq(
   "org.scalatestplus" %% "scalatestplus-scalacheck" % scalatestPlusVersion % Test
 )
 
+def ifScalaVersion[A](minorPred: Int => Boolean = _ => true)(value: List[A]): Def.Initialize[Seq[A]] = Def.setting {
+  scalaVersion.value.split('.') match {
+    case Array("2", minor, bugfix) if minorPred(minor.toInt) => value
+    case _                                                   => Nil
+  }
+}
+
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
   ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
@@ -259,15 +266,11 @@ val codegenSettings = Seq(
     "-deprecation",
     "-encoding",
     "utf8"
-  ) ++ (if (scalaVersion.value.startsWith("2.11.")) {
-          List("-Xexperimental", "-Xlint:-missing-interpolator,_")
-        } else {
-          List("-Xlint:-unused,-missing-interpolator,_")
-        }) ++ (if (scalaVersion.value.startsWith("2.13")) {
-          Nil
-        } else {
-          List("-Ypartial-unification")
-        }),
+  ),
+  scalacOptions in ThisBuild ++= ifScalaVersion(_ <= 11)(List("-Xexperimental", "-Xlint:-missing-interpolator,_")).value,
+  scalacOptions in ThisBuild ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+  scalacOptions in ThisBuild ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+  scalacOptions in ThisBuild ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
   parallelExecution in Test := true
 )
 
@@ -309,7 +312,6 @@ lazy val codegen = (project in file("modules/codegen"))
     ),
     scalacOptions ++= List(
       "-language:higherKinds",
-      "-Ywarn-unused-import",
       "-Xlint:_,-missing-interpolator"
     ),
     description := "Principled code generation for Scala services from OpenAPI specifications",
