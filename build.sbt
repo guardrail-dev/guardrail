@@ -251,7 +251,6 @@ val codegenSettings = Seq(
   wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
   wartremoverWarnings in Test := List.empty,
   scalacOptions in ThisBuild ++= Seq(
-    "-Ypartial-unification",
     "-Ydelambdafy:method",
     "-Yrangepos",
     // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/twilio/guardrail/pull/282
@@ -264,6 +263,10 @@ val codegenSettings = Seq(
           List("-Xexperimental", "-Xlint:-missing-interpolator,_")
         } else {
           List("-Xlint:-unused,-missing-interpolator,_")
+        }) ++ (if (scalaVersion.value.startsWith("2.13")) {
+          Nil
+        } else {
+          List("-Ypartial-unification")
         }),
   parallelExecution in Test := true
 )
