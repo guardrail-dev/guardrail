@@ -92,7 +92,7 @@ class Issue122 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.head.right.get.structure shouldBe client.structure
+    cls.head.value.structure shouldBe client.structure
     cmp.structure shouldBe companion.structure
   }
 }

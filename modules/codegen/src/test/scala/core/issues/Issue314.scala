@@ -145,7 +145,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       )       = runSwaggerSpec(swagger(config))(Context.empty, AkkaHttp)
       val cmp = companionForStaticDefns(staticDefns)
 
-      verifyTree(cls.head.right.get, client(expectedClassPrefix))
+      verifyTree(cls.head.value, client(expectedClassPrefix))
       verifyTree(cmp, companion(expectedClassPrefix))
     }
 

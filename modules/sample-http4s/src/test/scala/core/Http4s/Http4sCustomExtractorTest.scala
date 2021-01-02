@@ -34,7 +34,7 @@ class Http4sCustomExtractorTest extends AnyFunSuite with Matchers with EitherVal
     val client = UsersClient.httpClient(Client.fromHttpApp(server.orNotFound))
 
     val retrieved: cdefs.users.GetUserResponse =
-      client.getUser(user.id, List.empty).attempt.unsafeRunSync().right.value
+      client.getUser(user.id, List.empty).attempt.unsafeRunSync().value
 
     retrieved shouldBe cdefs.users.GetUserResponse
       .Ok(cdefs.definitions.User("id", cdefs.definitions.UserAddress(Some("line1"), Some("line2"), Some("line3"))))

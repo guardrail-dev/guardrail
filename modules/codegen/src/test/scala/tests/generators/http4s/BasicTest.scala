@@ -262,6 +262,6 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     expected.zip(statements).foreach({ case (a, b) => a.structure should equal(b.structure) })
     cmp.structure should equal(companion.structure)
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 }

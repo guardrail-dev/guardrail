@@ -31,7 +31,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doFoo(cdefs.definitions.Status.Ok, "Description").attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoFooResponse.Ok
+    fooClient.doFoo(cdefs.definitions.Status.Ok, "Description").attempt.unsafeRunSync().value shouldBe cdefs.foo.DoFooResponse.Ok
   }
 
   test("missing required form param") {
@@ -70,7 +70,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doBar(Some(cdefs.definitions.Status.Ok)).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Ok
+    fooClient.doBar(Some(cdefs.definitions.Status.Ok)).attempt.unsafeRunSync().value shouldBe cdefs.foo.DoBarResponse.Ok
   }
 
   test("missing optional form param") {
@@ -91,7 +91,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doBar(None).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBarResponse.Ok
+    fooClient.doBar(None).attempt.unsafeRunSync().value shouldBe cdefs.foo.DoBarResponse.Ok
   }
 
   test("present required multi form String param") {
@@ -111,6 +111,6 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doBaz(Seq(cdefs.definitions.Status.Ok.toString)).attempt.unsafeRunSync().right.value shouldBe cdefs.foo.DoBazResponse.Ok
+    fooClient.doBaz(Seq(cdefs.definitions.Status.Ok.toString)).attempt.unsafeRunSync().value shouldBe cdefs.foo.DoBazResponse.Ok
   }
 }

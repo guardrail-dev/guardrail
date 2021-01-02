@@ -90,6 +90,6 @@ class HardcodedQSSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.head.right.get.structure should equal(client.structure)
+    cls.head.value.structure should equal(client.structure)
   }
 }

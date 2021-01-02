@@ -204,7 +204,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
     }"""
     )
 
-    cls.head.right.get.structure should equal(clientClass.structure)
+    cls.head.value.structure should equal(clientClass.structure)
     cmp.structure should equal(clientCompanion.structure)
 
     statements.zip(expected).foreach({ case (a, b) => a.structure should equal(b.structure) })

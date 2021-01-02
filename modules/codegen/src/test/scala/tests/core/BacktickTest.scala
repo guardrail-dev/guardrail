@@ -120,12 +120,12 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.head.right.get.structure should equal(client.structure)
-    cls.head.right.get.toString should include("class DashyPackageClient")
-    cls.head.right.get.toString should include("def dashyOpId")
-    cls.head.right.get.toString should include("dashyParameter: String")
-    cls.head.right.get.toString should include("\"dashy-parameter\", dashyParameter")
-    cls.head.right.get.toString shouldNot include("``")
+    cls.head.value.structure should equal(client.structure)
+    cls.head.value.toString should include("class DashyPackageClient")
+    cls.head.value.toString should include("def dashyOpId")
+    cls.head.value.toString should include("dashyParameter: String")
+    cls.head.value.toString should include("\"dashy-parameter\", dashyParameter")
+    cls.head.value.toString shouldNot include("``")
 
     // Note regarding: def ${Term.Name("post /dashy-route")}
     //   This matches the expected behavior of scala.meta regarding terms that contain spaces.
@@ -133,7 +133,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     //   automatically stripping the backticks. The following test ensures that even though
     //   the test doesn't follow the pattern, the generated code is still escaped.
     //   This behavior may change in scalameta 2.0.0+
-    cls.head.right.get.toString should include("def postDashyOpId(dashyParameter")
+    cls.head.value.toString should include("def postDashyOpId(dashyParameter")
 
     cmp.toString shouldNot include("``")
   }

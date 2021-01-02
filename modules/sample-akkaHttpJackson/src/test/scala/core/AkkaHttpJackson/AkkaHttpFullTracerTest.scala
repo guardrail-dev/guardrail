@@ -103,7 +103,7 @@ class AkkaHttpFullTracerTest
     val testTrace = traceBuilder("top-level-request")
 
     // Make a request against the mock servers using a hard-coded user ID
-    val retrieved: GetUserResponse = usersClient.getUser(testTrace, "1234").value.futureValue.right.value
+    val retrieved: GetUserResponse = usersClient.getUser(testTrace, "1234").value.futureValue.value
 
     retrieved shouldBe (GetUserResponse.OK(cdefs.User("1234", cdefs.UserAddress(Some("line1"), Some("line2"), Some("line3")))))
   }

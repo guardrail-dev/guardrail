@@ -45,7 +45,7 @@ class AkkaHttpCustomHeadersTest extends AnyFlatSpec with TestImplicits with Matc
         }
     })))
 
-    client.getFoo("foo", 5L, cdefs.Bar.V1, Some(cdefs.Bar.V2), None).value.futureValue.right.value
+    client.getFoo("foo", 5L, cdefs.Bar.V1, Some(cdefs.Bar.V2), None).value.futureValue.value
   }
 
 }

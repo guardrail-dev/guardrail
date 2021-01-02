@@ -16,11 +16,11 @@ class Issue315Suite extends AnyFunSuite with Matchers with EitherValues with Sca
   override implicit val patienceConfig = PatienceConfig(1000.millis, 1000.millis)
 
   def expectSuccess[A, B](value: Either[Either[Throwable, A], B])(implicit pos: source.Position): Unit = {
-    val _ = value.right.value
+    val _ = value.value
   }
 
   def expectProtocolError[A, B](value: Either[Either[Throwable, A], B])(implicit pos: source.Position): Unit = {
-    val _ = value.left.value.right.value
+    val _ = value.left.value.value
   }
 
   object client {
