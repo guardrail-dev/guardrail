@@ -100,7 +100,7 @@ object Http4sServerGenerator {
                 ) =>
               generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
           }
-          .map(_.flatten)
+          .map(_.flatten.sortBy(_.methodName))
         routeTerms = renderedRoutes.map(_.route)
         combinedRouteTerms <- combineRouteTerms(routeTerms)
         methodSigs = renderedRoutes.map(_.methodSig)
@@ -109,7 +109,12 @@ object Http4sServerGenerator {
           List(combinedRouteTerms),
           List.empty,
           methodSigs,
-          renderedRoutes.flatMap(_.supportDefinitions).groupBy(_.structure).flatMap(_._2.headOption).toList, // Only unique supportDefinitions by structure
+          renderedRoutes
+            .flatMap(_.supportDefinitions)
+            .groupBy(_.structure)
+            .flatMap(_._2.headOption)
+            .toList
+            .sortBy(_.toString()), // Only unique supportDefinitions by structure
           renderedRoutes.flatMap(_.handlerDefinitions)
         )
       }
@@ -496,7 +501,7 @@ object Http4sServerGenerator {
               }
       )
 
-    case class RenderedRoute(route: Case, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
+    case class RenderedRoute(methodName: String, route: Case, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
     def generateRoute(
         resourceName: String,
@@ -661,6 +666,7 @@ object Http4sServerGenerator {
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
           RenderedRoute(
+            methodName,
             fullRoute,
             q"""def ${Term.Name(methodName)}(...${params}): F[$respType]""",
             supportDefinitions ++ generateQueryParamMatchers(methodName, qsArgs) ++ codecs ++
