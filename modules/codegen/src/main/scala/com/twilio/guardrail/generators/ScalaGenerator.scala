@@ -17,9 +17,10 @@ import scala.concurrent.Future
 import scala.meta._
 
 object ScalaGenerator {
-  private def sourceToBytes(source: Source): Future[Array[Byte]] = Future {
-    (GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8)
-  }
+  private def sourceToBytes(path: Path, source: Source): WriteTree =
+    WriteTree(path, Future {
+      Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))
+    })
 
   object ScalaInterp extends LanguageTerms[ScalaLanguage, Target] {
     // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
@@ -247,7 +248,7 @@ object ScalaGenerator {
 
             }
           """
-      Target.pure(Some(WriteTree(pkgPath.resolve("Implicits.scala"), sourceToBytes(implicits))))
+      Target.pure(Some(sourceToBytes(pkgPath.resolve("Implicits.scala"), implicits)))
     }
     def renderFrameworkImplicits(
         pkgPath: Path,
@@ -276,7 +277,7 @@ object ScalaGenerator {
 
             $frameworkImplicits
           """
-      Target.pure(WriteTree(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), sourceToBytes(frameworkImplicitsFile)))
+      Target.pure(sourceToBytes(pkgPath.resolve(s"${frameworkImplicitName.value}.scala"), frameworkImplicitsFile))
     }
     def renderFrameworkDefinitions(
         pkgPath: Path,
@@ -293,7 +294,7 @@ object ScalaGenerator {
 
             ..$frameworkDefinitions
           """
-      Target.pure(WriteTree(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), sourceToBytes(frameworkDefinitionsFile)))
+      Target.pure(sourceToBytes(pkgPath.resolve(s"${frameworkDefinitionsName.value}.scala"), frameworkDefinitionsFile))
     }
 
     def writePackageObject(
@@ -321,21 +322,21 @@ object ScalaGenerator {
               val List(Pat.Var(mirror)) = stat.pats
               stat.copy(rhs = q"$companion.$mirror")
             }
-            WriteTree(
+            sourceToBytes(
               dtoPackagePath.resolve("package.scala"),
-              sourceToBytes(source"""
-                package $dtoPkg
+              source"""
+              package $dtoPkg
 
-                ..${customImports ++ packageObjectImports ++ protocolImports :+ pkgImplicitsImport}
+              ..${customImports ++ packageObjectImports ++ protocolImports :+ pkgImplicitsImport}
 
-                object $companion {
-                  ..${implicits.map(_.copy(mods = List.empty))}
-                }
+              object $companion {
+                ..${implicits.map(_.copy(mods = List.empty))}
+              }
 
-                package object ${Term.Name(dtoComponents.last)} {
-                  ..${(mirroredImplicits ++ statements ++ extraTypes).toList}
-                }
-                """)
+              package object ${Term.Name(dtoComponents.last)} {
+                ..${(mirroredImplicits ++ statements ++ extraTypes).toList}
+              }
+              """
             )
           }
       })
@@ -356,15 +357,15 @@ object ScalaGenerator {
         case EnumDefinition(_, _, _, _, cls, staticDefns) =>
           (
             List(
-              WriteTree(
+              sourceToBytes(
                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                sourceToBytes(source"""
+                source"""
               package ${buildPkgTerm(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
                 ${companionForStaticDefns(staticDefns)}
-              """)
+              """
               )
             ),
             List.empty[Stat]
@@ -372,15 +373,15 @@ object ScalaGenerator {
         case ClassDefinition(_, _, _, cls, staticDefns, _) =>
           (
             List(
-              WriteTree(
+              sourceToBytes(
                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
-                sourceToBytes(source"""
+                source"""
               package ${buildPkgTerm(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
                 ${companionForStaticDefns(staticDefns)}
-              """)
+              """
               )
             ),
             List.empty[Stat]
@@ -389,16 +390,16 @@ object ScalaGenerator {
           val polyImports: Import = q"import cats.syntax.either._"
           (
             List(
-              WriteTree(
+              sourceToBytes(
                 resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
-                sourceToBytes(source"""
+                source"""
                     package ${buildPkgTerm(dtoComponents)}
                     ..$imports
                     ..$implicitImports
                     $polyImports
                     $trt
                     ${companionForStaticDefns(staticDefns)}
-                  """)
+                  """
               )
             ),
             List.empty[Stat]
@@ -419,9 +420,9 @@ object ScalaGenerator {
       val Client(pkg, clientName, imports, staticDefns, client, responseDefinitions) = _client
       Target.pure(
         List(
-          WriteTree(
+          sourceToBytes(
             resolveFile(pkgPath)(pkg :+ (s"$clientName.scala")),
-            sourceToBytes(source"""
+            source"""
               package ${buildPkgTerm(pkgName ++ pkg)}
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
               ..${frameworkImplicitNames.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.$name._")}
@@ -431,7 +432,7 @@ object ScalaGenerator {
               ${companionForStaticDefns(staticDefns)};
               ..${client.toList.map(_.merge)};
               ..$responseDefinitions
-              """)
+              """
           )
         )
       )
@@ -447,9 +448,9 @@ object ScalaGenerator {
       val Server(pkg, extraImports, handlerDefinition, serverDefinitions) = server
       Target.pure(
         List(
-          WriteTree(
+          sourceToBytes(
             resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
-            sourceToBytes(source"""
+            source"""
               package ${buildPkgTerm(pkgName ++ pkg.toList)}
               ..$extraImports
               import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
@@ -458,7 +459,7 @@ object ScalaGenerator {
               ..$customImports
               $handlerDefinition
               ..$serverDefinitions
-              """)
+              """
           )
         )
       )

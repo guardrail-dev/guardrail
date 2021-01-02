@@ -62,9 +62,8 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
           case MOCK_RESPONSE_BODY => ()
           case other              => fail(s"Unexpected response: ${other}")
         }, { () =>
-            fail("Should have gotten 201 response"); ()
-          }
-        )
+          fail("Should have gotten 201 response"); ()
+        })
     }
   }
 }

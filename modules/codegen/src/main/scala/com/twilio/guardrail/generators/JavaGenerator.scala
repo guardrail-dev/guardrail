@@ -42,25 +42,31 @@ object JavaGenerator {
     DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_COLON_IN_DEFAULT -> DefaultCodeFormatterConstants.FALSE
   ).asJava
 
-  def prettyPrintSource(source: CompilationUnit): Target[Future[Array[Byte]]] = {
-    val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
-    val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
-    val sourceStr = source.toString
-    val formatter = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
-    Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n"))
-      .fold(
-        Target.raiseUserError[Future[Array[Byte]]](s"Failed to format class '$className'")
-      )({ textEdit =>
-        val doc = new Document(sourceStr)
-        Try(textEdit.apply(doc)).fold(
-          t => Target.raiseUserError[Future[Array[Byte]]](s"Failed to format class '$className': $t"),
-          _ =>
-            Target.pure(Future {
-              doc.get.getBytes(StandardCharsets.UTF_8)
-            })
-        )
-      })
-  }
+  def prettyPrintSource(path: Path, source: CompilationUnit): Target[WriteTree] =
+    Target.pure(
+      WriteTree(
+        path, {
+          val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
+          val sourceStr = source.toString
+          Future {
+            val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
+            val formatter = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
+            val result: Either[Option[Throwable], Array[Byte]] = for {
+              textEdit <- Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n")).toRight(None)
+              doc = new Document(sourceStr)
+              _ <- Try(textEdit.apply(doc)).toEither.leftMap(Some(_))
+            } yield doc.get.getBytes(StandardCharsets.UTF_8)
+            result
+              .fold[Target[Array[Byte]]](
+                _.fold[Target[Array[Byte]]](Target.raiseUserError(s"Failed to format class '$className'")) { t =>
+                  Target.raiseUserError(s"Failed to format class '$className': $t")
+                },
+                Target.pure _
+              )
+          }
+        }
+      )
+    )
 
   def writeClientTree(
       pkgPath: Path,
@@ -73,9 +79,9 @@ object JavaGenerator {
       case td: TypeDeclaration[_] =>
         val cu = new CompilationUnit()
         cu.setPackageDeclaration(pkgDecl)
-        imports.map(cu.addImport)
+        imports.foreach(cu.addImport)
         cu.addType(td)
-        prettyPrintSource(cu).map(bytes => WriteTree(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), bytes))
+        prettyPrintSource(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), cu)
       case other =>
         Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
@@ -91,9 +97,9 @@ object JavaGenerator {
       case td: TypeDeclaration[_] =>
         val cu = new CompilationUnit()
         cu.setPackageDeclaration(pkgDecl)
-        imports.map(cu.addImport)
+        imports.foreach(cu.addImport)
         cu.addType(td)
-        prettyPrintSource(cu).map(bytes => WriteTree(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), bytes))
+        prettyPrintSource(resolveFile(pkgPath)(pkg :+ s"${td.getNameAsString}.java"), cu)
       case other =>
         Target.raiseUserError(s"Class definition must be a TypeDeclaration but it is a ${other.getClass.getName}")
     }
@@ -273,8 +279,8 @@ object JavaGenerator {
           }
           cu
         }
-        bytes <- prettyPrintSource(cu)
-      } yield WriteTree(resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")), bytes)
+        writeTree <- prettyPrintSource(resolveFile(pkgPath)(List(s"${frameworkDefinitionsName.asString}.java")), cu)
+      } yield writeTree
 
     def writePackageObject(
         dtoPackagePath: Path,
@@ -288,8 +294,10 @@ object JavaGenerator {
     ): Target[Option[WriteTree]] =
       for {
         pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
-        bytes   <- pkgDecl.traverse(x => prettyPrintSource(new CompilationUnit().setPackageDeclaration(x)))
-      } yield bytes.map(WriteTree(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), _))
+        writeTree <- pkgDecl.traverse(
+          x => prettyPrintSource(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), new CompilationUnit().setPackageDeclaration(x))
+        )
+      } yield writeTree
 
     private def staticifyInnerObjects(decl: BodyDeclaration[_ <: BodyDeclaration[_]]): BodyDeclaration[_ <: BodyDeclaration[_]] = {
       def rec(decl: BodyDeclaration[_ <: BodyDeclaration[_]]): Unit =
@@ -349,14 +357,8 @@ object JavaGenerator {
           case RandomType(_, _) =>
             Option.empty
         }
-        nameAndBytes <- nameAndCompilationUnit.fold(Target.pure(Option.empty[(String, Future[Array[Byte]])]))({
-          case (name, cu) =>
-            prettyPrintSource(cu).map(bytes => Option((name, bytes)))
-        })
-      } yield nameAndBytes.fold((List.empty[WriteTree], List.empty[Statement]))({
-        case (name, bytes) =>
-          (List(WriteTree(resolveFile(outputPath)(dtoComponents).resolve(s"$name.java"), bytes)), List.empty[Statement])
-      })
+        writeTree <- nameAndCompilationUnit.traverse { case (name, cu) => prettyPrintSource(resolveFile(outputPath)(dtoComponents).resolve(s"$name.java"), cu) }
+      } yield (writeTree.toList, List.empty[Statement])
     def writeClient(
         pkgPath: Path,
         pkgName: List[String],

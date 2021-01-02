@@ -170,7 +170,7 @@ trait CLICommon {
           rs =>
             ReadSwagger
               .readSwagger(rs)
-              .map(_.map(WriteTree.unsafeWriteTree))
+              .flatMap(_.traverse(WriteTree.writeTree))
               .leftFlatMap(
                 value =>
                   Target.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> Target.raiseError[List[Path]](value)

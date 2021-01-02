@@ -1,6 +1,6 @@
 package com.twilio.guardrail.core
 
-import com.twilio.guardrail.WriteTree
+import com.twilio.guardrail.{ Target, WriteTree }
 import java.nio.file.Files
 import scala.concurrent.Future
 import org.scalatest.funsuite.AnyFunSuite
@@ -13,8 +13,8 @@ class WriteTreeSuite extends AnyFunSuite with Matchers {
 
     val contents = "example contents".getBytes
 
-    val (firstLog, firstPath)   = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(contents))).run
-    val (secondLog, secondPath) = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(contents))).run
+    val (firstLog, firstPath)   = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(Target.pure(contents)))).run
+    val (secondLog, secondPath) = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(Target.pure(contents)))).run
 
     val _1 = firstLog shouldBe (Nil)
     val _2 = secondLog shouldBe (Nil)

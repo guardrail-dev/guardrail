@@ -3,15 +3,15 @@ package core.Dropwizard
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import invalidCharacters.client.dropwizard.invalidCharacters.InvalidCharactersClient
-import invalidCharacters.server.dropwizard.definitions.{InvalidCharacters, InvalidCharactersEnum}
+import invalidCharacters.server.dropwizard.definitions.{ InvalidCharacters, InvalidCharactersEnum }
 import io.netty.buffer.Unpooled
-import java.net.{SocketAddress, URI, URLDecoder}
-import java.util.concurrent.{CompletableFuture, CompletionStage}
+import java.net.{ SocketAddress, URI, URLDecoder }
+import java.util.concurrent.{ CompletableFuture, CompletionStage }
 import java.util.function
 import org.asynchttpclient.Response.ResponseBuilder
 import org.asynchttpclient.netty.EagerResponseBodyPart
 import org.asynchttpclient.uri.Uri
-import org.asynchttpclient.{HttpResponseStatus, Request, Response}
+import org.asynchttpclient.{ HttpResponseStatus, Request, Response }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import scala.collection.JavaConverters._
@@ -22,14 +22,14 @@ object JavaInvalidCharacterEscapingTest {
   }
 
   private object OkStatus extends HttpResponseStatus(Uri.create("http://localhost:1234/foo?foo^bar=query-param")) {
-    override def getStatusCode = 200
-    override def getStatusText = "OK"
-    override def getProtocolName = "HTTP"
-    override def getProtocolMajorVersion = 1
-    override def getProtocolMinorVersion = 1
-    override def getProtocolText = "HTTP/1.1"
+    override def getStatusCode                   = 200
+    override def getStatusText                   = "OK"
+    override def getProtocolName                 = "HTTP"
+    override def getProtocolMajorVersion         = 1
+    override def getProtocolMinorVersion         = 1
+    override def getProtocolText                 = "HTTP/1.1"
     override def getRemoteAddress: SocketAddress = ???
-    override def getLocalAddress: SocketAddress = ???
+    override def getLocalAddress: SocketAddress  = ???
   }
 }
 
@@ -65,15 +65,17 @@ class JavaInvalidCharacterEscapingTest extends AnyFreeSpec with Matchers {
         fps.find(_._1 == "d/c").map(_._2) mustBe Some("fourtharg")
         val response = new ResponseBuilder()
         response.accumulate(OkStatus)
-        response.accumulate(new EagerResponseBodyPart(
-          Unpooled.copiedBuffer(new ObjectMapper().writeValueAsBytes(new InvalidCharacters.Builder("foo", InvalidCharactersEnum.WEIRD_AT).build())),
-          true
-        ))
+        response.accumulate(
+          new EagerResponseBodyPart(
+            Unpooled.copiedBuffer(new ObjectMapper().writeValueAsBytes(new InvalidCharacters.Builder("foo", InvalidCharactersEnum.WEIRD_AT).build())),
+            true
+          )
+        )
         CompletableFuture.completedFuture(response.build())
       }
     }
 
-    val client = new InvalidCharactersClient.Builder(new URI("http://localhost:1234")).withHttpClient(httpClient).build()
+    val client   = new InvalidCharactersClient.Builder(new URI("http://localhost:1234")).withHttpClient(httpClient).build()
     val response = client.getFoo("firstarg", "secondarg", "thirdarg", "fourtharg").call().toCompletableFuture.get()
     response.fold(
       { invChar =>
