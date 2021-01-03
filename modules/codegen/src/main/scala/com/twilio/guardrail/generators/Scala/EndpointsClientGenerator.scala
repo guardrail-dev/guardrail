@@ -197,7 +197,7 @@ object EndpointsClientGenerator {
 
         val bodyAlgebra: Option[Term] = formAlgebra
           .orElse(textPlainAlgebra)
-          .orElse(bodyArgs.map(x => q"jsonRequest[${x.argType}](None)"))
+          .orElse(bodyArgs.map(x => q"jsonRequest[${x.argType}]"))
           .orElse(fallbackBodyAlgebra)
 
         val bodyArgument: Option[Term] = formArgument
@@ -219,7 +219,9 @@ object EndpointsClientGenerator {
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             (resp.value, resp.headers.value) match {
               case (None, Nil) =>
-                p"case ${Lit.Int(resp.statusCode)} => Right($responseCompanionTerm.$responseTerm)"
+                p"""case ${Lit.Int(resp.statusCode)} =>
+                  (_: XMLHttpRequest) => Right($responseCompanionTerm.$responseTerm)
+                """
               case (None, headers) =>
                 val params = headers.map { header =>
                   val lit  = Lit.String(header.name)
@@ -231,7 +233,7 @@ object EndpointsClientGenerator {
                   }
                 }
                 p"""case ${Lit.Int(resp.statusCode)} =>
-                  Right($responseCompanionTerm.$responseTerm(..$params))
+                  (_: XMLHttpRequest) => Right($responseCompanionTerm.$responseTerm(..$params))
                 """
               case (Some((_, tpe, _)), headers) =>
                 val params = Term.Name("v") :: headers.map { header =>
@@ -244,10 +246,10 @@ object EndpointsClientGenerator {
                         }
                       }
                 p"""case ${Lit.Int(resp.statusCode)} =>
-                  parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map(v => $responseCompanionTerm.$responseTerm(..$params))
+                  (_: XMLHttpRequest) => parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map(v => $responseCompanionTerm.$responseTerm(..$params))
                 """
             }
-          } :+ p"case _ => Left(new UnknownStatusException(xhr))"
+          } :+ p"case _ => (_: XMLHttpRequest) => Left(new UnknownStatusException(xhr))"
 
         val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
 
@@ -365,8 +367,8 @@ object EndpointsClientGenerator {
             """,
           List(
             q"""
-              def ${Term.Name(s"${methodName}ResponseMapper")}: Response[$responseCompanionType] = xhr => ${Term
-              .Match(q"xhr.status", cases)}
+              def ${Term.Name(s"${methodName}ResponseMapper")}: Response[$responseCompanionType] = xhr => Some(${Term
+              .Match(q"xhr.status", cases)})
               """,
             q"""
                 val ${Pat.Var(Term.Name(s"${methodName}Endpoint"))} = $endpointDefinition
