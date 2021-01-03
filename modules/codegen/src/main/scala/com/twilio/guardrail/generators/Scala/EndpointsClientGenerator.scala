@@ -499,7 +499,7 @@ object EndpointsClientGenerator {
       }
       val algebra =
         q"""
-            trait ${Type.Name(s"${clientName}Algebra")} extends algebra.Endpoints with algebra.circe.JsonEntitiesFromCodec with AddPathSegments with FormData {
+            trait ${Type.Name(s"${clientName}Algebra")} extends algebra.Endpoints with algebra.circe.JsonEntitiesFromCodecs with AddPathSegments with FormData {
               ..${responseDefs.map {
           case q"def $name: Response[$tpe] = $_" => q"def $name: Response[$tpe]"
         }};
@@ -509,7 +509,7 @@ object EndpointsClientGenerator {
       val client =
         q"""
             class ${Type
-          .Name(clientName)}(...$ctorArgs) extends ${Init(Type.Name(s"${clientName}Algebra"), Name(""), Nil)} with xhr.JsonEntitiesFromCodec with xhr.faithful.Endpoints with XhrAddPathSegments with XhrFormData {
+          .Name(clientName)}(...$ctorArgs) extends ${Init(Type.Name(s"${clientName}Algebra"), Name(""), Nil)} with xhr.JsonEntitiesFromCodecs with xhr.faithful.Endpoints with XhrAddPathSegments with XhrFormData {
               val basePath: Option[String] = ${basePath.fold[Term](q"Option.empty[String]")(bp => q"Option(${Lit.String(bp)})")}
 
               ..$responseDefs;
