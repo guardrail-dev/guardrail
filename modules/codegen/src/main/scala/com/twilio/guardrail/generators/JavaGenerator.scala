@@ -110,8 +110,8 @@ object JavaGenerator {
     def litString(value: String): Target[com.github.javaparser.ast.Node]   = Target.pure(new StringLiteralExpr(value))
     def litFloat(value: Float): Target[com.github.javaparser.ast.Node]     = Target.pure(new DoubleLiteralExpr(value))
     def litDouble(value: Double): Target[com.github.javaparser.ast.Node]   = Target.pure(new DoubleLiteralExpr(value))
-    def litInt(value: Int): Target[com.github.javaparser.ast.Node]         = Target.pure(new IntegerLiteralExpr(value))
-    def litLong(value: Long): Target[com.github.javaparser.ast.Node]       = Target.pure(new LongLiteralExpr(value))
+    def litInt(value: Int): Target[com.github.javaparser.ast.Node]         = Target.pure(new IntegerLiteralExpr(value.toString))
+    def litLong(value: Long): Target[com.github.javaparser.ast.Node]       = Target.pure(new LongLiteralExpr(value.toString))
     def litBoolean(value: Boolean): Target[com.github.javaparser.ast.Node] = Target.pure(new BooleanLiteralExpr(value))
 
     def fullyQualifyPackageName(rawPkgName: List[String]): Target[List[String]] = Target.pure(rawPkgName)
