@@ -333,6 +333,7 @@ object EndpointsClientGenerator {
         val algebraParams = List[Option[Term]](
           Some(urlWithParams),
           bodyAlgebra,
+          Option(q"None"), // Documentation
           NonEmptyList
             .fromList(headerArgs)
             .map(_.map[Term]({ arg =>
