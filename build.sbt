@@ -131,7 +131,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
-  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
+  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.toSet, "scala" -> (scalaFrameworks.toSet - "endpoints")), // Blocked by https://github.com/endpoints4s/endpoints4s/issues/713
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
   ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "dropwizard")),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s")),
