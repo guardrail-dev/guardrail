@@ -17,6 +17,8 @@ val scalatestVersion       = "3.2.3"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.18.0"
 val endpointsVersion       = "0.8.0"
+val endpointsCatsVersion   = "2.1.1"
+val endpointsCirceVersion  = "0.13.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.29"
 val dropwizardScalaVersion = "1.3.7-1"
@@ -478,15 +480,15 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
   .enablePlugins(ScalaJSPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
+      "io.circe"          %%% "circe-core"                    % endpointsCirceVersion,
+      "io.circe"          %%% "circe-parser"                  % endpointsCirceVersion,
+      "io.github.cquiroz" %%% "scala-java-time"               % "2.1.0",
       "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
       "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
-      "org.typelevel"     %%% "cats-core"                     % catsVersion
+      "org.typelevel"     %%% "cats-core"                     % endpointsCatsVersion
     ),
   )
 
