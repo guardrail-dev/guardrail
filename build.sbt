@@ -6,7 +6,7 @@ name := "guardrail-root"
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-val akkaVersion            = "2.6.10"
+val akkaVersion            = "2.6.11"
 val akkaHttpVersion        = "10.2.1"
 val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
@@ -21,10 +21,10 @@ val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.29"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
-val kindProjectorVersion   = "0.11.2"
+val kindProjectorVersion   = "0.11.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.3.7.RELEASE"
+val springBootVersion      = "2.3.8.RELEASE"
 val jacksonVersion         = "2.11.4"
 val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
@@ -302,12 +302,12 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(libraryDependencies ++= testDependencies)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.1",
+      "org.scalameta"               %% "scalameta"                    % "4.4.6",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.24",
-      "org.tpolecat"                %% "atto-core"                    % "0.8.0",
+      "org.tpolecat"                %% "atto-core"                    % "0.9.0",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-macros"                  % catsVersion,
@@ -393,7 +393,7 @@ val dropwizardProjectDependencies = Seq(
   "junit"                      %  "junit"                  % "4.13.1"             % Test,
   "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.1"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.16.12"           % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.16.15"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
@@ -412,7 +412,7 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
   "junit"                          %  "junit"                   % "4.13.1"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
-  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.12"           % Test,
+  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.15"           % Test,
   "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
   "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
@@ -430,7 +430,7 @@ val springProjectDependencies = Seq(
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.16.12"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.16.15"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
