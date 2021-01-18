@@ -6,7 +6,7 @@ name := "guardrail-root"
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-val akkaVersion            = "2.6.10"
+val akkaVersion            = "2.6.11"
 val akkaHttpVersion        = "10.2.1"
 val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
@@ -21,7 +21,7 @@ val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.28"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
-val kindProjectorVersion   = "0.11.2"
+val kindProjectorVersion   = "0.11.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.3.8.RELEASE"
@@ -302,7 +302,7 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(libraryDependencies ++= testDependencies)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.5",
+      "org.scalameta"               %% "scalameta"                    % "4.4.6",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
