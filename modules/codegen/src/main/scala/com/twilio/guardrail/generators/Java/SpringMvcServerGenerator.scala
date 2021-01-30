@@ -195,7 +195,7 @@ object SpringMvcServerGenerator {
                 new ExpressionStmt(
                   new MethodCallExpr(
                     "super",
-                    new IntegerLiteralExpr(response.statusCode)
+                    new IntegerLiteralExpr(response.statusCode.toString)
                   )
                 )
               )
@@ -219,7 +219,7 @@ object SpringMvcServerGenerator {
                   new ExpressionStmt(
                     new MethodCallExpr(
                       "super",
-                      new IntegerLiteralExpr(response.statusCode)
+                      new IntegerLiteralExpr(response.statusCode.toString)
                     )
                   ),
                   new ExpressionStmt(
