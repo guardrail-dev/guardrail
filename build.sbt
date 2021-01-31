@@ -6,7 +6,7 @@ name := "guardrail-root"
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-val akkaVersion            = "2.6.11"
+val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.1"
 val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
