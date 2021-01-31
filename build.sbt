@@ -6,7 +6,7 @@ name := "guardrail-root"
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-val akkaVersion            = "2.6.11"
+val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.1"
 val catsVersion            = "2.1.1"
 val catsEffectVersion      = "2.2.0"
@@ -391,7 +391,7 @@ val dropwizardProjectDependencies = Seq(
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   "junit"                      %  "junit"                  % "4.13.1"             % Test,
-  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.1"            % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.2"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.16.15"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
