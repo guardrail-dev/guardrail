@@ -30,6 +30,7 @@ val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
 val vavrVersion            = "0.10.3"
 val dropwizardVavrVersion  = "1.3.0-4"
+val shapelessVersion       = "2.3.3"
 
 mainClass in assembly := Some("com.twilio.guardrail.CLI")
 assemblyMergeStrategy in assembly := {
@@ -347,7 +348,8 @@ val akkaProjectDependencies = Seq(
   "io.circe"          %% "circe-jawn"           % circeVersion,
   "io.circe"          %% "circe-parser"         % circeVersion,
   "org.scalatest"     %% "scalatest"            % scalatestVersion % Test,
-  "org.typelevel"     %% "cats-core"            % catsVersion
+  "org.typelevel"     %% "cats-core"            % catsVersion,
+  "com.chuusai"       %% "shapeless"            % shapelessVersion
 )
 
 val akkaJacksonProjectDependencies = Seq(
@@ -366,6 +368,7 @@ val akkaJacksonProjectDependencies = Seq(
   "org.glassfish"                  %  "javax.el"                % javaxElVersion,
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion % Test,
+  "com.chuusai"                    %% "shapeless"               % shapelessVersion
 )
 
 val http4sProjectDependencies = Seq(
@@ -379,7 +382,8 @@ val http4sProjectDependencies = Seq(
   "org.http4s"       %% "http4s-dsl"            % http4sVersion,
   "org.scalatest"    %% "scalatest"             % scalatestVersion % Test,
   "org.typelevel"    %% "cats-core"             % catsVersion,
-  "org.typelevel"    %% "cats-effect"           % catsEffectVersion
+  "org.typelevel"    %% "cats-effect"           % catsEffectVersion,
+  "com.chuusai"      %% "shapeless"             % shapelessVersion
 )
 
 val dropwizardProjectDependencies = Seq(
@@ -504,7 +508,8 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
       "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
       "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
-      "org.typelevel"     %%% "cats-core"                     % catsVersion
+      "org.typelevel"     %%% "cats-core"                     % catsVersion,
+      "com.chuusai"       %%% "shapeless"                     % shapelessVersion
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,

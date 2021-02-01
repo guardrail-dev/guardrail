@@ -69,10 +69,29 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
           case x: GetUserResponse.Ok =>
             handleOk(x.value)
           }
+
+          import GetUserResponse._
+          def toUnion: UnionType = fold(value => Coproduct[UnionType](200 ->> createOkRecord(value)))
+          def toCoproduct = {
+            type CoproductType = _root_.com.test.User :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
        """
 
-    respObject shouldEqual q"""object GetUserResponse { case class Ok(value: _root_.com.test.User) extends GetUserResponse }"""
+    respObject shouldEqual
+      q"""
+         object GetUserResponse {
+           case class Ok(value: _root_.com.test.User) extends GetUserResponse
+
+           type OkRecord = FieldType[Witness.`"value"`.T, _root_.com.test.User] :: HNil
+           def createOkRecord(value: _root_.com.test.User): OkRecord = ("value" ->> value) :: HNil
+           type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+         }
+      """
 
   }
 }

@@ -25,7 +25,13 @@ object EndpointsGenerator {
           q"import endpoints.algebra.Documentation",
           q"import endpoints.xhr",
           q"import io.circe.{parser, Decoder => CirceDecoder, Encoder => CirceEncoder}",
-          q"import org.scalajs.dom.raw.XMLHttpRequest"
+          q"import org.scalajs.dom.raw.XMLHttpRequest",
+          q"import shapeless.{Segment => _, _}",
+          q"import shapeless.labelled.FieldType",
+          q"import shapeless.ops.record.Selector",
+          q"import shapeless.record._",
+          q"import shapeless.syntax.singleton._",
+          q"import shapeless.union._"
         )
       )
     def getFrameworkImplicits() = Target.pure(Some((q"EndpointsImplicits", q"""
@@ -77,15 +83,7 @@ object EndpointsGenerator {
             private[this] def argEscape(k: String, v: String): String = URIUtils.encodeURIComponent(k) ++ "=" ++ URIUtils.encodeURIComponent(v)
             implicit val stringPairEncoder: FormDataEncoder[List[(String, String)]] = new FormDataEncoder[List[(String, String)]] {
               private[this] def encode(k: String, v: String): String = URIUtils.encodeURIComponent(k) + "=" + URIUtils.encodeURIComponent(v)
-              def apply = {
-                case (k, v) :: xs =>
-                  xs.foldLeft(encode(k, v))({
-                    case (acc, (k, v)) =>
-                      acc + "&" + encode(k, v)
-                  })
-                case Nil =>
-                  ""
-              }
+              def apply = _.map({ case (k, v) => encode(k, v) }).mkString("&")
             }
             def formDataRequest[A]()(implicit ev: FormDataEncoder[A]): RequestEntity[A] = (a: A, xhr: XMLHttpRequest) => {
               xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded")

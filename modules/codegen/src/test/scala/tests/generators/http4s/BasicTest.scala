@@ -206,58 +206,184 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           def fold[A](handleOk: => A): A = this match {
             case GetBarResponse.Ok => handleOk
           }
+
+          import GetBarResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](200 ->> createOkRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object GetBarResponse { case object Ok extends GetBarResponse }""",
+      q"""
+        object GetBarResponse {
+          case object Ok extends GetBarResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+          def createOkRecord(value: Unit): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """,
       q"""
         sealed abstract class GetBazResponse {
           def fold[A](handleOk: io.circe.Json => A): A = this match {
             case x: GetBazResponse.Ok =>
               handleOk(x.value)
           }
+
+          import GetBazResponse._
+          def toUnion: UnionType = fold(value => Coproduct[UnionType](200 ->> createOkRecord(value)))
+          def toCoproduct = {
+            type CoproductType = io.circe.Json :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object GetBazResponse { case class Ok(value: io.circe.Json) extends GetBazResponse }""",
+      q"""
+        object GetBazResponse {
+          case class Ok(value: io.circe.Json) extends GetBazResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, io.circe.Json] :: HNil
+          def createOkRecord(value: io.circe.Json): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """,
       q"""
         sealed abstract class PostFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case PostFooResponse.Ok => handleOk
           }
+
+          import PostFooResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](200 ->> createOkRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object PostFooResponse { case object Ok extends PostFooResponse }""",
+      q"""
+        object PostFooResponse {
+          case object Ok extends PostFooResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+          def createOkRecord(value: Unit): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """,
       q"""
         sealed abstract class GetFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case GetFooResponse.Ok => handleOk
           }
+
+          import GetFooResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](200 ->> createOkRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object GetFooResponse { case object Ok extends GetFooResponse }""",
+      q"""
+        object GetFooResponse {
+          case object Ok extends GetFooResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+          def createOkRecord(value: Unit): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """,
       q"""
         sealed abstract class PutFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case PutFooResponse.Ok => handleOk
           }
+
+          import PutFooResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](200 ->> createOkRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object PutFooResponse { case object Ok extends PutFooResponse }""",
+      q"""
+        object PutFooResponse {
+          case object Ok extends PutFooResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+          def createOkRecord(value: Unit): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """,
       q"""
         sealed abstract class PatchFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case PatchFooResponse.Ok => handleOk
           }
+
+          import PatchFooResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](200 ->> createOkRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object PatchFooResponse { case object Ok extends PatchFooResponse }""",
+      q"""
+        object PatchFooResponse {
+          case object Ok extends PatchFooResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+          def createOkRecord(value: Unit): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """,
       q"""
         sealed abstract class DeleteFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case DeleteFooResponse.Ok => handleOk
           }
+
+          import DeleteFooResponse._
+          def toUnion: UnionType = fold(Coproduct[UnionType](200 ->> createOkRecord(())))
+          def toCoproduct = {
+            type CoproductType = Unit :+: CNil
+            case object f extends Poly1 {
+              implicit def handleOkRecord = at[(Witness.`200`.T, OkRecord)](pair => Coproduct[CoproductType](pair._2.get("value")))
+            }
+            toUnion.fields.fold(f)
+          }
         }
       """,
-      q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
+      q"""
+        object DeleteFooResponse {
+          case object Ok extends DeleteFooResponse
+
+          type OkRecord = FieldType[Witness.`"value"`.T, Unit] :: HNil
+          def createOkRecord(value: Unit): OkRecord = ("value" ->> value) :: HNil
+          type UnionType = FieldType[Witness.`200`.T, OkRecord] :+: CNil
+        }
+      """
     )
 
     expected.zip(statements).foreach({ case (a, b) => a.structure should equal(b.structure) })
