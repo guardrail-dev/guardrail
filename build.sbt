@@ -48,7 +48,7 @@ assemblyMergeStrategy in assembly := {
 val exampleFrameworkSuites = Map(
   "scala" -> List(
     ExampleFramework("akka-http", "akkaHttp"),
-    ExampleFramework("endpoints", "endpoints", List("client")),
+    ExampleFramework("endpoints", "endpoints", List()),
     ExampleFramework("http4s", "http4s"),
     ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
     ExampleFramework("dropwizard", "dropwizardScala", List("server")),
