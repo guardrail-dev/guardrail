@@ -13,7 +13,6 @@ micrositeTwitterCreator := "@twilio"
 micrositeGithubOwner := "twilio"
 micrositeGithubRepo := "guardrail"
 micrositeHighlightLanguages ++= Seq("yaml", "scala")
-micrositeCompilingDocsTool := WithMdoc
 micrositeGitterChannel := false
 micrositeAnalyticsToken := "UA-154175369-1"
 micrositeTheme := "pattern"
