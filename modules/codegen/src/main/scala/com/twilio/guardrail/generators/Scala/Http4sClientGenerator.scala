@@ -516,7 +516,10 @@ object Http4sClientGenerator {
       for {
         resp <- responses.value
         tpe  <- resp.value.map(_._2)
-      } yield q"private[this] val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, produces)}"
+      } yield {
+        val contentTypes = resp.value.map(_._1).map(List(_)).getOrElse(produces) //for OpenAPI 3.x we should take ContentType from the response
+        q"private[this] val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${Http4sHelper.generateDecoder(tpe, contentTypes)}"
+      }
   }
 
 }
