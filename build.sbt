@@ -394,7 +394,7 @@ val dropwizardProjectDependencies = Seq(
   "junit"                      %  "junit"                  % "4.13.1"             % Test,
   "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.2"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.16.15"           % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.16.23"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
@@ -413,7 +413,7 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
   "junit"                          %  "junit"                   % "4.13.1"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
-  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.15"           % Test,
+  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.23"           % Test,
   "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
   "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
@@ -431,7 +431,7 @@ val springProjectDependencies = Seq(
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.16.15"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.16.23"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
