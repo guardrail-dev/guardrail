@@ -261,10 +261,8 @@ val commonSettings = Seq(
     "-encoding",
     "utf8"
   ),
-  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental", "-Xlint:-missing-interpolator,_")).value,
-  scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
-  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
-  scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
+  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
   parallelExecution in Test := true,
   addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
@@ -337,6 +335,12 @@ lazy val codegen = (project in file("modules/codegen"))
         url = url("http://hardchee.se/")
       )
     )
+  )
+  .settings(
+    scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
+    scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+    scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+    scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
   )
 
 val akkaProjectDependencies = Seq(
