@@ -16,7 +16,9 @@ val scalacheckVersion      = "1.15.2"
 val scalatestVersion       = "3.2.3"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.18.0"
-val endpointsVersion       = "0.8.0"
+val endpointsVersion       = "1.3.0"
+val endpointsCatsVersion   = "2.1.1"
+val endpointsCirceVersion  = "0.13.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.29"
 val dropwizardScalaVersion = "1.3.7-1"
@@ -46,7 +48,7 @@ assemblyMergeStrategy in assembly := {
 val exampleFrameworkSuites = Map(
   "scala" -> List(
     ExampleFramework("akka-http", "akkaHttp"),
-    ExampleFramework("endpoints", "endpoints", List("client")),
+    ExampleFramework("endpoints", "endpoints", List()),
     ExampleFramework("http4s", "http4s"),
     ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
     ExampleFramework("dropwizard", "dropwizardScala", List("server")),
@@ -129,7 +131,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
-  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
+  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.toSet, "scala" -> (scalaFrameworks.toSet - "endpoints")), // Blocked by https://github.com/endpoints4s/endpoints4s/issues/713
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
   ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "dropwizard")),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s")),
@@ -259,10 +261,8 @@ val commonSettings = Seq(
     "-encoding",
     "utf8"
   ),
-  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental", "-Xlint:-missing-interpolator,_")).value,
-  scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
-  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
-  scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
+  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
   parallelExecution in Test := true,
   addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
@@ -335,6 +335,12 @@ lazy val codegen = (project in file("modules/codegen"))
         url = url("http://hardchee.se/")
       )
     )
+  )
+  .settings(
+    scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
+    scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+    scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+    scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
   )
 
 val akkaProjectDependencies = Seq(
@@ -475,37 +481,26 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
   .settings(
     skip in publish := true
   )
-  .enablePlugins(ScalaJSPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
-      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
-      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
-      "org.typelevel"     %%% "cats-core"                     % catsVersion
+      "io.circe"          %% "circe-core"          % endpointsCirceVersion,
+      "io.circe"          %% "circe-parser"        % endpointsCirceVersion,
+      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
+      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"           % endpointsCatsVersion
     ),
   )
 
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
-  .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings)
   .settings(
-    coverageEnabled := false,  // scoverage issue @ commit 28b0cc55: Found a dangling UndefinedParam at Position(file:.../modules/sample-endpoints/target/generated/issues/issue351/client/endpoints/EndpointsImplicits.scala,91,34). This is likely due to a bad interaction between a macro or a compiler plugin and the Scala.js compiler plugin. If you hit this, please let us know.
     codegenSettings,
     libraryDependencies ++= Seq(
-      "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
-      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
-      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
-      "org.typelevel"     %%% "cats-core"                     % catsVersion
+      "io.circe"          %% "circe-core"          % circeVersion,
+      "io.circe"          %% "circe-parser"        % circeVersion,
+      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
+      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"           % catsVersion
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,

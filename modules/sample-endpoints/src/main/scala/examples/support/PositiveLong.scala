@@ -1,5 +1,6 @@
 package examples.support
 
+/*
 import examples.client.endpoints.Implicits
 import io.circe.Decoder
 
@@ -9,3 +10,4 @@ object PositiveLong {
   implicit val showable                        = Implicits.Show.build[PositiveLong](_.value.toString())
   implicit val decodePositiveLong              = Decoder.decodeLong.emap(num => PositiveLong.apply(num).toRight(s"${num} is not positive"))
 }
+*/

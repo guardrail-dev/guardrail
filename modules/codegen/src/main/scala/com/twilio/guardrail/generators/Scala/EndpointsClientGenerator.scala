@@ -17,6 +17,70 @@ import java.net.URI
 import scala.meta._
 
 object EndpointsClientGenerator {
+  def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+    new ClientTermInterp
+  class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
+    implicit def MonadF: Monad[Target] = Target.targetInstances
+
+    def generateClientOperation(
+        className: List[String],
+        responseClsName: String,
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+        parameters: LanguageParameters[ScalaLanguage]
+    )(
+        route: RouteMeta,
+        methodName: String,
+        responses: Responses[ScalaLanguage]
+    ): Target[RenderedClientOperation[ScalaLanguage]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def getImports(tracing: Boolean): Target[List[scala.meta.Import]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def generateResponseDefinitions(
+        responseClsName: String,
+        responses: Responses[ScalaLanguage],
+        protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+    ): Target[List[scala.meta.Defn]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def generateSupportDefinitions(
+        tracing: Boolean,
+        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+    ): Target[List[SupportDefinition[ScalaLanguage]]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def buildStaticDefns(
+        clientName: String,
+        tracingName: Option[String],
+        serverUrls: Option[NonEmptyList[URI]],
+        ctorArgs: List[List[scala.meta.Term.Param]],
+        tracing: Boolean
+    ): Target[StaticDefns[ScalaLanguage]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+
+    def buildClient(
+        clientName: String,
+        tracingName: Option[String],
+        serverUrls: Option[NonEmptyList[URI]],
+        basePath: Option[String],
+        ctorArgs: List[List[scala.meta.Term.Param]],
+        clientCalls: List[scala.meta.Defn],
+        supportDefinitions: List[scala.meta.Defn],
+        tracing: Boolean
+    ): Target[NonEmptyList[Either[scala.meta.Defn.Trait, scala.meta.Defn.Class]]] =
+      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  }
+}
+/*
+object EndpointsClientGenerator {
   def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] = new ClientTermInterp
   class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -197,7 +261,7 @@ object EndpointsClientGenerator {
 
         val bodyAlgebra: Option[Term] = formAlgebra
           .orElse(textPlainAlgebra)
-          .orElse(bodyArgs.map(x => q"jsonRequest[${x.argType}](None)"))
+          .orElse(bodyArgs.map(x => q"jsonRequest[${x.argType}]"))
           .orElse(fallbackBodyAlgebra)
 
         val bodyArgument: Option[Term] = formArgument
@@ -219,7 +283,9 @@ object EndpointsClientGenerator {
             val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
             (resp.value, resp.headers.value) match {
               case (None, Nil) =>
-                p"case ${Lit.Int(resp.statusCode)} => Right($responseCompanionTerm.$responseTerm)"
+                p"""case ${Lit.Int(resp.statusCode)} =>
+                  (_: XMLHttpRequest) => Right($responseCompanionTerm.$responseTerm)
+                """
               case (None, headers) =>
                 val params = headers.map { header =>
                   val lit  = Lit.String(header.name)
@@ -231,7 +297,7 @@ object EndpointsClientGenerator {
                   }
                 }
                 p"""case ${Lit.Int(resp.statusCode)} =>
-                  Right($responseCompanionTerm.$responseTerm(..$params))
+                  (_: XMLHttpRequest) => Right($responseCompanionTerm.$responseTerm(..$params))
                 """
               case (Some((_, tpe, _)), headers) =>
                 val params = Term.Name("v") :: headers.map { header =>
@@ -244,10 +310,10 @@ object EndpointsClientGenerator {
                         }
                       }
                 p"""case ${Lit.Int(resp.statusCode)} =>
-                  parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map(v => $responseCompanionTerm.$responseTerm(..$params))
+                  (_: XMLHttpRequest) => parser.parse(xhr.responseText).flatMap(CirceDecoder[${tpe}].decodeJson _).map(v => $responseCompanionTerm.$responseTerm(..$params))
                 """
             }
-          } :+ p"case _ => Left(new UnknownStatusException(xhr))"
+          } :+ p"case _ => (_: XMLHttpRequest) => Left(new UnknownStatusException(xhr))"
 
         val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
 
@@ -270,19 +336,17 @@ object EndpointsClientGenerator {
           def emulateTupler(base: Term, xs: NonEmptyList[Term]): Term.Tuple = xs match {
             case NonEmptyList(x, Nil) =>
               base match {
-                case q"($a, $b)" => q"($a, $b, $x)"
-                case as          => q"($as, $x)"
-              }
-            case NonEmptyList(x, y :: Nil) =>
-              base match {
-                case q"($a, $b)" => q"($a, $b, $x, $y)"
-                case as          => q"($as, $x, $y)"
+                case q"($a, $b, $c)" => q"($a, $b, $c, $x)"
+                case q"($a, $b)"     => q"($a, $b, $x)"
+                case as              => q"($as, $x)"
               }
             case NonEmptyList(x, y :: rest) =>
-              emulateTupler(base match {
-                case q"($a, $b)" => q"($a, $b, $x)"
-                case as          => q"($as, $x)"
-              }, NonEmptyList(y, rest))
+              val next = base match {
+                case q"($a, $b, $c)" => q"($a, $b, $c, $x)"
+                case q"($a, $b)"     => q"($a, $b, $x)"
+                case as              => q"($as, $x)"
+              }
+              emulateTupler(next, NonEmptyList(y, rest))
           }
 
           def hackyFoldLimitedTupleTree: NonEmptyList[Term] => NonEmptyList[Term] = {
@@ -331,6 +395,7 @@ object EndpointsClientGenerator {
         val algebraParams = List[Option[Term]](
           Some(urlWithParams),
           bodyAlgebra,
+          Option(q"None"), // Documentation
           NonEmptyList
             .fromList(headerArgs)
             .map(_.map[Term]({ arg =>
@@ -365,8 +430,8 @@ object EndpointsClientGenerator {
             """,
           List(
             q"""
-              def ${Term.Name(s"${methodName}ResponseMapper")}: Response[$responseCompanionType] = xhr => ${Term
-              .Match(q"xhr.status", cases)}
+              def ${Term.Name(s"${methodName}ResponseMapper")}: Response[$responseCompanionType] = xhr => Some(${Term
+              .Match(q"xhr.status", cases)})
               """,
             q"""
                 val ${Pat.Var(Term.Name(s"${methodName}Endpoint"))} = $endpointDefinition
@@ -496,7 +561,7 @@ object EndpointsClientGenerator {
       }
       val algebra =
         q"""
-            trait ${Type.Name(s"${clientName}Algebra")} extends algebra.Endpoints with algebra.circe.JsonEntitiesFromCodec with AddPathSegments with FormData {
+            trait ${Type.Name(s"${clientName}Algebra")} extends algebra.Endpoints with algebra.circe.JsonEntitiesFromCodecs with AddPathSegments with FormData {
               ..${responseDefs.map {
           case q"def $name: Response[$tpe] = $_" => q"def $name: Response[$tpe]"
         }};
@@ -506,7 +571,7 @@ object EndpointsClientGenerator {
       val client =
         q"""
             class ${Type
-          .Name(clientName)}(...$ctorArgs) extends ${Init(Type.Name(s"${clientName}Algebra"), Name(""), Nil)} with xhr.JsonEntitiesFromCodec with xhr.faithful.Endpoints with XhrAddPathSegments with XhrFormData {
+          .Name(clientName)}(...$ctorArgs) extends ${Init(Type.Name(s"${clientName}Algebra"), Name(""), Nil)} with xhr.JsonEntitiesFromCodecs with xhr.faithful.Endpoints with XhrAddPathSegments with XhrFormData {
               val basePath: Option[String] = ${basePath.fold[Term](q"Option.empty[String]")(bp => q"Option(${Lit.String(bp)})")}
 
               ..$responseDefs;
@@ -525,3 +590,4 @@ object EndpointsClientGenerator {
     }
   }
 }
+ */

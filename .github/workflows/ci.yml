@@ -76,7 +76,7 @@ jobs:
           ]
         framework: [
             { framework: 'akka-http',         project: 'akkaHttpSample'        },
-            { framework: 'endpoints',         project: 'endpointsSample'       },
+            #{ framework: 'endpoints',         project: 'endpointsSample'       },
             { framework: 'http4s',            project: 'http4sSample'          },
             { framework: 'akka-http-jackson', project: 'akkaHttpJacksonSample' },
             { framework: 'dropwizard',        project: 'dropwizardScalaSample' }

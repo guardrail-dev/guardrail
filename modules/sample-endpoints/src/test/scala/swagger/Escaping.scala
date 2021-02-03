@@ -1,5 +1,6 @@
 package swagger
 
+/*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.funsuite.AnyFunSuite
 import examples.client.endpoints.Implicits
@@ -20,3 +21,4 @@ class EscapingTest extends AnyFunSuite with Matchers {
     Implicits.Formatter.addArg("my key", "3=foo/bar baz!") shouldEqual "&my%20key=3%3Dfoo%2Fbar%20baz!"
   }
 }
+ */
