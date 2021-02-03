@@ -45,6 +45,8 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
+WelcomeMessage.welcomeMessage
+
 val exampleFrameworkSuites = Map(
   "scala" -> List(
     ExampleFramework("akka-http", "akkaHttp"),
@@ -177,7 +179,7 @@ fullRunTask(
   exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
-lazy val runExample: InputKey[Unit] = inputKey[Unit]("Run generators with example args (usage: runExample [language] [framework])")
+lazy val runExample: InputKey[Unit] = inputKey[Unit]("Run generators with example args (usage: runExample [language [framework]])")
 runExample := Def.inputTaskDyn {
   val args: Seq[String] = spaceDelimited("<arg>").parsed
   val runArgs = args match {
