@@ -336,19 +336,17 @@ object EndpointsClientGenerator {
           def emulateTupler(base: Term, xs: NonEmptyList[Term]): Term.Tuple = xs match {
             case NonEmptyList(x, Nil) =>
               base match {
-                case q"($a, $b)" => q"($a, $b, $x)"
-                case as          => q"($as, $x)"
-              }
-            case NonEmptyList(x, y :: Nil) =>
-              base match {
-                case q"($a, $b)" => q"($a, $b, $x, $y)"
-                case as          => q"($as, $x, $y)"
+                case q"($a, $b, $c)" => q"($a, $b, $c, $x)"
+                case q"($a, $b)"     => q"($a, $b, $x)"
+                case as              => q"($as, $x)"
               }
             case NonEmptyList(x, y :: rest) =>
-              emulateTupler(base match {
-                case q"($a, $b)" => q"($a, $b, $x)"
-                case as          => q"($as, $x)"
-              }, NonEmptyList(y, rest))
+              val next = base match {
+                case q"($a, $b, $c)" => q"($a, $b, $c, $x)"
+                case q"($a, $b)"     => q"($a, $b, $x)"
+                case as              => q"($as, $x)"
+              }
+              emulateTupler(next, NonEmptyList(y, rest))
           }
 
           def hackyFoldLimitedTupleTree: NonEmptyList[Term] => NonEmptyList[Term] = {
