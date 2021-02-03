@@ -3,7 +3,7 @@ package com.twilio.guardrail.core
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats._
 import cats.data._
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.{ Target, UserError }
 import scala.collection.JavaConverters._
 import cats.Functor

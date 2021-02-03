@@ -1,7 +1,7 @@
 package com.twilio.guardrail.generators.helpers
 
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA

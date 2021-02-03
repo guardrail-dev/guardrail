@@ -1,6 +1,4 @@
 package com.twilio.guardrail
-
-import cats.instances.list._
 import cats.syntax.foldable._
 
 package object extract {
