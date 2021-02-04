@@ -6,6 +6,12 @@ name := "guardrail-root"
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
+git.gitDescribedVersion := git.gitDescribedVersion(v => {
+  import scala.sys.process._
+  val nativeGitDescribeResult = ("git describe --tags HEAD" !!).trim
+  git.defaultTagByVersionStrategy(nativeGitDescribeResult)
+}).value
+
 val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.3"
 val catsVersion            = "2.3.1"
