@@ -14,10 +14,20 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: 8
+      - uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '2.6.0'
+      - name: Install microsite deps
+        run: |
+          gem update --system
+          gem install sass
+          gem install jekyll -v 4.0.0
       - name: Print versions
         run: |
           java -version
           gpg --version
+          ruby --version
+          jekyll --version
       - name: Publish artifacts
         run: sbt clean ci-release
         env:
@@ -25,3 +35,5 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+      - name: Update website
+        run: sbt microsite/makeMicrosite microsite/publishMicrosite
