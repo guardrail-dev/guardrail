@@ -10,14 +10,14 @@ jobs:
     name: Publish release
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: print GnuPG version
-        run: gpg --version
-      - name: Set up JDK 8
-        uses: actions/setup-java@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
         with:
           java-version: 8
+      - name: Print versions
+        run: |
+          java -version
+          gpg --version
       - name: Publish artifacts
         run: sbt clean ci-release
         env:
