@@ -16,6 +16,8 @@ jobs:
           ]
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up JDK
       uses: actions/setup-java@v1
       with:
@@ -45,6 +47,8 @@ jobs:
           ]
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up JDK
       uses: actions/setup-java@v1
       with:
@@ -88,6 +92,8 @@ jobs:
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
       if: matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' )
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up JDK
       uses: actions/setup-java@v1
       with:

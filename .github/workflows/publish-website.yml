@@ -1,14 +1,11 @@
-name: Release
+name: Publish website
 
 on:
-  release:
-    types:
-      - released
   workflow_dispatch: {}
 
 jobs:
   publish:
-    name: Publish release
+    name: Publish website
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -31,12 +28,5 @@ jobs:
           gpg --version
           ruby --version
           jekyll --version
-      - name: Publish artifacts
-        run: sbt clean ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       - name: Update website
         run: sbt microsite/makeMicrosite microsite/publishMicrosite
