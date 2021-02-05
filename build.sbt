@@ -12,6 +12,8 @@ git.gitDescribedVersion := git.gitDescribedVersion(v => {
   git.defaultTagByVersionStrategy(nativeGitDescribeResult)
 }).value
 
+git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
+
 val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.3"
 val catsVersion            = "2.3.1"
