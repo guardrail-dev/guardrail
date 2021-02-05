@@ -19,7 +19,7 @@ jobs:
           java-version: 8
       - uses: actions/setup-ruby@v1
         with:
-          ruby-version: '2.6.0'
+          ruby-version: '2.6'
       - name: Install microsite deps
         run: |
           gem update --system
