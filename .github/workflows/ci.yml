@@ -21,14 +21,6 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: ${{ matrix.java }}
-    - uses: actions/setup-ruby@v1
-      with:
-        ruby-version: '2.6'
-    - name: Install microsite deps
-      run: |
-        gem update --system
-        gem install sass
-        gem install jekyll -v 4.0.0
     - name: print Java version
       run: java -version
     - uses: actions/cache@v1
