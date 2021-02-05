@@ -34,9 +34,5 @@ jobs:
         run: |
           java -version
           gpg --version
-          ruby --version
-          jekyll --version
-      - name: Update website
-        env:
-          RUBYOPT: '-rbundler/setup'  # Tricks ruby executables to recognize bundler configuration
-        run: sbt microsite/makeMicrosite microsite/publishMicrosite
+          ruby --version || true
+          jekyll --version || true
