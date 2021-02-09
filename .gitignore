@@ -3,5 +3,6 @@ target/
 .bloop/
 .bsp/
 .metals/
+vendor/
 
 .idea

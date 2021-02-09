@@ -144,7 +144,7 @@ object SwaggerGenerator {
                     .indexedCosequence
                     .map { tags =>
                       println(
-                        s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.history})"
+                        s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.showHistory})"
                       )
                       tags.get.toList
                     }
@@ -187,7 +187,7 @@ object SwaggerGenerator {
           .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
 
       def fallbackParameterHandler(parameter: Tracker[Parameter]) =
-        Target.raiseUserError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.history})")
+        Target.raiseUserError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.showHistory})")
 
       def getOperationId(operation: Tracker[Operation]) =
         operation
