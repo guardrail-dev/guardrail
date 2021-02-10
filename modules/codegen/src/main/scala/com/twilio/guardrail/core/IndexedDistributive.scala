@@ -1,7 +1,7 @@
 package com.twilio.guardrail.core
 
 import cats.{ Eval, FlatMap, Foldable, Functor, MonoidK }
-import cats.implicits._
+import cats.syntax.all._
 
 /** IndexedDistributive, heavily inspired by Data.Distributive, but exposing an index into the structure being walked
   *

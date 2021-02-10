@@ -6,7 +6,7 @@ import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.{ FlatMap, Foldable }
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SecurityScheme, SwaggerTerms }

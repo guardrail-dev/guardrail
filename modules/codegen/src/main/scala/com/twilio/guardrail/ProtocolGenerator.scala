@@ -4,7 +4,7 @@ import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.oas.models.media._
 import cats.Monad
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.RawParameterType

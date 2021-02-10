@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 package generators
 
-import cats.implicits._
+import cats.syntax.all._
 import cats.Monad
 import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.core.implicits._
