@@ -1,7 +1,7 @@
 package com.twilio.guardrail.protocol.terms
 
 import cats.Order
-import cats.implicits._
+import cats.syntax.all._
 
 import java.util.Locale
 

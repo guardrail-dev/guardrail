@@ -5,7 +5,6 @@ import java.util
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
-import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.CoreTermInterp
 import com.twilio.guardrail.languages.ScalaLanguage

@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.Java
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.{ FlatMap, Monad }
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
 import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }

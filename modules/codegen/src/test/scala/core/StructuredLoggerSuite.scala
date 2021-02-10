@@ -1,6 +1,4 @@
 package core
-
-import cats.implicits._
 import com.twilio.guardrail._
 import com.twilio.guardrail.core._
 

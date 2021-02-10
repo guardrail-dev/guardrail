@@ -1,6 +1,6 @@
 package com.twilio.guardrail.generators.syntax
 
-import cats.implicits._
+import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.body._
