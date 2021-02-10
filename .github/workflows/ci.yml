@@ -8,7 +8,6 @@ on:
 jobs:
   scala-steward-label:
     runs-on: ubuntu-20.04
-    if: github.actor == 'scala-steward'
     steps:
       - uses: actions/github-script@v3
         with:
@@ -18,7 +17,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: ['chore']
+              labels: ['chore', github.actor]
             })
   core:
     runs-on: ubuntu-20.04
