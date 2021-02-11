@@ -1,6 +1,6 @@
 package com.twilio.guardrail.protocol.terms
 
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.framework.FrameworkTerms

@@ -1,7 +1,7 @@
 package com.twilio.guardrail.core
 
 import cats.data.{ Chain, NonEmptyChain }
-import cats.implicits._
+import cats.syntax.all._
 import cats.{ Monoid, Order, Show }
 
 sealed abstract class LogLevel(val level: String)

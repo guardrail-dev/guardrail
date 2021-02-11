@@ -10,7 +10,7 @@ import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.shims._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.SwaggerUtil.ResolvedType
 
 case class RawParameterName private[generators] (value: String)

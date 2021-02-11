@@ -4,7 +4,7 @@ import com.twilio.guardrail.core.StructuredLogger
 import cats.{ Applicative, MonadError }
 import cats.Traverse
 import cats.Eval
-import cats.implicits._
+import cats.syntax.all._
 import java.util.concurrent.atomic.AtomicBoolean
 
 object Target {
