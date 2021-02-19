@@ -1,14 +1,11 @@
-name: Release
+name: Publish website
 
 on:
-  release:
-    types:
-      - released
   workflow_dispatch: {}
 
 jobs:
   publish:
-    name: Publish release
+    name: Publish website
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -30,18 +27,17 @@ jobs:
         run: |
           bundle config path vendor/bundle
           bundle install --jobs 4 --retry 3
+          echo "$PWD/vendor/bundle/bin" >> $GITHUB_PATH
       - name: Print versions
+        env:
+          RUBYOPT: '-rbundler/setup'  # Tricks ruby executables to recognize bundler configuration
         run: |
           java -version
           gpg --version
-          ruby --version
-          jekyll --version
-      - name: Publish artifacts
-        run: sbt 'show version' clean ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          ruby --version || true
+          jekyll --version || true
       - name: Update website
+        env:
+          RUBYOPT: '-rbundler/setup'  # Tricks ruby executables to recognize bundler configuration
+          MICROSITE_PUBLISH_TOKEN: ${{ secrets.MICROSITE_PUBLISH_TOKEN }}
         run: sbt microsite/makeMicrosite microsite/publishMicrosite

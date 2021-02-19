@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 
 import cats.data.{ Writer, WriterT }
-import cats.implicits._
+import cats.syntax.all._
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{ Files, Path, StandardOpenOption }
 import scala.io.AnsiColor

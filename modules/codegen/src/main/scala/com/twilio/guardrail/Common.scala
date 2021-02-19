@@ -2,7 +2,7 @@ package com.twilio.guardrail
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import cats.Id
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.extract.SecurityOptional

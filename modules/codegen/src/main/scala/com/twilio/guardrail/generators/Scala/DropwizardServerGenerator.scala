@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.Scala
 
 import cats.Monad
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.{ LanguageParameter, RawParameterName, ScalaGenerator }
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
