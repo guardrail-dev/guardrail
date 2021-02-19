@@ -16,14 +16,14 @@ git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.3"
-val catsVersion            = "2.4.2"
-val catsEffectVersion      = "2.2.0"
+val catsVersion            = "2.3.1"
+val catsEffectVersion      = "2.3.3"
 val circeVersion           = "0.13.0"
-val http4sVersion          = "0.21.18"
+val http4sVersion          = "0.21.19"
 val scalacheckVersion      = "1.15.2"
-val scalatestVersion       = "3.2.3"
+val scalatestVersion       = "3.2.4"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
-val javaparserVersion      = "3.18.0"
+val javaparserVersion      = "3.19.0"
 val endpointsVersion       = "1.3.0"
 val endpointsCatsVersion   = "2.4.1"
 val endpointsCirceVersion  = "0.13.0"
@@ -34,7 +34,7 @@ val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.11.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.3.8.RELEASE"
+val springBootVersion      = "2.3.9.RELEASE"
 val jacksonVersion         = "2.11.4"
 val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
@@ -406,7 +406,7 @@ val dropwizardProjectDependencies = Seq(
   "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-  "junit"                      %  "junit"                  % "4.13.1"             % Test,
+  "junit"                      %  "junit"                  % "4.13.2"             % Test,
   "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.4"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "org.mockito"                %% "mockito-scala"          % "1.16.25"           % Test,
@@ -426,7 +426,7 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scala-lang.modules"         %% "scala-java8-compat"      % "0.9.1"            % Test,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
-  "junit"                          %  "junit"                   % "4.13.1"             % Test,
+  "junit"                          %  "junit"                   % "4.13.2"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
   "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.25"           % Test,
   "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
