@@ -3,7 +3,7 @@ package generators
 
 import com.twilio.guardrail.languages.LA
 import cats.data.StateT
-import cats.implicits._
+import cats.syntax.all._
 
 abstract class AbstractModule[L <: LA] {
   def popModule[A](section: String, first: (String, A), rest: (String, A)*): StateT[Target, Set[String], A] =

@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators
 
 import cats.Monad
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail._
 import com.twilio.guardrail.generators.syntax.RichString

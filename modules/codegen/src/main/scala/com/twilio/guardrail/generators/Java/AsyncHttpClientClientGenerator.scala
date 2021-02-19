@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators.Java
 
 import cats.Monad
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.Modifier._

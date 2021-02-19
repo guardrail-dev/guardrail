@@ -151,7 +151,7 @@ guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
       <td>string</td>
       <td nowrap>definitions, parameters</td>
       <td>
-        Override the generated array type from `Map` to some custom type.
+        Override the generated map type from `Map` to some custom type.
         This requires the type to have either serializers/deserializers in the
         underlying JSON framework or HTTP framework. As this is an advanced
         feature, it may require use of custom <code>imports</code> provided via

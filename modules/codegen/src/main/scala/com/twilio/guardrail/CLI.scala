@@ -2,7 +2,7 @@ package com.twilio.guardrail
 
 import java.nio.file.Path
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.core.{ CoreTermInterp, LogLevel, LogLevels, StructuredLogger }
 import com.twilio.guardrail.terms.CoreTerms
 import com.twilio.guardrail.languages.{ JavaLanguage, LA, ScalaLanguage }

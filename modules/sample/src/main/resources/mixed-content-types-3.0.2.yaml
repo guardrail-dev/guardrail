@@ -1,0 +1,28 @@
+openapi: 3.0.2
+info:
+  title: 'mixed content types'
+  version: 1.0.0
+paths:
+  /foo:
+    post:
+      operationId: doFoo
+      responses:
+        200:
+          description: success
+          content:
+            text/plain:
+              schema:
+                type: string
+        400:
+          description: "Invalid"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        name:
+          type: string

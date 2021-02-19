@@ -6,17 +6,27 @@ name := "guardrail-root"
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-val akkaVersion            = "2.6.11"
-val akkaHttpVersion        = "10.2.1"
-val catsVersion            = "2.1.1"
-val catsEffectVersion      = "2.2.0"
+git.gitDescribedVersion := git.gitDescribedVersion(v => {
+  import scala.sys.process._
+  val nativeGitDescribeResult = ("git describe --tags HEAD" !!).trim
+  git.defaultTagByVersionStrategy(nativeGitDescribeResult)
+}).value
+
+git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
+
+val akkaVersion            = "2.6.12"
+val akkaHttpVersion        = "10.2.3"
+val catsVersion            = "2.3.1"
+val catsEffectVersion      = "2.3.3"
 val circeVersion           = "0.13.0"
-val http4sVersion          = "0.21.15"
+val http4sVersion          = "0.21.19"
 val scalacheckVersion      = "1.15.2"
-val scalatestVersion       = "3.2.3"
+val scalatestVersion       = "3.2.4"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
-val javaparserVersion      = "3.18.0"
-val endpointsVersion       = "0.8.0"
+val javaparserVersion      = "3.19.0"
+val endpointsVersion       = "1.3.0"
+val endpointsCatsVersion   = "2.4.1"
+val endpointsCirceVersion  = "0.13.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.29"
 val dropwizardScalaVersion = "1.3.7-1"
@@ -24,8 +34,8 @@ val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.11.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.3.8.RELEASE"
-val jacksonVersion         = "2.12.1"
+val springBootVersion      = "2.3.9.RELEASE"
+val jacksonVersion         = "2.11.4"
 val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
 val vavrVersion            = "0.10.3"
@@ -43,10 +53,12 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
+WelcomeMessage.welcomeMessage
+
 val exampleFrameworkSuites = Map(
   "scala" -> List(
     ExampleFramework("akka-http", "akkaHttp"),
-    ExampleFramework("endpoints", "endpoints", List("client")),
+    ExampleFramework("endpoints", "endpoints", List()),
     ExampleFramework("http4s", "http4s"),
     ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
     ExampleFramework("dropwizard", "dropwizardScala", List("server")),
@@ -129,13 +141,14 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("redaction.yaml"), "redaction"),
   ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
   ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
-  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological"),
+  ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.toSet, "scala" -> (scalaFrameworks.toSet - "endpoints")), // Blocked by https://github.com/endpoints4s/endpoints4s/issues/713
   ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
   ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "dropwizard")),
   ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s")),
   ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
   ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.toSet),
-  ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s"))
+  ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s")),
+  ExampleCase(sampleResource("mixed-content-types-3.0.2.yaml"), "mixedContentTypes").frameworks("scala" -> scalaFrameworks.toSet)
 )
 
 def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
@@ -174,7 +187,7 @@ fullRunTask(
   exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
-lazy val runExample: InputKey[Unit] = inputKey[Unit]("Run generators with example args (usage: runExample [language] [framework])")
+lazy val runExample: InputKey[Unit] = inputKey[Unit]("Run generators with example args (usage: runExample [language [framework]])")
 runExample := Def.inputTaskDyn {
   val args: Seq[String] = spaceDelimited("<arg>").parsed
   val runArgs = args match {
@@ -258,10 +271,8 @@ val commonSettings = Seq(
     "-encoding",
     "utf8"
   ),
-  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental", "-Xlint:-missing-interpolator,_")).value,
-  scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
-  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
-  scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+  scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
+  scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
   parallelExecution in Test := true,
   addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
@@ -302,15 +313,14 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(libraryDependencies ++= testDependencies)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.6",
+      "org.scalameta"               %% "scalameta"                    % "4.4.8",
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.24",
-      "org.tpolecat"                %% "atto-core"                    % "0.9.0",
+      "org.tpolecat"                %% "atto-core"                    % "0.9.1",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
-      "org.typelevel"               %% "cats-macros"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
       "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.1",
     ),
@@ -334,6 +344,12 @@ lazy val codegen = (project in file("modules/codegen"))
         url = url("http://hardchee.se/")
       )
     )
+  )
+  .settings(
+    scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
+    scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+    scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+    scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
   )
 
 val akkaProjectDependencies = Seq(
@@ -390,10 +406,10 @@ val dropwizardProjectDependencies = Seq(
   "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
   "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
-  "junit"                      %  "junit"                  % "4.13.1"             % Test,
-  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.1"            % Test,
+  "junit"                      %  "junit"                  % "4.13.2"             % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.5.4"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
-  "org.mockito"                %% "mockito-scala"          % "1.16.15"           % Test,
+  "org.mockito"                %% "mockito-scala"          % "1.16.25"           % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
@@ -410,9 +426,9 @@ val dropwizardScalaProjectDependencies = Seq(
   "org.typelevel"                  %% "cats-core"               % catsVersion,
   "org.scala-lang.modules"         %% "scala-java8-compat"      % "0.9.1"            % Test,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
-  "junit"                          %  "junit"                   % "4.13.1"             % Test,
+  "junit"                          %  "junit"                   % "4.13.2"             % Test,
   "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
-  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.15"           % Test,
+  "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.25"           % Test,
   "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
   "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
@@ -430,7 +446,7 @@ val springProjectDependencies = Seq(
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-  "org.mockito"                %% "mockito-scala"            % "1.16.15"           % Test,
+  "org.mockito"                %% "mockito-scala"            % "1.16.25"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 )
 
@@ -474,37 +490,26 @@ lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps
   .settings(
     skip in publish := true
   )
-  .enablePlugins(ScalaJSPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
-      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
-      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
-      "org.typelevel"     %%% "cats-core"                     % catsVersion
+      "io.circe"          %% "circe-core"          % endpointsCirceVersion,
+      "io.circe"          %% "circe-parser"        % endpointsCirceVersion,
+      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
+      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"           % endpointsCatsVersion
     ),
   )
 
 lazy val endpointsSample = (project in file("modules/sample-endpoints"))
-  .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings)
   .settings(
-    coverageEnabled := false,  // scoverage issue @ commit 28b0cc55: Found a dangling UndefinedParam at Position(file:.../modules/sample-endpoints/target/generated/issues/issue351/client/endpoints/EndpointsImplicits.scala,91,34). This is likely due to a bad interaction between a macro or a compiler plugin and the Scala.js compiler plugin. If you hit this, please let us know.
     codegenSettings,
     libraryDependencies ++= Seq(
-      "io.circe"          %%% "circe-core"                    % circeVersion,
-      "io.circe"          %%% "circe-parser"                  % circeVersion,
-      "io.github.cquiroz" %%% "scala-java-time"               % "2.0.0",
-      "org.julienrf"      %%% "endpoints-algebra"             % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client"          % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-circe"    % endpointsVersion,
-      "org.julienrf"      %%% "endpoints-xhr-client-faithful" % endpointsVersion,
-      "org.scalatest"     %%% "scalatest"                     % scalatestVersion % Test,
-      "org.typelevel"     %%% "cats-core"                     % catsVersion
+      "io.circe"          %% "circe-core"          % circeVersion,
+      "io.circe"          %% "circe-parser"        % circeVersion,
+      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
+      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+      "org.typelevel"     %% "cats-core"           % catsVersion
     ),
     unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
     skip in publish := true,
