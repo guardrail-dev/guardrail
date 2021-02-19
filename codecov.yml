@@ -1,5 +1,7 @@
 codecov:
   require_ci_to_pass: yes
+  notify:
+    after_n_builds: 10  # This should cover core, as well as enough buffer to catch both Scala and Java reporters
 
 coverage:
   precision: 2

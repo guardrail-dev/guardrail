@@ -1,7 +1,7 @@
 package com.twilio.guardrail
 
 import cats.FlatMap
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.protocol.terms.protocol.ProtocolSupportTerms

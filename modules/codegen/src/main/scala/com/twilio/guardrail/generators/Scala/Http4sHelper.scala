@@ -1,8 +1,9 @@
 package com.twilio.guardrail.generators.Scala
 
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ ApplicationJson, ContentType, Response, Responses }
+import com.twilio.guardrail.protocol.terms.{ AnyContentType, ApplicationJson, ContentType, Response, Responses }
 import com.twilio.guardrail.StrictProtocolElems
+
 import scala.meta._
 
 object Http4sHelper {
@@ -62,7 +63,7 @@ object Http4sHelper {
   }
 
   def generateDecoder(tpe: Type, consumes: Seq[ContentType]): Term =
-    if (consumes.contains(ApplicationJson) || consumes.isEmpty)
+    if (isJsonEncoderDecoder(consumes))
       q"jsonOf[F, $tpe]"
     else
       tpe match {
@@ -83,7 +84,7 @@ object Http4sHelper {
       }
 
   def generateEncoder(tpe: Type, produces: Seq[ContentType]): Term =
-    if (produces.contains(ApplicationJson) || produces.isEmpty)
+    if (isJsonEncoderDecoder(produces))
       q"jsonEncoderOf[F, $tpe]"
     else
       tpe match {
@@ -113,4 +114,9 @@ object Http4sHelper {
           }
       }
     }
+
+  private def isJsonEncoderDecoder(consumesOrProduces: Seq[ContentType]): Boolean =
+    consumesOrProduces.contains(ApplicationJson) ||
+      consumesOrProduces.isEmpty ||
+      consumesOrProduces.contains(AnyContentType) //guardrial converts missing contentTypes to */* what should be converted to JSON according OpenAPI
 }

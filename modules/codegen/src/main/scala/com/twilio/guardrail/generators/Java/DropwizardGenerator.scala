@@ -1,6 +1,6 @@
 package com.twilio.guardrail.generators.Java
 
-import cats.implicits._
+import cats.syntax.all._
 import com.github.javaparser.ast.ImportDeclaration
 import com.github.javaparser.ast.body.BodyDeclaration
 import com.github.javaparser.ast.expr._

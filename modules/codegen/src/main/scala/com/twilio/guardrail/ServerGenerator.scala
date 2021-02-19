@@ -1,6 +1,4 @@
 package com.twilio.guardrail
-
-import cats.instances.all._
 import cats.syntax.all._
 import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.languages.LA

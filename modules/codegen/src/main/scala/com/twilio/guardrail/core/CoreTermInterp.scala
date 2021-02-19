@@ -1,7 +1,7 @@
 package com.twilio.guardrail.core
 
 import cats.data.{ NonEmptyList, State }
-import cats.implicits._
+import cats.syntax.all._
 import cats.{ FlatMap, Monad }
 import com.twilio.guardrail.{
   Args,

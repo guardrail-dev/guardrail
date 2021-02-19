@@ -2,7 +2,7 @@ package com.twilio.guardrail.generators
 
 import cats.Monad
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.github.javaparser.ast._
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, ArrayType => AstArrayType }

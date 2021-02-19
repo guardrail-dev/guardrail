@@ -1,7 +1,8 @@
 package com.twilio.guardrail.protocol.terms
 
 import cats.Order
-import cats.implicits._
+import cats.syntax.all._
+
 import java.util.Locale
 
 sealed abstract class ContentType(val value: String) {
@@ -29,6 +30,7 @@ case object MultipartFormData  extends TextContent("multipart/form-data")
 case object UrlencodedFormData extends TextContent("application/x-www-form-urlencoded")
 case object TextPlain          extends TextContent("text/plain")
 case object OctetStream        extends BinaryContent("application/octet-stream")
+case object AnyContentType     extends ContentType("*/*")
 
 object ContentType {
   // This is not intended to be exhaustive, but should hopefully cover cases we're likely to see.
@@ -64,6 +66,7 @@ object ContentType {
     case "application/x-www-form-urlencoded"           => Some(UrlencodedFormData)
     case "text/plain"                                  => Some(TextPlain)
     case "application/octet-stream"                    => Some(OctetStream)
+    case "*/*"                                         => Some(AnyContentType)
     case x if isUnsupported(x)                         => None
     case x if isTextRegistry(x) | isApplicationText(x) => Some(new TextContent(value))
     case _                                             => Some(new BinaryContent(value))

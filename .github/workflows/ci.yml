@@ -16,8 +16,9 @@ jobs:
           ]
     steps:
     - uses: actions/checkout@v2
-    - name: Set up JDK
-      uses: actions/setup-java@v1
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-java@v1
       with:
         java-version: ${{ matrix.java }}
     - name: print Java version
@@ -45,6 +46,8 @@ jobs:
           ]
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up JDK
       uses: actions/setup-java@v1
       with:
@@ -76,7 +79,7 @@ jobs:
           ]
         framework: [
             { framework: 'akka-http',         project: 'akkaHttpSample'        },
-            { framework: 'endpoints',         project: 'endpointsSample'       },
+            #{ framework: 'endpoints',         project: 'endpointsSample'       },
             { framework: 'http4s',            project: 'http4sSample'          },
             { framework: 'akka-http-jackson', project: 'akkaHttpJacksonSample' },
             { framework: 'dropwizard',        project: 'dropwizardScalaSample' }
@@ -88,6 +91,8 @@ jobs:
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
       if: matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' )
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up JDK
       uses: actions/setup-java@v1
       with:

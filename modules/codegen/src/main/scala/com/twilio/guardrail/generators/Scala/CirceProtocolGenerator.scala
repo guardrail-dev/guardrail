@@ -3,7 +3,7 @@ package com.twilio.guardrail.generators.Scala
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
 import cats.data.{ NonEmptyList, NonEmptyVector }
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.{
   DataVisible,
   Discriminator,
