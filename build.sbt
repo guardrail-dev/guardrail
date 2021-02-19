@@ -16,7 +16,7 @@ git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 val akkaVersion            = "2.6.12"
 val akkaHttpVersion        = "10.2.3"
-val catsVersion            = "2.3.1"
+val catsVersion            = "2.4.2"
 val catsEffectVersion      = "2.3.3"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.19"
