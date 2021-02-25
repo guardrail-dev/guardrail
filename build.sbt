@@ -14,8 +14,8 @@ git.gitDescribedVersion := git.gitDescribedVersion(v => {
 
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
-val akkaVersion            = "2.6.13"
-val akkaHttpVersion        = "10.2.3"
+val akkaVersion            = "2.6.12"
+val akkaHttpVersion        = "10.2.4"
 val catsVersion            = "2.4.2"
 val catsEffectVersion      = "2.3.3"
 val circeVersion           = "0.13.0"
@@ -35,7 +35,7 @@ val kindProjectorVersion   = "0.11.3"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.3.9.RELEASE"
-val jacksonVersion         = "2.11.4"
+val jacksonVersion         = "2.12.1"
 val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
 val vavrVersion            = "0.10.3"
@@ -318,7 +318,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.0",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.24",
-      "org.tpolecat"                %% "atto-core"                    % "0.9.1",
+      "org.tpolecat"                %% "atto-core"                    % "0.9.2",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
