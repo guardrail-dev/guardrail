@@ -12,7 +12,7 @@ class PositiveLong private (@(NotNull @param @field) @Min(0) val value: Long)
 object PositiveLong {
   def apply(value: Long): Option[PositiveLong] = if (value >= 0) Some(new PositiveLong(value)) else None
   @JsonCreator
-  def applyUnsafe(value: Long): PositiveLong = apply(value).getOrElse({ throw new IllegalArgumentException(s"$value is not positive") })
+  def applyUnsafe(long: Long): PositiveLong = apply(long).getOrElse({ throw new IllegalArgumentException(s"$long is not positive") })
   @JsonCreator
   def apply(str: String): PositiveLong = new PositiveLong(str.toLong)
 

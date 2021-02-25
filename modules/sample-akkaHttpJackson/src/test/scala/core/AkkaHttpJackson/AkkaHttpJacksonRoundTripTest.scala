@@ -7,6 +7,7 @@ import _root_.examples.server.akkaHttpJackson.{ definitions => sdefs }
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import akka.http.scaladsl.unmarshalling._
 import core.TestImplicits
 import examples.support.PositiveLong
 import org.scalatest.EitherValues
@@ -299,10 +300,12 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
       .value
       .futureValue
     result
-      .fold({ err =>
-        failTest(err.toString)
-      }, {
-        case UploadFileResponse.OK(resp) => assert(resp.code.contains(2), "Unexpected number of file uploads!")
-      })
+      .fold(
+        { err =>
+          failTest(err.fold(_.toString, resp => Unmarshal(resp.entity).to[String].futureValue))
+        }, {
+          case UploadFileResponse.OK(resp) => assert(resp.code.contains(2), "Unexpected number of file uploads!")
+        }
+      )
   }
 }
