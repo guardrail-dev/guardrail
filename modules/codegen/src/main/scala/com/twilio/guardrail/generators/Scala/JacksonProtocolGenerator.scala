@@ -1,7 +1,7 @@
 package com.twilio.guardrail.generators.Scala
 
 import cats.data.NonEmptyList
-import cats.implicits._
+import cats.syntax.all._
 import com.twilio.guardrail.{ Discriminator, ProtocolParameter, RuntimeFailure, Target }
 import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.ScalaGenerator

@@ -4,7 +4,6 @@ import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
 import com.twilio.guardrail.core.implicits._
 import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.{ CodegenTarget, Context, UserError }
-import cats.instances.all._
 import org.scalacheck.{ Arbitrary, Gen }
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import support.SwaggerSpecRunner
