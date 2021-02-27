@@ -444,6 +444,7 @@ val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "javax.annotation"           %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
   "javax.validation"           %  "validation-api"           % "2.0.1.Final",
+  "junit"                      %  "junit"                    % "4.13.2"           % Test,
   "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
   "org.mockito"                %% "mockito-scala"            % "1.16.25"           % Test,
