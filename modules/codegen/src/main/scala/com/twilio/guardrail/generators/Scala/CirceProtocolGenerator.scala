@@ -41,8 +41,8 @@ object CirceProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Schema[_]) = {
-      val enumEntries: Option[List[String]] = swagger match {
+    def extractEnum(swagger: Tracker[Schema[_]]) = {
+      val enumEntries: Option[List[String]] = swagger.get match {
         case x: StringSchema =>
           Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
         case x =>

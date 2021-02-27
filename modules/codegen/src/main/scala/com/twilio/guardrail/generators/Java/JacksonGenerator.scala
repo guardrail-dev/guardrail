@@ -146,14 +146,12 @@ object JacksonGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Schema[_]) = {
-      val enumEntries: Option[List[String]] = swagger match {
-        case x: StringSchema =>
-          Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
-        case x =>
-          Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
-      }
-      Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
+    def extractEnum(swagger: Tracker[Schema[_]]) = {
+      val enumEntries: List[String] = swagger
+        .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
+        .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
+        .unwrapTracker
+      Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
     }
 
     def renderMembers(
@@ -795,7 +793,7 @@ object JacksonGenerator {
             )
         )
         .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
         )
         .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
@@ -1092,7 +1090,7 @@ object JacksonGenerator {
               .flatMap({ elem =>
                 definitions
                   .collectFirst({
-                    case (clsName, e) if elem.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName")) =>
+                    case (clsName, e) if elem.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName")) =>
                       (clsName, e, List.empty) :: allParents(e)
                   })
                   .getOrElse(List.empty)

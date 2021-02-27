@@ -55,7 +55,7 @@ object Common {
             server =>
               server
                 .downField("url", _.getUrl)
-                .get
+                .unwrapTracker
                 .map({ x =>
                   val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
                   @SuppressWarnings(Array("org.wartremover.warts.Null"))
@@ -70,18 +70,18 @@ object Common {
         .downField("servers", _.getServers)
         .cotraverse(_.downField("url", _.getUrl))
         .headOption
-        .flatMap(_.get)
+        .flatMap(_.unwrapTracker)
         .flatMap(url => Option(new URI(url).getPath))
         .filter(_ != "/")
 
       paths = swagger.downField("paths", _.getPaths)
       globalSecurityRequirements = NonEmptyList
-        .fromList(swagger.downField("security", _.getSecurity).get)
-        .flatMap(SecurityRequirements(_, SecurityOptional(swagger.get), SecurityRequirements.Global))
-      requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents).get)
+        .fromList(swagger.downField("security", _.getSecurity).unwrapTracker)
+        .flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
+      requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents))
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()
-      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.get, prefixes)
+      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.unwrapTracker, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupBy(_._1)

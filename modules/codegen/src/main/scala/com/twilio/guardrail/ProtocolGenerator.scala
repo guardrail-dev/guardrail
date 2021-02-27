@@ -86,7 +86,7 @@ object ProtocolGenerator {
   private[this] def getRequiredFieldsRec(root: Tracker[Schema[_]]): List[String] = {
     @scala.annotation.tailrec
     def work(values: List[Tracker[Schema[_]]], acc: List[String]): List[String] = {
-      val required = values.flatMap(value => value.downField("required", _.getRequired()).get)
+      val required: List[String] = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
       val next: List[Tracker[Schema[_]]] =
         for {
           a <- values
@@ -142,7 +142,7 @@ object ProtocolGenerator {
     val tpeName = swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Option("string")))
 
     for {
-      enum          <- extractEnum(swagger.get)
+      enum          <- extractEnum(swagger)
       customTpeName <- SwaggerUtil.customTypeName(swagger)
       tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), customTpeName)
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
