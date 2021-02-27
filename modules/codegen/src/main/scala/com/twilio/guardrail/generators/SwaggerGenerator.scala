@@ -20,7 +20,7 @@ import io.swagger.v3.oas.models.PathItem
 
 object SwaggerGenerator {
   private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] = {
-    val parameterName: String = Option(parameter.get.getName).fold("no name")(s => s"named: ${s}")
+    val parameterName: String = parameter.downField("name", _.getName).unwrapTracker.fold("no name")(s => s"named: ${s}")
     for {
       schema <- parameter.downField("schema", _.getSchema).raiseErrorIfEmpty(s"Parameter (${parameterName}) has no schema")
       tpe    <- schema.downField("type", _.getType).raiseErrorIfEmpty(s"Parameter (${parameterName}) has no schema type")
@@ -44,7 +44,7 @@ object SwaggerGenerator {
           globalSecurityRequirements: Option[SecurityRequirements]
       ): Target[List[RouteMeta]] =
         Target.log.function("extractOperations")(for {
-          _ <- Target.log.debug(s"Args: ${paths.get.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
+          _ <- Target.log.debug(s"Args: ${paths.unwrapTracker.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
           routes <- paths.indexedCosequence.value.flatTraverse({
             case (pathStr, path) =>
               for {
@@ -61,7 +61,7 @@ object SwaggerGenerator {
                         .orHistory
                         .fold(
                           _ => globalSecurityRequirements,
-                          security => SecurityRequirements(security.get, SecurityOptional(operation), SecurityRequirements.Local)
+                          security => SecurityRequirements(security.unwrapTracker, SecurityOptional(operation), SecurityRequirements.Local)
                         )
 
                     // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
@@ -71,7 +71,7 @@ object SwaggerGenerator {
                       .flatDownField("$ref", _.get$ref)
                       .refine[Target[Tracker[Operation]]]({ case Some(x) => (x, x.split("/").toList) })(
                         tracker =>
-                          tracker.get match {
+                          tracker.unwrapTracker match {
                             case (rbref, "#" :: "components" :: "requestBodies" :: name :: Nil) =>
                               commonRequestBodies
                                 .get(name)
@@ -129,7 +129,7 @@ object SwaggerGenerator {
 
       def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String]) =
         Target.log.function("getClassName")(for {
-          _ <- Target.log.debug(s"Args: ${operation.get.showNotNull}")
+          _ <- Target.log.debug(s"Args: ${operation.unwrapTracker.showNotNull}")
 
           className = ClassPrefix(operation, vendorPrefixes) match {
             case cls @ Some(_) => cls.toList
@@ -145,16 +145,19 @@ object SwaggerGenerator {
                       println(
                         s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.showHistory})"
                       )
-                      tags.get.toList
+                      tags.unwrapTracker.toList
                     }
                 })
-              val opPkg = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).get
-              pkg.map(_ ++ opPkg).getOrElse(opPkg).toList
+              val opPkg = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).unwrapTracker
+              pkg.fold(opPkg)(_.toList ++ opPkg)
           }
         } yield className)
 
-      def getParameterName(parameter: Parameter) =
-        Target.fromOption(Option(parameter.getName()), UserError(s"Parameter missing 'name': ${parameter}"))
+      def getParameterName(parameter: Tracker[Parameter]) =
+        parameter
+          .downField("name", _.getName())
+          .raiseErrorIfEmpty("Name not specified")
+          .map(_.unwrapTracker)
 
       def getBodyParameterSchema(parameter: Tracker[Parameter]) =
         parameter
@@ -183,7 +186,7 @@ object SwaggerGenerator {
         parameter
           .downField("$ref", _.get$ref())
           .map(_.flatMap(_.split("/").lastOption))
-          .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).get.getOrElse("<name missing as well>")}'")
+          .raiseErrorIfEmpty(s"$$ref not defined for parameter '${parameter.downField("name", _.getName()).unwrapTracker.getOrElse("<name missing as well>")}'")
 
       def fallbackParameterHandler(parameter: Tracker[Parameter]) =
         Target.raiseUserError(s"Unsure how to handle ${parameter.unwrapTracker} (${parameter.showHistory})")
@@ -193,7 +196,7 @@ object SwaggerGenerator {
           .downField("operationId", _.getOperationId())
           .map(_.map(splitOperationParts(_)._2))
           .raiseErrorIfEmpty("Missing operationId")
-          .map(_.get)
+          .map(_.unwrapTracker)
 
       def getResponses(operationId: String, operation: Tracker[Operation]) =
         operation.downField("responses", _.getResponses).toNel.raiseErrorIfEmpty(s"No responses defined for ${operationId}").map(_.indexedCosequence.value)
