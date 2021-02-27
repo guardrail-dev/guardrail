@@ -7,6 +7,7 @@ object WelcomeMessage {
 
     def header(text: String): String = s"${Console.WHITE}${text}${Console.RESET}"
 
+    def section(text: String): String = s"${Console.YELLOW}> ${Console.CYAN}${text}:${Console.RESET}"
     def item(text: String): String    = s"${Console.GREEN}> ${Console.CYAN}${text}${Console.RESET}"
     def subItem(text: String): String = s"  ${Console.YELLOW}> ${Console.CYAN}${text}${Console.RESET}"
 
@@ -31,6 +32,9 @@ object WelcomeMessage {
         |${item("runtimeSuite")} - Similar to testSuite, but skip core tests
         |${subItem("runtimeScalaSuite")} - Similar to testScalaSuite, but skip core tests
         |${subItem("runtimeJavaSuite")} - Similar to testJavaSuite, but skip core tests
+        |${section("Generate sample sources")}
+        |${subItem("runScalaExample")} - Only generate Scala sources for integration tests
+        |${subItem("runJavaExample")} - Only generate Java sources for integration tests
         |${item("publishLocal")} - Publish to local ivy repo
         |${item("publishM2")} - Publish to local m2 repo
       """.stripMargin
