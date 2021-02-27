@@ -56,7 +56,7 @@ object Responses {
                     SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
                   } yield (contentType, baseType, baseDefaultValue)
               }
-              headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
+              headers <- resp.downField("headers", _.getHeaders()).unwrapTracker.value.toList.traverse {
                 case (name, header) =>
                   for {
                     argName    <- formatMethodArgName(s"${name}Header")
