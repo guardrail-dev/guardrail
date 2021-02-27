@@ -25,7 +25,7 @@ abstract class SwaggerLogAdapter[F[_]] {
 abstract class SwaggerTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
 
-  def extractCommonRequestBodies(components: Option[Components]): F[Map[String, RequestBody]]
+  def extractCommonRequestBodies(components: Tracker[Option[Components]]): F[Map[String, RequestBody]]
   def extractOperations(
       paths: Tracker[Mappish[List, String, PathItem]],
       commonRequestBodies: Map[String, RequestBody],

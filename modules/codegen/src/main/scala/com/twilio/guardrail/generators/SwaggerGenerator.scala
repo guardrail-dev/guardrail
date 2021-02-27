@@ -12,7 +12,6 @@ import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import java.net.URI
-import scala.collection.JavaConverters._
 import scala.util.Try
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
@@ -36,8 +35,8 @@ object SwaggerGenerator {
         (parts.drop(1).toList, parts.last)
       }
 
-      def extractCommonRequestBodies(components: Option[Components]): Target[Map[String, RequestBody]] =
-        Target.pure(components.flatMap(c => Option(c.getRequestBodies)).fold(Map.empty[String, RequestBody])(_.asScala.toMap))
+      def extractCommonRequestBodies(components: Tracker[Option[Components]]): Target[Map[String, RequestBody]] =
+        Target.pure(components.flatDownField("requestBodies", _.getRequestBodies).unwrapTracker.value.toMap)
 
       def extractOperations(
           paths: Tracker[Mappish[List, String, PathItem]],
