@@ -69,7 +69,7 @@ object Http4sServerGenerator {
             label <- Target.fromOption[Lit.String](
               TracingLabel(operation)
                 .map(Lit.String(_))
-                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.unwrapTracker).toLit)),
               UserError(s"Missing client name (${operation.showHistory})")
             )
           } yield Some(TracingField[ScalaLanguage](LanguageParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
@@ -660,8 +660,8 @@ object Http4sServerGenerator {
                 )
               )
 
-        val consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
-        val produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
+        val consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
+        val produces = operation.unwrapTracker.produces.toList.flatMap(ContentType.unapply(_))
         val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(methodName, bodyArgs, responses, consumes, produces)
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
