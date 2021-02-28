@@ -42,13 +42,11 @@ object CirceProtocolGenerator {
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractEnum(swagger: Tracker[Schema[_]]) = {
-      val enumEntries: Option[List[String]] = swagger.get match {
-        case x: StringSchema =>
-          Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
-        case x =>
-          Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
-      }
-      Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
+      val enumEntries: List[String] = swagger
+        .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
+        .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
+        .unwrapTracker
+      Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
     }
 
     def renderMembers(clsName: String, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
@@ -138,7 +136,7 @@ object CirceProtocolGenerator {
           Target.pure(extractedProps)
         })
         .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
         )
         .getOrElse(Target.pure(List.empty))
         .map(_.toList)
@@ -639,11 +637,13 @@ object CirceProtocolGenerator {
             case head :: tail =>
               definitions
                 .collectFirst({
-                  case (clsName, e) if head.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName")) =>
+                  case (clsName, e) if head.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName")) =>
                     val thisParent = (clsName, e, tail)
                     allParents(e).map(otherParents => thisParent :: otherParents)
                 })
-                .getOrElse(Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
+                .getOrElse(
+                  Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).unwrapTracker} not found among definitions (${head.showHistory})")
+                )
             case _ => Target.pure(List.empty)
           }
         ).getOrElse(Target.pure(List.empty))
