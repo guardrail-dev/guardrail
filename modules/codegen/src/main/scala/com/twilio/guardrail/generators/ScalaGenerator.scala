@@ -23,10 +23,7 @@ object ScalaGenerator {
       Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))
     })
 
-  val buildTermSelect: List[String] => Term.Ref =
-    _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
-
-  val buildTermSelectNel: NonEmptyList[String] => Term.Ref = {
+  val buildTermSelect: NonEmptyList[String] => Term.Ref = {
     case NonEmptyList(start, rest) => rest.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(start))(Term.Select.apply _)
   }
 
@@ -63,7 +60,8 @@ object ScalaGenerator {
           Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that isn't a string")
       }
 
-    def formatPackageName(packageName: List[String]): Target[List[String]]              = Target.pure(packageName.map(_.toCamelCase))
+    def formatPackageName(packageName: List[String]): Target[NonEmptyList[String]] =
+      Target.fromOption(NonEmptyList.fromList(packageName.map(_.toCamelCase)), UserError("Empty packageName"))
     def formatTypeName(typeName: String, suffix: Option[String] = None): Target[String] = Target.pure(typeName.toPascalCase + suffix.fold("")(_.toPascalCase))
     def formatFieldName(fieldName: String): Target[String]                              = Target.pure(fieldName.toCamelCase)
     def formatMethodName(methodName: String): Target[String]                            = Target.pure(methodName.toCamelCase)
@@ -169,7 +167,7 @@ object ScalaGenerator {
         jsonImports: List[scala.meta.Import],
         customImports: List[scala.meta.Import]
     ): Target[Option[WriteTree]] = {
-      val pkg: Term.Ref = buildTermSelectNel(pkgName)
+      val pkg: Term.Ref = buildTermSelect(pkgName)
       val implicits     = source"""
             package $pkg
 
@@ -264,9 +262,9 @@ object ScalaGenerator {
         frameworkImplicits: scala.meta.Defn.Object,
         frameworkImplicitName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = buildTermSelectNel(pkgName)
+      val pkg: Term.Ref            = buildTermSelect(pkgName)
       val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
-      val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelectNel(("_root_" :: pkgName) :+ name.value)}._")
+      val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelect(("_root_" :: pkgName) :+ name.value)}._")
       val frameworkImplicitsFile   = source"""
             package $pkg
 
@@ -291,7 +289,7 @@ object ScalaGenerator {
         frameworkDefinitions: List[scala.meta.Defn],
         frameworkDefinitionsName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = buildTermSelectNel(pkgName)
+      val pkg: Term.Ref            = buildTermSelect(pkgName)
       val frameworkDefinitionsFile = source"""
             package $pkg
 
@@ -312,7 +310,7 @@ object ScalaGenerator {
         packageObjectContents: List[scala.meta.Stat],
         extraTypes: List[scala.meta.Stat]
     ): Target[Option[WriteTree]] = {
-      val pkgImplicitsImport = q"import ${buildTermSelectNel("_root_" :: pkgComponents)}.Implicits._"
+      val pkgImplicitsImport = q"import ${buildTermSelect("_root_" :: pkgComponents)}.Implicits._"
       dtoComponents.traverse({
         case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
           for (dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))) yield {
@@ -357,7 +355,7 @@ object ScalaGenerator {
         elem: StrictProtocolElems[ScalaLanguage]
     ): Target[(List[WriteTree], List[scala.meta.Stat])] = {
       val implicitImports = (List("Implicits") ++ protoImplicitName.map(_.value))
-        .map(name => q"import ${buildTermSelectNel(("_root_" :: pkgName) :+ name)}._")
+        .map(name => q"import ${buildTermSelect(("_root_" :: pkgName) :+ name)}._")
       Target.pure(elem match {
         case EnumDefinition(_, _, _, _, cls, staticDefns) =>
           (
@@ -365,7 +363,7 @@ object ScalaGenerator {
               sourceToBytes(
                 resolveFile(outputPath)(dtoComponents.toList).resolve(s"${cls.name.value}.scala"),
                 source"""
-              package ${buildTermSelectNel(dtoComponents)}
+              package ${buildTermSelect(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
@@ -381,7 +379,7 @@ object ScalaGenerator {
               sourceToBytes(
                 resolveFile(outputPath)(dtoComponents.toList).resolve(s"${cls.name.value}.scala"),
                 source"""
-              package ${buildTermSelectNel(dtoComponents)}
+              package ${buildTermSelect(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
@@ -398,7 +396,7 @@ object ScalaGenerator {
               sourceToBytes(
                 resolveFile(outputPath)(dtoComponents.toList).resolve(s"$name.scala"),
                 source"""
-                    package ${buildTermSelectNel(dtoComponents)}
+                    package ${buildTermSelect(dtoComponents)}
                     ..$imports
                     ..$implicitImports
                     $polyImports
@@ -416,10 +414,10 @@ object ScalaGenerator {
 
     def writeClient(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[scala.meta.Import],
         frameworkImplicitNames: List[scala.meta.Term.Name],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         _client: Client[ScalaLanguage]
     ): Target[List[WriteTree]] = {
       val Client(pkg, clientName, imports, staticDefns, client, responseDefinitions) = _client
@@ -429,9 +427,9 @@ object ScalaGenerator {
             resolveFile(pkgPath)(pkg :+ (s"$clientName.scala")),
             source"""
               package ${buildTermSelect(pkgName ++ pkg)}
-              import ${buildTermSelect(List("_root_") ++ pkgName ++ List("Implicits"))}._
-              ..${frameworkImplicitNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName)}.$name._")}
-              ..${dtoComponents.map(x => q"import ${buildTermSelect(List("_root_") ++ x)}._")}
+              import ${buildTermSelect(("_root_" :: pkgName) :+ "Implicits")}._
+              ..${frameworkImplicitNames.map(name => q"import ${buildTermSelect("_root_" :: pkgName)}.$name._")}
+              ..${dtoComponents.map(xs => q"import ${buildTermSelect("_root_" :: xs)}._")}
               ..$customImports;
               ..$imports;
               ${companionForStaticDefns(staticDefns)};
@@ -444,10 +442,10 @@ object ScalaGenerator {
     }
     def writeServer(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[scala.meta.Import],
         frameworkImplicitNames: List[scala.meta.Term.Name],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         server: Server[ScalaLanguage]
     ): Target[List[WriteTree]] = {
       val Server(pkg, extraImports, handlerDefinition, serverDefinitions) = server
@@ -458,9 +456,9 @@ object ScalaGenerator {
             source"""
               package ${buildTermSelect(pkgName ++ pkg.toList)}
               ..$extraImports
-              import ${buildTermSelect(List("_root_") ++ pkgName ++ List("Implicits"))}._
-              ..${frameworkImplicitNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName)}.$name._")}
-              ..${dtoComponents.map(x => q"import ${buildTermSelect(List("_root_") ++ x)}._")}
+              import ${buildTermSelect(("_root_" :: pkgName) :+ "Implicits")}._
+              ..${frameworkImplicitNames.map(name => q"import ${buildTermSelect("_root_" :: pkgName)}.$name._")}
+              ..${dtoComponents.map(xs => q"import ${buildTermSelect("_root_" :: xs)}._")}
               ..$customImports
               $handlerDefinition
               ..$serverDefinitions

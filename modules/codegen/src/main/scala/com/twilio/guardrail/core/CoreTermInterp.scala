@@ -215,7 +215,7 @@ class CoreTermInterp[L <: LA](
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 formattedPkgName   <- Sc.formatPackageName(pkgName)
-                definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName)
+                definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName.toList)
                 (proto, codegen) <- Common
                   .prepareDefinitions[L, Target](
                     kind,
@@ -226,7 +226,7 @@ class CoreTermInterp[L <: LA](
                   )
                 protocolSupport <- Ps.generateSupportDefinitions()
                 result <- Common
-                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName, dtoPackage, customImports, protocolSupport)
+                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName.toList, dtoPackage, customImports, protocolSupport)
               } yield result
             } catch {
               case NonFatal(ex) =>

@@ -22,7 +22,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): F[L#TermSelect]
 
-  def formatPackageName(packageName: List[String]): F[List[String]]
+  def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]
   def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]
   def formatFieldName(fieldName: String): F[String]
   def formatMethodName(methodName: String): F[String]
@@ -111,18 +111,18 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   ): F[(List[WriteTree], List[L#Statement])]
   def writeClient(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       customImports: List[L#Import],
       frameworkImplicitNames: List[L#TermName],
-      dtoComponents: Option[List[String]],
+      dtoComponents: Option[NonEmptyList[String]],
       client: Client[L]
   ): F[List[WriteTree]]
   def writeServer(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       customImports: List[L#Import],
       frameworkImplicitNames: List[L#TermName],
-      dtoComponents: Option[List[String]],
+      dtoComponents: Option[NonEmptyList[String]],
       server: Server[L]
   ): F[List[WriteTree]]
 
@@ -138,7 +138,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newLitBoolean: Boolean => F[L#Term] = litBoolean _,
       newFullyQualifyPackageName: List[String] => F[List[String]] = fullyQualifyPackageName _,
       newLookupEnumDefaultValue: (L#TypeName, L#Term, List[(String, L#TermName, L#TermSelect)]) => F[L#TermSelect] = lookupEnumDefaultValue _,
-      newFormatPackageName: List[String] => F[List[String]] = formatPackageName _,
+      newFormatPackageName: List[String] => F[NonEmptyList[String]] = formatPackageName _,
       newFormatTypeName: (String, Option[String]) => F[String] = formatTypeName _,
       newFormatFieldName: String => F[String] = formatFieldName _,
       newFormatMethodName: String => F[String] = formatMethodName _,
@@ -207,8 +207,10 @@ abstract class LanguageTerms[L <: LA, F[_]] {
           Option[L#TermName],
           StrictProtocolElems[L]
       ) => F[(List[WriteTree], List[L#Statement])] = writeProtocolDefinition _,
-      newWriteClient: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Client[L]) => F[List[WriteTree]] = writeClient _,
-      newWriteServer: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
+      newWriteClient: (Path, NonEmptyList[String], List[L#Import], List[L#TermName], Option[NonEmptyList[String]], Client[L]) => F[List[WriteTree]] =
+        writeClient _,
+      newWriteServer: (Path, NonEmptyList[String], List[L#Import], List[L#TermName], Option[NonEmptyList[String]], Server[L]) => F[List[WriteTree]] =
+        writeServer _,
       newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = wrapToObject _
   ) = new LanguageTerms[L, F] {
     def MonadF                                            = newMonadF
@@ -221,7 +223,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def fullyQualifyPackageName(rawPkgName: List[String]) = newFullyQualifyPackageName(rawPkgName)
     def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]) =
       newLookupEnumDefaultValue(tpe, defaultValue, values)
-    def formatPackageName(packageName: List[String]): F[List[String]]                 = newFormatPackageName(packageName)
+    def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]         = newFormatPackageName(packageName)
     def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]    = newFormatTypeName(typeName, suffix)
     def formatFieldName(fieldName: String): F[String]                                 = newFormatFieldName(fieldName)
     def formatMethodName(methodName: String): F[String]                               = newFormatMethodName(methodName)
@@ -314,18 +316,18 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     ) = newWriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, protoImplicitName, elem)
     def writeClient(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[L#Import],
         frameworkImplicitNames: List[L#TermName],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         client: Client[L]
     ) = newWriteClient(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, client)
     def writeServer(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[L#Import],
         frameworkImplicitNames: List[L#TermName],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         server: Server[L]
     )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, server)
     def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)
