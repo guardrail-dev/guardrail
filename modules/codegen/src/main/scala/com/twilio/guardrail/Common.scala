@@ -143,12 +143,20 @@ object Common {
         .filter(_ => protocolElems.exists({ case _: RandomType[_] => false; case _ => true }))
 
       protoOut <- protocolElems.traverse(
-        writeProtocolDefinition(outputPath, formattedPkgName, definitions, dtoComponents, customImports ++ protocolImports, protoImplicitName, _)
+        writeProtocolDefinition(
+          outputPath,
+          NonEmptyList.fromList(formattedPkgName).get,
+          definitions,
+          NonEmptyList.fromList(dtoComponents).get,
+          customImports ++ protocolImports,
+          protoImplicitName,
+          _
+        )
       )
       (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
       packageObject <- writePackageObject(
         dtoPackagePath,
-        formattedPkgName,
+        NonEmptyList.fromList(formattedPkgName).get,
         filteredDtoComponents,
         customImports,
         packageObjectImports,

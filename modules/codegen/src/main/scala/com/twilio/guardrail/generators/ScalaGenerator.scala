@@ -304,7 +304,7 @@ object ScalaGenerator {
 
     def writePackageObject(
         dtoPackagePath: Path,
-        pkgComponents: List[String],
+        pkgComponents: NonEmptyList[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[scala.meta.Import],
         packageObjectImports: List[scala.meta.Import],
@@ -312,7 +312,7 @@ object ScalaGenerator {
         packageObjectContents: List[scala.meta.Stat],
         extraTypes: List[scala.meta.Stat]
     ): Target[Option[WriteTree]] = {
-      val pkgImplicitsImport = q"import ${buildTermSelect("_root_" +: pkgComponents)}.Implicits._"
+      val pkgImplicitsImport = q"import ${buildTermSelectNel("_root_" :: pkgComponents)}.Implicits._"
       dtoComponents.traverse({
         case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
           for (dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))) yield {
@@ -349,23 +349,23 @@ object ScalaGenerator {
 
     def writeProtocolDefinition(
         outputPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         definitions: List[String],
-        dtoComponents: List[String],
+        dtoComponents: NonEmptyList[String],
         imports: List[scala.meta.Import],
         protoImplicitName: Option[scala.meta.Term.Name],
         elem: StrictProtocolElems[ScalaLanguage]
     ): Target[(List[WriteTree], List[scala.meta.Stat])] = {
       val implicitImports = (List("Implicits") ++ protoImplicitName.map(_.value))
-        .map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName ++ List(name))}._")
+        .map(name => q"import ${buildTermSelectNel(("_root_" :: pkgName) :+ name)}._")
       Target.pure(elem match {
         case EnumDefinition(_, _, _, _, cls, staticDefns) =>
           (
             List(
               sourceToBytes(
-                resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                resolveFile(outputPath)(dtoComponents.toList).resolve(s"${cls.name.value}.scala"),
                 source"""
-              package ${buildTermSelect(dtoComponents)}
+              package ${buildTermSelectNel(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
@@ -379,9 +379,9 @@ object ScalaGenerator {
           (
             List(
               sourceToBytes(
-                resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
+                resolveFile(outputPath)(dtoComponents.toList).resolve(s"${cls.name.value}.scala"),
                 source"""
-              package ${buildTermSelect(dtoComponents)}
+              package ${buildTermSelectNel(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
@@ -396,9 +396,9 @@ object ScalaGenerator {
           (
             List(
               sourceToBytes(
-                resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
+                resolveFile(outputPath)(dtoComponents.toList).resolve(s"$name.scala"),
                 source"""
-                    package ${buildTermSelect(dtoComponents)}
+                    package ${buildTermSelectNel(dtoComponents)}
                     ..$imports
                     ..$implicitImports
                     $polyImports

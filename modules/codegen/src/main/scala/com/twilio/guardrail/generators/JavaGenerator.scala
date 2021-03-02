@@ -288,7 +288,7 @@ object JavaGenerator {
 
     def writePackageObject(
         dtoPackagePath: Path,
-        pkgComponents: List[String],
+        pkgComponents: NonEmptyList[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],
@@ -317,16 +317,16 @@ object JavaGenerator {
 
     def writeProtocolDefinition(
         outputPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         definitions: List[String],
-        dtoComponents: List[String],
+        dtoComponents: NonEmptyList[String],
         imports: List[com.github.javaparser.ast.ImportDeclaration],
         protoImplicitName: Option[com.github.javaparser.ast.expr.Name],
         elem: StrictProtocolElems[JavaLanguage]
     ): Target[(List[WriteTree], List[com.github.javaparser.ast.Node])] =
       for {
-        pkgDecl      <- buildPkgDecl(dtoComponents)
-        showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
+        pkgDecl      <- buildPkgDecl(dtoComponents.toList)
+        showerImport <- safeParseRawImport((pkgName :+ "Shower").toList.mkString("."))
         nameAndCompilationUnit = elem match {
           case EnumDefinition(_, _, _, _, cls, staticDefns) =>
             val cu = new CompilationUnit()
@@ -361,7 +361,9 @@ object JavaGenerator {
           case RandomType(_, _) =>
             Option.empty
         }
-        writeTree <- nameAndCompilationUnit.traverse { case (name, cu) => prettyPrintSource(resolveFile(outputPath)(dtoComponents).resolve(s"$name.java"), cu) }
+        writeTree <- nameAndCompilationUnit.traverse {
+          case (name, cu) => prettyPrintSource(resolveFile(outputPath)(dtoComponents.toList).resolve(s"$name.java"), cu)
+        }
       } yield (writeTree.toList, List.empty[Statement])
     def writeClient(
         pkgPath: Path,

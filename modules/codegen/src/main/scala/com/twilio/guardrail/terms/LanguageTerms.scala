@@ -92,7 +92,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def writePackageObject(
       dtoPackagePath: Path,
-      pkgComponents: List[String],
+      pkgComponents: NonEmptyList[String],
       dtoComponents: Option[NonEmptyList[String]],
       customImports: List[L#Import],
       packageObjectImports: List[L#Import],
@@ -102,9 +102,9 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   ): F[Option[WriteTree]]
   def writeProtocolDefinition(
       outputPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       definitions: List[String],
-      dtoComponents: List[String],
+      dtoComponents: NonEmptyList[String],
       imports: List[L#Import],
       protoImplicitName: Option[L#TermName],
       elem: StrictProtocolElems[L]
@@ -190,7 +190,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
-          List[String],
+          NonEmptyList[String],
           Option[NonEmptyList[String]],
           List[L#Import],
           List[L#Import],
@@ -200,9 +200,9 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       ) => F[Option[WriteTree]] = writePackageObject _,
       newWriteProtocolDefinition: (
           Path,
+          NonEmptyList[String],
           List[String],
-          List[String],
-          List[String],
+          NonEmptyList[String],
           List[L#Import],
           Option[L#TermName],
           StrictProtocolElems[L]
@@ -285,7 +285,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     ) = newRenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
     def writePackageObject(
         dtoPackagePath: Path,
-        pkgComponents: List[String],
+        pkgComponents: NonEmptyList[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[L#Import],
         packageObjectImports: List[L#Import],
@@ -305,9 +305,9 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       )
     def writeProtocolDefinition(
         outputPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         definitions: List[String],
-        dtoComponents: List[String],
+        dtoComponents: NonEmptyList[String],
         imports: List[L#Import],
         protoImplicitName: Option[L#TermName],
         elem: StrictProtocolElems[L]
