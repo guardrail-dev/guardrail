@@ -78,7 +78,7 @@ object VendorExtension {
       build[SecurityScheme](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit def trackerAdapter[A](implicit ev: VendorExtensible[A]): VendorExtensible[Tracker[A]] =
-      ev.contramap[Tracker[A]](_.get)
+      ev.contramap[Tracker[A]](_.unwrapTracker)
   }
 
   case class VendorExtensibleAdapter[F](from: F) extends AnyVal {

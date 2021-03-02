@@ -503,12 +503,14 @@ object AsyncHttpClientClientGenerator {
           (parameters.headerParams, "addHeader", false)
         )
 
-        val allConsumes = operation.get.consumes.flatMap(ContentType.unapply).toList
+        val allConsumes = operation.unwrapTracker.consumes.flatMap(ContentType.unapply).toList
         val consumes    = DropwizardHelpers.getBestConsumes(operation, allConsumes, parameters)
-        val allProduces = operation.get.produces.flatMap(ContentType.unapply).toList
+        val allProduces = operation.unwrapTracker.produces.flatMap(ContentType.unapply).toList
         val produces =
           responses.value
-            .map(resp => (resp.statusCode, DropwizardHelpers.getBestProduces[JavaLanguage](operation.get.getOperationId, allProduces, resp, _.isPlain)))
+            .map(
+              resp => (resp.statusCode, DropwizardHelpers.getBestProduces[JavaLanguage](operation.unwrapTracker.getOperationId, allProduces, resp, _.isPlain))
+            )
             .toMap
 
         val builderMethodCalls: List[(LanguageParameter[JavaLanguage], Statement)] = builderParamsMethodNames

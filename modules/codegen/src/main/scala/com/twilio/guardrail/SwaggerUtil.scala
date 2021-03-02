@@ -163,7 +163,7 @@ object SwaggerUtil {
         import Cl._
         import Sw._
         import Fw._
-        log.debug(s"model:\n${log.schemaToString(model.get)}") >> (model
+        log.debug(s"model:\n${log.schemaToString(model.unwrapTracker)}") >> (model
           .refine[F[ResolvedType[L]]]({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(
             ref =>
               for {
@@ -214,7 +214,7 @@ object SwaggerUtil {
                 customTpeName <- customTypeName(impl)
                 fmt = impl.downField("format", _.getFormat())
                 tpe <- typeName[L, F](tpeName.map(Option(_)), fmt, customTpeName)
-              } yield Resolved[L](tpe, None, None, Some(tpeName.get), fmt.get)
+              } yield Resolved[L](tpe, None, None, Some(tpeName.unwrapTracker), fmt.unwrapTracker)
           ))
       }
   }
@@ -285,7 +285,7 @@ object SwaggerUtil {
       for {
         customTpe <- customType.flatTraverse(liftCustomType[L, F] _)
         result <- customTpe.fold({
-          (typeName.get, format.get) match {
+          (typeName.unwrapTracker, format.unwrapTracker) match {
             case (Some("string"), Some("uuid"))         => uuidType()
             case (Some("string"), Some("password"))     => stringType(None)
             case (Some("string"), Some("email"))        => stringType(None)
@@ -387,7 +387,7 @@ object SwaggerUtil {
         for {
           customTpeName <- customTypeName(a)
           tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-        } yield Resolved[L](tpe, None, None, rawType.get, rawFormat.get)
+        } yield Resolved[L](tpe, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker)
       }
       def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[ResolvedType[L]] = { a =>
         val rawType   = a.downField("type", _.getType())
@@ -396,14 +396,14 @@ object SwaggerUtil {
           customTpeName <- customTypeName(a)
           res <- (
             typeName[L, F](rawType, rawFormat, customTpeName),
-            Default(a.get).extract[B].traverse(transformLit(_))
-          ).mapN(Resolved[L](_, None, _, rawType.get, rawFormat.get))
+            Default(a.unwrapTracker).extract[B].traverse(transformLit(_))
+          ).mapN(Resolved[L](_, None, _, rawType.unwrapTracker, rawFormat.unwrapTracker))
         } yield res
       }
 
-      log.debug(s"property:\n${log.schemaToString(property.get)} (${property.get.getExtensions()})").flatMap { _ =>
+      log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})").flatMap { _ =>
         property
-          .refine[F[ResolvedType[L]]](strategy)(_.get)
+          .refine[F[ResolvedType[L]]](strategy)(_.unwrapTracker)
           .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
@@ -543,7 +543,7 @@ object SwaggerUtil {
 
       for {
         parts <- path.map(pattern.parseOnly(_).either).raiseErrorIfLeft
-        result = parts.get
+        result = parts.unwrapTracker
           .map({
             case Left(part)  => showLiteralPathComponent(part)
             case Right(term) => term

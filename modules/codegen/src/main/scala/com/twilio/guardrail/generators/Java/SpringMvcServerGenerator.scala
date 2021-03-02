@@ -24,7 +24,6 @@ import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecuritySche
 import com.twilio.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.responses.ApiResponse
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
@@ -103,7 +102,7 @@ object SpringMvcServerGenerator {
 
   private def getBestProduces(
       contentTypes: List[ContentType],
-      responses: List[ApiResponse],
+      responses: List[Tracker[ApiResponse]],
       protocolElems: List[StrictProtocolElems[JavaLanguage]]
   ): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
@@ -121,7 +120,7 @@ object SpringMvcServerGenerator {
         responses
           .map({ resp =>
             protocolElems
-              .find(pe => definitionName(Option(resp.get$ref())).contains(pe.name))
+              .find(pe => definitionName(resp.downField("ref", _.get$ref()).unwrapTracker).contains(pe.name))
               .flatMap({
                 case _: ClassDefinition[_]                                              => Some(ApplicationJson)
                 case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain)
@@ -319,7 +318,7 @@ object SpringMvcServerGenerator {
         handlerType  <- safeParseClassOrInterfaceType(handlerName)
       } yield {
         val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
+        val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
 
         val (routeMethods, handlerMethodSigs) = routes
           .map({
@@ -346,7 +345,7 @@ object SpringMvcServerGenerator {
                 nodeList.addLast(new MemberValuePair("path", new StringLiteralExpr(pathSuffix)))
               }
 
-              val consumes = getBestConsumes(operation.get.consumes.flatMap(ContentType.unapply).toList, parameters)
+              val consumes = getBestConsumes(operation.unwrapTracker.consumes.flatMap(ContentType.unapply).toList, parameters)
                 .orElse({
                   if (parameters.formParams.nonEmpty) {
                     if (parameters.formParams.exists(_.isFile)) {
@@ -366,8 +365,14 @@ object SpringMvcServerGenerator {
                 .foreach(nodeList.addLast)
 
               val successResponses =
-                operation.get.getResponses.entrySet.asScala.filter(entry => Try(entry.getKey.toInt / 100 == 2).getOrElse(false)).map(_.getValue).toList
-              val produces = getBestProduces(operation.get.produces.flatMap(ContentType.unapply).toList, successResponses, protocolElems)
+                operation
+                  .downField("responses", _.getResponses)
+                  .indexedDistribute
+                  .value
+                  .filter({ case (key, _) => Try(key.toInt / 100 == 2).getOrElse(false) })
+                  .map({ case (_, value) => value })
+                  .toList
+              val produces = getBestProduces(operation.unwrapTracker.produces.flatMap(ContentType.unapply).toList, successResponses, protocolElems)
 
               produces
                 .map(c => new MemberValuePair("produces", c.toSpringMediaType))
