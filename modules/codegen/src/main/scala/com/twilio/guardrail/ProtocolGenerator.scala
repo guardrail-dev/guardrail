@@ -216,7 +216,7 @@ object ProtocolGenerator {
             propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
-            defValue     <- defaultValue(typeName, prop, propertyRequirement, definitions.map(_.map(_.get)))
+            defValue     <- defaultValue(typeName, prop, propertyRequirement, definitions)
             fieldName    <- formatFieldName(name)
             res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
               name,
@@ -457,7 +457,7 @@ object ProtocolGenerator {
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
             customType            <- SwaggerUtil.customTypeName(schema.get)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
-            defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions.map(_.map(_.get)))
+            defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)
             parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, concreteTypes)(
               name,
@@ -797,7 +797,7 @@ object ProtocolGenerator {
       name: NonEmptyList[String],
       schema: Tracker[Schema[_]],
       requirement: PropertyRequirement,
-      definitions: List[(String, Schema[_])]
+      definitions: List[(String, Tracker[Schema[_]])]
   )(
       implicit Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F]
@@ -810,7 +810,7 @@ object ProtocolGenerator {
         definitions
           .collectFirst {
             case (cls, refSchema) if ref.unwrapTracker.endsWith(s"/$cls") =>
-              defaultValue(NonEmptyList.of(cls), Tracker.cloneHistory(ref, refSchema), requirement, definitions)
+              defaultValue(NonEmptyList.of(cls), refSchema, requirement, definitions)
           }
           .getOrElse(empty)
       case None =>
