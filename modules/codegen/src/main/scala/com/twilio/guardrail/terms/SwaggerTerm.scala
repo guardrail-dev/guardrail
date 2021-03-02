@@ -49,6 +49,7 @@ case class SecurityRequirements(
     location: SecurityRequirements.Location
 )
 
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Tracker[Operation], securityRequirements: Option[SecurityRequirements]) {
   override def toString(): String =
     s"RouteMeta(${path.unwrapTracker}, $method, ${operation.unwrapTracker.showNotNull} (${operation.showHistory}), $securityRequirements)"

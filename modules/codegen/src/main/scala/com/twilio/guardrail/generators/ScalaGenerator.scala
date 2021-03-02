@@ -23,6 +23,9 @@ object ScalaGenerator {
       Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))
     })
 
+  val buildTermSelect: List[String] => Term.Ref =
+    _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+
   object ScalaInterp extends LanguageTerms[ScalaLanguage, Target] {
     // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
     // defined inside `apply`. Once 2.11 is dropped, these can be moved back.
@@ -30,9 +33,6 @@ object ScalaGenerator {
       case x: Defn.Val if (x match { case q"implicit val $_: $_ = $_" => true; case _ => false }) => x
     }
     val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
-
-    val buildPkgTerm: List[String] => Term.Ref =
-      _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -165,7 +165,7 @@ object ScalaGenerator {
         jsonImports: List[scala.meta.Import],
         customImports: List[scala.meta.Import]
     ): Target[Option[WriteTree]] = {
-      val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      val pkg: Term.Ref = buildTermSelect(pkgName)
       val implicits     = source"""
             package $pkg
 
@@ -260,9 +260,9 @@ object ScalaGenerator {
         frameworkImplicits: scala.meta.Defn.Object,
         frameworkImplicitName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      val pkg: Term.Ref            = buildTermSelect(pkgName)
       val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
-      val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(name.value))}._")
+      val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName ++ List(name.value))}._")
       val frameworkImplicitsFile   = source"""
             package $pkg
 
@@ -287,7 +287,7 @@ object ScalaGenerator {
         frameworkDefinitions: List[scala.meta.Defn],
         frameworkDefinitionsName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      val pkg: Term.Ref            = buildTermSelect(pkgName)
       val frameworkDefinitionsFile = source"""
             package $pkg
 
@@ -308,7 +308,7 @@ object ScalaGenerator {
         packageObjectContents: List[scala.meta.Stat],
         extraTypes: List[scala.meta.Stat]
     ): Target[Option[WriteTree]] = {
-      val pkgImplicitsImport = q"import ${buildPkgTerm("_root_" +: pkgComponents)}.Implicits._"
+      val pkgImplicitsImport = q"import ${buildTermSelect("_root_" +: pkgComponents)}.Implicits._"
       dtoComponents.traverse({
         case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
           for (dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))) yield {
@@ -353,7 +353,7 @@ object ScalaGenerator {
         elem: StrictProtocolElems[ScalaLanguage]
     ): Target[(List[WriteTree], List[scala.meta.Stat])] = {
       val implicitImports = (List("Implicits") ++ protoImplicitName.map(_.value))
-        .map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName ++ List(name))}._")
+        .map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName ++ List(name))}._")
       Target.pure(elem match {
         case EnumDefinition(_, _, _, _, cls, staticDefns) =>
           (
@@ -361,7 +361,7 @@ object ScalaGenerator {
               sourceToBytes(
                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
                 source"""
-              package ${buildPkgTerm(dtoComponents)}
+              package ${buildTermSelect(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
@@ -377,7 +377,7 @@ object ScalaGenerator {
               sourceToBytes(
                 resolveFile(outputPath)(dtoComponents).resolve(s"${cls.name.value}.scala"),
                 source"""
-              package ${buildPkgTerm(dtoComponents)}
+              package ${buildTermSelect(dtoComponents)}
                 ..$imports
                 ..$implicitImports
                 $cls
@@ -394,7 +394,7 @@ object ScalaGenerator {
               sourceToBytes(
                 resolveFile(outputPath)(dtoComponents).resolve(s"$name.scala"),
                 source"""
-                    package ${buildPkgTerm(dtoComponents)}
+                    package ${buildTermSelect(dtoComponents)}
                     ..$imports
                     ..$implicitImports
                     $polyImports
@@ -424,10 +424,10 @@ object ScalaGenerator {
           sourceToBytes(
             resolveFile(pkgPath)(pkg :+ (s"$clientName.scala")),
             source"""
-              package ${buildPkgTerm(pkgName ++ pkg)}
-              import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-              ..${frameworkImplicitNames.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.$name._")}
-              ..${dtoComponents.map(x => q"import ${buildPkgTerm(List("_root_") ++ x)}._")}
+              package ${buildTermSelect(pkgName ++ pkg)}
+              import ${buildTermSelect(List("_root_") ++ pkgName ++ List("Implicits"))}._
+              ..${frameworkImplicitNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName)}.$name._")}
+              ..${dtoComponents.map(x => q"import ${buildTermSelect(List("_root_") ++ x)}._")}
               ..$customImports;
               ..$imports;
               ${companionForStaticDefns(staticDefns)};
@@ -452,11 +452,11 @@ object ScalaGenerator {
           sourceToBytes(
             resolveFile(pkgPath)(pkg.toList :+ "Routes.scala"),
             source"""
-              package ${buildPkgTerm(pkgName ++ pkg.toList)}
+              package ${buildTermSelect(pkgName ++ pkg.toList)}
               ..$extraImports
-              import ${buildPkgTerm(List("_root_") ++ pkgName ++ List("Implicits"))}._
-              ..${frameworkImplicitNames.map(name => q"import ${buildPkgTerm(List("_root_") ++ pkgName)}.$name._")}
-              ..${dtoComponents.map(x => q"import ${buildPkgTerm(List("_root_") ++ x)}._")}
+              import ${buildTermSelect(List("_root_") ++ pkgName ++ List("Implicits"))}._
+              ..${frameworkImplicitNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName)}.$name._")}
+              ..${dtoComponents.map(x => q"import ${buildTermSelect(List("_root_") ++ x)}._")}
               ..$customImports
               $handlerDefinition
               ..$serverDefinitions

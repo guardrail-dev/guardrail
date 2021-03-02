@@ -27,6 +27,7 @@ object JavaStdLibCollectionsHelpers {
   }
 }
 
+@SuppressWarnings(Array("org.wartremover.warts.Null", "org.wartremover.warts.Throw"))
 trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
   override implicit val optionInstances: OptionF[JavaLanguage] = new OptionF[JavaLanguage] {
     override def liftType(tpe: Type): Type  = StaticJavaParser.parseClassOrInterfaceType("java.util.Optional").setTypeArguments(tpe)

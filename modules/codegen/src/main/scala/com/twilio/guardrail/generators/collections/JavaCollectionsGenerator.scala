@@ -10,7 +10,7 @@ import com.twilio.guardrail.{ SwaggerUtil, Target }
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.terms.CollectionsLibTerms
-
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 object JavaCollectionsGenerator {
 
   class JavaCollectionsInterp extends CollectionsLibTerms[JavaLanguage, Target] {

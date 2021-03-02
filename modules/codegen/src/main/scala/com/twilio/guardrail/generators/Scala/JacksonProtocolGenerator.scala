@@ -15,7 +15,6 @@ import scala.meta._
 object JacksonProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.EnumProtocolTermInterp
-    import baseInterp.MonadF
     baseInterp.copy(
       newRenderClass = (className, tpe, elems) =>
         for {
@@ -233,7 +232,6 @@ object JacksonProtocolGenerator {
 
   def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
-    import baseInterp.MonadF
     baseInterp.copy(
       newProtocolImports = () =>
         Target.pure(
@@ -562,7 +560,6 @@ object JacksonProtocolGenerator {
 
   def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.PolyProtocolTermInterp
-    import baseInterp.MonadF
     baseInterp.copy(
       newRenderSealedTrait = (className, params, discriminator, parents, children) =>
         for {
