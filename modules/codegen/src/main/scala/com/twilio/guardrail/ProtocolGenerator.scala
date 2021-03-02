@@ -167,7 +167,7 @@ object ProtocolGenerator {
       case (false, None)        => defaultPropertyRequirement
       case (false, Some(false)) => PropertyRequirement.Optional
       case (false, Some(true))  => PropertyRequirement.OptionalNullable
-    }).get
+    }).unwrapTracker
 
   /**
     * Handle polymorphic model
