@@ -10,6 +10,7 @@ import com.github.javaparser.ast.body.{ BodyDeclaration, ClassOrInterfaceDeclara
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
 import com.twilio.guardrail._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.generators.syntax.RichString
@@ -139,8 +140,8 @@ object JavaGenerator {
     def formatMethodArgName(methodArgName: String): Target[String] = Target.pure(methodArgName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
     def formatEnumName(enumValue: String): Target[String]          = Target.pure(enumValue.escapeInvalidCharacters.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
 
-    def parseType(tpe: String): Target[Option[com.github.javaparser.ast.`type`.Type]] =
-      safeParseType(tpe)
+    def parseType(tpe: Tracker[String]): Target[Option[com.github.javaparser.ast.`type`.Type]] =
+      safeParseType(tpe.get)
         .map(Option.apply)
         .recover({
           case err =>

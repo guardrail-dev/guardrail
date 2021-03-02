@@ -5,6 +5,7 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.twilio.guardrail.Common.resolveFile
 import com.twilio.guardrail._
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.syntax.RichString
 import com.twilio.guardrail.generators.syntax.Scala._
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -65,9 +66,9 @@ object ScalaGenerator {
     def formatMethodArgName(methodArgName: String): Target[String]                      = Target.pure(methodArgName.toCamelCase)
     def formatEnumName(enumValue: String): Target[String]                               = Target.pure(enumValue.toPascalCase)
 
-    def parseType(tpe: String): Target[Option[scala.meta.Type]] =
+    def parseType(tpe: Tracker[String]): Target[Option[scala.meta.Type]] =
       Target.pure(
-        tpe
+        tpe.get
           .parse[Type]
           .fold({ err =>
             println(s"Warning: Unparsable x-scala-type: $tpe $err")

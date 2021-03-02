@@ -57,19 +57,20 @@ object Discriminator {
         .indexedDistribute
         .flatMap(x => x.downField("propertyName", _.getPropertyName()).indexedDistribute.map((x, _)))
         .traverse {
-          case (Tracker(_, x), Tracker(_, propertyName)) =>
-            val possibleMappings = Option(x.getMapping)
-              .map(_.asScala)
-              .getOrElse(Map.empty[String, String])
+          case (x, Tracker(_, propertyName)) =>
+            val possibleMappings = x
+              .downField("mapping", _.getMapping())
+              .indexedDistribute
+              .value
               .flatMap({
-                case (k, s) if s.startsWith("#/") => s.split("/").lastOption.filter(_.nonEmpty).map((k, _))
-                case (k, s)                       => Option((k, s))
+                case (k, s) if s.unwrapTracker.startsWith("#/") => s.map(_.split("/").lastOption.filter(_.nonEmpty)).indexedDistribute.map((k, _))
+                case (k, s)                                     => Option((k, s))
               })
               .toList
             for {
               mapping <- possibleMappings.flatTraverse({
                 case (key, name) =>
-                  parseType(name).map(_.map(tpe => (key, RandomType(name, tpe))).toList)
+                  parseType(name).map(_.map(tpe => (key, RandomType(name.unwrapTracker, tpe))).toList)
               })
             } yield Discriminator[L](propertyName, mapping.toMap)
         }
@@ -146,7 +147,7 @@ object ProtocolGenerator {
     for {
       enum          <- extractEnum(swagger)
       customTpeName <- SwaggerUtil.customTypeName(swagger)
-      tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), customTpeName)
+      tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), Tracker.cloneHistory(swagger, customTpeName))
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -567,7 +568,7 @@ object ProtocolGenerator {
           res <- SwaggerUtil.typeName[L, F](
             raw,
             m.downField("format", _.getFormat()),
-            tpeName
+            Tracker.cloneHistory(m, tpeName)
           )
         } yield res
       }
@@ -777,7 +778,7 @@ object ProtocolGenerator {
                   formattedClsName <- formatTypeName(clsName)
                   tpeName          <- getType(x)
                   customTypeName   <- SwaggerUtil.customTypeName(x)
-                  tpe              <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
+                  tpe              <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
                   res              <- typeAlias[L, F](formattedClsName, tpe)
                 } yield res
             )
