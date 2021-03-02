@@ -275,11 +275,11 @@ object ProtocolGenerator {
             (cls, tracker) <- definitions
             result <- tracker
               .refine[Tracker[Schema[_]]]({
-                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
+                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x
               })(
                 identity _
               )
-              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
+              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x })(identity _)
               .toOption
           } yield (cls -> result)
           val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
@@ -303,7 +303,7 @@ object ProtocolGenerator {
               supportPackage,
               defaultPropertyRequirement
             )
-            interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
+            interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last))
             tpe <- parseTypeName(clsName)
 
             discriminators <- (_extends :: concreteInterfaces).flatTraverse(
@@ -455,7 +455,7 @@ object ProtocolGenerator {
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
-            customType            <- SwaggerUtil.customTypeName(schema.get)
+            customType            <- SwaggerUtil.customTypeName(schema)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)
@@ -482,7 +482,7 @@ object ProtocolGenerator {
     import Sc._
     Foldable[List]
       .foldLeftM[F, Tracker[ProtocolParameter[L]], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, ta) =>
-        val a = ta.get
+        val a = ta.unwrapTracker
         s.find(p => p.name == a.name) match {
           case None => (a :: s).pure[F]
           case Some(duplicate) =>
@@ -651,7 +651,7 @@ object ProtocolGenerator {
             comp =>
               if (comp
                     .downField("allOf", _.getAllOf())
-                    .exists(x => x.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$cls")))) {
+                    .exists(x => x.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$cls")))) {
                 Some(ClassChild(clsName, comp, children(clsName), getRequiredFieldsRec(comp)))
               } else None
           )
