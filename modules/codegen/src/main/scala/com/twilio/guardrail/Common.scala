@@ -167,26 +167,42 @@ object Common {
         servers.flatTraverse(writeServer(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents.map(_.toList), _))
       ).mapN(_ ++ _)
 
-      implicits <- renderImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, customImports)
+      implicits <- renderImplicits(pkgPath, NonEmptyList.fromList(formattedPkgName).get, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F])({
         case (name, defn) =>
-          renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
-            .map(Option.apply)
+          renderFrameworkImplicits(
+            pkgPath,
+            NonEmptyList.fromList(formattedPkgName).get,
+            frameworkImports,
+            frameworkImplicitNames.filterNot(_ == name),
+            protocolImports,
+            defn,
+            name
+          ).map(Option.apply)
       })
       protocolImplicitsFile <- protoImplicits.fold(Option.empty[WriteTree].pure[F])({
         case (name, defn) =>
-          renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
-            .map(Option.apply)
+          renderFrameworkImplicits(
+            pkgPath,
+            NonEmptyList.fromList(formattedPkgName).get,
+            frameworkImports,
+            frameworkImplicitNames.filterNot(_ == name),
+            protocolImports,
+            defn,
+            name
+          ).map(Option.apply)
       })
       frameworkDefinitionsFiles <- frameworkDefinitions.traverse({
-        case (name, defn) => renderFrameworkDefinitions(pkgPath, formattedPkgName, frameworkImports, defn, name)
+        case (name, defn) => renderFrameworkDefinitions(pkgPath, NonEmptyList.fromList(formattedPkgName).get, frameworkImports, defn, name)
       })
 
       protocolStaticImports <- Pt.staticProtocolImports(formattedPkgName)
 
       supportDefinitionsFiles <- (supportDefinitions ++ protocolSupport).traverse({
-        case SupportDefinition(name, imports, defn, true)  => renderFrameworkDefinitions(pkgPath, formattedPkgName, imports ++ protocolStaticImports, defn, name)
-        case SupportDefinition(name, imports, defn, false) => renderFrameworkDefinitions(supportPkgPath, formattedPkgName :+ "support", imports, defn, name)
+        case SupportDefinition(name, imports, defn, true) =>
+          renderFrameworkDefinitions(pkgPath, NonEmptyList.fromList(formattedPkgName).get, imports ++ protocolStaticImports, defn, name)
+        case SupportDefinition(name, imports, defn, false) =>
+          renderFrameworkDefinitions(supportPkgPath, NonEmptyList.fromList(formattedPkgName).get :+ "support", imports, defn, name)
       })
     } yield (
       protocolDefinitions ++

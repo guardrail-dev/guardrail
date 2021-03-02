@@ -31,6 +31,8 @@ import scala.language.existentials
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object JavaGenerator {
+  def buildPkgDeclNel(parts: NonEmptyList[String]): Target[PackageDeclaration] =
+    buildPkgDecl(parts.toList)
   def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] =
     safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
 
@@ -248,14 +250,14 @@ object JavaGenerator {
 
     def renderImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
         jsonImports: List[com.github.javaparser.ast.ImportDeclaration],
         customImports: List[com.github.javaparser.ast.ImportDeclaration]
     ): Target[Option[WriteTree]] = Target.pure(None)
     def renderFrameworkImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkImplicitImportNames: List[com.github.javaparser.ast.expr.Name],
         jsonImports: List[com.github.javaparser.ast.ImportDeclaration],
@@ -264,13 +266,13 @@ object JavaGenerator {
     ): Target[WriteTree] = Target.raiseUserError("Java does not support Framework Implicits")
     def renderFrameworkDefinitions(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
         frameworkDefinitionsName: com.github.javaparser.ast.expr.Name
     ): Target[WriteTree] =
       for {
-        pkgDecl <- buildPkgDecl(pkgName)
+        pkgDecl <- buildPkgDeclNel(pkgName)
         cu = {
           val cu = new CompilationUnit()
           cu.setPackageDeclaration(pkgDecl)

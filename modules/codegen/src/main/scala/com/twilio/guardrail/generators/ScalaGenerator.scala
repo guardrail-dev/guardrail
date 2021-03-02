@@ -26,6 +26,10 @@ object ScalaGenerator {
   val buildTermSelect: List[String] => Term.Ref =
     _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
 
+  val buildTermSelectNel: NonEmptyList[String] => Term.Ref = {
+    case NonEmptyList(start, rest) => rest.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(start))(Term.Select.apply _)
+  }
+
   object ScalaInterp extends LanguageTerms[ScalaLanguage, Target] {
     // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
     // defined inside `apply`. Once 2.11 is dropped, these can be moved back.
@@ -160,12 +164,12 @@ object ScalaGenerator {
 
     def renderImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[scala.meta.Import],
         jsonImports: List[scala.meta.Import],
         customImports: List[scala.meta.Import]
     ): Target[Option[WriteTree]] = {
-      val pkg: Term.Ref = buildTermSelect(pkgName)
+      val pkg: Term.Ref = buildTermSelectNel(pkgName)
       val implicits     = source"""
             package $pkg
 
@@ -253,16 +257,16 @@ object ScalaGenerator {
     }
     def renderFrameworkImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[scala.meta.Import],
         frameworkImplicitImportNames: List[scala.meta.Term.Name],
         jsonImports: List[scala.meta.Import],
         frameworkImplicits: scala.meta.Defn.Object,
         frameworkImplicitName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = buildTermSelect(pkgName)
+      val pkg: Term.Ref            = buildTermSelectNel(pkgName)
       val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
-      val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName ++ List(name.value))}._")
+      val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelectNel(("_root_" :: pkgName) :+ name.value)}._")
       val frameworkImplicitsFile   = source"""
             package $pkg
 
@@ -282,12 +286,12 @@ object ScalaGenerator {
     }
     def renderFrameworkDefinitions(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[scala.meta.Import],
         frameworkDefinitions: List[scala.meta.Defn],
         frameworkDefinitionsName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = buildTermSelect(pkgName)
+      val pkg: Term.Ref            = buildTermSelectNel(pkgName)
       val frameworkDefinitionsFile = source"""
             package $pkg
 

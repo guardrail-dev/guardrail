@@ -68,14 +68,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def renderImplicits(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       frameworkImports: List[L#Import],
       jsonImports: List[L#Import],
       customImports: List[L#Import]
   ): F[Option[WriteTree]]
   def renderFrameworkImplicits(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       frameworkImports: List[L#Import],
       frameworkImplicitImportNames: List[L#TermName],
       jsonImports: List[L#Import],
@@ -84,7 +84,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   ): F[WriteTree]
   def renderFrameworkDefinitions(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       frameworkImports: List[L#Import],
       frameworkDefinitions: List[L#Definition],
       frameworkDefinitionsName: L#TermName
@@ -176,10 +176,18 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newWidenObjectDefinition: L#ObjectDefinition => F[L#Definition] = widenObjectDefinition _,
       newFindCommonDefaultValue: (String, Option[L#Term], Option[L#Term]) => F[Option[L#Term]] = findCommonDefaultValue _,
       newFindCommonRawType: (String, RawParameterType, RawParameterType) => F[RawParameterType] = findCommonRawType _,
-      newRenderImplicits: (Path, List[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
-      newRenderFrameworkImplicits: (Path, List[String], List[L#Import], List[L#TermName], List[L#Import], L#ObjectDefinition, L#TermName) => F[WriteTree] =
-        renderFrameworkImplicits _,
-      newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
+      newRenderImplicits: (Path, NonEmptyList[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
+      newRenderFrameworkImplicits: (
+          Path,
+          NonEmptyList[String],
+          List[L#Import],
+          List[L#TermName],
+          List[L#Import],
+          L#ObjectDefinition,
+          L#TermName
+      ) => F[WriteTree] = renderFrameworkImplicits _,
+      newRenderFrameworkDefinitions: (Path, NonEmptyList[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] =
+        renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
           List[String],
@@ -251,11 +259,17 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def widenObjectDefinition(value: L#ObjectDefinition)                              = newWidenObjectDefinition(value)
     def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]) = newFindCommonDefaultValue(history, a, b)
     def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType)  = newFindCommonRawType(history, a, b)
-    def renderImplicits(pkgPath: Path, pkgName: List[String], frameworkImports: List[L#Import], jsonImports: List[L#Import], customImports: List[L#Import]) =
+    def renderImplicits(
+        pkgPath: Path,
+        pkgName: NonEmptyList[String],
+        frameworkImports: List[L#Import],
+        jsonImports: List[L#Import],
+        customImports: List[L#Import]
+    ) =
       newRenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports)
     def renderFrameworkImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[L#Import],
         frameworkImplicitImportNames: List[L#TermName],
         jsonImports: List[L#Import],
@@ -264,7 +278,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     ) = newRenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, frameworkImplicitImportNames, jsonImports, frameworkImplicits, frameworkImplicitName)
     def renderFrameworkDefinitions(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[L#Import],
         frameworkDefinitions: List[L#Definition],
         frameworkDefinitionsName: L#TermName
