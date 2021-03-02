@@ -26,7 +26,7 @@ object Common {
       context: Context,
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
-      supportPackage: List[String]
+      supportPackage: NonEmptyList[String]
   )(
       implicit
       C: ClientTerms[L, F],

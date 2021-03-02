@@ -1,6 +1,7 @@
 package com.twilio.guardrail.protocol.terms.server
 
 import cats.Monad
+import cats.data.NonEmptyList
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.LanguageParameters
 import com.twilio.guardrail.languages.LA
@@ -53,7 +54,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       responseDefinitions: List[L#Definition],
       customExtraction: Boolean
   ): F[L#Definition]
-  def getExtraImports(tracing: Boolean, supportPackage: List[String]): F[List[L#Import]]
+  def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): F[List[L#Import]]
 
   def copy(
       newMonadF: Monad[F] = MonadF,
@@ -82,7 +83,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           Boolean
       ) => F[List[L#Definition]] = renderClass _,
       newRenderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition], Boolean) => F[L#Definition] = renderHandler _,
-      newGetExtraImports: (Boolean, List[String]) => F[List[L#Import]] = getExtraImports _
+      newGetExtraImports: (Boolean, NonEmptyList[String]) => F[List[L#Import]] = getExtraImports _
   ) = new ServerTerms[L, F] {
     def MonadF = newMonadF
     def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
@@ -119,7 +120,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
         handlerDefinitions: List[L#Statement],
         responseDefinitions: List[L#Definition],
         customExtraction: Boolean
-    )                                                                   = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions, customExtraction)
-    def getExtraImports(tracing: Boolean, supportPackage: List[String]) = newGetExtraImports(tracing, supportPackage)
+    )                                                                           = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions, customExtraction)
+    def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) = newGetExtraImports(tracing, supportPackage)
   }
 }

@@ -18,7 +18,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def litLong(value: Long): F[L#Term]
   def litBoolean(value: Boolean): F[L#Term]
 
-  def fullyQualifyPackageName(rawPkgName: List[String]): F[List[String]]
+  def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]): F[NonEmptyList[String]]
 
   def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): F[L#TermSelect]
 
@@ -136,7 +136,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newLitInt: Int => F[L#Term] = litInt _,
       newLitLong: Long => F[L#Term] = litLong _,
       newLitBoolean: Boolean => F[L#Term] = litBoolean _,
-      newFullyQualifyPackageName: List[String] => F[List[String]] = fullyQualifyPackageName _,
+      newFullyQualifyPackageName: NonEmptyList[String] => F[NonEmptyList[String]] = fullyQualifyPackageName _,
       newLookupEnumDefaultValue: (L#TypeName, L#Term, List[(String, L#TermName, L#TermSelect)]) => F[L#TermSelect] = lookupEnumDefaultValue _,
       newFormatPackageName: List[String] => F[NonEmptyList[String]] = formatPackageName _,
       newFormatTypeName: (String, Option[String]) => F[String] = formatTypeName _,
@@ -213,14 +213,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
         writeServer _,
       newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = wrapToObject _
   ) = new LanguageTerms[L, F] {
-    def MonadF                                            = newMonadF
-    def litString(value: String)                          = newLitString(value)
-    def litFloat(value: Float)                            = newLitFloat(value)
-    def litDouble(value: Double)                          = newLitDouble(value)
-    def litInt(value: Int)                                = newLitInt(value)
-    def litLong(value: Long)                              = newLitLong(value)
-    def litBoolean(value: Boolean)                        = newLitBoolean(value)
-    def fullyQualifyPackageName(rawPkgName: List[String]) = newFullyQualifyPackageName(rawPkgName)
+    def MonadF                                                    = newMonadF
+    def litString(value: String)                                  = newLitString(value)
+    def litFloat(value: Float)                                    = newLitFloat(value)
+    def litDouble(value: Double)                                  = newLitDouble(value)
+    def litInt(value: Int)                                        = newLitInt(value)
+    def litLong(value: Long)                                      = newLitLong(value)
+    def litBoolean(value: Boolean)                                = newLitBoolean(value)
+    def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]) = newFullyQualifyPackageName(rawPkgName)
     def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]) =
       newLookupEnumDefaultValue(tpe, defaultValue, values)
     def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]         = newFormatPackageName(packageName)

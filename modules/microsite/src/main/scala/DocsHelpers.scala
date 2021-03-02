@@ -3,6 +3,7 @@ package com.twilio.guardrail.docs
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
+import cats.data.NonEmptyList
 import com.twilio.guardrail._
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.Framework
@@ -26,7 +27,7 @@ object DocsHelpers {
     val segments: List[Option[String]] = identifier match {
       case GeneratingAServer =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), List("support"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         val server = codegenDefinitions.servers.head
         val q"object ${oname} { ..${stats} }" = server.serverDefinitions.head
@@ -43,7 +44,7 @@ object DocsHelpers {
         )
       case GeneratingClients =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), List("support"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         codegenDefinitions.clients match {
           case g :: Nil =>

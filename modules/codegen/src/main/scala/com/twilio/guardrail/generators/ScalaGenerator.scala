@@ -44,7 +44,7 @@ object ScalaGenerator {
     def litLong(value: Long): Target[scala.meta.Term]       = Target.pure(Lit.Long(value))
     def litBoolean(value: Boolean): Target[scala.meta.Term] = Target.pure(Lit.Boolean(value))
 
-    def fullyQualifyPackageName(rawPkgName: List[String]): Target[List[String]] = Target.pure("_root_" +: rawPkgName)
+    def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]): Target[NonEmptyList[String]] = Target.pure("_root_" :: rawPkgName)
 
     def lookupEnumDefaultValue(
         tpe: scala.meta.Type.Name,

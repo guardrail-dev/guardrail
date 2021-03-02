@@ -685,7 +685,7 @@ object ProtocolGenerator {
   def fromSwagger[L <: LA, F[_]](
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
-      supportPackage: List[String],
+      supportPackage: NonEmptyList[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
       implicit E: EnumProtocolTerms[L, F],
@@ -707,7 +707,7 @@ object ProtocolGenerator {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value)
-      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage, defaultPropertyRequirement))
+      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement))
       elems <- definitionsWithoutPoly.traverse {
         case (clsName, model) =>
           model
@@ -723,7 +723,7 @@ object ProtocolGenerator {
                     concreteTypes,
                     definitions.value,
                     dtoPackage,
-                    supportPackage,
+                    supportPackage.toList,
                     defaultPropertyRequirement
                   )
                   alias <- modelTypeAlias(clsName, m)
@@ -733,7 +733,7 @@ object ProtocolGenerator {
               comp =>
                 for {
                   formattedClsName <- formatTypeName(clsName)
-                  parents          <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+                  parents          <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement)
                   model <- fromModel(
                     NonEmptyList.of(formattedClsName),
                     comp,
@@ -741,7 +741,7 @@ object ProtocolGenerator {
                     concreteTypes,
                     definitions.value,
                     dtoPackage,
-                    supportPackage,
+                    supportPackage.toList,
                     defaultPropertyRequirement
                   )
                   alias <- modelTypeAlias(formattedClsName, comp)
@@ -766,7 +766,7 @@ object ProtocolGenerator {
                     concreteTypes,
                     definitions.value,
                     dtoPackage,
-                    supportPackage,
+                    supportPackage.toList,
                     defaultPropertyRequirement
                   )
                   alias <- modelTypeAlias(formattedClsName, m)

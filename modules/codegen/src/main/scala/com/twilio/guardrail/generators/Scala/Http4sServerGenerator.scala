@@ -180,7 +180,7 @@ object Http4sServerGenerator {
         }
       """ +: responseDefinitions)
 
-    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
+    def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
       Target.log.function("getExtraImports")(
         for {
           _ <- Target.log.debug(s"Args: ${tracing}")

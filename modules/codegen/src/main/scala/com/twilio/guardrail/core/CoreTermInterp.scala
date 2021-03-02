@@ -215,13 +215,13 @@ class CoreTermInterp[L <: LA](
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 formattedPkgName   <- Sc.formatPackageName(pkgName)
-                definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName.toList)
+                definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName)
                 (proto, codegen) <- Common
                   .prepareDefinitions[L, Target](
                     kind,
                     context,
                     Tracker(swagger),
-                    definitionsPkgName ++ ("definitions" :: dtoPackage),
+                    definitionsPkgName.toList ++ ("definitions" :: dtoPackage),
                     definitionsPkgName :+ "support"
                   )
                 protocolSupport <- Ps.generateSupportDefinitions()
