@@ -4,7 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.{ LanguageParameter, RawParameterName, ScalaGenerator }
+import com.twilio.guardrail.generators.{ LanguageParameter, RawParameterName }
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
@@ -17,6 +17,9 @@ import io.swagger.v3.oas.models.Operation
 import scala.meta._
 
 object DropwizardServerGenerator {
+  val buildTermSelect: List[String] => Term.Ref =
+    _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+
   private val PLAIN_TYPES =
     Set("Boolean", "Byte", "Char", "Short", "Int", "Long", "BigInt", "Float", "Double", "BigDecimal", "String", "OffsetDateTime", "LocalDateTime")
   private val CONTAINER_TYPES = Seq("Vector", "List", "Seq", "IndexedSeq", "Iterable", "Map")
@@ -151,7 +154,7 @@ object DropwizardServerGenerator {
           q"import scala.annotation.meta.{field, param}",
           q"import scala.concurrent.{ExecutionContext, Future}",
           q"import scala.util.{Failure, Success}",
-          q"import ${ScalaGenerator.ScalaInterp.buildPkgTerm(supportPackage)}.GuardrailJerseySupport"
+          q"import ${buildTermSelect(supportPackage)}.GuardrailJerseySupport"
         )
       )
 
