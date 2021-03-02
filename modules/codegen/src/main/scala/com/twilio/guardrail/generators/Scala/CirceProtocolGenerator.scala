@@ -149,7 +149,7 @@ object CirceProtocolGenerator {
     )(
         name: String,
         fieldName: String,
-        property: Schema[_],
+        property: Tracker[Schema[_]],
         meta: ResolvedType[ScalaLanguage],
         requirement: PropertyRequirement,
         isCustomType: Boolean,
@@ -159,15 +159,17 @@ object CirceProtocolGenerator {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
+          rawType = RawParameterType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
-          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-          emptyToNull = (property match {
-            case d: DateSchema      => EmptyValueIsNull(d)
-            case dt: DateTimeSchema => EmptyValueIsNull(dt)
-            case s: StringSchema    => EmptyValueIsNull(s)
-            case _                  => None
-          }).getOrElse(EmptyIsEmpty)
+          readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly()).unwrapTracker.contains(true))
+          emptyToNull = property
+            .refine({ case d: DateSchema => d })(d => EmptyValueIsNull(d))
+            .orRefine({ case dt: DateTimeSchema => dt })(dt => EmptyValueIsNull(dt))
+            .orRefine({ case s: StringSchema => s })(s => EmptyValueIsNull(s))
+            .toOption
+            .flatten
+            .getOrElse(EmptyIsEmpty)
+
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {

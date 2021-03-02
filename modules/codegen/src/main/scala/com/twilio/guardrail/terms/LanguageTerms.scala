@@ -3,6 +3,7 @@ package terms
 
 import cats.Monad
 import cats.data.NonEmptyList
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
@@ -28,7 +29,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def formatMethodArgName(methodArgName: String): F[String]
   def formatEnumName(enumValue: String): F[String]
 
-  def parseType(value: String): F[Option[L#Type]]
+  def parseType(value: Tracker[String]): F[Option[L#Type]]
   def parseTypeName(value: String): F[Option[L#TypeName]]
   def pureTermName(value: String): F[L#TermName]
   def pureTypeName(value: String): F[L#TypeName]
@@ -143,7 +144,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newFormatMethodName: String => F[String] = formatMethodName _,
       newFormatMethodArgName: String => F[String] = formatMethodArgName _,
       newFormatEnumName: String => F[String] = formatEnumName _,
-      newParseType: String => F[Option[L#Type]] = parseType _,
+      newParseType: Tracker[String] => F[Option[L#Type]] = parseType _,
       newParseTypeName: String => F[Option[L#TypeName]] = parseTypeName _,
       newPureTermName: String => F[L#TermName] = pureTermName _,
       newPureTypeName: String => F[L#TypeName] = pureTypeName _,
@@ -218,7 +219,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def formatMethodName(methodName: String): F[String]                               = newFormatMethodName(methodName)
     def formatMethodArgName(methodArgName: String): F[String]                         = newFormatMethodArgName(methodArgName)
     def formatEnumName(enumValue: String)                                             = newFormatEnumName(enumValue)
-    def parseType(value: String)                                                      = newParseType(value)
+    def parseType(value: Tracker[String])                                             = newParseType(value)
     def parseTypeName(value: String)                                                  = newParseTypeName(value)
     def pureTermName(value: String)                                                   = newPureTermName(value)
     def pureTypeName(value: String)                                                   = newPureTypeName(value)

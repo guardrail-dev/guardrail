@@ -19,7 +19,7 @@ abstract class ModelProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerm
   )(
       name: String,
       fieldName: String,
-      prop: Schema[_],
+      prop: Tracker[Schema[_]],
       meta: ResolvedType[L],
       requirement: PropertyRequirement,
       isCustomType: Boolean,
@@ -49,7 +49,7 @@ abstract class ModelProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerm
           List[String],
           List[String],
           List[PropMeta[L]]
-      ) => (String, String, Schema[_], ResolvedType[L], PropertyRequirement, Boolean, Option[L#Term]) => F[ProtocolParameter[L]] = transformProperty _,
+      ) => (String, String, Tracker[Schema[_]], ResolvedType[L], PropertyRequirement, Boolean, Option[L#Term]) => F[ProtocolParameter[L]] = transformProperty _,
       newRenderDTOClass: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = renderDTOClass _,
       newDecodeModel: (String, List[String], List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = decodeModel _,
       newEncodeModel: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = encodeModel _,
@@ -65,7 +65,7 @@ abstract class ModelProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerm
     )(
         name: String,
         fieldName: String,
-        prop: Schema[_],
+        prop: Tracker[Schema[_]],
         meta: ResolvedType[L],
         requirement: PropertyRequirement,
         isCustomType: Boolean,

@@ -49,25 +49,28 @@ case class ProtocolParameter[L <: LA](
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
 
 object Discriminator {
-  def fromSchema[L <: LA, F[_]](schema: Schema[_])(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Option[Discriminator[L]]] =
+  def fromSchema[L <: LA, F[_]](schema: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Option[Discriminator[L]]] =
     Sw.log.function("Discriminator.fromSchema") {
       import Sc._
-      Option(schema.getDiscriminator)
-        .flatMap(x => Option(x.getPropertyName).map((x, _)))
+      schema
+        .downField("discriminator", _.getDiscriminator)
+        .indexedDistribute
+        .flatMap(x => x.downField("propertyName", _.getPropertyName()).indexedDistribute.map((x, _)))
         .traverse {
-          case (x, propertyName) =>
-            val possibleMappings = Option(x.getMapping)
-              .map(_.asScala)
-              .getOrElse(Map.empty[String, String])
+          case (x, Tracker(_, propertyName)) =>
+            val possibleMappings = x
+              .downField("mapping", _.getMapping())
+              .indexedDistribute
+              .value
               .flatMap({
-                case (k, s) if s.startsWith("#/") => s.split("/").lastOption.filter(_.nonEmpty).map((k, _))
-                case (k, s)                       => Option((k, s))
+                case (k, s) if s.unwrapTracker.startsWith("#/") => s.map(_.split("/").lastOption.filter(_.nonEmpty)).indexedDistribute.map((k, _))
+                case (k, s)                                     => Option((k, s))
               })
               .toList
             for {
               mapping <- possibleMappings.flatTraverse({
                 case (key, name) =>
-                  parseType(name).map(_.map(tpe => (key, RandomType(name, tpe))).toList)
+                  parseType(name).map(_.map(tpe => (key, RandomType(name.unwrapTracker, tpe))).toList)
               })
             } yield Discriminator[L](propertyName, mapping.toMap)
         }
@@ -144,7 +147,7 @@ object ProtocolGenerator {
     for {
       enum          <- extractEnum(swagger)
       customTpeName <- SwaggerUtil.customTypeName(swagger)
-      tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), customTpeName)
+      tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), Tracker.cloneHistory(swagger, customTpeName))
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -164,7 +167,7 @@ object ProtocolGenerator {
       case (false, None)        => defaultPropertyRequirement
       case (false, Some(false)) => PropertyRequirement.Optional
       case (false, Some(true))  => PropertyRequirement.OptionalNullable
-    }).get
+    }).unwrapTracker
 
   /**
     * Handle polymorphic model
@@ -213,12 +216,12 @@ object ProtocolGenerator {
             propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
-            defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
+            defValue     <- defaultValue(typeName, prop, propertyRequirement, definitions)
             fieldName    <- formatFieldName(name)
             res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
               name,
               fieldName,
-              prop.get,
+              prop,
               resolvedType,
               propertyRequirement,
               customType.isDefined,
@@ -272,11 +275,11 @@ object ProtocolGenerator {
             (cls, tracker) <- definitions
             result <- tracker
               .refine[Tracker[Schema[_]]]({
-                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x
+                case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x
               })(
                 identity _
               )
-              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/${cls}")) => x })(identity _)
+              .orRefine({ case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x })(identity _)
               .toOption
           } yield (cls -> result)
           val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
@@ -300,11 +303,11 @@ object ProtocolGenerator {
               supportPackage,
               defaultPropertyRequirement
             )
-            interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).map(_.map(_.split("/").last)).get)
+            interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last))
             tpe <- parseTypeName(clsName)
 
             discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-              _.refine[F[List[Discriminator[L]]]]({ case m: ObjectSchema => m })(m => Discriminator.fromSchema(m.get).map(_.toList))
+              _.refine[F[List[Discriminator[L]]]]({ case m: ObjectSchema => m })(m => Discriminator.fromSchema(m).map(_.toList))
                 .getOrElse(List.empty[Discriminator[L]].pure[F])
             )
           } yield tpe
@@ -452,14 +455,14 @@ object ProtocolGenerator {
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
-            customType            <- SwaggerUtil.customTypeName(schema.get)
+            customType            <- SwaggerUtil.customTypeName(schema)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
-            defValue  <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
+            defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)
             parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, concreteTypes)(
               name,
               fieldName,
-              schema.get,
+              schema,
               resolvedType,
               propertyRequirement,
               customType.isDefined,
@@ -479,7 +482,7 @@ object ProtocolGenerator {
     import Sc._
     Foldable[List]
       .foldLeftM[F, Tracker[ProtocolParameter[L]], List[ProtocolParameter[L]]](params, List.empty[ProtocolParameter[L]]) { (s, ta) =>
-        val a = ta.get
+        val a = ta.unwrapTracker
         s.find(p => p.name == a.name) match {
           case None => (a :: s).pure[F]
           case Some(duplicate) =>
@@ -565,7 +568,7 @@ object ProtocolGenerator {
           res <- SwaggerUtil.typeName[L, F](
             raw,
             m.downField("format", _.getFormat()),
-            tpeName
+            Tracker.cloneHistory(m, tpeName)
           )
         } yield res
       }
@@ -624,17 +627,18 @@ object ProtocolGenerator {
       definitions: Mappish[List, String, Tracker[Schema[_]]]
   )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[(List[ClassParent[L]], List[(String, Tracker[Schema[_]])])] = {
 
-    def firstInHierarchy(model: Tracker[Schema[_]]): Option[ObjectSchema] =
+    def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[ObjectSchema]] =
       model
         .refine({ case x: ComposedSchema => x })({ elem =>
           definitions.value
             .collectFirst({
-              case (clsName, element) if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName"))) =>
+              case (clsName, element)
+                  if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName"))) =>
                 element
             })
             .flatMap(
               _.refine({ case x: ComposedSchema => x })(firstInHierarchy)
-                .orRefine({ case o: ObjectSchema => o })(x => Option(x.get))
+                .orRefine({ case o: ObjectSchema => o })(x => Option(x))
                 .getOrElse(None)
             )
         })
@@ -647,7 +651,7 @@ object ProtocolGenerator {
             comp =>
               if (comp
                     .downField("allOf", _.getAllOf())
-                    .exists(x => x.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$cls")))) {
+                    .exists(x => x.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$cls")))) {
                 Some(ClassChild(clsName, comp, children(clsName), getRequiredFieldsRec(comp)))
               } else None
           )
@@ -662,7 +666,7 @@ object ProtocolGenerator {
               .fold(Option.empty[Discriminator[L]].pure[F])(Discriminator.fromSchema[L, F])
               .map(_.map((_, getRequiredFieldsRec(c))))
         )
-        .orRefine({ case x: Schema[_] => x })(m => Discriminator.fromSchema(m.get).map(_.map((_, getRequiredFieldsRec(m)))))
+        .orRefine({ case x: Schema[_] => x })(m => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m)))))
         .getOrElse(Option.empty[(Discriminator[L], List[String])].pure[F])
         .map(_.map({ case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) }))
 
@@ -773,8 +777,8 @@ object ProtocolGenerator {
                 for {
                   formattedClsName <- formatTypeName(clsName)
                   tpeName          <- getType(x)
-                  customTypeName   <- SwaggerUtil.customTypeName(x.get)
-                  tpe              <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
+                  customTypeName   <- SwaggerUtil.customTypeName(x)
+                  tpe              <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
                   res              <- typeAlias[L, F](formattedClsName, tpe)
                 } yield res
             )
@@ -791,9 +795,9 @@ object ProtocolGenerator {
 
   private def defaultValue[L <: LA, F[_]](
       name: NonEmptyList[String],
-      schema: Schema[_],
+      schema: Tracker[Schema[_]],
       requirement: PropertyRequirement,
-      definitions: List[(String, Schema[_])]
+      definitions: List[(String, Tracker[Schema[_]])]
   )(
       implicit Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F]
@@ -801,50 +805,48 @@ object ProtocolGenerator {
     import Sc._
     import Cl._
     val empty = Option.empty[L#Term].pure[F]
-    Option(schema.get$ref()) match {
+    schema.downField("$ref", _.get$ref()).indexedDistribute match {
       case Some(ref) =>
         definitions
           .collectFirst {
-            case (cls, refSchema) if ref.endsWith(s"/$cls") =>
+            case (cls, refSchema) if ref.unwrapTracker.endsWith(s"/$cls") =>
               defaultValue(NonEmptyList.of(cls), refSchema, requirement, definitions)
           }
           .getOrElse(empty)
       case None =>
-        schema match {
-          case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable =>
-            for {
-              customTpe <- SwaggerUtil.customMapTypeName(map)
-              result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
-            } yield result
-          case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable =>
-            for {
-              customTpe <- SwaggerUtil.customArrayTypeName(arr)
-              result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
-            } yield result
-          case p: BooleanSchema =>
-            Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_)))
-          case p: NumberSchema if p.getFormat == "double" =>
-            Default(p).extract[Double].fold(empty)(litDouble(_).map(Some(_)))
-          case p: NumberSchema if p.getFormat == "float" =>
-            Default(p).extract[Float].fold(empty)(litFloat(_).map(Some(_)))
-          case p: IntegerSchema if p.getFormat == "int32" =>
-            Default(p).extract[Int].fold(empty)(litInt(_).map(Some(_)))
-          case p: IntegerSchema if p.getFormat == "int64" =>
-            Default(p).extract[Long].fold(empty)(litLong(_).map(Some(_)))
-          case p: StringSchema if Option(p.getEnum).map(_.asScala).exists(_.nonEmpty) =>
-            Default(p).extract[String] match {
-              case Some(defaultEnumValue) =>
-                for {
-                  enumName <- formatEnumName(defaultEnumValue)
-                  result   <- selectTerm(name.append(enumName))
-                } yield Some(result)
-              case None => empty
-            }
-          case p: StringSchema =>
-            Default(p).extract[String].fold(empty)(litString(_).map(Some(_)))
-          case _ =>
-            empty
-        }
+        schema
+          .refine({ case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => map })(
+            map =>
+              for {
+                customTpe <- SwaggerUtil.customMapTypeName(map)
+                result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
+              } yield result
+          )
+          .orRefine({ case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr })(
+            arr =>
+              for {
+                customTpe <- SwaggerUtil.customArrayTypeName(arr)
+                result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
+              } yield result
+          )
+          .orRefine({ case p: BooleanSchema => p })(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))
+          .orRefine({ case p: NumberSchema if p.getFormat == "double" => p })(p => Default(p).extract[Double].fold(empty)(litDouble(_).map(Some(_))))
+          .orRefine({ case p: NumberSchema if p.getFormat == "float" => p })(p => Default(p).extract[Float].fold(empty)(litFloat(_).map(Some(_))))
+          .orRefine({ case p: IntegerSchema if p.getFormat == "int32" => p })(p => Default(p).extract[Int].fold(empty)(litInt(_).map(Some(_))))
+          .orRefine({ case p: IntegerSchema if p.getFormat == "int64" => p })(p => Default(p).extract[Long].fold(empty)(litLong(_).map(Some(_))))
+          .orRefine({ case p: StringSchema if Option(p.getEnum).map(_.asScala).exists(_.nonEmpty) => p })(
+            p =>
+              Default(p).extract[String] match {
+                case Some(defaultEnumValue) =>
+                  for {
+                    enumName <- formatEnumName(defaultEnumValue)
+                    result   <- selectTerm(name.append(enumName))
+                  } yield Some(result)
+                case None => empty
+              }
+          )
+          .orRefine({ case p: StringSchema => p })(p => Default(p).extract[String].fold(empty)(litString(_).map(Some(_))))
+          .getOrElse(empty)
     }
 
   }

@@ -85,7 +85,7 @@ object LanguageParameter {
           fmt    = schema.flatDownField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- schema.unwrapTracker.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
-          customTypeName = customSchemaTypeName.orElse(customParamTypeName)
+          customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
           res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
             .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
         } yield res

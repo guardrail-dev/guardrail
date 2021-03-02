@@ -145,7 +145,7 @@ object AkkaHttpServerGenerator {
 
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       for {
-        _ <- Target.log.debug(s"buildTracingFields(${operation.get.showNotNull}, ${resourceName}, ${tracing})")
+        _ <- Target.log.debug(s"buildTracingFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${tracing})")
         res <- if (tracing) {
           for {
             operationId <- operation
@@ -155,7 +155,7 @@ object AkkaHttpServerGenerator {
             label <- Target.fromOption[Lit.String](
               TracingLabel(operation)
                 .map(Lit.String(_))
-                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.unwrapTracker).toLit)),
               UserError(s"Missing client name (${operation.showHistory})")
             )
           } yield Some(TracingField[ScalaLanguage](LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
@@ -635,9 +635,11 @@ object AkkaHttpServerGenerator {
             } else (List.empty[Stat], term => term)
 
             for {
-              (handlers, unmarshallerTerms) <- consumes.get.distinct
+              (handlers, unmarshallerTerms) <- consumes
+                .map(_.distinct)
+                .indexedDistribute
                 .traverse[(List[Stat], *), Target[NonEmptyList[Term.Name]]]({
-                  case MultipartFormData => {
+                  case Tracker(_, MultipartFormData) => {
                     val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
                     val fru = q"""
                   object ${partsTerm} {
@@ -681,7 +683,7 @@ object AkkaHttpServerGenerator {
                     (fru, Target.pure(NonEmptyList.one(unmarshallerTerm)))
                   }
 
-                  case UrlencodedFormData => {
+                  case Tracker(_, UrlencodedFormData) => {
                     val unmarshallerTerm               = q"FormDataUnmarshaller"
                     val unmarshalFieldTypeParam        = AkkaHttpHelper.unmarshalFieldTypeParam(modelGeneratorType)
                     val unmarshalFieldUnmarshallerType = AkkaHttpHelper.unmarshalFieldUnmarshallerType(modelGeneratorType)
@@ -723,11 +725,12 @@ object AkkaHttpServerGenerator {
                     (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
                   }
 
-                  case ApplicationJson => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json"))
+                  case t @ Tracker(_, ApplicationJson) =>
+                    (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${t.showHistory})"))
 
-                  case BinaryContent(name) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name"))
+                  case t @ Tracker(_, BinaryContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${t.showHistory})"))
 
-                  case TextContent(name) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name"))
+                  case t @ Tracker(_, TextContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${t.showHistory})"))
                 })
                 .traverse(_.flatSequence)
 

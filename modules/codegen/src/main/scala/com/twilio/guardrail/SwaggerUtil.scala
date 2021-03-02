@@ -163,7 +163,7 @@ object SwaggerUtil {
         import Cl._
         import Sw._
         import Fw._
-        log.debug(s"model:\n${log.schemaToString(model.get)}") >> (model
+        log.debug(s"model:\n${log.schemaToString(model.unwrapTracker)}") >> (model
           .refine[F[ResolvedType[L]]]({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(
             ref =>
               for {
@@ -177,7 +177,7 @@ object SwaggerUtil {
                 _         <- log.debug(s"items:\n${log.schemaToString(items.unwrapTracker)}")
                 meta      <- propMeta[L, F](items)
                 _         <- log.debug(s"meta: ${meta}")
-                arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(parseType))
+                arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
                 res <- meta match {
                   case Resolved(inner, dep, default, _, _) =>
                     (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm(_))).mapN(Resolved[L](_, dep, _, None, None))
@@ -198,7 +198,7 @@ object SwaggerUtil {
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(Resolved[L](_, None, None, None, None))
                 })
-              mapType <- customMapTypeName(map).flatMap(_.flatTraverse(parseType))
+              mapType <- customMapTypeName(map).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(map, x))))
               res <- rec match {
                 case Resolved(inner, dep, _, _, _) => liftMapType(inner, mapType).map(Resolved[L](_, dep, None, None, None))
                 case x: DeferredMap[L]             => embedMap(x, mapType)
@@ -213,8 +213,8 @@ object SwaggerUtil {
                 tpeName       <- getType(impl)
                 customTpeName <- customTypeName(impl)
                 fmt = impl.downField("format", _.getFormat())
-                tpe <- typeName[L, F](tpeName.map(Option(_)), fmt, customTpeName)
-              } yield Resolved[L](tpe, None, None, Some(tpeName.get), fmt.get)
+                tpe <- typeName[L, F](tpeName.map(Option(_)), fmt, Tracker.cloneHistory(impl, customTpeName))
+              } yield Resolved[L](tpe, None, None, Some(tpeName.unwrapTracker), fmt.unwrapTracker)
           ))
       }
   }
@@ -265,9 +265,9 @@ object SwaggerUtil {
   def typeName[L <: LA, F[_]](
       typeName: Tracker[Option[String]],
       format: Tracker[Option[String]],
-      customType: Option[String]
+      customType: Tracker[Option[String]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[L#Type] =
-    Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType})") {
+    Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType.unwrapTracker})") {
       import Sc._
       import Cl._
       import Fw._
@@ -283,9 +283,9 @@ object SwaggerUtil {
       }
 
       for {
-        customTpe <- customType.flatTraverse(liftCustomType[L, F] _)
+        customTpe <- customType.indexedDistribute.flatTraverse(x => liftCustomType[L, F](x))
         result <- customTpe.fold({
-          (typeName.get, format.get) match {
+          (typeName.unwrapTracker, format.unwrapTracker) match {
             case (Some("string"), Some("uuid"))         => uuidType()
             case (Some("string"), Some("password"))     => stringType(None)
             case (Some("string"), Some("email"))        => stringType(None)
@@ -330,20 +330,22 @@ object SwaggerUtil {
       Fw: FrameworkTerms[L, F]
   ): F[ResolvedType[L]] = {
     import Fw._
-    propMetaImpl(property) {
-      case o: ObjectSchema =>
-        for {
-          customTpeName <- customTypeName(o)
-          customTpe     <- customTpeName.flatTraverse(liftCustomType[L, F] _)
-          fallback      <- objectType(None)
-        } yield Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
-    }
+    propMetaImpl(property)(
+      _.refine({ case o: ObjectSchema => o })(
+        o =>
+          for {
+            customTpeName <- customTypeName(o)
+            customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
+            fallback      <- objectType(None)
+          } yield (Resolved[L](customTpe.getOrElse(fallback), None, None, None, None): ResolvedType[L])
+      )
+    )
   }
 
-  def liftCustomType[L <: LA, F[_]](s: String)(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
+  def liftCustomType[L <: LA, F[_]](s: Tracker[String])(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
-    val tpe = s.trim
-    if (tpe.nonEmpty) {
+    val tpe = s.map(_.trim)
+    if (tpe.unwrapTracker.nonEmpty) {
       parseType(tpe)
     } else Option.empty[L#Type].pure[F]
   }
@@ -355,24 +357,26 @@ object SwaggerUtil {
       Fw: FrameworkTerms[L, F]
   ): F[ResolvedType[L]] = {
     import Fw._
-    propMetaImpl(property) {
-      case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) =>
-        (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
-      case o: ObjectSchema =>
-        for {
-          customTpeName <- customTypeName(o)
-          customTpe     <- customTpeName.flatTraverse(liftCustomType[L, F] _)
-          fallback      <- objectType(None)
-        } yield Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
-      case _: ComposedSchema =>
-        (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
-      case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) =>
-        (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
-    }
+    propMetaImpl(property)(
+      _.refine({ case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema })(
+        _ => (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
+      ).orRefine({ case o: ObjectSchema => o })(
+          o =>
+            for {
+              customTpeName <- customTypeName(o)
+              customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
+              fallback      <- objectType(None)
+            } yield Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
+        )
+        .orRefine({ case c: ComposedSchema => c })(_ => (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F])
+        .orRefine({ case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) => schema })(
+          _ => (Resolved[L](tpe, None, None, None, None): ResolvedType[L]).pure[F]
+        )
+    )
   }
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
-      strategy: PartialFunction[Schema[_], F[ResolvedType[L]]]
+      strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[ResolvedType[L]]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
@@ -386,8 +390,8 @@ object SwaggerUtil {
 
         for {
           customTpeName <- customTypeName(a)
-          tpe           <- typeName[L, F](rawType, rawFormat, customTpeName)
-        } yield Resolved[L](tpe, None, None, rawType.get, rawFormat.get)
+          tpe           <- typeName[L, F](rawType, rawFormat, Tracker.cloneHistory(a, customTpeName))
+        } yield Resolved[L](tpe, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker)
       }
       def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[ResolvedType[L]] = { a =>
         val rawType   = a.downField("type", _.getType())
@@ -395,21 +399,20 @@ object SwaggerUtil {
         for {
           customTpeName <- customTypeName(a)
           res <- (
-            typeName[L, F](rawType, rawFormat, customTpeName),
-            Default(a.get).extract[B].traverse(transformLit(_))
-          ).mapN(Resolved[L](_, None, _, rawType.get, rawFormat.get))
+            typeName[L, F](rawType, rawFormat, Tracker.cloneHistory(a, customTpeName)),
+            Default(a.unwrapTracker).extract[B].traverse(transformLit(_))
+          ).mapN(Resolved[L](_, None, _, rawType.unwrapTracker, rawFormat.unwrapTracker))
         } yield res
       }
 
-      log.debug(s"property:\n${log.schemaToString(property.get)} (${property.get.getExtensions()})").flatMap { _ =>
-        property
-          .refine[F[ResolvedType[L]]](strategy)(_.get)
+      log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})").flatMap { _ =>
+        strategy(property)
           .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
                 items     <- getItems(p)
                 rec       <- propMetaImpl[L, F](items)(strategy)
-                arrayType <- customArrayTypeName(p).flatMap(_.flatTraverse(parseType))
+                arrayType <- customArrayTypeName(p).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(p, x))))
                 res <- rec match {
                   case Resolved(inner, dep, default, _, _) =>
                     (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
@@ -433,7 +436,7 @@ object SwaggerUtil {
                       Resolved[L](_, None, None, None, None)
                     )
                   })
-                mapType <- customArrayTypeName(m).flatMap(_.flatTraverse(parseType))
+                mapType <- customArrayTypeName(m).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(m, x))))
                 res <- rec match {
                   case Resolved(inner, dep, _, _, _) =>
                     liftMapType(inner, mapType).map(Resolved[L](_, dep, None, None, None))
@@ -466,20 +469,21 @@ object SwaggerUtil {
     import Sw._
     import Sc._
 
-    Option(swagger.getComponents)
-      .flatMap(components => Option(components.getSecuritySchemes))
-      .fold(Map.empty[String, SwSecurityScheme])(_.asScala.toMap)
-      .toList
+    Tracker(swagger)
+      .downField("components", _.getComponents)
+      .flatDownField("securitySchemes", _.getSecuritySchemes)
+      .indexedDistribute
+      .value
       .traverse({
         case (schemeName, scheme) =>
           val typeName = CustomTypeName(scheme, prefixes)
           for {
-            tpe <- typeName.fold(Option.empty[L#Type].pure[F])(parseType)
-            parsedScheme <- scheme.getType match {
-              case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
-              case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
-              case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
-              case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            tpe <- typeName.fold(Option.empty[L#Type].pure[F])(x => parseType(Tracker.cloneHistory(scheme, x)))
+            parsedScheme <- scheme.downField("type", _.getType).unwrapTracker.get match {
+              case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
+              case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
+              case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
+              case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
             }
           } yield (schemeName, parsedScheme)
       })
@@ -543,7 +547,7 @@ object SwaggerUtil {
 
       for {
         parts <- path.map(pattern.parseOnly(_).either).raiseErrorIfLeft
-        result = parts.get
+        result = parts.unwrapTracker
           .map({
             case Left(part)  => showLiteralPathComponent(part)
             case Right(term) => term

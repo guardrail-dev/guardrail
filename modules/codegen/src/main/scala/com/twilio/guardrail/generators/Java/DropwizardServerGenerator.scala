@@ -259,7 +259,7 @@ object DropwizardServerGenerator {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
         handlerType  <- safeParseClassOrInterfaceType(handlerName)
         basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
+        commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
         routeMethodsAndHandlerMethodSigs <- routes
           .traverse({
             case GenerateRouteMeta(

@@ -348,7 +348,7 @@ object AkkaHttpClientGenerator {
                 .fromList(xs.flatMap(ContentType.unapply(_)))
                 .getOrElse(NonEmptyList.one(ApplicationJson))
           )
-        consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
+        consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
 
         headerArgs = parameters.headerParams
         pathArgs   = parameters.pathParams
