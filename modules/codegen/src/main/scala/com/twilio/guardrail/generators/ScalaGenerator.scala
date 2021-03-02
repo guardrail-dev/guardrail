@@ -68,10 +68,10 @@ object ScalaGenerator {
 
     def parseType(tpe: Tracker[String]): Target[Option[scala.meta.Type]] =
       Target.pure(
-        tpe.get
+        tpe.unwrapTracker
           .parse[Type]
           .fold({ err =>
-            println(s"Warning: Unparsable x-scala-type: $tpe $err")
+            println(s"Warning: Unparsable x-scala-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
             None
           }, Option.apply _)
       )

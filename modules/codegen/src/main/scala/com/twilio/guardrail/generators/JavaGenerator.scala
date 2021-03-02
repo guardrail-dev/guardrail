@@ -141,11 +141,11 @@ object JavaGenerator {
     def formatEnumName(enumValue: String): Target[String]          = Target.pure(enumValue.escapeInvalidCharacters.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
 
     def parseType(tpe: Tracker[String]): Target[Option[com.github.javaparser.ast.`type`.Type]] =
-      safeParseType(tpe.get)
+      safeParseType(tpe.unwrapTracker)
         .map(Option.apply)
         .recover({
           case err =>
-            println(s"Warning: Unparsable x-java-type: $tpe $err")
+            println(s"Warning: Unparsable x-java-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
             None
         })
     def parseTypeName(tpe: String): Target[Option[JavaTypeName]] = Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
