@@ -7,7 +7,6 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFrameworkTerms }
 import io.swagger.v3.oas.models.Operation
-import scala.collection.JavaConverters._
 
 class Response[L <: LA](
     val statusCodeName: L#TermName,
