@@ -145,7 +145,7 @@ object AkkaHttpServerGenerator {
 
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       for {
-        _ <- Target.log.debug(s"buildTracingFields(${operation.get.showNotNull}, ${resourceName}, ${tracing})")
+        _ <- Target.log.debug(s"buildTracingFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${tracing})")
         res <- if (tracing) {
           for {
             operationId <- operation
@@ -155,7 +155,7 @@ object AkkaHttpServerGenerator {
             label <- Target.fromOption[Lit.String](
               TracingLabel(operation)
                 .map(Lit.String(_))
-                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.unwrapTracker).toLit)),
               UserError(s"Missing client name (${operation.showHistory})")
             )
           } yield Some(TracingField[ScalaLanguage](LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
