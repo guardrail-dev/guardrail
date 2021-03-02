@@ -11,6 +11,7 @@ import java.util.concurrent.CompletionStage
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
   override implicit val optionInstances: OptionF[JavaLanguage] = new OptionF[JavaLanguage] {
     override def liftType(tpe: Type): Type  = StaticJavaParser.parseClassOrInterfaceType("io.vavr.control.Option").setTypeArguments(tpe)

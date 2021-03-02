@@ -38,6 +38,7 @@ import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 import scala.collection.JavaConverters._
 
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 object JacksonGenerator {
   private val BUILDER_TYPE        = StaticJavaParser.parseClassOrInterfaceType("Builder")
   private val BIG_INTEGER_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigInteger")

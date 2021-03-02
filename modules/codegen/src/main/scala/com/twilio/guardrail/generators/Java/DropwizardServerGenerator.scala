@@ -28,6 +28,7 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.language.existentials
 
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object DropwizardServerGenerator {
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toJaxRsAnnotationName: Expression = ct match {

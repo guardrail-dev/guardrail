@@ -28,6 +28,7 @@ import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
 
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object SpringMvcServerGenerator {
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toSpringMediaType: Expression =

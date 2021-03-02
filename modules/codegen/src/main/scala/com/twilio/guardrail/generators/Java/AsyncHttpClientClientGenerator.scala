@@ -26,6 +26,7 @@ import java.net.URI
 import java.util.concurrent.CompletionStage
 import scala.annotation.tailrec
 
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object AsyncHttpClientClientGenerator {
   private val URI_TYPE                       = StaticJavaParser.parseClassOrInterfaceType("URI")
   private val OBJECT_MAPPER_TYPE             = StaticJavaParser.parseClassOrInterfaceType("ObjectMapper")

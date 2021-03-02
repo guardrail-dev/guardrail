@@ -29,6 +29,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.existentials
 
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object JavaGenerator {
   def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] =
     safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
