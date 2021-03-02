@@ -805,20 +805,22 @@ object JacksonGenerator {
     )(
         name: String,
         fieldName: String,
-        property: Schema[_],
+        property: Tracker[Schema[_]],
         meta: SwaggerUtil.ResolvedType[JavaLanguage],
         requirement: PropertyRequirement,
         isCustomType: Boolean,
         defaultValue: Option[com.github.javaparser.ast.Node]
     ) =
       Target.log.function("transformProperty") {
-        val readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-        val emptyToNull = (property match {
-          case d: DateSchema      => EmptyValueIsNull(d)
-          case dt: DateTimeSchema => EmptyValueIsNull(dt)
-          case s: StringSchema    => EmptyValueIsNull(s)
-          case _                  => None
-        }).getOrElse(EmptyIsEmpty)
+        val readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly).unwrapTracker.contains(true))
+        val emptyToNull =
+          property
+            .refine({ case d: DateSchema => d })(d => EmptyValueIsNull(d))
+            .orRefine({ case dt: DateTimeSchema => dt })(dt => EmptyValueIsNull(dt))
+            .orRefine({ case s: StringSchema => s })(s => EmptyValueIsNull(s))
+            .toOption
+            .flatten
+            .getOrElse(EmptyIsEmpty)
         val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
         for {
           tpeClassDep <- meta match {
@@ -845,7 +847,7 @@ object JacksonGenerator {
           }
           (tpe, classDep) = tpeClassDep
 
-          rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
+          rawType = RawParameterType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
           expressionDefaultValue <- (defaultValue match {
             case Some(e: Expression) => Target.pure(Some(e))

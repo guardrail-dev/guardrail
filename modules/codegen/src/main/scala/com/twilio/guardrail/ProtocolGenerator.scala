@@ -221,7 +221,7 @@ object ProtocolGenerator {
             res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
               name,
               fieldName,
-              prop.get,
+              prop,
               resolvedType,
               propertyRequirement,
               customType.isDefined,
@@ -462,7 +462,7 @@ object ProtocolGenerator {
             parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, concreteTypes)(
               name,
               fieldName,
-              schema.get,
+              schema,
               resolvedType,
               propertyRequirement,
               customType.isDefined,
