@@ -49,13 +49,15 @@ case class ProtocolParameter[L <: LA](
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
 
 object Discriminator {
-  def fromSchema[L <: LA, F[_]](schema: Schema[_])(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Option[Discriminator[L]]] =
+  def fromSchema[L <: LA, F[_]](schema: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Option[Discriminator[L]]] =
     Sw.log.function("Discriminator.fromSchema") {
       import Sc._
-      Option(schema.getDiscriminator)
-        .flatMap(x => Option(x.getPropertyName).map((x, _)))
+      schema
+        .downField("discriminator", _.getDiscriminator)
+        .indexedDistribute
+        .flatMap(x => x.downField("propertyName", _.getPropertyName()).indexedDistribute.map((x, _)))
         .traverse {
-          case (x, propertyName) =>
+          case (Tracker(_, x), Tracker(_, propertyName)) =>
             val possibleMappings = Option(x.getMapping)
               .map(_.asScala)
               .getOrElse(Map.empty[String, String])
@@ -304,7 +306,7 @@ object ProtocolGenerator {
             tpe <- parseTypeName(clsName)
 
             discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-              _.refine[F[List[Discriminator[L]]]]({ case m: ObjectSchema => m })(m => Discriminator.fromSchema(m.get).map(_.toList))
+              _.refine[F[List[Discriminator[L]]]]({ case m: ObjectSchema => m })(m => Discriminator.fromSchema(m).map(_.toList))
                 .getOrElse(List.empty[Discriminator[L]].pure[F])
             )
           } yield tpe
@@ -624,17 +626,18 @@ object ProtocolGenerator {
       definitions: Mappish[List, String, Tracker[Schema[_]]]
   )(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[(List[ClassParent[L]], List[(String, Tracker[Schema[_]])])] = {
 
-    def firstInHierarchy(model: Tracker[Schema[_]]): Option[ObjectSchema] =
+    def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[ObjectSchema]] =
       model
         .refine({ case x: ComposedSchema => x })({ elem =>
           definitions.value
             .collectFirst({
-              case (clsName, element) if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName"))) =>
+              case (clsName, element)
+                  if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName"))) =>
                 element
             })
             .flatMap(
               _.refine({ case x: ComposedSchema => x })(firstInHierarchy)
-                .orRefine({ case o: ObjectSchema => o })(x => Option(x.get))
+                .orRefine({ case o: ObjectSchema => o })(x => Option(x))
                 .getOrElse(None)
             )
         })
@@ -662,7 +665,7 @@ object ProtocolGenerator {
               .fold(Option.empty[Discriminator[L]].pure[F])(Discriminator.fromSchema[L, F])
               .map(_.map((_, getRequiredFieldsRec(c))))
         )
-        .orRefine({ case x: Schema[_] => x })(m => Discriminator.fromSchema(m.get).map(_.map((_, getRequiredFieldsRec(m)))))
+        .orRefine({ case x: Schema[_] => x })(m => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m)))))
         .getOrElse(Option.empty[(Discriminator[L], List[String])].pure[F])
         .map(_.map({ case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) }))
 
@@ -773,7 +776,7 @@ object ProtocolGenerator {
                 for {
                   formattedClsName <- formatTypeName(clsName)
                   tpeName          <- getType(x)
-                  customTypeName   <- SwaggerUtil.customTypeName(x.get)
+                  customTypeName   <- SwaggerUtil.customTypeName(x)
                   tpe              <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), customTypeName)
                   res              <- typeAlias[L, F](formattedClsName, tpe)
                 } yield res
