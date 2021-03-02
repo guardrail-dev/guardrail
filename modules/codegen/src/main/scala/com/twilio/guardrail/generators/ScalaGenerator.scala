@@ -165,7 +165,7 @@ object ScalaGenerator {
         jsonImports: List[scala.meta.Import],
         customImports: List[scala.meta.Import]
     ): Target[Option[WriteTree]] = {
-      val pkg: Term.Ref = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      val pkg: Term.Ref = buildTermSelect(pkgName)
       val implicits     = source"""
             package $pkg
 
@@ -260,7 +260,7 @@ object ScalaGenerator {
         frameworkImplicits: scala.meta.Defn.Object,
         frameworkImplicitName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      val pkg: Term.Ref            = buildTermSelect(pkgName)
       val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
       val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelect(List("_root_") ++ pkgName ++ List(name.value))}._")
       val frameworkImplicitsFile   = source"""
@@ -287,7 +287,7 @@ object ScalaGenerator {
         frameworkDefinitions: List[scala.meta.Defn],
         frameworkDefinitionsName: scala.meta.Term.Name
     ): Target[WriteTree] = {
-      val pkg: Term.Ref            = pkgName.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+      val pkg: Term.Ref            = buildTermSelect(pkgName)
       val frameworkDefinitionsFile = source"""
             package $pkg
 
