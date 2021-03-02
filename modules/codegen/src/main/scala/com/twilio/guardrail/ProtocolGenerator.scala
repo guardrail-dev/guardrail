@@ -216,7 +216,7 @@ object ProtocolGenerator {
             propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
             customType   <- SwaggerUtil.customTypeName(prop)
             resolvedType <- SwaggerUtil.propMeta[L, F](prop)
-            defValue     <- defaultValue(typeName, prop.get, propertyRequirement, definitions.map(_.map(_.get)))
+            defValue     <- defaultValue(typeName, prop, propertyRequirement, definitions.map(_.map(_.get)))
             fieldName    <- formatFieldName(name)
             res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
               name,
@@ -457,7 +457,7 @@ object ProtocolGenerator {
             resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
             customType            <- SwaggerUtil.customTypeName(schema.get)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
-            defValue  <- defaultValue(typeName, schema.get, propertyRequirement, definitions.map(_.map(_.get)))
+            defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions.map(_.map(_.get)))
             fieldName <- formatFieldName(name)
             parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, concreteTypes)(
               name,
@@ -795,7 +795,7 @@ object ProtocolGenerator {
 
   private def defaultValue[L <: LA, F[_]](
       name: NonEmptyList[String],
-      schema: Schema[_],
+      schema: Tracker[Schema[_]],
       requirement: PropertyRequirement,
       definitions: List[(String, Schema[_])]
   )(
@@ -805,50 +805,48 @@ object ProtocolGenerator {
     import Sc._
     import Cl._
     val empty = Option.empty[L#Term].pure[F]
-    Option(schema.get$ref()) match {
+    schema.downField("$ref", _.get$ref()).indexedDistribute match {
       case Some(ref) =>
         definitions
           .collectFirst {
-            case (cls, refSchema) if ref.endsWith(s"/$cls") =>
-              defaultValue(NonEmptyList.of(cls), refSchema, requirement, definitions)
+            case (cls, refSchema) if ref.unwrapTracker.endsWith(s"/$cls") =>
+              defaultValue(NonEmptyList.of(cls), Tracker.cloneHistory(ref, refSchema), requirement, definitions)
           }
           .getOrElse(empty)
       case None =>
-        schema match {
-          case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable =>
-            for {
-              customTpe <- SwaggerUtil.customMapTypeName(map)
-              result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
-            } yield result
-          case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable =>
-            for {
-              customTpe <- SwaggerUtil.customArrayTypeName(arr)
-              result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
-            } yield result
-          case p: BooleanSchema =>
-            Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_)))
-          case p: NumberSchema if p.getFormat == "double" =>
-            Default(p).extract[Double].fold(empty)(litDouble(_).map(Some(_)))
-          case p: NumberSchema if p.getFormat == "float" =>
-            Default(p).extract[Float].fold(empty)(litFloat(_).map(Some(_)))
-          case p: IntegerSchema if p.getFormat == "int32" =>
-            Default(p).extract[Int].fold(empty)(litInt(_).map(Some(_)))
-          case p: IntegerSchema if p.getFormat == "int64" =>
-            Default(p).extract[Long].fold(empty)(litLong(_).map(Some(_)))
-          case p: StringSchema if Option(p.getEnum).map(_.asScala).exists(_.nonEmpty) =>
-            Default(p).extract[String] match {
-              case Some(defaultEnumValue) =>
-                for {
-                  enumName <- formatEnumName(defaultEnumValue)
-                  result   <- selectTerm(name.append(enumName))
-                } yield Some(result)
-              case None => empty
-            }
-          case p: StringSchema =>
-            Default(p).extract[String].fold(empty)(litString(_).map(Some(_)))
-          case _ =>
-            empty
-        }
+        schema
+          .refine({ case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => map })(
+            map =>
+              for {
+                customTpe <- SwaggerUtil.customMapTypeName(map)
+                result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
+              } yield result
+          )
+          .orRefine({ case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr })(
+            arr =>
+              for {
+                customTpe <- SwaggerUtil.customArrayTypeName(arr)
+                result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
+              } yield result
+          )
+          .orRefine({ case p: BooleanSchema => p })(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))
+          .orRefine({ case p: NumberSchema if p.getFormat == "double" => p })(p => Default(p).extract[Double].fold(empty)(litDouble(_).map(Some(_))))
+          .orRefine({ case p: NumberSchema if p.getFormat == "float" => p })(p => Default(p).extract[Float].fold(empty)(litFloat(_).map(Some(_))))
+          .orRefine({ case p: IntegerSchema if p.getFormat == "int32" => p })(p => Default(p).extract[Int].fold(empty)(litInt(_).map(Some(_))))
+          .orRefine({ case p: IntegerSchema if p.getFormat == "int64" => p })(p => Default(p).extract[Long].fold(empty)(litLong(_).map(Some(_))))
+          .orRefine({ case p: StringSchema if Option(p.getEnum).map(_.asScala).exists(_.nonEmpty) => p })(
+            p =>
+              Default(p).extract[String] match {
+                case Some(defaultEnumValue) =>
+                  for {
+                    enumName <- formatEnumName(defaultEnumValue)
+                    result   <- selectTerm(name.append(enumName))
+                  } yield Some(result)
+                case None => empty
+              }
+          )
+          .orRefine({ case p: StringSchema => p })(p => Default(p).extract[String].fold(empty)(litString(_).map(Some(_))))
+          .getOrElse(empty)
     }
 
   }
