@@ -39,18 +39,18 @@ Tracker should:
     "convert" - {
       case class Holder[A](value: A)
       "array" in {
-        assert(Tracker(Holder(Array(1, 2, 3, 4))).downField("value", _.value).get === List(1, 2, 3, 4))
+        assert(Tracker(Holder(Array(1, 2, 3, 4))).downField("value", _.value).unwrapTracker === List(1, 2, 3, 4))
       }
       "j.u.List" in {
         val xs = new java.util.LinkedList[Int]()
         List(1, 2, 3, 4).foreach(xs.addLast(_))
-        assert(Tracker(Holder[java.util.List[Int]](xs)).downField("value", _.value).get === List(1, 2, 3, 4))
+        assert(Tracker(Holder[java.util.List[Int]](xs)).downField("value", _.value).unwrapTracker === List(1, 2, 3, 4))
       }
       "List" in {
-        assert(Tracker(Holder(List(1, 2, 3, 4))).downField("value", _.value).get === List(1, 2, 3, 4))
+        assert(Tracker(Holder(List(1, 2, 3, 4))).downField("value", _.value).unwrapTracker === List(1, 2, 3, 4))
       }
       "Option" in {
-        assert(Tracker(Holder(Option(1))).downField("value", _.value).get === Option(1))
+        assert(Tracker(Holder(Option(1))).downField("value", _.value).unwrapTracker === Option(1))
       }
       "j.u.Map" in {
         val xs = new java.util.HashMap[String, Int]()
@@ -58,20 +58,20 @@ Tracker should:
         // Assumption here is that HashMap -> List sort order is stable. Note that foo and bar have been reversed, but it's still consistent.
         // This is necessary, as swagger-parser represents many ordered structures as Map internally.
         // We eagerly convert to List[(K, V)] to ensure order is not lost.
-        assert(Tracker(Holder[java.util.Map[String, Int]](xs)).downField("value", _.value).get.value === List(("bar", 2), ("foo", 1)))
+        assert(Tracker(Holder[java.util.Map[String, Int]](xs)).downField("value", _.value).unwrapTracker.value === List(("bar", 2), ("foo", 1)))
       }
       "Map" in {
-        assert(Tracker(Holder(Map("foo" -> 1, "bar" -> 2))).downField("value", _.value).get.value === List(("foo", 1), ("bar", 2)))
+        assert(Tracker(Holder(Map("foo" -> 1, "bar" -> 2))).downField("value", _.value).unwrapTracker.value === List(("foo", 1), ("bar", 2)))
       }
       "Paths" in {
         import _root_.io.swagger.v3.oas.models.{ PathItem, Paths }
         val xs = new Paths
         val x  = new PathItem
         List(("/foo", x)).foreach((xs.put _).tupled)
-        assert(Tracker(Holder[Paths](xs)).downField("value", _.value).get.value === List(("/foo" -> x)))
+        assert(Tracker(Holder[Paths](xs)).downField("value", _.value).unwrapTracker.value === List(("/foo" -> x)))
       }
       "Fallback" in {
-        assert(Tracker(Holder(Holder(5L))).downField("value", _.value).get === Option(Holder(5L)))
+        assert(Tracker(Holder(Holder(5L))).downField("value", _.value).unwrapTracker === Option(Holder(5L)))
       }
     }
     "history" - {
@@ -108,7 +108,7 @@ Tracker should:
             Tracker(p)
               .refine({ case x: Child1 => x })(_.downField("grandchild", _.grandchild))
               .toOption
-              .flatMap(_.get) === Some(g)
+              .flatMap(_.unwrapTracker) === Some(g)
           )
         }
         "variance" in {
