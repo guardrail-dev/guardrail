@@ -282,8 +282,7 @@ val commonSettings = Seq(
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
   ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
-  wartremoverWarnings in Compile ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
-  wartremoverWarnings in Test := List.empty,
+  wartremoverWarnings in (Compile, compile) ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
 )
 
 lazy val root = (project in file("."))
