@@ -145,7 +145,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
     """
     val resource =
       q"""
-      class StoreResource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
+      class StoreResource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
         object GetOrderByIdStatusMatcher extends QueryParamDecoderMatcher[OrderStatus]("status")
         object PutBarBarMatcher extends QueryParamDecoderMatcher[Long]("bar")
@@ -230,7 +230,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
     """
     val resource =
       q"""
-      class StoreResource[F[_]](trace: String => Request[F] => TraceBuilder[F], mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
+      class StoreResource[F[_]](trace: String => Request[F] => TraceBuilder[F], mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
         object GetOrderByIdStatusMatcher extends QueryParamDecoderMatcher[OrderStatus]("status")
         object PutBarBarMatcher extends QueryParamDecoderMatcher[Long]("bar")
@@ -319,7 +319,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
     """
     val resource =
       q"""
-        class StoreResource[F[_], E](customExtract: String => Request[F] => E, mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] {
+        class StoreResource[F[_], E](customExtract: String => Request[F] => E, mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
           implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
           object GetOrderByIdStatusMatcher extends QueryParamDecoderMatcher[OrderStatus]("status")
           object PutBarBarMatcher extends QueryParamDecoderMatcher[Long]("bar")
