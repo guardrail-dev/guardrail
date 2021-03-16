@@ -171,7 +171,7 @@ object Http4sServerGenerator {
         handlerTParams  = List(Type.Name("F")) ++ List(customExtractionTypeName).filter(_ => customExtraction)
         routesParams    = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield q"""
-        class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
+        class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
 
           ..${supportDefinitions};
           def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
