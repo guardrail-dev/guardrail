@@ -15,8 +15,13 @@ import com.twilio.guardrail.terms.{
   CollectionsLibTerms,
   EnumSchema,
   HeldEnum,
+  IntHeldEnum,
   LanguageTerms,
+  LongHeldEnum,
+  NumberEnumSchema,
   ObjectEnumSchema,
+  RenderedIntEnum,
+  RenderedLongEnum,
   RenderedStringEnum,
   StringEnumSchema,
   StringHeldEnum,
@@ -118,6 +123,7 @@ object ProtocolGenerator {
   }
 
   type WrapEnumSchema[A] = Schema[A] => EnumSchema
+  implicit val wrapNumberEnumSchema: WrapEnumSchema[Number] = NumberEnumSchema.apply _
   implicit val wrapObjectEnumSchema: WrapEnumSchema[Object] = ObjectEnumSchema.apply _
   implicit val wrapStringEnumSchema: WrapEnumSchema[String] = StringEnumSchema.apply _
 
@@ -151,6 +157,30 @@ object ProtocolGenerator {
               }
               pascalValues  = elems.map(_._2)
               wrappedValues = RenderedStringEnum(elems)
+            } yield (pascalValues, wrappedValues)
+          case IntHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(s"v${elem}") // TODO: Push this string into LanguageTerms
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedIntEnum(elems)
+            } yield (pascalValues, wrappedValues)
+          case LongHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(s"v${elem}") // TODO: Push this string into LanguageTerms
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedLongEnum(elems)
             } yield (pascalValues, wrappedValues)
         }
         members <- renderMembers(clsName, wrappedValues)
@@ -793,6 +823,27 @@ object ProtocolGenerator {
                   )
                   alias <- modelTypeAlias(formattedClsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
+            )
+            .orRefine({ case x: IntegerSchema => x })(
+              x =>
+                for {
+                  formattedClsName <- formatTypeName(clsName)
+                  enum             <- fromEnum(formattedClsName, x, dtoPackage)
+                  model <- fromModel(
+                    NonEmptyList.of(formattedClsName),
+                    x,
+                    List.empty,
+                    concreteTypes,
+                    definitions.value,
+                    dtoPackage,
+                    supportPackage.toList,
+                    defaultPropertyRequirement
+                  )
+                  tpeName        <- getType(x)
+                  customTypeName <- SwaggerUtil.customTypeName(x)
+                  tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
+                  res            <- typeAlias[L, F](formattedClsName, tpe)
+                } yield enum.orElse(model).getOrElse(res)
             )
             .valueOr(
               x =>

@@ -34,7 +34,7 @@ import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedStringEnum }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
@@ -177,15 +177,35 @@ object JacksonGenerator {
                 new NodeList()
               )
           }
+        case RenderedIntEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              new EnumConstantDeclaration(
+                new NodeList(),
+                new SimpleName(termName.getIdentifier),
+                new NodeList(new IntegerLiteralExpr(value.toString())),
+                new NodeList()
+              )
+          }
+        case RenderedLongEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              new EnumConstantDeclaration(
+                new NodeList(),
+                new SimpleName(termName.getIdentifier),
+                new NodeList(new LongLiteralExpr(s"${value}l")),
+                new NodeList()
+              )
+          }
       }
 
       val nameField = new FieldDeclaration(
         new NodeList(privateModifier, finalModifier),
-        new VariableDeclarator(STRING_TYPE, "name")
+        new VariableDeclarator(tpe, "name")
       )
 
       val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-        .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
+        .addParameter(new Parameter(new NodeList(finalModifier), tpe, new SimpleName("name")))
         .setBody(
           new BlockStmt(
             new NodeList(
@@ -208,7 +228,7 @@ object JacksonGenerator {
         .setBody(
           new BlockStmt(
             new NodeList(
-              new ReturnStmt(new FieldAccessExpr(new ThisExpr, "name"))
+              new ReturnStmt(new MethodCallExpr("this.name.toString"))
             )
           )
         )
@@ -228,7 +248,7 @@ object JacksonGenerator {
                 new BlockStmt(
                   new NodeList(
                     new IfStmt(
-                      new MethodCallExpr("value.name.equals", new NameExpr("name")),
+                      new MethodCallExpr("value.name.toString().equals", new NameExpr("name")),
                       new ReturnStmt(new NameExpr("value")),
                       null
                     )

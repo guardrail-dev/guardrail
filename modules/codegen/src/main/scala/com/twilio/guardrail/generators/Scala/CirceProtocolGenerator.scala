@@ -25,7 +25,7 @@ import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedStringEnum }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import scala.meta._
 
 object CirceProtocolGenerator {
@@ -50,6 +50,28 @@ object CirceProtocolGenerator {
             .map({
               case (value, termName, defaultTerm) =>
                 q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.String(value)})"""
+            })
+            .toList}
+              }
+            """))
+        case RenderedIntEnum(elems) =>
+          Target.pure(Some(q"""
+              object members {
+                ..${elems
+            .map({
+              case (value, termName, defaultTerm) =>
+                q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.Int(value)})"""
+            })
+            .toList}
+              }
+            """))
+        case RenderedLongEnum(elems) =>
+          Target.pure(Some(q"""
+              object members {
+                ..${elems
+            .map({
+              case (value, termName, defaultTerm) =>
+                q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.Long(value)})"""
             })
             .toList}
               }

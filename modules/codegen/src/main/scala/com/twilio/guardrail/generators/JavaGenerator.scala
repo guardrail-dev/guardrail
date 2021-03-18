@@ -123,16 +123,21 @@ object JavaGenerator {
         defaultValue: com.github.javaparser.ast.Node,
         values: RenderedEnum[JavaLanguage]
     ): Target[com.github.javaparser.ast.expr.Name] =
-      defaultValue match {
-        case s: StringLiteralExpr =>
-          values match {
-            case RenderedStringEnum(values) =>
-              values
-                .find(_._1 == s.getValue)
-                .fold(Target.raiseUserError[Name](s"Enumeration $tpe is not defined for default value ${s.getValue}"))(value => Target.pure(value._3))
-          }
+      (defaultValue, values) match {
+        case (x: StringLiteralExpr, RenderedStringEnum(values)) =>
+          values
+            .find(_._1 == x.getValue)
+            .fold(Target.raiseUserError[Name](s"Enumeration $tpe is not defined for default value ${x.getValue}"))(value => Target.pure(value._3))
+        case (x: IntegerLiteralExpr, RenderedIntEnum(values)) =>
+          values
+            .find(_._1 == x.getValue.toInt)
+            .fold(Target.raiseUserError[Name](s"Enumeration $tpe is not defined for default value ${x.getValue}"))(value => Target.pure(value._3))
+        case (x: LongLiteralExpr, RenderedIntEnum(values)) =>
+          values
+            .find(_._1 == x.getValue.toLong)
+            .fold(Target.raiseUserError[Name](s"Enumeration $tpe is not defined for default value ${x.getValue}"))(value => Target.pure(value._3))
         case _ =>
-          Target.raiseUserError(s"Enumeration $tpe somehow has a default value that isn't a string")
+          Target.raiseUserError(s"Enumeration $tpe somehow has a default value that doesn't match its type")
       }
 
     def formatPackageName(packageName: List[String]): Target[NonEmptyList[String]] =

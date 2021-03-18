@@ -40,6 +40,21 @@ object SwaggerGenerator {
 
       def extractEnum(enumSchema: Tracker[EnumSchema]) = {
         type EnumValues[A] = (String, Option[String]) => List[A] => Either[String, HeldEnum]
+        implicit val wrapNumberValues: EnumValues[Number] = {
+          case (tpe, fmt) =>
+            Option(_)
+              .filterNot(_.isEmpty)
+              .toRight("Model has no enumerations")
+              .map(
+                xs =>
+                  (tpe, fmt) match {
+                    case ("integer", None)          => IntHeldEnum(xs.map(_.intValue))
+                    case ("integer", Some("int32")) => IntHeldEnum(xs.map(_.intValue))
+                    case ("integer", Some("int64")) => LongHeldEnum(xs.map(_.longValue))
+                    case _                          => StringHeldEnum(xs.map(_.toString())) // TODO: Preserve previous behaviour if we don't get a match
+                  }
+              )
+        }
         implicit val wrapStringValues: EnumValues[String] = (_, _) =>
           Option(_).filterNot(_.isEmpty).toRight("Model has no enumerations").map(StringHeldEnum.apply)
 
@@ -51,6 +66,7 @@ object SwaggerGenerator {
           t.downField("enum", _.getEnum()).map(_.map(translate)).map(ev(tpeName, format))
         }
         val enumEntries: Tracker[Either[String, HeldEnum]] = enumSchema.unwrapTracker match {
+          case NumberEnumSchema(value) => poly(value)(identity _)
           case ObjectEnumSchema(value) => poly(value)(_.toString())
           case StringEnumSchema(value) => poly(value)(identity _)
         }

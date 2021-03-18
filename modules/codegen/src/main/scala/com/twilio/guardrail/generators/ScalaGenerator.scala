@@ -51,16 +51,21 @@ object ScalaGenerator {
         defaultValue: scala.meta.Term,
         values: RenderedEnum[ScalaLanguage]
     ): Target[scala.meta.Term.Select] =
-      defaultValue match {
-        case Lit.String(name) =>
-          values match {
-            case RenderedStringEnum(values) =>
-              values
-                .find(_._1 == name)
-                .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
-          }
+      (defaultValue, values) match {
+        case (Lit.String(name), RenderedStringEnum(values)) =>
+          values
+            .find(_._1 == name)
+            .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
+        case (Lit.Int(name), RenderedIntEnum(values)) =>
+          values
+            .find(_._1 == name)
+            .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
+        case (Lit.Long(name), RenderedLongEnum(values)) =>
+          values
+            .find(_._1 == name)
+            .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
         case _ =>
-          Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that isn't a string")
+          Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that doesn't match its type")
       }
 
     def formatPackageName(packageName: List[String]): Target[NonEmptyList[String]] =
