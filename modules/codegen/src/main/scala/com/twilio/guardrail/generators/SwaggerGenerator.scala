@@ -12,10 +12,11 @@ import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import java.net.URI
+import scala.collection.JavaConverters._
 import scala.util.Try
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
-import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, Schema, StringSchema }
 import io.swagger.v3.oas.models.PathItem
 
 object SwaggerGenerator {
@@ -37,6 +38,14 @@ object SwaggerGenerator {
 
       def extractCommonRequestBodies(components: Tracker[Option[Components]]): Target[Map[String, RequestBody]] =
         Target.pure(components.flatDownField("requestBodies", _.getRequestBodies).unwrapTracker.value.toMap)
+
+      def extractEnum(swagger: Tracker[Schema[_]]) = {
+        val enumEntries: List[String] = swagger
+          .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
+          .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
+          .unwrapTracker
+        Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
+      }
 
       def extractOperations(
           paths: Tracker[Mappish[List, String, PathItem]],

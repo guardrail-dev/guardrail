@@ -120,6 +120,7 @@ object ProtocolGenerator {
   ): F[Either[String, EnumDefinition[L]]] = {
     import E._
     import Sc._
+    import Sw._
 
     def validProg(enum: List[String], tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
       for {

@@ -36,7 +36,6 @@ import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.CollectionsLibTerms
 import com.twilio.guardrail.terms.collections.CollectionsAbstraction
-import scala.collection.JavaConverters._
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
 object JacksonGenerator {
@@ -147,13 +146,6 @@ object JacksonGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Tracker[Schema[_]]) = {
-      val enumEntries: List[String] = swagger
-        .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
-        .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
-        .unwrapTracker
-      Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
-    }
 
     def renderMembers(
         clsName: String,

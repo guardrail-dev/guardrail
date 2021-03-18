@@ -26,7 +26,6 @@ import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, Sca
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.CollectionsLibTerms
-import scala.collection.JavaConverters._
 import scala.meta._
 
 object CirceProtocolGenerator {
@@ -41,13 +40,6 @@ object CirceProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Tracker[Schema[_]]) = {
-      val enumEntries: List[String] = swagger
-        .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
-        .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
-        .unwrapTracker
-      Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
-    }
 
     def renderMembers(clsName: String, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
       Target.pure(Some(q"""
