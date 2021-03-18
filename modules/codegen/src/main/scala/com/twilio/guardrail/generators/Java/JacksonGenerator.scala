@@ -166,37 +166,32 @@ object JacksonGenerator {
     ) = {
       val enumType = StaticJavaParser.parseType(clsName)
 
-      val enumDefns = elems match {
+      val fields = elems match {
         case RenderedStringEnum(xs) =>
           xs.map {
             case (value, termName, _) =>
-              new EnumConstantDeclaration(
-                new NodeList(),
-                new SimpleName(termName.getIdentifier),
-                new NodeList(new StringLiteralExpr(value)),
-                new NodeList()
-              )
+              (termName.getIdentifier, new StringLiteralExpr(value))
           }
         case RenderedIntEnum(xs) =>
           xs.map {
             case (value, termName, _) =>
-              new EnumConstantDeclaration(
-                new NodeList(),
-                new SimpleName(termName.getIdentifier),
-                new NodeList(new IntegerLiteralExpr(value.toString())),
-                new NodeList()
-              )
+              (termName.getIdentifier, new IntegerLiteralExpr(value.toString()))
           }
         case RenderedLongEnum(xs) =>
           xs.map {
             case (value, termName, _) =>
-              new EnumConstantDeclaration(
-                new NodeList(),
-                new SimpleName(termName.getIdentifier),
-                new NodeList(new LongLiteralExpr(s"${value}l")),
-                new NodeList()
-              )
+              (termName.getIdentifier, new LongLiteralExpr(s"${value}l"))
           }
+      }
+
+      val enumDefns = fields.map {
+        case (identifier, expr) =>
+          new EnumConstantDeclaration(
+            new NodeList(),
+            new SimpleName(identifier),
+            new NodeList(expr),
+            new NodeList()
+          )
       }
 
       val nameField = new FieldDeclaration(

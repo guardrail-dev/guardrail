@@ -41,42 +41,31 @@ object CirceProtocolGenerator {
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) =
-      elems match {
+    def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
+      val fields = elems match {
         case RenderedStringEnum(elems) =>
-          Target.pure(Some(q"""
-              object members {
-                ..${elems
-            .map({
-              case (value, termName, defaultTerm) =>
-                q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.String(value)})"""
-            })
-            .toList}
-              }
-            """))
+          elems.map({
+            case (value, termName, _) =>
+              (termName, Lit.String(value))
+          })
         case RenderedIntEnum(elems) =>
-          Target.pure(Some(q"""
-              object members {
-                ..${elems
-            .map({
-              case (value, termName, defaultTerm) =>
-                q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.Int(value)})"""
-            })
-            .toList}
-              }
-            """))
+          elems.map({
+            case (value, termName, _) =>
+              (termName, Lit.Int(value))
+          })
         case RenderedLongEnum(elems) =>
-          Target.pure(Some(q"""
+          elems.map({
+            case (value, termName, _) =>
+              (termName, Lit.Long(value))
+          })
+      }
+
+      Target.pure(Some(q"""
               object members {
-                ..${elems
-            .map({
-              case (value, termName, defaultTerm) =>
-                q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.Long(value)})"""
-            })
-            .toList}
+                ..${fields.map { case (termName, lit) => q"""case object ${termName} extends ${Type.Name(clsName)}(${lit})""" }}
               }
             """))
-      }
+    }
 
     def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
