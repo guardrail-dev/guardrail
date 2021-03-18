@@ -201,7 +201,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       implicit val encodeDashyEnum: Encoder[DashyEnum] = Encoder[String].contramap(_.value)
       implicit val decodeDashyEnum: Decoder[DashyEnum] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of DashyEnum"))
       implicit val addPathDashyEnum: AddPath[DashyEnum] = AddPath.build(_.value)
-      implicit val showDashyEnum: Show[DashyEnum] = Show.build(_.value)
+      implicit val showDashyEnum: Show[DashyEnum] = Show[String].contramap[DashyEnum](_.value)
       def parse(value: String): Option[DashyEnum] = values.find(_.value == value)
       implicit val order: cats.Order[DashyEnum] = cats.Order.by[DashyEnum, Int](values.indexOf)
     }
