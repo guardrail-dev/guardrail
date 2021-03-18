@@ -114,7 +114,6 @@ object CirceProtocolGenerator {
         .toList
       val values: Defn.Val = q"val values = Vector(..$accessors)"
       val implicits: List[Defn.Val] = List(
-        q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${longType}] = AddPath.build(_.value)",
         q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${longType}] = Show[${tpe}].contramap[${longType}](_.value)"
       )
       Target.pure(
