@@ -153,10 +153,10 @@ object JacksonGenerator {
     ) =
       Target.pure(None)
 
-    def encodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    def encodeEnum(clsName: String, tpe: com.github.javaparser.ast.`type`.Type): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
-    def decodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    def decodeEnum(clsName: String, tpe: com.github.javaparser.ast.`type`.Type): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
     def renderClass(
@@ -306,6 +306,7 @@ object JacksonGenerator {
 
     def renderStaticDefns(
         clsName: String,
+        tpe: com.github.javaparser.ast.`type`.Type,
         members: Option[Nothing],
         accessors: List[com.github.javaparser.ast.expr.Name],
         encoder: Option[com.github.javaparser.ast.body.BodyDeclaration[_ <: BodyDeclaration[_]]],

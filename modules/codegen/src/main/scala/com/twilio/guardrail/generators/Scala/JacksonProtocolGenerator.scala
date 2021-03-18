@@ -25,7 +25,7 @@ object JacksonProtocolGenerator {
               mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
             ) ++ renderedClass.mods
         ),
-      newEncodeEnum = className =>
+      newEncodeEnum = (className, _) =>
         Target.pure(
           Some(
             q"""
@@ -36,7 +36,7 @@ object JacksonProtocolGenerator {
        """
           )
         ),
-      newDecodeEnum = className =>
+      newDecodeEnum = (className, _) =>
         Target.pure(
           Some(
             q"""
@@ -50,9 +50,9 @@ object JacksonProtocolGenerator {
        """
           )
         ),
-      newRenderStaticDefns = (className, members, accessors, encoder, decoder) =>
+      newRenderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
         for {
-          renderedStaticDefns <- baseInterp.renderStaticDefns(className, members, accessors, encoder, decoder)
+          renderedStaticDefns <- baseInterp.renderStaticDefns(className, elems, members, accessors, encoder, decoder)
           classType = Type.Name(className)
         } yield renderedStaticDefns.copy(
           definitions = renderedStaticDefns.definitions ++ List(

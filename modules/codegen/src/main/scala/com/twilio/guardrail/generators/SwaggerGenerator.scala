@@ -39,13 +39,20 @@ object SwaggerGenerator {
         Target.pure(components.flatDownField("requestBodies", _.getRequestBodies).unwrapTracker.value.toMap)
 
       def extractEnum(enumSchema: Tracker[EnumSchema]) = {
-        type EnumValues[A] = List[A] => Either[String, HeldEnum]
-        implicit val wrapStringValues: EnumValues[String]                                 = Option(_).filterNot(_.isEmpty).toRight("Model has no enumerations").map(StringHeldEnum.apply)
-        def wrap[A](value: List[A])(implicit ev: EnumValues[A]): Either[String, HeldEnum] = ev(value)
+        type EnumValues[A] = (String, Option[String]) => List[A] => Either[String, HeldEnum]
+        implicit val wrapStringValues: EnumValues[String] = (_, _) =>
+          Option(_).filterNot(_.isEmpty).toRight("Model has no enumerations").map(StringHeldEnum.apply)
 
+        def poly[A, B](schema: Schema[A])(translate: A => B)(implicit ev: EnumValues[B]): Tracker[Either[String, HeldEnum]] = {
+          val t       = Tracker.cloneHistory(enumSchema, schema)
+          val tpeName = t.downField("type", _.getType()).map(_.filterNot(_ == "object").getOrElse("string")).unwrapTracker
+          val format  = t.downField("format", _.getFormat()).unwrapTracker
+
+          t.downField("enum", _.getEnum()).map(_.map(translate)).map(ev(tpeName, format))
+        }
         val enumEntries: Tracker[Either[String, HeldEnum]] = enumSchema.unwrapTracker match {
-          case ObjectEnumSchema(value) => Tracker.cloneHistory(enumSchema, value).downField("enum", _.getEnum()).map(_.map(_.toString())).map(wrap[String] _)
-          case StringEnumSchema(value) => Tracker.cloneHistory(enumSchema, value).downField("enum", _.getEnum()).map(wrap[String] _)
+          case ObjectEnumSchema(value) => poly(value)(_.toString())
+          case StringEnumSchema(value) => poly(value)(identity _)
         }
         Target.pure(enumEntries.unwrapTracker)
       }

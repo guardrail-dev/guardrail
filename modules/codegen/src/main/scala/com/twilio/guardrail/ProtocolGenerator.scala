@@ -138,27 +138,29 @@ object ProtocolGenerator {
     import Sw._
 
     def validProg(enum: HeldEnum, tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
-      enum match {
-        case StringHeldEnum(value) =>
-          for {
-            elems <- value.traverse { elem =>
-              for {
-                termName  <- formatEnumName(elem)
-                valueTerm <- pureTermName(termName)
-                accessor  <- buildAccessor(clsName, termName)
-              } yield (elem, valueTerm, accessor)
-            }
-            pascalValues  = elems.map(_._2)
-            wrappedValues = RenderedStringEnum(elems)
-            members <- renderMembers(clsName, wrappedValues)
-            encoder <- encodeEnum(clsName)
-            decoder <- decodeEnum(clsName)
+      for {
+        (pascalValues, wrappedValues) <- enum match {
+          case StringHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(elem)
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedStringEnum(elems)
+            } yield (pascalValues, wrappedValues)
+        }
+        members <- renderMembers(clsName, wrappedValues)
+        encoder <- encodeEnum(clsName, tpe)
+        decoder <- decodeEnum(clsName, tpe)
 
-            defn        <- renderClass(clsName, tpe, wrappedValues)
-            staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
-            classType   <- pureTypeName(clsName)
-          } yield EnumDefinition[L](clsName, classType, fullType, wrappedValues, defn, staticDefns)
-      }
+        defn        <- renderClass(clsName, tpe, wrappedValues)
+        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encoder, decoder)
+        classType   <- pureTypeName(clsName)
+      } yield EnumDefinition[L](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.

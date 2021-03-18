@@ -54,19 +54,18 @@ object CirceProtocolGenerator {
             .toList}
               }
             """))
-        case _ => ???
       }
 
-    def encodeEnum(clsName: String): Target[Option[Defn]] =
+    def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
             implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
-              Encoder[String].contramap(_.value)
+              Encoder[${tpe}].contramap(_.value)
           """))
 
-    def decodeEnum(clsName: String): Target[Option[Defn]] =
+    def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
         implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-          Decoder[String].emap(value => parse(value).toRight(${Term
+          Decoder[${tpe}].emap(value => parse(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
       """))
 
@@ -79,6 +78,7 @@ object CirceProtocolGenerator {
 
     def renderStaticDefns(
         clsName: String,
+        tpe: scala.meta.Type,
         members: Option[scala.meta.Defn.Object],
         accessors: List[scala.meta.Term.Name],
         encoder: Option[scala.meta.Defn],
@@ -103,7 +103,7 @@ object CirceProtocolGenerator {
                 List(Some(values), encoder, decoder).flatten ++
                 implicits ++
                 List(
-                  q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)",
+                  q"def parse(value: ${tpe}): Option[${Type.Name(clsName)}] = values.find(_.value == value)",
                   q"implicit val order: cats.Order[${Type.Name(clsName)}] = cats.Order.by[${Type.Name(clsName)}, Int](values.indexOf)"
                 )
         )
