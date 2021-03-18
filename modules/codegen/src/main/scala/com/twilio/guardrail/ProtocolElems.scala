@@ -67,7 +67,7 @@ object ProtocolElems {
                             RandomType[L](name, tpe).pure[F].widen
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
-                          case EnumDefinition(name, tpe, _, elems, cls, _) =>
+                          case EnumDefinition(name, tpe, _, _, cls, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
                           case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).map(RandomType[L](name, _))
@@ -80,7 +80,7 @@ object ProtocolElems {
                             liftVectorType(tpe, customTpe).map(RandomType[L](name, _))
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType(_, customTpe)).map(RandomType[L](name, _))
-                          case EnumDefinition(name, tpe, _, elems, cls, _) =>
+                          case EnumDefinition(name, tpe, _, _, cls, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType(_, customTpe)).map(RandomType[L](name, _))
                           case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftVectorType(_, customTpe)).map(RandomType[L](name, _))
@@ -93,7 +93,7 @@ object ProtocolElems {
                             liftMapType(tpe, customTpe).map(RandomType[L](name, _))
                           case ClassDefinition(name, tpe, _, cls, _, _) =>
                             widenTypeName(tpe).flatMap(liftMapType(_, customTpe)).map(RandomType[L](name, _))
-                          case EnumDefinition(name, tpe, _, elems, cls, _) =>
+                          case EnumDefinition(name, tpe, _, _, cls, _) =>
                             widenTypeName(tpe).flatMap(liftMapType(_, customTpe)).map(RandomType[L](name, _))
                           case ADT(name, tpe, _, _, _) =>
                             widenTypeName(tpe).flatMap(liftMapType(_, customTpe)).map(RandomType[L](name, _))

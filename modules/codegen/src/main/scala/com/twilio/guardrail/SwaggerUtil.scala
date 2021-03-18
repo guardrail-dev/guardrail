@@ -93,7 +93,7 @@ object SwaggerUtil {
                   Resolved[L](tpe, None, None, None, None).pure[F]
                 case ClassDefinition(name, _, fullType, cls, _, _) =>
                   Resolved[L](fullType, None, None, None, None).pure[F]
-                case EnumDefinition(name, _, fullType, elems, cls, _) =>
+                case EnumDefinition(name, _, fullType, _, cls, _) =>
                   Resolved[L](fullType, None, None, Some("string"), None).pure[F]
                 case ADT(_, _, fullType, _, _) =>
                   Resolved[L](fullType, None, None, None, None).pure[F]
@@ -108,7 +108,7 @@ object SwaggerUtil {
                   liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
                 case ClassDefinition(name, _, fullType, cls, _, _) =>
                   liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
-                case EnumDefinition(name, _, fullType, elems, cls, _) =>
+                case EnumDefinition(name, _, fullType, _, cls, _) =>
                   liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
                 case ADT(_, _, fullType, _, _) =>
                   liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
