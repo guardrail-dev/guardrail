@@ -47,6 +47,7 @@ object DropwizardServerGenerator {
   private val RESPONSE_BUILDER_TYPE = StaticJavaParser.parseClassOrInterfaceType("Response.ResponseBuilder")
   private val LOGGER_TYPE           = StaticJavaParser.parseClassOrInterfaceType("Logger")
   private val FILE_TYPE             = StaticJavaParser.parseClassOrInterfaceType("java.io.File")
+  private val REQUEST_TIMEOUT_TYPE  = StaticJavaParser.parseClassOrInterfaceType("RequestTimeout")
 
   private val INSTANT_PARAM_TYPE          = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.InstantParam")
   private val OFFSET_DATE_TIME_PARAM_TYPE = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetDateTimeParam")
@@ -541,6 +542,59 @@ object DropwizardServerGenerator {
                   )
                 )
 
+                timeoutSetter = new FieldAccessExpr(new ThisExpr, "requestTimeout")
+                  .lift[Option[Any]]
+                  .foreach(
+                    new LambdaExpr(
+                      new Parameter(new UnknownType, "_requestTimeout"),
+                      new BlockStmt(
+                        new NodeList(
+                          new ExpressionStmt(
+                            new MethodCallExpr(
+                              new NameExpr("asyncResponse"),
+                              "setTimeout",
+                              new NodeList[Expression](
+                                new MethodCallExpr(new MethodCallExpr(new NameExpr("_requestTimeout"), "getTimeout"), "toNanos"),
+                                new FieldAccessExpr(new NameExpr("java.util.concurrent.TimeUnit"), "NANOSECONDS")
+                              )
+                            )
+                          ),
+                          new ExpressionStmt(
+                            new MethodCallExpr(
+                              new NameExpr("asyncResponse"),
+                              "setTimeoutHandler",
+                              new NodeList[Expression](
+                                new LambdaExpr(
+                                  new Parameter(new UnknownType, "t"),
+                                  new BlockStmt(
+                                    new NodeList(
+                                      new IfStmt(
+                                        new UnaryExpr(new MethodCallExpr(new NameExpr("asyncResponse"), "isDone"), UnaryExpr.Operator.LOGICAL_COMPLEMENT),
+                                        new BlockStmt(
+                                          new NodeList(
+                                            new ExpressionStmt(
+                                              new MethodCallExpr(
+                                                new NameExpr("asyncResponse"),
+                                                "resume",
+                                                new NodeList[Expression](new MethodCallExpr(new NameExpr("_requestTimeout"), "getTimeoutResponse"))
+                                              )
+                                            )
+                                          )
+                                        ),
+                                        null
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    ).lift[Any => Unit]
+                  )
+                  .value
+
                 handlerCall = new MethodCallExpr(
                   new FieldAccessExpr(new ThisExpr, "handler"),
                   methodName,
@@ -550,6 +604,7 @@ object DropwizardServerGenerator {
                 _ = method.setBody(
                   new BlockStmt(
                     new NodeList(
+                      new ExpressionStmt(timeoutSetter),
                       new ExpressionStmt(
                         handlerCall
                           .lift[Future[Any]]
@@ -592,16 +647,41 @@ object DropwizardServerGenerator {
           .map(_.unzip)
         (routeMethods, handlerMethodSigs) = routeMethodsAndHandlerMethodSigs
       } yield {
-        val resourceConstructor = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
-        resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
-        resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
-        resourceConstructor.setBody(
-          new BlockStmt(
-            new NodeList(
-              new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN))
+        import Ca._
+
+        val resourceConstructorNoTimeout = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
+          .addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
+          .addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN)),
+                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "requestTimeout"), emptyOptional.value, AssignExpr.Operator.ASSIGN))
+              )
             )
           )
-        )
+
+        val resourceConstructorWithTimeout = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
+          .setParameters(
+            new NodeList(
+              new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")),
+              new Parameter(new NodeList(finalModifier), REQUEST_TIMEOUT_TYPE, new SimpleName("requestTimeout"))
+            )
+          )
+          .setBody(
+            new BlockStmt(
+              new NodeList(
+                new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN)),
+                new ExpressionStmt(
+                  new AssignExpr(
+                    new FieldAccessExpr(new ThisExpr, "requestTimeout"),
+                    new NameExpr("requestTimeout").lift[Any].liftOptional.value,
+                    AssignExpr.Operator.ASSIGN
+                  )
+                )
+              )
+            )
+          )
 
         val annotations = List(
           new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
@@ -617,7 +697,9 @@ object DropwizardServerGenerator {
             )
           ),
           new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(handlerType, "handler")),
-          resourceConstructor
+          new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(REQUEST_TIMEOUT_TYPE.liftOptionalType, "requestTimeout")),
+          resourceConstructorWithTimeout,
+          resourceConstructorNoTimeout
         )
 
         RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
@@ -666,7 +748,8 @@ object DropwizardServerGenerator {
           "javax.ws.rs.HttpMethod"
         ).traverse(safeParseRawImport)
 
-        jersey <- SerializationHelpers.guardrailJerseySupportDef
+        jersey         <- SerializationHelpers.guardrailJerseySupportDef
+        requestTimeout <- requestTimeoutSupportDef
       } yield {
         def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
           val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
@@ -682,6 +765,7 @@ object DropwizardServerGenerator {
         }
         List(
           jersey,
+          requestTimeout,
           httpMethodAnnotation("PATCH"),
           httpMethodAnnotation("TRACE")
         )

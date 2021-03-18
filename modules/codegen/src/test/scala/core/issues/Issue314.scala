@@ -356,13 +356,29 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |    private final ${prefix}Handler handler;
          |
+         |    private final java.util.Optional<RequestTimeout> requestTimeout;
+         |
+         |    public ${prefix}Resource(final ${prefix}Handler handler, final RequestTimeout requestTimeout) {
+         |        this.handler = handler;
+         |        this.requestTimeout = java.util.Optional.ofNullable(requestTimeout);
+         |    }
+         |
          |    @Inject
          |    public ${prefix}Resource(final ${prefix}Handler handler) {
          |        this.handler = handler;
+         |        this.requestTimeout = java.util.Optional.empty();
          |    }
          |
          |    @GET
          |    public void getUser(@NotNull @PathParam("id") final String id, @Suspended final AsyncResponse asyncResponse) {
+         |        this.requestTimeout.ifPresent(_requestTimeout -> {
+         |            asyncResponse.setTimeout(_requestTimeout.getTimeout().toNanos(), java.util.concurrent.TimeUnit.NANOSECONDS);
+         |            asyncResponse.setTimeoutHandler(t -> {
+         |                if (!asyncResponse.isDone()) {
+         |                    asyncResponse.resume(_requestTimeout.getTimeoutResponse());
+         |                }
+         |            });
+         |        });
          |        this.handler.getUser(id).whenComplete((result, err) -> {
          |            if (err != null) {
          |                logger.error("${prefix}Handler.getUser threw an exception ({}): {}", err.getClass().getName(), err.getMessage(), err);
