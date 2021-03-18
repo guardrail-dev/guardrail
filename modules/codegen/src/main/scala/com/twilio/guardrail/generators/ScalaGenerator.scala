@@ -212,11 +212,15 @@ object ScalaGenerator {
                 }
               }
 
-              abstract class Show[T] {
+              abstract class Show[T] { self =>
                 def show(v: T): String
+                def contramap[A](f: A => T): Show[A] = new Show[A] {
+                  def show(v: A): String = self.show(f(v))
+                }
               }
 
               object Show {
+                def apply[A](implicit ev: Show[A]): Show[A] = ev
                 def build[T](f: T => String): Show[T] = new Show[T] {
                   def show(v: T): String = f(v)
                 }
