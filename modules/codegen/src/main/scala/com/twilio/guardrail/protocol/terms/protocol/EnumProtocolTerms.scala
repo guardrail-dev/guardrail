@@ -3,14 +3,14 @@ package com.twilio.guardrail.protocol.terms.protocol
 import cats.Monad
 import com.twilio.guardrail.StaticDefns
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.terms.CollectionsLibTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum }
 
 abstract class EnumProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {
   def MonadF: Monad[F]
-  def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)]): F[Option[L#ObjectDefinition]]
+  def renderMembers(clsName: String, elems: RenderedEnum[L]): F[Option[L#ObjectDefinition]]
   def encodeEnum(clsName: String): F[Option[L#Definition]]
   def decodeEnum(clsName: String): F[Option[L#Definition]]
-  def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]): F[L#ClassDefinition]
+  def renderClass(clsName: String, tpe: L#Type, elems: RenderedEnum[L]): F[L#ClassDefinition]
   def renderStaticDefns(
       clsName: String,
       members: Option[L#ObjectDefinition],
@@ -22,19 +22,19 @@ abstract class EnumProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms
 
   def copy(
       newMonadF: Monad[F] = MonadF,
-      newRenderMembers: (String, List[(String, L#TermName, L#TermSelect)]) => F[Option[L#ObjectDefinition]] = renderMembers _,
+      newRenderMembers: (String, RenderedEnum[L]) => F[Option[L#ObjectDefinition]] = renderMembers _,
       newEncodeEnum: String => F[Option[L#Definition]] = encodeEnum _,
       newDecodeEnum: String => F[Option[L#Definition]] = decodeEnum _,
-      newRenderClass: (String, L#Type, List[(String, L#TermName, L#TermSelect)]) => F[L#ClassDefinition] = renderClass _,
+      newRenderClass: (String, L#Type, RenderedEnum[L]) => F[L#ClassDefinition] = renderClass _,
       newRenderStaticDefns: (String, Option[L#ObjectDefinition], List[L#TermName], Option[L#Definition], Option[L#Definition]) => F[StaticDefns[L]] =
         renderStaticDefns _,
       newBuildAccessor: (String, String) => F[L#TermSelect] = buildAccessor _
   ) = new EnumProtocolTerms[L, F] {
-    def MonadF                                                                                     = newMonadF
-    def renderMembers(clsName: String, elems: List[(String, L#TermName, L#TermSelect)])            = newRenderMembers(clsName, elems)
-    def encodeEnum(clsName: String): F[Option[L#Definition]]                                       = newEncodeEnum(clsName)
-    def decodeEnum(clsName: String): F[Option[L#Definition]]                                       = newDecodeEnum(clsName)
-    def renderClass(clsName: String, tpe: L#Type, elems: List[(String, L#TermName, L#TermSelect)]) = newRenderClass(clsName, tpe, elems)
+    def MonadF                                                            = newMonadF
+    def renderMembers(clsName: String, elems: RenderedEnum[L])            = newRenderMembers(clsName, elems)
+    def encodeEnum(clsName: String): F[Option[L#Definition]]              = newEncodeEnum(clsName)
+    def decodeEnum(clsName: String): F[Option[L#Definition]]              = newDecodeEnum(clsName)
+    def renderClass(clsName: String, tpe: L#Type, elems: RenderedEnum[L]) = newRenderClass(clsName, tpe, elems)
     def renderStaticDefns(
         clsName: String,
         members: Option[L#ObjectDefinition],

@@ -34,7 +34,7 @@ import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.CollectionsLibTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedStringEnum }
 import com.twilio.guardrail.terms.collections.CollectionsAbstraction
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
@@ -149,7 +149,7 @@ object JacksonGenerator {
 
     def renderMembers(
         clsName: String,
-        elems: List[(String, com.github.javaparser.ast.expr.Name, com.github.javaparser.ast.expr.Name)]
+        elems: RenderedEnum[JavaLanguage]
     ) =
       Target.pure(None)
 
@@ -162,18 +162,21 @@ object JacksonGenerator {
     def renderClass(
         clsName: String,
         tpe: com.github.javaparser.ast.`type`.Type,
-        elems: List[(String, com.github.javaparser.ast.expr.Name, com.github.javaparser.ast.expr.Name)]
+        elems: RenderedEnum[JavaLanguage]
     ) = {
       val enumType = StaticJavaParser.parseType(clsName)
 
-      val enumDefns = elems.map {
-        case (value, termName, _) =>
-          new EnumConstantDeclaration(
-            new NodeList(),
-            new SimpleName(termName.getIdentifier),
-            new NodeList(new StringLiteralExpr(value)),
-            new NodeList()
-          )
+      val enumDefns = elems match {
+        case RenderedStringEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              new EnumConstantDeclaration(
+                new NodeList(),
+                new SimpleName(termName.getIdentifier),
+                new NodeList(new StringLiteralExpr(value)),
+                new NodeList()
+              )
+          }
       }
 
       val nameField = new FieldDeclaration(

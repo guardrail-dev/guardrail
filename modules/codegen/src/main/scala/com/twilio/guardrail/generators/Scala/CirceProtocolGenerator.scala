@@ -25,7 +25,7 @@ import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.CollectionsLibTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedStringEnum }
 import scala.meta._
 
 object CirceProtocolGenerator {
@@ -41,17 +41,21 @@ object CirceProtocolGenerator {
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    def renderMembers(clsName: String, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
-      Target.pure(Some(q"""
-          object members {
-            ..${elems
-        .map({
-          case (value, termName, defaultTerm) =>
-            q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.String(value)})"""
-        })
-        .toList}
-          }
-        """))
+    def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) =
+      elems match {
+        case RenderedStringEnum(elems) =>
+          Target.pure(Some(q"""
+              object members {
+                ..${elems
+            .map({
+              case (value, termName, defaultTerm) =>
+                q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.String(value)})"""
+            })
+            .toList}
+              }
+            """))
+        case _ => ???
+      }
 
     def encodeEnum(clsName: String): Target[Option[Defn]] =
       Target.pure(Some(q"""
@@ -66,7 +70,7 @@ object CirceProtocolGenerator {
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
       """))
 
-    def renderClass(clsName: String, tpe: scala.meta.Type, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
+    def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
       Target.pure(q"""
         sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends Product with Serializable {
           override def toString: String = value.toString

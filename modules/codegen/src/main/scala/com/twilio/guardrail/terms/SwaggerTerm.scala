@@ -258,3 +258,6 @@ case class StringEnumSchema(value: Schema[String]) extends EnumSchema
 
 sealed trait HeldEnum
 case class StringHeldEnum(value: List[String]) extends HeldEnum
+
+sealed trait RenderedEnum[L <: LA]
+case class RenderedStringEnum[L <: LA](values: List[(String, L#TermName, L#TermSelect)]) extends RenderedEnum[L]

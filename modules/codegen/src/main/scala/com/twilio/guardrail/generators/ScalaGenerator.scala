@@ -49,13 +49,16 @@ object ScalaGenerator {
     def lookupEnumDefaultValue(
         tpe: scala.meta.Type.Name,
         defaultValue: scala.meta.Term,
-        values: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]
+        values: RenderedEnum[ScalaLanguage]
     ): Target[scala.meta.Term.Select] =
       defaultValue match {
         case Lit.String(name) =>
-          values
-            .find(_._1 == name)
-            .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
+          values match {
+            case RenderedStringEnum(values) =>
+              values
+                .find(_._1 == name)
+                .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
+          }
         case _ =>
           Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that isn't a string")
       }

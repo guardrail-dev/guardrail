@@ -3,7 +3,7 @@ package com.twilio.guardrail
 import cats.FlatMap
 import cats.syntax.all._
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RenderedEnum, SwaggerTerms }
 import com.twilio.guardrail.protocol.terms.protocol.ProtocolSupportTerms
 
 case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
@@ -35,7 +35,7 @@ case class EnumDefinition[L <: LA](
     name: String,
     tpe: L#TypeName,
     fullType: L#Type,
-    elems: List[(String, L#TermName, L#TermSelect)],
+    elems: RenderedEnum[L],
     cls: L#ClassDefinition,
     staticDefns: StaticDefns[L]
 ) extends NestedProtocolElems[L]

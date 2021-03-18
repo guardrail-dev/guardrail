@@ -11,7 +11,17 @@ import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, EnumSchema, HeldEnum, LanguageTerms, ObjectEnumSchema, StringEnumSchema, StringHeldEnum, SwaggerTerms }
+import com.twilio.guardrail.terms.{
+  CollectionsLibTerms,
+  EnumSchema,
+  HeldEnum,
+  LanguageTerms,
+  ObjectEnumSchema,
+  RenderedStringEnum,
+  StringEnumSchema,
+  StringHeldEnum,
+  SwaggerTerms
+}
 import cats.Foldable
 import com.twilio.guardrail.extract.Default
 import scala.collection.JavaConverters._
@@ -138,15 +148,16 @@ object ProtocolGenerator {
                 accessor  <- buildAccessor(clsName, termName)
               } yield (elem, valueTerm, accessor)
             }
-            pascalValues = elems.map(_._2)
-            members <- renderMembers(clsName, elems)
+            pascalValues  = elems.map(_._2)
+            wrappedValues = RenderedStringEnum(elems)
+            members <- renderMembers(clsName, wrappedValues)
             encoder <- encodeEnum(clsName)
             decoder <- decodeEnum(clsName)
 
-            defn        <- renderClass(clsName, tpe, elems)
+            defn        <- renderClass(clsName, tpe, wrappedValues)
             staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
             classType   <- pureTypeName(clsName)
-          } yield EnumDefinition[L](clsName, classType, fullType, elems, defn, staticDefns)
+          } yield EnumDefinition[L](clsName, classType, fullType, wrappedValues, defn, staticDefns)
       }
 
     // Default to `string` for untyped enums.
