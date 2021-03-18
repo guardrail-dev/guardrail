@@ -106,15 +106,16 @@ object CirceProtocolGenerator {
         encoder: Option[scala.meta.Defn],
         decoder: Option[scala.meta.Defn]
     ): Target[StaticDefns[ScalaLanguage]] = {
+      val longType = Type.Name(clsName)
       val terms: List[Defn.Val] = accessors
         .map({ pascalValue =>
-          q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
+          q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
         })
         .toList
       val values: Defn.Val = q"val values = Vector(..$accessors)"
       val implicits: List[Defn.Val] = List(
-        q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)",
-        q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)"
+        q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${longType}] = AddPath.build(_.value)",
+        q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${longType}] = Show.build(_.value)"
       )
       Target.pure(
         StaticDefns[ScalaLanguage](
@@ -125,8 +126,8 @@ object CirceProtocolGenerator {
                 List(Some(values), encoder, decoder).flatten ++
                 implicits ++
                 List(
-                  q"def parse(value: ${tpe}): Option[${Type.Name(clsName)}] = values.find(_.value == value)",
-                  q"implicit val order: cats.Order[${Type.Name(clsName)}] = cats.Order.by[${Type.Name(clsName)}, Int](values.indexOf)"
+                  q"def parse(value: ${tpe}): Option[${longType}] = values.find(_.value == value)",
+                  q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
                 )
         )
       )
