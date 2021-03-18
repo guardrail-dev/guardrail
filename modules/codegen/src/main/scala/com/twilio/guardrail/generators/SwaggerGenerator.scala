@@ -12,11 +12,10 @@ import com.twilio.guardrail.terms._
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import java.net.URI
-import scala.collection.JavaConverters._
 import scala.util.Try
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
-import io.swagger.v3.oas.models.media.{ ArraySchema, Schema, StringSchema }
+import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.PathItem
 
 object SwaggerGenerator {
@@ -39,12 +38,16 @@ object SwaggerGenerator {
       def extractCommonRequestBodies(components: Tracker[Option[Components]]): Target[Map[String, RequestBody]] =
         Target.pure(components.flatDownField("requestBodies", _.getRequestBodies).unwrapTracker.value.toMap)
 
-      def extractEnum(swagger: Tracker[Schema[_]]) = {
-        val enumEntries: List[String] = swagger
-          .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
-          .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
-          .unwrapTracker
-        Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
+      def extractEnum(enumSchema: Tracker[EnumSchema]) = {
+        type EnumValues[A] = List[A] => Either[String, HeldEnum]
+        implicit val wrapStringValues: EnumValues[String]                                 = Option(_).filterNot(_.isEmpty).toRight("Model has no enumerations").map(StringHeldEnum.apply)
+        def wrap[A](value: List[A])(implicit ev: EnumValues[A]): Either[String, HeldEnum] = ev(value)
+
+        val enumEntries: Tracker[Either[String, HeldEnum]] = enumSchema.unwrapTracker match {
+          case ObjectEnumSchema(value) => Tracker.cloneHistory(enumSchema, value).downField("enum", _.getEnum()).map(_.map(_.toString())).map(wrap[String] _)
+          case StringEnumSchema(value) => Tracker.cloneHistory(enumSchema, value).downField("enum", _.getEnum()).map(wrap[String] _)
+        }
+        Target.pure(enumEntries.unwrapTracker)
       }
 
       def extractOperations(
