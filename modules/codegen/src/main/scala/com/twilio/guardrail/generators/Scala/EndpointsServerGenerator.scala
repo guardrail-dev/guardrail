@@ -1,6 +1,7 @@
 package com.twilio.guardrail.generators.Scala
 
 import _root_.io.swagger.v3.oas.models.Operation
+import cats.data.NonEmptyList
 import cats.Monad
 import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.languages.ScalaLanguage
@@ -56,7 +57,7 @@ object EndpointsServerGenerator {
         customExtraction: Boolean
     ) =
       Target.raiseUserError("endpoints server generation is not currently supported")
-    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
+    def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
       Target.raiseUserError("endpoints server generation is not currently supported")
   }
 }

@@ -54,7 +54,7 @@ class DropwizardScalaJsr310Test extends AnyFreeSpec with Matchers with OptionVal
       _,
       _,
       Servers(Server(_, _, handler, server) :: Nil, _)
-    ) = runSwaggerSpec(openapi, supportPackage = List("support"))(Context.empty, Dropwizard, targets = NonEmptyList.of(CodegenTarget.Server))
+    ) = runSwaggerSpec(openapi)(Context.empty, Dropwizard, targets = NonEmptyList.of(CodegenTarget.Server))
 
     handler match {
       case Defn.Trait(
