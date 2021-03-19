@@ -274,7 +274,7 @@ object SpringMvcServerGenerator {
 
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
+    def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
       List(
         "java.util.Optional",
         "java.util.concurrent.CompletionStage",

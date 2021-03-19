@@ -221,12 +221,12 @@ class CoreTermInterp[L <: LA](
                     kind,
                     context,
                     Tracker(swagger),
-                    definitionsPkgName ++ ("definitions" :: dtoPackage),
+                    definitionsPkgName.toList ++ ("definitions" :: dtoPackage),
                     definitionsPkgName :+ "support"
                   )
                 protocolSupport <- Ps.generateSupportDefinitions()
                 result <- Common
-                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName, dtoPackage, customImports, protocolSupport)
+                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName.toList, dtoPackage, customImports, protocolSupport)
               } yield result
             } catch {
               case NonFatal(ex) =>

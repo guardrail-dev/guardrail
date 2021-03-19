@@ -31,8 +31,8 @@ import scala.language.existentials
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object JavaGenerator {
-  def buildPkgDecl(parts: List[String]): Target[PackageDeclaration] =
-    safeParseName(parts.mkString(".")).map(new PackageDeclaration(_))
+  def buildPkgDecl(parts: NonEmptyList[String]): Target[PackageDeclaration] =
+    safeParseName(parts.toList.mkString(".")).map(new PackageDeclaration(_))
 
   private val FORMATTER_OPTIONS = Map(
     JavaCore.COMPILER_SOURCE                                                     -> JavaCore.VERSION_1_8,
@@ -116,7 +116,7 @@ object JavaGenerator {
     def litLong(value: Long): Target[com.github.javaparser.ast.Node]       = Target.pure(new LongLiteralExpr(value.toString))
     def litBoolean(value: Boolean): Target[com.github.javaparser.ast.Node] = Target.pure(new BooleanLiteralExpr(value))
 
-    def fullyQualifyPackageName(rawPkgName: List[String]): Target[List[String]] = Target.pure(rawPkgName)
+    def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]): Target[NonEmptyList[String]] = Target.pure(rawPkgName)
 
     def lookupEnumDefaultValue(
         tpe: JavaTypeName,
@@ -132,8 +132,8 @@ object JavaGenerator {
           Target.raiseUserError(s"Enumeration $tpe somehow has a default value that isn't a string")
       }
 
-    def formatPackageName(packageName: List[String]): Target[List[String]] =
-      Target.pure(packageName.map(_.escapeInvalidCharacters.toCamelCase.escapeIdentifier))
+    def formatPackageName(packageName: List[String]): Target[NonEmptyList[String]] =
+      Target.fromOption(NonEmptyList.fromList(packageName.map(_.escapeInvalidCharacters.toCamelCase.escapeIdentifier)), UserError("Empty packageName"))
     def formatTypeName(typeName: String, suffix: Option[String] = None): Target[String] =
       Target.pure(typeName.escapeInvalidCharacters.toPascalCase.escapeIdentifier + suffix.fold("")(_.escapeInvalidCharacters.toPascalCase.escapeIdentifier))
     def formatFieldName(fieldName: String): Target[String]         = Target.pure(fieldName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
@@ -248,14 +248,14 @@ object JavaGenerator {
 
     def renderImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
         jsonImports: List[com.github.javaparser.ast.ImportDeclaration],
         customImports: List[com.github.javaparser.ast.ImportDeclaration]
     ): Target[Option[WriteTree]] = Target.pure(None)
     def renderFrameworkImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkImplicitImportNames: List[com.github.javaparser.ast.expr.Name],
         jsonImports: List[com.github.javaparser.ast.ImportDeclaration],
@@ -264,7 +264,7 @@ object JavaGenerator {
     ): Target[WriteTree] = Target.raiseUserError("Java does not support Framework Implicits")
     def renderFrameworkDefinitions(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
         frameworkDefinitionsName: com.github.javaparser.ast.expr.Name
@@ -286,7 +286,7 @@ object JavaGenerator {
 
     def writePackageObject(
         dtoPackagePath: Path,
-        pkgComponents: List[String],
+        pkgComponents: NonEmptyList[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         packageObjectImports: List[com.github.javaparser.ast.ImportDeclaration],
@@ -295,7 +295,7 @@ object JavaGenerator {
         extraTypes: List[com.github.javaparser.ast.Node]
     ): Target[Option[WriteTree]] =
       for {
-        pkgDecl <- dtoComponents.traverse(xs => buildPkgDecl(xs.toList))
+        pkgDecl <- dtoComponents.traverse(buildPkgDecl)
         writeTree <- pkgDecl.traverse(
           x => prettyPrintSource(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), new CompilationUnit().setPackageDeclaration(x))
         )
@@ -315,16 +315,16 @@ object JavaGenerator {
 
     def writeProtocolDefinition(
         outputPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         definitions: List[String],
-        dtoComponents: List[String],
+        dtoComponents: NonEmptyList[String],
         imports: List[com.github.javaparser.ast.ImportDeclaration],
         protoImplicitName: Option[com.github.javaparser.ast.expr.Name],
         elem: StrictProtocolElems[JavaLanguage]
     ): Target[(List[WriteTree], List[com.github.javaparser.ast.Node])] =
       for {
         pkgDecl      <- buildPkgDecl(dtoComponents)
-        showerImport <- safeParseRawImport((pkgName :+ "Shower").mkString("."))
+        showerImport <- safeParseRawImport((pkgName :+ "Shower").toList.mkString("."))
         nameAndCompilationUnit = elem match {
           case EnumDefinition(_, _, _, _, cls, staticDefns) =>
             val cu = new CompilationUnit()
@@ -359,21 +359,23 @@ object JavaGenerator {
           case RandomType(_, _) =>
             Option.empty
         }
-        writeTree <- nameAndCompilationUnit.traverse { case (name, cu) => prettyPrintSource(resolveFile(outputPath)(dtoComponents).resolve(s"$name.java"), cu) }
+        writeTree <- nameAndCompilationUnit.traverse {
+          case (name, cu) => prettyPrintSource(resolveFile(outputPath)(dtoComponents.toList).resolve(s"$name.java"), cu)
+        }
       } yield (writeTree.toList, List.empty[Statement])
     def writeClient(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkImplicitNames: List[com.github.javaparser.ast.expr.Name],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         _client: Client[JavaLanguage]
     ): Target[List[WriteTree]] = {
       val Client(pkg, clientName, imports, staticDefns, client, responseDefinitions) = _client
       for {
         pkgDecl             <- buildPkgDecl(pkgName ++ pkg)
-        commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
-        dtoComponentsImport <- dtoComponents.traverse(x => safeParseRawImport((x :+ "*").mkString(".")))
+        commonImport        <- safeParseRawImport((pkgName :+ "*").toList.mkString("."))
+        dtoComponentsImport <- dtoComponents.traverse(xs => safeParseRawImport((xs :+ "*").toList.mkString(".")))
         allImports    = imports ++ (customImports :+ commonImport) ++ dtoComponentsImport
         clientClasses = client.map(_.merge).toList
         trees <- (clientClasses ++ responseDefinitions).traverse(writeClientTree(pkgPath, pkg, pkgDecl, allImports, _))
@@ -381,17 +383,17 @@ object JavaGenerator {
     }
     def writeServer(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[com.github.javaparser.ast.ImportDeclaration],
         frameworkImplicitNames: List[com.github.javaparser.ast.expr.Name],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         server: Server[JavaLanguage]
     ): Target[List[WriteTree]] = {
       val Server(pkg, extraImports, handlerDefinition, serverDefinitions) = server
       for {
         pkgDecl             <- buildPkgDecl(pkgName ++ pkg)
-        commonImport        <- safeParseRawImport((pkgName :+ "*").mkString("."))
-        dtoComponentsImport <- dtoComponents.traverse(x => safeParseRawImport((x :+ "*").mkString(".")))
+        commonImport        <- safeParseRawImport((pkgName :+ "*").toList.mkString("."))
+        dtoComponentsImport <- dtoComponents.traverse(xs => safeParseRawImport((xs :+ "*").toList.mkString(".")))
         allImports = extraImports ++ List(commonImport) ++ dtoComponentsImport ++ customImports
         handlerTree <- writeServerTree(pkgPath, pkg, pkgDecl, allImports, handlerDefinition)
         serverTrees <- serverDefinitions.traverse(writeServerTree(pkgPath, pkg, pkgDecl, allImports, _))

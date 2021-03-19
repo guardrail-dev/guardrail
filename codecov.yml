@@ -1,12 +1,14 @@
 codecov:
   require_ci_to_pass: yes
   notify:
-    after_n_builds: 22  # This should match all code build tasks in the matrix, to instruct codecov to keep the submission window open long enough for all reporters to get in.
+    after_n_builds: 24  # This should match all code build tasks in the matrix, to instruct codecov to keep the submission window open long enough for all reporters to get in.
                         # Currently:
                         # - core :  1 build : javas: [15], scalas: [2.12]
-                        # - java :  5 builds: javas: [8,11,13,14,15], scalas: [2.12]
-                        # - scala: 16 builds: javas: [8,15], scalas: [2.12, 2.13], frameworks: [akka-http, akka-http-jackson, http4s, dropwizard]
-                        #          22 builds in total
+                        # - java :  6 builds: javas: [8,11,13,14,15,16], scalas: [2.12]
+                        # - scala: 24 builds: javas: [8,15,16], scalas: [2.12, 2.13], frameworks: [akka-http, akka-http-jackson, http4s, dropwizard]
+                        #           4 elided: javas: [15], scalas: [2.12]     # 2.12 incompatible with jdk15
+                        #           3 elided: javas: [8, 15,16], scalas: [2.13]  # 2.13 incompatible with dropwizard module
+                        #          24 builds in total
 coverage:
   precision: 2
   round: down

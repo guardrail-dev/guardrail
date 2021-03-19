@@ -1,5 +1,6 @@
 package tests.core.issues
 
+import cats.data.NonEmptyList
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 import com.twilio.guardrail._
@@ -51,7 +52,7 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           Context.empty,
           Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
           List.empty,
-          List.empty
+          NonEmptyList.one("support")
         )
     )
 
