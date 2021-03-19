@@ -55,7 +55,7 @@ object JacksonProtocolGenerator {
            override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
               className
             )} =
-            ${Term.Name(className)}.parse(p.${getter})
+            ${Term.Name(className)}.from(p.${getter})
               .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.${getter}}' for " + ${Lit
               .String(className)}) })
          }

@@ -76,7 +76,7 @@ object CirceProtocolGenerator {
     def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
         implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-          Decoder[${tpe}].emap(value => parse(value).toRight(${Term
+          Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
       """))
 
@@ -114,7 +114,7 @@ object CirceProtocolGenerator {
                 List(Some(values), encoder, decoder).flatten ++
                 implicits ++
                 List(
-                  q"def parse(value: ${tpe}): Option[${longType}] = values.find(_.value == value)",
+                  q"def from(value: ${tpe}): Option[${longType}] = values.find(_.value == value)",
                   q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
                 )
         )

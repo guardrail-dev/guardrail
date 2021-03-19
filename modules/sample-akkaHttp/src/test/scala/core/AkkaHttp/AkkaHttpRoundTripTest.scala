@@ -112,7 +112,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
                 name = name,
                 photoUrls = photoUrls,
                 tags = None,
-                status = sdefs.PetStatus.parse(value)
+                status = sdefs.PetStatus.from(value)
               )
             )
           } else {

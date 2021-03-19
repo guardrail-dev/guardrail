@@ -40,9 +40,9 @@ class Issue429 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         val `1`: StatusCode = members.`1`
         val values = Vector(`0`, `1`)
         implicit val encodeStatusCode: Encoder[StatusCode] = Encoder[String].contramap(_.value)
-        implicit val decodeStatusCode: Decoder[StatusCode] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of StatusCode"))
+        implicit val decodeStatusCode: Decoder[StatusCode] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of StatusCode"))
         implicit val showStatusCode: Show[StatusCode] = Show[String].contramap[StatusCode](_.value)
-        def parse(value: String): Option[StatusCode] = values.find(_.value == value)
+        def from(value: String): Option[StatusCode] = values.find(_.value == value)
         implicit val order: cats.Order[StatusCode] = cats.Order.by[StatusCode, Int](values.indexOf)
       }
       """

@@ -76,9 +76,9 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
             val B: Value = members.B
             val values = Vector(A, B)
             implicit val encodeValue: Encoder[Value] = Encoder[String].contramap(_.value)
-            implicit val decodeValue: Decoder[Value] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of Value"))
+            implicit val decodeValue: Decoder[Value] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of Value"))
             implicit val showValue: Show[Value] = Show[String].contramap[Value](_.value)
-            def parse(value: String): Option[Value] = values.find(_.value == value)
+            def from(value: String): Option[Value] = values.find(_.value == value)
             implicit val order: cats.Order[Value] = cats.Order.by[Value, Int](values.indexOf)
           }
           case class Nested(value: Option[Foo.Nested.Value] = Option(Foo.Nested.Value.C))
@@ -98,9 +98,9 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               val D: Value = members.D
               val values = Vector(C, D)
               implicit val encodeValue: Encoder[Value] = Encoder[String].contramap(_.value)
-              implicit val decodeValue: Decoder[Value] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of Value"))
+              implicit val decodeValue: Decoder[Value] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of Value"))
               implicit val showValue: Show[Value] = Show[String].contramap[Value](_.value)
-              def parse(value: String): Option[Value] = values.find(_.value == value)
+              def from(value: String): Option[Value] = values.find(_.value == value)
               implicit val order: cats.Order[Value] = cats.Order.by[Value, Int](values.indexOf)
             }
           }

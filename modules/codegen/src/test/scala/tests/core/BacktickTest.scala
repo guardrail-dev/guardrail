@@ -199,9 +199,9 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val DashyValueC: DashyEnum = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
       implicit val encodeDashyEnum: Encoder[DashyEnum] = Encoder[String].contramap(_.value)
-      implicit val decodeDashyEnum: Decoder[DashyEnum] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of DashyEnum"))
+      implicit val decodeDashyEnum: Decoder[DashyEnum] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of DashyEnum"))
       implicit val showDashyEnum: Show[DashyEnum] = Show[String].contramap[DashyEnum](_.value)
-      def parse(value: String): Option[DashyEnum] = values.find(_.value == value)
+      def from(value: String): Option[DashyEnum] = values.find(_.value == value)
       implicit val order: cats.Order[DashyEnum] = cats.Order.by[DashyEnum, Int](values.indexOf)
     }
     """
@@ -215,7 +215,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     cmp.toString should include("case object DashyValueB")
     cmp.toString should include("encodeDashyEnum")
     cmp.toString should include("decodeDashyEnum")
-    cmp.toString should include("def parse(value: String): Option[DashyEnum]")
+    cmp.toString should include("def from(value: String): Option[DashyEnum]")
     cmp.toString should include("DashyValueC")
     cmp.toString shouldNot include(".dashy-")
     cmp.toString shouldNot include("[dashy-")
