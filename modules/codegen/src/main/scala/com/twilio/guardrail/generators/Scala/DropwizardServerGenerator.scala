@@ -394,7 +394,7 @@ object DropwizardServerGenerator {
             val routeMethod = q"""
              ..$methodAnnotations
              def ${Term.Name(methodName)}(..$methodParams): Unit = {
-               this.requestTimeout.foreach({ requestTimeout =>
+               ${Term.Name(s"${methodName}RequestTimeout")}.foreach({ requestTimeout =>
                  asyncResponse.setTimeout(requestTimeout.timeout.toNanos, java.util.concurrent.TimeUnit.NANOSECONDS)
                  asyncResponse.setTimeoutHandler(_ => if (!asyncResponse.isDone) asyncResponse.resume(requestTimeout.timeoutResponse()))
                })
@@ -410,10 +410,12 @@ object DropwizardServerGenerator {
              }
            """
 
+            val timeoutMethod = q"""protected def ${Term.Name(s"${methodName}RequestTimeout")}: Option[RequestTimeout] = this.requestTimeout"""
+
             val handlerRetTypeParam = t"$resourceNameTerm.$responseClsType"
             val handlerMethodSig    = q"def $methodNameTerm($respondParam)(..$handlerParams): scala.concurrent.Future[$handlerRetTypeParam]"
 
-            (routeMethod: Stat, handlerMethodSig)
+            (List[Stat](routeMethod, timeoutMethod), handlerMethodSig)
         })
         .unzip
 
@@ -425,7 +427,7 @@ object DropwizardServerGenerator {
 
       Target.pure(
         RenderedRoutes[ScalaLanguage](
-          routeMethods,
+          routeMethods.flatten,
           List(classPathAnnotation),
           handlerMethodSigs,
           supportDefinitions,
