@@ -1,4 +1,5 @@
 package com.twilio.guardrail
+import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.twilio.guardrail.generators.LanguageParameter
 import com.twilio.guardrail.languages.LA
@@ -20,7 +21,7 @@ case class RenderedRoutes[L <: LA](
 )
 
 object ServerGenerator {
-  def fromSwagger[L <: LA, F[_]](context: Context, supportPackage: List[String], basePath: Option[String], frameworkImports: List[L#Import])(
+  def fromSwagger[L <: LA, F[_]](context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[L#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],
