@@ -18,14 +18,15 @@ import java.net.URI
 case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: List[L#Definition], insideDefinitions: Boolean = true)
 
 object Common {
-  val resolveFile: Path => List[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+  val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))
+  val resolveFileNel: Path => NonEmptyList[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
   def prepareDefinitions[L <: LA, F[_]](
       kind: CodegenTarget,
       context: Context,
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
-      supportPackage: List[String]
+      supportPackage: NonEmptyList[String]
   )(
       implicit
       C: ClientTerms[L, F],
@@ -123,27 +124,27 @@ object Common {
 
     for {
       formattedPkgName <- formatPackageName(pkgName)
-      pkgPath        = resolveFile(outputPath)(formattedPkgName)
+      pkgPath        = resolveFileNel(outputPath)(formattedPkgName)
       dtoPackagePath = resolveFile(pkgPath.resolve("definitions"))(dtoPackage)
       supportPkgPath = resolveFile(pkgPath.resolve("support"))(Nil)
 
-      definitions: List[String] = formattedPkgName :+ "definitions"
+      definitions: NonEmptyList[String] = formattedPkgName :+ "definitions"
 
       ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, protoImplicits) = proto
       protoImplicitName                                                                                                = protoImplicits.map(_._1)
       CodegenDefinitions(clients, servers, supportDefinitions, frameworkImplicits)                                     = codegen
       frameworkImplicitName                                                                                            = frameworkImplicits.map(_._1)
 
-      dtoComponents: List[String] = definitions ++ dtoPackage
+      dtoComponents: NonEmptyList[String] = definitions ++ dtoPackage
 
       // Only presume ...definitions._ import is available if we have
       // protocolElems which are not just all type aliases.
-      filteredDtoComponents: Option[NonEmptyList[String]] = NonEmptyList
-        .fromList(dtoComponents)
-        .filter(_ => protocolElems.exists({ case _: RandomType[_] => false; case _ => true }))
+      filteredDtoComponents: Option[NonEmptyList[String]] = Option(dtoComponents).filter(
+        _ => protocolElems.exists({ case _: RandomType[_] => false; case _ => true })
+      )
 
       protoOut <- protocolElems.traverse(
-        writeProtocolDefinition(outputPath, formattedPkgName, definitions, dtoComponents, customImports ++ protocolImports, protoImplicitName, _)
+        writeProtocolDefinition(outputPath, formattedPkgName, definitions.toList, dtoComponents, customImports ++ protocolImports, protoImplicitName, _)
       )
       (protocolDefinitions, extraTypes) = protoOut.foldLeft((List.empty[WriteTree], List.empty[L#Statement]))(_ |+| _)
       packageObject <- writePackageObject(
@@ -163,8 +164,8 @@ object Common {
       frameworkImplicitNames = frameworkImplicitName.toList ++ protoImplicitName.toList
 
       files <- (
-        clients.flatTraverse(writeClient(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents.map(_.toList), _)),
-        servers.flatTraverse(writeServer(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents.map(_.toList), _))
+        clients.flatTraverse(writeClient(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents, _)),
+        servers.flatTraverse(writeServer(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents, _))
       ).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, customImports)
@@ -182,7 +183,7 @@ object Common {
         case (name, defn) => renderFrameworkDefinitions(pkgPath, formattedPkgName, frameworkImports, defn, name)
       })
 
-      protocolStaticImports <- Pt.staticProtocolImports(formattedPkgName)
+      protocolStaticImports <- Pt.staticProtocolImports(formattedPkgName.toList)
 
       supportDefinitionsFiles <- (supportDefinitions ++ protocolSupport).traverse({
         case SupportDefinition(name, imports, defn, true)  => renderFrameworkDefinitions(pkgPath, formattedPkgName, imports ++ protocolStaticImports, defn, name)

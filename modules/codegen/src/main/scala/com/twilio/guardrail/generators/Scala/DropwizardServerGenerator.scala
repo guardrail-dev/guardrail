@@ -17,8 +17,10 @@ import io.swagger.v3.oas.models.Operation
 import scala.meta._
 
 object DropwizardServerGenerator {
-  val buildTermSelect: List[String] => Term.Ref =
-    _.map(Term.Name.apply _).reduceLeft(Term.Select.apply _)
+  val buildTermSelect: NonEmptyList[String] => Term.Ref = {
+    case NonEmptyList(head, tail) =>
+      tail.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(head))(Term.Select.apply _)
+  }
 
   private val PLAIN_TYPES =
     Set("Boolean", "Byte", "Char", "Short", "Int", "Long", "BigInt", "Float", "Double", "BigDecimal", "String", "OffsetDateTime", "LocalDateTime")
@@ -139,7 +141,7 @@ object DropwizardServerGenerator {
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
-    override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[Import]] =
+    override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[Import]] =
       Target.pure(
         List(
           q"import io.dropwizard.jersey.PATCH",
