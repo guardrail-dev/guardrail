@@ -371,7 +371,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |
          |    @GET
          |    public void getUser(@NotNull @PathParam("id") final String id, @Suspended final AsyncResponse asyncResponse) {
-         |        this.requestTimeout.ifPresent(_requestTimeout -> {
+         |        getGetUserRequestTimeout().ifPresent(_requestTimeout -> {
          |            asyncResponse.setTimeout(_requestTimeout.getTimeout().toNanos(), java.util.concurrent.TimeUnit.NANOSECONDS);
          |            asyncResponse.setTimeoutHandler(t -> {
          |                if (!asyncResponse.isDone()) {
@@ -388,6 +388,10 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |                asyncResponse.resume(builder.build());
          |            }
          |        });
+         |    }
+         |
+         |    protected java.util.Optional<RequestTimeout> getGetUserRequestTimeout() {
+         |        return this.requestTimeout;
          |    }
          |}""".stripMargin
 

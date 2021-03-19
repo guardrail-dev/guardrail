@@ -8,7 +8,7 @@ import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType, VoidType }
 import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
+import com.github.javaparser.ast.expr.{ FieldAccessExpr, MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
 import com.twilio.guardrail.core.Tracker
@@ -542,7 +542,7 @@ object DropwizardServerGenerator {
                   )
                 )
 
-                timeoutSetter = new FieldAccessExpr(new ThisExpr, "requestTimeout")
+                timeoutSetter = new MethodCallExpr(s"get${methodName.capitalize}RequestTimeout")
                   .lift[Option[Any]]
                   .foreach(
                     new LambdaExpr(
@@ -624,6 +624,18 @@ object DropwizardServerGenerator {
                   )
                 )
 
+                requestTimeoutGetter = new MethodDeclaration(
+                  new NodeList(protectedModifier),
+                  REQUEST_TIMEOUT_TYPE.liftOptionalType,
+                  s"get${methodName.capitalize}RequestTimeout"
+                ).setBody(
+                  new BlockStmt(
+                    new NodeList(
+                      new ReturnStmt(new FieldAccessExpr(new ThisExpr, "requestTimeout"))
+                    )
+                  )
+                )
+
                 transformedAnnotatedParams <- (
                   parameters.pathParams ++
                       parameters.headerParams ++
@@ -641,7 +653,7 @@ object DropwizardServerGenerator {
                 (transformedAnnotatedParams ++ transformedBodyParams).foreach(handlerMethodSig.addParameter)
                 handlerMethodSig.setBody(null)
 
-                (method, handlerMethodSig)
+                (List(method, requestTimeoutGetter), handlerMethodSig)
               }
           })
           .map(_.unzip)
@@ -702,7 +714,7 @@ object DropwizardServerGenerator {
           resourceConstructorNoTimeout
         )
 
-        RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
+        RenderedRoutes[JavaLanguage](routeMethods.flatten, annotations, handlerMethodSigs, supportDefinitions, List.empty)
       }
 
     override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
