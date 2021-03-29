@@ -185,6 +185,7 @@ object Http4sServerGenerator {
         for {
           _ <- Target.log.debug(s"Args: ${tracing}")
         } yield List(
+          q"import org.http4s.circe.CirceInstances",
           q"import org.http4s.dsl.Http4sDsl",
           q"import fs2.text._"
         )
