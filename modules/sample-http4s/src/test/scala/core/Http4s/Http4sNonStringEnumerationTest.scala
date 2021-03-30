@@ -33,10 +33,10 @@ class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with Eith
     }
 
   test("round-trip: Ensure enumerations are unpacked correctly") {
-    val expectedInt      = cdefs.IntEnum.V1
-    val expectedLong     = cdefs.LongEnum.V2
+    val expectedInt      = cdefs.IntEnum.IntEnum1
+    val expectedLong     = cdefs.LongEnum.LongEnum2
     val expectedString   = cdefs.StringEnum.ILikeSpaces
-    val expectedBody     = cdefs.IntEnum.V3
+    val expectedBody     = cdefs.IntEnum.IntEnum3
     val expectedResponse = cdefs.StringEnum.ILikeSpaces
 
     val httpService = new FooResource[IO]().routes(new FooHandler[IO] {
@@ -59,10 +59,10 @@ class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with Eith
   }
 
   test("raw client: Ensure enumerations are unpacked correctly") {
-    val expectedInt      = cdefs.IntEnum.V1
-    val expectedLong     = cdefs.LongEnum.V2
+    val expectedInt      = cdefs.IntEnum.IntEnum1
+    val expectedLong     = cdefs.LongEnum.LongEnum2
     val expectedString   = cdefs.StringEnum.ILikeSpaces
-    val expectedBody     = cdefs.IntEnum.V3
+    val expectedBody     = cdefs.IntEnum.IntEnum3
     val expectedResponse = cdefs.StringEnum.ILikeSpaces
 
     val httpService = new FooResource[IO]().routes(new FooHandler[IO] {
@@ -89,10 +89,10 @@ class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with Eith
   object StringParamMatcher extends OptionalQueryParamDecoderMatcher[String]("stringEnum")
 
   test("raw server: Ensure enumerations are unpacked correctly") {
-    val expectedInt      = cdefs.IntEnum.V1
-    val expectedLong     = cdefs.LongEnum.V2
+    val expectedInt      = cdefs.IntEnum.IntEnum1
+    val expectedLong     = cdefs.LongEnum.LongEnum2
     val expectedString   = cdefs.StringEnum.ILikeSpaces
-    val expectedBody     = cdefs.IntEnum.V3
+    val expectedBody     = cdefs.IntEnum.IntEnum3
     val expectedResponse = cdefs.StringEnum.ILikeSpaces
 
     val httpService = HttpRoutes.of[IO] {
