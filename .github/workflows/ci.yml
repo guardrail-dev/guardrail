@@ -44,7 +44,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '8', '11', '13', '14', '15' ]
+        java: [ '8', '11', '13', '14', '15', '16' ]
         scala: [
             { version: '2.12.12', bincompat: '2.12' }
           ]
@@ -76,7 +76,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '8', '15' ]
+        java: [ '8', '15', '16' ]
         scala: [
             { version: '2.12.12', bincompat: '2.12' },
             { version: '2.13.4', bincompat: '2.13' }

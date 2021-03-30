@@ -143,10 +143,9 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             val Aggressive: HuntingSkill = members.Aggressive
             val values = Vector(Clueless, Lazy, Adventurous, Aggressive)
             implicit val encodeHuntingSkill: Encoder[HuntingSkill] = Encoder[String].contramap(_.value)
-            implicit val decodeHuntingSkill: Decoder[HuntingSkill] = Decoder[String].emap(value => parse(value).toRight(s"$$value not a member of HuntingSkill"))
-            implicit val addPathHuntingSkill: AddPath[HuntingSkill] = AddPath.build(_.value)
-            implicit val showHuntingSkill: Show[HuntingSkill] = Show.build(_.value)
-            def parse(value: String): Option[HuntingSkill] = values.find(_.value == value)
+            implicit val decodeHuntingSkill: Decoder[HuntingSkill] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of HuntingSkill"))
+            implicit val showHuntingSkill: Show[HuntingSkill] = Show[String].contramap[HuntingSkill](_.value)
+            def from(value: String): Option[HuntingSkill] = values.find(_.value == value)
             implicit val order: cats.Order[HuntingSkill] = cats.Order.by[HuntingSkill, Int](values.indexOf)
           }
         }

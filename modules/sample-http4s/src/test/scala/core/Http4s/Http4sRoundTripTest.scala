@@ -103,7 +103,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
                   name = name,
                   photoUrls = photoUrls,
                   tags = None,
-                  status = sdefs.definitions.PetStatus.parse(value)
+                  status = sdefs.definitions.PetStatus.from(value)
                 )
               )
             } else {
