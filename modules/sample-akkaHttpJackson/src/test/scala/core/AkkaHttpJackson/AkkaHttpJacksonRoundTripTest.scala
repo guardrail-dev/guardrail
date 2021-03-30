@@ -101,7 +101,7 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
                 name = name,
                 photoUrls = photoUrls,
                 tags = None,
-                status = sdefs.PetStatus.parse(value)
+                status = sdefs.PetStatus.from(value)
               )
             )
           } else {

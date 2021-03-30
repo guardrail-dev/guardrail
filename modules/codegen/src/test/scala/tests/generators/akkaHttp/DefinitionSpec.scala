@@ -117,13 +117,10 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val V2: Third = members.V2
       val ILikeSpaces: Third = members.ILikeSpaces
       val values = Vector(V1, V2, ILikeSpaces)
-
       implicit val encodeThird: Encoder[Third] = Encoder[String].contramap(_.value)
-      implicit val decodeThird: Decoder[Third] = Decoder[String].emap(value => parse(value).toRight(s"$${value} not a member of Third"))
-      implicit val addPathThird: AddPath[Third] = AddPath.build(_.value)
-      implicit val showThird: Show[Third] = Show.build(_.value)
-
-      def parse(value: String): Option[Third] = values.find(_.value == value)
+      implicit val decodeThird: Decoder[Third] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of Third"))
+      implicit val showThird: Show[Third] = Show[String].contramap[Third](_.value)
+      def from(value: String): Option[Third] = values.find(_.value == value)
       implicit val order: cats.Order[Third] = cats.Order.by[Third, Int](values.indexOf)
     }
     """

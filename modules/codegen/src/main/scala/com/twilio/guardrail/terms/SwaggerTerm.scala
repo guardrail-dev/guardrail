@@ -251,3 +251,18 @@ case class ApiKeySecurityScheme[L <: LA](name: String, in: SwSecurityScheme.In, 
 case class HttpSecurityScheme[L <: LA](authScheme: String, tpe: Option[L#Type])                      extends SecurityScheme[L]
 case class OpenIdConnectSecurityScheme[L <: LA](url: URI, tpe: Option[L#Type])                       extends SecurityScheme[L]
 case class OAuth2SecurityScheme[L <: LA](flows: OAuthFlows, tpe: Option[L#Type])                     extends SecurityScheme[L]
+
+sealed trait EnumSchema
+case class NumberEnumSchema(value: Schema[Number]) extends EnumSchema
+case class ObjectEnumSchema(value: Schema[Object]) extends EnumSchema
+case class StringEnumSchema(value: Schema[String]) extends EnumSchema
+
+sealed trait HeldEnum
+case class IntHeldEnum(value: List[Int])       extends HeldEnum
+case class LongHeldEnum(value: List[Long])     extends HeldEnum
+case class StringHeldEnum(value: List[String]) extends HeldEnum
+
+sealed trait RenderedEnum[L <: LA]
+case class RenderedStringEnum[L <: LA](values: List[(String, L#TermName, L#TermSelect)]) extends RenderedEnum[L]
+case class RenderedIntEnum[L <: LA](values: List[(Int, L#TermName, L#TermSelect)])       extends RenderedEnum[L]
+case class RenderedLongEnum[L <: LA](values: List[(Long, L#TermName, L#TermSelect)])     extends RenderedEnum[L]

@@ -11,7 +11,22 @@ import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import com.twilio.guardrail.protocol.terms.protocol._
 import com.twilio.guardrail.terms.framework.FrameworkTerms
-import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
+import com.twilio.guardrail.terms.{
+  CollectionsLibTerms,
+  EnumSchema,
+  HeldEnum,
+  IntHeldEnum,
+  LanguageTerms,
+  LongHeldEnum,
+  NumberEnumSchema,
+  ObjectEnumSchema,
+  RenderedIntEnum,
+  RenderedLongEnum,
+  RenderedStringEnum,
+  StringEnumSchema,
+  StringHeldEnum,
+  SwaggerTerms
+}
 import cats.Foldable
 import com.twilio.guardrail.extract.Default
 import scala.collection.JavaConverters._
@@ -107,45 +122,82 @@ object ProtocolGenerator {
     work(List(root), Nil)
   }
 
-  private[this] def fromEnum[L <: LA, F[_]](
+  type WrapEnumSchema[A] = Schema[A] => EnumSchema
+  implicit val wrapNumberEnumSchema: WrapEnumSchema[Number] = NumberEnumSchema.apply _
+  implicit val wrapObjectEnumSchema: WrapEnumSchema[Object] = ObjectEnumSchema.apply _
+  implicit val wrapStringEnumSchema: WrapEnumSchema[String] = StringEnumSchema.apply _
+
+  private[this] def fromEnum[L <: LA, F[_], A](
       clsName: String,
-      swagger: Tracker[Schema[_]],
+      swagger: Tracker[Schema[A]],
       dtoPackage: List[String]
   )(
       implicit E: EnumProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: SwaggerTerms[L, F],
+      wrapEnumSchema: WrapEnumSchema[A]
   ): F[Either[String, EnumDefinition[L]]] = {
     import E._
     import Sc._
+    import Sw._
 
-    def validProg(enum: List[String], tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
+    def validProg(enum: HeldEnum, tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
       for {
-        elems <- enum.traverse { elem =>
-          for {
-            termName  <- formatEnumName(elem)
-            valueTerm <- pureTermName(termName)
-            accessor  <- buildAccessor(clsName, termName)
-          } yield (elem, valueTerm, accessor)
+        (pascalValues, wrappedValues) <- enum match {
+          case StringHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(elem)
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedStringEnum(elems)
+            } yield (pascalValues, wrappedValues)
+          case IntHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(s"v${elem}") // TODO: Push this string into LanguageTerms
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedIntEnum(elems)
+            } yield (pascalValues, wrappedValues)
+          case LongHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(s"v${elem}") // TODO: Push this string into LanguageTerms
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedLongEnum(elems)
+            } yield (pascalValues, wrappedValues)
         }
-        pascalValues = elems.map(_._2)
-        members <- renderMembers(clsName, elems)
-        encoder <- encodeEnum(clsName)
-        decoder <- decodeEnum(clsName)
+        members <- renderMembers(clsName, wrappedValues)
+        encoder <- encodeEnum(clsName, tpe)
+        decoder <- decodeEnum(clsName, tpe)
 
-        defn        <- renderClass(clsName, tpe, elems)
-        staticDefns <- renderStaticDefns(clsName, members, pascalValues, encoder, decoder)
+        defn        <- renderClass(clsName, tpe, wrappedValues)
+        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encoder, decoder)
         classType   <- pureTypeName(clsName)
-      } yield EnumDefinition[L](clsName, classType, fullType, elems, defn, staticDefns)
+      } yield EnumDefinition[L](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
     val tpeName = swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Option("string")))
 
     for {
-      enum          <- extractEnum(swagger)
+      enum          <- extractEnum(swagger.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(swagger)
       tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), Tracker.cloneHistory(swagger, customTpeName))
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
@@ -771,6 +823,27 @@ object ProtocolGenerator {
                   )
                   alias <- modelTypeAlias(formattedClsName, m)
                 } yield enum.orElse(model).getOrElse(alias)
+            )
+            .orRefine({ case x: IntegerSchema => x })(
+              x =>
+                for {
+                  formattedClsName <- formatTypeName(clsName)
+                  enum             <- fromEnum(formattedClsName, x, dtoPackage)
+                  model <- fromModel(
+                    NonEmptyList.of(formattedClsName),
+                    x,
+                    List.empty,
+                    concreteTypes,
+                    definitions.value,
+                    dtoPackage,
+                    supportPackage.toList,
+                    defaultPropertyRequirement
+                  )
+                  tpeName        <- getType(x)
+                  customTypeName <- SwaggerUtil.customTypeName(x)
+                  tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
+                  res            <- typeAlias[L, F](formattedClsName, tpe)
+                } yield enum.orElse(model).getOrElse(res)
             )
             .valueOr(
               x =>

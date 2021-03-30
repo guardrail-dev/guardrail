@@ -49,15 +49,23 @@ object ScalaGenerator {
     def lookupEnumDefaultValue(
         tpe: scala.meta.Type.Name,
         defaultValue: scala.meta.Term,
-        values: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]
+        values: RenderedEnum[ScalaLanguage]
     ): Target[scala.meta.Term.Select] =
-      defaultValue match {
-        case Lit.String(name) =>
+      (defaultValue, values) match {
+        case (Lit.String(name), RenderedStringEnum(values)) =>
+          values
+            .find(_._1 == name)
+            .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
+        case (Lit.Int(name), RenderedIntEnum(values)) =>
+          values
+            .find(_._1 == name)
+            .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
+        case (Lit.Long(name), RenderedLongEnum(values)) =>
           values
             .find(_._1 == name)
             .fold(Target.raiseUserError[Term.Select](s"Enumeration $tpe is not defined for default value $name"))(value => Target.pure(value._3))
         case _ =>
-          Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that isn't a string")
+          Target.raiseUserError[Term.Select](s"Enumeration $tpe somehow has a default value that doesn't match its type")
       }
 
     def formatPackageName(packageName: List[String]): Target[NonEmptyList[String]] =
@@ -204,11 +212,15 @@ object ScalaGenerator {
                 }
               }
 
-              abstract class Show[T] {
+              abstract class Show[T] { self =>
                 def show(v: T): String
+                def contramap[A](f: A => T): Show[A] = new Show[A] {
+                  def show(v: A): String = self.show(f(v))
+                }
               }
 
               object Show {
+                def apply[A](implicit ev: Show[A]): Show[A] = ev
                 def build[T](f: T => String): Show[T] = new Show[T] {
                   def show(v: T): String = f(v)
                 }

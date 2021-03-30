@@ -10,6 +10,8 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import support.SwaggerSpecRunner
 
+import scala.language.existentials
+
 class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   private def swagger(config: String) =
