@@ -16,8 +16,8 @@ git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 val akkaVersion            = "2.6.13"
 val akkaHttpVersion        = "10.2.4"
-val catsVersion            = "2.4.2"
-val catsEffectVersion      = "2.4.1"
+val catsVersion            = "2.5.0"
+val catsEffectVersion      = "2.4.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.21"
 val scalacheckVersion      = "1.15.3"
@@ -89,6 +89,7 @@ val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
   ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks("java" -> Set("dropwizard", "dropwizard-vavr")),
   ExampleCase(sampleResource("formData.yaml"), "form"),
+  ExampleCase(sampleResource("enumerations.yaml"), "enumerations"),
   ExampleCase(sampleResource("issues/issue45.yaml"), "issues.issue45"),
   ExampleCase(sampleResource("issues/issue121.yaml"), "issues.issue121"),
   ExampleCase(sampleResource("issues/issue127.yaml"), "issues.issue127"),

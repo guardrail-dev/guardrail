@@ -20,7 +20,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]): F[NonEmptyList[String]]
 
-  def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): F[L#TermSelect]
+  def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: RenderedEnum[L]): F[L#TermSelect]
 
   def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]
   def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]
@@ -137,7 +137,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newLitLong: Long => F[L#Term] = litLong _,
       newLitBoolean: Boolean => F[L#Term] = litBoolean _,
       newFullyQualifyPackageName: NonEmptyList[String] => F[NonEmptyList[String]] = fullyQualifyPackageName _,
-      newLookupEnumDefaultValue: (L#TypeName, L#Term, List[(String, L#TermName, L#TermSelect)]) => F[L#TermSelect] = lookupEnumDefaultValue _,
+      newLookupEnumDefaultValue: (L#TypeName, L#Term, RenderedEnum[L]) => F[L#TermSelect] = lookupEnumDefaultValue _,
       newFormatPackageName: List[String] => F[NonEmptyList[String]] = formatPackageName _,
       newFormatTypeName: (String, Option[String]) => F[String] = formatTypeName _,
       newFormatFieldName: String => F[String] = formatFieldName _,
@@ -221,7 +221,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def litLong(value: Long)                                      = newLitLong(value)
     def litBoolean(value: Boolean)                                = newLitBoolean(value)
     def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]) = newFullyQualifyPackageName(rawPkgName)
-    def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]) =
+    def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: RenderedEnum[L]) =
       newLookupEnumDefaultValue(tpe, defaultValue, values)
     def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]         = newFormatPackageName(packageName)
     def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]    = newFormatTypeName(typeName, suffix)

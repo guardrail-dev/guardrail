@@ -1,0 +1,67 @@
+openapi: 3.0.1
+info:
+  title: Whatever
+  version: 1.0.0
+paths:
+  /foo/{intEnum}:
+    post:
+      operationId: doFoo
+      x-jvm-package: foo
+      parameters:
+      - in: path
+        name: intEnum
+        required: true
+        schema:
+          $ref: '#/components/schemas/IntEnum'
+      - in: query
+        name: longEnum
+        schema:
+          $ref: '#/components/schemas/LongEnum'
+      - in: query
+        name: stringEnum
+        schema:
+          $ref: '#/components/schemas/StringEnum'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntEnum'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntEnum'
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringEnum'
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LongEnum'
+components:
+  schemas:
+    StringEnum:
+      type: string
+      enum:
+        - v1
+        - v2
+        - i like spaces
+    IntEnum:
+      type: integer
+      format: int32
+      enum:
+        - 1
+        - 2
+        - 3
+    LongEnum:
+      type: integer
+      format: int64
+      enum:
+        - 1
+        - 2
+        - 3

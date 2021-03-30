@@ -34,9 +34,8 @@ import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.CollectionsLibTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import com.twilio.guardrail.terms.collections.CollectionsAbstraction
-import scala.collection.JavaConverters._
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
 object JacksonGenerator {
@@ -147,50 +146,61 @@ object JacksonGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Tracker[Schema[_]]) = {
-      val enumEntries: List[String] = swagger
-        .refine({ case x: StringSchema => x })(_.downField("enum", _.getEnum()))
-        .orRefineFallback(_.downField("enum", _.getEnum()).map(_.toList.flatMap(_.asScala.toList).map(_.toString())))
-        .unwrapTracker
-      Target.pure(Option(enumEntries).filterNot(_.isEmpty).toRight("Model has no enumerations"))
-    }
 
     def renderMembers(
         clsName: String,
-        elems: List[(String, com.github.javaparser.ast.expr.Name, com.github.javaparser.ast.expr.Name)]
+        elems: RenderedEnum[JavaLanguage]
     ) =
       Target.pure(None)
 
-    def encodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    def encodeEnum(clsName: String, tpe: com.github.javaparser.ast.`type`.Type): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
-    def decodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    def decodeEnum(clsName: String, tpe: com.github.javaparser.ast.`type`.Type): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
     def renderClass(
         clsName: String,
         tpe: com.github.javaparser.ast.`type`.Type,
-        elems: List[(String, com.github.javaparser.ast.expr.Name, com.github.javaparser.ast.expr.Name)]
+        elems: RenderedEnum[JavaLanguage]
     ) = {
       val enumType = StaticJavaParser.parseType(clsName)
 
-      val enumDefns = elems.map {
-        case (value, termName, _) =>
+      val fields = elems match {
+        case RenderedStringEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              (termName.getIdentifier, new StringLiteralExpr(value))
+          }
+        case RenderedIntEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              (termName.getIdentifier, new IntegerLiteralExpr(value.toString()))
+          }
+        case RenderedLongEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              (termName.getIdentifier, new LongLiteralExpr(s"${value}l"))
+          }
+      }
+
+      val enumDefns = fields.map {
+        case (identifier, expr) =>
           new EnumConstantDeclaration(
             new NodeList(),
-            new SimpleName(termName.getIdentifier),
-            new NodeList(new StringLiteralExpr(value)),
+            new SimpleName(identifier),
+            new NodeList(expr),
             new NodeList()
           )
       }
 
       val nameField = new FieldDeclaration(
         new NodeList(privateModifier, finalModifier),
-        new VariableDeclarator(STRING_TYPE, "name")
+        new VariableDeclarator(tpe, "name")
       )
 
       val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-        .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
+        .addParameter(new Parameter(new NodeList(finalModifier), tpe, new SimpleName("name")))
         .setBody(
           new BlockStmt(
             new NodeList(
@@ -213,7 +223,7 @@ object JacksonGenerator {
         .setBody(
           new BlockStmt(
             new NodeList(
-              new ReturnStmt(new FieldAccessExpr(new ThisExpr, "name"))
+              new ReturnStmt(new MethodCallExpr("this.name.toString"))
             )
           )
         )
@@ -233,7 +243,7 @@ object JacksonGenerator {
                 new BlockStmt(
                   new NodeList(
                     new IfStmt(
-                      new MethodCallExpr("value.name.equals", new NameExpr("name")),
+                      new MethodCallExpr("value.name.toString().equals", new NameExpr("name")),
                       new ReturnStmt(new NameExpr("value")),
                       null
                     )
@@ -311,6 +321,7 @@ object JacksonGenerator {
 
     def renderStaticDefns(
         clsName: String,
+        tpe: com.github.javaparser.ast.`type`.Type,
         members: Option[Nothing],
         accessors: List[com.github.javaparser.ast.expr.Name],
         encoder: Option[com.github.javaparser.ast.body.BodyDeclaration[_ <: BodyDeclaration[_]]],
