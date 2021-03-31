@@ -37,4 +37,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       - name: Update website
+        env:
+          MICROSITE_PUBLISH_TOKEN: ${{ secrets.MICROSITE_PUBLISH_TOKEN }}
         run: sbt microsite/makeMicrosite microsite/publishMicrosite
