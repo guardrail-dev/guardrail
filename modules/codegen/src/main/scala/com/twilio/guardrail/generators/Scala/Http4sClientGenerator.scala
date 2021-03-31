@@ -379,7 +379,7 @@ object Http4sClientGenerator {
         )
       } yield renderedClientOperation)
     }
-    def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
+    def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._"))
     def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
       val ihc = param"implicit httpClient: Http4sClient[F]"

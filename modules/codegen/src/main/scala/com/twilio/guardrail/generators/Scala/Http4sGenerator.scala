@@ -26,7 +26,6 @@ object Http4sGenerator {
           q"import cats.effect.Async",
           q"import cats.effect.Sync",
           q"import org.http4s.{Status => _, _}",
-          q"import org.http4s.circe._",
           q"import org.http4s.client.{Client => Http4sClient}",
           q"import org.http4s.client.UnexpectedStatus",
           q"import org.http4s.dsl.io.Path",
