@@ -162,7 +162,7 @@ object ProtocolGenerator {
             for {
               elems <- value.traverse { elem =>
                 for {
-                  termName  <- formatEnumName(s"v${elem}") // TODO: Push this string into LanguageTerms
+                  termName  <- formatEnumName(s"${clsName}${elem}") // TODO: Push this string into LanguageTerms
                   valueTerm <- pureTermName(termName)
                   accessor  <- buildAccessor(clsName, termName)
                 } yield (elem, valueTerm, accessor)
@@ -174,7 +174,7 @@ object ProtocolGenerator {
             for {
               elems <- value.traverse { elem =>
                 for {
-                  termName  <- formatEnumName(s"v${elem}") // TODO: Push this string into LanguageTerms
+                  termName  <- formatEnumName(s"${clsName}${elem}") // TODO: Push this string into LanguageTerms
                   valueTerm <- pureTermName(termName)
                   accessor  <- buildAccessor(clsName, termName)
                 } yield (elem, valueTerm, accessor)
