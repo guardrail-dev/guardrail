@@ -12,7 +12,7 @@ addSbtPlugin("ohnosequences" % "sbt-github-release" % "0.7.0")
 
 addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.4.13")
 
-addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.3.2")
+addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.3.3")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
 
