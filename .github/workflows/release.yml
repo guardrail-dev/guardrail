@@ -30,6 +30,7 @@ jobs:
         run: |
           bundle config path vendor/bundle
           bundle install --jobs 4 --retry 3
+          echo "$PWD/vendor/bundle/bin" >> $GITHUB_PATH
       - name: Print versions
         run: |
           java -version
