@@ -21,13 +21,11 @@ jobs:
         run: |
           bundle install --jobs 4 --retry 3
       - name: Print versions
-        env:
-          RUBYOPT: '-rbundler/setup'  # Tricks ruby executables to recognize bundler configuration
         run: |
           java -version
           gpg --version
-          ruby --version || true
-          jekyll --version || true
+          ruby --version
+          jekyll --version
       - name: Update website
         env:
           RUBYOPT: '-rbundler/setup'  # Tricks ruby executables to recognize bundler configuration
