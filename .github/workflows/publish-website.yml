@@ -28,6 +28,5 @@ jobs:
           jekyll --version
       - name: Update website
         env:
-          RUBYOPT: '-rbundler/setup'  # Tricks ruby executables to recognize bundler configuration
           MICROSITE_PUBLISH_TOKEN: ${{ secrets.MICROSITE_PUBLISH_TOKEN }}
         run: sbt microsite/makeMicrosite microsite/publishMicrosite
