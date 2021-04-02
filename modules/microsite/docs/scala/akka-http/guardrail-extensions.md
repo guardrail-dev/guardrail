@@ -6,7 +6,7 @@ title: "guardrail extensions - akka-http - scala - guardrail"
 guardrail Extensions
 ====================
 
-guardrail has [a number of vendor extensions](https://github.com/twilio/guardrail/blob/cbf9acd9e8ff226cc0f4bbf2f278669071126d5e/modules/codegen/src/main/scala/com/twilio/guardrail/extract/package.scala) designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.
+guardrail has [a number of vendor extensions](https://github.com/guardrail-dev/guardrail/blob/cbf9acd9e8ff226cc0f4bbf2f278669071126d5e/modules/codegen/src/main/scala/com/twilio/guardrail/extract/package.scala) designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.
 
 <table>
   <thead>

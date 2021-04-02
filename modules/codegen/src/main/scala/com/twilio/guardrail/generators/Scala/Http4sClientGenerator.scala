@@ -255,9 +255,9 @@ object Http4sClientGenerator {
               case (maybeBody, headers) =>
                 if (maybeBody.size + headers.size > 22) {
                   // we have hit case class limitation
-                  // https://github.com/twilio/guardrail/pull/382
+                  // https://github.com/guardrail-dev/guardrail/pull/382
                   Target.raiseUserError(
-                    s"Failed to generate client for method $methodName and status code ${resp.statusCode}. It's currently not possible to have more than 22 properties (payload, HTTP headers). See https://github.com/twilio/guardrail/pull/382."
+                    s"Failed to generate client for method $methodName and status code ${resp.statusCode}. It's currently not possible to have more than 22 properties (payload, HTTP headers). See https://github.com/guardrail-dev/guardrail/pull/382."
                   )
                 } else {
                   val decodeValue = maybeBody.map { _ =>

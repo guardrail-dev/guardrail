@@ -290,7 +290,7 @@ val commonSettings = Seq(
   scalacOptions ++= Seq(
     "-Ydelambdafy:method",
     "-Yrangepos",
-    // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/twilio/guardrail/pull/282
+    // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/guardrail-dev/guardrail/pull/282
     "-feature",
     "-unchecked",
     "-deprecation",
@@ -353,7 +353,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "-Xlint:_,-missing-interpolator"
     ),
     description := "Principled code generation for Scala services from OpenAPI specifications",
-    homepage := Some(url("https://github.com/twilio/guardrail")),
+    homepage := Some(url("https://github.com/guardrail-dev/guardrail")),
     scmInfo := Some(
       ScmInfo(
         url("https://github.com/guardrail-dev/guardrail"),

@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  title: https://github.com/twilio/guardrail/issues/164
+  title: https://github.com/guardrail-dev/guardrail/issues/164
 host: localhost:1234
 schemes:
 - http
