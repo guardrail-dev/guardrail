@@ -25,6 +25,9 @@ Build tool plugins
 - Maven
   - [`guardrail-dev/guardrail-maven-plugin`](https://github.com/guardrail-dev/guardrail-maven-plugin) [docs](docs/plugins/maven.md)
 
+- Gradle
+  - [`guardrail-dev/guardrail-gradle-plugin`](https://github.com/guardrail-dev/guardrail-gradle-plugin) [docs](docs/plugins/gradle.md)
+
 - Makefile
   - [docs](docs/plugins/make.md)
 
