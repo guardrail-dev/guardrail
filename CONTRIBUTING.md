@@ -13,9 +13,9 @@ Coding guidelines
 - Testability
 - Defer effects
 - Typesafe accessors for Java function calls
-  - [`Extractable`](../modules/codegen/src/main/scala/com/twilio/guardrail/extract/Extractable.scala)
-  - [`VendorExtensible`](../modules/codegen/src/main/scala/com/twilio/guardrail/extract/VendorExtension.scala)
-  - [`Tracker`](../modules/codegen/src/main/scala/com/twilio/guardrail/core/Tracker.scala)
+  - [`Extractable`](../modules/codegen/src/main/scala/dev/guardrail/extract/Extractable.scala)
+  - [`VendorExtensible`](../modules/codegen/src/main/scala/dev/guardrail/extract/VendorExtension.scala)
+  - [`Tracker`](../modules/codegen/src/main/scala/dev/guardrail/core/Tracker.scala)
 
 Writing integration Tests
 =========================
@@ -39,7 +39,7 @@ Adding a new swagger spec
 Adding new specifications is accomplished by:
 
  - creating a file in `modules/sample/src/main/resources`
- - adding an entry in `exampleCases` defined in `build.sbt`. The available flags are largely undocumented, so [reading the parser](https://github.com/guardrail-dev/guardrail/blob/master/modules/codegen/src/main/scala/com/twilio/guardrail/core/CoreTermInterp.scala#L67-L91) is necessary.
+ - adding an entry in `exampleCases` defined in `build.sbt`. The available flags are largely undocumented, so [reading the parser](https://github.com/guardrail-dev/guardrail/blob/master/modules/codegen/src/main/scala/dev/guardrail/core/CoreTermInterp.scala#L67-L91) is necessary.
 
 ```scala
 val exampleCases: List[ExampleCase] = List(

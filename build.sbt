@@ -66,7 +66,7 @@ val eclipseFormatterDependencies = Seq(
   "org.eclipse.platform" % "org.eclipse.text"                % "3.11.0",
 )
 
-assembly / mainClass := Some("com.twilio.guardrail.CLI")
+assembly / mainClass := Some("dev.guardrail.CLI")
 assembly / assemblyMergeStrategy := {
   case ".api_description" => MergeStrategy.discard
   case ".options" => MergeStrategy.concat
@@ -101,7 +101,7 @@ val javaFrameworks = exampleFrameworkSuites("java").map(_.projectName)
 
 import scoverage.ScoverageKeys
 
-import com.twilio.guardrail.sbt.ExampleCase
+import dev.guardrail.sbt.ExampleCase
 def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
 val exampleCases: List[ExampleCase] = List(
   ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
@@ -201,7 +201,7 @@ lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run java generator with 
 fullRunTask(
   runJavaExample,
   Test,
-  "com.twilio.guardrail.CLI",
+  "dev.guardrail.CLI",
   exampleArgs("java").flatten.filter(_.nonEmpty): _*
 )
 
@@ -209,7 +209,7 @@ lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator wit
 fullRunTask(
   runScalaExample,
   Test,
-  "com.twilio.guardrail.CLI",
+  "dev.guardrail.CLI",
   exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
@@ -221,7 +221,7 @@ runExample := Def.inputTaskDyn {
     case language :: Nil => exampleArgs(language)
     case Nil => exampleArgs("scala") ++ exampleArgs("java")
   }
-  runTask(Test, "com.twilio.guardrail.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
+  runTask(Test, "dev.guardrail.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
 }.evaluated
 
 Compile / assembly / artifact := {
@@ -239,7 +239,7 @@ addCommandAlias("example", "runtimeSuite")
 // Make "cli" not emit unhandled exceptions on exit
 run / fork := true
 
-addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
+addCommandAlias("cli", "runMain dev.guardrail.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
@@ -307,7 +307,7 @@ val commonSettings = Seq(
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
-  ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
+  ScoverageKeys.coverageExcludedPackages := "<empty>;dev.guardrail.terms.*;dev.guardrail.protocol.terms.*",
   Compile / compile / wartremoverWarnings ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
 )
 

@@ -2,7 +2,7 @@ package swagger
 
 import java.util
 
-import com.twilio.guardrail.extract.VendorExtension
+import dev.guardrail.extract.VendorExtension
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 

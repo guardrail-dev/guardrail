@@ -1,10 +1,10 @@
 package core.issues
 
 import com.github.javaparser.ast.Node
-import com.twilio.guardrail.generators.Java.Dropwizard
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import com.twilio.guardrail.{ Client, Clients, Context, Server, Servers }
+import dev.guardrail.generators.Java.Dropwizard
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
+import dev.guardrail.{ Client, Clients, Context, Server, Servers }
 import org.scalactic.source
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
@@ -323,7 +323,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     def handler(prefix: String) =
       s"""public interface ${prefix}Handler {
          |
-         |    @javax.annotation.Generated(value = "com.twilio.guardrail.generators.Java.DropwizardServerGenerator$$")
+         |    @javax.annotation.Generated(value = "dev.guardrail.generators.Java.DropwizardServerGenerator$$")
          |    abstract class GetUserResponse {
          |
          |        private final int statusCode;
@@ -336,7 +336,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |            return this.statusCode;
          |        }
          |
-         |        @javax.annotation.Generated(value = "com.twilio.guardrail.generators.Java.DropwizardServerGenerator$$")
+         |        @javax.annotation.Generated(value = "dev.guardrail.generators.Java.DropwizardServerGenerator$$")
          |        public static class Ok extends GetUserResponse {
          |
          |            private Ok() {

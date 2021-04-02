@@ -1,8 +1,8 @@
 package tests.generators.akkaHttp
 
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import com.twilio.guardrail.{ ClassDefinition, Context, EnumDefinition, ProtocolDefinitions }
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
+import dev.guardrail.{ ClassDefinition, Context, EnumDefinition, ProtocolDefinitions }
 import support.SwaggerSpecRunner
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
@@ -38,7 +38,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |      - v2
     |      - i like spaces
     |  Fourth:
-    |    x-jvm-package: com.twilio.whatever
+    |    x-jvm-package: dev.guardrail.whatever
     |    type: string
     |    enum:
     |      - v1

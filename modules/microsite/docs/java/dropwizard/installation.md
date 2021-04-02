@@ -15,7 +15,7 @@ The following is an example invocation in a `pom.xml` file:
 <build>
     <plugins>
         <plugin>
-            <groupId>com.twilio</groupId>
+            <groupId>dev.guardrail</groupId>
             <artifactId>guardrail-maven-plugin_2.12</artifactId>
             <version>0.62.0</version>
             <executions>

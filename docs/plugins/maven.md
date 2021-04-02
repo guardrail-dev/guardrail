@@ -10,7 +10,7 @@ By putting the following in your `pom.xml`, generated classes for petstore and g
   <plugins>
     ...
     <plugin>
-      <groupId>com.twilio</groupId>
+      <groupId>dev.guardrail</groupId>
       <artifactId>guardrail-maven-plugin</artifactId>
       <version>0.62.0</version>
       <executions>
