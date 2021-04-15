@@ -41,15 +41,15 @@ val javaxElVersion         = "3.0.0"
 val vavrVersion            = "0.10.3"
 val dropwizardVavrVersion  = "1.3.0-4"
 
-mainClass in assembly := Some("com.twilio.guardrail.CLI")
-assemblyMergeStrategy in assembly := {
+assembly / mainClass := Some("com.twilio.guardrail.CLI")
+assembly / assemblyMergeStrategy := {
   case ".api_description" => MergeStrategy.discard
   case ".options" => MergeStrategy.concat
   case "plugin.properties" => MergeStrategy.discard
   case "plugin.xml" => MergeStrategy.concat
   case "META-INF/eclipse.inf" => MergeStrategy.first
   case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    val oldStrategy = (assembly / assemblyMergeStrategy).value
     oldStrategy(x)
 }
 
@@ -199,12 +199,12 @@ runExample := Def.inputTaskDyn {
   runTask(Test, "com.twilio.guardrail.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
 }.evaluated
 
-artifact in (Compile, assembly) := {
-  (artifact in (Compile, assembly)).value
+Compile / assembly / artifact := {
+  (Compile / assembly / artifact).value
     .withClassifier(Option("assembly"))
 }
 
-addArtifact(artifact in (Compile, assembly), assembly)
+addArtifact(Compile / assembly / artifact, assembly)
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
 
@@ -212,7 +212,7 @@ addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x
 addCommandAlias("example", "runtimeSuite")
 
 // Make "cli" not emit unhandled exceptions on exit
-fork in run := true
+run / fork := true
 
 addCommandAlias("cli", "runMain com.twilio.guardrail.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
@@ -274,7 +274,7 @@ val commonSettings = Seq(
   ),
   scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
   scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
-  parallelExecution in Test := true,
+  Test / parallelExecution := true,
   addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin(scalafixSemanticdb),
@@ -283,19 +283,19 @@ val commonSettings = Seq(
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
 val codegenSettings = Seq(
   ScoverageKeys.coverageExcludedPackages := "<empty>;com.twilio.guardrail.terms.*;com.twilio.guardrail.protocol.terms.*",
-  wartremoverWarnings in (Compile, compile) ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
+  Compile / compile / wartremoverWarnings ++= Warts.unsafe.filterNot(w => excludedWarts.exists(_.clazz == w.clazz)),
 )
 
 lazy val root = (project in file("."))
   .settings(commonSettings)
-  .settings(skip in publish := true)
+  .settings(publish / skip := true)
   .dependsOn(codegen, microsite)
   .aggregate(allDeps, codegen, microsite, endpointsDependencies)
 
 lazy val allDeps = (project in file("modules/alldeps"))
   .settings(commonSettings)
   .settings(
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= akkaProjectDependencies,
     libraryDependencies ++= akkaJacksonProjectDependencies,
     libraryDependencies ++= http4sProjectDependencies,
@@ -464,8 +464,8 @@ def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.libraryma
     .settings(codegenSettings)
     .settings(
       libraryDependencies ++= extraLibraryDependencies,
-      unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-      skip in publish := true,
+      Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
+      publish / skip := true,
       scalafmtOnCompile := false
     )
 
@@ -478,7 +478,7 @@ lazy val dropwizardScalaSample = buildSampleProject("dropwizardScala", dropwizar
 lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
 
 val javaSampleSettings = Seq(
-    testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    Test / testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
     javacOptions ++= Seq(
       "-Xlint:all"
     ),
@@ -496,7 +496,7 @@ lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependen
 lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
   .settings(commonSettings)
   .settings(
-    skip in publish := true
+    publish / skip := true
   )
   .settings(
     libraryDependencies ++= Seq(
@@ -519,19 +519,19 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
       "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
       "org.typelevel"     %% "cats-core"           % catsVersion
     ).map(_.cross(CrossVersion.for3Use2_13)),
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "target" / "generated",
-    skip in publish := true,
+    Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
+    publish / skip := true,
     scalafmtOnCompile := false
   )
 
 lazy val microsite = (project in file("modules/microsite"))
   .settings(commonSettings)
   .settings(
-    skip in publish := true
+    publish / skip := true
   )
   .dependsOn(codegen)
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
 
-logBuffered in Test := false
+Test / logBuffered := false
