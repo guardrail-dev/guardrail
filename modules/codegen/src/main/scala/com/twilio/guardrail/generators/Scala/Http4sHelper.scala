@@ -117,6 +117,7 @@ object Http4sHelper {
 
   private def isJsonEncoderDecoder(consumesOrProduces: Seq[ContentType]): Boolean =
     consumesOrProduces.contains(ApplicationJson) ||
+      consumesOrProduces.exists(ct => ct.value.startsWith("application/") && ct.value.endsWith("+json")) ||
       consumesOrProduces.isEmpty ||
       consumesOrProduces.contains(AnyContentType) //guardrial converts missing contentTypes to */* what should be converted to JSON according OpenAPI
 }
