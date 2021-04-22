@@ -9,7 +9,7 @@ import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.{ ContentType, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{ ContentType, TextPlain, UrlencodedFormData }
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -69,13 +69,14 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     // FIXME: Just taking the head here isn't super great
     def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
       _.flatMap({
-        case (contentType, mediaType) =>
+        case (ContentType(contentType), mediaType) =>
           mediaType
-            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == "text/plain" => mt })(
+            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == TextPlain => mt })(
               x => Option(Tracker.cloneHistory(x, new StringSchema()))
             )
             .orRefine({ case mt @ MediaType(schema, _, _) => schema })(_.indexedDistribute)
             .orRefineFallback(_ => None)
+        case _ => None
       }).headOption
     for {
       schema <- unifyEntries(fields.value)
