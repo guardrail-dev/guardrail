@@ -198,7 +198,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
         State[ParameterCountState, Tracker[Parameter]]({
           case (maxCount, instances) =>
             val updated = instances.updated(p.unwrapTracker.hashCode, instances.getOrElse(p.unwrapTracker.hashCode, 0) + 1)
-            ((Math.max(maxCount, updated.values.max), updated), p)
+            ((Math.max(maxCount, updated.values.foldLeft(0)(Math.max)), updated), p)
         })
       }
       .runEmpty

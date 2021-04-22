@@ -474,18 +474,18 @@ object SwaggerUtil {
       .flatDownField("securitySchemes", _.getSecuritySchemes)
       .indexedDistribute
       .value
-      .traverse({
+      .flatTraverse({
         case (schemeName, scheme) =>
           val typeName = CustomTypeName(scheme, prefixes)
           for {
             tpe <- typeName.fold(Option.empty[L#Type].pure[F])(x => parseType(Tracker.cloneHistory(scheme, x)))
-            parsedScheme <- scheme.downField("type", _.getType).unwrapTracker.get match {
+            parsedScheme <- scheme.downField("type", _.getType).unwrapTracker.traverse {
               case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
               case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
               case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
               case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
             }
-          } yield (schemeName, parsedScheme)
+          } yield parsedScheme.toList.map(scheme => schemeName -> scheme)
       })
       .map(_.toMap)
   }
