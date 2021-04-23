@@ -16,12 +16,12 @@ git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 val akkaVersion            = "2.6.13"
 val akkaHttpVersion        = "10.2.4"
-val catsVersion            = "2.6.0"
-val catsEffectVersion      = "2.4.1"
+val catsVersion            = "2.5.0"
+val catsEffectVersion      = "2.5.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.22"
 val scalacheckVersion      = "1.15.3"
-val scalatestVersion       = "3.2.7"
+val scalatestVersion       = "3.2.8"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.20.2"
 val endpointsVersion       = "1.3.0"
@@ -221,7 +221,7 @@ addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
 addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
 addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
@@ -318,7 +318,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.100",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.25",
     ) ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.13",
+      "org.scalameta"               %% "scalameta"                    % "4.4.14",
       "org.tpolecat"                %% "atto-core"                    % "0.9.3",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
