@@ -303,6 +303,7 @@ val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" % "kind-projector"  % kindProjectorVersion cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   addCompilerPlugin(scalafixSemanticdb),
+  sonatypeCredentialHost := "s01.oss.sonatype.org",
 )
 
 val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
