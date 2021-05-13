@@ -14,14 +14,14 @@ git.gitDescribedVersion := git.gitDescribedVersion(v => {
 
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
-val akkaVersion            = "2.6.13"
+val akkaVersion            = "2.6.14"
 val akkaHttpVersion        = "10.2.4"
 val catsVersion            = "2.5.0"
-val catsEffectVersion      = "2.4.1"
+val catsEffectVersion      = "2.5.0"
 val circeVersion           = "0.13.0"
 val http4sVersion          = "0.21.22"
 val scalacheckVersion      = "1.15.3"
-val scalatestVersion       = "3.2.7"
+val scalatestVersion       = "3.2.8"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
 val javaparserVersion      = "3.20.2"
 val endpointsVersion       = "1.3.0"
@@ -30,8 +30,8 @@ val endpointsCirceVersion  = "0.13.0"
 val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.29"
 val dropwizardScalaVersion = "1.3.7-1"
-val jerseyVersion          = "2.34"
-val kindProjectorVersion   = "0.11.3"
+val jerseyVersion          = "2.25.1"
+val kindProjectorVersion   = "0.12.0"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
 val springBootVersion      = "2.4.5"
@@ -221,7 +221,7 @@ addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
 addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
 addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/test:scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/test:scalafmtCheck").mkString("; "))
+addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
@@ -259,8 +259,8 @@ val commonSettings = Seq(
   organization := "com.twilio",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-  crossScalaVersions := Seq("2.12.12", "2.13.5"),
-  scalaVersion := "2.12.12",
+  crossScalaVersions := Seq("2.12.13", "2.13.5"),
+  scalaVersion := "2.12.13",
 
   scalacOptions ++= Seq(
     "-Ydelambdafy:method",
@@ -318,7 +318,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.100",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.25",
     ) ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.13",
+      "org.scalameta"               %% "scalameta"                    % "4.4.15",
       "org.tpolecat"                %% "atto-core"                    % "0.9.3",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
