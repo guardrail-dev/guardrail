@@ -323,7 +323,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
-      "org.scala-lang.modules"      %% "scala-java8-compat"           % "0.9.1",
+      "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.0",
     ).map(_.cross(CrossVersion.for3Use2_13)),
     scalacOptions ++= List(
       "-language:higherKinds",
@@ -416,7 +416,7 @@ val dropwizardProjectDependencies = Seq(
   "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
 ) ++ Seq(
   "org.mockito"                %% "mockito-scala"          % "1.16.37"           % Test,
-  "org.scala-lang.modules"     %% "scala-java8-compat"     % "0.9.1"            % Test,
+  "org.scala-lang.modules"     %% "scala-java8-compat"     % "1.0.0"            % Test,
   "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
 ).map(_.cross(CrossVersion.for3Use2_13))
 
@@ -435,7 +435,7 @@ val dropwizardScalaProjectDependencies = Seq(
   "com.datasift.dropwizard.scala"  %% "dropwizard-scala-core"   % dropwizardScalaVersion,
   "com.fasterxml.jackson.module"   %% "jackson-module-scala"    % jacksonVersion,
   "org.typelevel"                  %% "cats-core"               % catsVersion,
-  "org.scala-lang.modules"         %% "scala-java8-compat"      % "0.9.1"            % Test,
+  "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.0"            % Test,
   "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
   "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.37"           % Test,
 ).map(_.cross(CrossVersion.for3Use2_13))
@@ -453,7 +453,7 @@ val springProjectDependencies = Seq(
   "junit"                      %  "junit"                    % "4.13.2"           % Test,
   "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
 ) ++ Seq(
-  "org.scala-lang.modules"     %% "scala-java8-compat"       % "0.9.1"            % Test,
+  "org.scala-lang.modules"     %% "scala-java8-compat"       % "1.0.0"            % Test,
   "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
   "org.mockito"                %% "mockito-scala"            % "1.16.37"           % Test,
 ).map(_.cross(CrossVersion.for3Use2_13))
