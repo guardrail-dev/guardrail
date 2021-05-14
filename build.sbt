@@ -319,7 +319,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.25",
     ) ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.15",
-      "org.tpolecat"                %% "atto-core"                    % "0.9.3",
+      "org.tpolecat"                %% "atto-core"                    % "0.9.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
