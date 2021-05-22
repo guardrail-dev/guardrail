@@ -74,6 +74,7 @@ Useful commands inside sbt console
 - `cli`: Useful for scripting: `sbt 'cli --client ...'`
 - `format`: Runs scalafmt against codebase
 - `checkFormatting`: Verifies formatting, run as part of CI against PRs
+- `mdoc`: Generate the doc microsite locally
 
 Resources
 =========
