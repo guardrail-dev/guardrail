@@ -192,7 +192,12 @@ object AkkaHttpGenerator {
             // Translate HttpEntity => Json (for `application/json`)
             implicit final val structuredJsonEntityUnmarshaller: FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
-                .forContentTypes(MediaTypes.`application/json`)
+                .forContentTypes(
+                  MediaTypes.`application/json`,
+                  MediaTypes.`application/json-patch+json`,
+                  MediaTypes.`application/merge-patch+json`,
+                  MediaTypes.`application/problem+json`
+                )
                 .flatMapWithInput { (httpEntity, byteString) =>
                   if (byteString.isEmpty) {
                     FastFuture.failed(Unmarshaller.NoContentException)
@@ -302,7 +307,12 @@ object AkkaHttpGenerator {
                 implicit mapper: com.fasterxml.jackson.databind.ObjectMapper
             ): FromEntityUnmarshaller[${jsonType}] =
               Unmarshaller.byteStringUnmarshaller
-                .forContentTypes(MediaTypes.`application/json`)
+                .forContentTypes(
+                  MediaTypes.`application/json`,
+                  MediaTypes.`application/json-patch+json`,
+                  MediaTypes.`application/merge-patch+json`,
+                  MediaTypes.`application/problem+json`
+                )
                 .flatMapWithInput { (httpEntity, byteString) =>
                   if (byteString.isEmpty) {
                     FastFuture.failed(Unmarshaller.NoContentException)
