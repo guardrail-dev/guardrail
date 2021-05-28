@@ -259,7 +259,7 @@ val commonSettings = Seq(
   organization := "com.twilio",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-  crossScalaVersions := Seq("2.12.14", "2.13.5"),
+  crossScalaVersions := Seq("2.12.14", "2.13.6"),
   scalaVersion := "2.12.14",
 
   scalacOptions ++= Seq(
