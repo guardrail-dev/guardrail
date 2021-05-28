@@ -18,7 +18,7 @@ addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.10.0-RC1")
 
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.28")
 
-addSbtPlugin("org.scoverage"    %% "sbt-scoverage"  % "1.8.1")
+addSbtPlugin("org.scoverage"    %% "sbt-scoverage"  % "1.8.2")
 
 // for jdk11
 libraryDependencies += "com.sun.activation" % "javax.activation" % "1.2.0"
