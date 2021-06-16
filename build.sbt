@@ -63,7 +63,7 @@ val eclipseFormatterDependencies = Seq(
   "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.8.200",
   "org.eclipse.platform" % "org.eclipse.equinox.registry"    % "3.10.200",
   "org.eclipse.platform" % "org.eclipse.osgi"                % "3.16.300",
-  "org.eclipse.platform" % "org.eclipse.text"                % "3.11.0",
+  "org.eclipse.platform" % "org.eclipse.text"                % "3.12.0",
 )
 
 assembly / mainClass := Some("com.twilio.guardrail.CLI")
