@@ -341,7 +341,7 @@ lazy val codegen = (project in file("modules/codegen"))
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.26",
     ) ++ eclipseFormatterDependencies ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.15",
+      "org.scalameta"               %% "scalameta"                    % "4.4.21",
       "org.tpolecat"                %% "atto-core"                    % "0.9.3",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
