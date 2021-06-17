@@ -14,12 +14,12 @@ git.gitDescribedVersion := git.gitDescribedVersion(v => {
 
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
-val akkaVersion            = "2.6.14"
+val akkaVersion            = "2.6.15"
 val akkaHttpVersion        = "10.2.4"
 val catsVersion            = "2.5.0"
 val catsEffectVersion      = "2.5.1"
-val circeVersion           = "0.14.1"
-val http4sVersion          = "0.21.22"
+val circeVersion           = "0.13.0"
+val http4sVersion          = "0.21.24"
 val scalacheckVersion      = "1.15.3"
 val scalatestVersion       = "3.2.9"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
@@ -31,15 +31,40 @@ val ahcVersion             = "2.8.1"
 val dropwizardVersion      = "1.3.29"
 val dropwizardScalaVersion = "1.3.7-1"
 val jerseyVersion          = "2.25.1"
-val kindProjectorVersion   = "0.12.0"
+val kindProjectorVersion   = "0.13.0"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.4.5"
+val springBootVersion      = "2.5.1"
 val jacksonVersion         = "2.12.1"
 val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
 val vavrVersion            = "0.10.3"
 val dropwizardVavrVersion  = "1.3.0-4"
+
+// TAKE CARE WHEN UPDATING THESE
+val eclipseFormatterDependencies = Seq(
+  "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.24.0",
+  // These version pins are necessary because a bunch of transitive dependencies
+  // are specified via an allowed version range rather than being pinned to a
+  // particular version.  Unfortunately, at some point some of them started
+  // being compiled targeting Java 11, which breaks builds for people who are
+  // still building their projects with a JDK8 distribution.  Pinning only
+  // the Java11-compiled dependencies is not enough, as some of them are not
+  // mutually compatible.
+  "org.eclipse.platform" % "org.eclipse.core.commands"       % "3.10.0",
+  "org.eclipse.platform" % "org.eclipse.core.contenttype"    % "3.7.1000",
+  "org.eclipse.platform" % "org.eclipse.core.expressions"    % "3.7.100",
+  "org.eclipse.platform" % "org.eclipse.core.filesystem"     % "1.9.0",
+  "org.eclipse.platform" % "org.eclipse.core.jobs"           % "3.11.0",
+  "org.eclipse.platform" % "org.eclipse.core.resources"      % "3.14.0",
+  "org.eclipse.platform" % "org.eclipse.core.runtime"        % "3.20.100",
+  "org.eclipse.platform" % "org.eclipse.equinox.app"         % "1.5.100",
+  "org.eclipse.platform" % "org.eclipse.equinox.common"      % "3.14.100",
+  "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.8.200",
+  "org.eclipse.platform" % "org.eclipse.equinox.registry"    % "3.10.200",
+  "org.eclipse.platform" % "org.eclipse.osgi"                % "3.16.300",
+  "org.eclipse.platform" % "org.eclipse.text"                % "3.11.0",
+)
 
 assembly / mainClass := Some("com.twilio.guardrail.CLI")
 assembly / assemblyMergeStrategy := {
@@ -259,8 +284,8 @@ val commonSettings = Seq(
   organization := "com.twilio",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-  crossScalaVersions := Seq("2.12.13", "2.13.5"),
-  scalaVersion := "2.12.13",
+  crossScalaVersions := Seq("2.12.14", "2.13.6"),
+  scalaVersion := "2.12.14",
 
   scalacOptions ++= Seq(
     "-Ydelambdafy:method",
@@ -314,12 +339,10 @@ lazy val codegen = (project in file("modules/codegen"))
   .settings(
     libraryDependencies ++= Seq(
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
-      "org.eclipse.jdt"             % "org.eclipse.jdt.core"          % "3.24.0",
-      "org.eclipse.platform"        % "org.eclipse.equinox.app"       % "1.5.100",
-      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.25",
-    ) ++ Seq(
+      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.26",
+    ) ++ eclipseFormatterDependencies ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.15",
-      "org.tpolecat"                %% "atto-core"                    % "0.9.3",
+      "org.tpolecat"                %% "atto-core"                    % "0.9.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
