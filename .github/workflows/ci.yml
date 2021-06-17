@@ -1,9 +1,13 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
     branches:
       - master
+  workflow_dispatch: {}
 
 jobs:
   core:
@@ -12,7 +16,7 @@ jobs:
       matrix:
         java: [ '15' ]
         scala: [
-            { version: '2.12.12', bincompat: '2.12' }
+            { version: '2.12.14', bincompat: '2.12' }
           ]
     steps:
     - uses: actions/checkout@v2
@@ -40,9 +44,9 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '8', '11', '13', '14', '15' ]
+        java: [ '8', '11', '13', '14', '15', '16' ]
         scala: [
-            { version: '2.12.12', bincompat: '2.12' }
+            { version: '2.12.14', bincompat: '2.12' }
           ]
     steps:
     - uses: actions/checkout@v2
@@ -64,7 +68,6 @@ jobs:
       run:  sbt ++${{ matrix.scala.version }} clean codegen/clean coverage runtimeJavaSuite codegen/coverageReport
     - uses: codecov/codecov-action@v1
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
   scala:
@@ -72,10 +75,10 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '8', '15' ]
+        java: [ '8', '15', '16' ]
         scala: [
-            { version: '2.12.12', bincompat: '2.12' },
-            { version: '2.13.4', bincompat: '2.13' }
+            { version: '2.12.14', bincompat: '2.12' },
+            { version: '2.13.6', bincompat: '2.13' }
           ]
         framework: [
             { framework: 'akka-http',         project: 'akkaHttpSample'        },
@@ -111,6 +114,5 @@ jobs:
     - uses: codecov/codecov-action@v1
       if: ${{ env.combo_enabled == 'true' }}
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true

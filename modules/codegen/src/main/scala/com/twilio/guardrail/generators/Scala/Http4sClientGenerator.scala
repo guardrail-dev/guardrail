@@ -64,7 +64,7 @@ object Http4sClientGenerator {
       ): Target[Term] =
         Target.log.function("generateUrlWithParams") {
           for {
-            _    <- Target.log.debug(s"Using ${path.get} and ${pathArgs.map(_.argName)}")
+            _    <- Target.log.debug(s"Using ${path.unwrapTracker} and ${pathArgs.map(_.argName)}")
             base <- generateUrlPathParams(path, pathArgs)
 
             _ <- Target.log.debug(s"QS: ${qsArgs}")
@@ -328,8 +328,8 @@ object Http4sClientGenerator {
         // Placeholder for when more functions get logging
         _ <- Target.pure(())
 
-        consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
-        produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
+        consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
+        produces = operation.unwrapTracker.produces.toList.flatMap(ContentType.unapply(_))
 
         headerArgs = parameters.headerParams
         pathArgs   = parameters.pathParams
@@ -379,7 +379,7 @@ object Http4sClientGenerator {
         )
       } yield renderedClientOperation)
     }
-    def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
+    def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._"))
     def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
     def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
       val ihc = param"implicit httpClient: Http4sClient[F]"

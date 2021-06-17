@@ -7,7 +7,6 @@ import com.twilio.guardrail.terms.framework.FrameworkTerms
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import com.twilio.guardrail.{ StrictProtocolElems, SwaggerUtil, monadForFrameworkTerms }
 import io.swagger.v3.oas.models.Operation
-import scala.collection.JavaConverters._
 
 class Response[L <: LA](
     val statusCodeName: L#TermName,
@@ -56,7 +55,7 @@ object Responses {
                     SwaggerUtil.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
                   } yield (contentType, baseType, baseDefaultValue)
               }
-              headers <- Option(resp.get.getHeaders).map(_.asScala.toList).getOrElse(List.empty).traverse {
+              headers <- resp.downField("headers", _.getHeaders()).unwrapTracker.value.toList.traverse {
                 case (name, header) =>
                   for {
                     argName    <- formatMethodArgName(s"${name}Header")

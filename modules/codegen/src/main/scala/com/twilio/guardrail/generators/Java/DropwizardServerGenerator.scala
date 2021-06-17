@@ -28,6 +28,7 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.language.existentials
 
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object DropwizardServerGenerator {
   private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
     def toJaxRsAnnotationName: Expression = ct match {
@@ -201,7 +202,7 @@ object DropwizardServerGenerator {
 
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[ImportDeclaration]] =
+    override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[ImportDeclaration]] =
       List(
         "javax.inject.Inject",
         "javax.validation.constraints.NotNull",
@@ -259,7 +260,7 @@ object DropwizardServerGenerator {
         resourceType <- safeParseClassOrInterfaceType(resourceName)
         handlerType  <- safeParseClassOrInterfaceType(handlerName)
         basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.get))
+        commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
         routeMethodsAndHandlerMethodSigs <- routes
           .traverse({
             case GenerateRouteMeta(

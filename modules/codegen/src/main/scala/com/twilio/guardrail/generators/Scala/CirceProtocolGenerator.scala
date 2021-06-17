@@ -25,8 +25,7 @@ import com.twilio.guardrail.generators.Scala.model.CirceModelGenerator
 import com.twilio.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.CollectionsLibTerms
-import scala.collection.JavaConverters._
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import scala.meta._
 
 object CirceProtocolGenerator {
@@ -41,42 +40,47 @@ object CirceProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Schema[_]) = {
-      val enumEntries: Option[List[String]] = swagger match {
-        case x: StringSchema =>
-          Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
-        case x =>
-          Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
+
+    def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
+      val fields = elems match {
+        case RenderedStringEnum(elems) =>
+          elems.map({
+            case (value, termName, _) =>
+              (termName, Lit.String(value))
+          })
+        case RenderedIntEnum(elems) =>
+          elems.map({
+            case (value, termName, _) =>
+              (termName, Lit.Int(value))
+          })
+        case RenderedLongEnum(elems) =>
+          elems.map({
+            case (value, termName, _) =>
+              (termName, Lit.Long(value))
+          })
       }
-      Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
+
+      Target.pure(Some(q"""
+              object members {
+                ..${fields.map { case (termName, lit) => q"""case object ${termName} extends ${Type.Name(clsName)}(${lit})""" }}
+              }
+            """))
     }
 
-    def renderMembers(clsName: String, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
-      Target.pure(Some(q"""
-          object members {
-            ..${elems
-        .map({
-          case (value, termName, defaultTerm) =>
-            q"""case object ${termName} extends ${Type.Name(clsName)}(${Lit.String(value)})"""
-        })
-        .toList}
-          }
-        """))
-
-    def encodeEnum(clsName: String): Target[Option[Defn]] =
+    def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
             implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
-              Encoder[String].contramap(_.value)
+              Encoder[${tpe}].contramap(_.value)
           """))
 
-    def decodeEnum(clsName: String): Target[Option[Defn]] =
+    def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
         implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-          Decoder[String].emap(value => parse(value).toRight(${Term
+          Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
       """))
 
-    def renderClass(clsName: String, tpe: scala.meta.Type, elems: List[(String, scala.meta.Term.Name, scala.meta.Term.Select)]) =
+    def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
       Target.pure(q"""
         sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends Product with Serializable {
           override def toString: String = value.toString
@@ -85,20 +89,21 @@ object CirceProtocolGenerator {
 
     def renderStaticDefns(
         clsName: String,
+        tpe: scala.meta.Type,
         members: Option[scala.meta.Defn.Object],
         accessors: List[scala.meta.Term.Name],
         encoder: Option[scala.meta.Defn],
         decoder: Option[scala.meta.Defn]
     ): Target[StaticDefns[ScalaLanguage]] = {
+      val longType = Type.Name(clsName)
       val terms: List[Defn.Val] = accessors
         .map({ pascalValue =>
-          q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
+          q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
         })
         .toList
       val values: Defn.Val = q"val values = Vector(..$accessors)"
       val implicits: List[Defn.Val] = List(
-        q"implicit val ${Pat.Var(Term.Name(s"addPath${clsName}"))}: AddPath[${Type.Name(clsName)}] = AddPath.build(_.value)",
-        q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${Type.Name(clsName)}] = Show.build(_.value)"
+        q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${longType}] = Show[${tpe}].contramap[${longType}](_.value)"
       )
       Target.pure(
         StaticDefns[ScalaLanguage](
@@ -109,8 +114,8 @@ object CirceProtocolGenerator {
                 List(Some(values), encoder, decoder).flatten ++
                 implicits ++
                 List(
-                  q"def parse(value: String): Option[${Type.Name(clsName)}] = values.find(_.value == value)",
-                  q"implicit val order: cats.Order[${Type.Name(clsName)}] = cats.Order.by[${Type.Name(clsName)}, Int](values.indexOf)"
+                  q"def from(value: ${tpe}): Option[${longType}] = values.find(_.value == value)",
+                  q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
                 )
         )
       )
@@ -138,7 +143,7 @@ object CirceProtocolGenerator {
           Target.pure(extractedProps)
         })
         .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
         )
         .getOrElse(Target.pure(List.empty))
         .map(_.toList)
@@ -151,7 +156,7 @@ object CirceProtocolGenerator {
     )(
         name: String,
         fieldName: String,
-        property: Schema[_],
+        property: Tracker[Schema[_]],
         meta: ResolvedType[ScalaLanguage],
         requirement: PropertyRequirement,
         isCustomType: Boolean,
@@ -161,15 +166,17 @@ object CirceProtocolGenerator {
         for {
           _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-          rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
+          rawType = RawParameterType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
-          readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-          emptyToNull = (property match {
-            case d: DateSchema      => EmptyValueIsNull(d)
-            case dt: DateTimeSchema => EmptyValueIsNull(dt)
-            case s: StringSchema    => EmptyValueIsNull(s)
-            case _                  => None
-          }).getOrElse(EmptyIsEmpty)
+          readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly()).unwrapTracker.contains(true))
+          emptyToNull = property
+            .refine({ case d: DateSchema => d })(d => EmptyValueIsNull(d))
+            .orRefine({ case dt: DateTimeSchema => dt })(dt => EmptyValueIsNull(dt))
+            .orRefine({ case s: StringSchema => s })(s => EmptyValueIsNull(s))
+            .toOption
+            .flatten
+            .getOrElse(EmptyIsEmpty)
+
           dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
           (tpe, classDep) = meta match {
@@ -639,11 +646,13 @@ object CirceProtocolGenerator {
             case head :: tail =>
               definitions
                 .collectFirst({
-                  case (clsName, e) if head.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName")) =>
+                  case (clsName, e) if head.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName")) =>
                     val thisParent = (clsName, e, tail)
                     allParents(e).map(otherParents => thisParent :: otherParents)
                 })
-                .getOrElse(Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).get} not found among definitions"))
+                .getOrElse(
+                  Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).unwrapTracker} not found among definitions (${head.showHistory})")
+                )
             case _ => Target.pure(List.empty)
           }
         ).getOrElse(Target.pure(List.empty))

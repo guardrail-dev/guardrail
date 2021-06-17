@@ -1,19 +1,23 @@
 package com.twilio.guardrail.generators.Scala
 
-import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
+// import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.Monad
-import cats.data.{ Ior, NonEmptyList }
-import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, SwaggerUtil, Target }
-import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
-import com.twilio.guardrail.generators.syntax.Scala._
-import com.twilio.guardrail.generators.syntax._
+// import cats.data.Ior
+import cats.data.NonEmptyList
+// import com.twilio.guardrail.SwaggerUtil
+import com.twilio.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
+import com.twilio.guardrail.generators.LanguageParameters
+// import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
+// import com.twilio.guardrail.generators.syntax.Scala._
+// import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.{ ContentType, MultipartFormData, Responses, TextPlain }
+import com.twilio.guardrail.protocol.terms.Responses
+// import com.twilio.guardrail.protocol.terms.{ ContentType, MultipartFormData, Responses, TextPlain }
 import com.twilio.guardrail.protocol.terms.client._
 import com.twilio.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import com.twilio.guardrail.shims._
+// import com.twilio.guardrail.shims._
 import java.net.URI
-import scala.meta._
+// import scala.meta._
 
 object EndpointsClientGenerator {
   def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =

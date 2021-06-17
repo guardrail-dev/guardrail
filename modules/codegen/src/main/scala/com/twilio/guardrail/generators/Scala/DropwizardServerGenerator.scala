@@ -4,7 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.{ LanguageParameter, RawParameterName, ScalaGenerator }
+import com.twilio.guardrail.generators.{ LanguageParameter, RawParameterName }
 import com.twilio.guardrail.generators.helpers.DropwizardHelpers._
 import com.twilio.guardrail.languages.ScalaLanguage
 import com.twilio.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
@@ -17,6 +17,11 @@ import io.swagger.v3.oas.models.Operation
 import scala.meta._
 
 object DropwizardServerGenerator {
+  val buildTermSelect: NonEmptyList[String] => Term.Ref = {
+    case NonEmptyList(head, tail) =>
+      tail.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(head))(Term.Select.apply _)
+  }
+
   private val PLAIN_TYPES =
     Set("Boolean", "Byte", "Char", "Short", "Int", "Long", "BigInt", "Float", "Double", "BigDecimal", "String", "OffsetDateTime", "LocalDateTime")
   private val CONTAINER_TYPES = Seq("Vector", "List", "Seq", "IndexedSeq", "Iterable", "Map")
@@ -136,7 +141,7 @@ object DropwizardServerGenerator {
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     override def MonadF: Monad[Target] = Target.targetInstances
 
-    override def getExtraImports(tracing: Boolean, supportPackage: List[String]): Target[List[Import]] =
+    override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[Import]] =
       Target.pure(
         List(
           q"import io.dropwizard.jersey.PATCH",
@@ -151,7 +156,7 @@ object DropwizardServerGenerator {
           q"import scala.annotation.meta.{field, param}",
           q"import scala.concurrent.{ExecutionContext, Future}",
           q"import scala.util.{Failure, Success}",
-          q"import ${ScalaGenerator.ScalaInterp.buildPkgTerm(supportPackage)}.GuardrailJerseySupport"
+          q"import ${buildTermSelect(supportPackage)}.GuardrailJerseySupport"
         )
       )
 

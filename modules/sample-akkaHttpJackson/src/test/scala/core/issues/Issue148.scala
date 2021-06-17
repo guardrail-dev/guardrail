@@ -244,8 +244,11 @@ class Issue148Suite extends AnyFunSuite with TestImplicits with Matchers with Ei
      * Missing discriminator
      */
     Client.httpClient(jsonResponse("{}"), "http://localhost:80").getFoo().value.futureValue match {
-      case Left(Left(e: IllegalArgumentException)) => e.getMessage should startWith("Missing type id when trying to resolve subtype")
-      case ex                                      => failTest(s"Unknown: ${ex}")
+      case Left(Left(e: IllegalArgumentException)) =>
+        e.getMessage should startWith(
+              "Could not resolve subtype of [simple type, class issues.issue148.client.akkaHttpJackson.definitions.Foo]: missing type id property 'type'"
+            )
+      case ex => failTest(s"Unknown: ${ex}")
     }
 
     /* Correct mime type

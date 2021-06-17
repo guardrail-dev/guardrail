@@ -69,7 +69,7 @@ object Http4sServerGenerator {
             label <- Target.fromOption[Lit.String](
               TracingLabel(operation)
                 .map(Lit.String(_))
-                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.get).toLit)),
+                .orElse(resourceName.lastOption.map(clientName => TracingLabelFormatter(clientName, operationId.unwrapTracker).toLit)),
               UserError(s"Missing client name (${operation.showHistory})")
             )
           } yield Some(TracingField[ScalaLanguage](LanguageParameter.fromParam(param"traceBuilder: TraceBuilder[F]"), q"""trace(${label})"""))
@@ -171,7 +171,7 @@ object Http4sServerGenerator {
         handlerTParams  = List(Type.Name("F")) ++ List(customExtractionTypeName).filter(_ => customExtraction)
         routesParams    = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield q"""
-        class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] {
+        class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
 
           ..${supportDefinitions};
           def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
@@ -180,11 +180,12 @@ object Http4sServerGenerator {
         }
       """ +: responseDefinitions)
 
-    def getExtraImports(tracing: Boolean, supportPackage: List[String]) =
+    def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
       Target.log.function("getExtraImports")(
         for {
           _ <- Target.log.debug(s"Args: ${tracing}")
         } yield List(
+          q"import org.http4s.circe.CirceInstances",
           q"import org.http4s.dsl.Http4sDsl",
           q"import fs2.text._"
         )
@@ -660,8 +661,8 @@ object Http4sServerGenerator {
                 )
               )
 
-        val consumes = operation.get.consumes.toList.flatMap(ContentType.unapply(_))
-        val produces = operation.get.produces.toList.flatMap(ContentType.unapply(_))
+        val consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
+        val produces = operation.unwrapTracker.produces.toList.flatMap(ContentType.unapply(_))
         val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(methodName, bodyArgs, responses, consumes, produces)
         val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(

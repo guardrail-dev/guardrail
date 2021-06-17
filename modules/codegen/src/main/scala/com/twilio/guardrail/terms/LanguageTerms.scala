@@ -3,6 +3,7 @@ package terms
 
 import cats.Monad
 import cats.data.NonEmptyList
+import com.twilio.guardrail.core.Tracker
 import com.twilio.guardrail.generators.RawParameterType
 import com.twilio.guardrail.languages.LA
 import java.nio.file.Path
@@ -17,18 +18,18 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   def litLong(value: Long): F[L#Term]
   def litBoolean(value: Boolean): F[L#Term]
 
-  def fullyQualifyPackageName(rawPkgName: List[String]): F[List[String]]
+  def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]): F[NonEmptyList[String]]
 
-  def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]): F[L#TermSelect]
+  def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: RenderedEnum[L]): F[L#TermSelect]
 
-  def formatPackageName(packageName: List[String]): F[List[String]]
+  def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]
   def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]
   def formatFieldName(fieldName: String): F[String]
   def formatMethodName(methodName: String): F[String]
   def formatMethodArgName(methodArgName: String): F[String]
   def formatEnumName(enumValue: String): F[String]
 
-  def parseType(value: String): F[Option[L#Type]]
+  def parseType(value: Tracker[String]): F[Option[L#Type]]
   def parseTypeName(value: String): F[Option[L#TypeName]]
   def pureTermName(value: String): F[L#TermName]
   def pureTypeName(value: String): F[L#TypeName]
@@ -67,14 +68,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def renderImplicits(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       frameworkImports: List[L#Import],
       jsonImports: List[L#Import],
       customImports: List[L#Import]
   ): F[Option[WriteTree]]
   def renderFrameworkImplicits(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       frameworkImports: List[L#Import],
       frameworkImplicitImportNames: List[L#TermName],
       jsonImports: List[L#Import],
@@ -83,7 +84,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   ): F[WriteTree]
   def renderFrameworkDefinitions(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       frameworkImports: List[L#Import],
       frameworkDefinitions: List[L#Definition],
       frameworkDefinitionsName: L#TermName
@@ -91,7 +92,7 @@ abstract class LanguageTerms[L <: LA, F[_]] {
 
   def writePackageObject(
       dtoPackagePath: Path,
-      pkgComponents: List[String],
+      pkgComponents: NonEmptyList[String],
       dtoComponents: Option[NonEmptyList[String]],
       customImports: List[L#Import],
       packageObjectImports: List[L#Import],
@@ -101,27 +102,27 @@ abstract class LanguageTerms[L <: LA, F[_]] {
   ): F[Option[WriteTree]]
   def writeProtocolDefinition(
       outputPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       definitions: List[String],
-      dtoComponents: List[String],
+      dtoComponents: NonEmptyList[String],
       imports: List[L#Import],
       protoImplicitName: Option[L#TermName],
       elem: StrictProtocolElems[L]
   ): F[(List[WriteTree], List[L#Statement])]
   def writeClient(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       customImports: List[L#Import],
       frameworkImplicitNames: List[L#TermName],
-      dtoComponents: Option[List[String]],
+      dtoComponents: Option[NonEmptyList[String]],
       client: Client[L]
   ): F[List[WriteTree]]
   def writeServer(
       pkgPath: Path,
-      pkgName: List[String],
+      pkgName: NonEmptyList[String],
       customImports: List[L#Import],
       frameworkImplicitNames: List[L#TermName],
-      dtoComponents: Option[List[String]],
+      dtoComponents: Option[NonEmptyList[String]],
       server: Server[L]
   ): F[List[WriteTree]]
 
@@ -135,15 +136,15 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newLitInt: Int => F[L#Term] = litInt _,
       newLitLong: Long => F[L#Term] = litLong _,
       newLitBoolean: Boolean => F[L#Term] = litBoolean _,
-      newFullyQualifyPackageName: List[String] => F[List[String]] = fullyQualifyPackageName _,
-      newLookupEnumDefaultValue: (L#TypeName, L#Term, List[(String, L#TermName, L#TermSelect)]) => F[L#TermSelect] = lookupEnumDefaultValue _,
-      newFormatPackageName: List[String] => F[List[String]] = formatPackageName _,
+      newFullyQualifyPackageName: NonEmptyList[String] => F[NonEmptyList[String]] = fullyQualifyPackageName _,
+      newLookupEnumDefaultValue: (L#TypeName, L#Term, RenderedEnum[L]) => F[L#TermSelect] = lookupEnumDefaultValue _,
+      newFormatPackageName: List[String] => F[NonEmptyList[String]] = formatPackageName _,
       newFormatTypeName: (String, Option[String]) => F[String] = formatTypeName _,
       newFormatFieldName: String => F[String] = formatFieldName _,
       newFormatMethodName: String => F[String] = formatMethodName _,
       newFormatMethodArgName: String => F[String] = formatMethodArgName _,
       newFormatEnumName: String => F[String] = formatEnumName _,
-      newParseType: String => F[Option[L#Type]] = parseType _,
+      newParseType: Tracker[String] => F[Option[L#Type]] = parseType _,
       newParseTypeName: String => F[Option[L#TypeName]] = parseTypeName _,
       newPureTermName: String => F[L#TermName] = pureTermName _,
       newPureTypeName: String => F[L#TypeName] = pureTypeName _,
@@ -175,13 +176,21 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       newWidenObjectDefinition: L#ObjectDefinition => F[L#Definition] = widenObjectDefinition _,
       newFindCommonDefaultValue: (String, Option[L#Term], Option[L#Term]) => F[Option[L#Term]] = findCommonDefaultValue _,
       newFindCommonRawType: (String, RawParameterType, RawParameterType) => F[RawParameterType] = findCommonRawType _,
-      newRenderImplicits: (Path, List[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
-      newRenderFrameworkImplicits: (Path, List[String], List[L#Import], List[L#TermName], List[L#Import], L#ObjectDefinition, L#TermName) => F[WriteTree] =
-        renderFrameworkImplicits _,
-      newRenderFrameworkDefinitions: (Path, List[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] = renderFrameworkDefinitions _,
+      newRenderImplicits: (Path, NonEmptyList[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = renderImplicits _,
+      newRenderFrameworkImplicits: (
+          Path,
+          NonEmptyList[String],
+          List[L#Import],
+          List[L#TermName],
+          List[L#Import],
+          L#ObjectDefinition,
+          L#TermName
+      ) => F[WriteTree] = renderFrameworkImplicits _,
+      newRenderFrameworkDefinitions: (Path, NonEmptyList[String], List[L#Import], List[L#Definition], L#TermName) => F[WriteTree] =
+        renderFrameworkDefinitions _,
       newWritePackageObject: (
           Path,
-          List[String],
+          NonEmptyList[String],
           Option[NonEmptyList[String]],
           List[L#Import],
           List[L#Import],
@@ -191,34 +200,36 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       ) => F[Option[WriteTree]] = writePackageObject _,
       newWriteProtocolDefinition: (
           Path,
+          NonEmptyList[String],
           List[String],
-          List[String],
-          List[String],
+          NonEmptyList[String],
           List[L#Import],
           Option[L#TermName],
           StrictProtocolElems[L]
       ) => F[(List[WriteTree], List[L#Statement])] = writeProtocolDefinition _,
-      newWriteClient: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Client[L]) => F[List[WriteTree]] = writeClient _,
-      newWriteServer: (Path, List[String], List[L#Import], List[L#TermName], Option[List[String]], Server[L]) => F[List[WriteTree]] = writeServer _,
+      newWriteClient: (Path, NonEmptyList[String], List[L#Import], List[L#TermName], Option[NonEmptyList[String]], Client[L]) => F[List[WriteTree]] =
+        writeClient _,
+      newWriteServer: (Path, NonEmptyList[String], List[L#Import], List[L#TermName], Option[NonEmptyList[String]], Server[L]) => F[List[WriteTree]] =
+        writeServer _,
       newWrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = wrapToObject _
   ) = new LanguageTerms[L, F] {
-    def MonadF                                            = newMonadF
-    def litString(value: String)                          = newLitString(value)
-    def litFloat(value: Float)                            = newLitFloat(value)
-    def litDouble(value: Double)                          = newLitDouble(value)
-    def litInt(value: Int)                                = newLitInt(value)
-    def litLong(value: Long)                              = newLitLong(value)
-    def litBoolean(value: Boolean)                        = newLitBoolean(value)
-    def fullyQualifyPackageName(rawPkgName: List[String]) = newFullyQualifyPackageName(rawPkgName)
-    def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: List[(String, L#TermName, L#TermSelect)]) =
+    def MonadF                                                    = newMonadF
+    def litString(value: String)                                  = newLitString(value)
+    def litFloat(value: Float)                                    = newLitFloat(value)
+    def litDouble(value: Double)                                  = newLitDouble(value)
+    def litInt(value: Int)                                        = newLitInt(value)
+    def litLong(value: Long)                                      = newLitLong(value)
+    def litBoolean(value: Boolean)                                = newLitBoolean(value)
+    def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]) = newFullyQualifyPackageName(rawPkgName)
+    def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: RenderedEnum[L]) =
       newLookupEnumDefaultValue(tpe, defaultValue, values)
-    def formatPackageName(packageName: List[String]): F[List[String]]                 = newFormatPackageName(packageName)
+    def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]         = newFormatPackageName(packageName)
     def formatTypeName(typeName: String, suffix: Option[String] = None): F[String]    = newFormatTypeName(typeName, suffix)
     def formatFieldName(fieldName: String): F[String]                                 = newFormatFieldName(fieldName)
     def formatMethodName(methodName: String): F[String]                               = newFormatMethodName(methodName)
     def formatMethodArgName(methodArgName: String): F[String]                         = newFormatMethodArgName(methodArgName)
     def formatEnumName(enumValue: String)                                             = newFormatEnumName(enumValue)
-    def parseType(value: String)                                                      = newParseType(value)
+    def parseType(value: Tracker[String])                                             = newParseType(value)
     def parseTypeName(value: String)                                                  = newParseTypeName(value)
     def pureTermName(value: String)                                                   = newPureTermName(value)
     def pureTypeName(value: String)                                                   = newPureTypeName(value)
@@ -250,11 +261,17 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     def widenObjectDefinition(value: L#ObjectDefinition)                              = newWidenObjectDefinition(value)
     def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]) = newFindCommonDefaultValue(history, a, b)
     def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType)  = newFindCommonRawType(history, a, b)
-    def renderImplicits(pkgPath: Path, pkgName: List[String], frameworkImports: List[L#Import], jsonImports: List[L#Import], customImports: List[L#Import]) =
+    def renderImplicits(
+        pkgPath: Path,
+        pkgName: NonEmptyList[String],
+        frameworkImports: List[L#Import],
+        jsonImports: List[L#Import],
+        customImports: List[L#Import]
+    ) =
       newRenderImplicits(pkgPath, pkgName, frameworkImports, jsonImports, customImports)
     def renderFrameworkImplicits(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[L#Import],
         frameworkImplicitImportNames: List[L#TermName],
         jsonImports: List[L#Import],
@@ -263,14 +280,14 @@ abstract class LanguageTerms[L <: LA, F[_]] {
     ) = newRenderFrameworkImplicits(pkgPath, pkgName, frameworkImports, frameworkImplicitImportNames, jsonImports, frameworkImplicits, frameworkImplicitName)
     def renderFrameworkDefinitions(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         frameworkImports: List[L#Import],
         frameworkDefinitions: List[L#Definition],
         frameworkDefinitionsName: L#TermName
     ) = newRenderFrameworkDefinitions(pkgPath, pkgName, frameworkImports, frameworkDefinitions, frameworkDefinitionsName)
     def writePackageObject(
         dtoPackagePath: Path,
-        pkgComponents: List[String],
+        pkgComponents: NonEmptyList[String],
         dtoComponents: Option[NonEmptyList[String]],
         customImports: List[L#Import],
         packageObjectImports: List[L#Import],
@@ -290,27 +307,27 @@ abstract class LanguageTerms[L <: LA, F[_]] {
       )
     def writeProtocolDefinition(
         outputPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         definitions: List[String],
-        dtoComponents: List[String],
+        dtoComponents: NonEmptyList[String],
         imports: List[L#Import],
         protoImplicitName: Option[L#TermName],
         elem: StrictProtocolElems[L]
     ) = newWriteProtocolDefinition(outputPath, pkgName, definitions, dtoComponents, imports, protoImplicitName, elem)
     def writeClient(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[L#Import],
         frameworkImplicitNames: List[L#TermName],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         client: Client[L]
     ) = newWriteClient(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, client)
     def writeServer(
         pkgPath: Path,
-        pkgName: List[String],
+        pkgName: NonEmptyList[String],
         customImports: List[L#Import],
         frameworkImplicitNames: List[L#TermName],
-        dtoComponents: Option[List[String]],
+        dtoComponents: Option[NonEmptyList[String]],
         server: Server[L]
     )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, server)
     def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)

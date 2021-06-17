@@ -9,7 +9,7 @@ import com.twilio.guardrail.core.{ Mappish, Tracker }
 import com.twilio.guardrail.generators.syntax._
 import com.twilio.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import com.twilio.guardrail.languages.LA
-import com.twilio.guardrail.protocol.terms.{ ContentType, UrlencodedFormData }
+import com.twilio.guardrail.protocol.terms.{ ContentType, MultipartFormData, TextPlain, UrlencodedFormData }
 import com.twilio.guardrail.terms.SecurityRequirements.SecurityScopes
 import com.twilio.guardrail.terms.framework.FrameworkTerms
 import io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -49,8 +49,10 @@ case class SecurityRequirements(
     location: SecurityRequirements.Location
 )
 
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Tracker[Operation], securityRequirements: Option[SecurityRequirements]) {
-  override def toString(): String = s"RouteMeta(${path.unwrapTracker}, $method, ${operation.get.showNotNull} (${operation.showHistory}), $securityRequirements)"
+  override def toString(): String =
+    s"RouteMeta(${path.unwrapTracker}, $method, ${operation.unwrapTracker.showNotNull} (${operation.showHistory}), $securityRequirements)"
   object MediaType {
     def unapply(value: MediaType): Option[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
       val schema: Option[Schema[_]] = Option(value.getSchema)
@@ -64,16 +66,18 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       fields: Mappish[List, String, Tracker[MediaType]],
       required: Tracker[Option[Boolean]]
   ): Option[Tracker[Parameter]] = {
+    val formContentTypes = Set[ContentType](MultipartFormData, UrlencodedFormData)
     // FIXME: Just taking the head here isn't super great
     def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
       _.flatMap({
-        case (contentType, mediaType) =>
+        case (ContentType(contentType), mediaType) =>
           mediaType
-            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == "text/plain" => mt })(
+            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == TextPlain => mt })(
               x => Option(Tracker.cloneHistory(x, new StringSchema()))
             )
-            .orRefine({ case mt @ MediaType(schema, _, _) => schema })(_.indexedDistribute)
+            .orRefine({ case mt @ MediaType(schema, _, _) if !formContentTypes.contains(contentType) => schema })(_.indexedDistribute)
             .orRefineFallback(_ => None)
+        case _ => None
       }).headOption
     for {
       schema <- unifyEntries(fields.value)
@@ -82,19 +86,19 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
       val p = new Parameter
 
-      if (schema.get.getFormat == "binary") {
-        schema.get.setType("file")
-        schema.get.setFormat(null)
+      if (schema.unwrapTracker.getFormat == "binary") {
+        schema.unwrapTracker.setType("file")
+        schema.unwrapTracker.setFormat(null)
       }
 
       p.setIn("body")
       p.setName("body")
-      p.setSchema(schema.get)
-      required.get.foreach(x => p.setRequired(x))
+      p.setSchema(schema.unwrapTracker)
+      required.unwrapTracker.foreach(x => p.setRequired(x))
 
       schema
         .downField[Option[java.util.Map[String, Object]]]("extensions", _.getExtensions())
-        .get
+        .unwrapTracker
         .foreach(x => p.setExtensions(x))
       Tracker.cloneHistory(schema, p)
     }
@@ -116,18 +120,18 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     } yield {
       val p = new Parameter
 
-      if (schema.get.getFormat == "binary") {
-        schema.get.setType("file")
-        schema.get.setFormat(null)
+      if (schema.unwrapTracker.getFormat == "binary") {
+        schema.unwrapTracker.setType("file")
+        schema.unwrapTracker.setFormat(null)
       }
 
       p.setIn("body")
       p.setName("body")
-      p.set$ref(ref.get)
+      p.set$ref(ref.unwrapTracker)
 
-      required.get.foreach(x => p.setRequired(x))
+      required.unwrapTracker.foreach(x => p.setRequired(x))
 
-      extensions.get.foreach(x => p.setExtensions(x))
+      extensions.unwrapTracker.foreach(x => p.setExtensions(x))
       Tracker.cloneHistory(ref, p)
     }
 
@@ -136,11 +140,11 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
 
       p.setIn("body")
       p.setName("body")
-      p.set$ref(x.get)
+      p.set$ref(x.unwrapTracker)
 
-      required.get.foreach(x => p.setRequired(x))
+      required.unwrapTracker.foreach(x => p.setRequired(x))
 
-      extensions.get.foreach(x => p.setExtensions(x))
+      extensions.unwrapTracker.foreach(x => p.setExtensions(x))
 
       Tracker.cloneHistory(ref, p)
     }
@@ -162,30 +166,30 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
         case (_, mt) =>
           for {
             mtSchema <- mt.downField("schema", _.getSchema()).indexedCosequence.toList
-            requiredFields = mtSchema.downField("required", _.getRequired).get.toSet
+            requiredFields = mtSchema.downField("required", _.getRequired).unwrapTracker.toSet
             (name, schema) <- mtSchema.downField("properties", _.getProperties()).indexedCosequence.value
           } yield {
             val p = new Parameter
 
-            if (schema.downField("format", _.getFormat).get.contains("binary")) {
-              schema.get.setType("file")
-              schema.get.setFormat(null)
+            if (schema.downField("format", _.getFormat).unwrapTracker.contains("binary")) {
+              schema.unwrapTracker.setType("file")
+              schema.unwrapTracker.setFormat(null)
             }
 
             p.setName(name)
             p.setIn("formData")
-            p.setSchema(schema.get)
+            p.setSchema(schema.unwrapTracker)
 
             val isRequired: Boolean = if (requiredFields.nonEmpty) {
               requiredFields.contains(name)
             } else {
-              required.get.getOrElse(false)
+              required.unwrapTracker.getOrElse(false)
             }
 
             p.setRequired(isRequired)
             p.setExtensions(schema.unwrapTracker.getExtensions)
 
-            if (schema.downField("type", _.getType()).indexedCosequence.exists(_.get == "file") && contentTypes.contains(UrlencodedFormData)) {
+            if (schema.downField("type", _.getType()).indexedCosequence.exists(_.unwrapTracker == "file") && contentTypes.contains(UrlencodedFormData)) {
               p.setRequired(false)
             }
 
@@ -195,18 +199,18 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       .traverse[State[ParameterCountState, *], Tracker[Parameter]] { p =>
         State[ParameterCountState, Tracker[Parameter]]({
           case (maxCount, instances) =>
-            val updated = instances.updated(p.get.hashCode, instances.getOrElse(p.get.hashCode, 0) + 1)
-            ((Math.max(maxCount, updated.values.max), updated), p)
+            val updated = instances.updated(p.unwrapTracker.hashCode, instances.getOrElse(p.unwrapTracker.hashCode, 0) + 1)
+            ((Math.max(maxCount, updated.values.foldLeft(0)(Math.max)), updated), p)
         })
       }
       .runEmpty
       .value
 
-    ps.distinctBy(_.get).map { p =>
+    ps.distinctBy(_.unwrapTracker).map { p =>
       instances.get(p.hashCode).foreach { count =>
         // FIXME: Regardless of what the specification says, if a parameter does not appear across all media types, mark it as optional
         if (count != maxCount) {
-          p.get.setRequired(false)
+          p.unwrapTracker.setRequired(false)
         }
       }
       p
@@ -249,3 +253,18 @@ case class ApiKeySecurityScheme[L <: LA](name: String, in: SwSecurityScheme.In, 
 case class HttpSecurityScheme[L <: LA](authScheme: String, tpe: Option[L#Type])                      extends SecurityScheme[L]
 case class OpenIdConnectSecurityScheme[L <: LA](url: URI, tpe: Option[L#Type])                       extends SecurityScheme[L]
 case class OAuth2SecurityScheme[L <: LA](flows: OAuthFlows, tpe: Option[L#Type])                     extends SecurityScheme[L]
+
+sealed trait EnumSchema
+case class NumberEnumSchema(value: Schema[Number]) extends EnumSchema
+case class ObjectEnumSchema(value: Schema[Object]) extends EnumSchema
+case class StringEnumSchema(value: Schema[String]) extends EnumSchema
+
+sealed trait HeldEnum
+case class IntHeldEnum(value: List[Int])       extends HeldEnum
+case class LongHeldEnum(value: List[Long])     extends HeldEnum
+case class StringHeldEnum(value: List[String]) extends HeldEnum
+
+sealed trait RenderedEnum[L <: LA]
+case class RenderedStringEnum[L <: LA](values: List[(String, L#TermName, L#TermSelect)]) extends RenderedEnum[L]
+case class RenderedIntEnum[L <: LA](values: List[(Int, L#TermName, L#TermSelect)])       extends RenderedEnum[L]
+case class RenderedLongEnum[L <: LA](values: List[(Long, L#TermName, L#TermSelect)])     extends RenderedEnum[L]

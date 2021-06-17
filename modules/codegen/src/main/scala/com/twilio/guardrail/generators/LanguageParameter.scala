@@ -62,7 +62,7 @@ object LanguageParameter {
 
     def paramMeta(param: Tracker[Parameter]): F[SwaggerUtil.ResolvedType[L]] = {
       def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): F[Option[L#Term]] =
-        (_type, fmt.get) match {
+        (_type, fmt.unwrapTracker) match {
           case ("string", None) =>
             Default(p).extract[String].traverse(litString(_))
           case ("number", Some("float")) =>
@@ -84,16 +84,18 @@ object LanguageParameter {
           schema = param.downField("schema", _.getSchema)
           fmt    = schema.flatDownField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- schema.get.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
-          customTypeName = customSchemaTypeName.orElse(customParamTypeName)
+          customSchemaTypeName <- schema.unwrapTracker.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
+          customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
           res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
-            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.get))
+            .mapN(SwaggerUtil.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
         } yield res
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
       param
-        .refine[F[SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(r => getRefParameterRef(r).map(_.get).map(SwaggerUtil.Deferred(_)))
+        .refine[F[SwaggerUtil.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(
+          r => getRefParameterRef(r).map(_.unwrapTracker).map(SwaggerUtil.Deferred(_))
+        )
         .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(r => getSimpleRef(r.downField("schema", _.getSchema)).map(SwaggerUtil.Deferred(_)))
         .orRefine({ case x: Parameter if x.isInBody => x })(
           x =>
@@ -113,7 +115,7 @@ object LanguageParameter {
       meta                                                                     <- paramMeta(parameter)
       SwaggerUtil.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- SwaggerUtil.ResolvedType.resolve[L, F](meta, protocolElems)
 
-      required = Option[java.lang.Boolean](parameter.get.getRequired()).fold(false)(identity)
+      required = parameter.downField("required", _.getRequired()).map(_.getOrElse(false)).unwrapTracker
       declType <- if (!required) {
         liftOptionalType(paramType)
       } else {
@@ -140,7 +142,7 @@ object LanguageParameter {
         enumDefaultValue.pure[F]
       }
 
-      name <- getParameterName(parameter.get)
+      name <- getParameterName(parameter)
 
       paramName     <- formatMethodArgName(name)
       paramTermName <- pureTermName(paramName)
@@ -150,14 +152,14 @@ object LanguageParameter {
       isFileType <- typesEqual(paramType, ftpe)
     } yield {
       new LanguageParameter[L](
-        Option(parameter.get.getIn),
+        parameter.downField("in", _.getIn()).unwrapTracker,
         param,
         paramTermName,
         RawParameterName(name),
         declType,
         RawParameterType(rawType, rawFormat),
         required,
-        FileHashAlgorithm(parameter.get),
+        FileHashAlgorithm(parameter),
         isFileType
       )
     })

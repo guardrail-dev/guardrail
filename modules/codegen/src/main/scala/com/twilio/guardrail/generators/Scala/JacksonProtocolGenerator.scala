@@ -15,7 +15,6 @@ import scala.meta._
 object JacksonProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.EnumProtocolTermInterp
-    import baseInterp.MonadF
     baseInterp.copy(
       newRenderClass = (className, tpe, elems) =>
         for {
@@ -26,18 +25,29 @@ object JacksonProtocolGenerator {
               mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
             ) ++ renderedClass.mods
         ),
-      newEncodeEnum = className =>
+      newEncodeEnum = { (className, tpe) =>
+        val writeMethod = tpe match {
+          case t"Int"    => q"writeNumber"
+          case t"Long"   => q"writeNumber"
+          case t"String" => q"writeString"
+        }
         Target.pure(
           Some(
             q"""
          class ${Type.Name(className + "Serializer")} extends com.fasterxml.jackson.databind.JsonSerializer[${Type.Name(className)}] {
            override def serialize(value: ${Type
-              .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.writeString(value.value)
+              .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
          }
        """
           )
-        ),
-      newDecodeEnum = className =>
+        )
+      },
+      newDecodeEnum = { (className, tpe) =>
+        val getter = tpe match {
+          case t"String" => q"getText"
+          case t"Int"    => q"getIntValue"
+          case t"Long"   => q"getLongValue"
+        }
         Target.pure(
           Some(
             q"""
@@ -45,15 +55,17 @@ object JacksonProtocolGenerator {
            override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
               className
             )} =
-            ${Term.Select(Term.Name(className), Term.Name("parse"))}(p.getText)
-              .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.getText}' for " + ${Lit.String(className)}) })
+            ${Term.Name(className)}.from(p.${getter})
+              .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.${getter}}' for " + ${Lit
+              .String(className)}) })
          }
        """
           )
-        ),
-      newRenderStaticDefns = (className, members, accessors, encoder, decoder) =>
+        )
+      },
+      newRenderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
         for {
-          renderedStaticDefns <- baseInterp.renderStaticDefns(className, members, accessors, encoder, decoder)
+          renderedStaticDefns <- baseInterp.renderStaticDefns(className, elems, members, accessors, encoder, decoder)
           classType = Type.Name(className)
         } yield renderedStaticDefns.copy(
           definitions = renderedStaticDefns.definitions ++ List(
@@ -233,7 +245,6 @@ object JacksonProtocolGenerator {
 
   def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
-    import baseInterp.MonadF
     baseInterp.copy(
       newProtocolImports = () =>
         Target.pure(
@@ -562,7 +573,6 @@ object JacksonProtocolGenerator {
 
   def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.PolyProtocolTermInterp
-    import baseInterp.MonadF
     baseInterp.copy(
       newRenderSealedTrait = (className, params, discriminator, parents, children) =>
         for {

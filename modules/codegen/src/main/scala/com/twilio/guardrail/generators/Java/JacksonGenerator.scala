@@ -34,10 +34,10 @@ import com.twilio.guardrail.generators.helpers.JacksonHelpers
 import com.twilio.guardrail.generators.syntax.Java._
 import com.twilio.guardrail.languages.JavaLanguage
 import com.twilio.guardrail.protocol.terms.protocol._
-import com.twilio.guardrail.terms.CollectionsLibTerms
+import com.twilio.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import com.twilio.guardrail.terms.collections.CollectionsAbstraction
-import scala.collection.JavaConverters._
 
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 object JacksonGenerator {
   private val BUILDER_TYPE        = StaticJavaParser.parseClassOrInterfaceType("Builder")
   private val BIG_INTEGER_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigInteger")
@@ -146,52 +146,61 @@ object JacksonGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractEnum(swagger: Schema[_]) = {
-      val enumEntries: Option[List[String]] = swagger match {
-        case x: StringSchema =>
-          Option[java.util.List[String]](x.getEnum()).map(_.asScala.toList)
-        case x =>
-          Option[java.util.List[_]](x.getEnum()).map(_.asScala.toList.map(_.toString()))
-      }
-      Target.pure(Either.fromOption(enumEntries, "Model has no enumerations"))
-    }
 
     def renderMembers(
         clsName: String,
-        elems: List[(String, com.github.javaparser.ast.expr.Name, com.github.javaparser.ast.expr.Name)]
+        elems: RenderedEnum[JavaLanguage]
     ) =
       Target.pure(None)
 
-    def encodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    def encodeEnum(clsName: String, tpe: com.github.javaparser.ast.`type`.Type): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
-    def decodeEnum(clsName: String): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    def decodeEnum(clsName: String, tpe: com.github.javaparser.ast.`type`.Type): Target[Option[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
       Target.pure(None)
 
     def renderClass(
         clsName: String,
         tpe: com.github.javaparser.ast.`type`.Type,
-        elems: List[(String, com.github.javaparser.ast.expr.Name, com.github.javaparser.ast.expr.Name)]
+        elems: RenderedEnum[JavaLanguage]
     ) = {
       val enumType = StaticJavaParser.parseType(clsName)
 
-      val enumDefns = elems.map {
-        case (value, termName, _) =>
+      val fields = elems match {
+        case RenderedStringEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              (termName.getIdentifier, new StringLiteralExpr(value))
+          }
+        case RenderedIntEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              (termName.getIdentifier, new IntegerLiteralExpr(value.toString()))
+          }
+        case RenderedLongEnum(xs) =>
+          xs.map {
+            case (value, termName, _) =>
+              (termName.getIdentifier, new LongLiteralExpr(s"${value}l"))
+          }
+      }
+
+      val enumDefns = fields.map {
+        case (identifier, expr) =>
           new EnumConstantDeclaration(
             new NodeList(),
-            new SimpleName(termName.getIdentifier),
-            new NodeList(new StringLiteralExpr(value)),
+            new SimpleName(identifier),
+            new NodeList(expr),
             new NodeList()
           )
       }
 
       val nameField = new FieldDeclaration(
         new NodeList(privateModifier, finalModifier),
-        new VariableDeclarator(STRING_TYPE, "name")
+        new VariableDeclarator(tpe, "name")
       )
 
       val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-        .addParameter(new Parameter(new NodeList(finalModifier), STRING_TYPE, new SimpleName("name")))
+        .addParameter(new Parameter(new NodeList(finalModifier), tpe, new SimpleName("name")))
         .setBody(
           new BlockStmt(
             new NodeList(
@@ -214,7 +223,7 @@ object JacksonGenerator {
         .setBody(
           new BlockStmt(
             new NodeList(
-              new ReturnStmt(new FieldAccessExpr(new ThisExpr, "name"))
+              new ReturnStmt(new MethodCallExpr("this.name.toString"))
             )
           )
         )
@@ -234,7 +243,7 @@ object JacksonGenerator {
                 new BlockStmt(
                   new NodeList(
                     new IfStmt(
-                      new MethodCallExpr("value.name.equals", new NameExpr("name")),
+                      new MethodCallExpr("value.name.toString().equals", new NameExpr("name")),
                       new ReturnStmt(new NameExpr("value")),
                       null
                     )
@@ -312,6 +321,7 @@ object JacksonGenerator {
 
     def renderStaticDefns(
         clsName: String,
+        tpe: com.github.javaparser.ast.`type`.Type,
         members: Option[Nothing],
         accessors: List[com.github.javaparser.ast.expr.Name],
         encoder: Option[com.github.javaparser.ast.body.BodyDeclaration[_ <: BodyDeclaration[_]]],
@@ -795,7 +805,7 @@ object JacksonGenerator {
             )
         )
         .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.get.getClass()}, unsure what to do here (${comp.showHistory})")
+          comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
         )
         .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
@@ -807,20 +817,22 @@ object JacksonGenerator {
     )(
         name: String,
         fieldName: String,
-        property: Schema[_],
+        property: Tracker[Schema[_]],
         meta: SwaggerUtil.ResolvedType[JavaLanguage],
         requirement: PropertyRequirement,
         isCustomType: Boolean,
         defaultValue: Option[com.github.javaparser.ast.Node]
     ) =
       Target.log.function("transformProperty") {
-        val readOnlyKey = Option(name).filter(_ => Option(property.getReadOnly).contains(true))
-        val emptyToNull = (property match {
-          case d: DateSchema      => EmptyValueIsNull(d)
-          case dt: DateTimeSchema => EmptyValueIsNull(dt)
-          case s: StringSchema    => EmptyValueIsNull(s)
-          case _                  => None
-        }).getOrElse(EmptyIsEmpty)
+        val readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly).unwrapTracker.contains(true))
+        val emptyToNull =
+          property
+            .refine({ case d: DateSchema => d })(d => EmptyValueIsNull(d))
+            .orRefine({ case dt: DateTimeSchema => dt })(dt => EmptyValueIsNull(dt))
+            .orRefine({ case s: StringSchema => s })(s => EmptyValueIsNull(s))
+            .toOption
+            .flatten
+            .getOrElse(EmptyIsEmpty)
         val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
         for {
           tpeClassDep <- meta match {
@@ -847,7 +859,7 @@ object JacksonGenerator {
           }
           (tpe, classDep) = tpeClassDep
 
-          rawType = RawParameterType(Option(property.getType), Option(property.getFormat))
+          rawType = RawParameterType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
           expressionDefaultValue <- (defaultValue match {
             case Some(e: Expression) => Target.pure(Some(e))
@@ -1092,7 +1104,7 @@ object JacksonGenerator {
               .flatMap({ elem =>
                 definitions
                   .collectFirst({
-                    case (clsName, e) if elem.downField("$ref", _.get$ref()).exists(_.get.endsWith(s"/$clsName")) =>
+                    case (clsName, e) if elem.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName")) =>
                       (clsName, e, List.empty) :: allParents(e)
                   })
                   .getOrElse(List.empty)
