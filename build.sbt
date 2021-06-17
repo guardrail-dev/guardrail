@@ -19,7 +19,7 @@ val akkaHttpVersion        = "10.2.4"
 val catsVersion            = "2.5.0"
 val catsEffectVersion      = "2.5.1"
 val circeVersion           = "0.13.0"
-val http4sVersion          = "0.21.22"
+val http4sVersion          = "0.21.24"
 val scalacheckVersion      = "1.15.3"
 val scalatestVersion       = "3.2.9"
 val scalatestPlusVersion   = "3.1.0.0-RC2"
@@ -34,7 +34,7 @@ val jerseyVersion          = "2.25.1"
 val kindProjectorVersion   = "0.13.0"
 val jaxbApiVersion         = "2.3.1"
 val javaxAnnotationVersion = "1.3.2"
-val springBootVersion      = "2.4.7"
+val springBootVersion      = "2.5.1"
 val jacksonVersion         = "2.12.1"
 val hibernateVersion       = "6.2.0.Final"
 val javaxElVersion         = "3.0.0"
@@ -341,8 +341,8 @@ lazy val codegen = (project in file("modules/codegen"))
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.26",
     ) ++ eclipseFormatterDependencies ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.21",
-      "org.tpolecat"                %% "atto-core"                    % "0.9.3",
+      "org.scalameta"               %% "scalameta"                    % "4.4.15",
+      "org.tpolecat"                %% "atto-core"                    % "0.9.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
