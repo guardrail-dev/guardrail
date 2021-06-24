@@ -129,7 +129,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeCat: _root_.io.circe.Decoder[Cat] = new _root_.io.circe.Decoder[Cat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Cat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]) yield Cat(v0, v1) }
-          sealed abstract class HuntingSkill(val value: String) extends _root_.scala.Product with _root_.java.io.Serializable { override def toString: String = value.toString }
+          sealed abstract class HuntingSkill(val value: String) extends _root_.scala.Product with _root_.scala.Serializable { override def toString: String = value.toString }
           object HuntingSkill {
             object members {
               case object Clueless extends HuntingSkill("clueless")
