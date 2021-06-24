@@ -89,8 +89,8 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val expectedRequestEncoder =
       q"""
         implicit val encodeRequest: _root_.io.circe.Encoder.AsObject[Request] = {
-          val readOnlyKeys = Set[String]()
-          _root_.io.circe.Encoder.AsObject.instance[Request](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state", a.state.asJson), ("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
+          _root_.io.circe.Encoder.AsObject.instance[Request](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("state", a.state.asJson), ("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
@@ -111,8 +111,8 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val expectedFieldsEncoder =
       q"""
         implicit val encodeRequestFields: _root_.io.circe.Encoder.AsObject[RequestFields] = {
-          val readOnlyKeys = Set[String]()
-          _root_.io.circe.Encoder.AsObject.instance[RequestFields](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state", a.state.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
+          _root_.io.circe.Encoder.AsObject.instance[RequestFields](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("state", a.state.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedFieldsDecoder =
@@ -139,8 +139,8 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val expectedRequestEncoder =
       q"""
         implicit val encodeRequest2: _root_.io.circe.Encoder.AsObject[Request2] = {
-          val readOnlyKeys = Set[String]()
-          _root_.io.circe.Encoder.AsObject.instance[Request2](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
+          _root_.io.circe.Encoder.AsObject.instance[Request2](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
@@ -161,8 +161,8 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val expectedFieldsEncoder =
       q"""
         implicit val encodeRequestFields2: _root_.io.circe.Encoder.AsObject[RequestFields2] = {
-          val readOnlyKeys = Set[String]()
-          _root_.io.circe.Encoder.AsObject.instance[RequestFields2](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state2", a.state2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
+          _root_.io.circe.Encoder.AsObject.instance[RequestFields2](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("state2", a.state2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedFieldsDecoder =
@@ -188,8 +188,8 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val expectedRequestEncoder =
       q"""
         implicit val encodeRequest3: _root_.io.circe.Encoder.AsObject[Request3] = {
-          val readOnlyKeys = Set[String]()
-          _root_.io.circe.Encoder.AsObject.instance[Request3](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state", a.state.asJson), ("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
+          _root_.io.circe.Encoder.AsObject.instance[Request3](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("state", a.state.asJson), ("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =

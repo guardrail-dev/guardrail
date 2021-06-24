@@ -77,11 +77,11 @@ class EnumTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val V1: Bar = members.V1
       val V2: Bar = members.V2
       val ILikeSpaces: Bar = members.ILikeSpaces
-      val values = Vector(V1, V2, ILikeSpaces)
+      val values = _root_.scala.Vector(V1, V2, ILikeSpaces)
       implicit val encodeBar: _root_.io.circe.Encoder[Bar] = _root_.io.circe.Encoder[String].contramap(_.value)
       implicit val decodeBar:_root_.io.circe.Decoder[Bar] =_root_.io.circe.Decoder[String].emap(value => from(value).toRight(s"$$value not a member of Bar"))
       implicit val showBar: Show[Bar] = Show[String].contramap[Bar](_.value)
-      def from(value: String): Option[Bar] = values.find(_.value == value)
+      def from(value: String): _root_.scala.Option[Bar] = values.find(_.value == value)
       implicit val order: cats.Order[Bar] = cats.Order.by[Bar, Int](values.indexOf)
     }
     """

@@ -152,8 +152,8 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val companion  = q"""
       object DashyClass {
         implicit val encodeDashyClass: _root_.io.circe.Encoder.AsObject[DashyClass] = {
-          val readOnlyKeys = Set[String]()
-          _root_.io.circe.Encoder.AsObject.instance[DashyClass](a =>  _root_.io.circe.JsonObject.fromIterable(Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
+          _root_.io.circe.Encoder.AsObject.instance[DashyClass](a =>  _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
         implicit val decodeDashyClass: _root_.io.circe.Decoder[DashyClass] = new _root_.io.circe.Decoder[DashyClass] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[DashyClass] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield DashyClass(v0) }
       }
@@ -197,11 +197,11 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val DashyValueA: DashyEnum = members.DashyValueA
       val DashyValueB: DashyEnum = members.DashyValueB
       val DashyValueC: DashyEnum = members.DashyValueC
-      val values = Vector(DashyValueA, DashyValueB, DashyValueC)
+      val values = _root_.scala.Vector(DashyValueA, DashyValueB, DashyValueC)
       implicit val encodeDashyEnum: _root_.io.circe.Encoder[DashyEnum] = _root_.io.circe.Encoder[String].contramap(_.value)
       implicit val decodeDashyEnum:_root_.io.circe.Decoder[DashyEnum] =_root_.io.circe.Decoder[String].emap(value => from(value).toRight(s"$$value not a member of DashyEnum"))
       implicit val showDashyEnum: Show[DashyEnum] = Show[String].contramap[DashyEnum](_.value)
-      def from(value: String): Option[DashyEnum] = values.find(_.value == value)
+      def from(value: String): _root_.scala.Option[DashyEnum] = values.find(_.value == value)
       implicit val order: cats.Order[DashyEnum] = cats.Order.by[DashyEnum, Int](values.indexOf)
     }
     """
@@ -215,7 +215,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     cmp.toString should include("case object DashyValueB")
     cmp.toString should include("encodeDashyEnum")
     cmp.toString should include("decodeDashyEnum")
-    cmp.toString should include("def from(value: String): Option[DashyEnum]")
+    cmp.toString should include("def from(value: String): _root_.scala.Option[DashyEnum]")
     cmp.toString should include("DashyValueC")
     cmp.toString shouldNot include(".dashy-")
     cmp.toString shouldNot include("[dashy-")

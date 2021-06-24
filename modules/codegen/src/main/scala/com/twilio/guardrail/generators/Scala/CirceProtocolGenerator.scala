@@ -101,7 +101,7 @@ object CirceProtocolGenerator {
           q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
         })
         .toList
-      val values: Defn.Val = q"val values = Vector(..$accessors)"
+      val values: Defn.Val = q"val values = _root_.scala.Vector(..$accessors)"
       val implicits: List[Defn.Val] = List(
         q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${longType}] = Show[${tpe}].contramap[${longType}](_.value)"
       )
@@ -114,7 +114,7 @@ object CirceProtocolGenerator {
                 List(Some(values), encoder, decoder).flatten ++
                 implicits ++
                 List(
-                  q"def from(value: ${tpe}): Option[${longType}] = values.find(_.value == value)",
+                  q"def from(value: ${tpe}): _root_.scala.Option[${longType}] = values.find(_.value == value)",
                   q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
                 )
         )
@@ -194,11 +194,11 @@ object CirceProtocolGenerator {
             case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"${containerTpe.getOrElse(t"Vector")}[$innerType]", Option.empty)
+              (t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]", Option.empty)
             case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
               val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-              (t"${customTpe.getOrElse(t"Map")}[String, $innerType]", Option.empty)
+              (t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]", Option.empty)
           }
           presence     <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
           presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
@@ -354,7 +354,7 @@ object CirceProtocolGenerator {
           val optional = allFields.collect {
             case Left(field) => field
           }
-          val simpleCase = q"Vector(..${pairs})"
+          val simpleCase = q"_root_.scala.Vector(..${pairs})"
           val arg = optional.foldLeft[Term](simpleCase) { (acc, field) =>
             q"$acc ++ $field"
           }
@@ -366,7 +366,7 @@ object CirceProtocolGenerator {
         }
       Target.pure(encVal.map(encVal => q"""
             implicit val ${suffixClsName("encode", clsName)}: ${circeVersion.encoderObject}[${Type.Name(clsName)}] = {
-              val readOnlyKeys = Set[String](..${readOnlyKeys.map(Lit.String(_))})
+              val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String](..${readOnlyKeys.map(Lit.String(_))})
               $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }
           """))
@@ -438,7 +438,7 @@ object CirceProtocolGenerator {
                               .asObject
                               .filter(!_.contains($name))
                               .fold(${emptyToNull(q"c.downField($name)")}.as[${tpe}].map(x => ${present(q"x")})) { _ =>
-                                Right($absent)
+                                _root_.scala.Right($absent)
                               }
                           )($t)
                         """
@@ -527,12 +527,12 @@ object CirceProtocolGenerator {
             Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
           case SwaggerUtil.DeferredArray(tpeName, containerTpe) =>
             Target.fromOption(
-              lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"Vector")}[${tpe}]"),
+              lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[${tpe}]"),
               UserError(s"Unresolved reference ${tpeName}")
             )
           case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
             Target.fromOption(
-              lookupTypeName(tpeName, concreteTypes)(tpe => t"Vector[${customTpe.getOrElse(t"Map")}[String, ${tpe}]]"),
+              lookupTypeName(tpeName, concreteTypes)(tpe => t"_root_.scala.Vector[${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, ${tpe}]]"),
               UserError(s"Unresolved reference ${tpeName}")
             )
         }
@@ -691,7 +691,7 @@ object CirceProtocolGenerator {
                  discriminatorCursor.as[String].flatMap {
                    ..case $childrenCases;
                    case tpe =>
-                     Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit
+                     _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit
           .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
                  }
             })"""
