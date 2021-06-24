@@ -567,11 +567,7 @@ object CirceProtocolGenerator {
     }
 
     def packageObjectImports() =
-      Target.pure(
-        List(
-          q"import java.time._"
-        )
-      )
+      Target.pure(List.empty)
 
     def generateSupportDefinitions() = {
       val presenceTrait =
@@ -612,20 +608,20 @@ object CirceProtocolGenerator {
     def packageObjectContents() =
       Target.pure(
         List(
-          q"implicit val guardrailDecodeInstant: _root_.io.circe.Decoder[Instant] = _root_.io.circe.Decoder[Instant].or(_root_.io.circe.Decoder[Long].map(Instant.ofEpochMilli))",
-          q"implicit val guardrailDecodeLocalDate: _root_.io.circe.Decoder[LocalDate] = _root_.io.circe.Decoder[LocalDate].or(_root_.io.circe.Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate))",
-          q"implicit val guardrailDecodeLocalDateTime: _root_.io.circe.Decoder[LocalDateTime] = _root_.io.circe.Decoder[LocalDateTime]",
-          q"implicit val guardrailDecodeLocalTime: _root_.io.circe.Decoder[LocalTime] = _root_.io.circe.Decoder[LocalTime]",
-          q"implicit val guardrailDecodeOffsetDateTime: _root_.io.circe.Decoder[OffsetDateTime] = _root_.io.circe.Decoder[OffsetDateTime].or(_root_.io.circe.Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
-          q"implicit val guardrailDecodeZonedDateTime: _root_.io.circe.Decoder[ZonedDateTime] = _root_.io.circe.Decoder[ZonedDateTime]",
-          q"implicit val guardrailDecodeBase64String: _root_.io.circe.Decoder[Base64String] = _root_.io.circe.Decoder[String].emapTry(v => scala.util.Try(java.util.Base64.getDecoder.decode(v))).map(new Base64String(_))",
-          q"implicit val guardrailEncodeInstant: _root_.io.circe.Encoder[Instant] = _root_.io.circe.Encoder[Instant]",
-          q"implicit val guardrailEncodeLocalDate: _root_.io.circe.Encoder[LocalDate] = _root_.io.circe.Encoder[LocalDate]",
-          q"implicit val guardrailEncodeLocalDateTime: _root_.io.circe.Encoder[LocalDateTime] = _root_.io.circe.Encoder[LocalDateTime]",
-          q"implicit val guardrailEncodeLocalTime: _root_.io.circe.Encoder[LocalTime] = _root_.io.circe.Encoder[LocalTime]",
-          q"implicit val guardrailEncodeOffsetDateTime: _root_.io.circe.Encoder[OffsetDateTime] = _root_.io.circe.Encoder[OffsetDateTime]",
-          q"implicit val guardrailEncodeZonedDateTime: _root_.io.circe.Encoder[ZonedDateTime] = _root_.io.circe.Encoder[ZonedDateTime]",
-          q"implicit val guardrailEncodeBase64String: _root_.io.circe.Encoder[Base64String] = _root_.io.circe.Encoder[String].contramap[Base64String](v => new String(java.util.Base64.getEncoder.encode(v.data)))"
+          q"implicit val guardrailDecodeInstant: _root_.io.circe.Decoder[java.time.Instant] = _root_.io.circe.Decoder[java.time.Instant].or(_root_.io.circe.Decoder[_root_.scala.Long].map(java.time.Instant.ofEpochMilli))",
+          q"implicit val guardrailDecodeLocalDate: _root_.io.circe.Decoder[java.time.LocalDate] = _root_.io.circe.Decoder[java.time.LocalDate].or(_root_.io.circe.Decoder[java.time.Instant].map(_.atZone(java.time.ZoneOffset.UTC).toLocalDate))",
+          q"implicit val guardrailDecodeLocalDateTime: _root_.io.circe.Decoder[java.time.LocalDateTime] = _root_.io.circe.Decoder[java.time.LocalDateTime]",
+          q"implicit val guardrailDecodeLocalTime: _root_.io.circe.Decoder[java.time.LocalTime] = _root_.io.circe.Decoder[java.time.LocalTime]",
+          q"implicit val guardrailDecodeOffsetDateTime: _root_.io.circe.Decoder[java.time.OffsetDateTime] = _root_.io.circe.Decoder[java.time.OffsetDateTime].or(_root_.io.circe.Decoder[java.time.Instant].map(_.atZone(java.time.ZoneOffset.UTC).toOffsetDateTime))",
+          q"implicit val guardrailDecodeZonedDateTime: _root_.io.circe.Decoder[java.time.ZonedDateTime] = _root_.io.circe.Decoder[java.time.ZonedDateTime]",
+          q"implicit val guardrailDecodeBase64String: _root_.io.circe.Decoder[Base64String] = _root_.io.circe.Decoder[_root_.scala.Predef.String].emapTry(v => scala.util.Try(java.util.Base64.getDecoder.decode(v))).map(new Base64String(_))",
+          q"implicit val guardrailEncodeInstant: _root_.io.circe.Encoder[java.time.Instant] = _root_.io.circe.Encoder[java.time.Instant]",
+          q"implicit val guardrailEncodeLocalDate: _root_.io.circe.Encoder[java.time.LocalDate] = _root_.io.circe.Encoder[java.time.LocalDate]",
+          q"implicit val guardrailEncodeLocalDateTime: _root_.io.circe.Encoder[java.time.LocalDateTime] = _root_.io.circe.Encoder[java.time.LocalDateTime]",
+          q"implicit val guardrailEncodeLocalTime: _root_.io.circe.Encoder[java.time.LocalTime] = _root_.io.circe.Encoder[java.time.LocalTime]",
+          q"implicit val guardrailEncodeOffsetDateTime: _root_.io.circe.Encoder[java.time.OffsetDateTime] = _root_.io.circe.Encoder[java.time.OffsetDateTime]",
+          q"implicit val guardrailEncodeZonedDateTime: _root_.io.circe.Encoder[java.time.ZonedDateTime] = _root_.io.circe.Encoder[java.time.ZonedDateTime]",
+          q"implicit val guardrailEncodeBase64String: _root_.io.circe.Encoder[Base64String] = _root_.io.circe.Encoder[_root_.scala.Predef.String].contramap[Base64String](v => new _root_.scala.Predef.String(java.util.Base64.getEncoder.encode(v.data)))"
         )
       )
 
