@@ -532,7 +532,9 @@ object CirceProtocolGenerator {
             )
           case SwaggerUtil.DeferredMap(tpeName, customTpe) =>
             Target.fromOption(
-              lookupTypeName(tpeName, concreteTypes)(tpe => t"_root_.scala.Vector[${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, ${tpe}]]"),
+              lookupTypeName(tpeName, concreteTypes)(
+                tpe => t"_root_.scala.Vector[${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, ${tpe}]]"
+              ),
               UserError(s"Unresolved reference ${tpeName}")
             )
         }
