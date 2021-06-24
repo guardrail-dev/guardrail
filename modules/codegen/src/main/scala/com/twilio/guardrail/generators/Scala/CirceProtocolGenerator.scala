@@ -69,14 +69,14 @@ object CirceProtocolGenerator {
 
     def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
-            implicit val ${suffixClsName("encode", clsName)}: Encoder[${Type.Name(clsName)}] =
-              Encoder[${tpe}].contramap(_.value)
+            implicit val ${suffixClsName("encode", clsName)}: _root_.io.circe.Encoder[${Type.Name(clsName)}] =
+              _root_.io.circe.Encoder[${tpe}].contramap(_.value)
           """))
 
     def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
-        implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] =
-          Decoder[${tpe}].emap(value => from(value).toRight(${Term
+        implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] =
+          _root_.io.circe.Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
       """))
 
@@ -300,7 +300,7 @@ object CirceProtocolGenerator {
           val List(field) = fields
           Option(
             q"""
-              Encoder.forProduct1(${name})((o: ${Type.Name(clsName)}) => o.${field})
+              _root_.io.circe.Encoder.forProduct1(${name})((o: ${Type.Name(clsName)}) => o.${field})
             """
           )
         } else if (paramCount >= 2 && paramCount <= 22) {
@@ -320,7 +320,7 @@ object CirceProtocolGenerator {
           )
           Option(
             q"""
-              Encoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${unapply})
+              _root_.io.circe.Encoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${unapply})
             """
           )
         } else */ {
@@ -360,7 +360,7 @@ object CirceProtocolGenerator {
           }
           Option(
             q"""
-                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => JsonObject.fromIterable($arg))
+                ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => _root_.io.circe.JsonObject.fromIterable($arg))
               """
           )
         }
@@ -397,7 +397,7 @@ object CirceProtocolGenerator {
             Target.pure(
               Option(
                 q"""
-                  Decoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${Term
+                  _root_.io.circe.Decoder.${Term.Name(s"forProduct${paramCount}")}(..${names})(${Term
                   .Name(clsName)}.apply _)
                 """
               )
@@ -417,7 +417,7 @@ object CirceProtocolGenerator {
                     val name = Lit.String(param.name.value)
 
                     val emptyToNull: Term => Term = if (param.emptyToNull == EmptyIsNull) { t =>
-                      q"$t.withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) Json.Null else j))"
+                      q"$t.withFocus(j => j.asString.fold(j)(s => if(s.isEmpty) _root_.io.circe.Json.Null else j))"
                     } else identity _
 
                     val decodeField: Type => NonEmptyVector[Term => Term] = { tpe =>
@@ -432,7 +432,7 @@ object CirceProtocolGenerator {
                       tpe => (present, absent) =>
                         NonEmptyVector.of[Term => Term](
                           t => q"""
-                          ((c: HCursor) =>
+                          ((c: _root_.io.circe.HCursor) =>
                             c
                               .value
                               .asObject
@@ -451,7 +451,7 @@ object CirceProtocolGenerator {
                       case PropertyRequirement.OptionalLegacy =>
                         decodeField(tpe)
                       case PropertyRequirement.RequiredNullable =>
-                        decodeField(t"Json") :+ (
+                        decodeField(t"_root_.io.circe.Json") :+ (
                                 t => q"$t.flatMap(_.as[${tpe}])"
                             )
                       case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
@@ -480,8 +480,8 @@ object CirceProtocolGenerator {
                 val (terms, enumerators) = pairs.unzip
                 Option(
                   q"""
-                    new Decoder[${Type.Name(clsName)}] {
-                      final def apply(c: HCursor): Decoder.Result[${Type.Name(clsName)}] =
+                    new _root_.io.circe.Decoder[${Type.Name(clsName)}] {
+                      final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[${Type.Name(clsName)}] =
                         for {
                           ..${enumerators}
                         } yield ${Term.Name(clsName)}(..${terms})
@@ -492,7 +492,7 @@ object CirceProtocolGenerator {
           }
       } yield {
         decVal.map(decVal => q"""
-              implicit val ${suffixClsName("decode", clsName)}: Decoder[${Type.Name(clsName)}] = $decVal
+              implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = $decVal
             """)
       }
     }
@@ -612,20 +612,20 @@ object CirceProtocolGenerator {
     def packageObjectContents() =
       Target.pure(
         List(
-          q"implicit val guardrailDecodeInstant: Decoder[Instant] = Decoder[Instant].or(Decoder[Long].map(Instant.ofEpochMilli))",
-          q"implicit val guardrailDecodeLocalDate: Decoder[LocalDate] = Decoder[LocalDate].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate))",
-          q"implicit val guardrailDecodeLocalDateTime: Decoder[LocalDateTime] = Decoder[LocalDateTime]",
-          q"implicit val guardrailDecodeLocalTime: Decoder[LocalTime] = Decoder[LocalTime]",
-          q"implicit val guardrailDecodeOffsetDateTime: Decoder[OffsetDateTime] = Decoder[OffsetDateTime].or(Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
-          q"implicit val guardrailDecodeZonedDateTime: Decoder[ZonedDateTime] = Decoder[ZonedDateTime]",
-          q"implicit val guardrailDecodeBase64String: Decoder[Base64String] = Decoder[String].emapTry(v => scala.util.Try(java.util.Base64.getDecoder.decode(v))).map(new Base64String(_))",
-          q"implicit val guardrailEncodeInstant: Encoder[Instant] = Encoder[Instant]",
-          q"implicit val guardrailEncodeLocalDate: Encoder[LocalDate] = Encoder[LocalDate]",
-          q"implicit val guardrailEncodeLocalDateTime: Encoder[LocalDateTime] = Encoder[LocalDateTime]",
-          q"implicit val guardrailEncodeLocalTime: Encoder[LocalTime] = Encoder[LocalTime]",
-          q"implicit val guardrailEncodeOffsetDateTime: Encoder[OffsetDateTime] = Encoder[OffsetDateTime]",
-          q"implicit val guardrailEncodeZonedDateTime: Encoder[ZonedDateTime] = Encoder[ZonedDateTime]",
-          q"implicit val guardrailEncodeBase64String: Encoder[Base64String] = Encoder[String].contramap[Base64String](v => new String(java.util.Base64.getEncoder.encode(v.data)))"
+          q"implicit val guardrailDecodeInstant: _root_.io.circe.Decoder[Instant] = _root_.io.circe.Decoder[Instant].or(_root_.io.circe.Decoder[Long].map(Instant.ofEpochMilli))",
+          q"implicit val guardrailDecodeLocalDate: _root_.io.circe.Decoder[LocalDate] = _root_.io.circe.Decoder[LocalDate].or(_root_.io.circe.Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate))",
+          q"implicit val guardrailDecodeLocalDateTime: _root_.io.circe.Decoder[LocalDateTime] = _root_.io.circe.Decoder[LocalDateTime]",
+          q"implicit val guardrailDecodeLocalTime: _root_.io.circe.Decoder[LocalTime] = _root_.io.circe.Decoder[LocalTime]",
+          q"implicit val guardrailDecodeOffsetDateTime: _root_.io.circe.Decoder[OffsetDateTime] = _root_.io.circe.Decoder[OffsetDateTime].or(_root_.io.circe.Decoder[Instant].map(_.atZone(ZoneOffset.UTC).toOffsetDateTime))",
+          q"implicit val guardrailDecodeZonedDateTime: _root_.io.circe.Decoder[ZonedDateTime] = _root_.io.circe.Decoder[ZonedDateTime]",
+          q"implicit val guardrailDecodeBase64String: _root_.io.circe.Decoder[Base64String] = _root_.io.circe.Decoder[String].emapTry(v => scala.util.Try(java.util.Base64.getDecoder.decode(v))).map(new Base64String(_))",
+          q"implicit val guardrailEncodeInstant: _root_.io.circe.Encoder[Instant] = _root_.io.circe.Encoder[Instant]",
+          q"implicit val guardrailEncodeLocalDate: _root_.io.circe.Encoder[LocalDate] = _root_.io.circe.Encoder[LocalDate]",
+          q"implicit val guardrailEncodeLocalDateTime: _root_.io.circe.Encoder[LocalDateTime] = _root_.io.circe.Encoder[LocalDateTime]",
+          q"implicit val guardrailEncodeLocalTime: _root_.io.circe.Encoder[LocalTime] = _root_.io.circe.Encoder[LocalTime]",
+          q"implicit val guardrailEncodeOffsetDateTime: _root_.io.circe.Encoder[OffsetDateTime] = _root_.io.circe.Encoder[OffsetDateTime]",
+          q"implicit val guardrailEncodeZonedDateTime: _root_.io.circe.Encoder[ZonedDateTime] = _root_.io.circe.Encoder[ZonedDateTime]",
+          q"implicit val guardrailEncodeBase64String: _root_.io.circe.Encoder[Base64String] = _root_.io.circe.Encoder[String].contramap[Base64String](v => new String(java.util.Base64.getEncoder.encode(v.data)))"
         )
       )
 
@@ -690,7 +690,7 @@ object CirceProtocolGenerator {
         })
         .unzip
       val code =
-        q"""implicit val decoder: Decoder[${Type.Name(clsName)}] = Decoder.instance({ c =>
+        q"""implicit val decoder: _root_.io.circe.Decoder[${Type.Name(clsName)}] = _root_.io.circe.Decoder.instance({ c =>
                  val discriminatorCursor = c.downField(discriminator)
                  discriminatorCursor.as[String].flatMap {
                    ..case $childrenCases;
@@ -710,7 +710,7 @@ object CirceProtocolGenerator {
         p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(discriminatorValue)}.asJson).asJson"
       })
       val code =
-        q"""implicit val encoder: Encoder[${Type.Name(clsName)}] = Encoder.instance {
+        q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
               ..case $childrenCases
           }"""
       Target.pure(Some(code))

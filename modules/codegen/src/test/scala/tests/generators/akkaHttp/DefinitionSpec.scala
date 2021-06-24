@@ -81,11 +81,11 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object First {
-        implicit val encodeFirst: Encoder.AsObject[First] = {
+        implicit val encodeFirst: _root_.io.circe.Encoder.AsObject[First] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[First](a => JsonObject.fromIterable(Vector(("a", a.a.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[First](a => _root_.io.circe.JsonObject.fromIterable(Vector(("a", a.a.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeFirst: Decoder[First] = new Decoder[First] { final def apply(c: HCursor): Decoder.Result[First] = for (v0 <- c.downField("a").as[Option[Int]]) yield First(v0) }
+        implicit val decodeFirst: _root_.io.circe.Decoder[First] = new _root_.io.circe.Decoder[First] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[First] = for (v0 <- c.downField("a").as[Option[Int]]) yield First(v0) }
       }
     """
 
@@ -117,8 +117,8 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val V2: Third = members.V2
       val ILikeSpaces: Third = members.ILikeSpaces
       val values = Vector(V1, V2, ILikeSpaces)
-      implicit val encodeThird: Encoder[Third] = Encoder[String].contramap(_.value)
-      implicit val decodeThird: Decoder[Third] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of Third"))
+      implicit val encodeThird: _root_.io.circe.Encoder[Third] = _root_.io.circe.Encoder[String].contramap(_.value)
+      implicit val decodeThird: _root_.io.circe.Decoder[Third] = _root_.io.circe.Decoder[String].emap(value => from(value).toRight(s"$$value not a member of Third"))
       implicit val showThird: Show[Third] = Show[String].contramap[Third](_.value)
       def from(value: String): Option[Third] = values.find(_.value == value)
       implicit val order: cats.Order[Third] = cats.Order.by[Third, Int](values.indexOf)
@@ -142,11 +142,11 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object Fifth {
-        implicit val encodeFifth: Encoder.AsObject[Fifth] = {
+        implicit val encodeFifth: _root_.io.circe.Encoder.AsObject[Fifth] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Fifth](a => JsonObject.fromIterable(Vector(("a_b_c_d", a.aBCD.asJson), ("b_c_d_e", a.bCDE.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Fifth](a => _root_.io.circe.JsonObject.fromIterable(Vector(("a_b_c_d", a.aBCD.asJson), ("b_c_d_e", a.bCDE.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeFifth: Decoder[Fifth] = new Decoder[Fifth] { final def apply(c: HCursor): Decoder.Result[Fifth] = for (v0 <- c.downField("a_b_c_d").as[Option[Int]]; v1 <- c.downField("b_c_d_e").as[Option[Int]]) yield Fifth(v0, v1) }
+        implicit val decodeFifth: _root_.io.circe.Decoder[Fifth] = new _root_.io.circe.Decoder[Fifth] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Fifth] = for (v0 <- c.downField("a_b_c_d").as[Option[Int]]; v1 <- c.downField("b_c_d_e").as[Option[Int]]) yield Fifth(v0, v1) }
       }
     """
 
@@ -167,11 +167,11 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object Sixth {
-        implicit val encodeSixth: Encoder.AsObject[Sixth] = {
+        implicit val encodeSixth: _root_.io.circe.Encoder.AsObject[Sixth] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Sixth](a => JsonObject.fromIterable(Vector(("defval", a.defval.asJson), ("defval_opt", a.defvalOpt.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Sixth](a => _root_.io.circe.JsonObject.fromIterable(Vector(("defval", a.defval.asJson), ("defval_opt", a.defvalOpt.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeSixth: Decoder[Sixth] = new Decoder[Sixth] { final def apply(c: HCursor): Decoder.Result[Sixth] = for (v0 <- c.downField("defval").as[Int]; v1 <- c.downField("defval_opt").as[Option[Long]]) yield Sixth(v0, v1) }
+        implicit val decodeSixth: _root_.io.circe.Decoder[Sixth] = new _root_.io.circe.Decoder[Sixth] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Sixth] = for (v0 <- c.downField("defval").as[Int]; v1 <- c.downField("defval_opt").as[Option[Long]]) yield Sixth(v0, v1) }
       }
     """
 

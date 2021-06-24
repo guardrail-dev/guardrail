@@ -166,11 +166,11 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val expected =
       q"""
         object Foo {
-          implicit val encodeFoo: Encoder.AsObject[Foo] = {
+          implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {
             val readOnlyKeys = Set[String]()
-            Encoder.AsObject.instance[Foo](a => JsonObject.fromIterable(Vector(("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Foo](a => _root_.io.circe.JsonObject.fromIterable(Vector(("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-          implicit val decodeFoo: Decoder[Foo] = new Decoder[Foo] { final def apply(c: HCursor): Decoder.Result[Foo] = for (v0 <- c.downField("id").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) Json.Null else j)).as[String]) yield Foo(v0) }
+          implicit val decodeFoo: _root_.io.circe.Decoder[Foo] = new _root_.io.circe.Decoder[Foo] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Foo] = for (v0 <- c.downField("id").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) _root_.io.circe.Json.Null else j)).as[String]) yield Foo(v0) }
         }
        """
     cmp(companion, expected)

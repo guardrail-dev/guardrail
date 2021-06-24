@@ -88,14 +88,14 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestEncoder =
       q"""
-        implicit val encodeRequest: Encoder.AsObject[Request] = {
+        implicit val encodeRequest: _root_.io.circe.Encoder.AsObject[Request] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Request](a => JsonObject.fromIterable(Vector(("state", a.state.asJson), ("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Request](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state", a.state.asJson), ("id", a.id.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
       q"""
-        implicit val decodeRequest: Decoder[Request] = new Decoder[Request] { final def apply(c: HCursor): Decoder.Result[Request] = for (v0 <- c.downField("state").as[BigInt]; v1 <- c.downField("id").as[Option[String]]) yield Request(v0, v1) }
+        implicit val decodeRequest: _root_.io.circe.Decoder[Request] = new _root_.io.circe.Decoder[Request] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Request] = for (v0 <- c.downField("state").as[BigInt]; v1 <- c.downField("id").as[Option[String]]) yield Request(v0, v1) }
       """
 
     compare(request.tpe, expectedRequestTpe)
@@ -110,14 +110,14 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedFieldsEncoder =
       q"""
-        implicit val encodeRequestFields: Encoder.AsObject[RequestFields] = {
+        implicit val encodeRequestFields: _root_.io.circe.Encoder.AsObject[RequestFields] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[RequestFields](a => JsonObject.fromIterable(Vector(("state", a.state.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[RequestFields](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state", a.state.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedFieldsDecoder =
       q"""
-        implicit val decodeRequestFields: Decoder[RequestFields] = new Decoder[RequestFields] { final def apply(c: HCursor): Decoder.Result[RequestFields] = for (v0 <- c.downField("state").as[BigInt]) yield RequestFields(v0) }
+        implicit val decodeRequestFields: _root_.io.circe.Decoder[RequestFields] = new _root_.io.circe.Decoder[RequestFields] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[RequestFields] = for (v0 <- c.downField("state").as[BigInt]) yield RequestFields(v0) }
       """
 
     compare(requestFields.tpe, expectedFieldsTpe)
@@ -138,14 +138,14 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestEncoder =
       q"""
-        implicit val encodeRequest2: Encoder.AsObject[Request2] = {
+        implicit val encodeRequest2: _root_.io.circe.Encoder.AsObject[Request2] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Request2](a => JsonObject.fromIterable(Vector(("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Request2](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
       q"""
-        implicit val decodeRequest2: Decoder[Request2] = new Decoder[Request2] { final def apply(c: HCursor): Decoder.Result[Request2] = for (v0 <- c.downField("state2").as[Option[BigInt]]; v1 <- c.downField("id").as[Option[String]]; v2 <- c.downField("id2").as[String]) yield Request2(v0, v1, v2) }
+        implicit val decodeRequest2: _root_.io.circe.Decoder[Request2] = new _root_.io.circe.Decoder[Request2] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Request2] = for (v0 <- c.downField("state2").as[Option[BigInt]]; v1 <- c.downField("id").as[Option[String]]; v2 <- c.downField("id2").as[String]) yield Request2(v0, v1, v2) }
       """
 
     compare(request.tpe, expectedRequestTpe)
@@ -160,14 +160,14 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedFieldsEncoder =
       q"""
-        implicit val encodeRequestFields2: Encoder.AsObject[RequestFields2] = {
+        implicit val encodeRequestFields2: _root_.io.circe.Encoder.AsObject[RequestFields2] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[RequestFields2](a => JsonObject.fromIterable(Vector(("state2", a.state2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[RequestFields2](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state2", a.state2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedFieldsDecoder =
       q"""
-        implicit val decodeRequestFields2: Decoder[RequestFields2] = new Decoder[RequestFields2] { final def apply(c: HCursor): Decoder.Result[RequestFields2] = for (v0 <- c.downField("state2").as[Option[BigInt]]) yield RequestFields2(v0) }
+        implicit val decodeRequestFields2: _root_.io.circe.Decoder[RequestFields2] = new _root_.io.circe.Decoder[RequestFields2] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[RequestFields2] = for (v0 <- c.downField("state2").as[Option[BigInt]]) yield RequestFields2(v0) }
       """
 
     compare(requestFields.tpe, expectedFieldsTpe)
@@ -187,14 +187,14 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val expectedRequestEncoder =
       q"""
-        implicit val encodeRequest3: Encoder.AsObject[Request3] = {
+        implicit val encodeRequest3: _root_.io.circe.Encoder.AsObject[Request3] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[Request3](a => JsonObject.fromIterable(Vector(("state", a.state.asJson), ("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Request3](a => _root_.io.circe.JsonObject.fromIterable(Vector(("state", a.state.asJson), ("state2", a.state2.asJson), ("id", a.id.asJson), ("id2", a.id2.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
       """
     val expectedRequestDecoder =
       q"""
-        implicit val decodeRequest3: Decoder[Request3] = new Decoder[Request3] { final def apply(c: HCursor): Decoder.Result[Request3] = for (v0 <- c.downField("state").as[BigInt]; v1 <- c.downField("state2").as[Option[BigInt]]; v2 <- c.downField("id").as[Option[String]]; v3 <- c.downField("id2").as[String]) yield Request3(v0, v1, v2, v3) }
+        implicit val decodeRequest3: _root_.io.circe.Decoder[Request3] = new _root_.io.circe.Decoder[Request3] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Request3] = for (v0 <- c.downField("state").as[BigInt]; v1 <- c.downField("state2").as[Option[BigInt]]; v2 <- c.downField("id").as[Option[String]]; v3 <- c.downField("id2").as[String]) yield Request3(v0, v1, v2, v3) }
       """
 
     compare(request.tpe, expectedRequestTpe)

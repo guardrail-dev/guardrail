@@ -151,11 +151,11 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     """
     val companion  = q"""
       object DashyClass {
-        implicit val encodeDashyClass: Encoder.AsObject[DashyClass] = {
+        implicit val encodeDashyClass: _root_.io.circe.Encoder.AsObject[DashyClass] = {
           val readOnlyKeys = Set[String]()
-          Encoder.AsObject.instance[DashyClass](a => JsonObject.fromIterable(Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[DashyClass](a =>  _root_.io.circe.JsonObject.fromIterable(Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeDashyClass: Decoder[DashyClass] = new Decoder[DashyClass] { final def apply(c: HCursor): Decoder.Result[DashyClass] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield DashyClass(v0) }
+        implicit val decodeDashyClass: _root_.io.circe.Decoder[DashyClass] = new _root_.io.circe.Decoder[DashyClass] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[DashyClass] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield DashyClass(v0) }
       }
     """
 
@@ -198,8 +198,8 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val DashyValueB: DashyEnum = members.DashyValueB
       val DashyValueC: DashyEnum = members.DashyValueC
       val values = Vector(DashyValueA, DashyValueB, DashyValueC)
-      implicit val encodeDashyEnum: Encoder[DashyEnum] = Encoder[String].contramap(_.value)
-      implicit val decodeDashyEnum: Decoder[DashyEnum] = Decoder[String].emap(value => from(value).toRight(s"$$value not a member of DashyEnum"))
+      implicit val encodeDashyEnum: _root_.io.circe.Encoder[DashyEnum] = _root_.io.circe.Encoder[String].contramap(_.value)
+      implicit val decodeDashyEnum:_root_.io.circe.Decoder[DashyEnum] =_root_.io.circe.Decoder[String].emap(value => from(value).toRight(s"$$value not a member of DashyEnum"))
       implicit val showDashyEnum: Show[DashyEnum] = Show[String].contramap[DashyEnum](_.value)
       def from(value: String): Option[DashyEnum] = values.find(_.value == value)
       implicit val order: cats.Order[DashyEnum] = cats.Order.by[DashyEnum, Int](values.indexOf)
