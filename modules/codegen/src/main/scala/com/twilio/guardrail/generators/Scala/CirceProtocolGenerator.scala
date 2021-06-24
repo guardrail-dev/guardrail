@@ -82,7 +82,7 @@ object CirceProtocolGenerator {
 
     def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
       Target.pure(q"""
-        sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends Product with Serializable {
+        sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends _root_.scala.Product with _root_.java.io.Serializable {
           override def toString: String = value.toString
         }
       """)
@@ -575,7 +575,7 @@ object CirceProtocolGenerator {
 
     def generateSupportDefinitions() = {
       val presenceTrait =
-        q"""sealed trait Presence[+T] extends Product with Serializable {
+        q"""sealed trait Presence[+T] extends _root_.scala.Product with _root_.java.io.Serializable {
                 def fold[R](ifAbsent: => R,
                             ifPresent: T => R): R
                 def map[R](f: T => R): Presence[R] = fold(Presence.absent, a => Presence.present(f(a)))
