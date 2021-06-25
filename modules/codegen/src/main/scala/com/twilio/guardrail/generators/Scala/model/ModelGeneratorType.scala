@@ -16,8 +16,8 @@ object CirceModelGenerator {
     def print: Term.Name                  = q"pretty"
   }
   case object V012 extends CirceModelGenerator {
-    def encoderObject: Type.Select          = t"Encoder.AsObject"
-    def encoderObjectCompanion: Term.Select = q"Encoder.AsObject"
+    def encoderObject: Type.Select          = t"_root_.io.circe.Encoder.AsObject"
+    def encoderObjectCompanion: Term.Select = q"_root_.io.circe.Encoder.AsObject"
     def print: Term.Name                    = q"print"
   }
 }
