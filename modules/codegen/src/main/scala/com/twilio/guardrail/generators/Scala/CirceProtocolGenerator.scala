@@ -266,8 +266,9 @@ object CirceProtocolGenerator {
       val code = parentOpt
         .fold(q"""case class ${Type.Name(clsName)}(..${terms}) { ..$toStringMethod }""")(
           parent =>
-            q"""case class ${Type.Name(clsName)}(..${terms}) extends ${template"..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces
-                  .map(a => init"${Type.Name(a)}(...$Nil)")} { ..$toStringMethod }"}"""
+            q"""case class ${Type.Name(clsName)}(..${terms}) extends ..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces.map(
+                  a => init"${Type.Name(a)}(...$Nil)"
+                )} { ..$toStringMethod }"""
         )
 
       Target.pure(code)
@@ -742,7 +743,7 @@ object CirceProtocolGenerator {
       } yield {
         parents.headOption
           .fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(
-            parent => q"""trait ${Type.Name(className)} extends ${template"${init"${Type.Name(parent.clsName)}(...$Nil)"}{..${testTerms}}"} """
+            parent => q"""trait ${Type.Name(className)} extends ${init"${Type.Name(parent.clsName)}(...$Nil)"} { ..${testTerms} } """
           )
       }
   }

@@ -18,7 +18,7 @@ object Http4sHelper {
 
     val responseSuperType     = Type.Name(responseClsName)
     val responseSuperTerm     = Term.Name(responseClsName)
-    val responseSuperTemplate = template"${Init(if (isGeneric) Type.Apply(responseSuperType, extraTypes) else responseSuperType, Name(""), List.empty)}"
+    val responseSuperTemplate = Init(if (isGeneric) Type.Apply(responseSuperType, extraTypes) else responseSuperType, Name(""), List.empty)
 
     val (terms, foldPair) = responses.value
       .map({
