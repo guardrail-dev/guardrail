@@ -24,8 +24,8 @@ object DocsHelpers {
     parseOpts.setResolve(true)
     val openAPI = Tracker(new OpenAPIParser().readLocation(sampleSpec, new java.util.LinkedList(), parseOpts).getOpenAPI)
 
-    val segments: List[Option[String]] = identifier match {
-      case GeneratingAServer =>
+    val segments: List[Option[String]] = (generator, identifier) match {
+      case (AkkaHttp, GeneratingAServer) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -42,7 +42,7 @@ object DocsHelpers {
             }
           """.toString)
         )
-      case GeneratingClients =>
+      case (AkkaHttp, GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -74,6 +74,8 @@ object DocsHelpers {
             )
           case _ => ???
         }
+      case (generator, term) =>
+        List(Some(s"Unknown docs sample: ${generator.getClass().getSimpleName().stripSuffix("$")}/${term.toString()}"))
     }
 
     println((
