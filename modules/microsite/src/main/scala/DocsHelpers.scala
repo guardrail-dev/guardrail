@@ -101,7 +101,7 @@ object DocsHelpers {
             }
           """.toString)
         )
-      case (Http4s, GeneratingClients) if false =>
+      case (Http4s, GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
