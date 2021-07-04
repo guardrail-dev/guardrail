@@ -37,6 +37,7 @@ object WelcomeMessage {
         |${subItem("runJavaExample")} - Only generate Java sources for integration tests
         |${item("publishLocal")} - Publish to local ivy repo
         |${item("publishM2")} - Publish to local m2 repo
-      """.stripMargin
+        |${item("mdoc")} - Generate the docs microsite locally
+        |      """.stripMargin
   }
 }

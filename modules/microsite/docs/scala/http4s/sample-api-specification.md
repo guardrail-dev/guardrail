@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: "Sample API Specification - akka-http - scala - guardrail"
+title: "Sample API Specification - http4s - scala - guardrail"
 ---
 
 Sample API specification

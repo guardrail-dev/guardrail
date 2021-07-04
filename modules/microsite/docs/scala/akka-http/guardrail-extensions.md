@@ -184,7 +184,7 @@ guardrail has [a number of vendor extensions](https://github.com/twilio/guardrai
         An arbitrary class name prefix that overrides the default class name
         when generating JVM code. See also <code>x-scala-class-prefix</code>.
       </td>
-    </tr>    
+    </tr>
   </tbody>
 </table>
 

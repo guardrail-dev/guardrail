@@ -28,7 +28,7 @@ As all parameters are provided as arguments to the function stubs in the trait, 
 Separation of business logic
 ----------------------------
 
-Providing an implementating of a function with a well-defined set of inputs and outputs is natural for any developer. By reducing the scope of the interface a developer writes against, implementations are more clear and concise.
+Providing an implementation of a function with a well-defined set of inputs and outputs is natural for any developer. By reducing the scope of the interface a developer writes against, implementations are more clear and concise.
 
 Furthermore, by providing business logic as an implementation of an abstract class, unit tests can test the routing layer and business logic independently, by design.
 
