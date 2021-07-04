@@ -13,7 +13,7 @@ As we saw in [Installation](installation), guardrail is run as part of maven. It
 
 Lets take another look at the maven config for guardrail:
 
-```xml 
+```xml
 <plugin>
     <groupId>com.twilio</groupId>
     <artifactId>guardrail-maven-plugin_2.12</artifactId>
@@ -33,11 +33,11 @@ Lets take another look at the maven config for guardrail:
         </execution>
     </executions>
 </plugin>
-``` 
+```
 
 **NB**: if you prefer to use Vavr instead of Java's standard library collections, see the [generic Java instructions](../) for appropriate configuration options.
 
-Once configured, you can manually invoke guardrail with `mvn generate-sources`. 
+Once configured, you can manually invoke guardrail with `mvn generate-sources`.
 
 Server Handlers, Resources
 --------------------------

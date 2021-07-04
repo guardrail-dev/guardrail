@@ -35,11 +35,11 @@ paths:                                      # All HTTP paths are direct children
                                             # parameter name.
 
         in: path                            # Where to look for the parameter
-        
+
         description: The ID of the user     # The optional `description` parameter is not used in guardrail,
                                             # but is useful for providing a detailed explanation on what is
-                                            # expected as a value for the parameter. For example: 
-                                            # `description: User IDs are strings comprised of the concatenation 
+                                            # expected as a value for the parameter. For example:
+                                            # `description: User IDs are strings comprised of the concatenation
                                             # of the two upper-case letters ID and a UUID stripped of any dashes
                                             # i.e. ID4d9b1c54e4664c9d92aba94151a7f59f`
 

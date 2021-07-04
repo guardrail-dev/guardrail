@@ -17,7 +17,7 @@ import com.twilio.guardrail.generators.Scala.Http4s
 import com.twilio.guardrail.docs._
 DocsHelpers.renderScalaSnippet(Http4s, GeneratingClients)(
   """|// Two constructors are provided, one accepting the `httpClient` and `Async`
-     |// implicitly, the other accepting an explicit `httpClient`, but still 
+     |// implicitly, the other accepting an explicit `httpClient`, but still
      |// accepting the `Async` implicitly
   """.stripMargin,
   ""
