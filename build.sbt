@@ -550,7 +550,8 @@ lazy val endpointsSample = (project in file("modules/sample-endpoints"))
 lazy val microsite = (project in file("modules/microsite"))
   .settings(commonSettings)
   .settings(
-    publish / skip := true
+    publish / skip := true,
+    mdocExtraArguments += "--no-link-hygiene",
   )
   .dependsOn(codegen)
 
