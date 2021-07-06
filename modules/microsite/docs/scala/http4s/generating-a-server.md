@@ -43,6 +43,8 @@ EmberServerBuilder.default[IO]
   .as(ExitCode.Success)
 ```
 
+(See it in action: [guardrail-dev/guardrail-sample-http4s](https://github.com/guardrail-dev/guardrail-sample-http4s), [guardrail-dev/guardrail-sample-sbt-http4s-zio](https://github.com/guardrail-dev/guardrail-sample-sbt-http4s-zio))
+
 Separation of business logic
 ----------------------------
 

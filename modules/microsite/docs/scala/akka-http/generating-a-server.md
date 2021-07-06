@@ -25,6 +25,8 @@ DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingAServer)("""
 
 As all parameters are provided as arguments to the function stubs in the trait, there's no concern of forgetting to extract a query string parameter, introducing a typo in a form parameter name, or forgetting to close the bytestream for the streaming HTTP Request.
 
+(See it in action: [guardrail-dev/guardrail-sample-sbt-akkahttp](https://github.com/guardrail-dev/guardrail-sample-sbt-akkahttp))
+
 Separation of business logic
 ----------------------------
 

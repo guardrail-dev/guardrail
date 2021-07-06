@@ -25,6 +25,8 @@ DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingClients)(
 )
 ```
 
+(See it in action: [guardrail-dev/guardrail-sample-sbt-akkahttp](https://github.com/guardrail-dev/guardrail-sample-sbt-akkahttp))
+
 Separation of protocol-concerns from API-level concerns
 -------------------------------------------------------
 

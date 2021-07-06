@@ -87,6 +87,8 @@ Now we can examine the generated `Resource`. The resource companion class is gen
 
 This illistrates that while guardrail has helped us with much of the setup related to Dropwizard, we are still in controll of all the configuration of the Dropwizard service. Only the HTTP edge layer has been automated for us.
 
+(See it in action: [guardrail-dev/guardrail-sample-maven-dropwizard](https://github.com/guardrail-dev/guardrail-sample-maven-dropwizard))
+
 Separation of business logic
 ----------------------------
 
