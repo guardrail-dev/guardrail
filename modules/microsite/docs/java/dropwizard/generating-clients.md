@@ -43,3 +43,5 @@ For JDK9+ you also need to add [`javax.annotation:javax.annotation-api`](https:/
     </dependency>
 </dependencies>
 ```
+
+(See it in action: [guardrail-dev/guardrail-sample-maven-dropwizard](https://github.com/guardrail-dev/guardrail-sample-maven-dropwizard))

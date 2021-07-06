@@ -20,3 +20,5 @@ Getting started:
 - Java
   - [dropwizard](java/dropwizard)
   - [spring-mvc](java/spring-mvc)
+
+Additionally, check out the [`guardrail-sample`](https://github.com/topics/guardrail-sample) topic on GitHub for more examples.

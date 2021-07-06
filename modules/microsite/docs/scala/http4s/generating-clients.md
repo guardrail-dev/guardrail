@@ -24,6 +24,8 @@ DocsHelpers.renderScalaSnippet(Http4s, GeneratingClients)(
 )
 ```
 
+(See it in action: [guardrail-dev/guardrail-sample-http4s](https://github.com/guardrail-dev/guardrail-sample-http4s), [guardrail-dev/guardrail-sample-sbt-http4s-zio](https://github.com/guardrail-dev/guardrail-sample-sbt-http4s-zio))
+
 Separation of protocol-concerns from API-level concerns
 -------------------------------------------------------
 
