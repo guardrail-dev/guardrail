@@ -61,15 +61,18 @@ object ContentType {
       name.startsWith("example/")
 
   def unapply(value: String): Option[ContentType] = value.toLowerCase(Locale.US) match {
-    case "application/json"                            => Some(ApplicationJson)
-    case "multipart/form-data"                         => Some(MultipartFormData)
-    case "application/x-www-form-urlencoded"           => Some(UrlencodedFormData)
-    case "text/plain"                                  => Some(TextPlain)
-    case "application/octet-stream"                    => Some(OctetStream)
-    case "*/*"                                         => Some(AnyContentType)
-    case x if isUnsupported(x)                         => None
-    case x if isTextRegistry(x) | isApplicationText(x) => Some(new TextContent(value))
-    case _                                             => Some(new BinaryContent(value))
+    case "application/json"                             => Some(ApplicationJson)
+    case "application/json-patch+json"                  => Some(ApplicationJson)
+    case "application/merge-patch+json"                 => Some(ApplicationJson)
+    case "application/problem+json"                     => Some(ApplicationJson)
+    case "multipart/form-data"                          => Some(MultipartFormData)
+    case "application/x-www-form-urlencoded"            => Some(UrlencodedFormData)
+    case "text/plain"                                   => Some(TextPlain)
+    case "application/octet-stream"                     => Some(OctetStream)
+    case "*/*"                                          => Some(AnyContentType)
+    case x if isUnsupported(x)                          => None
+    case x if isTextRegistry(x) | isApplicationText(x)  => Some(new TextContent(value))
+    case _                                              => Some(new BinaryContent(value))
   }
 
   implicit val ContentTypeOrder: Order[ContentType] = Order[String].contramap[ContentType](_.value)
