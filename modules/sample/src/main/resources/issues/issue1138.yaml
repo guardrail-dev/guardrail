@@ -1,0 +1,36 @@
+openapi: 3.0.1
+info:
+  title: Poly
+  version: 1.0.0
+paths: {}
+produces:
+  - application/json
+consumes:
+  - application/json
+components:
+  schemas:
+    Data:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+      discriminator:
+        propertyName: type
+        mapping:
+          data_no_prop: "#/components/schemas/DataNoProp"
+          data_prop: "#/components/schemas/DataProp"
+    DataNoProp:
+      allOf:
+        - $ref: '#/components/schemas/Data'
+        - type: object
+    DataProp:
+      allOf:
+        - $ref: '#/components/schemas/Data'
+        - type: object
+          properties:
+            prop:
+              type: string
+          required:
+            - prop

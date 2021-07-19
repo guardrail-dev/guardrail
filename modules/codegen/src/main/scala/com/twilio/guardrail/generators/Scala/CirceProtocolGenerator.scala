@@ -288,9 +288,7 @@ object CirceProtocolGenerator {
       val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
       val paramCount                 = params.length
       val typeName                   = Type.Name(clsName)
-      val encVal = if (paramCount == 0) {
-        Option.empty[Term]
-      } else
+      val encVal                     =
         /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
         if (paramCount == 1) {
           val (names, fields): (List[Lit], List[Term.Name]) = params
@@ -390,7 +388,16 @@ object CirceProtocolGenerator {
       for {
         presence <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         decVal <- if (paramCount == 0) {
-          Target.pure(Option.empty[Term])
+          Target.pure(
+            Option[Term](
+              q"""
+                   new _root_.io.circe.Decoder[${Type.Name(clsName)}] {
+                      final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[${Type.Name(clsName)}] =
+                        _root_.scala.Right(${Term.Name(clsName)}())
+                    }
+                  """
+            )
+          )
         } else
           /* Temporarily removing forProductN due to https://github.com/circe/circe/issues/561
           if (paramCount <= 22 && !needsEmptyToNull) {
