@@ -13,8 +13,8 @@ By generating minimal clients that only have enough business knowledge to map do
 The following is an example from the [akka-http](https://github.com/akka/akka-http) client generator:
 
 ```scala mdoc:passthrough
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.docs._
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.docs._
 DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingClients)(
   """|// Two constructors are provided, one accepting the `httpClient`,
      |// `ExecutionContext`, and `Materializer` implicitly, the other accepting

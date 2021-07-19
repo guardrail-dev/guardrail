@@ -1,8 +1,8 @@
 package tests.generators.dropwizard.server
 
 import com.github.javaparser.ast.body.MethodDeclaration
-import com.twilio.guardrail.{ Context, Server, Servers }
-import com.twilio.guardrail.generators.Java.Dropwizard
+import dev.guardrail.{ Context, Server, Servers }
+import dev.guardrail.generators.Java.Dropwizard
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import scala.collection.JavaConverters._

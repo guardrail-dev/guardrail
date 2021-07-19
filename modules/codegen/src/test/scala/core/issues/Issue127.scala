@@ -1,7 +1,7 @@
 package tests.core.issues
 
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.{ Context, Server, Servers }
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.{ Context, Server, Servers }
 import support.SwaggerSpecRunner
 
 import scala.meta._

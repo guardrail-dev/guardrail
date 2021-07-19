@@ -1,8 +1,8 @@
 package tests.core
 
-import com.twilio.guardrail.generators.Scala.{ AkkaHttp, Http4s }
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import dev.guardrail.generators.Scala.{ AkkaHttp, Http4s }
+import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
+import dev.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 
 import scala.meta._
 import support.SwaggerSpecRunner

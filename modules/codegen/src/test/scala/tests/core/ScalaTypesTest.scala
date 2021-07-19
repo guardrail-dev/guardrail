@@ -1,8 +1,8 @@
 package tests.core
 
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
+import dev.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import support.SwaggerSpecRunner
 
 import scala.meta._
@@ -23,7 +23,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |    properties:
     |      foo:
     |        type: string
-    |        x-scala-type: com.twilio.foo.bar.Baz
+    |        x-scala-type: dev.guardrail.foo.bar.Baz
     |""".stripMargin
 
   test("Generate no definitions") {
@@ -35,7 +35,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Baz(foo: Option[com.twilio.foo.bar.Baz] = None)
+      case class Baz(foo: Option[dev.guardrail.foo.bar.Baz] = None)
     """
 
     val companion = q"""
@@ -44,7 +44,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
           _root_.io.circe.Encoder.AsObject.instance[Baz](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("foo", a.foo.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeBaz: _root_.io.circe.Decoder[Baz] = new _root_.io.circe.Decoder[Baz] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Baz] = for (v0 <- c.downField("foo").as[Option[com.twilio.foo.bar.Baz]]) yield Baz(v0) }
+        implicit val decodeBaz: _root_.io.circe.Decoder[Baz] = new _root_.io.circe.Decoder[Baz] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Baz] = for (v0 <- c.downField("foo").as[Option[dev.guardrail.foo.bar.Baz]]) yield Baz(v0) }
       }
     """
 

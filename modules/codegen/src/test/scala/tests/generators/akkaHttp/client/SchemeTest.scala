@@ -1,8 +1,8 @@
 package tests.generators.akkaHttp.client
 
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.generators.syntax.Scala._
-import com.twilio.guardrail.{ Client, Clients, Context }
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.generators.syntax.Scala._
+import dev.guardrail.{ Client, Clients, Context }
 import support.SwaggerSpecRunner
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite

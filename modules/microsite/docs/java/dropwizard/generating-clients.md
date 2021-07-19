@@ -8,7 +8,7 @@ To generate client code with maven please include following plugin to your pom.x
 <build>
     <plugins>
         <plugin>
-            <groupId>com.twilio</groupId>
+            <groupId>dev.guardrail</groupId>
             <artifactId>guardrail-maven-plugin_2.12</artifactId>
             <version>0.62.0</version>
             <executions>

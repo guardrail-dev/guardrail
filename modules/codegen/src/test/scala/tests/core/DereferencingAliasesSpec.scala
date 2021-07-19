@@ -1,8 +1,8 @@
 package tests.core
 
-import com.twilio.guardrail._
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
+import dev.guardrail._
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
 import scala.meta._
 import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite

@@ -1,8 +1,8 @@
 package core.issues
 
-import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.generators.syntax.Scala.companionForStaticDefns
-import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
+import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
+import dev.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import support.SwaggerSpecRunner
 
 import scala.meta._

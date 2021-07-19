@@ -8,7 +8,7 @@ fi
 args="$@"
 if hash sbt-client 2>&1 >/dev/null; then
     # Use https://github.com/cb372/sbt-client/ if available
-    sbt-client "runMain com.twilio.guardrail.CLI ${args}"
+    sbt-client "runMain dev.guardrail.CLI ${args}"
 else
     sbt "cli ${args}"
 fi
