@@ -1,14 +1,14 @@
 package tests.core
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.{ SwaggerUtil, Target }
-import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
-import com.twilio.guardrail.generators.LanguageParameter
-import com.twilio.guardrail.generators.Scala.model.{ CirceModelGenerator, ModelGeneratorType }
-import com.twilio.guardrail.generators.syntax.Scala._
+import dev.guardrail.{ SwaggerUtil, Target }
+import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.Scala.model.{ CirceModelGenerator, ModelGeneratorType }
+import dev.guardrail.generators.syntax.Scala._
 import org.scalatest.{ EitherValues, OptionValues }
 import support.ScalaMetaMatchers._
-import com.twilio.guardrail.languages.ScalaLanguage
+import dev.guardrail.languages.ScalaLanguage
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

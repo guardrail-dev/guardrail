@@ -1,6 +1,6 @@
 package tests.core
 
-import com.twilio.guardrail.generators.syntax.RichString
+import dev.guardrail.generators.syntax.RichString
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

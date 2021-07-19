@@ -1,15 +1,15 @@
-package com.twilio.guardrail.docs
+package dev.guardrail.docs
 
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 import cats.data.NonEmptyList
-import com.twilio.guardrail._
-import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.Framework
-import com.twilio.guardrail.generators.Scala.{ AkkaHttp, Http4s }
-import com.twilio.guardrail.languages.ScalaLanguage
-import com.twilio.guardrail.protocol.terms.server.ServerTerms
+import dev.guardrail._
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.Framework
+import dev.guardrail.generators.Scala.{ AkkaHttp, Http4s }
+import dev.guardrail.languages.ScalaLanguage
+import dev.guardrail.protocol.terms.server.ServerTerms
 import scala.meta._
 
 sealed trait SnippetComponent

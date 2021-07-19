@@ -114,7 +114,7 @@ definitions:                                # All non-primitive structures are d
 
       $ref: '#/definitions/UserAddress'     # Primitive types could be listed here, but as we're referring to another class,
                                             # we need to explicitly use a `$ref`. This may change in the future,
-                                            # see https://github.com/twilio/guardrail/issues/76
+                                            # see https://github.com/guardrail-dev/guardrail/issues/76
 
   UserAddress:
     type: object

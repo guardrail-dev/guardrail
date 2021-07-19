@@ -1,9 +1,9 @@
 package tests.generators.dropwizard
 
 import cats.data.NonEmptyList
-import com.twilio.guardrail.generators.Java.Dropwizard
-import com.twilio.guardrail.languages.JavaLanguage
-import com.twilio.guardrail.{ ClassDefinition, CodegenTarget, Context, ProtocolDefinitions }
+import dev.guardrail.generators.Java.Dropwizard
+import dev.guardrail.languages.JavaLanguage
+import dev.guardrail.{ ClassDefinition, CodegenTarget, Context, ProtocolDefinitions }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import support.SwaggerSpecRunner
