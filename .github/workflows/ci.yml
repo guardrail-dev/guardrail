@@ -11,6 +11,7 @@ on:
 
 jobs:
   core:
+    name: Run core tests
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -18,6 +19,8 @@ jobs:
         scala: [
             { version: '2.12.14', bincompat: '2.12' }
           ]
+    outputs:
+      scala_versions: ${{ steps.set-scala-versions.outputs.scala_versions }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -39,6 +42,9 @@ jobs:
       with:
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
+    - name: Set scala version for matrix
+      id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
+      run: echo "::set-output name=scala_versions::$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)"
   java:
     runs-on: ubuntu-20.04
     needs: [core]
@@ -76,10 +82,7 @@ jobs:
     strategy:
       matrix:
         java: [ '8', '15', '16' ]
-        scala: [
-            { version: '2.12.14', bincompat: '2.12' },
-            { version: '2.13.6', bincompat: '2.13' }
-          ]
+        scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
             { framework: 'akka-http',         project: 'akkaHttpSample'        },
             #{ framework: 'endpoints',         project: 'endpointsSample'       },
