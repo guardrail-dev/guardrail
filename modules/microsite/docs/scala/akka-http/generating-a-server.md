@@ -11,8 +11,8 @@ guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The
 The following is an example from the [akka-http](https://github.com/akka/akka-http) server generator:
 
 ```scala mdoc:passthrough
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.docs._
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.docs._
 DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingAServer)("""
     |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
     |// structural alterations (`F[_]` instead of `Future[_]` as the return type) the same handlers can be used with
@@ -25,10 +25,12 @@ DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingAServer)("""
 
 As all parameters are provided as arguments to the function stubs in the trait, there's no concern of forgetting to extract a query string parameter, introducing a typo in a form parameter name, or forgetting to close the bytestream for the streaming HTTP Request.
 
+(See it in action: [guardrail-dev/guardrail-sample-sbt-akkahttp](https://github.com/guardrail-dev/guardrail-sample-sbt-akkahttp))
+
 Separation of business logic
 ----------------------------
 
-Providing an implementating of a function with a well-defined set of inputs and outputs is natural for any developer. By reducing the scope of the interface a developer writes against, implementations are more clear and concise.
+Providing an implementation of a function with a well-defined set of inputs and outputs is natural for any developer. By reducing the scope of the interface a developer writes against, implementations are more clear and concise.
 
 Furthermore, by providing business logic as an implementation of an abstract class, unit tests can test the routing layer and business logic independently, by design.
 

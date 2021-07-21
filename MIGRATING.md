@@ -31,7 +31,7 @@ There is a Scalafix rule, [`GuardrailScalaResponseTypes`](https://github.com/bla
     ```
     sbt> scalafix -r https://raw.githubusercontent.com/blast-hardcheese/guardrail-scalafix-rules/master/rules/src/main/scala/fix/GuardrailScalaResponseTypes.scala
     ```
-1. If there are issues, please [report them](https://github.com/twilio/guardrail/issues).
+1. If there are issues, please [report them](https://github.com/guardrail-dev/guardrail/issues).
    We do our best to keep breaking changes to a minimum, but as this greatly simplified the casing heuristics, we decided to move forward. Thanks for your understanding.
 
 The most notable differences are:

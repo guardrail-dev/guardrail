@@ -1,8 +1,8 @@
 package core.issues
 
-import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.{ ClassDefinition, Context, ProtocolDefinitions, StaticDefns }
-import com.twilio.guardrail.languages.ScalaLanguage
+import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.{ ClassDefinition, Context, ProtocolDefinitions, StaticDefns }
+import dev.guardrail.languages.ScalaLanguage
 import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

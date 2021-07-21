@@ -1,4 +1,4 @@
-package com.twilio.guardrail.sbt
+package dev.guardrail.sbt
 
 class ExampleCase(val file: java.io.File, val prefix: String, val cliArgs: List[String], val frameworks: Option[Set[(String, Set[String])]]) {
   def args(cliArgs: String*): ExampleCase = new ExampleCase(file, prefix, cliArgs=cliArgs.toList, frameworks = frameworks)

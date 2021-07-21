@@ -4,10 +4,10 @@ import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.data.NonEmptyList
-import com.twilio.guardrail._
-import com.twilio.guardrail.core.{ StructuredLogger, Tracker }
-import com.twilio.guardrail.generators.Framework
-import com.twilio.guardrail.languages.LA
+import dev.guardrail._
+import dev.guardrail.core.{ StructuredLogger, Tracker }
+import dev.guardrail.generators.Framework
+import dev.guardrail.languages.LA
 import org.scalactic.Equality
 import org.scalatest.{ EitherValues, OptionValues }
 

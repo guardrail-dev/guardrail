@@ -1,18 +1,18 @@
 SBT
 ===
 
-The [`twilio/sbt-guardrail`](https://github.com/twilio/sbt-guardrail) plugin installation instructions can be found in that project's README.
+The [`guardrail-dev/sbt-guardrail`](https://github.com/guardrail-dev/sbt-guardrail) plugin installation instructions can be found in that project's README.
 
 By putting the following in your `build.sbt`, generated classes for petstore and github clients and `myserver` server routes are available the next time the `compile` or `guardrail` tasks are run. The motivation for generating servers in your test sources is to facilitate [generating "real" mock downstream servers](https://guardrail.dev/scala/akka-http/generating-a-server#generating-test-only-real-server-mocks-for-unit-tests).
 
 ```sbt
-guardrailTasks in Compile := List(
+Compile / guardrailTasks := List(
   Client(file("petstore.yaml")),
   Client(file("github.yaml"), pkg="com.example.clients.github"),
   Server(file("myserver.yaml"), pkg="com.example.server", tracing=true)
 )
 
-guardrailTasks in Test := List(
+Test / guardrailTasks := List(
   Server(file("petstore.yaml")),
   Server(file("github.yaml"), pkg="com.example.tests.github"),
   Client(file("myserver.yaml"), pkg="com.example.tests.server", tracing=true)

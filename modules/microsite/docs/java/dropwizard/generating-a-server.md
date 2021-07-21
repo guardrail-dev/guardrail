@@ -13,9 +13,9 @@ As we saw in [Installation](installation), guardrail is run as part of maven. It
 
 Lets take another look at the maven config for guardrail:
 
-```xml 
+```xml
 <plugin>
-    <groupId>com.twilio</groupId>
+    <groupId>dev.guardrail</groupId>
     <artifactId>guardrail-maven-plugin_2.12</artifactId>
     <version>0.62.0</version>
     <executions>
@@ -33,11 +33,11 @@ Lets take another look at the maven config for guardrail:
         </execution>
     </executions>
 </plugin>
-``` 
+```
 
 **NB**: if you prefer to use Vavr instead of Java's standard library collections, see the [generic Java instructions](../) for appropriate configuration options.
 
-Once configured, you can manually invoke guardrail with `mvn generate-sources`. 
+Once configured, you can manually invoke guardrail with `mvn generate-sources`.
 
 Server Handlers, Resources
 --------------------------
@@ -86,6 +86,8 @@ Now we can examine the generated `Resource`. The resource companion class is gen
 ```
 
 This illistrates that while guardrail has helped us with much of the setup related to Dropwizard, we are still in controll of all the configuration of the Dropwizard service. Only the HTTP edge layer has been automated for us.
+
+(See it in action: [guardrail-dev/guardrail-sample-maven-dropwizard](https://github.com/guardrail-dev/guardrail-sample-maven-dropwizard))
 
 Separation of business logic
 ----------------------------
