@@ -560,4 +560,13 @@ lazy val microsite = (project in file("modules/microsite"))
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
 
+lazy val githubMatrixSettings = taskKey[String]("Prints JSON value expected by the Scala CI matrix build: [{ version: ..., bincompat: ... }]")
+
+githubMatrixSettings := {
+  (codegen/crossScalaVersions).value
+    .map(v => (v, v.split('.').take(2).mkString(".")))
+    .map({ case (version, bincompat) => s"""{"version":"${version}","bincompat":"${bincompat}"}""" })
+    .mkString("[", ",", "]")
+}
+
 Test / logBuffered := false
