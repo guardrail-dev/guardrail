@@ -13,8 +13,8 @@ By generating minimal clients that only have enough business knowledge to map do
 The following is an example from the [http4s](https://github.com/http4s/http4s) client generator:
 
 ```scala mdoc:passthrough
-import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.docs._
+import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.docs._
 DocsHelpers.renderScalaSnippet(Http4s, GeneratingClients)(
   """|// Two constructors are provided, one accepting the `httpClient` and `Async`
      |// implicitly, the other accepting an explicit `httpClient`, but still

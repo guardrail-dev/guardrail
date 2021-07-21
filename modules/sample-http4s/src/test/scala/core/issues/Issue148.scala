@@ -111,7 +111,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Valid "x-header" value
      * Invalid "x-optional-header" value
      */
-    // TODO: https://github.com/twilio/guardrail/issues/155
+    // TODO: https://github.com/guardrail-dev/guardrail/issues/155
     // `x-header` is currently never parsed correctly due to #155
     // Once this is fixed, this test will still fail due to `x-optional-header`,
     // but this is intentional for this test case.
@@ -127,7 +127,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     /* Correct entity mime type
      * Invalid mime type for "foo" body part
      */
-    // TODO: https://github.com/twilio/guardrail/issues/155
+    // TODO: https://github.com/guardrail-dev/guardrail/issues/155
     failedResponseBody(
       makeFormRequest(
         Multipart(
@@ -142,7 +142,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Valid mime type for "foo" body part
      * Invalid content for "foo" body part
      */
-    // TODO: https://github.com/twilio/guardrail/issues/155
+    // TODO: https://github.com/guardrail-dev/guardrail/issues/155
     failedResponseBody(
       makeFormRequest(
         Multipart(
@@ -158,7 +158,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Valid content for "foo" body part
      * Invalid mime type for "bar" body part
      */
-    // TODO: https://github.com/twilio/guardrail/issues/155
+    // TODO: https://github.com/guardrail-dev/guardrail/issues/155
     failedResponseBody(
       makeFormRequest(
         Multipart(
@@ -176,7 +176,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Valid mime type for "bar" body part
      * Invalid content for "bar" body part
      */
-    // TODO: https://github.com/twilio/guardrail/issues/155
+    // TODO: https://github.com/guardrail-dev/guardrail/issues/155
     failedResponseBody(
       makeFormRequest(
         Multipart(

@@ -1,9 +1,9 @@
 package core
 
-import com.twilio.guardrail.core.{ Tracker, TrackerTestExtensions }
-import com.twilio.guardrail.core.implicits._
-import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.{ CodegenTarget, Context, UserError }
+import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
+import dev.guardrail.core.implicits._
+import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.{ CodegenTarget, Context, UserError }
 import org.scalacheck.{ Arbitrary, Gen }
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import support.SwaggerSpecRunner

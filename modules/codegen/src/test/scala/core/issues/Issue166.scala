@@ -3,10 +3,10 @@ package tests.core.issues
 import cats.data.NonEmptyList
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
-import com.twilio.guardrail._
-import com.twilio.guardrail.core.Tracker
-import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.languages.ScalaLanguage
+import dev.guardrail._
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.languages.ScalaLanguage
 import support.SwaggerSpecRunner
 
 import scala.meta._

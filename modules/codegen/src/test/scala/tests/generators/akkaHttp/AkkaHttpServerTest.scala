@@ -1,7 +1,7 @@
 package tests.generators.akkaHttp
 
-import com.twilio.guardrail.generators.Scala.AkkaHttp
-import com.twilio.guardrail.{ Context, Server, Servers }
+import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.{ Context, Server, Servers }
 import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

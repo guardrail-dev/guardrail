@@ -2,9 +2,9 @@ package tests.core
 
 import com.github.javaparser.ast.`type`.PrimitiveType
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import com.twilio.guardrail.generators.Java.Dropwizard
-import com.twilio.guardrail.generators.syntax.Java._
-import com.twilio.guardrail.{ Clients, Context }
+import dev.guardrail.generators.Java.Dropwizard
+import dev.guardrail.generators.syntax.Java._
+import dev.guardrail.{ Clients, Context }
 import scala.collection.JavaConverters._
 import support.SwaggerSpecRunner
 import org.scalatest.freespec.AnyFreeSpec

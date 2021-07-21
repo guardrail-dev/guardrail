@@ -1,7 +1,7 @@
 package tests.core
 
-import com.twilio.guardrail.generators.Scala.Http4s
-import com.twilio.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions }
+import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import scala.meta._

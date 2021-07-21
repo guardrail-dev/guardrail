@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  title: https://github.com/twilio/guardrail/issues/148
+  title: https://github.com/guardrail-dev/guardrail/issues/148
   version: 1.0.0
 paths:
   /test:
