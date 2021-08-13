@@ -434,7 +434,7 @@ val dropwizardProjectDependencies = Seq(
   "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
   "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
   "junit"                      %  "junit"                  % "4.13.2"             % Test,
-  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.7"            % Test,
+  "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.7.1"            % Test,
   "com.novocode"               %  "junit-interface"        % "0.11"             % Test,
   "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
   "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
