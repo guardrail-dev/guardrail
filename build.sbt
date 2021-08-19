@@ -14,7 +14,7 @@ git.gitDescribedVersion := git.gitDescribedVersion(v => {
 
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
-val akkaVersion            = "2.6.15"
+val akkaVersion            = "2.6.16"
 val akkaHttpVersion        = "10.2.5"
 val catsVersion            = "2.6.1"
 val catsEffectVersion      = "2.5.3"
