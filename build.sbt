@@ -317,7 +317,7 @@ lazy val root = (project in file("."))
   .settings(commonSettings)
   .settings(publish / skip := true)
   .dependsOn(codegen, microsite)
-  .aggregate(allDeps, codegen, microsite, endpointsDependencies)
+  .aggregate(allDeps, codegen, microsite)
 
 lazy val allDeps = (project in file("modules/alldeps"))
   .settings(commonSettings)
@@ -326,13 +326,18 @@ lazy val allDeps = (project in file("modules/alldeps"))
     libraryDependencies ++= akkaProjectDependencies,
     libraryDependencies ++= akkaJacksonProjectDependencies,
     libraryDependencies ++= http4sProjectDependencies,
+    libraryDependencies ++= endpointsProjectDependencies,
     libraryDependencies ++= springProjectDependencies,
     libraryDependencies ++= dropwizardProjectDependencies,
     libraryDependencies ++= dropwizardScalaProjectDependencies,
   )
 
-def commonModuleSettings(moduleName: String, mp: _root_.sbt.Project): _root_.sbt.Project =
-  mp.settings(commonSettings)
+def commonModule(moduleSegment: String) =
+  baseModule(s"guardrail-${moduleSegment}", file(s"modules/${moduleSegment}"))
+
+def baseModule(moduleName: String, path: File): Project =
+  Project(id=moduleName, base=path)
+    .settings(commonSettings)
     .settings(name := moduleName)
     .settings(codegenSettings)
     .settings(libraryDependencies ++= testDependencies)
@@ -365,10 +370,10 @@ def commonModuleSettings(moduleName: String, mp: _root_.sbt.Project): _root_.sbt
       scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
     )
 
-lazy val codegen = commonModuleSettings("guardrail", project in file("modules/codegen"))
+lazy val codegen = baseModule("guardrail", file("modules/codegen"))
   .dependsOn(core, javaDropwizard, javaSpringBoot, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
 
-lazy val core = commonModuleSettings("guardrail-core", project in file("modules/core"))
+lazy val core = commonModule("core")
   .settings(
     libraryDependencies ++= Seq(
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
@@ -383,34 +388,34 @@ lazy val core = commonModuleSettings("guardrail-core", project in file("modules/
     ).map(_.cross(CrossVersion.for3Use2_13)),
   )
 
-lazy val javaSupport = commonModuleSettings("guardrail-java-support", project in file("modules/java-support"))
+lazy val javaSupport = commonModule("java-support")
   .settings(
     libraryDependencies ++= eclipseFormatterDependencies
   )
   .dependsOn(core)
 
-lazy val javaAsyncHttp = commonModuleSettings("guardrail-java-async-http", project in file("modules/java-async-http"))
+lazy val javaAsyncHttp = commonModule("java-async-http")
   .dependsOn(javaSupport)
 
-lazy val javaDropwizard = commonModuleSettings("guardrail-java-dropwizard", project in file("modules/java-dropwizard"))
+lazy val javaDropwizard = commonModule("java-dropwizard")
   .dependsOn(javaSupport, javaAsyncHttp)
 
-lazy val javaSpringBoot = commonModuleSettings("guardrail-java-spring-boot", project in file("modules/java-spring-boot"))
+lazy val javaSpringBoot = commonModule("java-spring-boot")
   .dependsOn(javaSupport)
 
-lazy val scalaSupport = commonModuleSettings("guardrail-scala-support", project in file("modules/scala-support"))
+lazy val scalaSupport = commonModule("scala-support")
   .dependsOn(core, javaDropwizard)
 
-lazy val scalaAkkaHttp = commonModuleSettings("guardrail-scala-akka-http", project in file("modules/scala-akka-http"))
+lazy val scalaAkkaHttp = commonModule("scala-akka-http")
   .dependsOn(scalaSupport, javaDropwizard)
 
-lazy val scalaEndpoints = commonModuleSettings("guardrail-scala-endpoints", project in file("modules/scala-endpoints"))
+lazy val scalaEndpoints = commonModule("scala-endpoints")
   .dependsOn(scalaSupport)
 
-lazy val scalaHttp4s = commonModuleSettings("guardrail-scala-http4s", project in file("modules/scala-http4s"))
+lazy val scalaHttp4s = commonModule("scala-http4s")
   .dependsOn(scalaSupport)
 
-lazy val scalaDropwizard = commonModuleSettings("guardrail-scala-dropwizard", project in file("modules/scala-dropwizard"))
+lazy val scalaDropwizard = commonModule("scala-dropwizard")
   .dependsOn(javaDropwizard, scalaSupport)
 
 val akkaProjectDependencies = Seq(
@@ -506,6 +511,14 @@ val dropwizardVavrProjectDependencies = dropwizardProjectDependencies ++ Seq(
   "io.dropwizard.modules" % "dropwizard-vavr" % dropwizardVavrVersion,
 )
 
+val endpointsProjectDependencies = Seq(
+  "io.circe"          %% "circe-core"          % endpointsCirceVersion,
+  "io.circe"          %% "circe-parser"        % endpointsCirceVersion,
+  "org.endpoints4s"   %% "algebra"             % endpointsVersion,
+  "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+  "org.typelevel"     %% "cats-core"           % endpointsCatsVersion
+).map(_.cross(CrossVersion.for3Use2_13))
+
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "javax.annotation"           %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
@@ -519,7 +532,7 @@ val springProjectDependencies = Seq(
 ).map(_.cross(CrossVersion.for3Use2_13))
 
 def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
-  Project(s"${name}Sample", file(s"modules/sample-${name}"))
+  Project(s"sample-${name}", file(s"modules/sample-${name}"))
     .settings(commonSettings)
     .settings(codegenSettings)
     .settings(
@@ -534,6 +547,8 @@ lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies
 lazy val akkaHttpJacksonSample = buildSampleProject("akkaHttpJackson", akkaJacksonProjectDependencies)
 
 lazy val dropwizardScalaSample = buildSampleProject("dropwizardScala", dropwizardScalaProjectDependencies)
+
+lazy val endpointsSample = buildSampleProject("endpoints", endpointsProjectDependencies)
 
 lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
 
@@ -552,37 +567,6 @@ lazy val dropwizardVavrSample = buildSampleProject("dropwizardVavr", dropwizardV
 
 lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
   .settings(javaSampleSettings)
-
-lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
-  .settings(commonSettings)
-  .settings(
-    publish / skip := true
-  )
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.circe"          %% "circe-core"          % endpointsCirceVersion,
-      "io.circe"          %% "circe-parser"        % endpointsCirceVersion,
-      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % endpointsCatsVersion
-    ).map(_.cross(CrossVersion.for3Use2_13)),
-  )
-
-lazy val endpointsSample = (project in file("modules/sample-endpoints"))
-  .settings(commonSettings)
-  .settings(
-    codegenSettings,
-    libraryDependencies ++= Seq(
-      "io.circe"          %% "circe-core"          % circeVersion,
-      "io.circe"          %% "circe-parser"        % circeVersion,
-      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % catsVersion
-    ).map(_.cross(CrossVersion.for3Use2_13)),
-    Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
-    publish / skip := true,
-    scalafmtOnCompile := false
-  )
 
 lazy val microsite = (project in file("modules/microsite"))
   .settings(commonSettings)
