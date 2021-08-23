@@ -3,15 +3,6 @@ import complete.DefaultParsers._
 name := "guardrail-root"
 // Project version is determined by sbt-git based on the most recent tag
 
-enablePlugins(GitVersioning)
-git.useGitDescribe := true
-
-git.gitDescribedVersion := git.gitDescribedVersion(v => {
-  import scala.sys.process._
-  val nativeGitDescribeResult = ("git describe --tags HEAD" !!).trim
-  git.defaultTagByVersionStrategy(nativeGitDescribeResult)
-}).value
-
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 val akkaVersion            = "2.6.15"
@@ -333,11 +324,46 @@ lazy val allDeps = (project in file("modules/alldeps"))
     libraryDependencies ++= dropwizardScalaProjectDependencies,
   )
 
+import com.typesafe.sbt.SbtGit.GitKeys.gitReader
+
+def customTagToVersionNumber(moduleSegment: String): String => Option[String] = { v =>
+  val prefix = s"${moduleSegment}-v"
+  if (v.startsWith(prefix)) { Some(v.stripPrefix(prefix)) }
+  else { None }
+}
+
 def commonModule(moduleSegment: String) =
   baseModule(s"guardrail-${moduleSegment}", moduleSegment, file(s"modules/${moduleSegment}"))
 
 def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
   Project(id=moduleName, base=path)
+    .settings(versionWithGit)
+    .settings(
+      // None of this stuff can be used because of scoping issues. Everything needs to be inlined to avoid just bubbling up to a singleton, since the keys (scopes?) are only valid at the root, not scoped per project.
+      // git.gitDescribePatterns := Seq(s"${moduleSegment}-v*"),
+      // git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion(gitDescribePatterns.value)).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v)),
+      git.useGitDescribe := true,
+      version := {
+        val overrideVersion =
+          git.overrideVersion(git.versionProperty.value)
+        val uncommittedSuffix =
+          git.makeUncommittedSignifierSuffix(git.gitUncommittedChanges.value, git.uncommittedSignifier.value)
+        val releaseVersion =
+          git.releaseVersion(git.gitCurrentTags.value, customTagToVersionNumber(moduleSegment), uncommittedSuffix)
+        val customGitDescribedVersion = gitReader.value.withGit(_.describedVersion(Seq(s"${moduleSegment}-v*"))).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v))
+        val describedVersion =
+          git.flaggedOptional(git.useGitDescribe.value, git.describeVersion(customGitDescribedVersion, uncommittedSuffix))
+        val datedVersion = git.formattedDateVersion.value
+        val commitVersion = git.formattedShaVersion.value
+        //Now we fall through the potential version numbers...
+        git.makeVersion(Seq(
+           overrideVersion,
+           releaseVersion,
+           describedVersion,
+           commitVersion
+        )) getOrElse datedVersion // For when git isn't there at all.
+      }
+    )
     .settings(commonSettings)
     .settings(name := moduleName)
     .settings(codegenSettings)
