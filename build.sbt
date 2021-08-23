@@ -331,18 +331,49 @@ lazy val allDeps = (project in file("modules/alldeps"))
     libraryDependencies ++= dropwizardScalaProjectDependencies,
   )
 
-lazy val codegen = (project in file("modules/codegen"))
-  .settings(commonSettings)
-  .settings(
-    name := "guardrail"
-  )
-  .settings(codegenSettings)
-  .settings(libraryDependencies ++= testDependencies)
+def commonModuleSettings(moduleName: String, mp: _root_.sbt.Project): _root_.sbt.Project =
+  mp.settings(commonSettings)
+    .settings(name := moduleName)
+    .settings(codegenSettings)
+    .settings(libraryDependencies ++= testDependencies)
+    .settings(
+      scalacOptions ++= List(
+        "-language:higherKinds",
+        "-Xlint:_,-missing-interpolator"
+      ),
+      description := "Principled code generation for Scala services from OpenAPI specifications",
+      homepage := Some(url("https://github.com/guardrail-dev/guardrail")),
+      scmInfo := Some(
+        ScmInfo(
+          url("https://github.com/guardrail-dev/guardrail"),
+          "scm:git@github.com:guardrail-dev/guardrail.git"
+        )
+      ),
+      developers := List(
+        Developer(
+          id = "blast_hardcheese",
+          name = "Devon Stewart",
+          email = "blast@hardchee.se",
+          url = url("http://hardchee.se/")
+        )
+      )
+    )
+    .settings(
+      scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
+      scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+      scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+      scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+    )
+
+lazy val codegen = commonModuleSettings("guardrail", project in file("modules/codegen"))
+  .dependsOn(core, javaDropwizard, javaSpringBoot, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
+
+lazy val core = commonModuleSettings("guardrail-core", project in file("modules/core"))
   .settings(
     libraryDependencies ++= Seq(
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.27",
-    ) ++ eclipseFormatterDependencies ++ Seq(
+    ) ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.24",
       "org.tpolecat"                %% "atto-core"                    % "0.9.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
@@ -350,33 +381,37 @@ lazy val codegen = (project in file("modules/codegen"))
       "org.typelevel"               %% "cats-free"                    % catsVersion,
       "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.0",
     ).map(_.cross(CrossVersion.for3Use2_13)),
-    scalacOptions ++= List(
-      "-language:higherKinds",
-      "-Xlint:_,-missing-interpolator"
-    ),
-    description := "Principled code generation for Scala services from OpenAPI specifications",
-    homepage := Some(url("https://github.com/guardrail-dev/guardrail")),
-    scmInfo := Some(
-      ScmInfo(
-        url("https://github.com/guardrail-dev/guardrail"),
-        "scm:git@github.com:guardrail-dev/guardrail.git"
-      )
-    ),
-    developers := List(
-      Developer(
-        id = "blast_hardcheese",
-        name = "Devon Stewart",
-        email = "blast@hardchee.se",
-        url = url("http://hardchee.se/")
-      )
-    )
   )
+
+lazy val javaSupport = commonModuleSettings("guardrail-java-support", project in file("modules/java-support"))
   .settings(
-    scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
-    scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
-    scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
-    scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+    libraryDependencies ++= eclipseFormatterDependencies
   )
+  .dependsOn(core)
+
+lazy val javaAsyncHttp = commonModuleSettings("guardrail-java-async-http", project in file("modules/java-async-http"))
+  .dependsOn(javaSupport)
+
+lazy val javaDropwizard = commonModuleSettings("guardrail-java-dropwizard", project in file("modules/java-dropwizard"))
+  .dependsOn(javaSupport, javaAsyncHttp)
+
+lazy val javaSpringBoot = commonModuleSettings("guardrail-java-spring-boot", project in file("modules/java-spring-boot"))
+  .dependsOn(javaSupport)
+
+lazy val scalaSupport = commonModuleSettings("guardrail-scala-support", project in file("modules/scala-support"))
+  .dependsOn(core, javaDropwizard)
+
+lazy val scalaAkkaHttp = commonModuleSettings("guardrail-scala-akka-http", project in file("modules/scala-akka-http"))
+  .dependsOn(scalaSupport, javaDropwizard)
+
+lazy val scalaEndpoints = commonModuleSettings("guardrail-scala-endpoints", project in file("modules/scala-endpoints"))
+  .dependsOn(scalaSupport)
+
+lazy val scalaHttp4s = commonModuleSettings("guardrail-scala-http4s", project in file("modules/scala-http4s"))
+  .dependsOn(scalaSupport)
+
+lazy val scalaDropwizard = commonModuleSettings("guardrail-scala-dropwizard", project in file("modules/scala-dropwizard"))
+  .dependsOn(javaDropwizard, scalaSupport)
 
 val akkaProjectDependencies = Seq(
   "javax.annotation"  %  "javax.annotation-api" % javaxAnnotationVersion, // for jdk11
