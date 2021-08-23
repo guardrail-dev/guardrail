@@ -318,6 +318,7 @@ lazy val root = (project in file("."))
   .settings(publish / skip := true)
   .dependsOn(codegen, microsite)
   .aggregate(allDeps, codegen, microsite)
+  .aggregate(allModules: _*)
 
 lazy val allDeps = (project in file("modules/alldeps"))
   .settings(commonSettings)
@@ -417,6 +418,19 @@ lazy val scalaHttp4s = commonModule("scala-http4s")
 
 lazy val scalaDropwizard = commonModule("scala-dropwizard")
   .dependsOn(javaDropwizard, scalaSupport)
+
+lazy val allModules = Seq[sbt.ProjectReference](
+  javaSupport,
+  javaAsyncHttp,
+  javaDropwizard,
+  javaSpringBoot,
+
+  scalaSupport,
+  scalaAkkaHttp,
+  scalaEndpoints,
+  scalaHttp4s,
+  scalaDropwizard,
+)
 
 val akkaProjectDependencies = Seq(
   "javax.annotation"  %  "javax.annotation-api" % javaxAnnotationVersion, // for jdk11
