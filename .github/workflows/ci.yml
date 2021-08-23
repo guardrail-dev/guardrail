@@ -37,7 +37,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean codegen/clean checkFormatting coverage codegen/test codegen/coverageReport microsite/compile
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test guardrail/coverageReport microsite/compile
     - uses: codecov/codecov-action@v1
       with:
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
@@ -71,7 +71,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean codegen/clean coverage runtimeJavaSuite codegen/coverageReport
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage runtimeJavaSuite guardrail/coverageReport
     - uses: codecov/codecov-action@v1
       with:
         file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
@@ -84,11 +84,11 @@ jobs:
         java: [ '8', '15', '16' ]
         scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
-            { framework: 'akka-http',         project: 'akkaHttpSample'        },
-            #{ framework: 'endpoints',         project: 'endpointsSample'       },
-            { framework: 'http4s',            project: 'http4sSample'          },
-            { framework: 'akka-http-jackson', project: 'akkaHttpJacksonSample' },
-            { framework: 'dropwizard',        project: 'dropwizardScalaSample' }
+            { framework: 'akka-http',         project: 'sample-akkaHttp'        },
+            #{ framework: 'endpoints',         project: 'sample-endpoints'       },
+            { framework: 'http4s',            project: 'sample-http4s'          },
+            { framework: 'akka-http-jackson', project: 'sample-akkaHttpJackson' },
+            { framework: 'dropwizard',        project: 'sample-dropwizardScala' }
           ]
     steps:
     - run: echo 'combo_enabled=true' >> $GITHUB_ENV
@@ -113,7 +113,7 @@ jobs:
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
       if: ${{ env.combo_enabled == 'true' }}
-      run:  sbt ++${{ matrix.scala.version }} clean codegen/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test codegen/coverageReport
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test guardrail/coverageReport
     - uses: codecov/codecov-action@v1
       if: ${{ env.combo_enabled == 'true' }}
       with:

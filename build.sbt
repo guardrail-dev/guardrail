@@ -223,7 +223,7 @@ Compile / assembly / artifact := {
 
 addArtifact(Compile / assembly / artifact, assembly)
 
-addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
+addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
@@ -232,26 +232,26 @@ addCommandAlias("example", "runtimeSuite")
 run / fork := true
 
 addCommandAlias("cli", "runMain dev.guardrail.CLI")
-addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
-addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
+addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
-addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
-addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/Test/scalafmtCheck").mkString("; "))
+addCommandAlias("scalaTestSuite", "; guardrail/test ; runtimeScalaSuite")
+addCommandAlias("javaTestSuite", "; guardrail/test ; runtimeJavaSuite")
+addCommandAlias("format", "; guardrail/scalafmt ; guardrail/test:scalafmt ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmt ; sample-${x}/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmtCheck ; sample-${x}/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
   "publishSonatype",
-  "; set publishTo in codegen := (sonatypePublishToBundle in codegen).value; codegen/publish"
+  "; set publishTo in guardrail := (sonatypePublishToBundle in guardrail).value; guardrail/publish"
 )
 addCommandAlias(
   "publishLocal",
-  "; package ; codegen/publishLocal"
+  "; package ; guardrail/publishLocal"
 )
 addCommandAlias(
   "publishM2",
-  "; package ; codegen/publishM2"
+  "; package ; guardrail/publishM2"
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
@@ -307,8 +307,8 @@ val codegenSettings = Seq(
 lazy val root = (project in file("."))
   .settings(commonSettings)
   .settings(publish / skip := true)
-  .dependsOn(codegen, microsite)
-  .aggregate(allDeps, codegen, microsite)
+  .dependsOn(guardrail, microsite)
+  .aggregate(allDeps, guardrail, microsite)
   .aggregate(allModules: _*)
 
 lazy val allDeps = (project in file("modules/alldeps"))
@@ -397,8 +397,8 @@ def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
       scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
     )
 
-lazy val codegen = baseModule("guardrail", "guardrail", file("modules/codegen"))
-  .dependsOn(core, javaDropwizard, javaSpringBoot, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
+lazy val guardrail = baseModule("guardrail", "guardrail", file("modules/codegen"))
+  .dependsOn(core, javaDropwizard, javaSpringMvc, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
 
 lazy val core = commonModule("core")
   .settings(
@@ -427,7 +427,7 @@ lazy val javaAsyncHttp = commonModule("java-async-http")
 lazy val javaDropwizard = commonModule("java-dropwizard")
   .dependsOn(javaSupport, javaAsyncHttp)
 
-lazy val javaSpringBoot = commonModule("java-spring-boot")
+lazy val javaSpringMvc = commonModule("java-spring-mvc")
   .dependsOn(javaSupport)
 
 lazy val scalaSupport = commonModule("scala-support")
@@ -449,7 +449,7 @@ lazy val allModules = Seq[sbt.ProjectReference](
   javaSupport,
   javaAsyncHttp,
   javaDropwizard,
-  javaSpringBoot,
+  javaSpringMvc,
 
   scalaSupport,
   scalaAkkaHttp,
@@ -614,7 +614,7 @@ lazy val microsite = (project in file("modules/microsite"))
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",
   )
-  .dependsOn(codegen)
+  .dependsOn(guardrail)
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
@@ -622,7 +622,7 @@ watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").g
 lazy val githubMatrixSettings = taskKey[String]("Prints JSON value expected by the Scala CI matrix build: [{ version: ..., bincompat: ... }]")
 
 githubMatrixSettings := {
-  (codegen/crossScalaVersions).value
+  (guardrail/crossScalaVersions).value
     .map(v => (v, v.split('.').take(2).mkString(".")))
     .map({ case (version, bincompat) => s"""{"version":"${version}","bincompat":"${bincompat}"}""" })
     .mkString("[", ",", "]")

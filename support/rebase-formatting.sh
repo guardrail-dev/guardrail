@@ -54,8 +54,21 @@ else
   exit 1
 fi
 
+projects=(
+  guardrail
+  java-support
+  java-async-http
+  java-dropwizard
+  java-spring-boot
+  scala-support
+  scala-akka-http
+  scala-endpoints
+  scala-http4s
+  scala-dropwizard
+)
+
 format_cmd="${sbt} scalafmt"
-for project in akkaHttpSample codegen dropwizardSample endpointsSample http4sSample microsite; do
+for project in ${projects[@]} microsite; do
   format_cmd="${format_cmd} && ${sbt} ${project}/scalafmt && ${sbt} ${project}/test:scalafmt"
 done
 
