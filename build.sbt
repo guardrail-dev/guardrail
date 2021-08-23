@@ -427,7 +427,7 @@ lazy val javaAsyncHttp = commonModule("java-async-http")
 lazy val javaDropwizard = commonModule("java-dropwizard")
   .dependsOn(javaSupport, javaAsyncHttp)
 
-lazy val javaSpringBoot = commonModule("java-spring-boot")
+lazy val javaSpringBoot = commonModule("java-spring-mvc")
   .dependsOn(javaSupport)
 
 lazy val scalaSupport = commonModule("scala-support")
