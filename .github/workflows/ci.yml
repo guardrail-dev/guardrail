@@ -84,11 +84,11 @@ jobs:
         java: [ '8', '15', '16' ]
         scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
-            { framework: 'akka-http',         project: 'akkaHttpSample'        },
-            #{ framework: 'endpoints',         project: 'endpointsSample'       },
-            { framework: 'http4s',            project: 'http4sSample'          },
-            { framework: 'akka-http-jackson', project: 'akkaHttpJacksonSample' },
-            { framework: 'dropwizard',        project: 'dropwizardScalaSample' }
+            { framework: 'akka-http',         project: 'sample-akkaHttp'        },
+            #{ framework: 'endpoints',         project: 'sample-endpoints'       },
+            { framework: 'http4s',            project: 'sample-http4s'          },
+            { framework: 'akka-http-jackson', project: 'sample-akkaHttpJackson' },
+            { framework: 'dropwizard',        project: 'sample-dropwizardScala' }
           ]
     steps:
     - run: echo 'combo_enabled=true' >> $GITHUB_ENV

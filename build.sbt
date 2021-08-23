@@ -238,7 +238,7 @@ addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; guardrail/test ; runtimeScalaSuite")
 addCommandAlias("javaTestSuite", "; guardrail/test ; runtimeJavaSuite")
 addCommandAlias("format", "; guardrail/scalafmt ; guardrail/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/Test/scalafmtCheck").mkString("; "))
+addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmtCheck ; sample-${x}/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
