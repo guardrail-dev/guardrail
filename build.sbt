@@ -398,7 +398,7 @@ def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
     )
 
 lazy val guardrail = baseModule("guardrail", "guardrail", file("modules/codegen"))
-  .dependsOn(core, javaDropwizard, javaSpringBoot, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
+  .dependsOn(core, javaDropwizard, javaSpringMvc, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
 
 lazy val core = commonModule("core")
   .settings(
@@ -427,7 +427,7 @@ lazy val javaAsyncHttp = commonModule("java-async-http")
 lazy val javaDropwizard = commonModule("java-dropwizard")
   .dependsOn(javaSupport, javaAsyncHttp)
 
-lazy val javaSpringBoot = commonModule("java-spring-mvc")
+lazy val javaSpringMvc = commonModule("java-spring-mvc")
   .dependsOn(javaSupport)
 
 lazy val scalaSupport = commonModule("scala-support")
@@ -449,7 +449,7 @@ lazy val allModules = Seq[sbt.ProjectReference](
   javaSupport,
   javaAsyncHttp,
   javaDropwizard,
-  javaSpringBoot,
+  javaSpringMvc,
 
   scalaSupport,
   scalaAkkaHttp,
