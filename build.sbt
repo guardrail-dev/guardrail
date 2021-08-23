@@ -334,9 +334,9 @@ lazy val allDeps = (project in file("modules/alldeps"))
   )
 
 def commonModule(moduleSegment: String) =
-  baseModule(s"guardrail-${moduleSegment}", file(s"modules/${moduleSegment}"))
+  baseModule(s"guardrail-${moduleSegment}", moduleSegment, file(s"modules/${moduleSegment}"))
 
-def baseModule(moduleName: String, path: File): Project =
+def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
   Project(id=moduleName, base=path)
     .settings(commonSettings)
     .settings(name := moduleName)
@@ -371,7 +371,7 @@ def baseModule(moduleName: String, path: File): Project =
       scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
     )
 
-lazy val codegen = baseModule("guardrail", file("modules/codegen"))
+lazy val codegen = baseModule("guardrail", "guardrail", file("modules/codegen"))
   .dependsOn(core, javaDropwizard, javaSpringBoot, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
 
 lazy val core = commonModule("core")
