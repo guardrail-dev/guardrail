@@ -324,6 +324,14 @@ lazy val allDeps = (project in file("modules/alldeps"))
     libraryDependencies ++= dropwizardScalaProjectDependencies,
   )
 
+import com.typesafe.sbt.SbtGit.GitKeys.gitReader
+
+def customTagToVersionNumber(moduleSegment: String): String => Option[String] = { v =>
+  val prefix = s"${moduleSegment}-v"
+  if (v.startsWith(prefix)) { Some(v.stripPrefix(prefix)) }
+  else { None }
+}
+
 def commonModule(moduleSegment: String) =
   baseModule(s"guardrail-${moduleSegment}", moduleSegment, file(s"modules/${moduleSegment}"))
 
@@ -331,41 +339,23 @@ def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
   Project(id=moduleName, base=path)
     .settings(versionWithGit)
     .settings(
-      // git.gitDescribePatterns := Seq(s"${moduleSegment}-v*"), // This is not used, since we explictly shell out to ProcessBuilder in order to run git. This permits guardrail to exist in a git submodule, which is not supported by JGit.
+      // None of this stuff can be used because of scoping issues. Everything needs to be inlined to avoid just bubbling up to a singleton, since the keys (scopes?) are only valid at the root, not scoped per project.
+      // git.gitDescribePatterns := Seq(s"${moduleSegment}-v*"),
+      // git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion(gitDescribePatterns.value)).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v)),
       git.useGitDescribe := true,
-      version := { // Use a bastardized version of SbtGit's version derivation strategy, extended to support arbitrary subproject tags, interleaved with our ProcessBuilder stuff so guardrail can be embedded via git submodule.
-        // Strip moduleSegment prefix
-        def tagByVersionStrategy: String => Option[String] = {
-          val pattern = s"${moduleSegment}-v([0-9].*)".r
-
-          {
-            case pattern(v) => Some(v)
-            case _ => None
-          }
-        }
-
-        import com.typesafe.sbt.SbtGit.GitKeys.gitReader
-        // This is copied directly from https://github.com/sbt/sbt-git/blob/c97aca2577d8ca36d04859cb1bbcc6d8cdb0bece/src/main/scala/com/typesafe/sbt/SbtGit.scala#L190-L207
-        // sbt seems to favor some seemingly arbitrary tagByVersionStrategy, not the one defined in the current project
-        // In order to truly support multi-module, we need to find the current project's tag.
+      version := {
         val overrideVersion =
           git.overrideVersion(git.versionProperty.value)
         val uncommittedSuffix =
           git.makeUncommittedSignifierSuffix(git.gitUncommittedChanges.value, git.uncommittedSignifier.value)
         val releaseVersion =
-          git.releaseVersion(git.gitCurrentTags.value, tagByVersionStrategy, uncommittedSuffix)
-
-        val describedVersion = {
-          import scala.sys.process._
-          val matchPatterns: Seq[String] = Seq(s"${moduleSegment}-v*").flatMap(x => Seq("--match", x))
-          val nativeGitDescribeResult = Process(Seq("git", "describe") ++ matchPatterns ++ Seq("--tags", "HEAD")).!!.trim
-          git.flaggedOptional(git.useGitDescribe.value, tagByVersionStrategy(nativeGitDescribeResult))
-        }
-
+          git.releaseVersion(git.gitCurrentTags.value, customTagToVersionNumber(moduleSegment), uncommittedSuffix)
+        val customGitDescribedVersion = gitReader.value.withGit(_.describedVersion(Seq(s"${moduleSegment}-v*"))).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v))
+        val describedVersion =
+          git.flaggedOptional(git.useGitDescribe.value, git.describeVersion(customGitDescribedVersion, uncommittedSuffix))
         val datedVersion = git.formattedDateVersion.value
         val commitVersion = git.formattedShaVersion.value
         //Now we fall through the potential version numbers...
-
         git.makeVersion(Seq(
            overrideVersion,
            releaseVersion,
