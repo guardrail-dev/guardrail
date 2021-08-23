@@ -45,6 +45,8 @@
 # seconds on my machine starting cold.
 if hash sbt-client 2>/dev/null; then
   sbt="sbt-client"
+elif hash sbtn 2>/dev/null; then
+  sbt="sbtn"
 elif hash sbt 2>/dev/null; then
   sbt="sbt"
 else
