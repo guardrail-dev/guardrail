@@ -63,7 +63,8 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
   ).foreach {
     case (str, expected) =>
       test(s"Server ${str}") {
-        val NonEmptyList((gen, _), _) = Target.unsafeExtract(AkkaHttpServerGenerator.paths.generateUrlPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
+        val NonEmptyList((gen, _), _) =
+          Target.unsafeExtract(AkkaHttpServerGenerator.paths.generateUrlPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
         gen.toString shouldBe ((expected.toString))
       }
   }
