@@ -53,7 +53,7 @@ else
 fi
 
 format_cmd="${sbt} scalafmt"
-for project in akkaHttpSample codegen dropwizardSample endpointsSample http4sSample microsite; do
+for project in akkaHttpSample guardrail dropwizardSample endpointsSample http4sSample microsite; do
   format_cmd="${format_cmd} && ${sbt} ${project}/scalafmt && ${sbt} ${project}/test:scalafmt"
 done
 
