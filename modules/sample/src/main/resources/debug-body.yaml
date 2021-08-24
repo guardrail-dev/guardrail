@@ -1,0 +1,30 @@
+openapi: 3.0.2
+info:
+  title: 'mixed content types'
+  version: 1.0.0
+paths:
+  /bar:
+    post:
+      operationId: debugBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Body'
+      responses:
+        204:
+          description: costam
+components:
+  schemas:
+    Body:
+      type: object
+      properties:
+        something1:
+          type: integer
+          format: int32
+        something2:
+          type: string
+      required:
+        - something1
+        - something2

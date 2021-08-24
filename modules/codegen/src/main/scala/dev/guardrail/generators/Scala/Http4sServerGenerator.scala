@@ -77,6 +77,7 @@ object Http4sServerGenerator {
       } yield res)
 
     def generateRoutes(
+        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,
@@ -98,7 +99,7 @@ object Http4sServerGenerator {
                 parameters,
                 responses
                 ) =>
-              generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
+              generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses, debugBody)
           }
           .map(_.flatten.sortBy(_.methodName))
         routeTerms = renderedRoutes.map(_.route)
@@ -245,11 +246,28 @@ object Http4sServerGenerator {
         }
       } yield directives
 
-    def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
+    def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]], debugBody: Boolean): Target[Option[Term => Term]] =
       Target.pure(
         body.map {
           case LanguageParameter(_, _, paramName, _, _) =>
-            content => q"req.decodeWith(${Term.Name(s"${methodName.uncapitalized}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
+            content =>
+              if (debugBody) {
+                q"""
+                  Media[F](req.body, req.headers)
+                    .attemptAs(${Term.Name(s"${methodName.uncapitalized}Decoder")})
+                    .foldF(
+                      err =>
+                        Response(
+                          org.http4s.Status.UnprocessableEntity,
+                          body = stringEncoder[F].toEntity(err.getCause.toString).body
+                        )
+                    .pure[F],
+                    ${param"$paramName"} => $content
+                    )
+                """
+              } else {
+                q"req.decodeWith(${Term.Name(s"${methodName.uncapitalized}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
+              }
         }
       )
 
@@ -513,7 +531,8 @@ object Http4sServerGenerator {
         customExtractionFields: Option[CustomExtractionField[ScalaLanguage]],
         tracingFields: Option[TracingField[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage],
-        responses: Responses[ScalaLanguage]
+        responses: Responses[ScalaLanguage],
+        debugBody: Boolean
     ): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       Target.log.function("generateRoute")(for {
@@ -530,7 +549,7 @@ object Http4sServerGenerator {
         pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
         (http4sPath, additionalQs) = pathWithQs
         http4sQs   <- qsToHttp4s(methodName)(qsArgs)
-        http4sBody <- bodyToHttp4s(methodName, bodyArgs)
+        http4sBody <- bodyToHttp4s(methodName, bodyArgs, debugBody)
         asyncFormProcessing = formArgs.exists(_.isFile)
         http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(methodName)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
