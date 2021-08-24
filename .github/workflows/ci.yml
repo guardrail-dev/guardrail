@@ -37,10 +37,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test guardrail/coverageReport microsite/compile
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test coverageReport microsite/compile
     - uses: codecov/codecov-action@v1
       with:
-        file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
+        file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
     - name: Set scala version for matrix
       id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
@@ -71,10 +71,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage runtimeJavaSuite guardrail/coverageReport
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage runtimeJavaSuite coverageReport
     - uses: codecov/codecov-action@v1
       with:
-        file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
+        file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
   scala:
     runs-on: ubuntu-20.04
@@ -113,9 +113,9 @@ jobs:
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
       if: ${{ env.combo_enabled == 'true' }}
-      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test guardrail/coverageReport
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test coverageReport
     - uses: codecov/codecov-action@v1
       if: ${{ env.combo_enabled == 'true' }}
       with:
-        file: ./modules/codegen/target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
+        file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
