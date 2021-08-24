@@ -22,6 +22,7 @@ object EndpointsServerGenerator {
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       Target.raiseUserError("endpoints server generation is not currently supported")
     def generateRoutes(
+        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,

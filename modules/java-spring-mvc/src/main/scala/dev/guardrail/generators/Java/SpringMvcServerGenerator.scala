@@ -306,6 +306,7 @@ object SpringMvcServerGenerator {
       }
 
     def generateRoutes(
+        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,

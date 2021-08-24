@@ -228,6 +228,7 @@ object AkkaHttpServerGenerator {
         } else Target.pure(None)
       } yield res
     def generateRoutes(
+        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,
