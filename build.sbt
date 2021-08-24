@@ -308,7 +308,7 @@ lazy val root = (project in file("."))
   .settings(commonSettings)
   .settings(publish / skip := true)
   .dependsOn(guardrail, microsite)
-  .aggregate(allDeps, guardrail, microsite)
+  .aggregate(allDeps, microsite)
   .aggregate(allModules: _*)
 
 lazy val allDeps = (project in file("modules/alldeps"))
@@ -446,6 +446,9 @@ lazy val scalaDropwizard = commonModule("scala-dropwizard")
   .dependsOn(javaDropwizard, scalaSupport)
 
 lazy val allModules = Seq[sbt.ProjectReference](
+  core,
+  guardrail,
+
   javaSupport,
   javaAsyncHttp,
   javaDropwizard,
