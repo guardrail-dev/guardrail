@@ -17,6 +17,7 @@ case class Args(
       framework: Option[String] = self.context.framework,
       customExtraction: Boolean = self.context.customExtraction,
       tracing: Boolean = self.context.tracing,
+      debugBody: Boolean = self.context.debugBody,
       modules: List[String] = self.context.modules,
       propertyRequirement: PropertyRequirement.Configured = self.context.propertyRequirement
   ): Args =
@@ -25,6 +26,7 @@ case class Args(
         framework = framework,
         customExtraction = customExtraction,
         tracing = tracing,
+        debugBody = debugBody,
         modules = modules,
         propertyRequirement = propertyRequirement
       )
