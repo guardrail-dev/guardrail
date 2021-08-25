@@ -133,7 +133,7 @@ class CoreTermInterp[L <: LA](
                 Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
               case (sofar :: already, "--custom-extraction" :: xs) =>
                 Continue((sofar.copyContext(customExtraction = true) :: already, xs))
-              case (sofar :: already, "--debug-body" :: xs) => 
+              case (sofar :: already, "--debug-body" :: xs) =>
                 Continue((sofar.copyContext(debugBody = true) :: already, xs))
               case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
                 for {

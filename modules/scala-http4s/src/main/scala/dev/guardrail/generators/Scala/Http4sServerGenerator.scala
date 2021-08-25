@@ -308,11 +308,20 @@ object Http4sServerGenerator {
                     .attemptAs(${Term.Name(s"${methodName.uncapitalized}Decoder")})
                     .foldF(
                       err =>
-                        Response(
-                          org.http4s.Status.UnprocessableEntity,
-                          body = stringEncoder[F].toEntity(err.getCause.toString).body
-                        )
-                    .pure[F],
+                        err.cause match {
+                          case Some(circeErr: io.circe.DecodingFailure) =>
+                            val errors = circeErr.history.map {
+                              case io.circe.CursorOp.DownField(field) => field
+                              case io.circe.CursorOp.Field(field)     => field
+                              case op                                 => op.toString
+                            }.mkString(",")
+                            val errorMessage =
+                              "Couldn't decode body. Underlying message: " + circeErr.message + ". " + "Problematic fields: " + errors
+
+                            Response[F](org.http4s.Status.UnprocessableEntity, body = stringEncoder.toEntity(errorMessage).body)
+                              .pure[F]
+                          case _ => err.toHttpResponse[F](req.httpVersion).pure[F]
+                        },
                     ${param"$paramName"} => $content
                     )
                 """
