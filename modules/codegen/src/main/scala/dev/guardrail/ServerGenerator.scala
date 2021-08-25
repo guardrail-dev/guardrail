@@ -57,7 +57,16 @@ object ServerGenerator {
                 )
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes <- generateRoutes(context.debugBody, context.tracing, resourceName, handlerName, basePath, serverOperations, protocolElems, securitySchemes)
+            renderedRoutes <- generateRoutes(
+              context.debugBody,
+              context.tracing,
+              resourceName,
+              handlerName,
+              basePath,
+              serverOperations,
+              protocolElems,
+              securitySchemes
+            )
             handlerSrc <- renderHandler(
               handlerName,
               renderedRoutes.methodSigs,
