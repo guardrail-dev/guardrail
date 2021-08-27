@@ -3,15 +3,6 @@ import complete.DefaultParsers._
 name := "guardrail-root"
 // Project version is determined by sbt-git based on the most recent tag
 
-enablePlugins(GitVersioning)
-git.useGitDescribe := true
-
-git.gitDescribedVersion := git.gitDescribedVersion(v => {
-  import scala.sys.process._
-  val nativeGitDescribeResult = ("git describe --tags HEAD" !!).trim
-  git.defaultTagByVersionStrategy(nativeGitDescribeResult)
-}).value
-
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 val akkaVersion            = "2.6.15"
@@ -232,7 +223,7 @@ Compile / assembly / artifact := {
 
 addArtifact(Compile / assembly / artifact, assembly)
 
-addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"${x}Sample/clean").mkString(" ; "))
+addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
@@ -241,26 +232,26 @@ addCommandAlias("example", "runtimeSuite")
 run / fork := true
 
 addCommandAlias("cli", "runMain dev.guardrail.CLI")
-addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
-addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"${x}Sample/test").mkString("; "))
+addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
+addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
-addCommandAlias("scalaTestSuite", "; codegen/test ; runtimeScalaSuite")
-addCommandAlias("javaTestSuite", "; codegen/test ; runtimeJavaSuite")
-addCommandAlias("format", "; codegen/scalafmt ; codegen/test:scalafmt ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmt ; ${x}Sample/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; codegen/scalafmtCheck ; codegen/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"${x}Sample/scalafmtCheck ; ${x}Sample/Test/scalafmtCheck").mkString("; "))
+addCommandAlias("scalaTestSuite", "; guardrail/test ; runtimeScalaSuite")
+addCommandAlias("javaTestSuite", "; guardrail/test ; runtimeJavaSuite")
+addCommandAlias("format", "; guardrail/scalafmt ; guardrail/test:scalafmt ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmt ; sample-${x}/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmtCheck ; sample-${x}/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
   "publishSonatype",
-  "; set publishTo in codegen := (sonatypePublishToBundle in codegen).value; codegen/publish"
+  "; set publishTo in guardrail := (sonatypePublishToBundle in guardrail).value; guardrail/publish"
 )
 addCommandAlias(
   "publishLocal",
-  "; package ; codegen/publishLocal"
+  "; package ; guardrail/publishLocal"
 )
 addCommandAlias(
   "publishM2",
-  "; package ; codegen/publishM2"
+  "; package ; guardrail/publishM2"
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
@@ -316,8 +307,9 @@ val codegenSettings = Seq(
 lazy val root = (project in file("."))
   .settings(commonSettings)
   .settings(publish / skip := true)
-  .dependsOn(codegen, microsite)
-  .aggregate(allDeps, codegen, microsite, endpointsDependencies)
+  .dependsOn(guardrail, microsite)
+  .aggregate(allDeps, microsite)
+  .aggregate(allModules: _*)
 
 lazy val allDeps = (project in file("modules/alldeps"))
   .settings(commonSettings)
@@ -326,57 +318,148 @@ lazy val allDeps = (project in file("modules/alldeps"))
     libraryDependencies ++= akkaProjectDependencies,
     libraryDependencies ++= akkaJacksonProjectDependencies,
     libraryDependencies ++= http4sProjectDependencies,
+    libraryDependencies ++= endpointsProjectDependencies,
     libraryDependencies ++= springProjectDependencies,
     libraryDependencies ++= dropwizardProjectDependencies,
     libraryDependencies ++= dropwizardScalaProjectDependencies,
   )
 
-lazy val codegen = (project in file("modules/codegen"))
-  .settings(commonSettings)
-  .settings(
-    name := "guardrail"
-  )
-  .settings(codegenSettings)
-  .settings(libraryDependencies ++= testDependencies)
+import com.typesafe.sbt.SbtGit.GitKeys.gitReader
+
+def customTagToVersionNumber(moduleSegment: String): String => Option[String] = { v =>
+  val prefix = s"${moduleSegment}-v"
+  if (v.startsWith(prefix)) { Some(v.stripPrefix(prefix)) }
+  else { None }
+}
+
+def commonModule(moduleSegment: String) =
+  baseModule(s"guardrail-${moduleSegment}", moduleSegment, file(s"modules/${moduleSegment}"))
+
+def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
+  Project(id=moduleName, base=path)
+    .settings(versionWithGit)
+    .settings(
+      // None of this stuff can be used because of scoping issues. Everything needs to be inlined to avoid just bubbling up to a singleton, since the keys (scopes?) are only valid at the root, not scoped per project.
+      // git.gitDescribePatterns := Seq(s"${moduleSegment}-v*"),
+      // git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion(gitDescribePatterns.value)).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v)),
+      git.useGitDescribe := true,
+      version := {
+        val overrideVersion =
+          git.overrideVersion(git.versionProperty.value)
+        val uncommittedSuffix =
+          git.makeUncommittedSignifierSuffix(git.gitUncommittedChanges.value, git.uncommittedSignifier.value)
+        val releaseVersion =
+          git.releaseVersion(git.gitCurrentTags.value, customTagToVersionNumber(moduleSegment), uncommittedSuffix)
+        val customGitDescribedVersion = gitReader.value.withGit(_.describedVersion(Seq(s"${moduleSegment}-v*"))).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v))
+        val describedVersion =
+          git.flaggedOptional(git.useGitDescribe.value, git.describeVersion(customGitDescribedVersion, uncommittedSuffix))
+        val datedVersion = git.formattedDateVersion.value
+        val commitVersion = git.formattedShaVersion.value
+        //Now we fall through the potential version numbers...
+        git.makeVersion(Seq(
+           overrideVersion,
+           releaseVersion,
+           describedVersion,
+           commitVersion
+        )) getOrElse datedVersion // For when git isn't there at all.
+      }
+    )
+    .settings(commonSettings)
+    .settings(name := moduleName)
+    .settings(codegenSettings)
+    .settings(libraryDependencies ++= testDependencies)
+    .settings(
+      scalacOptions ++= List(
+        "-language:higherKinds",
+        "-Xlint:_,-missing-interpolator"
+      ),
+      description := "Principled code generation for Scala services from OpenAPI specifications",
+      homepage := Some(url("https://github.com/guardrail-dev/guardrail")),
+      scmInfo := Some(
+        ScmInfo(
+          url("https://github.com/guardrail-dev/guardrail"),
+          "scm:git@github.com:guardrail-dev/guardrail.git"
+        )
+      ),
+      developers := List(
+        Developer(
+          id = "blast_hardcheese",
+          name = "Devon Stewart",
+          email = "blast@hardchee.se",
+          url = url("http://hardchee.se/")
+        )
+      )
+    )
+    .settings(
+      scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
+      scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
+      scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
+      scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+    )
+
+lazy val guardrail = baseModule("guardrail", "guardrail", file("modules/codegen"))
+  .dependsOn(core, javaDropwizard, javaSpringMvc, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
+
+lazy val core = commonModule("core")
   .settings(
     libraryDependencies ++= Seq(
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.27",
-    ) ++ eclipseFormatterDependencies ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.27",
+    ) ++ Seq(
+      "org.scalameta"               %% "scalameta"                    % "4.4.24",
       "org.tpolecat"                %% "atto-core"                    % "0.9.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
       "org.typelevel"               %% "cats-free"                    % catsVersion,
       "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.0",
     ).map(_.cross(CrossVersion.for3Use2_13)),
-    scalacOptions ++= List(
-      "-language:higherKinds",
-      "-Xlint:_,-missing-interpolator"
-    ),
-    description := "Principled code generation for Scala services from OpenAPI specifications",
-    homepage := Some(url("https://github.com/guardrail-dev/guardrail")),
-    scmInfo := Some(
-      ScmInfo(
-        url("https://github.com/guardrail-dev/guardrail"),
-        "scm:git@github.com:guardrail-dev/guardrail.git"
-      )
-    ),
-    developers := List(
-      Developer(
-        id = "blast_hardcheese",
-        name = "Devon Stewart",
-        email = "blast@hardchee.se",
-        url = url("http://hardchee.se/")
-      )
-    )
   )
+
+lazy val javaSupport = commonModule("java-support")
   .settings(
-    scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xlint:-missing-interpolator,_")).value,
-    scalacOptions ++= ifScalaVersion(_ >= 12)(List("-Xlint:-unused,-missing-interpolator,_")).value,
-    scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
-    scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
+    libraryDependencies ++= eclipseFormatterDependencies
   )
+  .dependsOn(core)
+
+lazy val javaAsyncHttp = commonModule("java-async-http")
+  .dependsOn(javaSupport)
+
+lazy val javaDropwizard = commonModule("java-dropwizard")
+  .dependsOn(javaSupport, javaAsyncHttp)
+
+lazy val javaSpringMvc = commonModule("java-spring-mvc")
+  .dependsOn(javaSupport)
+
+lazy val scalaSupport = commonModule("scala-support")
+  .dependsOn(core, javaDropwizard)
+
+lazy val scalaAkkaHttp = commonModule("scala-akka-http")
+  .dependsOn(scalaSupport, javaDropwizard)
+
+lazy val scalaEndpoints = commonModule("scala-endpoints")
+  .dependsOn(scalaSupport)
+
+lazy val scalaHttp4s = commonModule("scala-http4s")
+  .dependsOn(scalaSupport)
+
+lazy val scalaDropwizard = commonModule("scala-dropwizard")
+  .dependsOn(javaDropwizard, scalaSupport)
+
+lazy val allModules = Seq[sbt.ProjectReference](
+  core,
+  guardrail,
+
+  javaSupport,
+  javaAsyncHttp,
+  javaDropwizard,
+  javaSpringMvc,
+
+  scalaSupport,
+  scalaAkkaHttp,
+  scalaEndpoints,
+  scalaHttp4s,
+  scalaDropwizard,
+)
 
 val akkaProjectDependencies = Seq(
   "javax.annotation"  %  "javax.annotation-api" % javaxAnnotationVersion, // for jdk11
@@ -471,6 +554,14 @@ val dropwizardVavrProjectDependencies = dropwizardProjectDependencies ++ Seq(
   "io.dropwizard.modules" % "dropwizard-vavr" % dropwizardVavrVersion,
 )
 
+val endpointsProjectDependencies = Seq(
+  "io.circe"          %% "circe-core"          % endpointsCirceVersion,
+  "io.circe"          %% "circe-parser"        % endpointsCirceVersion,
+  "org.endpoints4s"   %% "algebra"             % endpointsVersion,
+  "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
+  "org.typelevel"     %% "cats-core"           % endpointsCatsVersion
+).map(_.cross(CrossVersion.for3Use2_13))
+
 val springProjectDependencies = Seq(
   "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
   "javax.annotation"           %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
@@ -484,7 +575,7 @@ val springProjectDependencies = Seq(
 ).map(_.cross(CrossVersion.for3Use2_13))
 
 def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
-  Project(s"${name}Sample", file(s"modules/sample-${name}"))
+  Project(s"sample-${name}", file(s"modules/sample-${name}"))
     .settings(commonSettings)
     .settings(codegenSettings)
     .settings(
@@ -499,6 +590,8 @@ lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies
 lazy val akkaHttpJacksonSample = buildSampleProject("akkaHttpJackson", akkaJacksonProjectDependencies)
 
 lazy val dropwizardScalaSample = buildSampleProject("dropwizardScala", dropwizardScalaProjectDependencies)
+
+lazy val endpointsSample = buildSampleProject("endpoints", endpointsProjectDependencies)
 
 lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
 
@@ -518,44 +611,13 @@ lazy val dropwizardVavrSample = buildSampleProject("dropwizardVavr", dropwizardV
 lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
   .settings(javaSampleSettings)
 
-lazy val endpointsDependencies = (project in file("modules/sample-endpoints-deps"))
-  .settings(commonSettings)
-  .settings(
-    publish / skip := true
-  )
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.circe"          %% "circe-core"          % endpointsCirceVersion,
-      "io.circe"          %% "circe-parser"        % endpointsCirceVersion,
-      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % endpointsCatsVersion
-    ).map(_.cross(CrossVersion.for3Use2_13)),
-  )
-
-lazy val endpointsSample = (project in file("modules/sample-endpoints"))
-  .settings(commonSettings)
-  .settings(
-    codegenSettings,
-    libraryDependencies ++= Seq(
-      "io.circe"          %% "circe-core"          % circeVersion,
-      "io.circe"          %% "circe-parser"        % circeVersion,
-      "org.endpoints4s"   %% "algebra"             % endpointsVersion,
-      "org.scalatest"     %% "scalatest"           % scalatestVersion % Test,
-      "org.typelevel"     %% "cats-core"           % catsVersion
-    ).map(_.cross(CrossVersion.for3Use2_13)),
-    Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
-    publish / skip := true,
-    scalafmtOnCompile := false
-  )
-
 lazy val microsite = (project in file("modules/microsite"))
   .settings(commonSettings)
   .settings(
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",
   )
-  .dependsOn(codegen)
+  .dependsOn(guardrail)
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
@@ -563,7 +625,7 @@ watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").g
 lazy val githubMatrixSettings = taskKey[String]("Prints JSON value expected by the Scala CI matrix build: [{ version: ..., bincompat: ... }]")
 
 githubMatrixSettings := {
-  (codegen/crossScalaVersions).value
+  (guardrail/crossScalaVersions).value
     .map(v => (v, v.split('.').take(2).mkString(".")))
     .map({ case (version, bincompat) => s"""{"version":"${version}","bincompat":"${bincompat}"}""" })
     .mkString("[", ",", "]")
