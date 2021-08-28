@@ -405,6 +405,7 @@ lazy val core = commonModule("core")
     libraryDependencies ++= Seq(
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % javaparserVersion,
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.27",
+      "org.slf4j"                   % "slf4j-simple"                  % "1.7.32",
     ) ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.27",
       "org.tpolecat"                %% "atto-core"                    % "0.9.5",
