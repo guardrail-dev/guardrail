@@ -477,11 +477,11 @@ object Http4sClientGenerator {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
               private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-                F.pure(response.headers.get(header.ci).map(_.head.value))
+                F.pure(response.headers.get(CIString(header)).map(_.head.value))
 
               private def parseRequiredHeader(response: Response[F], header: String): F[String] =
                 response.headers
-                  .get(header.ci)
+                  .get(CIString(header))
                   .map(_.head.value)
                   .fold[F[String]](
                     F.raiseError(
