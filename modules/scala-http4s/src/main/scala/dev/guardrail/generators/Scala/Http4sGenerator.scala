@@ -46,7 +46,7 @@ object Http4sGenerator {
         val defn = q"""
             object Http4sImplicits {
               import scala.util.Try
-              private[this] def pathEscape(s: String): String = Path(s, "").toString.init.tail
+              private[this] def pathEscape(s: String): String = Path.Segment(s).toString
               implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
 
               private[this] def argEscape(k: String, v: String): String = Query.apply((k, Some(v))).toString
@@ -57,7 +57,7 @@ object Http4sGenerator {
               implicit def emptyEntityEncoder[F[_]: Sync]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
 
               implicit def byteStreamEntityDecoder[F[_]:Sync]: EntityDecoder[F, Stream[F, Byte]] = new EntityDecoder[F,Stream[F,Byte]] {
-                override def decode(m: Media[F], strict: Boolean): DecodeResult[F, Stream[F, Byte]] = DecodeResult.success(m.body)
+                override def decode(m: Media[F], strict: Boolean): DecodeResult[F, Stream[F, Byte]] = DecodeResult.successT(m.body)
                 override def consumes: Set[MediaRange] = Set(MediaRange.`*/*`)
               }
 

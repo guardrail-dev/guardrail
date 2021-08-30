@@ -171,7 +171,7 @@ object Http4sClientGenerator {
           case LanguageParameter(_, param, paramName, argName, _) =>
             lifter(param)(paramName, argName)
         }
-        q"List[Option[Header]](..$args).flatten"
+        q"List[Option[Header.ToRaw]](..$args).flatten"
       }
 
       def build(
@@ -198,7 +198,7 @@ object Http4sClientGenerator {
         for {
           _ <- Target.pure(())
           implicitParams                 = Option(extraImplicits).filter(_.nonEmpty)
-          defaultHeaders                 = param"headers: List[Header] = List.empty"
+          defaultHeaders                 = param"headers: List[Header.ToRaw] = List.empty"
           safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
           formDataNeedsMultipart = consumes.contains(MultipartFormData)
@@ -222,7 +222,9 @@ object Http4sClientGenerator {
           } else {
             List(q"val allHeaders = headers ++ $headerParams")
           }
-          req = q"Request[F](method = Method.${Term.Name(httpMethod.toString.toUpperCase)}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
+          methodExpr = List(q"val methodGuardrailPrivate = Method.${Term.Name(httpMethod.toString.toUpperCase)}")
+          uriExpr = List(q"val uriGuardrailPrivate = ${urlWithParams}")
+          req = q"Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))"
           reqWithBody = formEntity
             .map(e => q"$req.withEntity($e)")
             .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
@@ -276,14 +278,14 @@ object Http4sClientGenerator {
             }
           })
           // Get the response type
-          unexpectedCase = if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status))"
-          else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status))"
+          unexpectedCase = if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))"
+          else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))"
           responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
           executeReqExpr = if (isGeneric) List(q"""$httpClientName.run(req).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           else List(q"""$httpClientName.run(req).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           methodBody: Term = q"""
               {
-                ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
+                ..${tracingExpr ++ multipartExpr ++ headersExpr ++ methodExpr ++ uriExpr ++ reqExpr ++ executeReqExpr}
               }
               """
 
@@ -475,12 +477,12 @@ object Http4sClientGenerator {
               val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
               private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-                F.pure(response.headers.get(header.ci).map(_.value))
+                F.pure(response.headers.get(header.ci).map(_.head.value))
 
               private def parseRequiredHeader(response: Response[F], header: String): F[String] =
                 response.headers
                   .get(header.ci)
-                  .map(_.value)
+                  .map(_.head.value)
                   .fold[F[String]](
                     F.raiseError(
                       ParseFailure(
