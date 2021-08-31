@@ -248,7 +248,6 @@ object DropwizardServerGenerator {
       }
 
     override def generateRoutes(
-        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,

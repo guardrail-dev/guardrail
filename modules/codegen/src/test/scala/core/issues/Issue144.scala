@@ -41,12 +41,24 @@ class Issue144 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           {
             case req @ GET -> Root =>
               mapRoute("getEpochSeconds", req, {
-                req.decodeWith(getEpochSecondsDecoder, strict = false) { body =>
-                  handler.getEpochSeconds(GetEpochSecondsResponse)(body) flatMap ({
-                    case GetEpochSecondsResponse.Ok =>
-                      F.pure(Response[F](status = org.http4s.Status.Ok))
-                  })
-                }
+                req
+                  .attemptAs(getEpochSecondsDecoder)
+                  .foldF(
+                    err =>
+                      err.cause match {
+                        case Some(circeErr: io.circe.DecodingFailure) =>
+                          Response[F](
+                          status = org.http4s.Status.UnprocessableEntity,
+                          body   = stringEncoder.toEntity("The request body was invalid. " + circeErr.message + ": " + circeErr.history.mkString(", ")).body
+                        ).pure[F]
+                        case _ => err.toHttpResponse[F](req.httpVersion).pure[F]
+                      },
+                    body =>
+                      handler.getEpochSeconds(GetEpochSecondsResponse)(body) flatMap ({
+                        case GetEpochSecondsResponse.Ok =>
+                          F.pure(Response[F](status = org.http4s.Status.Ok))
+                      })
+                    )
               })
           }
         }

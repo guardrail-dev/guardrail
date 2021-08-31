@@ -129,7 +129,6 @@ object Http4sServerGenerator {
       } yield res)
 
     def generateRoutes(
-        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,
@@ -151,7 +150,7 @@ object Http4sServerGenerator {
                 parameters,
                 responses
                 ) =>
-              generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses, debugBody)
+              generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
           }
           .map(_.flatten.sortBy(_.methodName))
         routeTerms = renderedRoutes.map(_.route)
@@ -297,28 +296,22 @@ object Http4sServerGenerator {
         }
       } yield directives
 
-    def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]], debugBody: Boolean): Target[Option[Term => Term]] =
+    def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
       Target.pure(
         body.map {
           case LanguageParameter(_, _, paramName, _, _) =>
             content =>
                 q"""
-                  Media[F](req.body, req.headers)
+                  req
                     .attemptAs(${Term.Name(s"${methodName.uncapitalized}Decoder")})
                     .foldF(
                       err =>
                         err.cause match {
                           case Some(circeErr: io.circe.DecodingFailure) =>
-                            val errors = circeErr.history.map {
-                              case io.circe.CursorOp.DownField(field) => field
-                              case io.circe.CursorOp.Field(field)     => field
-                              case op                                 => op.toString
-                            }.mkString(",")
-                            val errorMessage =
-                              "The request body was malformed. Underlying message: " + circeErr.message + ". " + "Problematic fields: " + errors
-
-                            Response[F](org.http4s.Status.UnprocessableEntity, body = stringEncoder.toEntity(errorMessage).body)
-                              .pure[F]
+                            Response[F](
+                            status = org.http4s.Status.UnprocessableEntity,
+                            body   = stringEncoder.toEntity("The request body was invalid. " + circeErr.message + ": " + circeErr.history.mkString(", ")).body
+                          ).pure[F]
                           case _ => err.toHttpResponse[F](req.httpVersion).pure[F]
                         },
                     ${param"$paramName"} => $content
@@ -587,8 +580,7 @@ object Http4sServerGenerator {
         customExtractionFields: Option[CustomExtractionField[ScalaLanguage]],
         tracingFields: Option[TracingField[ScalaLanguage]],
         parameters: LanguageParameters[ScalaLanguage],
-        responses: Responses[ScalaLanguage],
-        debugBody: Boolean
+        responses: Responses[ScalaLanguage]
     ): Target[Option[RenderedRoute]] =
       // Generate the pair of the Handler method and the actual call to `complete(...)`
       Target.log.function("generateRoute")(for {
@@ -605,7 +597,7 @@ object Http4sServerGenerator {
         pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
         (http4sPath, additionalQs) = pathWithQs
         http4sQs   <- qsToHttp4s(methodName)(qsArgs)
-        http4sBody <- bodyToHttp4s(methodName, bodyArgs, debugBody)
+        http4sBody <- bodyToHttp4s(methodName, bodyArgs)
         asyncFormProcessing = formArgs.exists(_.isFile)
         http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(methodName)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
