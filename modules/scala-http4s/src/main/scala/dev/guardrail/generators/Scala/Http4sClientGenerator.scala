@@ -156,10 +156,10 @@ object Http4sClientGenerator {
 
       def generateHeaderParams(parameters: List[LanguageParameter[ScalaLanguage]]): Term = {
         def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
-          q"$tParamName.map(v => Header(${tName.toLit}, Formatter.show(v)))"
+          q"$tParamName.map(v => (${tName.toLit}, Formatter.show(v)))"
 
         def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
-          q"Some(Header(${tName.toLit}, Formatter.show($tParamName)))"
+          q"Some((${tName.toLit}, Formatter.show($tParamName)))"
 
         val lifter: Term.Param => (Term.Name, RawParameterName) => Term = {
           case param"$_: Option[$_]"      => liftOptionTerm _
@@ -218,7 +218,7 @@ object Http4sClientGenerator {
             .filter(_ => formDataNeedsMultipart)
             .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
           headersExpr = if (formDataNeedsMultipart) {
-            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.toList")
+            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)")
           } else {
             List(q"val allHeaders = headers ++ $headerParams")
           }
