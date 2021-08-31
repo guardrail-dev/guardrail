@@ -27,7 +27,6 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
   def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): F[Option[TracingField[L]]]
   def generateRoutes(
       tracing: Boolean,
-      debugBody: Boolean,
       resourceName: String,
       handlerName: String,
       basePath: Option[String],
@@ -63,7 +62,6 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       newBuildTracingFields: (Tracker[Operation], List[String], Boolean) => F[Option[TracingField[L]]] = buildTracingFields _,
       newGenerateRoutes: (
           Boolean,
-          Boolean,
           String,
           String,
           Option[String],
@@ -93,7 +91,6 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
     def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
       newBuildTracingFields(operation, resourceName, tracing)
     def generateRoutes(
-        debugBody: Boolean,
         tracing: Boolean,
         resourceName: String,
         handlerName: String,
@@ -101,7 +98,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
         routes: List[GenerateRouteMeta[L]],
         protocolElems: List[StrictProtocolElems[L]],
         securitySchemes: Map[String, SecurityScheme[L]]
-    )                                                                    = newGenerateRoutes(debugBody, tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes)
+    )                                                                    = newGenerateRoutes(tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes)
     def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) = newGetExtraRouteParams(customExtraction, tracing)
     def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]) =
       newGenerateResponseDefinitions(responseClsName, responses, protocolElems)

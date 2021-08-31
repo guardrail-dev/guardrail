@@ -54,7 +54,7 @@ class Http4sDebugBodyTest extends AnyFunSuite with Matchers with EitherValues wi
         .unsafeRunSync()
 
     val expectedErrorMessage =
-      "Couldn't decode body. Underlying message: Attempt to decode value on failed cursor. Problematic fields: something1"
+      "The request body was malformed. Underlying message: Attempt to decode value on failed cursor. Problematic fields: something1"
 
     actualErrorMessages should (have length (1))
     actualErrorMessages.head should equal(expectedErrorMessage)

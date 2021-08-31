@@ -73,20 +73,26 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Valid JSON
      * Missing discriminator
      */
-    failedResponseBody(makeJsonRequest("{}")) should equal("The request body was invalid.")
+    failedResponseBody(makeJsonRequest("{}")) should equal(
+      "The request body was malformed. Underlying message: Attempt to decode value on failed cursor. Problematic fields: type"
+    )
 
     /* Correct mime type
      * Valid JSON
      * Invalid discriminator
      */
-    failedResponseBody(makeJsonRequest("""{"type": "blep"}""")) should equal("The request body was invalid.")
+    failedResponseBody(makeJsonRequest("""{"type": "blep"}""")) should equal(
+      "The request body was malformed. Underlying message: Unknown value blep (valid: Bar). Problematic fields: type"
+    )
 
     /* Correct mime type
      * Valid JSON
      * Valid discriminator
      * Missing "name" field
      */
-    failedResponseBody(makeJsonRequest("""{"type": "Bar"}""")) should equal("The request body was invalid.")
+    failedResponseBody(makeJsonRequest("""{"type": "Bar"}""")) should equal(
+      "The request body was malformed. Underlying message: Attempt to decode value on failed cursor. Problematic fields: name"
+    )
 
     val validEntity = """{"type": "Bar", "name": "bar"}"""
 
