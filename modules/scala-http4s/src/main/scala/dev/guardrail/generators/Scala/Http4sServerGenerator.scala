@@ -300,7 +300,23 @@ object Http4sServerGenerator {
       Target.pure(
         body.map {
           case LanguageParameter(_, _, paramName, _, _) =>
-            content => q"req.decodeWith(${Term.Name(s"${methodName.uncapitalized}Decoder")}, strict = false) { ${param"$paramName"} => $content }"
+            content =>
+                q"""
+                  req
+                    .attemptAs(${Term.Name(s"${methodName.uncapitalized}Decoder")})
+                    .foldF(
+                      err =>
+                        err.cause match {
+                          case Some(circeErr: io.circe.DecodingFailure) =>
+                            Response[F](
+                            status = org.http4s.Status.UnprocessableEntity,
+                            body   = stringEncoder.toEntity("The request body was invalid. " + circeErr.message + ": " + circeErr.history.mkString(", ")).body
+                          ).pure[F]
+                          case _ => err.toHttpResponse[F](req.httpVersion).pure[F]
+                        },
+                    ${param"$paramName"} => $content
+                    )
+                """
         }
       )
 

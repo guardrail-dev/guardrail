@@ -47,12 +47,24 @@ class Issue416 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           {
             case req @ GET -> Root =>
               mapRoute("getRoot", req, {
-                req.decodeWith(getRootDecoder, strict = false) { body =>
-                  handler.getRoot(GetRootResponse)(body) flatMap ({
-                    case GetRootResponse.Ok =>
-                      F.pure(Response[F](status = org.http4s.Status.Ok))
-                  })
-                }
+                req
+                  .attemptAs(getRootDecoder)
+                  .foldF(
+                    err =>
+                      err.cause match {
+                        case Some(circeErr: io.circe.DecodingFailure) =>
+                          Response[F](
+                          status = org.http4s.Status.UnprocessableEntity,
+                          body   = stringEncoder.toEntity("The request body was invalid. " + circeErr.message + ": " + circeErr.history.mkString(", ")).body
+                        ).pure[F]
+                        case _ => err.toHttpResponse[F](req.httpVersion).pure[F]
+                      },
+                    body =>
+                      handler.getRoot(GetRootResponse)(body) flatMap ({
+                        case GetRootResponse.Ok =>
+                        F.pure(Response[F](status = org.http4s.Status.Ok))
+                    })
+                    )
               })
           }
         }
