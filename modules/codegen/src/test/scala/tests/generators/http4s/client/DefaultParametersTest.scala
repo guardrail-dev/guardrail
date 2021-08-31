@@ -139,16 +139,18 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
     val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
       private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-        F.pure(response.headers.get(header.ci).map(_.value))
+        F.pure(response.headers.get(CIString(header)).map(_.head.value))
 
       private def parseRequiredHeader(response: Response[F], header: String): F[String] =
         response.headers
-          .get(header.ci)
-          .map(_.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
+          .get(CIString(header))
+          .map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
       private[this] val getOrderByIdOkDecoder = jsonOf[F, Order]
-      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header] = List.empty): F[GetOrderByIdResponse] = {
-        val allHeaders = headers ++ List[Option[Header]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
-        val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
+      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header.ToRaw] = List.empty): F[GetOrderByIdResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
+        val methodGuardrailPrivate = Method.GET
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm))
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(resp) =>
             F.map(getOrderByIdOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetOrderByIdResponse.Ok.apply): F[GetOrderByIdResponse]
@@ -156,18 +158,20 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
             F.pure(GetOrderByIdResponse.BadRequest): F[GetOrderByIdResponse]
           case _root_.org.http4s.Status.NotFound(_) =>
             F.pure(GetOrderByIdResponse.NotFound): F[GetOrderByIdResponse]
-          case resp => F.raiseError[GetOrderByIdResponse](UnexpectedStatus(resp.status))
+          case resp => F.raiseError[GetOrderByIdResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def deleteOrder(orderId: Long, headers: List[Header] = List.empty): F[DeleteOrderResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders))
+      def deleteOrder(orderId: Long, headers: List[Header.ToRaw] = List.empty): F[DeleteOrderResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.DELETE
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId))
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.BadRequest(_) =>
             F.pure(DeleteOrderResponse.BadRequest): F[DeleteOrderResponse]
           case _root_.org.http4s.Status.NotFound(_) =>
             F.pure(DeleteOrderResponse.NotFound): F[DeleteOrderResponse]
-          case resp => F.raiseError[DeleteOrderResponse](UnexpectedStatus(resp.status))
+          case resp => F.raiseError[DeleteOrderResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
     }"""

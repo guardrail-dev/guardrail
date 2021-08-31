@@ -15,6 +15,7 @@ import org.http4s.syntax.StringSyntax
 import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.ci.CIString
 
 class Http4sFullTracerTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
 
@@ -25,7 +26,7 @@ class Http4sFullTracerTest extends AnyFunSuite with Matchers with EitherValues w
     // In a real environment, this would be where you could establish a new
     // tracing context and inject that fresh header value.
     log(s"Expecting all requests to have ${traceHeaderKey} header.")
-    traceBuilder(request.headers.get(traceHeaderKey.ci).get.value)
+    traceBuilder(request.headers.get(CIString(traceHeaderKey)).get.value)
   }
 
   def traceBuilder(parentValue: String): TraceBuilder[IO] = { name => httpClient =>

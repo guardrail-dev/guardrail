@@ -310,12 +310,12 @@ object Http4sServerGenerator {
       directivesFromParams(
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
+            Target.pure(Param(None, Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.value)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))")),
+                Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))")),
                 arg.paramName
               )
             )
@@ -323,12 +323,12 @@ object Http4sServerGenerator {
         arg => _ => _ => Target.raiseUserError(s"Unsupported Iterable[${arg}"),
         arg => _ => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
         arg => {
-          case t"String" => Target.pure(Param(None, None, q"req.headers.get(${arg.argName.toLit}.ci).map(_.value)"))
+          case t"String" => Target.pure(Param(None, None, q"req.headers.get(CIString(${arg.argName.toLit})).map(_.value)"))
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some((q"req.headers.get(${arg.argName.toLit}.ci).map(_.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})")),
+                Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})")),
                 arg.paramName
               )
             )

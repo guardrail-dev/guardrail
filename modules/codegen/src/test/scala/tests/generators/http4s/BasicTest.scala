@@ -121,82 +121,96 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val basePath: String = ""
 
       private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-        F.pure(response.headers.get(header.ci).map(_.value))
+        F.pure(response.headers.get(CIString(header)).map(_.head.value))
 
       private def parseRequiredHeader(response: Response[F], header: String): F[String] =
         response.headers
-          .get(header.ci)
-          .map(_.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
+          .get(CIString(header))
+          .map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
 
       private[this] val getBazOkDecoder = jsonOf[F, io.circe.Json]
-      def getBar(headers: List[Header] = List.empty): F[GetBarResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))
+      def getBar(headers: List[Header.ToRaw] = List.empty): F[GetBarResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.GET
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/bar")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(GetBarResponse.Ok): F[GetBarResponse]
           case resp =>
-            F.raiseError[GetBarResponse](UnexpectedStatus(resp.status))
+            F.raiseError[GetBarResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def getBaz(headers: List[Header] = List.empty): F[GetBazResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
+      def getBaz(headers: List[Header.ToRaw] = List.empty): F[GetBazResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.GET
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/baz")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(resp) =>
             F.map(getBazOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetBazResponse.Ok.apply): F[GetBazResponse]
           case resp =>
-            F.raiseError[GetBazResponse](UnexpectedStatus(resp.status))
+            F.raiseError[GetBazResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def postFoo(headers: List[Header] = List.empty): F[PostFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
+      def postFoo(headers: List[Header.ToRaw] = List.empty): F[PostFooResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.POST
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/foo")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(PostFooResponse.Ok): F[PostFooResponse]
           case resp =>
-            F.raiseError[PostFooResponse](UnexpectedStatus(resp.status))
+            F.raiseError[PostFooResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def getFoo(headers: List[Header] = List.empty): F[GetFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
+      def getFoo(headers: List[Header.ToRaw] = List.empty): F[GetFooResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.GET
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/foo")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(GetFooResponse.Ok): F[GetFooResponse]
           case resp =>
-            F.raiseError[GetFooResponse](UnexpectedStatus(resp.status))
+            F.raiseError[GetFooResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def putFoo(headers: List[Header] = List.empty): F[PutFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
+      def putFoo(headers: List[Header.ToRaw] = List.empty): F[PutFooResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.PUT
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/foo")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(PutFooResponse.Ok): F[PutFooResponse]
           case resp =>
-            F.raiseError[PutFooResponse](UnexpectedStatus(resp.status))
+            F.raiseError[PutFooResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def patchFoo(headers: List[Header] = List.empty): F[PatchFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
+      def patchFoo(headers: List[Header.ToRaw] = List.empty): F[PatchFooResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.PATCH
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/foo")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(PatchFooResponse.Ok): F[PatchFooResponse]
           case resp =>
-            F.raiseError[PatchFooResponse](UnexpectedStatus(resp.status))
+            F.raiseError[PatchFooResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
-      def deleteFoo(headers: List[Header] = List.empty): F[DeleteFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header]]().flatten
-        val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
+      def deleteFoo(headers: List[Header.ToRaw] = List.empty): F[DeleteFooResponse] = {
+        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val methodGuardrailPrivate = Method.DELETE
+        val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/foo")
+        val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
             F.pure(DeleteFooResponse.Ok): F[DeleteFooResponse]
           case resp =>
-            F.raiseError[DeleteFooResponse](UnexpectedStatus(resp.status))
+            F.raiseError[DeleteFooResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
         })
       }
     }"""
