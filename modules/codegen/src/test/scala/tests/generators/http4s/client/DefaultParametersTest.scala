@@ -147,7 +147,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
           .map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
       private[this] val getOrderByIdOkDecoder = jsonOf[F, Order]
       def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header.ToRaw] = List.empty): F[GetOrderByIdResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]](Some(Header("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
+        val allHeaders = headers ++ List[Option[Header.ToRaw]](Some(("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         val methodGuardrailPrivate = Method.GET
         val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm))
         val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
