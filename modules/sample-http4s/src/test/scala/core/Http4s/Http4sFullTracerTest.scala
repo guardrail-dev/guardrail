@@ -26,12 +26,12 @@ class Http4sFullTracerTest extends AnyFunSuite with Matchers with EitherValues w
     // In a real environment, this would be where you could establish a new
     // tracing context and inject that fresh header value.
     log(s"Expecting all requests to have ${traceHeaderKey} header.")
-    traceBuilder(request.headers.get(CIString(traceHeaderKey)).get.value)
+    traceBuilder(request.headers.get(CIString(traceHeaderKey)).get.head.value)
   }
 
   def traceBuilder(parentValue: String): TraceBuilder[IO] = { name => httpClient =>
     Client { req =>
-      httpClient.run(req.putHeaders(Header(traceHeaderKey, parentValue)))
+      httpClient.run(req.putHeaders((traceHeaderKey, parentValue)))
     }
   }
 
