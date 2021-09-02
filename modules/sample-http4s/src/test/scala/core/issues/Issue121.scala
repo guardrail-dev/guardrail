@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.data.Kleisli
 import org.http4s._
 import org.http4s.client.{ Client => Http4sClient }
-import org.http4s.client.blaze._
+import org.http4s.blaze.client._
 import org.http4s.headers._
 import org.http4s.implicits._
 import org.http4s.multipart._
