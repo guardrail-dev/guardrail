@@ -222,15 +222,15 @@ object Http4sClientGenerator {
           } else {
             List(q"val allHeaders = headers ++ $headerParams")
           }
-          methodExpr = List(q"val methodGuardrailPrivate = Method.${Term.Name(httpMethod.toString.toUpperCase)}")
-          uriExpr = List(q"val uriGuardrailPrivate = ${urlWithParams}")
-          req = q"Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))"
+          methodExpr = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
+          reqBinding = q"req"
+          req = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
           reqWithBody = formEntity
             .map(e => q"$req.withEntity($e)")
             .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
             .getOrElse(req)
           reqExpr = List(
-            q"val req = $reqWithBody"
+            q"val ${Pat.Var(reqBinding)} = $reqWithBody"
           )
 
           buildHeaders = (_: List[Header[ScalaLanguage]])
@@ -278,14 +278,14 @@ object Http4sClientGenerator {
             }
           })
           // Get the response type
-          unexpectedCase = if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))"
-          else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))"
+          unexpectedCase = if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
+          else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
           responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
-          executeReqExpr = if (isGeneric) List(q"""$httpClientName.run(req).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
-          else List(q"""$httpClientName.run(req).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+          executeReqExpr = if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+          else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           methodBody: Term = q"""
               {
-                ..${tracingExpr ++ multipartExpr ++ headersExpr ++ methodExpr ++ uriExpr ++ reqExpr ++ executeReqExpr}
+                ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
               }
               """
 

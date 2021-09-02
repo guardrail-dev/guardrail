@@ -51,14 +51,12 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
          private[this] val getUserOkDecoder = jsonOf[F, _root_.com.test.User]
          def getUser(id: String, headers: List[Header.ToRaw] = List.empty): F[GetUserResponse] = {
            val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
-           val methodGuardrailPrivate = Method.GET
-           val uriGuardrailPrivate = Uri.unsafeFromString(host + basePath + "/user/" + Formatter.addPath(id))
-           val req = Request[F](method = methodGuardrailPrivate, uri = uriGuardrailPrivate, headers = Headers(allHeaders))
+           val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/user/" + Formatter.addPath(id)), headers = Headers(allHeaders))
            httpClient.run(req).use({
              case _root_.org.http4s.Status.Ok(resp) =>
                F.map(getUserOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetUserResponse.Ok.apply): F[GetUserResponse]
              case resp =>
-               F.raiseError[GetUserResponse](UnexpectedStatus(resp.status, methodGuardrailPrivate, uriGuardrailPrivate))
+               F.raiseError[GetUserResponse](UnexpectedStatus(resp.status, Method.GET, req.uri))
            })
          }
        }
