@@ -1,5 +1,8 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: 'cli-v$RESOLVED_VERSION'
+tag-template: 'cli-v$RESOLVED_VERSION'
+tag-prefix: cli-v
+include-paths:
+  - modules/cli/
 categories:
   - title: '🚀 Features'
     labels:
