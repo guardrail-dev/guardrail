@@ -52,3 +52,12 @@ jobs:
           config-name: release-drafter-java-dropwizard.yml
         env:
           GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+  java-spring-mvc:
+    name: '[java-spring-mvc] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.38
+        with:
+          config-name: release-drafter-java-spring-mvc.yml
+        env:
+          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
