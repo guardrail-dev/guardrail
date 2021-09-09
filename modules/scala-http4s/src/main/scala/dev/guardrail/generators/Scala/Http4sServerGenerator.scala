@@ -152,7 +152,7 @@ object Http4sServerGenerator {
                 ) =>
               generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
           }
-          .map(_.flatten.sortBy(_.methodName))
+          .map(_.flatten)
         routeTerms = renderedRoutes.map(_.route)
         combinedRouteTerms <- combineRouteTerms(routeTerms)
         methodSigs = renderedRoutes.map(_.methodSig)
