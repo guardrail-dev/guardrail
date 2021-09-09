@@ -33,7 +33,7 @@ jobs:
         with:
           config-name: release-drafter-codegen.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java-async-http:
     name: '[java-async-http] Draft release'
     runs-on: ubuntu-20.04
@@ -42,7 +42,7 @@ jobs:
         with:
           config-name: release-drafter-java-async-http.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java-dropwizard:
     name: '[java-dropwizard] Draft release'
     runs-on: ubuntu-20.04
@@ -51,7 +51,7 @@ jobs:
         with:
           config-name: release-drafter-java-dropwizard.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java-spring-mvc:
     name: '[java-spring-mvc] Draft release'
     runs-on: ubuntu-20.04
@@ -60,7 +60,7 @@ jobs:
         with:
           config-name: release-drafter-java-spring-mvc.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java-support:
     name: '[java-support] Draft release'
     runs-on: ubuntu-20.04
@@ -69,7 +69,7 @@ jobs:
         with:
           config-name: release-drafter-java-support.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   scala-akka-http:
     name: '[scala-akka-http] Draft release'
     runs-on: ubuntu-20.04
@@ -78,7 +78,7 @@ jobs:
         with:
           config-name: release-drafter-scala-akka-http.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   scala-dropwizard:
     name: '[scala-dropwizard] Draft release'
     runs-on: ubuntu-20.04
@@ -87,7 +87,7 @@ jobs:
         with:
           config-name: release-drafter-scala-dropwizard.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   scala-endpoints:
     name: '[scala-endpoints] Draft release'
     runs-on: ubuntu-20.04
@@ -96,7 +96,7 @@ jobs:
         with:
           config-name: release-drafter-scala-endpoints.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   scala-http4s:
     name: '[scala-http4s] Draft release'
     runs-on: ubuntu-20.04
@@ -105,7 +105,7 @@ jobs:
         with:
           config-name: release-drafter-scala-http4s.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   scala-support:
     name: '[scala-support] Draft release'
     runs-on: ubuntu-20.04
@@ -114,4 +114,4 @@ jobs:
         with:
           config-name: release-drafter-scala-support.yml
         env:
-          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
