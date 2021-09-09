@@ -25,3 +25,12 @@ jobs:
           config-name: release-drafter-core.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  codegen:
+    name: '[codegen] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.38
+        with:
+          config-name: release-drafter-codegen.yml
+        env:
+          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
