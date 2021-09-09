@@ -1,5 +1,8 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: 'scala-dropwizard-v$RESOLVED_VERSION'
+tag-template: 'scala-dropwizard-v$RESOLVED_VERSION'
+tag-prefix: scala-dropwizard-v
+include-paths:
+  - modules/scala-dropwizard/
 categories:
   - title: '🚀 Features'
     labels:
