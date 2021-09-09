@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Extract project from tag
         id: set-project-from-tag
-        run: echo "::set-output name=module::$(echo \"$GITHUB_REF\" | sed 's/-v[0-9.]\+$//)"
+        run: echo "::set-output name=module::$(echo \"$GITHUB_REF\" | sed 's/-v[0-9.]\+$//')"
       - uses: actions/checkout@v2
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-async-http' }}
         with:
