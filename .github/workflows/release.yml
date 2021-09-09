@@ -43,6 +43,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
 
       - name: 'Publish artifacts [java-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-support' }}
@@ -52,6 +53,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [scala-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-support' }}
         run: sbt "project guardrail-scala-support" 'show version' clean ci-release
@@ -60,6 +62,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
 
       - name: 'Publish artifacts [java-async-http]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-async-http' }}
@@ -69,6 +72,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [java-dropwizard]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-dropwizard' }}
         run: sbt "project guardrail-java-dropwizard" 'show version' clean ci-release
@@ -77,6 +81,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [java-spring-mvc]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-spring-mvc' }}
         run: sbt "project guardrail-java-spring-mvc" 'show version' clean ci-release
@@ -85,6 +90,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [scala-akka-http]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-akka-http' }}
         run: sbt "project guardrail-scala-akka-http" 'show version' clean ci-release
@@ -93,6 +99,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [scala-dropwizard]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-dropwizard' }}
         run: sbt "project guardrail-scala-dropwizard" 'show version' clean ci-release
@@ -101,6 +108,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [scala-endpoints]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-endpoints' }}
         run: sbt "project guardrail-scala-endpoints" 'show version' clean ci-release
@@ -109,6 +117,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [scala-http4s]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-http4s' }}
         run: sbt "project guardrail-scala-http4s" 'show version' clean ci-release
@@ -117,6 +126,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
 
       - name: 'Publish artifacts [guardrail]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
@@ -126,3 +136,4 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}

@@ -329,9 +329,13 @@ lazy val allDeps = (project in file("modules/alldeps"))
 
 import com.typesafe.sbt.SbtGit.GitKeys.gitReader
 
-def customTagToVersionNumber(moduleSegment: String): String => Option[String] = { v =>
+def customTagToVersionNumber(moduleSegment: String, isRelease: Boolean): String => Option[String] = { v =>
   val prefix = s"${moduleSegment}-v"
-  if (v.startsWith(prefix)) { Some(v.stripPrefix(prefix)) }
+  val stripPrefix: String => String = _.stripPrefix(prefix)
+  val stripSuffix: String => String = if (isRelease) {
+    _.replaceAll("-[0-9]+-[0-9a-z]+$", "")
+  } else identity _
+  if (v.startsWith(prefix)) { Some(stripSuffix(stripPrefix(v))) }
   else { None }
 }
 
@@ -347,13 +351,14 @@ def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
       // git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion(gitDescribePatterns.value)).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v)),
       git.useGitDescribe := true,
       version := {
+        val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
         val overrideVersion =
           git.overrideVersion(git.versionProperty.value)
         val uncommittedSuffix =
           git.makeUncommittedSignifierSuffix(git.gitUncommittedChanges.value, git.uncommittedSignifier.value)
         val releaseVersion =
-          git.releaseVersion(git.gitCurrentTags.value, customTagToVersionNumber(moduleSegment), uncommittedSuffix)
-        val customGitDescribedVersion = gitReader.value.withGit(_.describedVersion(Seq(s"${moduleSegment}-v*"))).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v))
+          git.releaseVersion(git.gitCurrentTags.value, customTagToVersionNumber(moduleSegment, isRelease), uncommittedSuffix)
+        val customGitDescribedVersion = gitReader.value.withGit(_.describedVersion(Seq(s"${moduleSegment}-v*"))).map(v => customTagToVersionNumber(moduleSegment, isRelease)(v).getOrElse(v))
         val describedVersion =
           git.flaggedOptional(git.useGitDescribe.value, git.describeVersion(customGitDescribedVersion, uncommittedSuffix))
         val datedVersion = git.formattedDateVersion.value
