@@ -70,3 +70,12 @@ jobs:
           config-name: release-drafter-java-support.yml
         env:
           GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+  scala-akka-http:
+    name: '[scala-akka-http] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.38
+        with:
+          config-name: release-drafter-scala-akka-http.yml
+        env:
+          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
