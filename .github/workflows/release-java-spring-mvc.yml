@@ -13,7 +13,10 @@ jobs:
     steps:
       - name: Extract project from tag
         id: set-project-from-tag
-        run: echo "::set-output name=module::$(echo \"$GITHUB_REF\" | sed 's/-v[0-9.]\+$//')"
+        run: |
+          module="$(echo \"$GITHUB_REF\" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
+          echo "extract project: ${GITHUB_REF}, ${module}"
+          echo "::set-output name=module::$module"
       - uses: actions/checkout@v2
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-spring-mvc' }}
         with:
