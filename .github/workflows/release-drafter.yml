@@ -97,3 +97,12 @@ jobs:
           config-name: release-drafter-scala-endpoints.yml
         env:
           GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+  scala-http4s:
+    name: '[scala-http4s] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.38
+        with:
+          config-name: release-drafter-scala-http4s.yml
+        env:
+          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
