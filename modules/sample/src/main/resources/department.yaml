@@ -1,0 +1,158 @@
+openapi: 3.0.3
+servers:
+  - url: /v1
+info:
+  description: |-
+    department search svc OpenAPI 3.0 specification.
+  version: 1.0.0-SNAPSHOT
+  title: User search svc - OpenAPI 3.0
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: xxx@xxx.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: department
+    description: Access to departments
+    externalDocs:
+      description: TODO
+      url: 'http://swagger.io'
+paths:
+  /department/search:
+    get:
+      tags:
+        - department
+      summary: Search departments
+      description: ''
+      operationId: searchDepartments
+      parameters:
+        - name: query
+          description: search query
+          in: query
+          required: false
+          schema:
+            type: string
+          example: search
+        - name: page
+          description: page number
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 0
+          default: 0
+        - name: pageSize
+          description: page size
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 10
+          default: 10
+        - name: sort
+          description: sort
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          example: [ 'name:asc' ]
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentSearchResponse'
+        '400':
+          description: failed operation
+          content:
+            application/json:
+              schema:
+                type: string
+
+  '/department/{id}':
+    get:
+      tags:
+        - department
+      summary: Get department by department id
+      description: ''
+      operationId: getDepartment
+      parameters:
+        - name: id
+          in: path
+          description: 'The id that needs to be fetched. Department dep1 for testing. '
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+        '401':
+          description: unauthorized
+        '404':
+          description: department not found
+      security:
+        - bearerAuth: [ ]
+
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
+components:
+  schemas:
+    Department:
+      properties:
+        id:
+          type: string
+          example: d1
+
+        name:
+          type: string
+          example: dep 1
+        description:
+          type: string
+          example: department 1
+      type: object
+      required:
+        - id
+        - name
+        - description
+    DepartmentSearchResponse:
+      description: Department search response
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
+        page:
+          type: integer
+          format: int32
+          example: 0
+        pageSize:
+          type: integer
+          format: int32
+          example: 10
+        count:
+          type: integer
+          format: int32
+          example: 12
+      type: object
+      required:
+        - items
+        - page
+        - pageSize
+        - count
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
