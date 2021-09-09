@@ -61,3 +61,12 @@ jobs:
           config-name: release-drafter-java-spring-mvc.yml
         env:
           GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+  java-support:
+    name: '[java-support] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.38
+        with:
+          config-name: release-drafter-java-support.yml
+        env:
+          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
