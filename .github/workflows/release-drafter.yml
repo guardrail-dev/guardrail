@@ -88,3 +88,12 @@ jobs:
           config-name: release-drafter-scala-dropwizard.yml
         env:
           GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
+  scala-endpoints:
+    name: '[scala-endpoints] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.38
+        with:
+          config-name: release-drafter-scala-endpoints.yml
+        env:
+          GITHUB_TOKEN: 31480{{ secrets.GITHUB_TOKEN }}
