@@ -1,4 +1,4 @@
-name: Release codegen
+name: Release guardrail
 
 on:
   release:
@@ -15,31 +15,31 @@ jobs:
         id: set-project-from-tag
         run: echo "::set-output name=module::$(echo \"$GITHUB_REF\" | sed 's/-v[0-9.]\+$//)"
       - uses: actions/checkout@v2
-        if: ${{ steps.set-project-from-tag.outputs.module == 'codegen' }}
+        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
         with:
           fetch-depth: 0
       - uses: actions/setup-java@v1
-        if: ${{ steps.set-project-from-tag.outputs.module == 'codegen' }}
+        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
         with:
           java-version: 8
       - uses: ruby/setup-ruby@v1.66.1
-        if: ${{ steps.set-project-from-tag.outputs.module == 'codegen' }}
+        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
         with:
           bundler-cache: true
       - name: Install microsite deps
-        if: ${{ steps.set-project-from-tag.outputs.module == 'codegen' }}
+        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
         run: |
           bundle install --jobs 4 --retry 3 --system
       - name: Print versions
-        if: ${{ steps.set-project-from-tag.outputs.module == 'codegen' }}
+        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
         run: |
           java -version
           gpg --version
           ruby --version
           jekyll --version
       - name: Publish artifacts
-        if: ${{ steps.set-project-from-tag.outputs.module == 'codegen' }}
-        run: sbt "project guardrail-codegen" 'show version' clean ci-release
+        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
+        run: sbt "project guardrail" 'show version' clean ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}

@@ -16,13 +16,13 @@ jobs:
           config-name: release-drafter-core.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  codegen:
-    name: '[codegen] Draft release'
+  guardrail:
+    name: '[guardrail] Draft release'
     runs-on: ubuntu-20.04
     steps:
       - uses: blast-hardcheese/release-drafter@v5.16.40
         with:
-          config-name: release-drafter-codegen.yml
+          config-name: release-drafter-guardrail.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   java-async-http:
