@@ -2,7 +2,10 @@ name-template: 'core-v$RESOLVED_VERSION'
 tag-template: 'core-v$RESOLVED_VERSION'
 tag-prefix: core-v
 include-paths:
-  - modules/core/
+  - "modules/core/"
+  - "build.sbt"
+  - "project/"
+# NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'
     labels:

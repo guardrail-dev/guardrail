@@ -281,6 +281,8 @@ val commonSettings = Seq(
   crossScalaVersions := Seq("2.12.14", "2.13.6"),
   scalaVersion := "2.12.14",
 
+  versionScheme := Some("early-semver"), // This should help once the build plugins start depending directly on modules
+
   scalacOptions ++= Seq(
     "-Ydelambdafy:method",
     "-Yrangepos",
@@ -373,6 +375,7 @@ def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
       }
     )
     .settings(commonSettings)
+    .settings(versionPolicyIntention := Compatibility.BinaryCompatible)
     .settings(name := moduleName)
     .settings(codegenSettings)
     .settings(libraryDependencies ++= testDependencies)

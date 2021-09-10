@@ -2,7 +2,10 @@ name-template: 'java-support-v$RESOLVED_VERSION'
 tag-template: 'java-support-v$RESOLVED_VERSION'
 tag-prefix: java-support-v
 include-paths:
-  - modules/java-support/
+  - "modules/java-support/"
+  - "build.sbt"
+  - "project/"
+# NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'
     labels:

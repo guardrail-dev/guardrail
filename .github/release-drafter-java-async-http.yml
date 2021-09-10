@@ -2,7 +2,10 @@ name-template: 'java-async-http-v$RESOLVED_VERSION'
 tag-template: 'java-async-http-v$RESOLVED_VERSION'
 tag-prefix: java-async-http-v
 include-paths:
-  - modules/java-async-http/
+  - "modules/java-async-http/"
+  - "build.sbt"
+  - "project/"
+# NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'
     labels:
