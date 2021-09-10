@@ -56,11 +56,73 @@ template: |
 !
 }
 
+reinitialize_release() {
+  cat > .github/workflows/release.yml <<!
+name: Release
+
+on:
+  release:
+    types:
+      - released
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    name: 'Publish release'
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Extract project from tag'
+        id: set-project-from-tag
+        run: |
+          module="\$(echo "\$GITHUB_REF" | sed 's~^refs/tags/\\(.*\\)-v[0-9.]\+$~\1~')"
+          echo "extract project: \${GITHUB_REF}, \${module}"
+          echo "::set-output name=module::\$module"
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - uses: ruby/setup-ruby@v1.66.1
+        with:
+          bundler-cache: true
+      - name: 'Install microsite deps'
+        run: |
+          bundle install --jobs 4 --retry 3 --system
+      - name: 'Print versions'
+        run: |
+          java -version
+          gpg --version
+          ruby --version
+          jekyll --version
+!
+}
+
+write_release() {
+  module="$1"; shift || die "Missing module for write_release"
+  cat <<!
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [${module}]'
+        if: \${{ steps.set-project-from-tag.outputs.module == '${module}' }}
+        run: sbt 'show version' "project ${module}" clean compile ci-release
+        env:
+          PGP_PASSPHRASE: \${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: \${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: \${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: \${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: \${{ steps.set-project-from-tag.outputs.module }}
+!
+}
+
 write() {
   module="$1"; shift || die "Missing module for write"
   render "$module" "$@" \
     > ".github/release-drafter-$module.yml"
+  write_release "$module" \
+    >> .github/workflows/release.yml
 }
+
+reinitialize_release
 
 write core              modules/core/              build.sbt  project/
 write guardrail         modules/codegen/           build.sbt  project/
