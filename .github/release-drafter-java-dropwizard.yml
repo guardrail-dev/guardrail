@@ -2,7 +2,9 @@ name-template: 'java-dropwizard-v$RESOLVED_VERSION'
 tag-template: 'java-dropwizard-v$RESOLVED_VERSION'
 tag-prefix: java-dropwizard-v
 include-paths:
-  - modules/java-dropwizard/
+  - "modules/java-dropwizard/"
+  - "build.sbt"
+  - "project/"
 categories:
   - title: '🚀 Features'
     labels:

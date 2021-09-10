@@ -2,7 +2,9 @@ name-template: 'core-v$RESOLVED_VERSION'
 tag-template: 'core-v$RESOLVED_VERSION'
 tag-prefix: core-v
 include-paths:
-  - modules/core/
+  - "modules/core/"
+  - "build.sbt"
+  - "project/"
 categories:
   - title: '🚀 Features'
     labels:

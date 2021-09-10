@@ -2,7 +2,9 @@ name-template: 'scala-http4s-v$RESOLVED_VERSION'
 tag-template: 'scala-http4s-v$RESOLVED_VERSION'
 tag-prefix: scala-http4s-v
 include-paths:
-  - modules/scala-http4s/
+  - "modules/scala-http4s/"
+  - "build.sbt"
+  - "project/"
 categories:
   - title: '🚀 Features'
     labels:

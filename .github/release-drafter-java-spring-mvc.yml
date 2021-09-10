@@ -2,7 +2,9 @@ name-template: 'java-spring-mvc-v$RESOLVED_VERSION'
 tag-template: 'java-spring-mvc-v$RESOLVED_VERSION'
 tag-prefix: java-spring-mvc-v
 include-paths:
-  - modules/java-spring-mvc/
+  - "modules/java-spring-mvc/"
+  - "build.sbt"
+  - "project/"
 categories:
   - title: '🚀 Features'
     labels:

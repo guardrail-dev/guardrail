@@ -2,7 +2,9 @@ name-template: 'guardrail-v$RESOLVED_VERSION'
 tag-template: 'guardrail-v$RESOLVED_VERSION'
 tag-prefix: guardrail-v
 include-paths:
-  - modules/codegen/
+  - "modules/codegen/"
+  - "build.sbt"
+  - "project/"
 categories:
   - title: '🚀 Features'
     labels:
