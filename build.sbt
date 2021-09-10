@@ -375,6 +375,7 @@ def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
       }
     )
     .settings(commonSettings)
+    .settings(versionPolicyIntention := Compatibility.BinaryCompatible)
     .settings(name := moduleName)
     .settings(codegenSettings)
     .settings(libraryDependencies ++= testDependencies)
