@@ -23,6 +23,7 @@ include-paths:
 !
   done
   cat <<!
+# NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'
     labels:
