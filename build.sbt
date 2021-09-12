@@ -123,7 +123,7 @@ lazy val guardrail = baseModule("guardrail", "guardrail", file("modules/codegen"
 lazy val core = commonModule("core")
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.22.1",
+      "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.23.0",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.27",
     ) ++ Seq(
       "org.scalameta"               %% "scalameta"                    % "4.4.27",
