@@ -136,11 +136,11 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
     val handler =
       q"""
       trait StoreHandler[F[_]] {
+        def getRoot(respond: GetRootResponse.type)(): F[GetRootResponse]
+        def putBar(respond: PutBarResponse.type)(bar: Long): F[Response[F]]
         def getFoo(respond: GetFooResponse.type)(): F[GetFooResponse]
         def getFooBar(respond: GetFooBarResponse.type)(bar: Long): F[GetFooBarResponse]
         def getOrderById(respond: GetOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): F[GetOrderByIdResponse]
-        def getRoot(respond: GetRootResponse.type)(): F[GetRootResponse]
-        def putBar(respond: PutBarResponse.type)(bar: Long): F[Response[F]]
       }
     """
     val resource =
@@ -166,6 +166,17 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         }
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
+            case req @ GET -> Root =>
+              mapRoute("getRoot", req, {
+                handler.getRoot(GetRootResponse)() flatMap ({
+                  case GetRootResponse.Ok =>
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
+                })
+              })
+            case req @ PUT -> Root / "bar" :? PutBarBarMatcher(bar) =>
+              mapRoute("putBar", req, {
+                handler.putBar(PutBarResponse)(bar)
+              })
             case req @ GET -> Root / "foo" / "" =>
               mapRoute("getFoo", req, {
                 handler.getFoo(GetFooResponse)() flatMap ({
@@ -191,17 +202,6 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
                     F.pure(Response[F](status = org.http4s.Status.NotFound))
                 })
               })
-            case req @ GET -> Root =>
-              mapRoute("getRoot", req, {
-                handler.getRoot(GetRootResponse)() flatMap ({
-                  case GetRootResponse.Ok =>
-                    F.pure(Response[F](status = org.http4s.Status.Ok))
-                })
-              })
-            case req @ PUT -> Root / "bar" :? PutBarBarMatcher(bar) =>
-              mapRoute("putBar", req, {
-                handler.putBar(PutBarResponse)(bar)
-              })
           }
         }
       }
@@ -221,11 +221,11 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
     val handler =
       q"""
       trait StoreHandler[F[_]] {
+        def getRoot(respond: GetRootResponse.type)()(traceBuilder: TraceBuilder[F]): F[GetRootResponse]
+        def putBar(respond: PutBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder[F]): F[Response[F]]
         def getFoo(respond: GetFooResponse.type)()(traceBuilder: TraceBuilder[F]): F[GetFooResponse]
         def getFooBar(respond: GetFooBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder[F]): F[GetFooBarResponse]
         def getOrderById(respond: GetOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed)(traceBuilder: TraceBuilder[F]): F[GetOrderByIdResponse]
-        def getRoot(respond: GetRootResponse.type)()(traceBuilder: TraceBuilder[F]): F[GetRootResponse]
-        def putBar(respond: PutBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder[F]): F[Response[F]]
       }
     """
     val resource =
@@ -256,6 +256,17 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         }
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
+            case req @ GET -> Root usingForGetRoot traceBuilder =>
+              mapRoute("getRoot", req, {
+                handler.getRoot(GetRootResponse)()(traceBuilder) flatMap ({
+                  case GetRootResponse.Ok =>
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
+                })
+              })
+            case req @ PUT -> Root / "bar" :? PutBarBarMatcher(bar) usingForPutBar traceBuilder =>
+              mapRoute("putBar", req, {
+                handler.putBar(PutBarResponse)(bar)(traceBuilder)
+              })
             case req @ GET -> Root / "foo" / "" usingForGetFoo traceBuilder =>
               mapRoute("getFoo", req, {
                 handler.getFoo(GetFooResponse)()(traceBuilder) flatMap ({
@@ -281,17 +292,6 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
                     F.pure(Response[F](status = org.http4s.Status.NotFound))
                 })
               })
-            case req @ GET -> Root usingForGetRoot traceBuilder =>
-              mapRoute("getRoot", req, {
-                handler.getRoot(GetRootResponse)()(traceBuilder) flatMap ({
-                  case GetRootResponse.Ok =>
-                    F.pure(Response[F](status = org.http4s.Status.Ok))
-                })
-              })
-            case req @ PUT -> Root / "bar" :? PutBarBarMatcher(bar) usingForPutBar traceBuilder =>
-              mapRoute("putBar", req, {
-                handler.putBar(PutBarResponse)(bar)(traceBuilder)
-              })
           }
         }
       }
@@ -310,11 +310,11 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
     val handler =
       q"""
       trait StoreHandler[F[_], -E] {
+        def getRoot(respond: GetRootResponse.type)()(extracted: E): F[GetRootResponse]
+        def putBar(respond: PutBarResponse.type)(bar: Long)(extracted: E): F[Response[F]]
         def getFoo(respond: GetFooResponse.type)()(extracted: E): F[GetFooResponse]
         def getFooBar(respond: GetFooBarResponse.type)(bar: Long)(extracted: E): F[GetFooBarResponse]
         def getOrderById(respond: GetOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed)(extracted: E): F[GetOrderByIdResponse]
-        def getRoot(respond: GetRootResponse.type)()(extracted: E): F[GetRootResponse]
-        def putBar(respond: PutBarResponse.type)(bar: Long)(extracted: E): F[Response[F]]
       }
     """
     val resource =
@@ -345,6 +345,17 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
           }
           def routes(handler: StoreHandler[F, E]): HttpRoutes[F] = HttpRoutes.of {
             {
+              case req @ GET -> Root extractorForGetRoot extracted =>
+                mapRoute("getRoot", req, {
+                  handler.getRoot(GetRootResponse)()(extracted) flatMap ({
+                    case GetRootResponse.Ok =>
+                      F.pure(Response[F](status = org.http4s.Status.Ok))
+                  })
+                })
+              case req @ PUT -> Root / "bar" :? PutBarBarMatcher(bar) extractorForPutBar extracted =>
+                mapRoute("putBar", req, {
+                  handler.putBar(PutBarResponse)(bar)(extracted)
+                })
               case req @ GET -> Root / "foo" / "" extractorForGetFoo extracted =>
                 mapRoute("getFoo", req, {
                   handler.getFoo(GetFooResponse)()(extracted) flatMap ({
@@ -369,17 +380,6 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
                     case GetOrderByIdResponse.NotFound =>
                       F.pure(Response[F](status = org.http4s.Status.NotFound))
                   })
-                })
-              case req @ GET -> Root extractorForGetRoot extracted =>
-                mapRoute("getRoot", req, {
-                  handler.getRoot(GetRootResponse)()(extracted) flatMap ({
-                    case GetRootResponse.Ok =>
-                      F.pure(Response[F](status = org.http4s.Status.Ok))
-                  })
-                })
-              case req @ PUT -> Root / "bar" :? PutBarBarMatcher(bar) extractorForPutBar extracted =>
-                mapRoute("putBar", req, {
-                  handler.putBar(PutBarResponse)(bar)(extracted)
                 })
             }
           }

@@ -1,5 +1,11 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: 'scala-dropwizard-v$RESOLVED_VERSION'
+tag-template: 'scala-dropwizard-v$RESOLVED_VERSION'
+tag-prefix: scala-dropwizard-v
+include-paths:
+  - "modules/scala-dropwizard/"
+  - "build.sbt"
+  - "project/"
+# NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'
     labels:
