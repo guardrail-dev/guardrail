@@ -105,7 +105,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     failedResponseBody(
       makeJsonRequest(validEntity).withHeaders(
         Headers(
-          Header("x-header", "foo")
+          ("x-header", "foo")
         )
       )
     ) should equal("Invalid data")
@@ -124,8 +124,8 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     failedResponseBody(
       makeJsonRequest(validEntity).withHeaders(
         Headers(
-          Header("x-header", "false"),
-          Header("x-optional-header", "foo")
+          ("x-header", "false"),
+          ("x-optional-header", "foo")
         )
       )
     ) should equal("Invalid data")
@@ -153,7 +153,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       makeFormRequest(
         Multipart(
           Vector(
-            Part.formData[IO]("foo", "blep", Header("Content-Type", "application/json"))
+            Part.formData[IO]("foo", "blep", ("Content-Type", "application/json"))
           )
         )
       )
@@ -169,7 +169,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       makeFormRequest(
         Multipart(
           Vector(
-            Part.formData[IO]("foo", "false", Header("Content-Type", "application/json")),
+            Part.formData[IO]("foo", "false", ("Content-Type", "application/json")),
             Part.formData[IO]("bar", "blep")
           )
         )
@@ -187,8 +187,8 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       makeFormRequest(
         Multipart(
           Vector(
-            Part.formData[IO]("foo", "false", Header("Content-Type", "application/json")),
-            Part.formData[IO]("bar", "blep", Header("Content-Type", "application/json"))
+            Part.formData[IO]("foo", "false", ("Content-Type", "application/json")),
+            Part.formData[IO]("bar", "blep", ("Content-Type", "application/json"))
           )
         )
       )

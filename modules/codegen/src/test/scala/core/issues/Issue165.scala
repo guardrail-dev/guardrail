@@ -43,15 +43,22 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val handler  = q"""
       trait StoreHandler[F[_]] {
+        def getRoot(respond: GetRootResponse.type)(): F[GetRootResponse]
         def getFoo(respond: GetFooResponse.type)(): F[GetFooResponse]
         def getFooDir(respond: GetFooDirResponse.type)(): F[GetFooDirResponse]
-        def getRoot(respond: GetRootResponse.type)(): F[GetRootResponse]
       }
     """
     val resource = q"""
       class StoreResource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
+            case req @ GET -> Root =>
+              mapRoute("getRoot", req, {
+                handler.getRoot(GetRootResponse)() flatMap ({
+                  case GetRootResponse.Ok =>
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
+                })
+              })
             case req @ GET -> Root / "foo" =>
               mapRoute("getFoo", req, {
                 handler.getFoo(GetFooResponse)() flatMap ({
@@ -63,13 +70,6 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               mapRoute("getFooDir", req, {
                 handler.getFooDir(GetFooDirResponse)() flatMap ({
                   case GetFooDirResponse.Ok =>
-                    F.pure(Response[F](status = org.http4s.Status.Ok))
-                })
-              })
-            case req @ GET -> Root =>
-              mapRoute("getRoot", req, {
-                handler.getRoot(GetRootResponse)() flatMap ({
-                  case GetRootResponse.Ok =>
                     F.pure(Response[F](status = org.http4s.Status.Ok))
                 })
               })

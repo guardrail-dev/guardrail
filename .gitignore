@@ -7,3 +7,4 @@ vendor/
 
 .idea
 .bundle/
+metals.sbt
