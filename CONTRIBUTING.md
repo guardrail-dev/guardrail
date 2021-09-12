@@ -1,6 +1,9 @@
 Project structure
 =================
 
+Structure in flux currently, please see [#1195: Proposal to modularize the guardrail repo](https://github.com/guardrail-dev/guardrail/issues/1195)
+
+
 - `root`: Contains tests and nothing else
   - `codegen`: Codegen core. Defines algebras and default interpreters.
   - `sample`: Contains integration tests for generated code. May be generated via `example` in the sbt console.

@@ -1,0 +1,38 @@
+name-template: 'guardrail-v$RESOLVED_VERSION'
+tag-template: 'guardrail-v$RESOLVED_VERSION'
+tag-prefix: guardrail-v
+include-paths:
+  - "modules/codegen/"
+  - "build.sbt"
+  - "project/"
+# NB: Managed by support/regenerate-release-drafter.sh
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+  - title: '🧰 Maintenance'
+    label: 'chore'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+template: |
+  ## Changes
+
+  $CHANGES
+
+  ## Contributors
+
+  Thanks to $CONTRIBUTORS for your contributions to this release!

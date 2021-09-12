@@ -16,9 +16,11 @@ definitions:
       string_value:
         type: string
       date_property:
-        type: date
+        type: string
+        format: date
       date_time_property:
-        type: date-time
+        type: string
+        format: date-time
       long_property:
         type: integer
         format: int64

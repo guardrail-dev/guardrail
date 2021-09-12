@@ -119,9 +119,6 @@
           },
           "404": {
             "description": "Pet not found"
-          },
-          "400": {
-            "description": "Validation exception"
           }
         },
         "security": [

@@ -36,6 +36,7 @@ guardrail version | http4s | circe-core | cats  | cats-effect | Notes
 0.51.0            | 0.20.0 |  "         |  "    |  "          |
 0.54.0            |   "    | 0.12.1     |  "    |  "          | For Scala 2.11, use --module circe-java8
 0.55.4            | 0.21.0 | 0.13.0     | 2.1.0 | 2.1.0       |
+0.65.0            | 0.22.0 | 0.13.0     | 2.1.0 | 2.1.0       |
 
 ## Java
 
