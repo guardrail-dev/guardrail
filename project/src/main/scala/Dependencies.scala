@@ -17,7 +17,7 @@ object Dependencies {
   val ahcVersion             = "2.8.1"
   val dropwizardVersion      = "1.3.29"
   val dropwizardScalaVersion = "1.3.7-1"
-  val jerseyVersion          = "2.25.1"
+  val jerseyVersion          = "2.35"
   val jaxbApiVersion         = "2.3.1"
   val javaxAnnotationVersion = "1.3.2"
   val springBootVersion      = "2.5.4"
