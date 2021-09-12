@@ -15,7 +15,7 @@ object Dependencies {
   val endpointsCatsVersion   = "2.4.1"
   val endpointsCirceVersion  = "0.14.1"
   val ahcVersion             = "2.8.1"
-  val dropwizardVersion      = "1.3.29"
+  val dropwizardVersion      = "2.0.25"
   val dropwizardScalaVersion = "1.3.7-1"
   val jerseyVersion          = "2.25.1"
   val jaxbApiVersion         = "2.3.1"
