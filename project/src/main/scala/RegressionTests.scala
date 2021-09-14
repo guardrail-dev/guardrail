@@ -96,6 +96,7 @@ object RegressionTests {
     ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
     ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "dropwizard")),
     ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s")),
+    ExampleCase(sampleResource("binary3.yaml"), "binary3").frameworks("scala" -> Set("http4s")),
     ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
     ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.toSet),
     ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s")),

@@ -1,0 +1,41 @@
+openapi: 3.0.2
+info:
+  title: Title
+  description: >
+    Description
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /path:
+    post:
+      description: >
+        Description
+      operationId: operationId
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description:
+            description
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+                x-scala-type: fs2.Stream[F, Byte]
+        '400':
+          description: 400 - The request was malformed or missing a required field.
+          schema:
+            description: Optional information about how the request was bad.
+            type: object
+            properties:
+              fieldName:
+                description: >-
+                  If this error was due to a particular field, this is the name of that field.
+                type: string
