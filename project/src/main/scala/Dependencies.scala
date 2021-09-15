@@ -29,7 +29,7 @@ object Dependencies {
 
   // TAKE CARE WHEN UPDATING THESE
   val eclipseFormatterDependencies = Seq(
-    "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.24.0",
+    "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.27.0",
     // These version pins are necessary because a bunch of transitive dependencies
     // are specified via an allowed version range rather than being pinned to a
     // particular version.  Unfortunately, at some point some of them started
