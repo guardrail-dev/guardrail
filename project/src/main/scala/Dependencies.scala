@@ -44,7 +44,7 @@ object Dependencies {
     "org.eclipse.platform" % "org.eclipse.core.jobs"           % "3.11.0",
     "org.eclipse.platform" % "org.eclipse.core.resources"      % "3.14.0",
     "org.eclipse.platform" % "org.eclipse.core.runtime"        % "3.20.100",
-    "org.eclipse.platform" % "org.eclipse.equinox.app"         % "1.5.100",
+    "org.eclipse.platform" % "org.eclipse.equinox.app"         % "1.6.0",
     "org.eclipse.platform" % "org.eclipse.equinox.common"      % "3.14.100",
     "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.8.200",
     "org.eclipse.platform" % "org.eclipse.equinox.registry"    % "3.10.200",
