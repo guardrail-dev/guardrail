@@ -42,7 +42,7 @@ object Dependencies {
     "org.eclipse.platform" % "org.eclipse.core.expressions"    % "3.7.100",
     "org.eclipse.platform" % "org.eclipse.core.filesystem"     % "1.9.0",
     "org.eclipse.platform" % "org.eclipse.core.jobs"           % "3.11.0",
-    "org.eclipse.platform" % "org.eclipse.core.resources"      % "3.14.0",
+    "org.eclipse.platform" % "org.eclipse.core.resources"      % "3.15.100",
     "org.eclipse.platform" % "org.eclipse.core.runtime"        % "3.20.100",
     "org.eclipse.platform" % "org.eclipse.equinox.app"         % "1.5.100",
     "org.eclipse.platform" % "org.eclipse.equinox.common"      % "3.14.100",
