@@ -126,7 +126,7 @@ lazy val core = commonModule("core")
       "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.22.1",
       "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.27",
     ) ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.27",
+      "org.scalameta"               %% "scalameta"                    % "4.4.28",
       "org.tpolecat"                %% "atto-core"                    % "0.9.5",
       "org.typelevel"               %% "cats-core"                    % catsVersion,
       "org.typelevel"               %% "cats-kernel"                  % catsVersion,
