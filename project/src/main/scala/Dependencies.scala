@@ -38,7 +38,7 @@ object Dependencies {
     // the Java11-compiled dependencies is not enough, as some of them are not
     // mutually compatible.
     "org.eclipse.platform" % "org.eclipse.core.commands"       % "3.10.0",
-    "org.eclipse.platform" % "org.eclipse.core.contenttype"    % "3.7.1000",
+    "org.eclipse.platform" % "org.eclipse.core.contenttype"    % "3.8.0",
     "org.eclipse.platform" % "org.eclipse.core.expressions"    % "3.7.100",
     "org.eclipse.platform" % "org.eclipse.core.filesystem"     % "1.9.0",
     "org.eclipse.platform" % "org.eclipse.core.jobs"           % "3.11.0",
