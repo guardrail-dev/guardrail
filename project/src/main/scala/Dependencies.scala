@@ -46,7 +46,7 @@ object Dependencies {
     "org.eclipse.platform" % "org.eclipse.core.runtime"        % "3.20.100",
     "org.eclipse.platform" % "org.eclipse.equinox.app"         % "1.5.100",
     "org.eclipse.platform" % "org.eclipse.equinox.common"      % "3.14.100",
-    "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.8.200",
+    "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.9.0",
     "org.eclipse.platform" % "org.eclipse.equinox.registry"    % "3.10.200",
     "org.eclipse.platform" % "org.eclipse.osgi"                % "3.16.300",
     "org.eclipse.platform" % "org.eclipse.text"                % "3.11.0",
