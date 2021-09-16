@@ -121,7 +121,7 @@ object Dependencies {
     "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
   ) ++ Seq(
-    "org.mockito"                %% "mockito-scala"          % "1.16.39"           % Test,
+    "org.mockito"                %% "mockito-scala"          % "1.16.42"           % Test,
     "org.scala-lang.modules"     %% "scala-java8-compat"     % "1.0.0"            % Test,
     "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
@@ -143,7 +143,7 @@ object Dependencies {
     "org.typelevel"                  %% "cats-core"               % catsVersion,
     "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.0"            % Test,
     "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
-    "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.39"           % Test,
+    "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.42"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val dropwizardVavrProjectDependencies = dropwizardProjectDependencies ++ Seq(
@@ -169,6 +169,6 @@ object Dependencies {
   ) ++ Seq(
     "org.scala-lang.modules"     %% "scala-java8-compat"       % "1.0.0"            % Test,
     "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-    "org.mockito"                %% "mockito-scala"            % "1.16.39"           % Test,
+    "org.mockito"                %% "mockito-scala"            % "1.16.42"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
 }
