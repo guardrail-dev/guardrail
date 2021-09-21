@@ -9,7 +9,7 @@ object Dependencies {
   val catsVersion            = "2.6.1"
   val catsEffectVersion      = "2.5.4"
   val circeVersion           = "0.14.1"
-  val http4sVersion          = "0.22.5"
+  val http4sVersion          = "0.23.4"
   val scalatestVersion       = "3.2.10"
   val endpointsVersion       = "1.3.0"
   val endpointsCatsVersion   = "2.4.1"
