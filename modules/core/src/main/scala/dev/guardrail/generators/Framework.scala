@@ -1,10 +1,9 @@
-package dev.guardrail
-package generators
+package dev.guardrail.generators
 
 import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
-import dev.guardrail.protocol.terms.client.ClientTerms
-import dev.guardrail.protocol.terms.server.ServerTerms
+import dev.guardrail.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
+import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.server.ServerTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
 

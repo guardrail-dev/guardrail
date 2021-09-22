@@ -1,6 +1,6 @@
 package dev.guardrail
 
-import dev.guardrail.protocol.terms.protocol.PropertyRequirement
+import dev.guardrail.terms.protocol.PropertyRequirement
 
 case class Args(
     kind: CodegenTarget,

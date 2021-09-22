@@ -80,7 +80,7 @@ object Target {
   }
 }
 
-sealed abstract class Target[A](val logEntries: StructuredLogger) {
+sealed abstract class Target[+A](val logEntries: StructuredLogger) {
   def valueOr[AA >: A](fallback: Error => AA): AA
   def recover[AA >: A](f: Error => AA): Target[AA]
   def fold[B](fail: Error => B, pass: A => B): B

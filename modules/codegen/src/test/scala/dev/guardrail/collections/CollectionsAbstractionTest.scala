@@ -5,7 +5,7 @@ import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.`type`.{ PrimitiveType, UnknownType }
 import com.github.javaparser.ast.body.Parameter
 import com.github.javaparser.ast.expr._
-import dev.guardrail.languages.JavaLanguage
+import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.collections._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers

@@ -4,7 +4,7 @@ tag-prefix: scala-endpoints-v
 include-paths:
   - "modules/scala-endpoints/"
   - "build.sbt"
-  - "project/"
+  - "project/src/main/scala/modules/scalaEndpoints.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'

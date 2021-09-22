@@ -1,8 +1,9 @@
 package tests.generators.http4s.client
 
-import dev.guardrail.generators.Scala.Http4s
-import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
-import dev.guardrail.{ Client, Clients, Context }
+import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.Context
+import dev.guardrail.generators.{ Client, Clients }
 import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

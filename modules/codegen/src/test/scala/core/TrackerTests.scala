@@ -2,7 +2,7 @@ package core
 
 import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
 import dev.guardrail.core.implicits._
-import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.generators.scala.http4s.Http4s
 import dev.guardrail.{ CodegenTarget, Context, UserError }
 import org.scalacheck.{ Arbitrary, Gen }
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks

@@ -7,18 +7,7 @@ import dev.guardrail.sbt.Build._
 import dev.guardrail.sbt.Dependencies._
 import dev.guardrail.sbt.RegressionTests._
 import dev.guardrail.sbt.ExampleCase
-
-assembly / mainClass := Some("dev.guardrail.CLI")
-assembly / assemblyMergeStrategy := {
-  case ".api_description" => MergeStrategy.discard
-  case ".options" => MergeStrategy.concat
-  case "plugin.properties" => MergeStrategy.discard
-  case "plugin.xml" => MergeStrategy.concat
-  case "META-INF/eclipse.inf" => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assembly / assemblyMergeStrategy).value
-    oldStrategy(x)
-}
+import dev.guardrail.sbt.modules
 
 WelcomeMessage.welcomeMessage
 
@@ -28,7 +17,7 @@ lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run java generator with 
 fullRunTask(
   runJavaExample,
   Test,
-  "dev.guardrail.CLI",
+  "dev.guardrail.cli.CLI",
   exampleArgs("java").flatten.filter(_.nonEmpty): _*
 )
 
@@ -36,7 +25,7 @@ lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator wit
 fullRunTask(
   runScalaExample,
   Test,
-  "dev.guardrail.CLI",
+  "dev.guardrail.cli.CLI",
   exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
@@ -50,15 +39,8 @@ runExample := Def.inputTaskDyn {
     case language :: Nil => exampleArgs(language)
     case Nil => exampleArgs("scala") ++ exampleArgs("java")
   }
-  runTask(Test, "dev.guardrail.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
+  runTask(Test, "dev.guardrail.cli.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
 }.evaluated
-
-Compile / assembly / artifact := {
-  (Compile / assembly / artifact).value
-    .withClassifier(Option("assembly"))
-}
-
-addArtifact(Compile / assembly / artifact, assembly)
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
 
@@ -68,7 +50,7 @@ addCommandAlias("example", "runtimeSuite")
 // Make "cli" not emit unhandled exceptions on exit
 run / fork := true
 
-addCommandAlias("cli", "runMain dev.guardrail.CLI")
+addCommandAlias("cli", "runMain dev.guardrail.cli.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
@@ -92,80 +74,71 @@ addCommandAlias(
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
-scalacOptions += "-Yrangepos"
 
 publishMavenStyle := true
 
-lazy val root = (project in file("."))
-  .settings(commonSettings)
-  .settings(publish / skip := true)
-  .settings(libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.32")
-  .dependsOn(guardrail, microsite)
+val javaSampleSettings = Seq(
+    Test / testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    javacOptions ++= Seq(
+      "-Xlint:all"
+    ),
+  )
+
+lazy val root = modules.root.project
+  .dependsOn(guardrail, microsite, cli)
   .aggregate(allDeps, microsite)
   .aggregate(allModules: _*)
 
-lazy val allDeps = (project in file("modules/alldeps"))
-  .settings(commonSettings)
-  .settings(
-    publish / skip := true,
-    libraryDependencies ++= akkaProjectDependencies,
-    libraryDependencies ++= akkaJacksonProjectDependencies,
-    libraryDependencies ++= http4sProjectDependencies,
-    libraryDependencies ++= endpointsProjectDependencies,
-    libraryDependencies ++= springProjectDependencies,
-    libraryDependencies ++= dropwizardProjectDependencies,
-    libraryDependencies ++= dropwizardScalaProjectDependencies,
-  )
+lazy val allDeps = modules.allDeps.project
 
-lazy val guardrail = baseModule("guardrail", "guardrail", file("modules/codegen"))
+lazy val guardrail = modules.guardrail.project
   .dependsOn(core, javaDropwizard, javaSpringMvc, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
 
-lazy val core = commonModule("core")
-  .settings(
-    libraryDependencies ++= Seq(
-      "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.23.0",
-      "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.27",
-    ) ++ Seq(
-      "org.scalameta"               %% "scalameta"                    % "4.4.27",
-      "org.tpolecat"                %% "atto-core"                    % "0.9.5",
-      "org.typelevel"               %% "cats-core"                    % catsVersion,
-      "org.typelevel"               %% "cats-kernel"                  % catsVersion,
-      "org.typelevel"               %% "cats-free"                    % catsVersion,
-      "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.0",
-    ).map(_.cross(CrossVersion.for3Use2_13)),
-  )
+lazy val core = modules.core.project
 
-lazy val javaSupport = commonModule("java-support")
-  .settings(
-    libraryDependencies ++= eclipseFormatterDependencies
-  )
+lazy val cli = modules.cli.project
+  .dependsOn(guardrail)
+
+lazy val javaSupport = modules.javaSupport.project
   .dependsOn(core)
 
-lazy val javaAsyncHttp = commonModule("java-async-http")
+lazy val javaAsyncHttp = modules.javaAsyncHttp.project
   .dependsOn(javaSupport)
 
-lazy val javaDropwizard = commonModule("java-dropwizard")
+lazy val dropwizardSample = modules.javaDropwizard.sample
+  .settings(javaSampleSettings)
+lazy val dropwizardVavrSample = modules.javaDropwizard.sampleVavr
+  .settings(javaSampleSettings)
+lazy val javaDropwizard = modules.javaDropwizard.project
   .dependsOn(javaSupport, javaAsyncHttp)
 
-lazy val javaSpringMvc = commonModule("java-spring-mvc")
+lazy val javaSpringMvcSample = modules.javaSpringMvc.sample
+  .settings(javaSampleSettings)
+lazy val javaSpringMvc = modules.javaSpringMvc.project
   .dependsOn(javaSupport)
 
-lazy val scalaSupport = commonModule("scala-support")
+lazy val scalaSupport = modules.scalaSupport.project
   .dependsOn(core, javaDropwizard)
 
-lazy val scalaAkkaHttp = commonModule("scala-akka-http")
+lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
+lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
+lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
   .dependsOn(scalaSupport, javaDropwizard)
 
-lazy val scalaEndpoints = commonModule("scala-endpoints")
+lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
+lazy val scalaEndpoints = modules.scalaEndpoints.project
   .dependsOn(scalaSupport)
 
-lazy val scalaHttp4s = commonModule("scala-http4s")
+lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
+lazy val scalaHttp4s = modules.scalaHttp4s.project
   .dependsOn(scalaSupport)
 
-lazy val scalaDropwizard = commonModule("scala-dropwizard")
+lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
+lazy val scalaDropwizard = modules.scalaDropwizard.project
   .dependsOn(javaDropwizard, scalaSupport)
 
 lazy val allModules = Seq[sbt.ProjectReference](
+  cli,
   core,
   guardrail,
 
@@ -181,34 +154,7 @@ lazy val allModules = Seq[sbt.ProjectReference](
   scalaDropwizard,
 )
 
-lazy val akkaHttpSample = buildSampleProject("akkaHttp", akkaProjectDependencies)
-
-lazy val akkaHttpJacksonSample = buildSampleProject("akkaHttpJackson", akkaJacksonProjectDependencies)
-
-lazy val dropwizardScalaSample = buildSampleProject("dropwizardScala", dropwizardScalaProjectDependencies)
-
-lazy val endpointsSample = buildSampleProject("endpoints", endpointsProjectDependencies)
-
-lazy val http4sSample = buildSampleProject("http4s", http4sProjectDependencies)
-
-val javaSampleSettings = Seq(
-    Test / testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    javacOptions ++= Seq(
-      "-Xlint:all"
-    ),
-  )
-
-lazy val dropwizardSample = buildSampleProject("dropwizard", dropwizardProjectDependencies)
-  .settings(javaSampleSettings)
-
-lazy val dropwizardVavrSample = buildSampleProject("dropwizardVavr", dropwizardVavrProjectDependencies)
-  .settings(javaSampleSettings)
-
-lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
-  .settings(javaSampleSettings)
-
-lazy val microsite = (project in file("modules/microsite"))
-  .settings(commonSettings)
+lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
   .settings(
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",

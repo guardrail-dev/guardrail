@@ -1,16 +1,18 @@
 package dev.guardrail.docs
 
-import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.oas.models.OpenAPI
-import io.swagger.v3.parser.core.models.ParseOptions
 import cats.data.NonEmptyList
+
+import io.swagger.parser.OpenAPIParser
+import io.swagger.v3.parser.core.models.ParseOptions
+import scala.meta._
+
 import dev.guardrail._
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.Framework
-import dev.guardrail.generators.Scala.{ AkkaHttp, Http4s }
-import dev.guardrail.languages.ScalaLanguage
-import dev.guardrail.protocol.terms.server.ServerTerms
-import scala.meta._
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.terms.protocol.StaticDefns
 
 sealed trait SnippetComponent
 case object GeneratingAServer extends SnippetComponent
