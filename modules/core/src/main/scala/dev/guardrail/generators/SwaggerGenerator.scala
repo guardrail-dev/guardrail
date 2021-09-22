@@ -5,7 +5,7 @@ import cats.syntax.all._
 import cats.Monad
 import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.core.implicits._
-import dev.guardrail.extract.{ ClassPrefix, PackageName, SecurityOptional }
+import dev.guardrail.core.extract.{ ClassPrefix, PackageName, SecurityOptional }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms._

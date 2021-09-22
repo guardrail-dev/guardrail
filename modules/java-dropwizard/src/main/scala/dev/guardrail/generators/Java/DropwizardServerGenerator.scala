@@ -12,7 +12,7 @@ import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ ImportDeclaration, Node, NodeList }
 import dev.guardrail.core.Tracker
-import dev.guardrail.extract.ServerRawResponse
+import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.LanguageParameter
 import dev.guardrail.generators.helpers.ResponseHelpers._
 import dev.guardrail.generators.syntax.Java._

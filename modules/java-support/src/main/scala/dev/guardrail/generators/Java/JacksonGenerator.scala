@@ -12,10 +12,20 @@ import com.github.javaparser.ast.{Node, NodeList}
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{MethodCallExpr, _}
 import com.github.javaparser.ast.stmt._
-import dev.guardrail.{DataRedacted, DataVisible, Discriminator, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, ProtocolParameter, RedactionBehaviour, RuntimeFailure, StaticDefns, SuperClass, Target, UserError, core}
+import dev.guardrail.{
+  Discriminator,
+  ProtocolParameter,
+  RuntimeFailure,
+  StaticDefns,
+  SuperClass,
+  Target,
+  UserError
+}
+import dev.guardrail.core
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.implicits._
-import dev.guardrail.extract.{DataRedaction, EmptyValueIsNull}
+import dev.guardrail.core.{DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour}
+import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.generators.{JavaGenerator, RawParameterName, RawParameterType}
 import dev.guardrail.generators.helpers.JacksonHelpers
 import dev.guardrail.generators.syntax.Java._

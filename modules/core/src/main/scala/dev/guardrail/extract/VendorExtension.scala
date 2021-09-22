@@ -1,4 +1,4 @@
-package dev.guardrail.extract
+package dev.guardrail.core.extract
 
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media._

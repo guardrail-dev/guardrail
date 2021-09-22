@@ -5,7 +5,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import dev.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, Target, TracingField, UserError }
 import dev.guardrail.core.{PathExtractor, Tracker}
-import dev.guardrail.extract.{ ServerRawResponse, TracingLabel }
+import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.generators.Scala.model.ModelGeneratorType
 import dev.guardrail.generators.syntax._

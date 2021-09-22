@@ -2,7 +2,8 @@ package dev.guardrail.generators.Scala
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.{Discriminator, EmptyIsNull, ProtocolParameter, RuntimeFailure, SupportDefinition, Target}
+import dev.guardrail.{Discriminator, ProtocolParameter, RuntimeFailure, SupportDefinition, Target}
+import dev.guardrail.core.EmptyIsNull
 import dev.guardrail.generators.Scala.model.CirceModelGenerator
 import dev.guardrail.generators.ScalaGenerator
 import dev.guardrail.generators.helpers.JacksonHelpers

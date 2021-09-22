@@ -12,7 +12,7 @@ import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ Node, NodeList }
 import dev.guardrail.core.Tracker
-import dev.guardrail.extract.ServerRawResponse
+import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.syntax.Java._
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.languages.JavaLanguage

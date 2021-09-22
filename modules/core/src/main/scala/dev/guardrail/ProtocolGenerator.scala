@@ -5,7 +5,7 @@ import _root_.io.swagger.v3.oas.models.media._
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.core.{ Mappish, Tracker }
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyToNullBehaviour, EmptyIsNull, EmptyIsEmpty, Mappish, RedactionBehaviour, Tracker }
 import dev.guardrail.core.implicits._
 import dev.guardrail.generators.RawParameterType
 import dev.guardrail.languages.LA
@@ -28,7 +28,7 @@ import dev.guardrail.terms.{
   SwaggerTerms
 }
 import cats.Foldable
-import dev.guardrail.extract.Default
+import dev.guardrail.core.extract.Default
 import scala.collection.JavaConverters._
 import scala.language.higherKinds
 import dev.guardrail.generators.RawParameterName
@@ -40,13 +40,6 @@ case class ProtocolDefinitions[L <: LA](
     packageObjectContents: List[L#Statement],
     implicitsObject: Option[(L#TermName, L#ObjectDefinition)]
 )
-sealed trait EmptyToNullBehaviour
-case object EmptyIsNull  extends EmptyToNullBehaviour
-case object EmptyIsEmpty extends EmptyToNullBehaviour
-
-sealed trait RedactionBehaviour
-case object DataVisible  extends RedactionBehaviour
-case object DataRedacted extends RedactionBehaviour
 
 case class ProtocolParameter[L <: LA](
     term: L#MethodParameter,

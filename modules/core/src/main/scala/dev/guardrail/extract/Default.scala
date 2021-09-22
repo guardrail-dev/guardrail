@@ -1,4 +1,4 @@
-package dev.guardrail.extract
+package dev.guardrail.core.extract
 
 import dev.guardrail.core.Tracker
 import io.swagger.v3.oas.models.media.{ BooleanSchema, IntegerSchema, NumberSchema, StringSchema }

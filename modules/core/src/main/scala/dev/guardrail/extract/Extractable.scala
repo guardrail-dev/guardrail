@@ -1,6 +1,6 @@
-package dev.guardrail.extract
+package dev.guardrail.core.extract
 
-import dev.guardrail.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
 import scala.util.{ Success, Try }
 import scala.reflect.ClassTag
 import scala.collection.JavaConverters._

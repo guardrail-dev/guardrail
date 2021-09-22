@@ -1,4 +1,5 @@
-package dev.guardrail
+package dev.guardrail.core
+
 import cats.syntax.foldable._
 
 package object extract {

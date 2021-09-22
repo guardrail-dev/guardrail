@@ -4,7 +4,7 @@ package generators
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
 import dev.guardrail.core.{ ResolvedType, Tracker }
-import dev.guardrail.extract.{ Default, FileHashAlgorithm }
+import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._

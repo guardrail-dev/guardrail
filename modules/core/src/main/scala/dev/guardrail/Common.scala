@@ -5,7 +5,7 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.Id
 import dev.guardrail.core.Tracker
-import dev.guardrail.extract.SecurityOptional
+import dev.guardrail.core.extract.SecurityOptional
 import dev.guardrail.languages.LA
 import dev.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
 import dev.guardrail.terms.framework.FrameworkTerms

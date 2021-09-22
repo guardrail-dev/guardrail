@@ -5,10 +5,7 @@ import cats.Monad
 import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.syntax.all._
 import dev.guardrail.{
-  DataVisible,
   Discriminator,
-  EmptyIsEmpty,
-  EmptyIsNull,
   ProtocolParameter,
   StaticDefns,
   SuperClass,
@@ -18,9 +15,9 @@ import dev.guardrail.{
   UserError
 }
 import dev.guardrail.core
-import dev.guardrail.core.{ResolvedType, Tracker}
+import dev.guardrail.core.{DataVisible, EmptyIsEmpty, EmptyIsNull, ResolvedType, Tracker}
 import dev.guardrail.core.implicits._
-import dev.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
+import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.generators.Scala.model.CirceModelGenerator
 import dev.guardrail.generators.{ RawParameterName, RawParameterType, ScalaGenerator }
 import dev.guardrail.languages.ScalaLanguage
