@@ -1,6 +1,6 @@
 package dev.guardrail
 
-import dev.guardrail.languages.ScalaLanguage
+import dev.guardrail.generators.scala.ScalaLanguage
 
 package object generators {
   implicit class RichLanguageParameter(value: LanguageParameter[ScalaLanguage]) {

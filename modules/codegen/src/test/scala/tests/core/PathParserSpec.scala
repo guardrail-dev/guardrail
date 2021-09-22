@@ -4,12 +4,12 @@ import cats.data.NonEmptyList
 import dev.guardrail.Target
 import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
 import dev.guardrail.generators.LanguageParameter
-import dev.guardrail.generators.Scala.model.{ CirceModelGenerator, ModelGeneratorType }
-import dev.guardrail.generators.Scala.AkkaHttpServerGenerator
-import dev.guardrail.generators.syntax.Scala._
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ModelGeneratorType }
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttpServerGenerator
+import dev.guardrail.generators.scala.syntax._
 import org.scalatest.{ EitherValues, OptionValues }
 import support.ScalaMetaMatchers._
-import dev.guardrail.languages.ScalaLanguage
+import dev.guardrail.generators.scala.ScalaLanguage
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

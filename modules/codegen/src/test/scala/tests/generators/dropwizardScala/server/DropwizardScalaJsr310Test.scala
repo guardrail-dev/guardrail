@@ -1,8 +1,9 @@
 package tests.generators.dropwizardScala.server
 
 import cats.data.NonEmptyList
-import dev.guardrail.{ CodegenTarget, Context, Server, Servers }
-import dev.guardrail.generators.Scala.Dropwizard
+import dev.guardrail.{ CodegenTarget, Context }
+import dev.guardrail.generators.{ Server, Servers }
+import dev.guardrail.generators.scala.dropwizard.Dropwizard
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers

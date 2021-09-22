@@ -28,7 +28,7 @@ lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run java generator with 
 fullRunTask(
   runJavaExample,
   Test,
-  "dev.guardrail.CLI",
+  "dev.guardrail.cli.CLI",
   exampleArgs("java").flatten.filter(_.nonEmpty): _*
 )
 
@@ -36,7 +36,7 @@ lazy val runScalaExample: TaskKey[Unit] = taskKey[Unit]("Run scala generator wit
 fullRunTask(
   runScalaExample,
   Test,
-  "dev.guardrail.CLI",
+  "dev.guardrail.cli.CLI",
   exampleArgs("scala").flatten.filter(_.nonEmpty): _*
 )
 
@@ -50,7 +50,7 @@ runExample := Def.inputTaskDyn {
     case language :: Nil => exampleArgs(language)
     case Nil => exampleArgs("scala") ++ exampleArgs("java")
   }
-  runTask(Test, "dev.guardrail.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
+  runTask(Test, "dev.guardrail.cli.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
 }.evaluated
 
 Compile / assembly / artifact := {
@@ -68,7 +68,7 @@ addCommandAlias("example", "runtimeSuite")
 // Make "cli" not emit unhandled exceptions on exit
 run / fork := true
 
-addCommandAlias("cli", "runMain dev.guardrail.CLI")
+addCommandAlias("cli", "runMain dev.guardrail.cli.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
@@ -100,7 +100,7 @@ lazy val root = (project in file("."))
   .settings(commonSettings)
   .settings(publish / skip := true)
   .settings(libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.32")
-  .dependsOn(guardrail, microsite)
+  .dependsOn(guardrail, microsite, cli)
   .aggregate(allDeps, microsite)
   .aggregate(allModules: _*)
 
@@ -135,6 +135,9 @@ lazy val core = commonModule("core")
     ).map(_.cross(CrossVersion.for3Use2_13)),
   )
 
+lazy val cli = commonModule("cli")
+  .dependsOn(guardrail)
+
 lazy val javaSupport = commonModule("java-support")
   .settings(
     libraryDependencies ++= eclipseFormatterDependencies
@@ -166,6 +169,7 @@ lazy val scalaDropwizard = commonModule("scala-dropwizard")
   .dependsOn(javaDropwizard, scalaSupport)
 
 lazy val allModules = Seq[sbt.ProjectReference](
+  cli,
   core,
   guardrail,
 

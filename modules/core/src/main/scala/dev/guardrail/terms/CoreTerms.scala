@@ -1,8 +1,8 @@
-package dev.guardrail
-package terms
+package dev.guardrail.terms
 
 import cats.Monad
 import cats.data.NonEmptyList
+import dev.guardrail._
 import dev.guardrail.languages.LA
 import dev.guardrail.generators.Framework
 

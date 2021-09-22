@@ -1,7 +1,7 @@
-package dev.guardrail
-package terms.framework
+package dev.guardrail.terms.framework
 
 import cats.Monad
+
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.CollectionsLibTerms
 

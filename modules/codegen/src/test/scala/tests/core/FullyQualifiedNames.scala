@@ -1,11 +1,16 @@
 package tests.core
 
-import dev.guardrail.generators.Scala.Http4s
-import dev.guardrail.{ ClassDefinition, Client, Clients, Context, ProtocolDefinitions }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
+
 import support.SwaggerSpecRunner
+
+import dev.guardrail.Context
+import dev.guardrail.generators.ProtocolDefinitions
+import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.{ Client, Clients }
+import dev.guardrail.terms.protocol.ClassDefinition
 
 class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 

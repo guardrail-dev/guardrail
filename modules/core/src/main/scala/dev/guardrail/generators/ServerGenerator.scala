@@ -2,11 +2,14 @@ package dev.guardrail.generators
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.{Context, SupportDefinition, StrictProtocolElems, _}
+
+import dev.guardrail._
+import dev.guardrail.core.SupportDefinition
 import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.Responses
-import dev.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
+import dev.guardrail.terms.Responses
 import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.StrictProtocolElems
+import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])

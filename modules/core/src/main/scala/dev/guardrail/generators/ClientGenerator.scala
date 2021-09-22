@@ -2,13 +2,16 @@ package dev.guardrail.generators
 
 import cats.data.NonEmptyList
 import cats.implicits._
-import dev.guardrail.{Context, SupportDefinition, StaticDefns, StrictProtocolElems, _}
-import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.Responses
-import dev.guardrail.protocol.terms.client.ClientTerms
-import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.terms._
 import java.net.URI
+
+import dev.guardrail.core.SupportDefinition
+import dev.guardrail.languages.LA
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms._
+import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
+import dev.guardrail.{Context, _}
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Client[L <: LA](

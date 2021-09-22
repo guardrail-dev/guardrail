@@ -1,12 +1,16 @@
 package tests.core.issues
 
-import dev.guardrail.generators.Scala.AkkaHttp
-import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
-import dev.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
-import scala.meta._
-import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import scala.meta._
+
+import support.SwaggerSpecRunner
+
+import dev.guardrail.Context
+import dev.guardrail.generators.ProtocolDefinitions
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue105 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   val swagger: String = s"""

@@ -3,31 +3,15 @@ package dev.guardrail.core
 import cats.data.{ NonEmptyList, State }
 import cats.syntax.all._
 import cats.{ FlatMap, Monad }
-import dev.guardrail.{
-  Args,
-  CodegenTarget,
-  Common,
-  Context,
-  Error,
-  MissingArg,
-  NoArgsSpecified,
-  NoFramework,
-  PrintHelp,
-  ReadSwagger,
-  Target,
-  UnknownArguments,
-  UnknownFramework,
-  UnparseableArgument,
-  WriteTree
-}
-import dev.guardrail.languages.LA
-import dev.guardrail.terms._
-import dev.guardrail.generators.Framework
 import java.nio.file.Paths
-
-import dev.guardrail.protocol.terms.protocol.{ PropertyRequirement, ProtocolSupportTerms }
-
 import scala.util.control.NonFatal
+
+import dev.guardrail.generators.Framework
+import dev.guardrail.languages.LA
+import dev.guardrail.terms.protocol.ProtocolSupportTerms
+import dev.guardrail.terms._
+import dev.guardrail.terms.protocol.PropertyRequirement
+import dev.guardrail.{ Args, CodegenTarget, Common, Context, Error, MissingArg, NoArgsSpecified, NoFramework, PrintHelp, ReadSwagger, Target, UnknownArguments, UnknownFramework, UnparseableArgument, WriteTree }
 
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,

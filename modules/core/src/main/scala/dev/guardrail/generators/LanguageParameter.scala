@@ -1,16 +1,18 @@
-package dev.guardrail
-package generators
+package dev.guardrail.generators
 
+import cats.syntax.all._
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
-import dev.guardrail.core.{ ResolvedType, Tracker }
+
+import dev.guardrail._
 import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
+import dev.guardrail.core.{ ResolvedType, Tracker }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
-import cats.syntax.all._
+import dev.guardrail.terms.protocol._
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 case class RawParameterName private[generators] (value: String)
 case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])

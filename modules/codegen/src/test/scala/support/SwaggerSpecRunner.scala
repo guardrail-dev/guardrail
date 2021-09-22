@@ -4,14 +4,16 @@ import _root_.io.swagger.parser.OpenAPIParser
 import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.data.NonEmptyList
+import java.util.LinkedList
+import org.scalactic.Equality
+import org.scalatest.{ EitherValues, OptionValues }
+import scala.meta.Tree
+
 import dev.guardrail._
 import dev.guardrail.core.{ StructuredLogger, Tracker }
 import dev.guardrail.generators.Framework
+import dev.guardrail.generators._
 import dev.guardrail.languages.LA
-import org.scalactic.Equality
-import org.scalatest.{ EitherValues, OptionValues }
-
-import scala.meta.Tree
 
 trait SwaggerSpecRunner extends EitherValues with OptionValues {
   implicit def TreeEquality[A <: Tree]: Equality[A] =
@@ -34,7 +36,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
   ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
-    runSwagger(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI, dtoPackage, supportPackage)(
+    runSwagger(new OpenAPIParser().readContents(spec, new LinkedList(), parseOpts).getOpenAPI, dtoPackage, supportPackage)(
       context,
       framework,
       targets
@@ -85,7 +87,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
   ): (Context, CodegenTarget, Framework[L, Target]) => (StructuredLogger, Error) = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
-    runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new java.util.LinkedList(), parseOpts).getOpenAPI) _
+    runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new LinkedList(), parseOpts).getOpenAPI) _
   }
 
   def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: Framework[L, Target]): (StructuredLogger, Error) = {
