@@ -4,7 +4,7 @@ import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.{ ArrayCreationLevel, NodeList }
 import com.github.javaparser.ast.`type`.Type
 import com.github.javaparser.ast.expr.{ ArrayCreationExpr, Expression, IntegerLiteralExpr, MethodCallExpr, NameExpr }
-import dev.guardrail.languages.JavaLanguage
+import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.collections.JavaCollectionsHelpers.{ doMethodCall, isContainerOfType, typeFromClass }
 
 import java.util.concurrent.CompletionStage

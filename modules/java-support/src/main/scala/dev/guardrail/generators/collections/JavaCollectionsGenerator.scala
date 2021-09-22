@@ -8,8 +8,8 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr
 import dev.guardrail.core.LazyResolvedType
 import dev.guardrail.Target
 import dev.guardrail.core
-import dev.guardrail.generators.syntax.Java._
-import dev.guardrail.languages.JavaLanguage
+import dev.guardrail.generators.java.syntax._
+import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
 object JavaCollectionsGenerator {

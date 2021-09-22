@@ -4,7 +4,8 @@ tag-prefix: guardrail-v
 include-paths:
   - "modules/codegen/"
   - "build.sbt"
-  - "project/"
+  - "project/src/main/scala/modules/guardrail.scala"
+  - "project/src/main/scala/modules/cli.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'

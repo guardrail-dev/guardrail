@@ -1,12 +1,15 @@
 package core.issues
 
-import dev.guardrail.generators.Scala.Http4s
-import dev.guardrail.languages.ScalaLanguage
-import dev.guardrail.{ ClassDefinition, Context, ProtocolDefinitions }
 import org.scalatest.Assertion
-import support.SwaggerSpecRunner
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+
+import dev.guardrail.Context
+import dev.guardrail.generators.ProtocolDefinitions
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.terms.protocol.ClassDefinition
+import support.SwaggerSpecRunner
 
 class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 

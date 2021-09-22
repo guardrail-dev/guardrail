@@ -1,6 +1,6 @@
 package dev.guardrail.generators.syntax
 
-import dev.guardrail.generators.syntax.Java._
+import dev.guardrail.generators.java.syntax._
 import scala.util.Random
 import scala.util.{ Failure, Try }
 import com.github.javaparser.StaticJavaParser

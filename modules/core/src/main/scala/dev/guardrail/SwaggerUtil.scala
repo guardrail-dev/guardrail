@@ -9,10 +9,10 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.core.implicits._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SecurityScheme, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
-import dev.guardrail.extract.VendorExtension.VendorExtensible._
+import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
+import dev.guardrail.core.extract.VendorExtension.VendorExtensible._
 import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.protocol.PropMeta
+import dev.guardrail.terms.protocol.PropMeta
 import scala.collection.JavaConverters._
 
 object SwaggerUtil {

@@ -2,20 +2,13 @@ package dev
 
 import cats.Monad
 import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.client.ClientTerms
-import dev.guardrail.protocol.terms.protocol._
-import dev.guardrail.protocol.terms.server.ServerTerms
+import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.protocol._
+import dev.guardrail.terms.server.ServerTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SwaggerTerms }
 
 package guardrail {
-  case class CodegenDefinitions[L <: LA](
-      clients: List[Client[L]],
-      servers: List[Server[L]],
-      supportDefinitions: List[SupportDefinition[L]],
-      frameworksImplicits: Option[(L#TermName, L#ObjectDefinition)]
-  )
-
   trait MonadChain12 {
     implicit def monadForCollectionsLib[L <: LA, F[_]](implicit ev: CollectionsLibTerms[L, F]): Monad[F] = ev.MonadF
   }

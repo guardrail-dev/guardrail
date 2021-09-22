@@ -4,18 +4,18 @@ import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.Id
-import dev.guardrail.core.Tracker
-import dev.guardrail.extract.SecurityOptional
-import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
-import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.protocol.terms.client.ClientTerms
-import dev.guardrail.protocol.terms.server.ServerTerms
-import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
 import java.net.URI
 
-case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: List[L#Definition], insideDefinitions: Boolean = true)
+import dev.guardrail.core.{Tracker, SupportDefinition}
+import dev.guardrail.core.extract.SecurityOptional
+import dev.guardrail.generators.{ Clients, ClientGenerator, ProtocolDefinitions, ProtocolGenerator, Servers, ServerGenerator }
+import dev.guardrail.languages.LA
+import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms, RandomType }
+import dev.guardrail.terms.server.ServerTerms
+import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
 
 object Common {
   val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))

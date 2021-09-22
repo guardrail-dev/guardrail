@@ -1,13 +1,16 @@
 package tests.core
 
-import dev.guardrail._
-import dev.guardrail.generators.Scala.AkkaHttp
-import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
-import support.SwaggerSpecRunner
-
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+
+import support.SwaggerSpecRunner
+
+import dev.guardrail.Context
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.generators.{ Client, Clients, ProtocolDefinitions }
+import dev.guardrail.terms.protocol.{ ClassDefinition, EnumDefinition }
 
 class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 

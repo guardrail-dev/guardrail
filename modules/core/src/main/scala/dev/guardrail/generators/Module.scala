@@ -1,9 +1,10 @@
-package dev.guardrail
-package generators
+package dev.guardrail.generators
 
-import dev.guardrail.languages.LA
 import cats.data.StateT
 import cats.syntax.all._
+
+import dev.guardrail._
+import dev.guardrail.languages.LA
 
 abstract class AbstractModule[L <: LA] {
   def popModule[A](section: String, first: (String, A), rest: (String, A)*): StateT[Target, Set[String], A] =

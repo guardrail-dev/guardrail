@@ -1,8 +1,9 @@
 package tests.generators.akkaHttp.client.contentType
 
-import dev.guardrail.generators.Scala.AkkaHttp
-import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
-import dev.guardrail.{ Client, Clients, Context }
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.Context
+import dev.guardrail.generators.{ Client, Clients }
 import support.SwaggerSpecRunner
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite

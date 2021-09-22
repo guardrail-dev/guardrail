@@ -1,12 +1,17 @@
 package tests.generators.dropwizard
 
 import cats.data.NonEmptyList
-import dev.guardrail.generators.Java.Dropwizard
-import dev.guardrail.languages.JavaLanguage
-import dev.guardrail.{ ClassDefinition, CodegenTarget, Context, ProtocolDefinitions }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+
 import support.SwaggerSpecRunner
+
+import dev.guardrail.CodegenTarget
+import dev.guardrail.Context
+import dev.guardrail.generators.ProtocolDefinitions
+import dev.guardrail.generators.java.JavaLanguage
+import dev.guardrail.generators.java.dropwizard.Dropwizard
+import dev.guardrail.terms.protocol.ClassDefinition
 
 class JacksonGetterTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
   private val openapi =
