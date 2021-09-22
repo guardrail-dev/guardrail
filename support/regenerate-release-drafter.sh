@@ -125,14 +125,14 @@ write() {
 
 reinitialize_release
 
-write core              modules/core/              build.sbt  project/
-write guardrail         modules/codegen/           build.sbt  project/
-write java-async-http   modules/java-async-http/   build.sbt  project/
-write java-dropwizard   modules/java-dropwizard/   build.sbt  project/
-write java-spring-mvc   modules/java-spring-mvc/   build.sbt  project/
-write java-support      modules/java-support/      build.sbt  project/
-write scala-akka-http   modules/scala-akka-http/   build.sbt  project/
-write scala-dropwizard  modules/scala-dropwizard/  build.sbt  project/
-write scala-endpoints   modules/scala-endpoints/   build.sbt  project/
-write scala-http4s      modules/scala-http4s/      build.sbt  project/
-write scala-support     modules/scala-support/     build.sbt  project/
+write core              modules/core/              build.sbt  project/src/main/scala/modules/core.scala
+write guardrail         modules/codegen/           build.sbt  project/src/main/scala/modules/guardrail.scala project/src/main/scala/modules/cli.scala
+write java-async-http   modules/java-async-http/   build.sbt  project/src/main/scala/modules/javaAsyncHttp.scala
+write java-dropwizard   modules/java-dropwizard/   build.sbt  project/src/main/scala/modules/javaDropwizard.scala
+write java-spring-mvc   modules/java-spring-mvc/   build.sbt  project/src/main/scala/modules/javaSpringMvc.scala
+write java-support      modules/java-support/      build.sbt  project/src/main/scala/modules/javaSupport.scala
+write scala-akka-http   modules/scala-akka-http/   build.sbt  project/src/main/scala/modules/scalaAkkaHttp.scala
+write scala-dropwizard  modules/scala-dropwizard/  build.sbt  project/src/main/scala/modules/scalaDropwizard.scala
+write scala-endpoints   modules/scala-endpoints/   build.sbt  project/src/main/scala/modules/scalaEndpoints.scala
+write scala-http4s      modules/scala-http4s/      build.sbt  project/src/main/scala/modules/scalaHttp4s.scala
+write scala-support     modules/scala-support/     build.sbt  project/src/main/scala/modules/scalaSupport.scala
