@@ -8,18 +8,6 @@ import dev.guardrail.sbt.Dependencies._
 import dev.guardrail.sbt.RegressionTests._
 import dev.guardrail.sbt.ExampleCase
 
-assembly / mainClass := Some("dev.guardrail.CLI")
-assembly / assemblyMergeStrategy := {
-  case ".api_description" => MergeStrategy.discard
-  case ".options" => MergeStrategy.concat
-  case "plugin.properties" => MergeStrategy.discard
-  case "plugin.xml" => MergeStrategy.concat
-  case "META-INF/eclipse.inf" => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assembly / assemblyMergeStrategy).value
-    oldStrategy(x)
-}
-
 WelcomeMessage.welcomeMessage
 
 import scoverage.ScoverageKeys
@@ -52,13 +40,6 @@ runExample := Def.inputTaskDyn {
   }
   runTask(Test, "dev.guardrail.cli.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
 }.evaluated
-
-Compile / assembly / artifact := {
-  (Compile / assembly / artifact).value
-    .withClassifier(Option("assembly"))
-}
-
-addArtifact(Compile / assembly / artifact, assembly)
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
 
