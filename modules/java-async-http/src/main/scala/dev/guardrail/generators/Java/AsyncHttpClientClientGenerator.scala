@@ -16,13 +16,14 @@ import dev.guardrail.generators.Java.AsyncHttpClientHelpers._
 import dev.guardrail.generators.helpers.ResponseHelpers
 import dev.guardrail.generators.syntax.Java._
 import dev.guardrail.generators.{ JavaGenerator, LanguageParameter, LanguageParameters }
+import dev.guardrail.generators.RenderedClientOperation
 import dev.guardrail.languages.JavaLanguage
 import dev.guardrail.protocol.terms.client._
 import dev.guardrail.protocol.terms._
 import dev.guardrail.shims._
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import dev.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
+import dev.guardrail.{ StaticDefns, StrictProtocolElems, SupportDefinition, Target }
 import java.net.URI
 import java.util.concurrent.CompletionStage
 import scala.annotation.tailrec

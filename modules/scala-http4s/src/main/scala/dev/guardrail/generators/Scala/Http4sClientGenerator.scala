@@ -3,7 +3,7 @@ package dev.guardrail.generators.Scala
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
+import dev.guardrail.{ StaticDefns, StrictProtocolElems, SupportDefinition, Target }
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.syntax.Scala._
 import dev.guardrail.generators.syntax._
@@ -12,7 +12,7 @@ import dev.guardrail.protocol.terms.{ ContentType, Header, MultipartFormData, Re
 import dev.guardrail.protocol.terms.client._
 import dev.guardrail.shims._
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
+import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import java.net.URI

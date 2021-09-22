@@ -4,14 +4,14 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import dev.guardrail.core.Tracker
-import dev.guardrail.generators.{ LanguageParameter, RawParameterName }
+import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.generators.helpers.ResponseHelpers._
 import dev.guardrail.languages.ScalaLanguage
 import dev.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }
 import dev.guardrail.protocol.terms._
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import dev.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, Target, TracingField }
+import dev.guardrail.{ StrictProtocolElems, SupportDefinition, Target }
 import io.swagger.v3.oas.models.Operation
 
 import scala.meta._

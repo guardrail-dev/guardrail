@@ -1,7 +1,8 @@
-package dev.guardrail
+package dev.guardrail.generators
+
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.{Context, SupportDefinition, StrictProtocolElems, _}
 import dev.guardrail.languages.LA
 import dev.guardrail.protocol.terms.Responses
 import dev.guardrail.protocol.terms.server.{ GenerateRouteMeta, ServerTerms }

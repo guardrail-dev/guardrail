@@ -7,6 +7,7 @@ import dev.guardrail.protocol.terms.protocol._
 import dev.guardrail.protocol.terms.server.ServerTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SwaggerTerms }
+import dev.guardrail.generators.{ Client, Server }
 
 package guardrail {
   case class CodegenDefinitions[L <: LA](

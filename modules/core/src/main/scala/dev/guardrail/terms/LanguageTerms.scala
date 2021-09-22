@@ -4,6 +4,7 @@ package terms
 import cats.Monad
 import cats.data.NonEmptyList
 import dev.guardrail.core.Tracker
+import dev.guardrail.generators.{Client, Server}
 import dev.guardrail.generators.RawParameterType
 import dev.guardrail.languages.LA
 import java.nio.file.Path

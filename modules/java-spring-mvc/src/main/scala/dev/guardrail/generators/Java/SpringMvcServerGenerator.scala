@@ -21,7 +21,8 @@ import dev.guardrail.protocol.terms.server._
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import dev.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, RenderedRoutes, StrictProtocolElems, Target }
+import dev.guardrail.{ ADT, ClassDefinition, EnumDefinition, RandomType, StrictProtocolElems, Target }
+import dev.guardrail.generators.RenderedRoutes
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.responses.ApiResponse
 import scala.compat.java8.OptionConverters._

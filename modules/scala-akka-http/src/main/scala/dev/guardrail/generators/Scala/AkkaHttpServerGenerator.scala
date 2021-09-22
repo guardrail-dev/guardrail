@@ -3,10 +3,10 @@ package dev.guardrail.generators.Scala
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import dev.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, Target, TracingField, UserError }
+import dev.guardrail.{ StrictProtocolElems, Target, UserError }
 import dev.guardrail.core.{PathExtractor, Tracker}
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.generators.Scala.model.ModelGeneratorType
 import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.syntax.RichOperation

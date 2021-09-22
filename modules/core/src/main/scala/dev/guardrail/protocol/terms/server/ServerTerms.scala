@@ -3,11 +3,11 @@ package dev.guardrail.protocol.terms.server
 import cats.Monad
 import cats.data.NonEmptyList
 import dev.guardrail.core.Tracker
-import dev.guardrail.generators.LanguageParameters
+import dev.guardrail.generators.{ CustomExtractionField, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.languages.LA
 import dev.guardrail.protocol.terms.Responses
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import dev.guardrail.{ CustomExtractionField, RenderedRoutes, StrictProtocolElems, SupportDefinition, TracingField }
+import dev.guardrail.{ StrictProtocolElems, SupportDefinition }
 import io.swagger.v3.oas.models.Operation
 
 case class GenerateRouteMeta[L <: LA](

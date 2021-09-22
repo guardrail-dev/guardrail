@@ -6,7 +6,8 @@ import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.languages.LA
 import dev.guardrail.protocol.terms.Responses
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
-import dev.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition }
+import dev.guardrail.{ StaticDefns, StrictProtocolElems, SupportDefinition }
+import dev.guardrail.generators.RenderedClientOperation
 import java.net.URI
 
 abstract class ClientTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) {

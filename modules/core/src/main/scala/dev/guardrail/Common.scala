@@ -12,6 +12,7 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.protocol.terms.client.ClientTerms
 import dev.guardrail.protocol.terms.server.ServerTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
+import dev.guardrail.generators.{ Clients, ClientGenerator, Servers, ServerGenerator }
 import java.nio.file.Path
 import java.net.URI
 

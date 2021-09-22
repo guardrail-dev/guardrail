@@ -3,9 +3,9 @@ package dev.guardrail.generators.Scala
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
+import dev.guardrail.{ StaticDefns, StrictProtocolElems, SupportDefinition, Target }
 import dev.guardrail.core.Tracker
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
+import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.generators.syntax.Scala._
 import dev.guardrail.generators.syntax._
 import dev.guardrail.protocol.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }

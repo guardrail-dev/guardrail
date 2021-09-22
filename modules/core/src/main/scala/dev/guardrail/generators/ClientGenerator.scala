@@ -1,7 +1,8 @@
-package dev.guardrail
+package dev.guardrail.generators
 
 import cats.data.NonEmptyList
 import cats.implicits._
+import dev.guardrail.{Context, SupportDefinition, StaticDefns, StrictProtocolElems, _}
 import dev.guardrail.languages.LA
 import dev.guardrail.protocol.terms.Responses
 import dev.guardrail.protocol.terms.client.ClientTerms

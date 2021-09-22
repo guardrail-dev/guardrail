@@ -2,8 +2,8 @@ package dev.guardrail.generators.Scala
 
 import cats.Monad
 import cats.data.NonEmptyList
-import dev.guardrail.{ RenderedClientOperation, RuntimeFailure, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
-import dev.guardrail.generators.LanguageParameters
+import dev.guardrail.{ RuntimeFailure, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
+import dev.guardrail.generators.{ LanguageParameters, RenderedClientOperation }
 import dev.guardrail.languages.ScalaLanguage
 import dev.guardrail.protocol.terms.Responses
 import dev.guardrail.protocol.terms.client.ClientTerms

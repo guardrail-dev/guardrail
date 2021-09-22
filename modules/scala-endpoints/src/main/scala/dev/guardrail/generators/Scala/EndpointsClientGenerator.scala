@@ -5,8 +5,8 @@ import cats.Monad
 // import cats.data.Ior
 import cats.data.NonEmptyList
 // import dev.guardrail.SwaggerUtil
-import dev.guardrail.{ RenderedClientOperation, StaticDefns, StrictProtocolElems, SupportDefinition, Target }
-import dev.guardrail.generators.LanguageParameters
+import dev.guardrail.{ StaticDefns, StrictProtocolElems, SupportDefinition, Target }
+import dev.guardrail.generators.{ LanguageParameters, RenderedClientOperation }
 // import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName }
 // import dev.guardrail.generators.syntax.Scala._
 // import dev.guardrail.generators.syntax._
