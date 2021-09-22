@@ -2,7 +2,7 @@ package dev.guardrail.core
 
 import cats.data.{ NonEmptyList, State }
 import cats.syntax.all._
-import cats.{ FlatMap, Monad }
+import cats.Monad
 import java.nio.file.Paths
 import scala.util.control.NonFatal
 
@@ -11,7 +11,7 @@ import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.ProtocolSupportTerms
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol.PropertyRequirement
-import dev.guardrail.{ Args, CodegenTarget, Common, Context, Error, MissingArg, NoArgsSpecified, NoFramework, PrintHelp, ReadSwagger, Target, UnknownArguments, UnknownFramework, UnparseableArgument, WriteTree }
+import dev.guardrail.{ Args, Common, Context, Error, MissingArg, NoArgsSpecified, NoFramework, PrintHelp, ReadSwagger, Target, UnknownFramework, UnparseableArgument, WriteTree }
 
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,
@@ -60,88 +60,6 @@ class CoreTermInterp[L <: LA](
         Target.raiseError[NonEmptyList[Args]](PrintHelp)
       else Target.pure(args)
     } yield args
-
-  def parseArgs(args: Array[String]) = {
-    def expandTilde(path: String): String =
-      path.replaceFirst("^~", System.getProperty("user.home"))
-    val defaultArgs =
-      Args.empty.copy(context = Args.empty.context, defaults = true)
-
-    type From = (List[Args], List[String])
-    type To   = List[Args]
-    val start: From = (List.empty[Args], args.toList)
-    import Target.log.debug
-    Target.log.function("parseArgs") {
-      FlatMap[Target].tailRecM[From, To](start)({
-        case pair @ (sofars, rest) =>
-          val empty = sofars
-            .filter(_.defaults)
-            .reverse
-            .headOption
-            .getOrElse(defaultArgs)
-            .copy(defaults = false)
-          def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
-          def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
-          def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
-          for {
-            _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
-            step <- pair match {
-              case (already, Nil) =>
-                debug("Finished") >> Return(already)
-              case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
-              case (sofar :: already, "--defaults" :: xs) =>
-                Continue((empty.copy(defaults = true) :: sofar :: already, xs))
-              case (sofar :: already, "--client" :: xs) =>
-                Continue((empty :: sofar :: already, xs))
-              case (sofar :: already, "--server" :: xs) =>
-                Continue((empty.copy(kind = CodegenTarget.Server) :: sofar :: already, xs))
-              case (sofar :: already, "--models" :: xs) =>
-                Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
-              case (sofar :: already, "--framework" :: value :: xs) =>
-                Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
-              case (sofar :: already, "--help" :: xs) =>
-                Continue((sofar.copy(printHelp = true) :: already, List.empty))
-              case (sofar :: already, "--specPath" :: value :: xs) =>
-                Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
-              case (sofar :: already, "--tracing" :: xs) =>
-                Continue((sofar.copyContext(tracing = true) :: already, xs))
-              case (sofar :: already, "--outputPath" :: value :: xs) =>
-                Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
-              case (sofar :: already, "--packageName" :: value :: xs) =>
-                Continue((sofar.copy(packageName = Option(value.trim.split('.').toList)) :: already, xs))
-              case (sofar :: already, "--dtoPackage" :: value :: xs) =>
-                Continue((sofar.copy(dtoPackage = value.trim.split('.').toList) :: already, xs))
-              case (sofar :: already, "--import" :: value :: xs) =>
-                Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
-              case (sofar :: already, "--module" :: value :: xs) =>
-                Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
-              case (sofar :: already, "--custom-extraction" :: xs) =>
-                Continue((sofar.copyContext(customExtraction = true) :: already, xs))
-              case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
-                for {
-                  propertyRequirement <- parseOptionalProperty(arg, value)
-                  res                 <- Continue((sofar.copyPropertyRequirement(encoder = propertyRequirement) :: already, xs))
-                } yield res
-              case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
-                for {
-                  propertyRequirement <- parseOptionalProperty(arg, value)
-                  res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
-                } yield res
-              case (_, unknown) =>
-                debug("Unknown argument") >> Bail(UnknownArguments(unknown))
-            }
-          } yield step
-      })
-    }
-  }
-
-  private def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
-    value match {
-      case "required-nullable" => Target.pure(PropertyRequirement.RequiredNullable)
-      case "optional"          => Target.pure(PropertyRequirement.Optional)
-      case "legacy"            => Target.pure(PropertyRequirement.OptionalLegacy)
-      case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
-    }
 
   private def verifyPropertyRequirement: PropertyRequirement.Configured => Target[Unit] = {
     val mapping: PropertyRequirement.OptionalRequirement => String = {

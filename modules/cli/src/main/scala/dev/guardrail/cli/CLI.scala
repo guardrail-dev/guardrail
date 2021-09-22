@@ -41,8 +41,8 @@ object CLI extends CLICommon {
   )
 
   def handleLanguage: PartialFunction[String, Array[String] => CommandLineResult] = {
-    case "java"  => run("java", _)(javaInterpreter)
-    case "scala" => run("scala", _)(scalaInterpreter)
+    case "java"  => run("java", _)
+    case "scala" => run("scala", _)
   }
 
   def runLanguages(
