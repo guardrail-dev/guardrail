@@ -3,15 +3,18 @@ package tests.core.issues
 import cats.data.NonEmptyList
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
-import dev.guardrail._
-import dev.guardrail.core.Tracker
-import dev.guardrail.generators.Scala.Http4s
-import dev.guardrail.languages.ScalaLanguage
-import support.SwaggerSpecRunner
-
-import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import scala.meta._
+
+import support.SwaggerSpecRunner
+
+import dev.guardrail._
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.ProtocolDefinitions
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 

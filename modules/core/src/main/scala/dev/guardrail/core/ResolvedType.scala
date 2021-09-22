@@ -2,9 +2,11 @@ package dev.guardrail.core
 
 import cats.{ FlatMap, Foldable }
 import cats.syntax.all._
+
 import dev.guardrail._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import dev.guardrail.languages.LA
+import dev.guardrail.terms.protocol._
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 sealed trait ResolvedType[L <: LA]
 case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String])

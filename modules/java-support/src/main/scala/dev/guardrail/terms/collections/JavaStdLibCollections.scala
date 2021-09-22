@@ -7,7 +7,7 @@ import com.github.javaparser.ast.body.{ Parameter, VariableDeclarator }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
 import com.github.javaparser.ast.{ ArrayCreationLevel, NodeList }
-import dev.guardrail.languages.JavaLanguage
+import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.collections.JavaCollectionsHelpers._
 import dev.guardrail.terms.collections.JavaStdLibCollectionsHelpers.JavaStdLibTermHolder
 

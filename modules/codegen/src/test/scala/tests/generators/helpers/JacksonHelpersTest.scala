@@ -1,8 +1,8 @@
 package tests.generators.helpers
 
-import dev.guardrail.generators.ScalaGenerator
-import dev.guardrail.generators.helpers.JacksonHelpers
-import dev.guardrail.languages.ScalaLanguage
+import dev.guardrail.generators.scala.ScalaGenerator
+import dev.guardrail.generators.java.jackson.JacksonHelpers
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.{ Target, TargetValue }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
