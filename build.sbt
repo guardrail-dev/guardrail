@@ -73,7 +73,6 @@ addCommandAlias(
 )
 
 resolvers += Resolver.sonatypeRepo("releases")
-scalacOptions += "-Yrangepos"
 
 publishMavenStyle := true
 
