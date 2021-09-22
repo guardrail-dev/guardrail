@@ -6,7 +6,7 @@ addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.6.0")
 
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.3")
 
-addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.7")
+addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.5.9")
 
 addSbtPlugin("ohnosequences" % "sbt-github-release" % "0.7.0")
 
