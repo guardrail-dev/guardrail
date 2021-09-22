@@ -1,9 +1,10 @@
 package core.issues
 
 import cats.data.NonEmptyList
-import dev.guardrail.generators.Scala.AkkaHttp
-import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
-import dev.guardrail.{ Client, Clients, Context }
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.Context
+import dev.guardrail.generators.{ Client, Clients }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import support.SwaggerSpecRunner

@@ -5,7 +5,7 @@ import cats.syntax.all._
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms._
+import dev.guardrail.terms.{ ApplicationJson, ContentType, MultipartFormData, OctetStream, Response, TextPlain, TextContent, BinaryContent, UrlencodedFormData }
 import io.swagger.v3.oas.models.Operation
 
 object ResponseHelpers {

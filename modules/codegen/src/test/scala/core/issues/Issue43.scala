@@ -1,13 +1,17 @@
 package core.issues
 
-import dev.guardrail._
-import dev.guardrail.generators.Scala.AkkaHttp
-import dev.guardrail.generators.syntax.Scala.companionForStaticDefns
-import support.SwaggerSpecRunner
-
 import scala.meta._
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+
+import support.SwaggerSpecRunner
+
+import dev.guardrail.Context
+import dev.guardrail._
+import dev.guardrail.generators.ProtocolDefinitions
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.terms.protocol.{ ADT, ClassDefinition }
 
 class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 

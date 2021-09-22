@@ -1,22 +1,24 @@
-package dev.guardrail
-package generators
+package dev.guardrail.generators
 
-import cats.syntax.all._
 import cats.Monad
-import dev.guardrail.core.{ Mappish, Tracker }
+import cats.syntax.all._
+import io.swagger.v3.oas.models.Components
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
+import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import java.net.URI
+import scala.util.Try
+
+import dev.guardrail._
+import dev.guardrail.core.extract.{ ClassPrefix, PackageName, SecurityOptional }
 import dev.guardrail.core.implicits._
-import dev.guardrail.extract.{ ClassPrefix, PackageName, SecurityOptional }
+import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms._
-import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
-import java.net.URI
-import scala.util.Try
-import io.swagger.v3.oas.models.Components
-import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
-import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
-import io.swagger.v3.oas.models.PathItem
+import dev.guardrail.terms.protocol._
 
 object SwaggerGenerator {
   private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] = {

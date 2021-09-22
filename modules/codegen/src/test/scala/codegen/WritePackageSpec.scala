@@ -8,7 +8,7 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import dev.guardrail._
 import dev.guardrail.core.CoreTermInterp
-import dev.guardrail.languages.ScalaLanguage
+import dev.guardrail.generators.scala.ScalaLanguage
 
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
@@ -86,8 +86,8 @@ class WritePackageSpec extends AnyFunSuite with Matchers {
       List.empty
     )
 
-    import dev.guardrail.generators.ScalaModule
-    import dev.guardrail.generators.Scala.AkkaHttp
+    import dev.guardrail.generators.scala.ScalaModule
+    import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
@@ -151,8 +151,8 @@ class WritePackageSpec extends AnyFunSuite with Matchers {
       List.empty
     )
 
-    import dev.guardrail.generators.ScalaModule
-    import dev.guardrail.generators.Scala.AkkaHttp
+    import dev.guardrail.generators.scala.ScalaModule
+    import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common

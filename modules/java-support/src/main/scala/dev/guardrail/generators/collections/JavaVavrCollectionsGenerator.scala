@@ -5,8 +5,8 @@ import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import dev.guardrail.Target
 import dev.guardrail.core
-import dev.guardrail.generators.syntax.Java.{ buildMethodCall, _ }
-import dev.guardrail.languages.JavaLanguage
+import dev.guardrail.generators.java.syntax.{ buildMethodCall, _ }
+import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 
 object JavaVavrCollectionsGenerator {

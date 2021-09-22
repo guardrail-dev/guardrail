@@ -11,7 +11,7 @@ guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The
 The following is an example from the [http4s](https://github.com/http4s/http4s) server generator:
 
 ```scala mdoc:passthrough
-import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.generators.scala.http4s.Http4s
 import dev.guardrail.docs._
 DocsHelpers.renderScalaSnippet(Http4s, GeneratingAServer)("""
     |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some

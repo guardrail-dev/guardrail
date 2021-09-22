@@ -1,15 +1,17 @@
-package dev.guardrail
-package terms
+package dev.guardrail.terms
 
 import cats.Monad
 import cats.data.NonEmptyList
-import dev.guardrail.core.{ Mappish, Tracker }
-import dev.guardrail.languages.LA
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+
+import dev.guardrail._
+import dev.guardrail.core.{ Mappish, Tracker }
+import dev.guardrail.languages.LA
+import dev.guardrail.terms.protocol._
 
 abstract class SwaggerLogAdapter[F[_]] {
   def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")

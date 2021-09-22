@@ -4,7 +4,7 @@ tag-prefix: scala-dropwizard-v
 include-paths:
   - "modules/scala-dropwizard/"
   - "build.sbt"
-  - "project/"
+  - "project/src/main/scala/modules/scalaDropwizard.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'

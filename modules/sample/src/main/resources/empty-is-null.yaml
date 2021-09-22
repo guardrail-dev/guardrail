@@ -1,0 +1,23 @@
+openapi: 3.0.2
+info:
+  title: empty is null
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    EmptyIsNullProperties:
+      type: object
+      required:
+        - empty_allowed
+        - empty_not_allowed
+      properties:
+        empty_allowed:
+          type: string
+        empty_not_allowed:
+          type: string
+          x-empty-is-null: true
+        empty_allowed_opt:
+          type: string
+        empty_not_allowed_opt:
+          type: string
+          x-empty-is-null: true

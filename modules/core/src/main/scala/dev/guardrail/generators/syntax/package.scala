@@ -1,11 +1,11 @@
 package dev.guardrail.generators
 
 import cats.data.NonEmptyList
-import java.util.Locale
-import java.util.regex.Matcher.quoteReplacement
-import io.swagger.v3.oas.models.{ Operation, PathItem }
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.{ Operation, PathItem }
+import java.util.Locale
+import java.util.regex.Matcher.quoteReplacement
 
 package syntax {
   class RichNotNullShower[A](value: A) {

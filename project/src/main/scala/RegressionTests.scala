@@ -32,6 +32,7 @@ object RegressionTests {
     ExampleCase(sampleResource("custom-header-type.yaml"), "tests.customTypes.customHeader"),
     ExampleCase(sampleResource("date-time.yaml"), "dateTime"),
     ExampleCase(sampleResource("edgecases/defaults.yaml"), "edgecases.defaults"),
+    ExampleCase(sampleResource("empty-is-null.yaml"), "emptyIsNull"),
     ExampleCase(sampleResource("invalid-characters.yaml"), "invalidCharacters").frameworks("java" -> Set("dropwizard", "dropwizard-vavr")),
     ExampleCase(sampleResource("formData.yaml"), "form"),
     ExampleCase(sampleResource("enumerations.yaml"), "enumerations"),
