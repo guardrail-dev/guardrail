@@ -151,10 +151,10 @@ object Java {
     case other                        => other.toString
   }
 
-  def requireNonNullExpr(param: Expression): Expression = new MethodCallExpr(
+  def requireNonNullExpr(param: Expression, paramNameForDescription: Option[String] = None): Expression = new MethodCallExpr(
     "requireNonNull",
     param,
-    new StringLiteralExpr(s"${nameFromExpr(param)} is required")
+    new StringLiteralExpr(s"${paramNameForDescription.getOrElse(nameFromExpr(param))} is required")
   )
 
   def requireNonNullExpr(paramName: String): Expression = requireNonNullExpr(new NameExpr(paramName))

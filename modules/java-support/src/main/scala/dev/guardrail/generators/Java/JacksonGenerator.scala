@@ -1,40 +1,27 @@
 package dev.guardrail.generators.Java
 
-import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
-import cats.{ FlatMap, Monad }
+import _root_.io.swagger.v3.oas.models.media.{Discriminator => _, _}
+import cats.{FlatMap, Monad}
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
-import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
+import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, UnknownType}
+import com.github.javaparser.ast.Modifier.Keyword.{FINAL, PRIVATE, PROTECTED, PUBLIC}
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.{ Node, NodeList }
+import com.github.javaparser.ast.{Node, NodeList}
 import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
+import com.github.javaparser.ast.expr.{MethodCallExpr, _}
 import com.github.javaparser.ast.stmt._
-import dev.guardrail.{
-  DataRedacted,
-  DataVisible,
-  Discriminator,
-  EmptyIsEmpty,
-  ProtocolParameter,
-  RedactionBehaviour,
-  RuntimeFailure,
-  StaticDefns,
-  SuperClass,
-  Target,
-  UserError
-}
-import dev.guardrail.core
+import dev.guardrail.{DataRedacted, DataVisible, Discriminator, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, ProtocolParameter, RedactionBehaviour, RuntimeFailure, StaticDefns, SuperClass, Target, UserError, core}
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.implicits._
-import dev.guardrail.extract.{ DataRedaction, EmptyValueIsNull }
-import dev.guardrail.generators.{ JavaGenerator, RawParameterName, RawParameterType }
+import dev.guardrail.extract.{DataRedaction, EmptyValueIsNull}
+import dev.guardrail.generators.{JavaGenerator, RawParameterName, RawParameterType}
 import dev.guardrail.generators.helpers.JacksonHelpers
 import dev.guardrail.generators.syntax.Java._
 import dev.guardrail.languages.JavaLanguage
 import dev.guardrail.protocol.terms.protocol._
-import dev.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
+import dev.guardrail.terms.{CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum}
 import dev.guardrail.terms.collections.CollectionsAbstraction
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
@@ -50,7 +37,8 @@ object JacksonGenerator {
       parameterType: Type,
       rawType: RawParameterType,
       defaultValue: Option[Expression],
-      dataRedacted: RedactionBehaviour
+      dataRedacted: RedactionBehaviour,
+      emptyToNull: EmptyToNullBehaviour
   )
 
   // returns a tuple of (requiredTerms, optionalTerms)
@@ -74,7 +62,7 @@ object JacksonGenerator {
         }
         val defaultValue = defaultValueToExpression(param.defaultValue)
 
-        ParameterTerm(param.name.value, param.term.getNameAsString, param.term.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction)
+        ParameterTerm(param.name.value, param.term.getNameAsString, param.term.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction, param.emptyToNull)
       })
       .partition(
         pt => !pt.fieldType.isOptionalType && pt.defaultValue.isEmpty
@@ -95,7 +83,6 @@ object JacksonGenerator {
       .find(_.clsName == tpeName)
       .map(_.tpe)
 
-  // TODO: handle emptyToNull in the return for the getters
   private def addParameterGetter(cls: ClassOrInterfaceDeclaration, param: ParameterTerm): Unit = {
     val _ = cls
       .addMethod(getterMethodNameForParameter(param.parameterName), PUBLIC)
@@ -125,14 +112,57 @@ object JacksonGenerator {
                   new ExpressionStmt(
                     new AssignExpr(
                       new FieldAccessExpr(new ThisExpr, term.parameterName),
-                      term.fieldType match {
-                        case ft if ft.isOptionalType =>
-                          new ConditionalExpr(
-                            new BinaryExpr(new NameExpr(term.parameterName), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
-                            emptyOptional,
-                            new NameExpr(term.parameterName)
+                      if (term.fieldType.isOptionalType) {
+                        val parameterValueExpr = term.emptyToNull match {
+                          case EmptyIsEmpty => new NameExpr(term.parameterName)
+                          case EmptyIsNull => new MethodCallExpr(
+                            new NameExpr(term.parameterName),
+                            "filter",
+                            new NodeList[Expression](new LambdaExpr(
+                              new Parameter(new UnknownType, term.parameterName + "_"),
+                              new UnaryExpr(
+                                new MethodCallExpr(
+                                  new StringLiteralExpr(""),
+                                  "equals",
+                                  new NodeList[Expression](new NameExpr(term.parameterName + "_"))
+                                ),
+                                UnaryExpr.Operator.LOGICAL_COMPLEMENT
+                              )
+                            ))
                           )
-                        case _ => requireNonNullExpr(term.parameterName)
+                        }
+                        new ConditionalExpr(
+                          new BinaryExpr(new NameExpr(term.parameterName), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
+                          emptyOptional,
+                          parameterValueExpr
+                        )
+                      } else {
+                        val parameterValueExpr = term.emptyToNull match {
+                          case EmptyIsEmpty => new NameExpr(term.parameterName)
+                          case EmptyIsNull => new MethodCallExpr(
+                            new MethodCallExpr(
+                              new MethodCallExpr(
+                                "java.util.Optional.ofNullable",
+                                new NameExpr(term.parameterName)
+                              ),
+                              "filter",
+                              new NodeList[Expression](new LambdaExpr(
+                                new Parameter(new UnknownType, term.parameterName + "_"),
+                                new UnaryExpr(
+                                  new MethodCallExpr(
+                                    new StringLiteralExpr(""),
+                                    "equals",
+                                    new NodeList[Expression](new NameExpr(term.parameterName + "_"))
+                                  ),
+                                  UnaryExpr.Operator.LOGICAL_COMPLEMENT
+                                )
+                              ))
+                            ),
+                            "orElse",
+                            new NodeList[Expression](new NullLiteralExpr)
+                          )
+                        }
+                        requireNonNullExpr(parameterValueExpr, Some(term.parameterName))
                       },
                       AssignExpr.Operator.ASSIGN
                     )
@@ -457,7 +487,7 @@ object JacksonGenerator {
         _ = addParents(dtoClass, parentOpt)
 
         _ = terms.foreach({
-          case ParameterTerm(propertyName, parameterName, fieldType, _, _, _, _) =>
+          case ParameterTerm(propertyName, parameterName, fieldType, _, _, _, _, _) =>
             val field: FieldDeclaration = dtoClass.addField(fieldType, parameterName, PRIVATE, FINAL)
             field.addSingleMemberAnnotation("JsonProperty", new StringLiteralExpr(propertyName))
         })
@@ -468,7 +498,7 @@ object JacksonGenerator {
           .setParameters(
             new NodeList(
               withoutDiscriminators(parentTerms ++ terms).map({
-                case ParameterTerm(propertyName, parameterName, fieldType, _, _, _, _) =>
+                case ParameterTerm(propertyName, parameterName, fieldType, _, _, _, _, _) =>
                   new Parameter(new NodeList(finalModifier), fieldType.box, new SimpleName(parameterName))
                     .addAnnotation(new SingleMemberAnnotationExpr(new Name("JsonProperty"), new StringLiteralExpr(propertyName)))
               }): _*
@@ -607,11 +637,11 @@ object JacksonGenerator {
         builderClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, "Builder")
 
         _ = withoutDiscriminators(parentRequiredTerms ++ requiredTerms).foreach({
-          case ParameterTerm(_, parameterName, fieldType, _, _, _, _) =>
+          case ParameterTerm(_, parameterName, fieldType, _, _, _, _, _) =>
             builderClass.addField(fieldType, parameterName, PRIVATE)
         })
         _ <- withoutDiscriminators(parentOptionalTerms ++ optionalTerms).traverse({
-          case ParameterTerm(_, parameterName, fieldType, _, _, defaultValue, _) =>
+          case ParameterTerm(_, parameterName, fieldType, _, _, defaultValue, _, _) =>
             for {
               initializer <- defaultValue.fold[Target[Expression]](
                 Cl.emptyOptionalTerm().flatMap(_.toExpression)
@@ -632,7 +662,7 @@ object JacksonGenerator {
           .setParameters(
             new NodeList(
               withoutDiscriminators(parentRequiredTerms ++ requiredTerms).map({
-                case ParameterTerm(_, parameterName, _, parameterType, _, _, _) =>
+                case ParameterTerm(_, parameterName, _, parameterType, _, _, _, _) =>
                   new Parameter(new NodeList(finalModifier), parameterType, new SimpleName(parameterName))
               }): _*
             )
@@ -641,7 +671,7 @@ object JacksonGenerator {
             new BlockStmt(
               new NodeList(
                 withoutDiscriminators(parentRequiredTerms ++ requiredTerms).map({
-                  case ParameterTerm(_, parameterName, fieldType, _, _, _, _) =>
+                  case ParameterTerm(_, parameterName, fieldType, _, _, _, _, _) =>
                     new ExpressionStmt(
                       new AssignExpr(
                         new FieldAccessExpr(new ThisExpr, parameterName),
@@ -664,7 +694,7 @@ object JacksonGenerator {
             new BlockStmt(
               withoutDiscriminators(parentTerms ++ terms)
                 .map({
-                  case term @ ParameterTerm(_, parameterName, _, _, _, _, _) =>
+                  case term @ ParameterTerm(_, parameterName, _, _, _, _, _, _) =>
                     new ExpressionStmt(
                       new AssignExpr(
                         new FieldAccessExpr(new ThisExpr, parameterName),
@@ -679,7 +709,7 @@ object JacksonGenerator {
 
         // TODO: leave out with${name}() if readOnlyKey?
         _ <- withoutDiscriminators(parentTerms ++ terms).traverse({
-          case ParameterTerm(_, parameterName, fieldType, parameterType, _, _, _) =>
+          case ParameterTerm(_, parameterName, fieldType, parameterType, _, _, _, _) =>
             val methodName = s"with${parameterName.unescapeIdentifier.capitalize}"
             for {
               fieldInitializer <- (fieldType, parameterType) match {

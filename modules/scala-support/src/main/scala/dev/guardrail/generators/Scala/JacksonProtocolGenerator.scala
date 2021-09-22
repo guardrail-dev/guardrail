@@ -2,14 +2,15 @@ package dev.guardrail.generators.Scala
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.{ Discriminator, ProtocolParameter, RuntimeFailure, Target }
+import dev.guardrail.{Discriminator, EmptyIsNull, ProtocolParameter, RuntimeFailure, SupportDefinition, Target}
 import dev.guardrail.generators.Scala.model.CirceModelGenerator
 import dev.guardrail.generators.ScalaGenerator
 import dev.guardrail.generators.helpers.JacksonHelpers
 import dev.guardrail.languages.ScalaLanguage
-import dev.guardrail.protocol.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
+import dev.guardrail.protocol.terms.protocol.PropertyRequirement.{Optional, RequiredNullable}
 import dev.guardrail.protocol.terms.protocol._
 import dev.guardrail.terms.CollectionsLibTerms
+
 import scala.meta._
 
 object JacksonProtocolGenerator {
@@ -83,7 +84,9 @@ object JacksonProtocolGenerator {
         presenceSerType: Type,
         presenceDeserType: Type,
         optionNonNullDeserType: Type,
-        optionNonMissingDeserType: Type
+        optionNonMissingDeserType: Type,
+        emptyIsNullDeserType: Type,
+        emptyIsNullOptionDeserType: Type
     ): List[Mod] = {
       val jsonProperty = List(mod"@com.fasterxml.jackson.annotation.JsonProperty(${Lit.String(param.name.value)})")
       val containerDeserializers = param.term.decltpe match {
@@ -104,7 +107,7 @@ object JacksonProtocolGenerator {
           )
         case _ => List.empty
       }
-      val optionHandling = param.term.decltpe match {
+      val optionAndEmptyHandling = param.term.decltpe match {
         case Some(t"Option[$inner]") =>
           val encodeRequirement = param.propertyRequirement match {
             case PropertyRequirement.Configured(encoder, _) => encoder
@@ -133,16 +136,27 @@ object JacksonProtocolGenerator {
               // When deserializing, the property must be present, but can be null
               List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$optionNonMissingDeserType], contentAs = classOf[$inner])")
             case _ =>
-              // OptionalLegacy: When deserializing the property can be present (null or non-null) or not present
-              List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+              (param.emptyToNull, inner) match {
+                case (EmptyIsNull, t"String") =>
+                  // OptionalLegacy: Same as above, but deserializes the empty string as None
+                  List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$emptyIsNullOptionDeserType])")
+                case _ =>
+                  // OptionalLegacy: When deserializing the property can be present (null or non-null) or not present
+                  List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+              }
           }
 
           serializers ++ deserializers
 
-        case _ => List.empty
+        case Some(t"String") if param.emptyToNull == EmptyIsNull =>
+          // Causes a deserialization failure if the value is the empty string
+          List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$emptyIsNullDeserType])")
+
+        case _ =>
+          List.empty
       }
       val notNull = List(mod"@constraints.NotNull")
-      jsonProperty ++ containerDeserializers ++ presenceHandling ++ optionHandling ++ notNull
+      jsonProperty ++ containerDeserializers ++ presenceHandling ++ optionAndEmptyHandling ++ notNull
     }
     def fixDefaultValue(param: ProtocolParameter[ScalaLanguage]): Option[Term] =
       param.propertyRequirement match {
@@ -192,6 +206,8 @@ object JacksonProtocolGenerator {
           presenceSerType        <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
           presenceDeserType      <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
           optionNonNullDeserType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
+          emptyIsNullDeserType   <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
+          emptyIsNullOptionDeserType   <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer"))
           optionNonMissingDeserType <- ScalaGenerator.ScalaInterp.selectType(
             NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonMissingDeserializer")
           )
@@ -206,7 +222,7 @@ object JacksonProtocolGenerator {
                     .find(_.term.name.value == param.name.value)
                     .fold(param)({ term =>
                       param.copy(
-                        mods = paramAnnotations(term, presenceSerType, presenceDeserType, optionNonNullDeserType, optionNonMissingDeserType) ++ param.mods,
+                        mods = paramAnnotations(term, presenceSerType, presenceDeserType, optionNonNullDeserType, optionNonMissingDeserType, emptyIsNullDeserType, emptyIsNullOptionDeserType) ++ param.mods,
                         default = fixDefaultValue(term)
                       )
                     })
@@ -566,7 +582,44 @@ object JacksonProtocolGenerator {
                   })
                 )
             )
-            .toList ++ others
+            .toList ++ others ++ List(
+              SupportDefinition[ScalaLanguage](
+                q"EmptyIsNullDeserializers",
+                List(
+                  q"import com.fasterxml.jackson.core.{JsonParser, JsonToken}",
+                  q"import com.fasterxml.jackson.databind.{DeserializationContext, JsonDeserializer, JsonMappingException}"
+                ),
+                List(
+                  q"""
+                    @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+                    object EmptyIsNullDeserializers {
+                      class EmptyIsNullDeserializer extends JsonDeserializer[String] {
+                        override def deserialize(p: JsonParser, ctxt: DeserializationContext): String =
+                          p.currentToken() match {
+                            case JsonToken.VALUE_STRING => p.getValueAsString match {
+                              case "" => throw new JsonMappingException(p, "Value cannot be null")
+                              case s => s
+                            }
+                            case _ => throw new JsonMappingException(p, s"Value is not a string")
+                          }
+                      }
+
+                      class EmptyIsNullOptionDeserializer extends JsonDeserializer[Option[String]] {
+                        override def deserialize(p: JsonParser, ctxt: DeserializationContext): Option[String] =
+                          p.currentToken() match {
+                            case JsonToken.VALUE_STRING => p.getValueAsString match {
+                              case "" => None
+                              case s => Option(s)
+                            }
+                            case _ => throw new JsonMappingException(p, s"Value is not a string")
+                          }
+                      }
+                    }
+                  """
+                ),
+                insideDefinitions = false
+              )
+            )
         }
     )
   }
