@@ -207,8 +207,7 @@ lazy val dropwizardVavrSample = buildSampleProject("dropwizardVavr", dropwizardV
 lazy val springMvcSample = buildSampleProject("springMvc", springProjectDependencies)
   .settings(javaSampleSettings)
 
-lazy val microsite = (project in file("modules/microsite"))
-  .settings(commonSettings)
+lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
   .settings(
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",
