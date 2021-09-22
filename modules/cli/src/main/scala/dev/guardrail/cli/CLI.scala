@@ -1,6 +1,5 @@
 package dev.guardrail.cli
 
-import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
 import scala.meta._
@@ -14,7 +13,7 @@ import dev.guardrail.generators.scala
 import dev.guardrail.generators.scala.ScalaLanguage
 
 object CLI extends CLICommon {
-  implicit val scalaInterpreter = new CoreTermInterp[ScalaLanguage](
+  implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
     scala.ScalaModule.extract, {
       case "akka-http"         => scala.akkaHttp.AkkaHttp
@@ -27,7 +26,7 @@ object CLI extends CLICommon {
     }
   )
 
-  implicit val javaInterpreter = new CoreTermInterp[JavaLanguage](
+  implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
     java.JavaModule.extract, {
       case "dropwizard" => java.dropwizard.Dropwizard
@@ -40,25 +39,10 @@ object CLI extends CLICommon {
     }
   )
 
-  def handleLanguage: PartialFunction[String, Array[String] => CommandLineResult] = {
-    case "java"  => run("java", _)
-    case "scala" => run("scala", _)
-  }
-
-  def runLanguages(
-      tasks: Map[String, NonEmptyList[Args]]
-  ): Target[List[ReadSwagger[Target[List[WriteTree]]]]] =
-    tasks.toList.flatTraverse[Target, ReadSwagger[Target[List[WriteTree]]]]({
-      case (language, args) =>
-        (language match {
-          case "java" =>
-            Common.runM[JavaLanguage, Target](args)
-          case "scala" =>
-            Common.runM[ScalaLanguage, Target](args)
-          case other =>
-            Target.raiseError(UnparseableArgument("language", other))
-        }).map(_.toList)
-    })
+  def languages = Map(
+    ("java", Common.runM[JavaLanguage, Target](_)),
+    ("scala", Common.runM[ScalaLanguage, Target](_))
+  )
 
   def main(args: Array[String]): Unit = {
     val result = processArgs(args)

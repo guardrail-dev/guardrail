@@ -8,7 +8,6 @@ import cats.FlatMap
 
 import dev.guardrail._
 import dev.guardrail.core.{ LogLevel, LogLevels, StructuredLogger }
-import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.PropertyRequirement
 
 object CLICommon {
@@ -56,14 +55,14 @@ object CommandLineResult {
 }
 
 trait CLICommon {
+  def languages: Map[String,NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+
   def processArgs(args: Array[String]): CommandLineResult = {
-    val (language, strippedArgs) = args.partition(handleLanguage.isDefinedAt _)
-    handleLanguage(language.lastOption.getOrElse("scala"))(strippedArgs)
+    val (language, strippedArgs) = args.partition(languages.contains)
+    run(language.lastOption.getOrElse("scala"), strippedArgs)
   }
 
-  def handleLanguage: PartialFunction[String, Array[String] => CommandLineResult]
-
-  private def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
+  def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
     value match {
       case "required-nullable" => Target.pure(PropertyRequirement.RequiredNullable)
       case "optional"          => Target.pure(PropertyRequirement.Optional)
@@ -145,8 +144,7 @@ trait CLICommon {
     }
   }
 
-
-  def run[L <: LA](language: String, args: Array[String]): CommandLineResult = {
+  def run(language: String, args: Array[String]): CommandLineResult = {
     // Hacky loglevel parsing, only supports levels that come before absolutely
     // every other argument due to arguments being a small configuration
     // language themselves.
@@ -226,7 +224,15 @@ trait CLICommon {
     }
   }
 
-  def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSwagger[Target[List[WriteTree]]]]]
+  def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSwagger[Target[List[WriteTree]]]]] =
+    tasks.toList.flatTraverse({
+      case (language, args) =>
+        languages.get(language) match {
+          case None => Target.raiseError(UnparseableArgument("language", language))
+          case Some(func) => func(args).map(_.toList)
+        }
+    })
+
 
   def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
     runLanguages(tasks)
