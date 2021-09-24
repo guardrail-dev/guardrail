@@ -3,8 +3,8 @@ guardrail [![Build Status](https://github.com/guardrail-dev/guardrail/workflows/
 
 guardrail is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating both Scala and Java source code, targeting various libraries and frameworks listed here:
 
-Scala: `akka-http` and `http4s`, both backed by `circe`, as well as `dropwizard` backed by `jackson`
-Java: `dropwizard` and `spring-mvc`, both backed by `jackson`
+- Scala: `akka-http` and `http4s`, both backed by `circe`, as well as `dropwizard` backed by `jackson`
+- Java: `dropwizard` and `spring-mvc`, both backed by `jackson`
 
 New to guardrail?
 ---
