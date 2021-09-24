@@ -50,7 +50,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '1.8', '1.11', '1.13', '1.14', '1.15', '1.16' ]
+        java: [ '1.8', '1.11', '1.13', '1.15', '1.17' ]
         scala: [
             { version: '2.12.14', bincompat: '2.12' }
           ]
@@ -80,7 +80,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '1.8', '1.15', '1.16' ]
+        java: [ '1.8', '1.15', '1.17' ]
         scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
             { framework: 'akka-http',         project: 'sample-akkaHttp'        },
