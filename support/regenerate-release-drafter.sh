@@ -99,6 +99,20 @@ jobs:
 !
 }
 
+reinitialize_release_drafter() {
+  cat > .github/workflows/release-drafter.yml <<!
+name: Release Drafter
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch: {}
+
+jobs:
+!
+}
+
 write_release() {
   module="$1"; shift || die "Missing module for write_release"
   cat <<!
@@ -115,15 +129,33 @@ write_release() {
 !
 }
 
+write_release_drafter() {
+  module="$1"; shift || die "Missing module for write_release"
+  cat <<!
+  ${module}:
+    name: '[${module}] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.42
+        with:
+          config-name: release-drafter-${module}.yml
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+!
+}
+
 write() {
   module="$1"; shift || die "Missing module for write"
   render "$module" "$@" \
     > ".github/release-drafter-$module.yml"
   write_release "$module" \
     >> .github/workflows/release.yml
+  write_release_drafter "$module" \
+    >> .github/workflows/release-drafter.yml
 }
 
 reinitialize_release
+reinitialize_release_drafter
 
 write core              modules/core/              build.sbt  project/src/main/scala/modules/core.scala
 write guardrail         modules/codegen/           build.sbt  project/src/main/scala/modules/guardrail.scala project/src/main/scala/modules/cli.scala
