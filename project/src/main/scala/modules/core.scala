@@ -20,7 +20,7 @@ object core {
           "org.typelevel"               %% "cats-core"                    % catsVersion,
           "org.typelevel"               %% "cats-kernel"                  % catsVersion,
           "org.typelevel"               %% "cats-free"                    % catsVersion,
-          "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.0",
+          "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.1",
         ).map(_.cross(CrossVersion.for3Use2_13)),
       )
 }

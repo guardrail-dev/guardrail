@@ -17,7 +17,7 @@ object javaSpringMvc {
     "junit"                      %  "junit"                    % "4.13.2"           % Test,
     "org.springframework.boot"   %  "spring-boot-starter-test" % springBootVersion  % Test,
   ) ++ Seq(
-    "org.scala-lang.modules"     %% "scala-java8-compat"       % "1.0.0"            % Test,
+    "org.scala-lang.modules"     %% "scala-java8-compat"       % "1.0.1"            % Test,
     "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
     "org.mockito"                %% "mockito-scala"            % "1.16.42"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
