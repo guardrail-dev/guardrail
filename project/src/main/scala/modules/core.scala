@@ -12,7 +12,7 @@ object core {
     commonModule("core")
       .settings(
         libraryDependencies ++= Seq(
-          "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.22.1",
+          "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.23.0",
           "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.28",
         ) ++ Seq(
           "org.scalameta"               %% "scalameta"                    % "4.4.28",
