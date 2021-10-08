@@ -50,10 +50,10 @@ object SwaggerGenerator {
               .map(
                 xs =>
                   (tpe, fmt) match {
-                    case ("integer", None)          => IntHeldEnum(xs.map(_.intValue))
-                    case ("integer", Some("int32")) => IntHeldEnum(xs.map(_.intValue))
-                    case ("integer", Some("int64")) => LongHeldEnum(xs.map(_.longValue))
-                    case _                          => StringHeldEnum(xs.map(_.toString())) // TODO: Preserve previous behaviour if we don't get a match
+                    case ("integer", None)          => IntHeldEnum(xs)
+                    case ("integer", Some("int32")) => IntHeldEnum(xs)
+                    case ("integer", Some("int64")) => LongHeldEnum(xs)
+                    case _                          => StringHeldEnum.fromNumbers(xs) // TODO: Preserve previous behaviour if we don't get a match
                   }
               )
         }
