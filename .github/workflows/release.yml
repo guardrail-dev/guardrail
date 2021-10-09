@@ -38,7 +38,97 @@ jobs:
       # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [core]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'core' }}
-        run: sbt 'show version' "project core" clean compile versionCheck ci-release
+        run: sbt 'show version' "project guardrail-core" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [java-async-http]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'java-async-http' }}
+        run: sbt 'show version' "project guardrail-java-async-http" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [java-dropwizard]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'java-dropwizard' }}
+        run: sbt 'show version' "project guardrail-java-dropwizard" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [java-spring-mvc]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'java-spring-mvc' }}
+        run: sbt 'show version' "project guardrail-java-spring-mvc" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [java-support]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'java-support' }}
+        run: sbt 'show version' "project guardrail-java-support" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [scala-akka-http]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-akka-http' }}
+        run: sbt 'show version' "project guardrail-scala-akka-http" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [scala-dropwizard]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-dropwizard' }}
+        run: sbt 'show version' "project guardrail-scala-dropwizard" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [scala-endpoints]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-endpoints' }}
+        run: sbt 'show version' "project guardrail-scala-endpoints" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [scala-http4s]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-http4s' }}
+        run: sbt 'show version' "project guardrail-scala-http4s" clean compile versionCheck ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      # NB: Managed by support/regenerate-release-drafter.sh
+      - name: 'Publish artifacts [scala-support]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-support' }}
+        run: sbt 'show version' "project guardrail-scala-support" clean compile versionCheck ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
@@ -49,96 +139,6 @@ jobs:
       - name: 'Publish artifacts [guardrail]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
         run: sbt 'show version' "project guardrail" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [java-async-http]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'java-async-http' }}
-        run: sbt 'show version' "project java-async-http" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [java-dropwizard]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'java-dropwizard' }}
-        run: sbt 'show version' "project java-dropwizard" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [java-spring-mvc]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'java-spring-mvc' }}
-        run: sbt 'show version' "project java-spring-mvc" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [java-support]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'java-support' }}
-        run: sbt 'show version' "project java-support" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [scala-akka-http]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-akka-http' }}
-        run: sbt 'show version' "project scala-akka-http" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [scala-dropwizard]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-dropwizard' }}
-        run: sbt 'show version' "project scala-dropwizard" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [scala-endpoints]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-endpoints' }}
-        run: sbt 'show version' "project scala-endpoints" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [scala-http4s]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-http4s' }}
-        run: sbt 'show version' "project scala-http4s" clean compile versionCheck ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [scala-support]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-support' }}
-        run: sbt 'show version' "project scala-support" clean compile versionCheck ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
