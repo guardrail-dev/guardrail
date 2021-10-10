@@ -140,4 +140,11 @@ object Build {
         scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
         scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
       )
+
+  implicit class ProjectSyntax(project: Project) {
+    def customDependsOn(other: Project): Project =
+      project
+        .dependsOn(other % Provided)
+        .settings(Compile / unmanagedClasspath ++= (other / Compile / fullClasspathAsJars).value)
+  }
 }

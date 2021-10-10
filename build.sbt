@@ -87,57 +87,72 @@ val javaSampleSettings = Seq(
   )
 
 lazy val root = modules.root.project
-  .dependsOn(guardrail, microsite, cli)
+  .customDependsOn(guardrail)
+  .customDependsOn(microsite)
+  .customDependsOn(cli)
   .aggregate(allDeps, microsite)
   .aggregate(allModules: _*)
 
 lazy val allDeps = modules.allDeps.project
 
 lazy val guardrail = modules.guardrail.project
-  .dependsOn(core, javaDropwizard, javaSpringMvc, scalaAkkaHttp, scalaEndpoints, scalaHttp4s, scalaDropwizard)
+  .customDependsOn(core)
+  .customDependsOn(javaDropwizard)
+  .customDependsOn(javaSpringMvc)
+  .customDependsOn(javaSupport)
+  .customDependsOn(javaAsyncHttp)
+  .customDependsOn(scalaAkkaHttp)
+  .customDependsOn(scalaDropwizard)
+  .customDependsOn(scalaEndpoints)
+  .customDependsOn(scalaHttp4s)
+  .customDependsOn(scalaSupport)
 
 lazy val core = modules.core.project
 
 lazy val cli = modules.cli.project
-  .dependsOn(guardrail)
+  .customDependsOn(guardrail)
 
 lazy val javaSupport = modules.javaSupport.project
-  .dependsOn(core)
+  .customDependsOn(core)
 
 lazy val javaAsyncHttp = modules.javaAsyncHttp.project
-  .dependsOn(javaSupport)
+  .customDependsOn(javaSupport)
 
 lazy val dropwizardSample = modules.javaDropwizard.sample
   .settings(javaSampleSettings)
 lazy val dropwizardVavrSample = modules.javaDropwizard.sampleVavr
   .settings(javaSampleSettings)
 lazy val javaDropwizard = modules.javaDropwizard.project
-  .dependsOn(javaSupport, javaAsyncHttp)
+  .customDependsOn(javaSupport)
+  .customDependsOn(javaAsyncHttp)
 
 lazy val javaSpringMvcSample = modules.javaSpringMvc.sample
   .settings(javaSampleSettings)
 lazy val javaSpringMvc = modules.javaSpringMvc.project
-  .dependsOn(javaSupport)
+  .customDependsOn(javaSupport)
 
 lazy val scalaSupport = modules.scalaSupport.project
-  .dependsOn(core, javaDropwizard)
+  .customDependsOn(core)
+  .customDependsOn(javaDropwizard)
 
 lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
 lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
 lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
-  .dependsOn(scalaSupport, javaDropwizard)
+  .customDependsOn(javaDropwizard)
+  .customDependsOn(scalaSupport)
 
 lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
 lazy val scalaEndpoints = modules.scalaEndpoints.project
-  .dependsOn(scalaSupport)
+  .customDependsOn(scalaSupport)
 
 lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
 lazy val scalaHttp4s = modules.scalaHttp4s.project
-  .dependsOn(scalaSupport)
+  .customDependsOn(scalaSupport)
 
 lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
 lazy val scalaDropwizard = modules.scalaDropwizard.project
-  .dependsOn(javaDropwizard, scalaSupport)
+  .customDependsOn(javaDropwizard)
+  .customDependsOn(scalaSupport)
 
 lazy val allModules = Seq[sbt.ProjectReference](
   cli,
@@ -161,7 +176,7 @@ lazy val microsite = baseModule("microsite", "microsite", file("modules/microsit
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",
   )
-  .dependsOn(guardrail)
+  .customDependsOn(guardrail)
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
