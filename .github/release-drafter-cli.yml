@@ -1,10 +1,10 @@
-name-template: 'guardrail-v$RESOLVED_VERSION'
-tag-template: 'guardrail-v$RESOLVED_VERSION'
-tag-prefix: guardrail-v
+name-template: 'cli-v$RESOLVED_VERSION'
+tag-template: 'cli-v$RESOLVED_VERSION'
+tag-prefix: cli-v
 include-paths:
-  - "modules/codegen/"
+  - "modules/cli/"
   - "build.sbt"
-  - "project/src/main/scala/modules/guardrail.scala"
+  - "project/src/main/scala/modules/cli.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'
