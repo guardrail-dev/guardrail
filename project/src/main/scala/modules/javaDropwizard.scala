@@ -29,7 +29,7 @@ object javaDropwizard {
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
   ) ++ Seq(
     "org.mockito"                %% "mockito-scala"          % "1.16.46"           % Test,
-    "org.scala-lang.modules"     %% "scala-java8-compat"     % "1.0.0"            % Test,
+    "org.scala-lang.modules"     %% "scala-java8-compat"     % "1.0.1"            % Test,
     "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
 
