@@ -40,7 +40,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
   ) = {
     val stockProtocolSupportInterp = CirceProtocolGenerator.ProtocolSupportTermInterp
     val protocolSupportInterp = stockProtocolSupportInterp.copy(
-      newPackageObjectImports = () =>
+      packageObjectImports = () =>
         stockProtocolSupportInterp.packageObjectImports().map { values =>
           import _root_.scala.meta._
           values :+ q"import io.circe.java8.time._"

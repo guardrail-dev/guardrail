@@ -155,18 +155,24 @@ trait CollectionsAbstractionSyntax[L <: LA]
   }
 }
 
-trait CollectionsAbstraction[L <: LA] extends CollectionsAbstractionSyntax[L] {
+trait CollectionsAbstraction[L <: LA] extends CollectionsAbstractionSyntax[L] { self =>
   implicit def optionInstances: OptionF[L]
   implicit def listInstances: ListF[L]
   implicit def futureInstances: FutureF[L]
 
   def copy(
-      newOptionInstances: OptionF[L] = optionInstances,
-      newListInstances: ListF[L] = listInstances,
-      newFutureInstances: FutureF[L] = futureInstances
-  ): CollectionsAbstraction[L] = new CollectionsAbstraction[L] {
-    override implicit def optionInstances: OptionF[L] = newOptionInstances
-    override implicit def listInstances: ListF[L]     = newListInstances
-    override implicit def futureInstances: FutureF[L] = newFutureInstances
+      optionInstances: OptionF[L] = self.optionInstances,
+      listInstances: ListF[L] = self.listInstances,
+      futureInstances: FutureF[L] = self.futureInstances
+  ): CollectionsAbstraction[L] = {
+    val newOptionInstances = optionInstances
+    val newListInstances   = listInstances
+    val newFutureInstances = futureInstances
+
+    new CollectionsAbstraction[L] {
+      override implicit def optionInstances: OptionF[L] = newOptionInstances
+      override implicit def listInstances: ListF[L]     = newListInstances
+      override implicit def futureInstances: FutureF[L] = newFutureInstances
+    }
   }
 }

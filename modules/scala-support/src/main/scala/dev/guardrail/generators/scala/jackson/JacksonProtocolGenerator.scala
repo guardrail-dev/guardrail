@@ -20,7 +20,7 @@ object JacksonProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.EnumProtocolTermInterp
     baseInterp.copy(
-      newRenderClass = (className, tpe, elems) =>
+      renderClass = (className, tpe, elems) =>
         for {
           renderedClass <- baseInterp.renderClass(className, tpe, elems)
         } yield renderedClass.copy(
@@ -29,7 +29,7 @@ object JacksonProtocolGenerator {
               mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
             ) ++ renderedClass.mods
         ),
-      newEncodeEnum = { (className, tpe) =>
+      encodeEnum = { (className, tpe) =>
         val writeMethod = tpe match {
           case t"Int"    => q"writeNumber"
           case t"Long"   => q"writeNumber"
@@ -46,7 +46,7 @@ object JacksonProtocolGenerator {
           )
         )
       },
-      newDecodeEnum = { (className, tpe) =>
+      decodeEnum = { (className, tpe) =>
         val getter = tpe match {
           case t"String" => q"getText"
           case t"Int"    => q"getIntValue"
@@ -67,7 +67,7 @@ object JacksonProtocolGenerator {
           )
         )
       },
-      newRenderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
+      renderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
         for {
           renderedStaticDefns <- baseInterp.renderStaticDefns(className, elems, members, accessors, encoder, decoder)
           classType = Type.Name(className)
@@ -176,7 +176,7 @@ object JacksonProtocolGenerator {
     val baseInterp           = new CirceProtocolGenerator.ModelProtocolTermInterp(CirceModelGenerator.V012)
     import baseInterp.MonadF
     baseInterp.copy(
-      newRenderDTOClass = (className, supportPackage, terms, parents) =>
+      renderDTOClass = (className, supportPackage, terms, parents) =>
         for {
           renderedClass <- baseInterp.renderDTOClass(className, supportPackage, terms, parents)
           discriminatorParams = parents.flatMap(
@@ -255,9 +255,9 @@ object JacksonProtocolGenerator {
               }) ++ renderedClass.templ.stats
           )
         ),
-      newEncodeModel = (_, _, _, _) => Target.pure(None),
-      newDecodeModel = (_, _, _, _, _) => Target.pure(None),
-      newRenderDTOStaticDefns = (className, deps, encoder, decoder) =>
+      encodeModel = (_, _, _, _) => Target.pure(None),
+      decodeModel = (_, _, _, _, _) => Target.pure(None),
+      renderDTOStaticDefns = (className, deps, encoder, decoder) =>
         for {
           renderedDTOStaticDefns <- baseInterp.renderDTOStaticDefns(className, deps, encoder, decoder)
           classType = Type.Name(className)
@@ -277,15 +277,15 @@ object JacksonProtocolGenerator {
   def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
     baseInterp.copy(
-      newProtocolImports = () =>
+      protocolImports = () =>
         Target.pure(
           List(
             q"import cats.implicits._"
           )
         ),
-      newPackageObjectImports = () => Target.pure(List.empty),
-      newPackageObjectContents = () => Target.pure(List.empty),
-      newImplicitsObject = () =>
+      packageObjectImports = () => Target.pure(List.empty),
+      packageObjectContents = () => Target.pure(List.empty),
+      implicitsObject = () =>
         Target.pure(
           Some(
             (
@@ -441,7 +441,7 @@ object JacksonProtocolGenerator {
             )
           )
         ),
-      newGenerateSupportDefinitions = () =>
+      generateSupportDefinitions = () =>
         for {
           generatedSupportDefinitions <- baseInterp.generateSupportDefinitions()
         } yield {
@@ -642,7 +642,7 @@ object JacksonProtocolGenerator {
   def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = new CirceProtocolGenerator.PolyProtocolTermInterp
     baseInterp.copy(
-      newRenderSealedTrait = (className, params, discriminator, parents, children) =>
+      renderSealedTrait = (className, params, discriminator, parents, children) =>
         for {
           renderedTrait      <- baseInterp.renderSealedTrait(className, params, discriminator, parents, children)
           discriminatorParam <- Target.pure(params.find(_.name.value == discriminator.propertyName))
@@ -674,9 +674,9 @@ object JacksonProtocolGenerator {
             )
           )
         },
-      newEncodeADT = (_, _, _) => Target.pure(None),
-      newDecodeADT = (_, _, _) => Target.pure(None),
-      newRenderADTStaticDefns = (className, discriminator, encoder, decoder) =>
+      encodeADT = (_, _, _) => Target.pure(None),
+      decodeADT = (_, _, _) => Target.pure(None),
+      renderADTStaticDefns = (className, discriminator, encoder, decoder) =>
         for {
           renderedADTStaticDefns <- baseInterp.renderADTStaticDefns(className, discriminator, encoder, decoder)
           classType = Type.Name(className)
