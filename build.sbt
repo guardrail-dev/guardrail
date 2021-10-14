@@ -34,12 +34,14 @@ runExample := Def.inputTaskDyn {
   import complete.DefaultParsers.spaceDelimited
 
   val args: Seq[String] = spaceDelimited("<arg>").parsed
-  val runArgs = args match {
-    case language :: framework :: Nil => exampleArgs(language, Some(framework))
-    case language :: Nil => exampleArgs(language)
-    case Nil => exampleArgs("scala") ++ exampleArgs("java")
+  val runArgs: List[List[List[String]]] = args match {
+    case language :: framework :: Nil => List(exampleArgs(language, Some(framework)))
+    case language :: Nil => List(exampleArgs(language))
+    case Nil => List(exampleArgs("scala"), exampleArgs("java"))
   }
-  runTask(Test, "dev.guardrail.cli.CLI", runArgs.flatten.filter(_.nonEmpty): _*)
+  Def.sequential(
+    runArgs.map(args => runTask(Test, "dev.guardrail.cli.CLI", args.flatten.filter(_.nonEmpty): _*))
+  )
 }.evaluated
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))

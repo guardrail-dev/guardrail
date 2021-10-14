@@ -78,6 +78,7 @@ object RegressionTests {
     ExampleCase(sampleResource("issues/issue455.yaml"), "issues.issue455"),
     ExampleCase(sampleResource("issues/issue622.yaml"), "issues.issue622"),
     ExampleCase(sampleResource("issues/issue1138.yaml"), "issues.issue1138"),
+    ExampleCase(sampleResource("issues/issue1260.yaml"), "issues.issue1260"),
     ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
     ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "examples.support.PositiveLong"),
     // ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "examples.support.PositiveLong"),
