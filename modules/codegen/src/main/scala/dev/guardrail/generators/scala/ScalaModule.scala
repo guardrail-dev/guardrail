@@ -17,6 +17,14 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
+  private def catchClassNotFound[A](value: => A, error: => MissingDependency): Target[A] =
+    try {
+      Target.pure(value)
+    } catch {
+      case _: _root_.java.lang.NoClassDefFoundError =>
+        Target.raiseError(error)
+    }
+
   def circe(circeModelGenerator: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ProtocolSupportTerms[ScalaLanguage, Target],
       ModelProtocolTerms[ScalaLanguage, Target],
@@ -114,17 +122,17 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     (for {
       (modelGeneratorType, (protocol, model, enum, array, poly)) <- popModule(
         "json",
-        ("circe-java8", (CirceModelGenerator.V011, circeJava8(CirceModelGenerator.V011))),
-        ("circe-0.11", (CirceModelGenerator.V011, circe(CirceModelGenerator.V011))),
-        ("circe", (CirceModelGenerator.V012, circe(CirceModelGenerator.V012))),
-        ("jackson", (JacksonModelGenerator, jackson))
+        ("circe-java8", catchClassNotFound((CirceModelGenerator.V011, circeJava8(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
+        ("circe-0.11", catchClassNotFound((CirceModelGenerator.V011, circe(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
+        ("circe", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
+        ("jackson", catchClassNotFound((JacksonModelGenerator, jackson), MissingDependency("guardrail-scala-support")))
       )
       (client, server, framework) <- popModule(
         "framework",
-        ("akka-http", akkaHttp(modelGeneratorType)),
-        ("http4s", http4s),
-        ("endpoints", endpoints(modelGeneratorType)),
-        ("dropwizard", dropwizard)
+        ("akka-http", catchClassNotFound(akkaHttp(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
+        ("http4s", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
+        ("endpoints", catchClassNotFound(endpoints(modelGeneratorType), MissingDependency("guardrail-scala-endpoints"))),
+        ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
       )
       // parser             =  or interpFramework
       // codegenApplication = ScalaGenerator.ScalaInterp or parser

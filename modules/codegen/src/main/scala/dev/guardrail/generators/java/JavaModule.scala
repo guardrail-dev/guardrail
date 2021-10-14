@@ -17,6 +17,14 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object JavaModule extends AbstractModule[JavaLanguage] {
+  private def catchClassNotFound[A](value: => A, error: => MissingDependency): Target[A] =
+    try {
+      Target.pure(value)
+    } catch {
+      case _: java.lang.NoClassDefFoundError =>
+        Target.raiseError(error)
+    }
+
   def stdlib: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
     (new JavaCollectionsGenerator.JavaCollectionsInterp, JavaStdLibCollections)
   def vavr: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
@@ -50,10 +58,24 @@ object JavaModule extends AbstractModule[JavaLanguage] {
   def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
     implicit val col = JavaStdLibCollections
     (for {
-      (collections, col)                   <- popModule("collections", ("java-stdlib", stdlib), ("java-vavr", vavr))
-      (protocol, model, enum, array, poly) <- popModule("json", ("jackson", jackson(collections, col)))
-      client                               <- popModule("client", ("async-http-client", asyncHttpClient(collections, col)))
-      (server, framework)                  <- popModule("server", ("dropwizard", dropwizard(collections, col)), ("spring-mvc", spring(collections, col)))
+      (collections, col) <- popModule(
+        "collections",
+        ("java-stdlib", catchClassNotFound(stdlib, MissingDependency("guardrail-java-support"))),
+        ("java-vavr", catchClassNotFound(vavr, MissingDependency("guardrail-java-support")))
+      )
+      (protocol, model, enum, array, poly) <- popModule(
+        "json",
+        ("jackson", catchClassNotFound(jackson(collections, col), MissingDependency("guardrail-java-support")))
+      )
+      client <- popModule(
+        "client",
+        ("async-http-client", catchClassNotFound(asyncHttpClient(collections, col), MissingDependency("guardrail-java-async-http")))
+      )
+      (server, framework) <- popModule(
+        "server",
+        ("dropwizard", catchClassNotFound(dropwizard(collections, col), MissingDependency("guardrail-java-dropwizard"))),
+        ("spring-mvc", catchClassNotFound(spring(collections, col), MissingDependency("guardrail-java-spring-mvc")))
+      )
     } yield new Framework[JavaLanguage, Target] {
       def ArrayProtocolInterp: ArrayProtocolTerms[JavaLanguage, Target]     = array
       def ClientInterp: ClientTerms[JavaLanguage, Target]                   = client
