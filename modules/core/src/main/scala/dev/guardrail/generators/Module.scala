@@ -1,6 +1,6 @@
 package dev.guardrail.generators
 
-import cats.data.StateT
+import cats.data.{ NonEmptyList, StateT }
 import cats.syntax.all._
 
 import dev.guardrail._
@@ -21,4 +21,6 @@ abstract class AbstractModule[L <: LA] {
           Target.raiseError(ModuleConflict(section))
       }
     })
+
+  def extract(modules: NonEmptyList[String]): Target[Framework[L, Target]]
 }

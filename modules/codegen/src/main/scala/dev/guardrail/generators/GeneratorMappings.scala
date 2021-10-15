@@ -6,18 +6,17 @@ import com.github.javaparser.StaticJavaParser
 import _root_.scala.meta._
 import _root_.scala.util.{ Failure, Success, Try }
 
-import dev.guardrail.languages.LA
 import dev.guardrail.core.CoreTermInterp
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.{ Args, Common, MissingDependency, ReadSwagger, Target, UnparseableArgument, WriteTree }
 
 object GeneratorMappings {
-  private abstract class LoaderIndirection[L <: LA] {
-    val instance: Framework[L, Target]
+  private abstract class LoaderIndirection[A] {
+    val instance: A
   }
 
-  private def catchClassNotFound[L <: LA](value: => LoaderIndirection[L], error: => MissingDependency): Target[Framework[L, Target]] =
+  private def catchClassNotFound[A](value: => LoaderIndirection[A], error: => MissingDependency): Target[A] =
     try {
       Target.pure(value.instance)
     } catch {
@@ -25,25 +24,29 @@ object GeneratorMappings {
         Target.raiseError(error)
     }
 
-  private def indirectAkkaHttp = new LoaderIndirection[ScalaLanguage] {
+  private def indirectAkkaHttp = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.akkaHttp.AkkaHttp
   }
-  private def indirectEndpoints = new LoaderIndirection[ScalaLanguage] {
+  private def indirectEndpoints = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.endpoints.Endpoints
   }
-  private def indirectHttp4s = new LoaderIndirection[ScalaLanguage] {
+  private def indirectHttp4s = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.http4s.Http4s
   }
-  private def indirectAkkaHttpJackson = new LoaderIndirection[ScalaLanguage] {
+  private def indirectAkkaHttpJackson = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.akkaHttp.AkkaHttpJackson
   }
-  private def indirectScalaDropwizard = new LoaderIndirection[ScalaLanguage] {
+  private def indirectScalaDropwizard = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.dropwizard.Dropwizard
+  }
+
+  private def indirectScalaModule = new LoaderIndirection[AbstractModule[ScalaLanguage]] {
+    val instance = scala.ScalaModule
   }
 
   implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
-    scala.ScalaModule.extract, {
+    xs => catchClassNotFound(indirectScalaModule, MissingDependency("guardrail-scala-support")).flatMap(_.extract(xs)), {
       case "akka-http"         => catchClassNotFound(indirectAkkaHttp, MissingDependency("guardrail-scala-akka-http"))
       case "endpoints"         => catchClassNotFound(indirectEndpoints, MissingDependency("guardrail-scala-endpoints"))
       case "http4s"            => catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
@@ -54,16 +57,20 @@ object GeneratorMappings {
     }
   )
 
-  private def indirectJavaDropwizard = new LoaderIndirection[JavaLanguage] {
+  private def indirectJavaDropwizard = new LoaderIndirection[Framework[JavaLanguage, Target]] {
     val instance = java.dropwizard.Dropwizard
   }
-  private def indirectSpringMvc = new LoaderIndirection[JavaLanguage] {
+  private def indirectSpringMvc = new LoaderIndirection[Framework[JavaLanguage, Target]] {
     val instance = java.springMvc.SpringMvc
+  }
+
+  private def indirectJavaModule = new LoaderIndirection[AbstractModule[JavaLanguage]] {
+    val instance = java.JavaModule
   }
 
   implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
-    java.JavaModule.extract, {
+    xs => catchClassNotFound(indirectJavaModule, MissingDependency("guardrail-java-support")).flatMap(_.extract(xs)), {
       case "dropwizard" => catchClassNotFound(indirectJavaDropwizard, MissingDependency("guardrail-java-dropwizard"))
       case "spring-mvc" => catchClassNotFound(indirectSpringMvc, MissingDependency("guardrail-java-spring-mvc"))
     }, { str =>
