@@ -7,7 +7,7 @@ import sbt.Keys._
 
 object scalaAkkaHttp {
   val akkaHttpVersion        = "10.2.6"
-  val akkaVersion            = "2.6.16"
+  val akkaVersion            = "2.6.17"
   val catsVersion            = "2.6.1"
   val circeVersion           = "0.14.1"
   val hibernateVersion       = "6.2.0.Final"
