@@ -30,7 +30,7 @@ object scalaDropwizard {
     "com.datasift.dropwizard.scala"  %% "dropwizard-scala-core"   % dropwizardScalaVersion,
     "com.fasterxml.jackson.module"   %% "jackson-module-scala"    % jacksonVersion,
     "org.typelevel"                  %% "cats-core"               % catsVersion,
-    "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.0"            % Test,
+    "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.1"            % Test,
     "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
     "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.46"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
