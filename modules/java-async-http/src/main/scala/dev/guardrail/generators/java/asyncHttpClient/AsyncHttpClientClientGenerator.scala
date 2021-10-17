@@ -18,12 +18,12 @@ import scala.annotation.tailrec
 import dev.guardrail.Target
 import dev.guardrail.core.{ PathExtractor, SupportDefinition }
 import dev.guardrail.generators.RenderedClientOperation
-import dev.guardrail.generators.helpers.ResponseHelpers
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientHelpers._
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import dev.guardrail.javaext.helpers.ResponseHelpers
 import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.collections.CollectionsAbstraction

@@ -1,4 +1,4 @@
-package dev.guardrail.generators.helpers
+package dev.guardrail.javaext.helpers
 
 import cats.data.NonEmptyList
 import cats.syntax.all._

@@ -20,11 +20,11 @@ import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.LanguageParameter
-import dev.guardrail.generators.helpers.ResponseHelpers._
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.{ CustomExtractionField, RenderedRoutes, TracingField }
+import dev.guardrail.javaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.StrictProtocolElems
@@ -269,8 +269,8 @@ class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, T
     for {
       resourceType <- safeParseClassOrInterfaceType(resourceName)
       handlerType  <- safeParseClassOrInterfaceType(handlerName)
-      basePathComponents = basePath.toList.flatMap(splitPathComponents)
-      commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
+      basePathComponents = basePath.toList.flatMap(ResponseHelpers.splitPathComponents)
+      commonPathPrefix   = ResponseHelpers.findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
       routeMethodsAndHandlerMethodSigs <- routes
         .traverse({
           case GenerateRouteMeta(
@@ -288,13 +288,13 @@ class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, T
             val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, methodName)
               .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
-            val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
+            val pathSuffix = ResponseHelpers.splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
             if (pathSuffix.nonEmpty && pathSuffix != "/") {
               method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
             }
 
             val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-            val consumes    = getBestConsumes(operation, allConsumes, parameters)
+            val consumes    = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
             consumes
               .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), toJaxRsAnnotationName(c)))
               .foreach(method.addAnnotation)
@@ -303,7 +303,7 @@ class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, T
             NonEmptyList
               .fromList(
                 responses.value
-                  .flatMap(getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
+                  .flatMap(ResponseHelpers.getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
                   .distinct
                   .map(toJaxRsAnnotationName)
               )

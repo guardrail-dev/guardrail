@@ -8,9 +8,9 @@ import scala.meta._
 
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.helpers.ResponseHelpers._
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
+import dev.guardrail.scalaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
@@ -300,8 +300,8 @@ class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, 
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
   ): Target[RenderedRoutes[ScalaLanguage]] = {
-    val basePathComponents = basePath.toList.flatMap(splitPathComponents)
-    val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
+    val basePathComponents = basePath.toList.flatMap(ResponseHelpers.splitPathComponents)
+    val commonPathPrefix   = ResponseHelpers.findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
     val fullPathPrefix     = (basePathComponents ++ commonPathPrefix).mkString("/", "/", "")
 
     val resourceNameTerm = Term.Name(resourceName)
@@ -318,13 +318,13 @@ class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, 
             parameters,
             responses
             ) =>
-          val pathSuffix     = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
+          val pathSuffix     = ResponseHelpers.splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
           val pathAnnotation = Option(pathSuffix).filter(_.nonEmpty).filterNot(_ == "/").map(p => mod"@Path(${Lit.String(p)})")
 
           val httpMethodAnnotation = Mod.Annot(Init(Type.Name(method.name()), Name.Anonymous(), List.empty))
 
           val allConsumes        = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-          val consumes           = getBestConsumes(operation, allConsumes, parameters)
+          val consumes           = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
           val consumesAnnotation = consumes.map(c => mod"@Consumes(Array(..${List(toJaxRsAnnotationName(c))}))")
 
           def isTypePlain(tpe: Type): Boolean =
@@ -338,7 +338,7 @@ class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, 
           val producesAnnotation = NonEmptyList
             .fromList(
               responses.value
-                .flatMap(getBestProduces[ScalaLanguage](operationId, allProduces, _, isTypePlain))
+                .flatMap(ResponseHelpers.getBestProduces[ScalaLanguage](operationId, allProduces, _, isTypePlain))
                 .distinct
                 .map(toJaxRsAnnotationName)
             )
