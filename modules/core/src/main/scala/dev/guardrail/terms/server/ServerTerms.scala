@@ -4,7 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import io.swagger.v3.oas.models.Operation
 
-import dev.guardrail.core.{SupportDefinition, Tracker}
+import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.Responses

@@ -13,7 +13,7 @@ abstract class ArrayProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerm
       newMonadF: Monad[F] = this.MonadF,
       newExtractArrayType: (core.ResolvedType[L], List[PropMeta[L]]) => F[L#Type] = extractArrayType _
   ): ArrayProtocolTerms[L, F] = new ArrayProtocolTerms[L, F] {
-    def MonadF                                                                               = newMonadF
+    def MonadF                                                                        = newMonadF
     def extractArrayType(arr: core.ResolvedType[L], concreteTypes: List[PropMeta[L]]) = newExtractArrayType(arr, concreteTypes)
   }
 }

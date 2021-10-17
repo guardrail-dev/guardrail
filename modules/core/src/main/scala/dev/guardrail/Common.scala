@@ -7,9 +7,9 @@ import cats.Id
 import java.nio.file.Path
 import java.net.URI
 
-import dev.guardrail.core.{Tracker, SupportDefinition}
+import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.core.extract.SecurityOptional
-import dev.guardrail.generators.{ Clients, ClientGenerator, ProtocolDefinitions, ProtocolGenerator, Servers, ServerGenerator }
+import dev.guardrail.generators.{ ClientGenerator, Clients, ProtocolDefinitions, ProtocolGenerator, ServerGenerator, Servers }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms

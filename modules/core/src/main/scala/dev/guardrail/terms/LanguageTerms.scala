@@ -7,7 +7,7 @@ import java.nio.file.Path
 import dev.guardrail._
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.RawParameterType
-import dev.guardrail.generators.{Client, Server}
+import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.StrictProtocolElems
 

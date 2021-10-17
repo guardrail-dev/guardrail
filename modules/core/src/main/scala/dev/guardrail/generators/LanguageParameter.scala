@@ -112,8 +112,8 @@ object LanguageParameter {
     }
 
     log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                                     <- paramMeta(parameter)
+      _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
+      meta                                                              <- paramMeta(parameter)
       core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = parameter.downField("required", _.getRequired()).map(_.getOrElse(false)).unwrapTracker

@@ -6,7 +6,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import dev.guardrail._
-import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsNull, EmptyIsEmpty, Mappish, Tracker }
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, Mappish, Tracker }
 import dev.guardrail.core.implicits._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._

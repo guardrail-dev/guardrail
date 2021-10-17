@@ -27,7 +27,7 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.generators.java.JavaLanguage.JavaTypeName
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.syntax.RichString
-import dev.guardrail.generators.{ Client, Server, RawParameterType }
+import dev.guardrail.generators.{ Client, RawParameterType, Server }
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 

@@ -9,7 +9,7 @@ import scala.meta._
 import dev.guardrail.core
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{DataVisible, EmptyIsEmpty, EmptyIsNull, ResolvedType, SupportDefinition, Tracker}
+import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, ResolvedType, SupportDefinition, Tracker }
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.{ ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.{ RawParameterName, RawParameterType }

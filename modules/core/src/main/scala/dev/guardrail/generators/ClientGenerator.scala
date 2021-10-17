@@ -11,7 +11,7 @@ import dev.guardrail.terms._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.{Context, _}
+import dev.guardrail.{ Context, _ }
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Client[L <: LA](

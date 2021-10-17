@@ -36,4 +36,3 @@ case class SecurityRequirements(
     optionalSchemes: List[String],
     location: SecurityRequirements.Location
 )
-

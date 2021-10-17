@@ -10,7 +10,7 @@ import scala.meta._
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.scala.{ ScalaLanguage, ResponseADTHelper }
+import dev.guardrail.generators.scala.{ ResponseADTHelper, ScalaLanguage }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.shims._
@@ -226,7 +226,7 @@ object Http4sClientGenerator {
           }
           methodExpr = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
           reqBinding = q"req"
-          req = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
+          req        = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
           reqWithBody = formEntity
             .map(e => q"$req.withEntity($e)")
             .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))

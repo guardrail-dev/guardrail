@@ -55,7 +55,7 @@ object CommandLineResult {
 }
 
 trait CLICommon {
-  def languages: Map[String,NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+  def languages: Map[String, NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
 
   def processArgs(args: Array[String]): CommandLineResult = {
     val (language, strippedArgs) = args.partition(languages.contains)
@@ -228,11 +228,10 @@ trait CLICommon {
     tasks.toList.flatTraverse({
       case (language, args) =>
         languages.get(language) match {
-          case None => Target.raiseError(UnparseableArgument("language", language))
+          case None       => Target.raiseError(UnparseableArgument("language", language))
           case Some(func) => func(args).map(_.toList)
         }
     })
-
 
   def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
     runLanguages(tasks)

@@ -7,14 +7,27 @@ import io.swagger.v3.oas.models.Operation
 import scala.meta._
 
 import dev.guardrail.Target
-import dev.guardrail.core.{Tracker, SupportDefinition}
+import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.helpers.ResponseHelpers._
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
-import dev.guardrail.terms.{ ApplicationJson, ContentType, MultipartFormData, OctetStream, TextPlain, TextContent, BinaryContent, UrlencodedFormData, CollectionsLibTerms, SecurityScheme, RouteMeta, Responses }
+import dev.guardrail.terms.{
+  ApplicationJson,
+  BinaryContent,
+  CollectionsLibTerms,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Responses,
+  RouteMeta,
+  SecurityScheme,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 object DropwizardServerGenerator {

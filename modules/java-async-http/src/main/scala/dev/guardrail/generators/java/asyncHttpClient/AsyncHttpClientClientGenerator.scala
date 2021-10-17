@@ -16,7 +16,7 @@ import java.util.concurrent.CompletionStage
 import scala.annotation.tailrec
 
 import dev.guardrail.Target
-import dev.guardrail.core.{PathExtractor, SupportDefinition}
+import dev.guardrail.core.{ PathExtractor, SupportDefinition }
 import dev.guardrail.generators.RenderedClientOperation
 import dev.guardrail.generators.helpers.ResponseHelpers
 import dev.guardrail.generators.java.JavaGenerator
@@ -28,7 +28,7 @@ import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.terms.{ ApplicationJson, ContentType, MultipartFormData, Response, TextContent, BinaryContent, UrlencodedFormData, Responses }
+import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Response, Responses, TextContent, UrlencodedFormData }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))

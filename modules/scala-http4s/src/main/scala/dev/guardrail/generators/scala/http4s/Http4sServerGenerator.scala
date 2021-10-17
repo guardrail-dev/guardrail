@@ -6,7 +6,7 @@ import cats.implicits._
 import cats.Traverse
 import dev.guardrail.{ Target, UserError }
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.core.{PathExtractor, Tracker}
+import dev.guardrail.core.{ PathExtractor, Tracker }
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.generators.syntax._
@@ -62,7 +62,7 @@ object Http4sServerGenerator {
           //todo add support for regex segment
           throw new UnsupportedOperationException
       ) {
-    def generateUrlPathExtractors(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] = {
+    def generateUrlPathExtractors(path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs, CirceModelGenerator.V012)
         (directive, bindings) = parts
@@ -74,9 +74,8 @@ object Http4sServerGenerator {
           p"$directive / ${Lit.String("")}"
         } else directive
       } yield (trailingSlashed, queryParams)
-    }
   }
-  
+
   class ServerTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
     val customExtractionTypeName: Type.Name = Type.Name("E")
 
@@ -301,8 +300,7 @@ object Http4sServerGenerator {
       Target.pure(
         body.map {
           case LanguageParameter(_, _, paramName, _, _) =>
-            content =>
-                q"""
+            content => q"""
                   req
                     .attemptAs(${Term.Name(s"${methodName.uncapitalized}Decoder")})
                     .foldF(
@@ -327,12 +325,19 @@ object Http4sServerGenerator {
       directivesFromParams(
         arg => {
           case t"String" =>
-            Target.pure(Param(None, Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName))
+            Target.pure(
+              Param(None, Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value)", p"Some(${Pat.Var(arg.paramName)})")), arg.paramName)
+            )
           case tpe =>
             Target.pure(
               Param(
                 None,
-                Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(Json.fromString(_).as[$tpe])", p"Some(Right(${Pat.Var(arg.paramName)}))")),
+                Some(
+                  (
+                    q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(Json.fromString(_).as[$tpe])",
+                    p"Some(Right(${Pat.Var(arg.paramName)}))"
+                  )
+                ),
                 arg.paramName
               )
             )
@@ -345,7 +350,12 @@ object Http4sServerGenerator {
             Target.pure(
               Param(
                 None,
-                Some((q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(Json.fromString(_).as[$tpe]).sequence", p"Right(${Pat.Var(arg.paramName)})")),
+                Some(
+                  (
+                    q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(Json.fromString(_).as[$tpe]).sequence",
+                    p"Right(${Pat.Var(arg.paramName)})"
+                  )
+                ),
                 arg.paramName
               )
             )

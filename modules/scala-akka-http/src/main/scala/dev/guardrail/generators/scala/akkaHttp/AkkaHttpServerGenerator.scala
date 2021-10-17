@@ -8,7 +8,7 @@ import cats.implicits._
 import scala.meta._
 
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
-import dev.guardrail.core.{PathExtractor, Tracker}
+import dev.guardrail.core.{ PathExtractor, Tracker }
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ScalaLanguage
@@ -70,7 +70,7 @@ object AkkaHttpServerGenerator {
         path: Tracker[String],
         pathArgs: List[LanguageParameter[ScalaLanguage]],
         modelGeneratorType: ModelGeneratorType
-    ): Target[NonEmptyList[(Term, List[Term.Name])]] = {
+    ): Target[NonEmptyList[(Term, List[Term.Name])]] =
       for {
         (parts, (trailingSlash, queryParams)) <- runParse(path, pathArgs, modelGeneratorType)
         allPairs = parts
@@ -96,7 +96,6 @@ object AkkaHttpServerGenerator {
           NonEmptyList((q"${directives} & ${qs}", bindings), xs)
         }
       } yield result.reverse
-    }
   }
 
   class ServerTermInterp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])

@@ -1,29 +1,29 @@
 package dev.guardrail.generators.java.jackson
 
-import _root_.io.swagger.v3.oas.models.media.{Discriminator => _, _}
-import cats.{FlatMap, Monad}
+import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
+import cats.{ FlatMap, Monad }
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, UnknownType}
-import com.github.javaparser.ast.Modifier.Keyword.{FINAL, PRIVATE, PROTECTED, PUBLIC}
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
+import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.{Node, NodeList}
+import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr.{MethodCallExpr, _}
+import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 
 import dev.guardrail.{ RuntimeFailure, Target, UserError }
 import dev.guardrail.core
 import dev.guardrail.core.Tracker
-import dev.guardrail.core.extract.{DataRedaction, EmptyValueIsNull}
+import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour}
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.{RawParameterName, RawParameterType}
-import dev.guardrail.terms.{CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum}
+import dev.guardrail.generators.{ RawParameterName, RawParameterType }
+import dev.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
@@ -67,7 +67,16 @@ object JacksonGenerator {
         }
         val defaultValue = defaultValueToExpression(param.defaultValue)
 
-        ParameterTerm(param.name.value, param.term.getNameAsString, param.term.getType.unbox, parameterType, param.rawType, defaultValue, param.dataRedaction, param.emptyToNull)
+        ParameterTerm(
+          param.name.value,
+          param.term.getNameAsString,
+          param.term.getType.unbox,
+          parameterType,
+          param.rawType,
+          defaultValue,
+          param.dataRedaction,
+          param.emptyToNull
+        )
       })
       .partition(
         pt => !pt.fieldType.isOptionalType && pt.defaultValue.isEmpty
@@ -120,21 +129,24 @@ object JacksonGenerator {
                       if (term.fieldType.isOptionalType) {
                         val parameterValueExpr = term.emptyToNull match {
                           case EmptyIsEmpty => new NameExpr(term.parameterName)
-                          case EmptyIsNull => new MethodCallExpr(
-                            new NameExpr(term.parameterName),
-                            "filter",
-                            new NodeList[Expression](new LambdaExpr(
-                              new Parameter(new UnknownType, term.parameterName + "_"),
-                              new UnaryExpr(
-                                new MethodCallExpr(
-                                  new StringLiteralExpr(""),
-                                  "equals",
-                                  new NodeList[Expression](new NameExpr(term.parameterName + "_"))
-                                ),
-                                UnaryExpr.Operator.LOGICAL_COMPLEMENT
+                          case EmptyIsNull =>
+                            new MethodCallExpr(
+                              new NameExpr(term.parameterName),
+                              "filter",
+                              new NodeList[Expression](
+                                new LambdaExpr(
+                                  new Parameter(new UnknownType, term.parameterName + "_"),
+                                  new UnaryExpr(
+                                    new MethodCallExpr(
+                                      new StringLiteralExpr(""),
+                                      "equals",
+                                      new NodeList[Expression](new NameExpr(term.parameterName + "_"))
+                                    ),
+                                    UnaryExpr.Operator.LOGICAL_COMPLEMENT
+                                  )
+                                )
                               )
-                            ))
-                          )
+                            )
                         }
                         new ConditionalExpr(
                           new BinaryExpr(new NameExpr(term.parameterName), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
@@ -144,28 +156,31 @@ object JacksonGenerator {
                       } else {
                         val parameterValueExpr = term.emptyToNull match {
                           case EmptyIsEmpty => new NameExpr(term.parameterName)
-                          case EmptyIsNull => new MethodCallExpr(
+                          case EmptyIsNull =>
                             new MethodCallExpr(
                               new MethodCallExpr(
-                                "java.util.Optional.ofNullable",
-                                new NameExpr(term.parameterName)
-                              ),
-                              "filter",
-                              new NodeList[Expression](new LambdaExpr(
-                                new Parameter(new UnknownType, term.parameterName + "_"),
-                                new UnaryExpr(
-                                  new MethodCallExpr(
-                                    new StringLiteralExpr(""),
-                                    "equals",
-                                    new NodeList[Expression](new NameExpr(term.parameterName + "_"))
-                                  ),
-                                  UnaryExpr.Operator.LOGICAL_COMPLEMENT
+                                new MethodCallExpr(
+                                  "java.util.Optional.ofNullable",
+                                  new NameExpr(term.parameterName)
+                                ),
+                                "filter",
+                                new NodeList[Expression](
+                                  new LambdaExpr(
+                                    new Parameter(new UnknownType, term.parameterName + "_"),
+                                    new UnaryExpr(
+                                      new MethodCallExpr(
+                                        new StringLiteralExpr(""),
+                                        "equals",
+                                        new NodeList[Expression](new NameExpr(term.parameterName + "_"))
+                                      ),
+                                      UnaryExpr.Operator.LOGICAL_COMPLEMENT
+                                    )
+                                  )
                                 )
-                              ))
-                            ),
-                            "orElse",
-                            new NodeList[Expression](new NullLiteralExpr)
-                          )
+                              ),
+                              "orElse",
+                              new NodeList[Expression](new NullLiteralExpr)
+                            )
                         }
                         requireNonNullExpr(parameterValueExpr, Some(term.parameterName))
                       },

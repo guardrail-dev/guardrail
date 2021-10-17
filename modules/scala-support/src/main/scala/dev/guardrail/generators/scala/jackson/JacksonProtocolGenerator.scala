@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import scala.meta._
 
-import dev.guardrail.core.{EmptyIsNull, SupportDefinition}
+import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
 import dev.guardrail.generators.java.jackson.JacksonHelpers
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
@@ -14,7 +14,7 @@ import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.protocol.{ Discriminator, PropertyRequirement }
-import dev.guardrail.{RuntimeFailure, Target}
+import dev.guardrail.{ RuntimeFailure, Target }
 
 object JacksonProtocolGenerator {
   def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = {
@@ -209,8 +209,12 @@ object JacksonProtocolGenerator {
           presenceSerType        <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
           presenceDeserType      <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
           optionNonNullDeserType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
-          emptyIsNullDeserType   <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
-          emptyIsNullOptionDeserType   <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer"))
+          emptyIsNullDeserType <- ScalaGenerator.ScalaInterp.selectType(
+            NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer")
+          )
+          emptyIsNullOptionDeserType <- ScalaGenerator.ScalaInterp.selectType(
+            NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer")
+          )
           optionNonMissingDeserType <- ScalaGenerator.ScalaInterp.selectType(
             NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonMissingDeserializer")
           )
@@ -225,7 +229,15 @@ object JacksonProtocolGenerator {
                     .find(_.term.name.value == param.name.value)
                     .fold(param)({ term =>
                       param.copy(
-                        mods = paramAnnotations(term, presenceSerType, presenceDeserType, optionNonNullDeserType, optionNonMissingDeserType, emptyIsNullDeserType, emptyIsNullOptionDeserType) ++ param.mods,
+                        mods = paramAnnotations(
+                            term,
+                            presenceSerType,
+                            presenceDeserType,
+                            optionNonNullDeserType,
+                            optionNonMissingDeserType,
+                            emptyIsNullDeserType,
+                            emptyIsNullOptionDeserType
+                          ) ++ param.mods,
                         default = fixDefaultValue(term)
                       )
                     })
@@ -586,14 +598,14 @@ object JacksonProtocolGenerator {
                 )
             )
             .toList ++ others ++ List(
-              SupportDefinition[ScalaLanguage](
-                q"EmptyIsNullDeserializers",
-                List(
-                  q"import com.fasterxml.jackson.core.{JsonParser, JsonToken}",
-                  q"import com.fasterxml.jackson.databind.{DeserializationContext, JsonDeserializer, JsonMappingException}"
-                ),
-                List(
-                  q"""
+            SupportDefinition[ScalaLanguage](
+              q"EmptyIsNullDeserializers",
+              List(
+                q"import com.fasterxml.jackson.core.{JsonParser, JsonToken}",
+                q"import com.fasterxml.jackson.databind.{DeserializationContext, JsonDeserializer, JsonMappingException}"
+              ),
+              List(
+                q"""
                     @SuppressWarnings(Array("org.wartremover.warts.Throw"))
                     object EmptyIsNullDeserializers {
                       class EmptyIsNullDeserializer extends JsonDeserializer[String] {
@@ -619,10 +631,10 @@ object JacksonProtocolGenerator {
                       }
                     }
                   """
-                ),
-                insideDefinitions = false
-              )
+              ),
+              insideDefinitions = false
             )
+          )
         }
     )
   }
