@@ -57,7 +57,7 @@ object ResponseHelpers {
           })
       })
 
-  def removeEmpty(s: String): Option[String]       = if (s.trim.isEmpty) None else Some(s.trim)
+  def removeEmpty(s: String): Option[String]       = Option(s.trim).filter(_.nonEmpty)
   def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList
 
   def findPathPrefix(routePaths: List[String]): List[String] = {
