@@ -1,12 +1,12 @@
-package dev.guardrail.generators.java.jackson
+package dev.guardrail.generators.scala.jackson
 
 import dev.guardrail.Target
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.LanguageTerms
 import scala.util.Try
 
-/* There's a copy of this file in guardrail-scala-support,
- * modules/scala-support/src/main/scala/dev/guardrail/generators/scala/jackson/JacksonHelpers.scala
+/* There's a copy of this file in guardrail-java-support,
+ * modules/java-support/src/main/scala/dev/guardrail/generators/java/jackson/JacksonHelpers.scala
  */
 object JacksonHelpers {
   def discriminatorExpression[L <: LA](

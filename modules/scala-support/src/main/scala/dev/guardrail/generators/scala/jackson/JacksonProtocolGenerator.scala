@@ -5,15 +5,14 @@ import cats.syntax.all._
 import scala.meta._
 
 import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
-import dev.guardrail.generators.java.jackson.JacksonHelpers
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
-import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms }
 import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.protocol.{ Discriminator, PropertyRequirement }
+import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms }
 import dev.guardrail.{ RuntimeFailure, Target }
 
 object JacksonProtocolGenerator {
