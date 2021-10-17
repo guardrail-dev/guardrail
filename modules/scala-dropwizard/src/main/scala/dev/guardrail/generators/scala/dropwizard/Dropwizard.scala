@@ -1,7 +1,7 @@
 package dev.guardrail.generators.scala.dropwizard
 
 import dev.guardrail.Target
-import dev.guardrail.generators.scala.ScalaGenerator.ScalaInterp
+import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
 import dev.guardrail.generators.scala.jackson._
 import dev.guardrail.generators.{ Framework, SwaggerGenerator }
@@ -14,14 +14,14 @@ import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 object Dropwizard extends Framework[ScalaLanguage, Target] {
   override implicit def ArrayProtocolInterp: ArrayProtocolTerms[ScalaLanguage, Target]     = JacksonProtocolGenerator.ArrayProtocolTermInterp
-  override implicit def ClientInterp: ClientTerms[ScalaLanguage, Target]                   = DropwizardClientGenerator.ClientTermInterp
+  override implicit def ClientInterp: ClientTerms[ScalaLanguage, Target]                   = new DropwizardClientGenerator
   override implicit def EnumProtocolInterp: EnumProtocolTerms[ScalaLanguage, Target]       = JacksonProtocolGenerator.EnumProtocolTermInterp
-  override implicit def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]             = DropwizardGenerator.FrameworkInterp
+  override implicit def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]             = new DropwizardGenerator
   override implicit def ModelProtocolInterp: ModelProtocolTerms[ScalaLanguage, Target]     = JacksonProtocolGenerator.ModelProtocolTermInterp
   override implicit def PolyProtocolInterp: PolyProtocolTerms[ScalaLanguage, Target]       = JacksonProtocolGenerator.PolyProtocolTermInterp
   override implicit def ProtocolSupportInterp: ProtocolSupportTerms[ScalaLanguage, Target] = JacksonProtocolGenerator.ProtocolSupportTermInterp
-  override implicit def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = DropwizardServerGenerator.ServerTermInterp
+  override implicit def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = new DropwizardServerGenerator
   override implicit def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]()
-  override implicit def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaInterp
-  override implicit def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target]   = ScalaCollectionsGenerator.ScalaCollectionsInterp
+  override implicit def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator
+  override implicit def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target]   = ScalaCollectionsGenerator
 }

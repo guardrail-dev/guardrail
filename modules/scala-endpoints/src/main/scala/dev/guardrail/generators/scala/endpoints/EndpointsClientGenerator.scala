@@ -22,68 +22,64 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 // import dev.guardrail.shims._
 
-object EndpointsClientGenerator {
-  def ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
-    new ClientTermInterp
-  class ClientTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
-    implicit def MonadF: Monad[Target] = Target.targetInstances
+class EndpointsClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
+  override implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    def generateClientOperation(
-        className: List[String],
-        responseClsName: String,
-        tracing: Boolean,
-        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
-        parameters: LanguageParameters[ScalaLanguage]
-    )(
-        route: RouteMeta,
-        methodName: String,
-        responses: Responses[ScalaLanguage]
-    ): Target[RenderedClientOperation[ScalaLanguage]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def generateClientOperation(
+      className: List[String],
+      responseClsName: String,
+      tracing: Boolean,
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      parameters: LanguageParameters[ScalaLanguage]
+  )(
+      route: RouteMeta,
+      methodName: String,
+      responses: Responses[ScalaLanguage]
+  ): Target[RenderedClientOperation[ScalaLanguage]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def getImports(tracing: Boolean): Target[List[scala.meta.Import]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def getImports(tracing: Boolean): Target[List[scala.meta.Import]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def generateResponseDefinitions(
-        responseClsName: String,
-        responses: Responses[ScalaLanguage],
-        protocolElems: List[StrictProtocolElems[ScalaLanguage]]
-    ): Target[List[scala.meta.Defn]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def generateResponseDefinitions(
+      responseClsName: String,
+      responses: Responses[ScalaLanguage],
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+  ): Target[List[scala.meta.Defn]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def generateSupportDefinitions(
-        tracing: Boolean,
-        securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
-    ): Target[List[SupportDefinition[ScalaLanguage]]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def generateSupportDefinitions(
+      tracing: Boolean,
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+  ): Target[List[SupportDefinition[ScalaLanguage]]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def buildStaticDefns(
-        clientName: String,
-        tracingName: Option[String],
-        serverUrls: Option[NonEmptyList[URI]],
-        ctorArgs: List[List[scala.meta.Term.Param]],
-        tracing: Boolean
-    ): Target[StaticDefns[ScalaLanguage]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
+  override def buildStaticDefns(
+      clientName: String,
+      tracingName: Option[String],
+      serverUrls: Option[NonEmptyList[URI]],
+      ctorArgs: List[List[scala.meta.Term.Param]],
+      tracing: Boolean
+  ): Target[StaticDefns[ScalaLanguage]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 
-    def buildClient(
-        clientName: String,
-        tracingName: Option[String],
-        serverUrls: Option[NonEmptyList[URI]],
-        basePath: Option[String],
-        ctorArgs: List[List[scala.meta.Term.Param]],
-        clientCalls: List[scala.meta.Defn],
-        supportDefinitions: List[scala.meta.Defn],
-        tracing: Boolean
-    ): Target[NonEmptyList[Either[scala.meta.Defn.Trait, scala.meta.Defn.Class]]] =
-      Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
-  }
+  override def buildClient(
+      clientName: String,
+      tracingName: Option[String],
+      serverUrls: Option[NonEmptyList[URI]],
+      basePath: Option[String],
+      ctorArgs: List[List[scala.meta.Term.Param]],
+      clientCalls: List[scala.meta.Defn],
+      supportDefinitions: List[scala.meta.Defn],
+      tracing: Boolean
+  ): Target[NonEmptyList[Either[scala.meta.Defn.Trait, scala.meta.Defn.Class]]] =
+    Target.raiseUserError("endpoints client generation is not currently supported (last supported: 0.64.1)")
 }
 /*
 object EndpointsClientGenerator {

@@ -192,7 +192,6 @@ object JacksonGenerator {
     )
   }
 
-  def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): EnumProtocolTerms[JavaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends EnumProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -391,12 +390,6 @@ object JacksonGenerator {
       Target.pure(new Name(s"${clsName}.${termName}"))
   }
 
-  def ModelProtocolTermInterp(
-      implicit Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Ca: CollectionsAbstraction[JavaLanguage]
-  ): ModelProtocolTerms[JavaLanguage, Target] =
-    new ModelProtocolTermInterp
-
   class ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
       extends ModelProtocolTerms[JavaLanguage, Target] {
     import Ca._
@@ -466,11 +459,11 @@ object JacksonGenerator {
                     term.fieldType match {
                       case cls: ClassOrInterfaceType =>
                         // hopefully it's an enum type; nothing else really makes sense here
-                        JavaGenerator.JavaInterp.formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
+                        JavaGenerator.formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
                       case tpe =>
                         Target.raiseUserError[Node](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
                     }
-                )(JavaGenerator.JavaInterp)
+                )(JavaGenerator)
                 .flatMap[Expression]({
                   case expr: Expression => Target.pure(expr)
                   case node =>
@@ -970,7 +963,6 @@ object JacksonGenerator {
       Target.pure(StaticDefns(clsName, List.empty, List.empty))
   }
 
-  def ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ArrayProtocolTerms[JavaLanguage, Target] = new ArrayProtocolTermInterp
   class ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ArrayProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractArrayType(
@@ -993,8 +985,6 @@ object JacksonGenerator {
       } yield result
   }
 
-  def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ProtocolSupportTerms[JavaLanguage, Target] =
-    new ProtocolSupportTermInterp
   class ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ProtocolSupportTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances
     def extractConcreteTypes(definitions: Either[String, List[PropMeta[JavaLanguage]]]) =
@@ -1026,11 +1016,6 @@ object JacksonGenerator {
       Target.pure(None)
   }
 
-  def PolyProtocolTermInterp(
-      implicit Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Ca: CollectionsAbstraction[JavaLanguage]
-  ): PolyProtocolTerms[JavaLanguage, Target] =
-    new PolyProtocolTermInterp
   class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
       extends PolyProtocolTerms[JavaLanguage, Target] {
     implicit def MonadF: Monad[Target] = Target.targetInstances

@@ -200,22 +200,20 @@ object JacksonProtocolGenerator {
                         Target.raiseUserError[Term](s"No declared type for property '${param.name.value}' on class $className")
                       )({
                         case tpe @ (_: Type.Name | _: Type.Select) =>
-                          ScalaGenerator.ScalaInterp.formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
+                          ScalaGenerator.formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
                         case tpe => Target.raiseError(RuntimeFailure(s"Assumed property ${param.name.value} was an enum, but can't handle $tpe"))
                       })
-                  )(ScalaGenerator.ScalaInterp)
+                  )(ScalaGenerator)
               } yield (param.name.value, param.term.name.value, param.term.decltpe, discrimValue)
           })
-          presenceSerType        <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
-          presenceDeserType      <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
-          optionNonNullDeserType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
-          emptyIsNullDeserType <- ScalaGenerator.ScalaInterp.selectType(
-            NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer")
-          )
-          emptyIsNullOptionDeserType <- ScalaGenerator.ScalaInterp.selectType(
+          presenceSerType        <- ScalaGenerator.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
+          presenceDeserType      <- ScalaGenerator.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
+          optionNonNullDeserType <- ScalaGenerator.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
+          emptyIsNullDeserType   <- ScalaGenerator.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
+          emptyIsNullOptionDeserType <- ScalaGenerator.selectType(
             NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer")
           )
-          optionNonMissingDeserType <- ScalaGenerator.ScalaInterp.selectType(
+          optionNonMissingDeserType <- ScalaGenerator.selectType(
             NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonMissingDeserializer")
           )
           allTerms = terms ++ parents.flatMap(_.params)

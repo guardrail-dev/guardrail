@@ -20,19 +20,18 @@ import dev.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum,
 import dev.guardrail.{ SwaggerUtil, Target, UserError }
 
 object CirceProtocolGenerator {
-  def suffixClsName(prefix: String, clsName: String): Pat.Var = Pat.Var(Term.Name(s"${prefix}${clsName}"))
+  private def suffixClsName(prefix: String, clsName: String): Pat.Var = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
-  def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[ScalaLanguage]])(f: Type => Type): Option[Type] =
+  private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[ScalaLanguage]])(f: Type => Type): Option[Type] =
     concreteTypes
       .find(_.clsName == tpeName)
       .map(_.tpe)
       .map(f)
 
-  def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = new EnumProtocolTermInterp
   class EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends EnumProtocolTerms[ScalaLanguage, Target] {
-    implicit def MonadF: Monad[Target] = Target.targetInstances
+    override implicit def MonadF: Monad[Target] = Target.targetInstances
 
-    def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
+    override def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
       val fields = elems match {
         case RenderedStringEnum(elems) =>
           elems.map({
@@ -58,27 +57,27 @@ object CirceProtocolGenerator {
             """))
     }
 
-    def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
+    override def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
             implicit val ${suffixClsName("encode", clsName)}: _root_.io.circe.Encoder[${Type.Name(clsName)}] =
               _root_.io.circe.Encoder[${tpe}].contramap(_.value)
           """))
 
-    def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
+    override def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
       Target.pure(Some(q"""
         implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] =
           _root_.io.circe.Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
       """))
 
-    def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
+    override def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
       Target.pure(q"""
         sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends _root_.scala.Product with _root_.scala.Serializable {
           override def toString: String = value.toString
         }
       """)
 
-    def renderStaticDefns(
+    override def renderStaticDefns(
         clsName: String,
         tpe: scala.meta.Type,
         members: Option[scala.meta.Defn.Object],
@@ -112,18 +111,14 @@ object CirceProtocolGenerator {
       )
     }
 
-    def buildAccessor(clsName: String, termName: String) =
+    override def buildAccessor(clsName: String, termName: String) =
       Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
   }
 
-  def ModelProtocolTermInterp(
-      circeVersion: CirceModelGenerator
-  )(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ModelProtocolTerms[ScalaLanguage, Target] =
-    new ModelProtocolTermInterp(circeVersion)
   class ModelProtocolTermInterp(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
       extends ModelProtocolTerms[ScalaLanguage, Target] {
-    implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractProperties(swagger: Tracker[Schema[_]]) =
+    override implicit def MonadF: Monad[Target] = Target.targetInstances
+    override def extractProperties(swagger: Tracker[Schema[_]]) =
       swagger
         .refine[Target[List[(String, Tracker[Schema[_]])]]]({ case o: ObjectSchema => o })(
           m => Target.pure(m.downField("properties", _.getProperties).indexedCosequence.value)
@@ -139,7 +134,7 @@ object CirceProtocolGenerator {
         .getOrElse(Target.pure(List.empty))
         .map(_.toList)
 
-    def transformProperty(
+    override def transformProperty(
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
@@ -191,8 +186,8 @@ object CirceProtocolGenerator {
               val innerType    = concreteType.getOrElse(Type.Name(tpeName))
               (t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]", Option.empty)
           }
-          presence     <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-          presenceType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+          presence     <- ScalaGenerator.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+          presenceType <- ScalaGenerator.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
           (finalDeclType, finalDefaultValue) = requirement match {
             case PropertyRequirement.Required => tpe -> defaultValue
             case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
@@ -218,7 +213,7 @@ object CirceProtocolGenerator {
         )
       }
 
-    def renderDTOClass(
+    override def renderDTOClass(
         clsName: String,
         supportPackage: List[String],
         selfParams: List[ProtocolParameter[ScalaLanguage]],
@@ -265,7 +260,7 @@ object CirceProtocolGenerator {
       Target.pure(code)
     }
 
-    def encodeModel(
+    override def encodeModel(
         clsName: String,
         dtoPackage: List[String],
         selfParams: List[ProtocolParameter[ScalaLanguage]],
@@ -362,7 +357,7 @@ object CirceProtocolGenerator {
           """))
     }
 
-    def decodeModel(
+    override def decodeModel(
         clsName: String,
         dtoPackage: List[String],
         supportPackage: List[String],
@@ -377,7 +372,7 @@ object CirceProtocolGenerator {
       val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
       val paramCount                = params.length
       for {
-        presence <- ScalaGenerator.ScalaInterp.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presence <- ScalaGenerator.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         decVal <- if (paramCount == 0) {
           Target.pure(
             Option[Term](
@@ -496,7 +491,7 @@ object CirceProtocolGenerator {
       }
     }
 
-    def renderDTOStaticDefns(
+    override def renderDTOStaticDefns(
         clsName: String,
         deps: List[scala.meta.Term.Name],
         encoder: Option[scala.meta.Defn.Val],
@@ -515,10 +510,9 @@ object CirceProtocolGenerator {
     }
   }
 
-  def ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ArrayProtocolTerms[ScalaLanguage, Target] = new ArrayProtocolTermInterp
   class ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ArrayProtocolTerms[ScalaLanguage, Target] {
-    implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
+    override implicit def MonadF: Monad[Target] = Target.targetInstances
+    override def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
       for {
         result <- arr match {
           case core.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
@@ -540,14 +534,12 @@ object CirceProtocolGenerator {
       } yield result
   }
 
-  def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] =
-    new ProtocolSupportTermInterp
   class ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ProtocolSupportTerms[ScalaLanguage, Target] {
-    implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
+    override implicit def MonadF: Monad[Target] = Target.targetInstances
+    override def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
       definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
 
-    def protocolImports() =
+    override def protocolImports() =
       Target.pure(
         List(
           q"import cats.syntax.either._",
@@ -557,7 +549,7 @@ object CirceProtocolGenerator {
         )
       )
 
-    def staticProtocolImports(pkgName: List[String]): Target[List[Import]] = {
+    override def staticProtocolImports(pkgName: List[String]): Target[List[Import]] = {
       val implicitsRef: Term.Ref = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
       Target.pure(
         List(
@@ -567,10 +559,10 @@ object CirceProtocolGenerator {
       )
     }
 
-    def packageObjectImports() =
+    override def packageObjectImports() =
       Target.pure(List.empty)
 
-    def generateSupportDefinitions() = {
+    override def generateSupportDefinitions() = {
       val presenceTrait =
         q"""sealed trait Presence[+T] extends _root_.scala.Product with _root_.scala.Serializable {
                 def fold[R](ifAbsent: => R,
@@ -606,7 +598,7 @@ object CirceProtocolGenerator {
       Target.pure(List(presenceDefinition))
     }
 
-    def packageObjectContents() =
+    override def packageObjectContents() =
       Target.pure(
         List(
           q"implicit val guardrailDecodeInstant: _root_.io.circe.Decoder[java.time.Instant] = _root_.io.circe.Decoder[java.time.Instant].or(_root_.io.circe.Decoder[_root_.scala.Long].map(java.time.Instant.ofEpochMilli))",
@@ -626,14 +618,12 @@ object CirceProtocolGenerator {
         )
       )
 
-    def implicitsObject() = Target.pure(None)
+    override def implicitsObject() = Target.pure(None)
   }
 
-  def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] =
-    new PolyProtocolTermInterp
   class PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends PolyProtocolTerms[ScalaLanguage, Target] {
-    implicit def MonadF: Monad[Target] = Target.targetInstances
-    def extractSuperClass(
+    override implicit def MonadF: Monad[Target] = Target.targetInstances
+    override def extractSuperClass(
         swagger: Tracker[ComposedSchema],
         definitions: List[(String, Tracker[Schema[_]])]
     ) = {
@@ -656,7 +646,7 @@ object CirceProtocolGenerator {
       allParents(swagger)
     }
 
-    def renderADTStaticDefns(
+    override def renderADTStaticDefns(
         clsName: String,
         discriminator: Discriminator[ScalaLanguage],
         encoder: Option[scala.meta.Defn.Val],
@@ -674,7 +664,7 @@ object CirceProtocolGenerator {
         )
       )
 
-    def decodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
+    override def decodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
       val (childrenCases, childrenDiscriminators) = children
         .map({ child =>
           val discriminatorValue = discriminator.mapping
@@ -699,7 +689,7 @@ object CirceProtocolGenerator {
       Target.pure(Some(code))
     }
 
-    def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
+    override def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
       val childrenCases = children.map({ child =>
         val discriminatorValue = discriminator.mapping
           .collectFirst({ case (value, elem) if elem.name == child => value })
@@ -713,7 +703,7 @@ object CirceProtocolGenerator {
       Target.pure(Some(code))
     }
 
-    def renderSealedTrait(
+    override def renderSealedTrait(
         className: String,
         params: List[ProtocolParameter[ScalaLanguage]],
         discriminator: Discriminator[ScalaLanguage],

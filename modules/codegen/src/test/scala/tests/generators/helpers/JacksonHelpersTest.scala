@@ -9,7 +9,7 @@ import org.scalatest.matchers.must.Matchers
 import scala.meta._
 
 class JacksonHelpersTest extends AnyFreeSpec with Matchers {
-  private implicit val lt = ScalaGenerator.ScalaInterp
+  private implicit val lt = ScalaGenerator
 
   implicit class TargetValues[T](private val t: Target[T]) {
     def value: T = t match {

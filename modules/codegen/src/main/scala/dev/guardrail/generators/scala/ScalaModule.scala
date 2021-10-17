@@ -32,11 +32,11 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ArrayProtocolTerms[ScalaLanguage, Target],
       PolyProtocolTerms[ScalaLanguage, Target]
   ) = (
-    CirceProtocolGenerator.ProtocolSupportTermInterp,
-    CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
-    CirceProtocolGenerator.EnumProtocolTermInterp,
-    CirceProtocolGenerator.ArrayProtocolTermInterp,
-    CirceProtocolGenerator.PolyProtocolTermInterp
+    new CirceProtocolGenerator.ProtocolSupportTermInterp,
+    new CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
+    new CirceProtocolGenerator.EnumProtocolTermInterp,
+    new CirceProtocolGenerator.ArrayProtocolTermInterp,
+    new CirceProtocolGenerator.PolyProtocolTermInterp
   )
 
   def circeJava8(circeModelGenerator: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
@@ -46,7 +46,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ArrayProtocolTerms[ScalaLanguage, Target],
       PolyProtocolTerms[ScalaLanguage, Target]
   ) = {
-    val stockProtocolSupportInterp = CirceProtocolGenerator.ProtocolSupportTermInterp
+    val stockProtocolSupportInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
     val protocolSupportInterp = stockProtocolSupportInterp.copy(
       packageObjectImports = () =>
         stockProtocolSupportInterp.packageObjectImports().map { values =>
@@ -56,10 +56,10 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     )
     (
       protocolSupportInterp,
-      CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
-      CirceProtocolGenerator.EnumProtocolTermInterp,
-      CirceProtocolGenerator.ArrayProtocolTermInterp,
-      CirceProtocolGenerator.PolyProtocolTermInterp
+      new CirceProtocolGenerator.ModelProtocolTermInterp(circeModelGenerator),
+      new CirceProtocolGenerator.EnumProtocolTermInterp,
+      new CirceProtocolGenerator.ArrayProtocolTermInterp,
+      new CirceProtocolGenerator.PolyProtocolTermInterp
     )
   }
 
@@ -82,9 +82,9 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    AkkaHttpClientGenerator.ClientTermInterp(modelGeneratorType),
-    AkkaHttpServerGenerator.ServerTermInterp(modelGeneratorType),
-    AkkaHttpGenerator.FrameworkInterp(modelGeneratorType)
+    new AkkaHttpClientGenerator(modelGeneratorType),
+    new AkkaHttpServerGenerator(modelGeneratorType),
+    new AkkaHttpGenerator(modelGeneratorType)
   )
 
   def endpoints(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
@@ -92,9 +92,9 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    EndpointsClientGenerator.ClientTermInterp,
-    EndpointsServerGenerator.ServerTermInterp,
-    EndpointsGenerator.FrameworkInterp
+    new EndpointsClientGenerator,
+    new EndpointsServerGenerator,
+    new EndpointsGenerator
   )
 
   def http4s(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
@@ -102,9 +102,9 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    Http4sClientGenerator.ClientTermInterp,
-    Http4sServerGenerator.ServerTermInterp,
-    Http4sGenerator.FrameworkInterp
+    new Http4sClientGenerator,
+    new Http4sServerGenerator,
+    new Http4sGenerator
   )
 
   def dropwizard(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
@@ -112,13 +112,13 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
-    DropwizardClientGenerator.ClientTermInterp,
-    DropwizardServerGenerator.ServerTermInterp,
-    DropwizardGenerator.FrameworkInterp
+    new DropwizardClientGenerator,
+    new DropwizardServerGenerator,
+    new DropwizardGenerator
   )
 
   def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] = {
-    implicit val collections = ScalaCollectionsGenerator.ScalaCollectionsInterp
+    implicit val collections = ScalaCollectionsGenerator
     (for {
       (modelGeneratorType, (protocol, model, enum, array, poly)) <- popModule(
         "json",
@@ -135,7 +135,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
       )
       // parser             =  or interpFramework
-      // codegenApplication = ScalaGenerator.ScalaInterp or parser
+      // codegenApplication = ScalaGenerator or parser
     } yield new Framework[ScalaLanguage, Target] {
       def ArrayProtocolInterp: ArrayProtocolTerms[ScalaLanguage, Target]     = array
       def ClientInterp: ClientTerms[ScalaLanguage, Target]                   = client
@@ -146,7 +146,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def ProtocolSupportInterp: ProtocolSupportTerms[ScalaLanguage, Target] = protocol
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                   = server
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]                 = SwaggerGenerator[ScalaLanguage]
-      def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator.ScalaInterp
+      def LanguageInterp: LanguageTerms[ScalaLanguage, Target]               = ScalaGenerator
       def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target]   = collections
     }).runA(modules.toList.toSet)
   }
