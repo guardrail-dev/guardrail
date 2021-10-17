@@ -324,7 +324,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     def handler(prefix: String) =
       s"""public interface ${prefix}Handler {
          |
-         |    @javax.annotation.Generated(value = "dev.guardrail.generators.java.dropwizard.DropwizardServerGenerator$$")
+         |    @javax.annotation.Generated(value = "dev.guardrail.generators.java.dropwizard.DropwizardServerGenerator")
          |    abstract class GetUserResponse {
          |
          |        private final int statusCode;
@@ -337,7 +337,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
          |            return this.statusCode;
          |        }
          |
-         |        @javax.annotation.Generated(value = "dev.guardrail.generators.java.dropwizard.DropwizardServerGenerator$$")
+         |        @javax.annotation.Generated(value = "dev.guardrail.generators.java.dropwizard.DropwizardServerGenerator")
          |        public static class Ok extends GetUserResponse {
          |
          |            private Ok() {

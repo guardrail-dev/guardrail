@@ -13,9 +13,9 @@ import dev.guardrail.generators.{ ClientGenerator, Clients, ProtocolDefinitions,
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms, RandomType }
+import dev.guardrail.terms.protocol.RandomType
 import dev.guardrail.terms.server.ServerTerms
-import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, ProtocolTerms, SecurityRequirements, SwaggerTerms }
 
 object Common {
   val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))
@@ -30,12 +30,8 @@ object Common {
   )(
       implicit
       C: ClientTerms[L, F],
-      R: ArrayProtocolTerms[L, F],
-      E: EnumProtocolTerms[L, F],
       Fw: FrameworkTerms[L, F],
-      M: ModelProtocolTerms[L, F],
-      Pol: PolyProtocolTerms[L, F],
-      S: ProtocolSupportTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Se: ServerTerms[L, F],
@@ -118,7 +114,7 @@ object Common {
       dtoPackage: List[String],
       customImports: List[L#Import],
       protocolSupport: List[SupportDefinition[L]]
-  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F], Pt: ProtocolSupportTerms[L, F]): F[List[WriteTree]] = {
+  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F], Pt: ProtocolTerms[L, F]): F[List[WriteTree]] = {
     import Fw._
     import Sc._
 

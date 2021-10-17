@@ -8,7 +8,7 @@ import cats.implicits._
 import scala.meta._
 
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
-import dev.guardrail.core.{ PathExtractor, Tracker }
+import dev.guardrail.core.Tracker
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ScalaLanguage
@@ -23,53 +23,13 @@ import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import dev.guardrail.{ Target, UserError }
 
 object AkkaHttpServerGenerator {
-  private val paths = new PathExtractor[ScalaLanguage, Term, Term.Name, ModelGeneratorType](
-    pathSegmentConverter = {
-      case (LanguageParameter(_, param, _, argName, argType), base, modelGeneratorType) =>
-        base.fold {
-          argType match {
-            case t"String" => Right(q"Segment")
-            case t"Double" => Right(q"DoubleNumber")
-            case t"BigDecimal" =>
-              Right(q"Segment.map(BigDecimal.apply _)")
-            case t"Int"    => Right(q"IntNumber")
-            case t"Long"   => Right(q"LongNumber")
-            case t"BigInt" => Right(q"Segment.map(BigInt.apply _)")
-            case tpe =>
-              Right(q"Segment.flatMap(str => ${AkkaHttpHelper.fromStringConverter(tpe, modelGeneratorType)})")
-          }
-        } { segment =>
-          argType match {
-            case t"String" => Right(segment)
-            case t"BigDecimal" =>
-              Right(q"${segment}.map(BigDecimal.apply _)")
-            case t"BigInt" => Right(q"${segment}.map(BigInt.apply _)")
-            case tpe =>
-              Right(q"${segment}.flatMap(str => ${AkkaHttpHelper.fromStringConverter(tpe, modelGeneratorType)})")
-          }
-        }
-    },
-    buildParamConstraint = {
-      case (k, v) =>
-        q" parameter(${Lit.String(k)}).require(_ == ${Lit.String(v)}) "
-    },
-    joinParams = { (l, r) =>
-      q"${l} & ${r}"
-    },
-    stringPath = Lit.String(_),
-    liftBinding = identity,
-    litRegex = (before, _, after) =>
-      q"""new scala.util.matching.Regex("^" + ${Lit
-        .String(before)} + "(.*)" + ${Lit.String(after)} + ${Lit.String("$")})"""
-  )
-
   def generateUrlPathExtractors(
       path: Tracker[String],
       pathArgs: List[LanguageParameter[ScalaLanguage]],
       modelGeneratorType: ModelGeneratorType
   ): Target[NonEmptyList[(Term, List[Term.Name])]] =
     for {
-      (parts, (trailingSlash, queryParams)) <- paths.runParse(path, pathArgs, modelGeneratorType)
+      (parts, (trailingSlash, queryParams)) <- AkkaHttpPathExtractor.runParse(path, pathArgs, modelGeneratorType)
       allPairs = parts
         .foldLeft[NonEmptyList[(Term, List[Term.Name])]](NonEmptyList.one((q"pathEnd", List.empty)))({
           case (NonEmptyList((q"pathEnd   ", bindings), xs), (termName, b)) =>

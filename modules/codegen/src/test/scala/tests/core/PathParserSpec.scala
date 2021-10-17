@@ -5,7 +5,7 @@ import dev.guardrail.Target
 import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
 import dev.guardrail.generators.LanguageParameter
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ModelGeneratorType }
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttpServerGenerator
+import dev.guardrail.generators.scala.akkaHttp.{ AkkaHttpPathExtractor, AkkaHttpServerGenerator }
 import dev.guardrail.generators.scala.syntax._
 import org.scalatest.{ EitherValues, OptionValues }
 import support.ScalaMetaMatchers._
@@ -64,7 +64,7 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
     case (str, expected) =>
       test(s"Server ${str}") {
         val NonEmptyList((gen, _), _) =
-          Target.unsafeExtract(AkkaHttpServerGenerator.paths.generateUrlPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
+          Target.unsafeExtract(AkkaHttpServerGenerator.generateUrlPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
         gen.toString shouldBe ((expected.toString))
       }
   }
@@ -72,7 +72,7 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
   test("individual extractor components") {
     import atto._
     import Atto._
-    import AkkaHttpServerGenerator.paths._
+    import AkkaHttpPathExtractor._
 
     implicit val params: List[LanguageParameter[ScalaLanguage]] = List.empty
 

@@ -6,7 +6,7 @@ import cats.implicits._
 import cats.Traverse
 import dev.guardrail.{ Target, UserError }
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.core.{ PathExtractor, Tracker }
+import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.generators.syntax._
@@ -24,48 +24,13 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object Http4sServerGenerator {
-  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
-  private val paths = new PathExtractor[ScalaLanguage, Pat, Term.Name, ModelGeneratorType](
-    pathSegmentConverter = {
-      case (LanguageParameter(_, param, paramName, argName, argType), base, _) =>
-        base.fold[Either[String, Pat]] {
-          argType match {
-            case t"Int"                         => Right(p"IntVar(${Pat.Var(paramName)})")
-            case t"Long"                        => Right(p"LongVar(${Pat.Var(paramName)})")
-            case t"String"                      => Right(Pat.Var(paramName))
-            case t"java.util.UUID"              => Right(p"UUIDVar(${Pat.Var(paramName)})")
-            case Type.Name(tpe)                 => Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
-            case Type.Select(_, Type.Name(tpe)) => Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
-            case tpe =>
-              println(s"Doing our best turning ${tpe} into an extractor")
-              Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
-          }
-        } { _ =>
-          //todo add support for regex segment
-          Left("Unsupported feature")
-        }
-    },
-    buildParamConstraint = {
-      case (k, v) =>
-        p"${Term.Name(s"${k.capitalize}Matcher")}(${Lit.String(v)})"
-    },
-    joinParams = { (l, r) =>
-      p"${l} +& ${r}"
-    },
-    stringPath = Lit.String(_),
-    liftBinding = identity,
-    litRegex = (before, _, after) =>
-      //todo add support for regex segment
-      throw new UnsupportedOperationException
-  )
-
   def generateUrlPathExtractors(
       path: Tracker[String],
       pathArgs: List[LanguageParameter[ScalaLanguage]],
       modelGeneratorType: ModelGeneratorType
   ): Target[(Pat, Option[Pat])] =
     for {
-      (parts, (trailingSlash, queryParams)) <- paths.runParse(path, pathArgs, modelGeneratorType)
+      (parts, (trailingSlash, queryParams)) <- Http4sPathExtractor.runParse(path, pathArgs, modelGeneratorType)
       (directive, bindings) = parts
         .foldLeft[(Pat, List[Term.Name])]((p"${Term.Name("Root")}", List.empty))({
           case ((acc, bindings), (termName, c)) =>

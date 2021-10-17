@@ -8,7 +8,6 @@ import scala.util.control.NonFatal
 
 import dev.guardrail.generators.Framework
 import dev.guardrail.languages.LA
-import dev.guardrail.terms.protocol.ProtocolSupportTerms
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.{
@@ -128,7 +127,7 @@ class CoreTermInterp[L <: LA](
               import targetInterpreter._
               val Sw = implicitly[SwaggerTerms[L, Target]]
               val Sc = implicitly[LanguageTerms[L, Target]]
-              val Ps = implicitly[ProtocolSupportTerms[L, Target]]
+              val Ps = implicitly[ProtocolTerms[L, Target]]
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 formattedPkgName   <- Sc.formatPackageName(pkgName)
