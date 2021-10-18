@@ -87,6 +87,7 @@ val javaSampleSettings = Seq(
   )
 
 lazy val root = modules.root.project
+  .settings(publish / skip := true)
   .customDependsOn(guardrail)
   .customDependsOn(microsite)
   .customDependsOn(cli)
@@ -94,6 +95,7 @@ lazy val root = modules.root.project
   .aggregate(allModules: _*)
 
 lazy val allDeps = modules.allDeps.project
+  .settings(publish / skip := true)
 
 lazy val guardrail = modules.guardrail.project
   .customDependsOn(core)
