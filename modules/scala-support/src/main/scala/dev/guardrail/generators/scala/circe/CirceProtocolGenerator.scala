@@ -18,7 +18,12 @@ import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import dev.guardrail.{ SwaggerUtil, Target, UserError }
 
-class CirceProtocolGenerator(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+object CirceProtocolGenerator {
+  def apply(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
+    new CirceProtocolGenerator(circeVersion)
+}
+
+class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
     extends ProtocolTerms[ScalaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -181,8 +186,8 @@ class CirceProtocolGenerator(circeVersion: CirceModelGenerator)(implicit Cl: Col
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             (t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]", Option.empty)
         }
-        presence     <- ScalaGenerator.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-        presenceType <- ScalaGenerator.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         (finalDeclType, finalDefaultValue) = requirement match {
           case PropertyRequirement.Required => tpe -> defaultValue
           case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
@@ -367,7 +372,7 @@ class CirceProtocolGenerator(circeVersion: CirceModelGenerator)(implicit Cl: Col
     val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
     val paramCount                = params.length
     for {
-      presence <- ScalaGenerator.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+      presence <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
       decVal <- if (paramCount == 0) {
         Target.pure(
           Option[Term](

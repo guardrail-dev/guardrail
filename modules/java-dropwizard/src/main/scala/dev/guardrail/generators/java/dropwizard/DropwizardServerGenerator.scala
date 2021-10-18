@@ -46,8 +46,13 @@ import dev.guardrail.terms.{
 }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
+object DropwizardServerGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ServerTerms[JavaLanguage, Target] =
+    new DropwizardServerGenerator
+}
+
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
-class DropwizardServerGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ServerTerms[JavaLanguage, Target] {
   import Ca._
 

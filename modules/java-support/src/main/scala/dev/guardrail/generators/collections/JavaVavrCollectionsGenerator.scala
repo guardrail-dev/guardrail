@@ -9,8 +9,13 @@ import dev.guardrail.generators.java.syntax.{ buildMethodCall, _ }
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 
-class JavaVavrCollectionsGenerator extends CollectionsLibTerms[JavaLanguage, Target] {
-  private val baseInterp = new JavaCollectionsGenerator
+object JavaVavrCollectionsGenerator {
+  def apply(): CollectionsLibTerms[JavaLanguage, Target] =
+    new JavaVavrCollectionsGenerator
+}
+
+class JavaVavrCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage, Target] {
+  private val baseInterp = JavaCollectionsGenerator()
 
   override def MonadF: Monad[Target] = Target.targetInstances
 

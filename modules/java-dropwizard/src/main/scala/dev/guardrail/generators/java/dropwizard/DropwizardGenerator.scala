@@ -13,7 +13,11 @@ import dev.guardrail.generators.java.syntax._
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
 
-class DropwizardGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
+object DropwizardGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): FrameworkTerms[JavaLanguage, Target] = new DropwizardGenerator
+}
+
+class DropwizardGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
   implicit def MonadF = Target.targetInstances
 
   private lazy val supportDefs: Target[List[SupportDefinition[JavaLanguage]]] = List(

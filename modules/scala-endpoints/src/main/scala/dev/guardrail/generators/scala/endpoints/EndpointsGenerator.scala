@@ -6,7 +6,12 @@ import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.Target
 import dev.guardrail.terms.CollectionsLibTerms
 
-class EndpointsGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
+object EndpointsGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new EndpointsGenerator
+}
+
+class EndpointsGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
   override implicit def MonadF                    = Target.targetInstances
   override def fileType(format: Option[String])   = Target.pure(format.fold[Type](t"org.scalajs.dom.raw.File")(Type.Name(_)))
   override def objectType(format: Option[String]) = Target.pure(t"io.circe.Json")

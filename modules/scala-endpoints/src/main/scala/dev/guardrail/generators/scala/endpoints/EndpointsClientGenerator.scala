@@ -22,7 +22,12 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 // import dev.guardrail.shims._
 
-class EndpointsClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
+object EndpointsClientGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+    new EndpointsClientGenerator
+}
+
+class EndpointsClientGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   override def generateClientOperation(

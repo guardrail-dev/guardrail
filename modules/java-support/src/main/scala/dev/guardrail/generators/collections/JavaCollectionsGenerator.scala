@@ -12,8 +12,12 @@ import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 
+object JavaCollectionsGenerator {
+  def apply(): CollectionsLibTerms[JavaLanguage, Target] = new JavaCollectionsGenerator
+}
+
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
-class JavaCollectionsGenerator extends CollectionsLibTerms[JavaLanguage, Target] {
+class JavaCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage, Target] {
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-java", "x-jvm"))

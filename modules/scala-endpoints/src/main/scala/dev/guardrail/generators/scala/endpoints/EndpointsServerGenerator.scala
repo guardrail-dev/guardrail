@@ -11,7 +11,12 @@ import dev.guardrail.terms.server._
 import dev.guardrail.terms.{ CollectionsLibTerms, SecurityScheme }
 import dev.guardrail.Target
 
-class EndpointsServerGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
+object EndpointsServerGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new EndpointsServerGenerator
+}
+
+class EndpointsServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
   override def generateResponseDefinitions(
       responseClsName: String,

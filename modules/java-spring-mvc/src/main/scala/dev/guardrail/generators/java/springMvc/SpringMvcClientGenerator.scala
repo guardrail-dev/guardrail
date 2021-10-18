@@ -11,7 +11,12 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
-class SpringMvcClientGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
+object SpringMvcClientGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ClientTerms[JavaLanguage, Target] =
+    new SpringMvcClientGenerator
+}
+
+class SpringMvcClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
   def MonadF = Target.targetInstances
   def generateClientOperation(
       className: List[String],

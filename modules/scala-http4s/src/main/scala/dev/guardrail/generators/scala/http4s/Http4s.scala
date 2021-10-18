@@ -8,11 +8,11 @@ import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
 
 object Http4s extends Framework[ScalaLanguage, Target] {
-  implicit def CollectionsLibInterp = ScalaCollectionsGenerator
-  implicit def ProtocolInterp       = new CirceProtocolGenerator(CirceModelGenerator.V012)
-  implicit def ClientInterp         = new Http4sClientGenerator
-  implicit def FrameworkInterp      = new Http4sGenerator
-  implicit def ServerInterp         = new Http4sServerGenerator
+  implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
+  implicit def ProtocolInterp       = CirceProtocolGenerator(CirceModelGenerator.V012)
+  implicit def ClientInterp         = Http4sClientGenerator()
+  implicit def FrameworkInterp      = Http4sGenerator()
+  implicit def ServerInterp         = Http4sServerGenerator()
   implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]
-  implicit def LanguageInterp       = ScalaGenerator
+  implicit def LanguageInterp       = ScalaGenerator()
 }

@@ -14,7 +14,12 @@ import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import dev.guardrail.{ RuntimeFailure, Target }
 
-class DropwizardClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
+object DropwizardClientGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+    new DropwizardClientGenerator
+}
+
+class DropwizardClientGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target]                                   = Target.targetInstances
   override def getImports(tracing: Boolean): Target[List[Import]]      = Target.raiseError(RuntimeFailure("Dropwizard Scala clients are not yet supported"))
   override def getExtraImports(tracing: Boolean): Target[List[Import]] = Target.raiseError(RuntimeFailure("Dropwizard Scala clients are not yet supported"))

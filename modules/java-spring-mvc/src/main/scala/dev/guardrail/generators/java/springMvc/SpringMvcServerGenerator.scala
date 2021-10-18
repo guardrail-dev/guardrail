@@ -45,8 +45,13 @@ import dev.guardrail.terms.{
 import dev.guardrail.Target
 import dev.guardrail.terms.protocol.{ ADT, ClassDefinition, EnumDefinition, RandomType, StrictProtocolElems }
 
+object SpringMvcServerGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ServerTerms[JavaLanguage, Target] =
+    new SpringMvcServerGenerator
+}
+
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
-class SpringMvcServerGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ServerTerms[JavaLanguage, Target] {
   import Ca._
 

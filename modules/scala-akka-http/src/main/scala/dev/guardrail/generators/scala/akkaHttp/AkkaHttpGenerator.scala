@@ -7,7 +7,12 @@ import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
 import scala.meta._
 
-class AkkaHttpGenerator(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+object AkkaHttpGenerator {
+  def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new AkkaHttpGenerator(modelGeneratorType)
+}
+
+class AkkaHttpGenerator private (modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
     extends FrameworkTerms[ScalaLanguage, Target] {
   override implicit def MonadF                  = Target.targetInstances
   override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))

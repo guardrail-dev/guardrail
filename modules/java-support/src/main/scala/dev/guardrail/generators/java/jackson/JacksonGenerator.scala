@@ -29,8 +29,13 @@ import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 
+object JacksonGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ProtocolTerms[JavaLanguage, Target] =
+    new JacksonGenerator
+}
+
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
-class JacksonGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ProtocolTerms[JavaLanguage, Target] {
   import Ca._
 
@@ -454,11 +459,11 @@ class JacksonGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], C
                   term.fieldType match {
                     case cls: ClassOrInterfaceType =>
                       // hopefully it's an enum type; nothing else really makes sense here
-                      JavaGenerator.formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
+                      JavaGenerator().formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
                     case tpe =>
                       Target.raiseUserError[Node](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
                   }
-              )(JavaGenerator)
+              )(JavaGenerator())
               .flatMap[Expression]({
                 case expr: Expression => Target.pure(expr)
                 case node =>

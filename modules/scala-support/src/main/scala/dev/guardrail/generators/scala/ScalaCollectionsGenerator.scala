@@ -6,7 +6,12 @@ import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.Target
 import scala.meta._
 
-object ScalaCollectionsGenerator extends CollectionsLibTerms[ScalaLanguage, Target] {
+object ScalaCollectionsGenerator {
+  def apply(): CollectionsLibTerms[ScalaLanguage, Target] =
+    new ScalaCollectionsGenerator
+}
+
+class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguage, Target] {
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-scala", "x-jvm"))

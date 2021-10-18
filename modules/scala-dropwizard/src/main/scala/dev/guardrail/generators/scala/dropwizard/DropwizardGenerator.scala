@@ -9,7 +9,12 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import scala.meta._
 import scala.util.Try
 
-class DropwizardGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
+object DropwizardGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+    new DropwizardGenerator
+}
+
+class DropwizardGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
 
   override def objectType(format: Option[String]): Target[Type] = Target.pure(t"com.fasterxml.jackson.databind.JsonNode")

@@ -33,6 +33,9 @@ import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object AsyncHttpClientClientGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ClientTerms[JavaLanguage, Target] =
+    new AsyncHttpClientClientGenerator
+
   private val URI_TYPE                       = StaticJavaParser.parseClassOrInterfaceType("URI")
   private val OBJECT_MAPPER_TYPE             = StaticJavaParser.parseClassOrInterfaceType("ObjectMapper")
   private val BUILDER_TYPE                   = StaticJavaParser.parseClassOrInterfaceType("Builder")
@@ -425,7 +428,7 @@ object AsyncHttpClientClientGenerator {
     }
 }
 
-class AsyncHttpClientClientGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ClientTerms[JavaLanguage, Target] {
   import AsyncHttpClientClientGenerator._
   import Ca._
@@ -446,7 +449,7 @@ class AsyncHttpClientClientGenerator(implicit Cl: CollectionsLibTerms[JavaLangua
     val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
 
     for {
-      callBuilderName    <- JavaGenerator.formatTypeName(methodName, Some("CallBuilder"))
+      callBuilderName    <- JavaGenerator().formatTypeName(methodName, Some("CallBuilder"))
       responseParentType <- safeParseClassOrInterfaceType(responseClsName)
       callBuilderType    <- safeParseClassOrInterfaceType(callBuilderName)
 

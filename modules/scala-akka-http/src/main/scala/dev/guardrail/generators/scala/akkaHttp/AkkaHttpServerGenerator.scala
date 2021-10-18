@@ -23,6 +23,9 @@ import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import dev.guardrail.{ Target, UserError }
 
 object AkkaHttpServerGenerator {
+  def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new AkkaHttpServerGenerator(modelGeneratorType)
+
   def generateUrlPathExtractors(
       path: Tracker[String],
       pathArgs: List[LanguageParameter[ScalaLanguage]],
@@ -55,7 +58,7 @@ object AkkaHttpServerGenerator {
     } yield result.reverse
 }
 
-class AkkaHttpServerGenerator(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
     extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
 

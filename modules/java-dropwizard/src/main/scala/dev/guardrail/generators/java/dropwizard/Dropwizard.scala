@@ -12,11 +12,11 @@ import dev.guardrail.terms.collections.JavaStdLibCollections
 object Dropwizard extends Framework[JavaLanguage, Target] {
   private implicit val col = JavaStdLibCollections
 
-  implicit def CollectionsLibInterp = new JavaCollectionsGenerator
-  implicit def ProtocolInterp       = new JacksonGenerator
-  implicit def ClientInterp         = new AsyncHttpClientClientGenerator
-  implicit def FrameworkInterp      = new DropwizardGenerator
-  implicit def ServerInterp         = new DropwizardServerGenerator
+  implicit def CollectionsLibInterp = JavaCollectionsGenerator()
+  implicit def ProtocolInterp       = JacksonGenerator()
+  implicit def ClientInterp         = AsyncHttpClientClientGenerator()
+  implicit def FrameworkInterp      = DropwizardGenerator()
+  implicit def ServerInterp         = DropwizardServerGenerator()
   implicit def SwaggerInterp        = SwaggerGenerator[JavaLanguage]
-  implicit def LanguageInterp       = JavaGenerator
+  implicit def LanguageInterp       = JavaGenerator()
 }

@@ -18,7 +18,12 @@ import dev.guardrail.generators.{ Client, RawParameterType, Server }
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 
-object ScalaGenerator extends LanguageTerms[ScalaLanguage, Target] {
+object ScalaGenerator {
+  def apply(): LanguageTerms[ScalaLanguage, Target] =
+    new ScalaGenerator
+}
+
+class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
   private def sourceToBytes(path: Path, source: Source): WriteTree =
     WriteTree(path, Future {
       Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))

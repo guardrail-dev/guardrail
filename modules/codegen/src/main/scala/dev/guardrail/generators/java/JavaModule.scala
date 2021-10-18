@@ -25,22 +25,22 @@ object JavaModule extends AbstractModule[JavaLanguage] {
     }
 
   def stdlib: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
-    (new JavaCollectionsGenerator, JavaStdLibCollections)
+    (JavaCollectionsGenerator(), JavaStdLibCollections)
   def vavr: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
-    (new JavaVavrCollectionsGenerator, JavaVavrCollections)
+    (JavaVavrCollectionsGenerator(), JavaVavrCollections)
 
   def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ProtocolTerms[JavaLanguage, Target] =
-    new JacksonGenerator
+    JacksonGenerator()
   def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
-  ) = (new DropwizardServerGenerator, new DropwizardGenerator)
+  ) = (DropwizardServerGenerator(), DropwizardGenerator())
   def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
       ServerTerms[JavaLanguage, Target],
       FrameworkTerms[JavaLanguage, Target]
-  ) = (new SpringMvcServerGenerator, new SpringMvcGenerator)
+  ) = (SpringMvcServerGenerator(), SpringMvcGenerator())
   def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ClientTerms[JavaLanguage, Target] =
-    new AsyncHttpClientClientGenerator
+    AsyncHttpClientClientGenerator()
 
   def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
     implicit val col = JavaStdLibCollections
@@ -69,7 +69,7 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def ProtocolInterp: ProtocolTerms[JavaLanguage, Target]             = protocol
       def ServerInterp: ServerTerms[JavaLanguage, Target]                 = server
       def SwaggerInterp: SwaggerTerms[JavaLanguage, Target]               = SwaggerGenerator[JavaLanguage]
-      def LanguageInterp: LanguageTerms[JavaLanguage, Target]             = JavaGenerator
+      def LanguageInterp: LanguageTerms[JavaLanguage, Target]             = JavaGenerator()
       def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target] = collections
     }).runA(modules.toList.toSet)
   }

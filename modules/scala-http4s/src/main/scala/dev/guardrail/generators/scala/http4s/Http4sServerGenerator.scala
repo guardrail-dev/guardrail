@@ -24,6 +24,8 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object Http4sServerGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] = new Http4sServerGenerator
+
   def generateUrlPathExtractors(
       path: Tracker[String],
       pathArgs: List[LanguageParameter[ScalaLanguage]],
@@ -42,7 +44,7 @@ object Http4sServerGenerator {
     } yield (trailingSlashed, queryParams)
 }
 
-class Http4sServerGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
+class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
 
   def splitOperationParts(operationId: String): (List[String], String) = {

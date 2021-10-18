@@ -12,11 +12,11 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, ProtocolTerms, SwaggerTerms }
 
 object Dropwizard extends Framework[ScalaLanguage, Target] {
-  override implicit def ClientInterp: ClientTerms[ScalaLanguage, Target]                 = new DropwizardClientGenerator
-  override implicit def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]           = new DropwizardGenerator
+  override implicit def ClientInterp: ClientTerms[ScalaLanguage, Target]                 = DropwizardClientGenerator()
+  override implicit def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]           = DropwizardGenerator()
   override implicit def ProtocolInterp: ProtocolTerms[ScalaLanguage, Target]             = JacksonProtocolGenerator.apply
-  override implicit def ServerInterp: ServerTerms[ScalaLanguage, Target]                 = new DropwizardServerGenerator
+  override implicit def ServerInterp: ServerTerms[ScalaLanguage, Target]                 = DropwizardServerGenerator()
   override implicit def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]()
-  override implicit def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator
-  override implicit def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = ScalaCollectionsGenerator
+  override implicit def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator()
+  override implicit def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = ScalaCollectionsGenerator()
 }

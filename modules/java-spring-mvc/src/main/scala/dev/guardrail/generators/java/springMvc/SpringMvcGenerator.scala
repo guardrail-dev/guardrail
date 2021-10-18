@@ -7,7 +7,12 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 
-class SpringMvcGenerator(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
+object SpringMvcGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): FrameworkTerms[JavaLanguage, Target] =
+    new SpringMvcGenerator
+}
+
+class SpringMvcGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
   implicit def MonadF                    = Target.targetInstances
   def fileType(format: Option[String])   = safeParseType(format.getOrElse("MultipartFile"))
   def objectType(format: Option[String]) = safeParseType("com.fasterxml.jackson.databind.JsonNode")

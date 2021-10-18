@@ -31,8 +31,13 @@ import dev.guardrail.generators.{ Client, RawParameterType, Server }
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 
+object JavaGenerator {
+  def apply(): LanguageTerms[JavaLanguage, Target] =
+    new JavaGenerator
+}
+
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
-object JavaGenerator extends LanguageTerms[JavaLanguage, Target] {
+class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def buildPkgDecl(parts: NonEmptyList[String]): Target[PackageDeclaration] =

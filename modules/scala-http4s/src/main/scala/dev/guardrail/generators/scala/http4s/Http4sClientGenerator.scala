@@ -19,6 +19,11 @@ import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import dev.guardrail.terms.{ ContentType, Header, MultipartFormData, Responses }
 
+object Http4sClientGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+    new Http4sClientGenerator
+}
+
 class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
   implicit def MonadF: Monad[Target] = Target.targetInstances
 

@@ -21,7 +21,12 @@ import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
-class AkkaHttpClientGenerator(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+object AkkaHttpClientGenerator {
+  def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+    new AkkaHttpClientGenerator(modelGeneratorType)
+}
+
+class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
     extends ClientTerms[ScalaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 

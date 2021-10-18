@@ -6,7 +6,11 @@ import dev.guardrail.terms.framework._
 import dev.guardrail.generators.scala._
 import scala.meta._
 
-class Http4sGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
+object Http4sGenerator {
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] = new Http4sGenerator
+}
+
+class Http4sGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
   implicit def MonadF = Target.targetInstances
   def fileType(format: Option[String]) =
     Target.pure(format.fold[Type](t"fs2.Stream[F,Byte]")(Type.Name(_)))
