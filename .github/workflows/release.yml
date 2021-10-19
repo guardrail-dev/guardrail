@@ -27,8 +27,6 @@ jobs:
         run: |
           java -version
           gpg --version
-          ruby --version
-          jekyll --version
       # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [core]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'core' }}
