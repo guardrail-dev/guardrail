@@ -84,12 +84,6 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: 8
-      - uses: ruby/setup-ruby@v1.66.1
-        with:
-          bundler-cache: true
-      - name: 'Install microsite deps'
-        run: |
-          bundle install --jobs 4 --retry 3 --system
       - name: 'Print versions'
         run: |
           java -version
