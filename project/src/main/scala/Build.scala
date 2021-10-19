@@ -175,6 +175,7 @@ object Build {
 
     def customDependsOn(other: Project): Project =
       project
+        .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
         .dependsOn(other % Provided)
         .accumulateClasspath(other)
   }
