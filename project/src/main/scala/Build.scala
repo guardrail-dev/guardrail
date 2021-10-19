@@ -140,4 +140,42 @@ object Build {
         scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
         scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
       )
+
+  implicit class ProjectSyntax(project: Project) {
+    // Adding these to I _think_ work around https://github.com/sbt/sbt/issues/3733 ?
+    // Seems like there's probably a better way to do this, but I don't know what it is
+    // The intent is we should be able to use `dependsOn(core % Provided)` to compile
+    // against the module's classes, but then emit <scope>provided</scope> in the published POM.
+    //
+    // Currently, it seems as though `dependsOn(core % Provided)` doesn't expose
+    // classes from `core` to the depending module, which means even though we get the desired
+    // scope in the pom, it's useless since we can't actually compile the project.
+    def accumulateClasspath(other: Project): Project =
+      project
+        .settings(Compile / unmanagedClasspath := {
+          val current = (Compile / unmanagedClasspath).value
+          val fromOther = (other / Compile / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+        .settings(Runtime / unmanagedClasspath := {
+          val current = (Runtime / unmanagedClasspath).value
+          val fromOther = (other / Runtime / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+        .settings(Test / unmanagedClasspath := {
+          val current = (Compile / unmanagedClasspath).value
+          val fromOther = (other / Compile / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+        .settings(Default / unmanagedClasspath := {
+          val current = (Compile / unmanagedClasspath).value
+          val fromOther = (other / Compile / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+
+    def customDependsOn(other: Project): Project =
+      project
+        .dependsOn(other % Provided)
+        .accumulateClasspath(other)
+  }
 }

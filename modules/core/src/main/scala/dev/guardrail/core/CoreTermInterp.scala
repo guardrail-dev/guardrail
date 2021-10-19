@@ -30,7 +30,7 @@ import dev.guardrail.{
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,
     val handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
-    val frameworkMapping: PartialFunction[String, Framework[L, Target]],
+    val frameworkMapping: PartialFunction[String, Target[Framework[L, Target]]],
     val handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] { self =>
   implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -40,7 +40,8 @@ class CoreTermInterp[L <: LA](
       handleModules: NonEmptyList[String] => Target[Framework[L, Target]] = self.handleModules,
       additionalFrameworkMappings: PartialFunction[String, Framework[L, Target]] = PartialFunction.empty,
       handleImport: String => Either[Error, L#Import] = self.handleImport
-  ): CoreTermInterp[L] = new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.orElse(self.frameworkMapping), handleImport)
+  ): CoreTermInterp[L] =
+    new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.andThen(Target.pure _).orElse(self.frameworkMapping), handleImport)
 
   def getDefaultFramework =
     Target.log.function("getDefaultFramework") {
@@ -58,7 +59,7 @@ class CoreTermInterp[L <: LA](
             ctxFramework =>
               for {
                 frameworkName <- Target.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
-                framework     <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
+                framework     <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName)).flatten
                 _             <- Target.log.debug(s"Found: $framework")
               } yield framework,
             handleModules

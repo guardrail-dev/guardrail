@@ -95,7 +95,7 @@ class WritePackageSpec extends AnyFunSuite with Matchers {
             new CoreTermInterp[ScalaLanguage](
               "akka-http",
               ScalaModule.extract, {
-                case "akka-http" => AkkaHttp
+                case "akka-http" => Target.pure(AkkaHttp)
               }, {
                 _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
               }
@@ -160,7 +160,7 @@ class WritePackageSpec extends AnyFunSuite with Matchers {
             new CoreTermInterp[ScalaLanguage](
               "akka-http",
               ScalaModule.extract, {
-                case "akka-http" => AkkaHttp
+                case "akka-http" => Target.pure(AkkaHttp)
               }, {
                 _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
               }
