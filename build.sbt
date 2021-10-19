@@ -87,6 +87,7 @@ val javaSampleSettings = Seq(
   )
 
 lazy val root = modules.root.project
+  .settings(publish / skip := true)
   .customDependsOn(guardrail)
   .customDependsOn(microsite)
   .customDependsOn(cli)
@@ -94,6 +95,7 @@ lazy val root = modules.root.project
   .aggregate(allModules: _*)
 
 lazy val allDeps = modules.allDeps.project
+  .settings(publish / skip := true)
 
 lazy val guardrail = modules.guardrail.project
   .customDependsOn(core)
@@ -133,12 +135,10 @@ lazy val javaSpringMvc = modules.javaSpringMvc.project
 
 lazy val scalaSupport = modules.scalaSupport.project
   .customDependsOn(core)
-  .customDependsOn(javaDropwizard)
 
 lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
 lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
 lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
-  .customDependsOn(javaDropwizard)
   .customDependsOn(scalaSupport)
 
 lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
@@ -151,7 +151,6 @@ lazy val scalaHttp4s = modules.scalaHttp4s.project
 
 lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
 lazy val scalaDropwizard = modules.scalaDropwizard.project
-  .customDependsOn(javaDropwizard)
   .customDependsOn(scalaSupport)
 
 lazy val allModules = Seq[sbt.ProjectReference](

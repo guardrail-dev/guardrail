@@ -20,11 +20,11 @@ import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.LanguageParameter
-import dev.guardrail.generators.helpers.ResponseHelpers._
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.{ CustomExtractionField, RenderedRoutes, TracingField }
+import dev.guardrail.javaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.StrictProtocolElems
@@ -46,18 +46,26 @@ import dev.guardrail.terms.{
 }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
-@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object DropwizardServerGenerator {
-  private implicit class ContentTypeExt(private val ct: ContentType) extends AnyVal {
-    def toJaxRsAnnotationName: Expression = ct match {
-      case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
-      case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
-      case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
-      case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")
-      case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
-      case TextContent(name)   => new StringLiteralExpr(name)
-      case BinaryContent(name) => new StringLiteralExpr(name)
-    }
+  def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ServerTerms[JavaLanguage, Target] =
+    new DropwizardServerGenerator
+}
+
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
+class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+    extends ServerTerms[JavaLanguage, Target] {
+  import Ca._
+
+  implicit def MonadF: Monad[Target] = Target.targetInstances
+
+  private def toJaxRsAnnotationName: ContentType => Expression = {
+    case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
+    case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
+    case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
+    case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")
+    case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
+    case TextContent(name)   => new StringLiteralExpr(name)
+    case BinaryContent(name) => new StringLiteralExpr(name)
   }
 
   private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("AsyncResponse")
@@ -75,7 +83,7 @@ object DropwizardServerGenerator {
   private val OFFSET_TIME_PARAM_TYPE      = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.OffsetTimeParam")
   private val DURATION_PARAM_TYPE         = StaticJavaParser.parseClassOrInterfaceType("GuardrailJerseySupport.Jsr310.DurationParam")
 
-  def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
+  private def generateResponseSuperClass(name: String): Target[ClassOrInterfaceDeclaration] =
     Target.log.function("generateResponseSuperClass") {
       for {
         _ <- Target.log.info(s"Name: ${name}")
@@ -109,7 +117,7 @@ object DropwizardServerGenerator {
       } yield cls
     }
 
-  def generateResponseClass(
+  private def generateResponseClass(
       superClassType: ClassOrInterfaceType,
       response: Response[JavaLanguage],
       errorEntityFallbackType: Option[Type]
@@ -209,540 +217,528 @@ object DropwizardServerGenerator {
     }
   }
 
-  def ServerTermInterp(
-      implicit Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Ca: CollectionsAbstraction[JavaLanguage]
-  ): ServerTerms[JavaLanguage, Target] = new ServerTermInterp
+  override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[ImportDeclaration]] =
+    List(
+      "javax.inject.Inject",
+      "javax.validation.constraints.NotNull",
+      "javax.ws.rs.Consumes",
+      "javax.ws.rs.DELETE",
+      "javax.ws.rs.FormParam",
+      "javax.ws.rs.GET",
+      "javax.ws.rs.HEAD",
+      "javax.ws.rs.HeaderParam",
+      "javax.ws.rs.OPTIONS",
+      "javax.ws.rs.POST",
+      "javax.ws.rs.PUT",
+      "javax.ws.rs.Path",
+      "javax.ws.rs.PathParam",
+      "javax.ws.rs.Produces",
+      "javax.ws.rs.QueryParam",
+      "javax.ws.rs.container.AsyncResponse",
+      "javax.ws.rs.container.Suspended",
+      "javax.ws.rs.core.MediaType",
+      "javax.ws.rs.core.Response",
+      "org.glassfish.jersey.media.multipart.FormDataParam",
+      "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
+      "org.slf4j.Logger",
+      "org.slf4j.LoggerFactory"
+    ).traverse(safeParseRawImport)
 
-  class ServerTermInterp(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
-      extends ServerTerms[JavaLanguage, Target] {
-    import Ca._
+  override def buildCustomExtractionFields(
+      operation: Tracker[Operation],
+      resourceName: List[String],
+      customExtraction: Boolean
+  ): Target[Option[CustomExtractionField[JavaLanguage]]] =
+    if (customExtraction) {
+      Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+    } else {
+      Target.pure(Option.empty)
+    }
 
-    implicit def MonadF: Monad[Target] = Target.targetInstances
+  override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[JavaLanguage]]] =
+    if (tracing) {
+      Target.raiseUserError(s"Tracing is not yet supported by this framework")
+    } else {
+      Target.pure(Option.empty)
+    }
 
-    override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[ImportDeclaration]] =
-      List(
-        "javax.inject.Inject",
-        "javax.validation.constraints.NotNull",
-        "javax.ws.rs.Consumes",
-        "javax.ws.rs.DELETE",
-        "javax.ws.rs.FormParam",
-        "javax.ws.rs.GET",
-        "javax.ws.rs.HEAD",
-        "javax.ws.rs.HeaderParam",
-        "javax.ws.rs.OPTIONS",
-        "javax.ws.rs.POST",
-        "javax.ws.rs.PUT",
-        "javax.ws.rs.Path",
-        "javax.ws.rs.PathParam",
-        "javax.ws.rs.Produces",
-        "javax.ws.rs.QueryParam",
-        "javax.ws.rs.container.AsyncResponse",
-        "javax.ws.rs.container.Suspended",
-        "javax.ws.rs.core.MediaType",
-        "javax.ws.rs.core.Response",
-        "org.glassfish.jersey.media.multipart.FormDataParam",
-        "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
-        "org.slf4j.Logger",
-        "org.slf4j.LoggerFactory"
-      ).traverse(safeParseRawImport)
+  override def generateRoutes(
+      tracing: Boolean,
+      resourceName: String,
+      handlerName: String,
+      basePath: Option[String],
+      routes: List[GenerateRouteMeta[JavaLanguage]],
+      protocolElems: List[StrictProtocolElems[JavaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+  ): Target[RenderedRoutes[JavaLanguage]] =
+    for {
+      resourceType <- safeParseClassOrInterfaceType(resourceName)
+      handlerType  <- safeParseClassOrInterfaceType(handlerName)
+      basePathComponents = basePath.toList.flatMap(ResponseHelpers.splitPathComponents)
+      commonPathPrefix   = ResponseHelpers.findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
+      routeMethodsAndHandlerMethodSigs <- routes
+        .traverse({
+          case GenerateRouteMeta(
+              operationId,
+              methodName,
+              responseClsName,
+              customExtractionFields,
+              tracingFields,
+              sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
+              parameters,
+              responses
+              ) =>
+            parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
-    override def buildCustomExtractionFields(
-        operation: Tracker[Operation],
-        resourceName: List[String],
-        customExtraction: Boolean
-    ): Target[Option[CustomExtractionField[JavaLanguage]]] =
-      if (customExtraction) {
-        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
-      } else {
-        Target.pure(Option.empty)
-      }
+            val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, methodName)
+              .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
 
-    override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[JavaLanguage]]] =
-      if (tracing) {
-        Target.raiseUserError(s"Tracing is not yet supported by this framework")
-      } else {
-        Target.pure(Option.empty)
-      }
+            val pathSuffix = ResponseHelpers.splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
+            if (pathSuffix.nonEmpty && pathSuffix != "/") {
+              method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
+            }
 
-    override def generateRoutes(
-        tracing: Boolean,
-        resourceName: String,
-        handlerName: String,
-        basePath: Option[String],
-        routes: List[GenerateRouteMeta[JavaLanguage]],
-        protocolElems: List[StrictProtocolElems[JavaLanguage]],
-        securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
-    ): Target[RenderedRoutes[JavaLanguage]] =
-      for {
-        resourceType <- safeParseClassOrInterfaceType(resourceName)
-        handlerType  <- safeParseClassOrInterfaceType(handlerName)
-        basePathComponents = basePath.toList.flatMap(splitPathComponents)
-        commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
-        routeMethodsAndHandlerMethodSigs <- routes
-          .traverse({
-            case GenerateRouteMeta(
-                operationId,
-                methodName,
-                responseClsName,
-                customExtractionFields,
-                tracingFields,
-                sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
-                parameters,
-                responses
-                ) =>
-              parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
+            val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
+            val consumes    = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
+            consumes
+              .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), toJaxRsAnnotationName(c)))
+              .foreach(method.addAnnotation)
 
-              val method = new MethodDeclaration(new NodeList(publicModifier), new VoidType, methodName)
-                .addAnnotation(new MarkerAnnotationExpr(httpMethod.toString))
-
-              val pathSuffix = splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
-              if (pathSuffix.nonEmpty && pathSuffix != "/") {
-                method.addAnnotation(new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr(pathSuffix)))
-              }
-
-              val allConsumes = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-              val consumes    = getBestConsumes(operation, allConsumes, parameters)
-              consumes
-                .map(c => new SingleMemberAnnotationExpr(new Name("Consumes"), c.toJaxRsAnnotationName))
-                .foreach(method.addAnnotation)
-
-              val allProduces = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
-              NonEmptyList
-                .fromList(
-                  responses.value
-                    .flatMap(getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
-                    .distinct
-                    .map(_.toJaxRsAnnotationName)
-                )
-                .foreach(
-                  producesExprs =>
-                    method.addAnnotation(
-                      new SingleMemberAnnotationExpr(
-                        new Name("Produces"),
-                        producesExprs.toList match {
-                          case singleProduces :: Nil => singleProduces
-                          case manyProduces          => new ArrayInitializerExpr(manyProduces.toNodeList)
-                        }
-                      )
+            val allProduces = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
+            NonEmptyList
+              .fromList(
+                responses.value
+                  .flatMap(ResponseHelpers.getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
+                  .distinct
+                  .map(toJaxRsAnnotationName)
+              )
+              .foreach(
+                producesExprs =>
+                  method.addAnnotation(
+                    new SingleMemberAnnotationExpr(
+                      new Name("Produces"),
+                      producesExprs.toList match {
+                        case singleProduces :: Nil => singleProduces
+                        case manyProduces          => new ArrayInitializerExpr(manyProduces.toNodeList)
+                      }
                     )
-                )
+                  )
+              )
 
-              def transformJsr310Params(parameter: Parameter): Target[Parameter] = {
-                val isOptional = parameter.getType.isOptionalType
-                val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
+            def transformJsr310Params(parameter: Parameter): Target[Parameter] = {
+              val isOptional = parameter.getType.isOptionalType
+              val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
-                def transform(to: Type): Target[Parameter] = {
-                  parameter.setType(if (isOptional) to.liftOptionalType else to)
-                  if (!isOptional) {
-                    parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
-                  }
-                  Target.pure(parameter)
+              def transform(to: Type): Target[Parameter] = {
+                parameter.setType(if (isOptional) to.liftOptionalType else to)
+                if (!isOptional) {
+                  parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                 }
-
-                tpe match {
-                  case cls: ClassOrInterfaceType if cls.getScope.asScala.forall(_.asString == "java.time") =>
-                    cls.getNameAsString match {
-                      case "Instant"        => transform(INSTANT_PARAM_TYPE)
-                      case "OffsetDateTime" => transform(OFFSET_DATE_TIME_PARAM_TYPE)
-                      case "ZonedDateTime"  => transform(ZONED_DATE_TIME_PARAM_TYPE)
-                      case "LocalDateTime"  => transform(LOCAL_DATE_TIME_PARAM_TYPE)
-                      case "LocalDate"      => transform(LOCAL_DATE_PARAM_TYPE)
-                      case "LocalTime"      => transform(LOCAL_TIME_PARAM_TYPE)
-                      case "OffsetTime"     => transform(OFFSET_TIME_PARAM_TYPE)
-                      case "Duration"       => transform(DURATION_PARAM_TYPE)
-                      case _                => Target.pure(parameter)
-                    }
-                  case _ => Target.pure(parameter)
-                }
+                Target.pure(parameter)
               }
 
-              // When we have a file inside multipart/form-data, we don't want to use InputStream,
-              // because that will require the server to buffer the entire contents in memory as it
-              // reads in the entire body.  Instead we instruct Dropwizard to write it out to a file
-              // on disk and use java.io.File.
-              def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Target[Parameter] =
-                (param.isFile, param.required) match {
-                  case (true, true)  => Target.pure(parameter.setType(FILE_TYPE))
-                  case (true, false) => Cl.liftOptionalType(FILE_TYPE).map(parameter.setType)
-                  case _             => Target.pure(parameter)
-                }
-
-              def addValidationAnnotations(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter = {
-                if (param.required) {
-                  // NB: The order here is actually critical.  In the case where we're using multipart,
-                  // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
-                  // https://github.com/eclipse-ee4j/jersey/issues/3632
-                  parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
-
-                  // Vavr's validation support for some reason requires this.
-                  if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
-                    parameter.getAnnotations.add(1, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+              tpe match {
+                case cls: ClassOrInterfaceType if cls.getScope.asScala.forall(_.asString == "java.time") =>
+                  cls.getNameAsString match {
+                    case "Instant"        => transform(INSTANT_PARAM_TYPE)
+                    case "OffsetDateTime" => transform(OFFSET_DATE_TIME_PARAM_TYPE)
+                    case "ZonedDateTime"  => transform(ZONED_DATE_TIME_PARAM_TYPE)
+                    case "LocalDateTime"  => transform(LOCAL_DATE_TIME_PARAM_TYPE)
+                    case "LocalDate"      => transform(LOCAL_DATE_PARAM_TYPE)
+                    case "LocalTime"      => transform(LOCAL_TIME_PARAM_TYPE)
+                    case "OffsetTime"     => transform(OFFSET_TIME_PARAM_TYPE)
+                    case "Duration"       => transform(DURATION_PARAM_TYPE)
+                    case _                => Target.pure(parameter)
                   }
+                case _ => Target.pure(parameter)
+              }
+            }
+
+            // When we have a file inside multipart/form-data, we don't want to use InputStream,
+            // because that will require the server to buffer the entire contents in memory as it
+            // reads in the entire body.  Instead we instruct Dropwizard to write it out to a file
+            // on disk and use java.io.File.
+            def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Target[Parameter] =
+              (param.isFile, param.required) match {
+                case (true, true)  => Target.pure(parameter.setType(FILE_TYPE))
+                case (true, false) => Cl.liftOptionalType(FILE_TYPE).map(parameter.setType)
+                case _             => Target.pure(parameter)
+              }
+
+            def addValidationAnnotations(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter = {
+              if (param.required) {
+                // NB: The order here is actually critical.  In the case where we're using multipart,
+                // the @NotNull annotation *must* come before the @FormDataParam annotation.  See:
+                // https://github.com/eclipse-ee4j/jersey/issues/3632
+                parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
+
+                // Vavr's validation support for some reason requires this.
+                if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
+                  parameter.getAnnotations.add(1, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                 }
+              }
+              parameter
+            }
+
+            def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
+              if (!param.required && parameter.getType.containedType.isListType) {
+                parameter.setType(parameter.getType.containedType)
+              } else {
                 parameter
               }
 
-              def stripOptionalFromCollections(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Parameter =
-                if (!param.required && parameter.getType.containedType.isListType) {
-                  parameter.setType(parameter.getType.containedType)
-                } else {
-                  parameter
-                }
+            def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
+              parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
 
-              def addParamAnnotation(parameter: Parameter, param: LanguageParameter[JavaLanguage], annotationName: String): Parameter =
-                parameter.addAnnotation(new SingleMemberAnnotationExpr(new Name(annotationName), new StringLiteralExpr(param.argName.value)))
-
-              def boxParameterTypes(parameter: Parameter): Parameter = {
-                if (parameter.getType.isPrimitiveType) {
-                  parameter.setType(parameter.getType.asPrimitiveType.toBoxedType)
-                }
-                parameter
+            def boxParameterTypes(parameter: Parameter): Parameter = {
+              if (parameter.getType.isPrimitiveType) {
+                parameter.setType(parameter.getType.asPrimitiveType.toBoxedType)
               }
+              parameter
+            }
 
-              def transformHandlerArg(parameter: Parameter): Expression = {
-                val isOptional = parameter.getType.isOptionalType
-                val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
-                if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
-                  if (isOptional) {
-                    new MethodCallExpr(
-                      parameter.getNameAsExpression,
-                      "map",
-                      new NodeList[Expression](new MethodReferenceExpr(new NameExpr(typeName), new NodeList, "get"))
-                    )
-                  } else {
-                    new MethodCallExpr(parameter.getNameAsExpression, "get")
-                  }
+            def transformHandlerArg(parameter: Parameter): Expression = {
+              val isOptional = parameter.getType.isOptionalType
+              val typeName   = if (isOptional) parameter.getType.containedType.asString else parameter.getType.asString
+              if (typeName.startsWith("GuardrailJerseySupport.Jsr310.") && typeName.endsWith("Param")) {
+                if (isOptional) {
+                  new MethodCallExpr(
+                    parameter.getNameAsExpression,
+                    "map",
+                    new NodeList[Expression](new MethodReferenceExpr(new NameExpr(typeName), new NodeList, "get"))
+                  )
                 } else {
-                  parameter.getNameAsExpression
+                  new MethodCallExpr(parameter.getNameAsExpression, "get")
                 }
+              } else {
+                parameter.getNameAsExpression
               }
+            }
 
-              for {
-                annotatedMethodParams <- List(
-                  (parameters.pathParams, "PathParam"),
-                  (parameters.headerParams, "HeaderParam"),
-                  (parameters.queryStringParams, "QueryParam"),
-                  (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
-                ).flatTraverse({
-                  case (params, annotationName) =>
-                    params.traverse({ param =>
-                      val parameter                  = param.param.clone()
-                      val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
-                      val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
-                      for {
-                        dateTransformed <- transformJsr310Params(annotated)
-                        fileTransformed <- transformMultipartFile(dateTransformed, param)
-                      } yield addValidationAnnotations(fileTransformed, param)
-                    })
-                })
-
-                bareMethodParams <- parameters.bodyParams.toList
-                  .traverse({ param =>
+            for {
+              annotatedMethodParams <- List(
+                (parameters.pathParams, "PathParam"),
+                (parameters.headerParams, "HeaderParam"),
+                (parameters.queryStringParams, "QueryParam"),
+                (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
+              ).flatTraverse({
+                case (params, annotationName) =>
+                  params.traverse({ param =>
                     val parameter                  = param.param.clone()
                     val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                    val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
                     for {
-                      dateTransformed <- transformJsr310Params(optionalCollectionStripped)
-                    } yield addValidationAnnotations(dateTransformed, param)
+                      dateTransformed <- transformJsr310Params(annotated)
+                      fileTransformed <- transformMultipartFile(dateTransformed, param)
+                    } yield addValidationAnnotations(fileTransformed, param)
                   })
+              })
 
-                methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
-                _            = methodParams.foreach(method.addParameter)
-                _ = method.addParameter(
-                  new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
-                )
+              bareMethodParams <- parameters.bodyParams.toList
+                .traverse({ param =>
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  for {
+                    dateTransformed <- transformJsr310Params(optionalCollectionStripped)
+                  } yield addValidationAnnotations(dateTransformed, param)
+                })
 
-                (responseType, resultResumeBody) = ServerRawResponse(operation)
-                  .filter(_ == true)
-                  .fold({
-                    val responseName = s"$handlerName.$responseClsName"
-                    val entitySetterIfTree = NonEmptyList
-                      .fromList(responses.value.collect({
-                        case Response(statusCodeName, Some(_), _) => statusCodeName
-                      }))
-                      .map(_.reverse.foldLeft[IfStmt](null)({
-                        case (nextIfTree, statusCodeName) =>
-                          val responseSubclassType = StaticJavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
-                          new IfStmt(
-                            new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
-                            new BlockStmt(
-                              new NodeList(
-                                new ExpressionStmt(
-                                  new MethodCallExpr(
-                                    new NameExpr("builder"),
-                                    "entity",
-                                    new NodeList[Expression](
-                                      new MethodCallExpr(
-                                        new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
-                                        "getEntityBody"
-                                      )
+              methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
+              _            = methodParams.foreach(method.addParameter)
+              _ = method.addParameter(
+                new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
+              )
+
+              (responseType, resultResumeBody) = ServerRawResponse(operation)
+                .filter(_ == true)
+                .fold({
+                  val responseName = s"$handlerName.$responseClsName"
+                  val entitySetterIfTree = NonEmptyList
+                    .fromList(responses.value.collect({
+                      case Response(statusCodeName, Some(_), _) => statusCodeName
+                    }))
+                    .map(_.reverse.foldLeft[IfStmt](null)({
+                      case (nextIfTree, statusCodeName) =>
+                        val responseSubclassType = StaticJavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
+                        new IfStmt(
+                          new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                          new BlockStmt(
+                            new NodeList(
+                              new ExpressionStmt(
+                                new MethodCallExpr(
+                                  new NameExpr("builder"),
+                                  "entity",
+                                  new NodeList[Expression](
+                                    new MethodCallExpr(
+                                      new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                                      "getEntityBody"
                                     )
                                   )
                                 )
                               )
-                            ),
-                            nextIfTree
-                          )
-                      }))
-                    (
-                      StaticJavaParser.parseClassOrInterfaceType(responseName),
-                      (
-                        List[Statement](
-                          new ExpressionStmt(
-                            new VariableDeclarationExpr(
-                              new VariableDeclarator(
-                                RESPONSE_BUILDER_TYPE,
-                                "builder",
-                                new MethodCallExpr(
-                                  new NameExpr("Response"),
-                                  "status",
-                                  new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode"))
-                                )
-                              ),
-                              finalModifier
                             )
+                          ),
+                          nextIfTree
+                        )
+                    }))
+                  (
+                    StaticJavaParser.parseClassOrInterfaceType(responseName),
+                    (
+                      List[Statement](
+                        new ExpressionStmt(
+                          new VariableDeclarationExpr(
+                            new VariableDeclarator(
+                              RESPONSE_BUILDER_TYPE,
+                              "builder",
+                              new MethodCallExpr(
+                                new NameExpr("Response"),
+                                "status",
+                                new NodeList[Expression](new MethodCallExpr(new NameExpr("result"), "getStatusCode"))
+                              )
+                            ),
+                            finalModifier
                           )
-                        ) ++ entitySetterIfTree ++ List(
-                              new ExpressionStmt(
-                                new MethodCallExpr(
-                                  new NameExpr("asyncResponse"),
-                                  "resume",
-                                  new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
-                                )
+                        )
+                      ) ++ entitySetterIfTree ++ List(
+                            new ExpressionStmt(
+                              new MethodCallExpr(
+                                new NameExpr("asyncResponse"),
+                                "resume",
+                                new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
                               )
                             )
-                      ).toNodeList
-                    )
-                  })({ _ =>
-                    (
-                      RESPONSE_TYPE,
-                      new NodeList(
-                        new ExpressionStmt(
-                          new MethodCallExpr(
-                            new NameExpr("asyncResponse"),
-                            "resume",
-                            new NodeList[Expression](new NameExpr("result"))
                           )
-                        )
-                      )
-                    )
-                  })
-
-                resultErrorBody = List[Statement](
-                  new ExpressionStmt(
-                    new MethodCallExpr(
-                      new NameExpr("logger"),
-                      "error",
-                      new NodeList[Expression](
-                        new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
-                        new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
-                        new MethodCallExpr(new NameExpr("err"), "getMessage"),
-                        new NameExpr("err")
-                      )
-                    )
-                  ),
-                  new ExpressionStmt(
-                    new MethodCallExpr(
-                      new NameExpr("asyncResponse"),
-                      "resume",
-                      new NodeList[Expression](
-                        new MethodCallExpr(
-                          new MethodCallExpr(
-                            new NameExpr("Response"),
-                            "status",
-                            new NodeList[Expression](new IntegerLiteralExpr("500"))
-                          ),
-                          "build"
-                        )
-                      )
-                    )
+                    ).toNodeList
                   )
-                )
-
-                handlerCall = new MethodCallExpr(
-                  new FieldAccessExpr(new ThisExpr, "handler"),
-                  methodName,
-                  new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
-                )
-
-                _ = method.setBody(
-                  new BlockStmt(
+                })({ _ =>
+                  (
+                    RESPONSE_TYPE,
                     new NodeList(
                       new ExpressionStmt(
-                        handlerCall
-                          .lift[Future[Any]]
-                          .onComplete[Throwable, Expression](
-                            new LambdaExpr(
-                              new Parameter(new UnknownType, "result"),
-                              new BlockStmt(resultResumeBody)
-                            ).lift[Any => Unit],
-                            new LambdaExpr(
-                              new Parameter(new UnknownType, "err"),
-                              new BlockStmt(resultErrorBody.toNodeList)
-                            ).lift[Throwable => Unit]
-                          )
-                          .value
+                        new MethodCallExpr(
+                          new NameExpr("asyncResponse"),
+                          "resume",
+                          new NodeList[Expression](new NameExpr("result"))
+                        )
+                      )
+                    )
+                  )
+                })
+
+              resultErrorBody = List[Statement](
+                new ExpressionStmt(
+                  new MethodCallExpr(
+                    new NameExpr("logger"),
+                    "error",
+                    new NodeList[Expression](
+                      new StringLiteralExpr(s"${handlerName}.${methodName} threw an exception ({}): {}"),
+                      new MethodCallExpr(new MethodCallExpr(new NameExpr("err"), "getClass"), "getName"),
+                      new MethodCallExpr(new NameExpr("err"), "getMessage"),
+                      new NameExpr("err")
+                    )
+                  )
+                ),
+                new ExpressionStmt(
+                  new MethodCallExpr(
+                    new NameExpr("asyncResponse"),
+                    "resume",
+                    new NodeList[Expression](
+                      new MethodCallExpr(
+                        new MethodCallExpr(
+                          new NameExpr("Response"),
+                          "status",
+                          new NodeList[Expression](new IntegerLiteralExpr("500"))
+                        ),
+                        "build"
                       )
                     )
                   )
                 )
+              )
 
-                transformedAnnotatedParams <- (
-                  parameters.pathParams ++
-                      parameters.headerParams ++
-                      parameters.queryStringParams ++
-                      parameters.formParams
-                ).traverse({ param =>
-                  val parameter                  = param.param.clone()
-                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
-                  transformMultipartFile(optionalCollectionStripped, param)
-                })
-                transformedBodyParams = parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
-              } yield {
-                val futureResponseType = responseType.liftFutureType
-                val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
-                (transformedAnnotatedParams ++ transformedBodyParams).foreach(handlerMethodSig.addParameter)
-                handlerMethodSig.setBody(null)
+              handlerCall = new MethodCallExpr(
+                new FieldAccessExpr(new ThisExpr, "handler"),
+                methodName,
+                new NodeList[Expression](methodParams.map(transformHandlerArg): _*)
+              )
 
-                (method, handlerMethodSig)
-              }
-          })
-          .map(_.unzip)
-        (routeMethods, handlerMethodSigs) = routeMethodsAndHandlerMethodSigs
-      } yield {
-        val resourceConstructor = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
-        resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
-        resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
-        resourceConstructor.setBody(
-          new BlockStmt(
-            new NodeList(
-              new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN))
-            )
+              _ = method.setBody(
+                new BlockStmt(
+                  new NodeList(
+                    new ExpressionStmt(
+                      handlerCall
+                        .lift[Future[Any]]
+                        .onComplete[Throwable, Expression](
+                          new LambdaExpr(
+                            new Parameter(new UnknownType, "result"),
+                            new BlockStmt(resultResumeBody)
+                          ).lift[Any => Unit],
+                          new LambdaExpr(
+                            new Parameter(new UnknownType, "err"),
+                            new BlockStmt(resultErrorBody.toNodeList)
+                          ).lift[Throwable => Unit]
+                        )
+                        .value
+                    )
+                  )
+                )
+              )
+
+              transformedAnnotatedParams <- (
+                parameters.pathParams ++
+                    parameters.headerParams ++
+                    parameters.queryStringParams ++
+                    parameters.formParams
+              ).traverse({ param =>
+                val parameter                  = param.param.clone()
+                val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                transformMultipartFile(optionalCollectionStripped, param)
+              })
+              transformedBodyParams = parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
+            } yield {
+              val futureResponseType = responseType.liftFutureType
+              val handlerMethodSig   = new MethodDeclaration(new NodeList(), futureResponseType, methodName)
+              (transformedAnnotatedParams ++ transformedBodyParams).foreach(handlerMethodSig.addParameter)
+              handlerMethodSig.setBody(null)
+
+              (method, handlerMethodSig)
+            }
+        })
+        .map(_.unzip)
+      (routeMethods, handlerMethodSigs) = routeMethodsAndHandlerMethodSigs
+    } yield {
+      val resourceConstructor = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
+      resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
+      resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
+      resourceConstructor.setBody(
+        new BlockStmt(
+          new NodeList(
+            new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, "handler"), new NameExpr("handler"), AssignExpr.Operator.ASSIGN))
           )
         )
+      )
 
-        val annotations = List(
-          new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
-        )
+      val annotations = List(
+        new SingleMemberAnnotationExpr(new Name("Path"), new StringLiteralExpr((basePathComponents ++ commonPathPrefix).mkString("/", "/", "")))
+      )
 
-        val supportDefinitions = List[BodyDeclaration[_ <: BodyDeclaration[_]]](
-          new FieldDeclaration(
-            new NodeList(privateModifier, staticModifier, finalModifier),
-            new VariableDeclarator(
-              LOGGER_TYPE,
-              "logger",
-              new MethodCallExpr(new NameExpr("LoggerFactory"), "getLogger", new NodeList[Expression](new ClassExpr(resourceType)))
-            )
-          ),
-          new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(handlerType, "handler")),
-          resourceConstructor
-        )
+      val supportDefinitions = List[BodyDeclaration[_ <: BodyDeclaration[_]]](
+        new FieldDeclaration(
+          new NodeList(privateModifier, staticModifier, finalModifier),
+          new VariableDeclarator(
+            LOGGER_TYPE,
+            "logger",
+            new MethodCallExpr(new NameExpr("LoggerFactory"), "getLogger", new NodeList[Expression](new ClassExpr(resourceType)))
+          )
+        ),
+        new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(handlerType, "handler")),
+        resourceConstructor
+      )
 
-        RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
-      }
-
-    override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
-      for {
-        customExtraction <- if (customExtraction) {
-          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
-        } else Target.pure(List.empty)
-
-        tracing <- if (tracing) {
-          Target.raiseUserError(s"Tracing is not yet supported by this framework")
-        } else Target.pure(List.empty)
-      } yield (customExtraction ::: tracing)
-
-    override def generateResponseDefinitions(
-        responseClsName: String,
-        responses: Responses[JavaLanguage],
-        protocolElems: List[StrictProtocolElems[JavaLanguage]]
-    ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
-      for {
-        abstractResponseClassType <- safeParseClassOrInterfaceType(responseClsName)
-
-        // TODO: verify valueTypes are in protocolElems
-
-        abstractResponseClass <- generateResponseSuperClass(responseClsName)
-        responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
-      } yield {
-        sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))
-          .foreach(abstractResponseClass.addMember)
-
-        abstractResponseClass :: Nil
-      }
-
-    override def generateSupportDefinitions(
-        tracing: Boolean,
-        securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
-    ): Target[List[SupportDefinition[JavaLanguage]]] =
-      for {
-        annotationImports <- List(
-          "java.lang.annotation.ElementType",
-          "java.lang.annotation.Retention",
-          "java.lang.annotation.RetentionPolicy",
-          "java.lang.annotation.Target",
-          "javax.ws.rs.HttpMethod"
-        ).traverse(safeParseRawImport)
-
-        jersey <- SerializationHelpers.guardrailJerseySupportDef
-      } yield {
-        def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
-          val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
-            .addAnnotation(
-              new SingleMemberAnnotationExpr(
-                new Name("Target"),
-                new ArrayInitializerExpr(new NodeList(new FieldAccessExpr(new NameExpr("ElementType"), "METHOD")))
-              )
-            )
-            .addAnnotation(new SingleMemberAnnotationExpr(new Name("Retention"), new FieldAccessExpr(new NameExpr("RetentionPolicy"), "RUNTIME")))
-            .addAnnotation(new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr(name)))
-          SupportDefinition[JavaLanguage](new Name(name), annotationImports, List(annotationDecl))
-        }
-        List(
-          jersey,
-          httpMethodAnnotation("PATCH"),
-          httpMethodAnnotation("TRACE")
-        )
-      }
-
-    override def renderClass(
-        className: String,
-        handlerName: String,
-        classAnnotations: List[com.github.javaparser.ast.expr.AnnotationExpr],
-        combinedRouteTerms: List[com.github.javaparser.ast.Node],
-        extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
-        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-        supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-        customExtraction: Boolean
-    ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
-      safeParseSimpleName(className) >>
-          safeParseSimpleName(handlerName) >>
-          Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
-
-    override def renderHandler(
-        handlerName: String,
-        methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
-        handlerDefinitions: List[com.github.javaparser.ast.Node],
-        responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-        customExtraction: Boolean
-    ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
-      val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
-      sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)
-      Target.pure(handlerClass)
+      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
     }
 
-    // Lift this function out of RenderClass above to work around a 2.11.x compiler syntax bug
-    private def doRenderClass(
-        className: String,
-        classAnnotations: List[AnnotationExpr],
-        supportDefinitions: List[BodyDeclaration[_ <: BodyDeclaration[_]]],
-        combinedRouteTerms: List[Node]
-    ): ClassOrInterfaceDeclaration = {
-      val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, className)
-      classAnnotations.foreach(cls.addAnnotation)
-      sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
-        .foreach(cls.addMember)
-      cls
+  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
+    for {
+      customExtraction <- if (customExtraction) {
+        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+      } else Target.pure(List.empty)
+
+      tracing <- if (tracing) {
+        Target.raiseUserError(s"Tracing is not yet supported by this framework")
+      } else Target.pure(List.empty)
+    } yield (customExtraction ::: tracing)
+
+  override def generateResponseDefinitions(
+      responseClsName: String,
+      responses: Responses[JavaLanguage],
+      protocolElems: List[StrictProtocolElems[JavaLanguage]]
+  ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    for {
+      abstractResponseClassType <- safeParseClassOrInterfaceType(responseClsName)
+
+      // TODO: verify valueTypes are in protocolElems
+
+      abstractResponseClass <- generateResponseSuperClass(responseClsName)
+      responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
+    } yield {
+      sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))
+        .foreach(abstractResponseClass.addMember)
+
+      abstractResponseClass :: Nil
     }
+
+  override def generateSupportDefinitions(
+      tracing: Boolean,
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+  ): Target[List[SupportDefinition[JavaLanguage]]] =
+    for {
+      annotationImports <- List(
+        "java.lang.annotation.ElementType",
+        "java.lang.annotation.Retention",
+        "java.lang.annotation.RetentionPolicy",
+        "java.lang.annotation.Target",
+        "javax.ws.rs.HttpMethod"
+      ).traverse(safeParseRawImport)
+
+      jersey <- SerializationHelpers.guardrailJerseySupportDef
+    } yield {
+      def httpMethodAnnotation(name: String): SupportDefinition[JavaLanguage] = {
+        val annotationDecl = new AnnotationDeclaration(new NodeList(publicModifier), name)
+          .addAnnotation(
+            new SingleMemberAnnotationExpr(
+              new Name("Target"),
+              new ArrayInitializerExpr(new NodeList(new FieldAccessExpr(new NameExpr("ElementType"), "METHOD")))
+            )
+          )
+          .addAnnotation(new SingleMemberAnnotationExpr(new Name("Retention"), new FieldAccessExpr(new NameExpr("RetentionPolicy"), "RUNTIME")))
+          .addAnnotation(new SingleMemberAnnotationExpr(new Name("HttpMethod"), new StringLiteralExpr(name)))
+        SupportDefinition[JavaLanguage](new Name(name), annotationImports, List(annotationDecl))
+      }
+      List(
+        jersey,
+        httpMethodAnnotation("PATCH"),
+        httpMethodAnnotation("TRACE")
+      )
+    }
+
+  override def renderClass(
+      className: String,
+      handlerName: String,
+      classAnnotations: List[com.github.javaparser.ast.expr.AnnotationExpr],
+      combinedRouteTerms: List[com.github.javaparser.ast.Node],
+      extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
+      responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      customExtraction: Boolean
+  ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
+    safeParseSimpleName(className) >>
+        safeParseSimpleName(handlerName) >>
+        Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
+
+  override def renderHandler(
+      handlerName: String,
+      methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
+      handlerDefinitions: List[com.github.javaparser.ast.Node],
+      responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      customExtraction: Boolean
+  ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
+    val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
+    sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)
+    Target.pure(handlerClass)
+  }
+
+  // Lift this function out of RenderClass above to work around a 2.11.x compiler syntax bug
+  private def doRenderClass(
+      className: String,
+      classAnnotations: List[AnnotationExpr],
+      supportDefinitions: List[BodyDeclaration[_ <: BodyDeclaration[_]]],
+      combinedRouteTerms: List[Node]
+  ): ClassOrInterfaceDeclaration = {
+    val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, className)
+    classAnnotations.foreach(cls.addAnnotation)
+    sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
+      .foreach(cls.addMember)
+    cls
   }
 }

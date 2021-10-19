@@ -175,6 +175,9 @@ trait CLICommon extends GuardrailRunner {
             println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
             unsafePrintHelp()
             fallback
+          case MissingDependency(dependency) =>
+            println(s"${AnsiColor.RED}Missing dependency:${AnsiColor.RESET} ${AnsiColor.BOLD}${dependency}${AnsiColor.RESET} not found on classpath")
+            fallback
           case NoArgsSpecified =>
             println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
             unsafePrintHelp()
