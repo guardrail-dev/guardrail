@@ -6,11 +6,15 @@ guardrail is a code generation tool, capable of reading from OpenAPI/Swagger spe
 - Scala: `akka-http` and `http4s`, both backed by `circe`, as well as `dropwizard` backed by `jackson`
 - Java: `dropwizard` and `spring-mvc`, both backed by `jackson`
 
-| Plugins | versions |
-|---|---|
-| `sbt-guardrail` | [![sbt-guardrail](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/sbt-guardrail/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:sbt-guardrail) |
-| `guardrail-maven-plugin` | [![guardrail-maven-plugin](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-maven-plugin/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-maven-plugin_2.12) |
-| `guardrail-gradle-plugin` | [Plugin Portal](https://plugins.gradle.org/plugin/com.twilio.guardrail) |
+Build tool plugins
+------------------
+
+| Plugins | versions | docs |
+|---|---|---|
+| [`guardrail-dev/sbt-guardrail`](https://github.com/guardrail-dev/sbt-guardrail) | [![sbt-guardrail](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/sbt-guardrail/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:sbt-guardrail) | [docs](docs/plugins/sbt.md) |
+| [`guardrail-dev/guardrail-maven-plugin`](https://github.com/guardrail-dev/guardrail-maven-plugin) | [![guardrail-maven-plugin](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-maven-plugin/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-maven-plugin_2.12) | [docs](docs/plugins/maven.md) |
+| [`guardrail-dev/guardrail-gradle-plugin`](https://github.com/guardrail-dev/guardrail-gradle-plugin) | `guardrail-gradle-plugin` | [Plugin Portal](https://plugins.gradle.org/plugin/com.twilio.guardrail) | [docs](docs/plugins/gradle.md) |
+| [CLI support](./modules/cli) | Latest | [`cs install guardrail`](https://get-coursier.io/docs/cli-install), [docs](docs/plugins/make.md) |
 
 New to guardrail?
 ---
@@ -46,21 +50,6 @@ Interested in contributing?
 
 [CONTRIBUTING.md](CONTRIBUTING.md) provides an overview of how the project is structured, expectations, and information around writing new integration tests.
 The [issue tracker](https://github.com/guardrail-dev/guardrail/issues) also has tags for [`help wanted`](https://github.com/guardrail-dev/guardrail/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and [`good first issue`](https://github.com/guardrail-dev/guardrail/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
-
-Build tool plugins
-------------------
-
-- SBT
-  - [`guardrail-dev/sbt-guardrail`](https://github.com/guardrail-dev/sbt-guardrail) [docs](docs/plugins/sbt.md)
-
-- Maven
-  - [`guardrail-dev/guardrail-maven-plugin`](https://github.com/guardrail-dev/guardrail-maven-plugin) [docs](docs/plugins/maven.md)
-
-- Gradle
-  - [`guardrail-dev/guardrail-gradle-plugin`](https://github.com/guardrail-dev/guardrail-gradle-plugin) [docs](docs/plugins/gradle.md)
-
-- Makefile
-  - [docs](docs/plugins/make.md)
 
 Adopters
 ========
