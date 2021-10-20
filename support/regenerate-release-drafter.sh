@@ -88,8 +88,6 @@ jobs:
         run: |
           java -version
           gpg --version
-          ruby --version
-          jekyll --version
 !
 }
 
@@ -153,15 +151,15 @@ write() {
 reinitialize_release
 reinitialize_release_drafter
 
-write core              guardrail-core              modules/core/              build.sbt  project/src/main/scala/modules/core.scala
-write java-async-http   guardrail-java-async-http   modules/java-async-http/   build.sbt  project/src/main/scala/modules/javaAsyncHttp.scala
-write java-dropwizard   guardrail-java-dropwizard   modules/java-dropwizard/   build.sbt  project/src/main/scala/modules/javaDropwizard.scala
-write java-spring-mvc   guardrail-java-spring-mvc   modules/java-spring-mvc/   build.sbt  project/src/main/scala/modules/javaSpringMvc.scala
-write java-support      guardrail-java-support      modules/java-support/      build.sbt  project/src/main/scala/modules/javaSupport.scala
-write scala-akka-http   guardrail-scala-akka-http   modules/scala-akka-http/   build.sbt  project/src/main/scala/modules/scalaAkkaHttp.scala
-write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/  build.sbt  project/src/main/scala/modules/scalaDropwizard.scala
-write scala-endpoints   guardrail-scala-endpoints   modules/scala-endpoints/   build.sbt  project/src/main/scala/modules/scalaEndpoints.scala
-write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/      build.sbt  project/src/main/scala/modules/scalaHttp4s.scala
-write scala-support     guardrail-scala-support     modules/scala-support/     build.sbt  project/src/main/scala/modules/scalaSupport.scala
-write guardrail         guardrail                   modules/codegen/           build.sbt  project/src/main/scala/modules/guardrail.scala
-write cli               guardrail-cli               modules/cli/               build.sbt  project/src/main/scala/modules/cli.scala
+write core              guardrail-core              modules/core/              build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/core.scala
+write java-async-http   guardrail-java-async-http   modules/java-async-http/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/javaAsyncHttp.scala
+write java-dropwizard   guardrail-java-dropwizard   modules/java-dropwizard/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/javaDropwizard.scala
+write java-spring-mvc   guardrail-java-spring-mvc   modules/java-spring-mvc/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/javaSpringMvc.scala
+write java-support      guardrail-java-support      modules/java-support/      build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/javaSupport.scala
+write scala-akka-http   guardrail-scala-akka-http   modules/scala-akka-http/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaAkkaHttp.scala
+write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/  build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaDropwizard.scala
+write scala-endpoints   guardrail-scala-endpoints   modules/scala-endpoints/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaEndpoints.scala
+write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/      build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaHttp4s.scala
+write scala-support     guardrail-scala-support     modules/scala-support/     build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaSupport.scala
+write guardrail         guardrail                   modules/codegen/           build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala
+write cli               guardrail-cli               modules/cli/               build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/cli.scala

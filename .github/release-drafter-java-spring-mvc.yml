@@ -4,6 +4,7 @@ tag-prefix: java-spring-mvc-v
 include-paths:
   - "modules/java-spring-mvc/"
   - "build.sbt"
+  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/javaSpringMvc.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:

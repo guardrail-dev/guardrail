@@ -4,6 +4,7 @@ tag-prefix: scala-akka-http-v
 include-paths:
   - "modules/scala-akka-http/"
   - "build.sbt"
+  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/scalaAkkaHttp.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:

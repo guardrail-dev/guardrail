@@ -4,6 +4,7 @@ tag-prefix: core-v
 include-paths:
   - "modules/core/"
   - "build.sbt"
+  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/core.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:

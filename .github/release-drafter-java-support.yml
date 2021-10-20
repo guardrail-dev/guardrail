@@ -4,6 +4,7 @@ tag-prefix: java-support-v
 include-paths:
   - "modules/java-support/"
   - "build.sbt"
+  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/javaSupport.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
