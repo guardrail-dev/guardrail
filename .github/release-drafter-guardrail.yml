@@ -2,7 +2,7 @@ name-template: 'guardrail-v$RESOLVED_VERSION'
 tag-template: 'guardrail-v$RESOLVED_VERSION'
 tag-prefix: guardrail-v
 include-paths:
-  - "modules/codegen/"
+  - "modules/codegen/src/main/"
   - "build.sbt"
   - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/guardrail.scala"

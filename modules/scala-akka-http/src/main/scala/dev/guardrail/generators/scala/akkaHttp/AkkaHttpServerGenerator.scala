@@ -14,12 +14,12 @@ import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.syntax._
-import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RenderedRoutes, TracingField }
+import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.shims._
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.server._
-import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Responses, TextContent, TextPlain, UrlencodedFormData }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import dev.guardrail.terms.{ ApplicationJson, BinaryContent, CollectionsLibTerms, ContentType, Header, MultipartFormData, Response }
+import dev.guardrail.terms.{ Responses, RouteMeta, SecurityScheme, TextContent, TextPlain, UrlencodedFormData }
 import dev.guardrail.{ Target, UserError }
 
 object AkkaHttpServerGenerator {
@@ -78,17 +78,30 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
       responseSuperType = Type.Name(responseClsName)
       responseSuperTerm = Term.Name(responseClsName)
       instances = responses.value.map {
-        case resp =>
-          val statusCodeName = resp.statusCodeName
-          val statusCode     = q"StatusCodes.${statusCodeName}"
-          val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
-          val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
+        case resp @ Response(statusCodeName, _, headers) =>
+          val statusCode       = q"StatusCodes.${statusCodeName}"
+          val responseTerm     = Term.Name(s"${responseClsName}${statusCodeName.value}")
+          val responseName     = Type.Name(s"${responseClsName}${statusCodeName.value}")
+          val headerParams     = headers.value.map(h => (h.term, h.tpe))
+          val headerParamTerms = headerParams.map({ case (term, tpe) => param"${term}: ${tpe}" })
+          val headersTerm      = generateHeaderParams(headers.value, Term.Name("r"))
+          val headersExpr      = q"val allHeaders = $headersTerm"
           resp.value.fold[(Defn, Defn, Case)](
-            (
-              q"case object $responseTerm                      extends $responseSuperType($statusCode)",
-              q"def $statusCodeName: $responseSuperType = $responseTerm",
-              p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
-            )
+            if (headers.value.isEmpty) {
+              (
+                q"case object $responseTerm                      extends $responseSuperType($statusCode)",
+                q"def $statusCodeName: $responseSuperType = $responseTerm",
+                p"case r: $responseTerm.type => scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode) } :: Nil)"
+              )
+            } else {
+              (
+                q"case class  $responseName(..${headerParams.map({ case (term, tpe)                                                    => param"${term}: ${tpe}" })}) extends $responseSuperType($statusCode)",
+                q"def $statusCodeName(..${headerParamTerms}): $responseSuperType = $responseTerm(..${headerParams.map({ case (term, _) => q"${term}" })})",
+                p"""case r :$responseName =>
+                      $headersExpr;
+                      scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode, allHeaders) } :: Nil)"""
+              )
+            }
           ) {
             case (contentType, valueType, _) =>
               val transformer: Term => Term = contentType match {
@@ -96,9 +109,17 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
                 case _         => identity _
               }
               (
-                q"case class  $responseName(value: $valueType) extends $responseSuperType($statusCode)",
-                q"def $statusCodeName(value: $valueType): $responseSuperType = $responseTerm(value)",
-                p"case r@$responseTerm(value) => Marshal(${transformer(q"value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                q"case class  $responseName(..${param"value: ${valueType}" +: headerParamTerms}) extends $responseSuperType($statusCode)",
+                q"def $statusCodeName(..${param"value: ${valueType}" +: headerParamTerms}): $responseSuperType = $responseTerm(..${q"value" +: headerParams
+                      .map({ case (term, _) => q"${term}" })})",
+                if (headers.value.isEmpty) {
+                  p"case r :$responseName => Marshal(${transformer(q"r.value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
+                } else {
+                  p"""case r :$responseName =>
+                 Marshal(${transformer(q"r.value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () =>
+                 $headersExpr;
+                 HttpResponse(r.statusCode, entity=entity, headers=allHeaders) } :: Nil }"""
+                }
               )
           }
       }
@@ -922,6 +943,22 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
         handlerDefinitions
       )
     }
+
+  def generateHeaderParams(headers: List[Header[ScalaLanguage]], prefix: Term.Name): Term = {
+    def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
+      q"$prefix.$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
+
+    def liftTerm(tParamName: Term.Name, tName: RawParameterName) =
+      q"Some(RawHeader(${tName.toLit}, Formatter.show($prefix.$tParamName)))"
+
+    val args: List[Term] = headers.map {
+      case Header(name, true, _, term) =>
+        liftTerm(term, RawParameterName(name))
+      case Header(name, false, _, term) =>
+        liftOptionTerm(term, RawParameterName(name))
+    }
+    q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
+  }
 
   def combineRouteTerms(terms: List[Term]): Target[Term] =
     Target.log.function(s"combineRouteTerms(<${terms.length} routes>)")(for {
