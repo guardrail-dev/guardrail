@@ -78,14 +78,14 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
       responseSuperType = Type.Name(responseClsName)
       responseSuperTerm = Term.Name(responseClsName)
       instances = responses.value.map {
-        case resp @ Response(statusCodeName, valueType, headers) =>
-          val statusCode     = q"StatusCodes.${statusCodeName}"
-          val responseTerm   = Term.Name(s"${responseClsName}${statusCodeName.value}")
-          val responseName   = Type.Name(s"${responseClsName}${statusCodeName.value}")
-          val allParams = valueType.map(tpe => (tpe, q"value")).toList ++ headers.value.map(h => (h.tpe, h.term))
-          val allAsParamTerms = allParams.map(t => param"${t._2}: ${t._1}")
-          val headersTerm = generateHeaderParams(headers.value, Term.Name("r"))
-          val headersExpr = q"val allHeaders = $headersTerm"
+        case resp @ Response(statusCodeName, _, headers) =>
+          val statusCode       = q"StatusCodes.${statusCodeName}"
+          val responseTerm     = Term.Name(s"${responseClsName}${statusCodeName.value}")
+          val responseName     = Type.Name(s"${responseClsName}${statusCodeName.value}")
+          val headerParams     = headers.value.map(h => (h.term, h.tpe))
+          val headerParamTerms = headerParams.map({ case (term, tpe) => param"${term}: ${tpe}" })
+          val headersTerm      = generateHeaderParams(headers.value, Term.Name("r"))
+          val headersExpr      = q"val allHeaders = $headersTerm"
           resp.value.fold[(Defn, Defn, Case)](
             if (headers.value.isEmpty) {
               (
@@ -95,8 +95,8 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
               )
             } else {
               (
-                q"case class  $responseName(..${allParams.map(t => param"${t._2}: ${t._1}")}) extends $responseSuperType($statusCode)",
-                q"def $statusCodeName(..${allAsParamTerms}): $responseSuperType = $responseTerm(..${allParams.map(t => q"${t._2}")})",
+                q"case class  $responseName(..${headerParams.map({ case (term, tpe)                                                    => param"${term}: ${tpe}" })}) extends $responseSuperType($statusCode)",
+                q"def $statusCodeName(..${headerParamTerms}): $responseSuperType = $responseTerm(..${headerParams.map({ case (term, _) => q"${term}" })})",
                 p"""case r :$responseName =>
                       $headersExpr;
                       scala.concurrent.Future.successful(Marshalling.Opaque { () => HttpResponse(r.statusCode, allHeaders) } :: Nil)"""
@@ -109,8 +109,9 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
                 case _         => identity _
               }
               (
-                q"case class  $responseName(..${allAsParamTerms}) extends $responseSuperType($statusCode)",
-                q"def $statusCodeName(..${allAsParamTerms}): $responseSuperType = $responseTerm(..${allParams.map(t => q"${t._2}")})",
+                q"case class  $responseName(..${param"value: ${valueType}" +: headerParamTerms}) extends $responseSuperType($statusCode)",
+                q"def $statusCodeName(..${param"value: ${valueType}" +: headerParamTerms}): $responseSuperType = $responseTerm(..${q"value" +: headerParams
+                      .map({ case (term, _) => q"${term}" })})",
                 if (headers.value.isEmpty) {
                   p"case r :$responseName => Marshal(${transformer(q"r.value")}).to[ResponseEntity].map { entity => Marshalling.Opaque { () => HttpResponse(r.statusCode, entity=entity) } :: Nil }"
                 } else {
