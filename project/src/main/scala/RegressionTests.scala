@@ -76,6 +76,7 @@ object RegressionTests {
     ExampleCase(sampleResource("issues/issue405.yaml"), "issues.issue405"),
     ExampleCase(sampleResource("issues/issue440.yaml"), "issues.issue440"),
     ExampleCase(sampleResource("issues/issue455.yaml"), "issues.issue455"),
+    ExampleCase(sampleResource("issues/issue572.yaml"), "issues.issue572"),
     ExampleCase(sampleResource("issues/issue622.yaml"), "issues.issue622"),
     ExampleCase(sampleResource("issues/issue1138.yaml"), "issues.issue1138"),
     ExampleCase(sampleResource("issues/issue1260.yaml"), "issues.issue1260"),

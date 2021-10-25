@@ -178,8 +178,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => putBarResponseTR(resp)
           }
           implicit def putBarResponseTR(value: PutBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ PutBarResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :PutBarResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -196,8 +196,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getFooResponseTR(resp)
           }
           implicit def getFooResponseTR(value: GetFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetFooResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetFooResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -214,8 +214,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getFooBarResponseTR(resp)
           }
           implicit def getFooBarResponseTR(value: GetFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetFooBarResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetFooBarResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -234,8 +234,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getOrderByIdResponseTR(resp)
           }
           implicit def getOrderByIdResponseTR(value: GetOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetOrderByIdResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetOrderByIdResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -315,8 +315,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => putBarResponseTR(resp)
           }
           implicit def putBarResponseTR(value: PutBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ PutBarResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :PutBarResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -333,8 +333,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getFooResponseTR(resp)
           }
           implicit def getFooResponseTR(value: GetFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetFooResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetFooResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -351,8 +351,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getFooBarResponseTR(resp)
           }
           implicit def getFooBarResponseTR(value: GetFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetFooBarResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetFooBarResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -371,8 +371,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getOrderByIdResponseTR(resp)
           }
           implicit def getOrderByIdResponseTR(value: GetOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetOrderByIdResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetOrderByIdResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -452,8 +452,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => putBarResponseTR(resp)
           }
           implicit def putBarResponseTR(value: PutBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ PutBarResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :PutBarResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -470,8 +470,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getFooResponseTR(resp)
           }
           implicit def getFooResponseTR(value: GetFooResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetFooResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetFooResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -488,8 +488,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getFooBarResponseTR(resp)
           }
           implicit def getFooBarResponseTR(value: GetFooBarResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetFooBarResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetFooBarResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
@@ -508,8 +508,8 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
             resp => getOrderByIdResponseTR(resp)
           }
           implicit def getOrderByIdResponseTR(value: GetOrderByIdResponse)(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[List[Marshalling[HttpResponse]]] = value match {
-            case r @ GetOrderByIdResponseOK(value) =>
-              Marshal(value).to[ResponseEntity].map {
+            case r :GetOrderByIdResponseOK =>
+              Marshal(r.value).to[ResponseEntity].map {
                 entity => Marshalling.Opaque {
                   () => HttpResponse(r.statusCode, entity = entity)
                 } :: Nil
