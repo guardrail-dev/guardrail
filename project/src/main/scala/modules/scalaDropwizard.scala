@@ -22,7 +22,7 @@ object scalaDropwizard {
     "io.dropwizard"                  %  "dropwizard-forms"        % dropwizardVersion,
     "com.fasterxml.jackson.datatype" %  "jackson-datatype-jsr310" % jacksonVersion,
     "junit"                          %  "junit"                   % "4.13.2"             % Test,
-    "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
+    "com.github.sbt"                   %  "junit-interface"         % "0.13.2"             % Test,
     "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
     "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
