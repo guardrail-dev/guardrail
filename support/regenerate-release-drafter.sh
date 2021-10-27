@@ -161,5 +161,5 @@ write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/  b
 write scala-endpoints   guardrail-scala-endpoints   modules/scala-endpoints/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaEndpoints.scala
 write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/      build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaHttp4s.scala
 write scala-support     guardrail-scala-support     modules/scala-support/     build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaSupport.scala
-write guardrail         guardrail                   modules/codegen/           build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala
+write guardrail         guardrail                   modules/codegen/src/main/  build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala
 write cli               guardrail-cli               modules/cli/               build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/cli.scala
