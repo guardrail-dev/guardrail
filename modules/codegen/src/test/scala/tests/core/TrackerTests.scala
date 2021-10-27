@@ -1,4 +1,4 @@
-package core
+package tests.core
 
 import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
 import dev.guardrail.core.implicits._
