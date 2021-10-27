@@ -112,7 +112,7 @@ write_release() {
       # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [${module}]'
         if: \${{ steps.set-project-from-tag.outputs.module == '${module}' }}
-        run: sbt 'show version' "project ${project_name}" clean compile versionCheck ci-release
+        run: sbt 'show version' "project ${project_name}" clean compile versionCheck test ci-release
         env:
           PGP_PASSPHRASE: \${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: \${{ secrets.PGP_SECRET }}
