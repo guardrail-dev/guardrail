@@ -6,7 +6,8 @@ import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.data.NonEmptyList
 import java.util.LinkedList
 import org.scalactic.Equality
-import org.scalatest.{ EitherValues, OptionValues }
+import org.scalatest.{ Assertions, EitherValues, OptionValues }
+import org.scalactic.source.Position
 import scala.meta.Tree
 
 import dev.guardrail._
@@ -15,7 +16,15 @@ import dev.guardrail.generators.Framework
 import dev.guardrail.generators._
 import dev.guardrail.languages.LA
 
-trait SwaggerSpecRunner extends EitherValues with OptionValues {
+trait TargetValues { self: Assertions =>
+  implicit class TargetSyntax[A](wrapped: Target[A])(implicit pos: Position) {
+    def value: A = wrapped.valueOr { err =>
+      fail(s"Attempted to get value for a failed Target: ${err}")
+    }
+  }
+}
+
+trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues { self: Assertions =>
   implicit def TreeEquality[A <: Tree]: Equality[A] =
     new Equality[A] {
       def areEqual(a: A, b: Any): Boolean =
@@ -25,6 +34,12 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
         }
     }
 
+  def swaggerFromString(spec: String): OpenAPI = {
+    val parseOpts = new ParseOptions
+    parseOpts.setResolve(true)
+    new OpenAPIParser().readContents(spec, new LinkedList(), parseOpts).getOpenAPI
+  }
+
   def runSwaggerSpec[L <: LA](
       spec: String,
       dtoPackage: List[String] = List.empty,
@@ -33,15 +48,12 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues {
       context: Context,
       framework: Framework[L, Target],
       targets: NonEmptyList[CodegenTarget] = NonEmptyList.of(CodegenTarget.Client, CodegenTarget.Server)
-  ): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
-    val parseOpts = new ParseOptions
-    parseOpts.setResolve(true)
-    runSwagger(new OpenAPIParser().readContents(spec, new LinkedList(), parseOpts).getOpenAPI, dtoPackage, supportPackage)(
+  ): (ProtocolDefinitions[L], Clients[L], Servers[L]) =
+    runSwagger(swaggerFromString(spec), dtoPackage, supportPackage)(
       context,
       framework,
       targets
     )
-  }
 
   private def runSwagger[L <: LA](
       swagger: OpenAPI,
