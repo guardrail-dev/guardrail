@@ -1,3 +1,5 @@
+GITHUB_TOKEN="$1"
+
 pr_number="$(jq --raw-output '.pull_request.number' "$GITHUB_EVENT_PATH")"
 user="$(jq --raw-output '.pull_request.user.login' "$GITHUB_EVENT_PATH")"
 
