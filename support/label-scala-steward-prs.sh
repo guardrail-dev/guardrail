@@ -9,7 +9,7 @@ die() {
 
 api() {
   url="$1"; shift || die 1 "Missing URL for api call"
-  curl \
+  curl -s \
     -H "Accept: application/vnd.github.v3+json" \
     -H "Authorization: Bearer ${GITHUB_TOKEN}" \
     "https://api.github.com/${url#/}" \
