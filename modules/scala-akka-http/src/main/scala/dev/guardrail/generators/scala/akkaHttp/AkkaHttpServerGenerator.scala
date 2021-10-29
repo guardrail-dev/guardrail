@@ -653,7 +653,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             }
           """
               ),
-              entityDirective => q"""
+              entityDirective =>
+                q"""
         (
           handleExceptions(ExceptionHandler {
             case e: Throwable =>
@@ -669,7 +670,10 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                     case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
                   }
                   val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
-                  val status = StatusCodes.PayloadTooLarge
+                  val status = ${akkaHttpVersion match {
+                  case AkkaHttpVersion.V10_1 => q"StatusCodes.RequestEntityTooLarge"
+                  case AkkaHttpVersion.V10_2 => q"StatusCodes.PayloadTooLarge"
+                }}
                   val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
                   complete(HttpResponse(status, entity = msg))
               }
