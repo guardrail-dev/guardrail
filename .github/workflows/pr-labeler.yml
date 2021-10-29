@@ -10,8 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Label scala-steward
-        run: |
-          ./support/label-scala-steward-prs.sh "${{ secrets.GITHUB_TOKEN }}"
+        run: ./support/label-scala-steward-prs.sh "${{ secrets.GITHUB_TOKEN }}"
   cron-labeler:
     runs-on: ubuntu-latest
     steps:
