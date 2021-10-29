@@ -2,18 +2,21 @@ package dev.guardrail.generators.scala.akkaHttp
 
 import dev.guardrail.Target
 import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ AkkaHttpVersion, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
 import scala.meta._
 
 object AkkaHttpGenerator {
-  def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
-    new AkkaHttpGenerator(modelGeneratorType)
+  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(
+      implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]
+  ): FrameworkTerms[ScalaLanguage, Target] =
+    new AkkaHttpGenerator(akkaHttpVersion, modelGeneratorType)
 }
 
-class AkkaHttpGenerator private (modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
-    extends FrameworkTerms[ScalaLanguage, Target] {
+class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(
+    implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]
+) extends FrameworkTerms[ScalaLanguage, Target] {
   override implicit def MonadF                  = Target.targetInstances
   override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
   override def objectType(format: Option[String]) =
