@@ -112,7 +112,7 @@ write_release() {
       # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [${module}]'
         if: \${{ steps.set-project-from-tag.outputs.module == '${module}' }}
-        run: sbt 'show version' "project ${project_name}" clean compile versionCheck ci-release
+        run: sbt 'show version' "project ${project_name}" clean compile versionCheck test ci-release
         env:
           PGP_PASSPHRASE: \${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: \${{ secrets.PGP_SECRET }}
@@ -161,5 +161,5 @@ write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/  b
 write scala-endpoints   guardrail-scala-endpoints   modules/scala-endpoints/   build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaEndpoints.scala
 write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/      build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaHttp4s.scala
 write scala-support     guardrail-scala-support     modules/scala-support/     build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaSupport.scala
-write guardrail         guardrail                   modules/codegen/           build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala
+write guardrail         guardrail                   modules/codegen/src/main/  build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala
 write cli               guardrail-cli               modules/cli/               build.sbt  project/src/main/scala/Build.scala  project/src/main/scala/modules/cli.scala

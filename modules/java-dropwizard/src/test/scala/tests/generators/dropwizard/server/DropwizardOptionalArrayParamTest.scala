@@ -4,13 +4,22 @@ import com.github.javaparser.ast.body.MethodDeclaration
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import dev.guardrail.generators.java.dropwizard.Dropwizard
+import org.scalatest.Retries
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.tagobjects.Retryable
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import support.SwaggerSpecRunner
 
-class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
+class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with Retries with SwaggerSpecRunner {
+
+  override def withFixture(test: NoArgTest) =
+    if (isRetryable(test))
+      withRetry { super.withFixture(test) }
+    else
+      super.withFixture(test)
+
   private val openapi =
     """openapi: 3.0.2
       |info:
@@ -39,7 +48,7 @@ class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with Sw
       |        200: {}
       |""".stripMargin
 
-  "Optional array resource method params should be unwrapped" in {
+  "Optional array resource method params should be unwrapped" taggedAs (Retryable) in {
     val (
       _,
       _,

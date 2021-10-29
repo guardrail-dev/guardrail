@@ -163,9 +163,9 @@ object Build {
           (current ++ fromOther).distinct
         })
         .settings(Test / unmanagedClasspath := {
-          val current = (Compile / unmanagedClasspath).value
-          val fromOther = (other / Compile / fullClasspathAsJars).value
-          (current ++ fromOther).distinct
+          val current = (Test / unmanagedClasspath).value
+          val fromOther = (other / Test / fullClasspathAsJars).value
+          (current ++ fromOther).distinct ++ (other / Test / exportedProductJars).value
         })
         .settings(Default / unmanagedClasspath := {
           val current = (Compile / unmanagedClasspath).value

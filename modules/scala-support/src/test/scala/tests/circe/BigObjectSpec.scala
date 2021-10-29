@@ -1,17 +1,27 @@
-package swagger
-package protocols
+package tests
+package circe
 
+import cats.data.NonEmptyList
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 import support.SwaggerSpecRunner
 
-import dev.guardrail.Context
+import dev.guardrail.Target
+import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.ProtocolGenerator
+import dev.guardrail.generators.SwaggerGenerator
+import dev.guardrail.generators.scala.CirceModelGenerator
+import dev.guardrail.generators.scala.ScalaCollectionsGenerator
+import dev.guardrail.generators.scala.ScalaGenerator
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
+import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.ClassDefinition
+import dev.guardrail.terms.protocol.PropertyRequirement
 
 class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
@@ -120,8 +130,32 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |""".stripMargin
 
   test("Big objects can be generated") {
-    val (ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _), _, _) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
+    implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
+      def MonadF                                                                                                    = Target.targetInstances
+      def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = ???
+      def getFrameworkDefinitions(
+          tracing: Boolean
+      ): dev.guardrail.Target[List[(dev.guardrail.generators.scala.ScalaLanguage#TermName, List[dev.guardrail.generators.scala.ScalaLanguage#Definition])]] =
+        ???
+      def getFrameworkImplicits(): dev.guardrail.Target[Option[
+        (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
+      ]]                                                                                                                         = ???
+      def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]] = ???
+      def lookupStatusCode(key: String): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)]      = ???
+      def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type]            = Target.pure(t"io.circe.Json")
+    }
+    implicit val circeProtocolGenerator = CirceProtocolGenerator(CirceModelGenerator.V012)
+    implicit val scalaGenerator         = ScalaGenerator()
+    implicit val swaggerGenerator       = SwaggerGenerator[ScalaLanguage]()
+    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
+      .fromSwagger[ScalaLanguage, Target](
+        Tracker(swaggerFromString(swagger)),
+        dtoPackage = Nil,
+        supportPackage = NonEmptyList.one("foop"),
+        defaultPropertyRequirement = PropertyRequirement.OptionalLegacy
+      )
+      .value
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
