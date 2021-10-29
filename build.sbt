@@ -44,6 +44,8 @@ runExample := Def.inputTaskDyn {
   )
 }.evaluated
 
+addCommandAlias("runtimeAkkaHttpSuite", "; resetSample ; runExample scala akka-http ; sample-akkaHttp / test")
+
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
 
 // Deprecated command
