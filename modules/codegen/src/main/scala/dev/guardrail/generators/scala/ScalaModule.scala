@@ -46,8 +46,18 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
     AkkaHttpClientGenerator(modelGeneratorType),
-    AkkaHttpServerGenerator(modelGeneratorType),
-    AkkaHttpGenerator(modelGeneratorType)
+    AkkaHttpServerGenerator(AkkaHttpVersion.V10_2, modelGeneratorType),
+    AkkaHttpGenerator(AkkaHttpVersion.V10_2, modelGeneratorType)
+  )
+
+  def akkaHttpV10_1(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
+      ClientTerms[ScalaLanguage, Target],
+      ServerTerms[ScalaLanguage, Target],
+      FrameworkTerms[ScalaLanguage, Target]
+  ) = (
+    AkkaHttpClientGenerator(modelGeneratorType),
+    AkkaHttpServerGenerator(AkkaHttpVersion.V10_1, modelGeneratorType),
+    AkkaHttpGenerator(AkkaHttpVersion.V10_1, modelGeneratorType)
   )
 
   def endpoints(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
@@ -93,6 +103,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       (client, server, framework) <- popModule(
         "framework",
         ("akka-http", catchClassNotFound(akkaHttp(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
+        ("akka-http-v10.1", catchClassNotFound(akkaHttpV10_1(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
         ("http4s", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
         ("endpoints", catchClassNotFound(endpoints(modelGeneratorType), MissingDependency("guardrail-scala-endpoints"))),
         ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
