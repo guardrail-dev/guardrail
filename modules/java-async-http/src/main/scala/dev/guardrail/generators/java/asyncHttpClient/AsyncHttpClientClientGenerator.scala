@@ -28,7 +28,19 @@ import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, Response, Responses, TextContent, UrlencodedFormData }
+import dev.guardrail.terms.{
+  AnyContentType,
+  ApplicationJson,
+  BinaryContent,
+  ContentType,
+  MultipartFormData,
+  OctetStream,
+  Response,
+  Responses,
+  TextContent,
+  TextPlain,
+  UrlencodedFormData
+}
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
@@ -201,6 +213,9 @@ object AsyncHttpClientClientGenerator {
 
         case Some(UrlencodedFormData) | Some(MultipartFormData) =>
           // We shouldn't be here, since we can't have a body param with these content types
+          None
+        case Some(AnyContentType | OctetStream | TextPlain) =>
+          // TODO: These need to be addressed, just suppressing warnings as of now
           None
       }
     }
