@@ -428,6 +428,7 @@ object AsyncHttpClientClientGenerator {
     }
 }
 
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ClientTerms[JavaLanguage, Target] {
   import AsyncHttpClientClientGenerator._
