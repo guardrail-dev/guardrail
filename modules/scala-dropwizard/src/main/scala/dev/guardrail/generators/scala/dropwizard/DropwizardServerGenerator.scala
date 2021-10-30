@@ -28,7 +28,6 @@ import dev.guardrail.terms.{
   TextPlain,
   UrlencodedFormData
 }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 object DropwizardServerGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =

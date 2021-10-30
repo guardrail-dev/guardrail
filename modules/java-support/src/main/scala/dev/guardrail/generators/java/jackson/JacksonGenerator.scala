@@ -13,7 +13,6 @@ import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 
-import dev.guardrail.{ RuntimeFailure, Target, UserError }
 import dev.guardrail.core
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
@@ -23,11 +22,11 @@ import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.{ RawParameterName, RawParameterType }
-import dev.guardrail.terms.{ CollectionsLibTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
+import dev.guardrail.{ RuntimeFailure, Target, UserError }
 
 object JacksonGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ProtocolTerms[JavaLanguage, Target] =
