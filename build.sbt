@@ -9,7 +9,7 @@ import dev.guardrail.sbt.RegressionTests._
 import dev.guardrail.sbt.ExampleCase
 import dev.guardrail.sbt.modules
 
-WelcomeMessage.welcomeMessage
+onLoadMessage := WelcomeMessage.welcomeMessage((guardrail / version).value)
 
 import scoverage.ScoverageKeys
 

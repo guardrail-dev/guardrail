@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 object WelcomeMessage {
-  def welcomeMessage = onLoadMessage := {
+  def welcomeMessage(guardrailVersion: String) = {
     import scala.Console
 
     def header(text: String): String = s"${Console.WHITE}${text}${Console.RESET}"
@@ -20,7 +20,7 @@ object WelcomeMessage {
         |${header(" | (_| | |_| | (_| | | | (_| | | | (_| | | |")}
         |${header("  \\__, |\\__,_|\\__,_|_|  \\__,_|_|  \\__,_|_|_|")}
         |${header("   __/ |")}
-        |${header(s"  |___/   ${version.value}")}
+        |${header(s"  |___/   ${guardrailVersion}")}
         |
         |Useful sbt tasks:
         |${item("cli")} - Use the CLI driver to run guardrail directly. `cli --help` to get started
