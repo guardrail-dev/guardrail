@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{reques
 import org.springframework.web.multipart.MultipartFile
 import spring.test.TestApplication
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 @RunWith(classOf[SpringRunner])
 @SpringBootTest(classes = Array(classOf[TestApplication]))

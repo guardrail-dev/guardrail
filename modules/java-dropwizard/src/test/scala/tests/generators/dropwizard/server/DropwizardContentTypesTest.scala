@@ -6,7 +6,7 @@ import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.compat.java8.OptionConverters._
 import support.SwaggerSpecRunner
 

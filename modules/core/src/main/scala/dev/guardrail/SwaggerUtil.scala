@@ -13,7 +13,7 @@ import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, Cust
 import dev.guardrail.core.extract.VendorExtension.VendorExtensible._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.PropMeta
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object SwaggerUtil {
   def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit Cl: CollectionsLibTerms[L, F]): F[Option[String]] = {

@@ -6,7 +6,7 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.Parameter
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import dev.guardrail._
 import dev.guardrail.core.implicits._

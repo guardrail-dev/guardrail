@@ -16,6 +16,7 @@ object core {
           "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.28",
         ) ++ Seq(
           "org.scalameta"               %% "scalameta"                    % "4.4.29",
+          "org.scala-lang.modules"      %% "scala-collection-compat"      % "2.5.0",
           "org.tpolecat"                %% "atto-core"                    % "0.9.5",
           "org.typelevel"               %% "cats-core"                    % catsVersion,
           "org.typelevel"               %% "cats-kernel"                  % catsVersion,

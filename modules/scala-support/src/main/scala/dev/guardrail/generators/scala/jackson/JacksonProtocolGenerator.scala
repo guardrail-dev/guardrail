@@ -342,7 +342,7 @@ object JacksonProtocolGenerator {
                     jsonNode match {
                       case arr: com.fasterxml.jackson.databind.node.ArrayNode =>
                         import cats.implicits._
-                        import _root_.scala.collection.JavaConverters._
+                        import _root_.scala.jdk.CollectionConverters._
                         arr.iterator().asScala.toVector.traverse(implicitly[GuardrailDecoder[B]].decode)
                       case _ =>
                         scala.util.Failure(new com.fasterxml.jackson.databind.JsonMappingException(null, s"Can't decode to vector; node of type $${jsonNode.getClass.getSimpleName} is not an array"))
@@ -355,7 +355,7 @@ object JacksonProtocolGenerator {
                     jsonNode match {
                       case obj: com.fasterxml.jackson.databind.node.ObjectNode =>
                         import cats.implicits._
-                        import _root_.scala.collection.JavaConverters._
+                        import _root_.scala.jdk.CollectionConverters._
                         obj.fields().asScala.toVector.traverse(entry => implicitly[GuardrailDecoder[B]].decode(entry.getValue).map((entry.getKey, _))).map(_.toMap)
                       case _ =>
                         scala.util.Failure(new com.fasterxml.jackson.databind.JsonMappingException(null, s"Can't decode to map; node of type $${jsonNode.getClass.getSimpleName} is not an object"))
@@ -385,7 +385,7 @@ object JacksonProtocolGenerator {
               object GuardrailValidator {
                 def instance[A]: GuardrailValidator[A] = new GuardrailValidator[A] {
                   override def validate(a: A)(implicit validator: javax.validation.Validator): scala.util.Try[A] = {
-                    import _root_.scala.collection.JavaConverters._
+                    import _root_.scala.jdk.CollectionConverters._
                     scala.util.Try(validator.validate(a)).flatMap({
                       case violations if violations.isEmpty =>
                         scala.util.Success(a)

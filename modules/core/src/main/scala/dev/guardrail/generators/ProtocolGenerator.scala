@@ -30,7 +30,7 @@ import dev.guardrail.terms.{
 }
 import cats.Foldable
 import dev.guardrail.core.extract.Default
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 case class ProtocolDefinitions[L <: LA](
     elems: List[StrictProtocolElems[L]],

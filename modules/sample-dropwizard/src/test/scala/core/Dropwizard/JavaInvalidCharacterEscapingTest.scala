@@ -14,7 +14,7 @@ import org.asynchttpclient.uri.Uri
 import org.asynchttpclient.{ HttpResponseStatus, Request, Response }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object JavaInvalidCharacterEscapingTest {
   private implicit class RichString(private val s: String) extends AnyVal {
