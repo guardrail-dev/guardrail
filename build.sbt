@@ -113,6 +113,7 @@ lazy val root = modules.root.project
 
 lazy val allDeps = modules.allDeps.project
   .settings(publish / skip := true)
+  .settings(crossScalaVersions := crossScalaVersions.value.filter(_.startsWith("2.12")))
 
 lazy val guardrail = modules.guardrail.project
   .customDependsOn(core)
