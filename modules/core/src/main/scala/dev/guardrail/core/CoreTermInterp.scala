@@ -94,12 +94,7 @@ class CoreTermInterp[L <: LA](
     }
   }
 
-  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
-    import scala.meta.parsers.Parsed
-    implicit def parsed2Either[Z]: Parsed[Z] => Either[Parsed.Error, Z] = {
-      case x: Parsed.Error      => Left(x)
-      case Parsed.Success(tree) => Right(tree)
-    }
+  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] =
     Target.log.function("processArgSet")(for {
       _          <- Target.log.debug("Processing arguments")
       specPath   <- Target.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
@@ -176,5 +171,4 @@ class CoreTermInterp[L <: LA](
         }
       )
     })
-  }
 }
