@@ -65,45 +65,59 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
 
   "Jackson can build a discriminator value expression" - {
     "from a string" in {
-      val StringLiteralExpr(foobar) = discriminatorExpression("foobar", "string").value
-      foobar mustBe "foobar"
+      discriminatorExpression("foobar", "string").value match {
+        case StringLiteralExpr(foobar) => foobar mustBe "foobar"
+        case _                         => fail()
+      }
     }
 
     "from a boolean" in {
-      val BooleanLiteralExpr(bool) = discriminatorExpression("true", "boolean").value
-      bool mustBe true
+      discriminatorExpression("true", "boolean").value match {
+        case BooleanLiteralExpr(bool) => bool mustBe true
+        case _                        => fail()
+      }
     }
 
     "from an int32" in {
-      val IntegerLiteralExpr(int) = discriminatorExpression("42", "integer", Some("int32")).value
-      int mustBe "42"
+      discriminatorExpression("42", "integer", Some("int32")).value match {
+        case IntegerLiteralExpr(int) => int mustBe "42"
+        case _                       => fail()
+      }
     }
 
     "from an int64" in {
-      val LongLiteralExpr(long) = discriminatorExpression(Long.MaxValue.toString, "integer", Some("int64")).value
-      long mustBe Long.MaxValue.toString()
+      discriminatorExpression(Long.MaxValue.toString, "integer", Some("int64")).value match {
+        case LongLiteralExpr(long) => long mustBe Long.MaxValue.toString()
+        case _                     => fail()
+      }
     }
 
     "from a bigint" in {
-      val ObjectCreationExpr(_, BIG_INTEGER_FQ_TYPE, List(StringLiteralExpr(bigintStr))) = discriminatorExpression("12345678901234567890", "integer").value
-      println(bigintStr.getClass())
-      bigintStr mustBe "12345678901234567890"
+      discriminatorExpression("12345678901234567890", "integer").value match {
+        case ObjectCreationExpr(_, BIG_INTEGER_FQ_TYPE, List(StringLiteralExpr(bigintStr))) => bigintStr mustBe "12345678901234567890"
+        case _                                                                              => fail()
+      }
     }
 
     "from a float" in {
-      val DoubleLiteralExpr(floatStr) = discriminatorExpression("42.42", "number", Some("float")).value
-      floatStr mustBe "42.41999816894531" // Not "42.42" but kinda close enough I guess.
+      discriminatorExpression("42.42", "number", Some("float")).value match {
+        case DoubleLiteralExpr(floatStr) => floatStr mustBe "42.41999816894531" // Not "42.42" but kinda close enough I guess.
+        case _                           => fail()
+      }
     }
 
     "from a double" in {
-      val DoubleLiteralExpr(doubleStr) = discriminatorExpression("42.42", "number", Some("double")).value
-      doubleStr mustBe "42.42" // Why isn't this inaccurate like "from a float"?
+      discriminatorExpression("42.42", "number", Some("double")).value match {
+        case DoubleLiteralExpr(doubleStr) => doubleStr mustBe "42.42" // Why isn't this inaccurate like "from a float"?
+        case _                            => fail()
+      }
     }
 
     "from a bigdecimal" in {
-      val ObjectCreationExpr(_, BIG_DECIMAL_FQ_TYPE, List(StringLiteralExpr(bigdecStr))) =
-        discriminatorExpression("12345678901234567890.0987654321", "number").value
-      bigdecStr mustBe "12345678901234567890.0987654321"
+      discriminatorExpression("12345678901234567890.0987654321", "number").value match {
+        case ObjectCreationExpr(_, BIG_DECIMAL_FQ_TYPE, List(StringLiteralExpr(bigdecStr))) => bigdecStr mustBe "12345678901234567890.0987654321"
+        case _                                                                              => fail()
+      }
     }
   }
 
