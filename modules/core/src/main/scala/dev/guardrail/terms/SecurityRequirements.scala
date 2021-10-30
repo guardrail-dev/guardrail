@@ -24,7 +24,7 @@ object SecurityRequirements {
           .flatMap(
             req =>
               NonEmptyMap.fromMap(
-                TreeMap(req.asScala.mapValues(_.asScala.toList).toSeq: _*)
+                TreeMap(req.asScala.view.mapValues(_.asScala.toList).toSeq: _*)
               )
           )
       )

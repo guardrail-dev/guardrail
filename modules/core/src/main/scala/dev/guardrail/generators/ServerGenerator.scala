@@ -42,6 +42,7 @@ object ServerGenerator {
         case (className, unsortedRoutes) =>
           val routes = unsortedRoutes
             .groupBy(_.path.unwrapTracker.indexOf('{'))
+            .view
             .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
             .toList
             .sortBy(_._1)

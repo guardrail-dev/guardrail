@@ -177,7 +177,7 @@ object LanguageParameter {
     import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
-      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).view.mapValues(_.length).toMap)
       result <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>
           if (counts.getOrElse(name, 0) > 1) {

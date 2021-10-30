@@ -81,8 +81,7 @@ object Common {
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.unwrapTracker, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
-        .groupBy(_._1)
-        .mapValues(_.map(_._2))
+        .groupMap(_._1)(_._2)
         .toList
       frameworkImports <- getFrameworkImports(context.tracing)
 

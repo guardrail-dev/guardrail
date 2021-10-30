@@ -500,7 +500,7 @@ object ProtocolGenerator {
     import Lt._
     for {
       paramsWithNames <- params.traverse(param => extractTermNameFromParam(param.term).map((_, param)))
-      counts = paramsWithNames.groupBy(_._1).mapValues(_.length)
+      counts = paramsWithNames.groupBy(_._1).view.mapValues(_.length).toMap
       newParams <- paramsWithNames.traverse({
         case (name, param) =>
           if (counts.getOrElse(name, 0) > 1) {

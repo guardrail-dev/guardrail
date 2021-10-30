@@ -34,4 +34,4 @@ package guardrail {
   }
 }
 
-package object guardrail extends MonadChain1
+package object guardrail extends MonadChain1 with CollectionsSyntax
