@@ -28,6 +28,7 @@ import dev.guardrail.terms.server._
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.{
+  AnyContentType,
   ApplicationJson,
   BinaryContent,
   CollectionsLibTerms,
@@ -65,6 +66,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
     case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM_VALUE")
     case TextContent(name)   => new StringLiteralExpr(name)
     case BinaryContent(name) => new StringLiteralExpr(name)
+    case AnyContentType      => ??? // TODO: What do we do if we get here?
   }
 
   private val ASYNC_RESPONSE_TYPE        = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
