@@ -108,10 +108,11 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       case _ =>
         Option.empty
     })
-  override def extractTermName(term: scala.meta.Term.Name): Target[String] = {
-    val Term.Name(name) = term
-    Target.pure(name)
-  }
+  override def extractTermName(term: scala.meta.Term.Name): Target[String] =
+    term match {
+      case Term.Name(name) => Target.pure(name)
+      case _               => Target.raiseException("Impossible 2.13.4+ excitement, see https://github.com/scala/bug/issues/12232")
+    }
   override def extractTermNameFromParam(param: scala.meta.Term.Param): Target[String] = Target.pure(param.name.value)
   override def selectType(typeNames: NonEmptyList[String]): Target[scala.meta.Type] = {
     val tpe   = Type.Name(typeNames.last)
@@ -336,18 +337,22 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     val pkgImplicitsImport = q"import ${buildTermSelect("_root_" :: pkgComponents)}.Implicits._"
     dtoComponents.traverse({
       case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
-        for (dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))) yield {
-          val dtoPkg = dtoRestNel.init.foldLeft[Term.Ref](Term.Name(dtoHead))({
+        for {
+          dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))
+          dtoPkg = dtoRestNel.init.foldLeft[Term.Ref](Term.Name(dtoHead))({
             case (acc, next) =>
               Term.Select(acc, Term.Name(next))
           })
-          val companion                 = Term.Name(s"${dtoRestNel.last}$$")
-          val (_, statements)           = packageObjectContents.partition(partitionImplicits)
-          val implicits: List[Defn.Val] = packageObjectContents.collect(matchImplicit)
-          val mirroredImplicits = implicits.map { stat =>
-            val List(Pat.Var(mirror)) = stat.pats
-            stat.copy(rhs = q"$companion.$mirror")
+          companion       = Term.Name(s"${dtoRestNel.last}$$")
+          (_, statements) = packageObjectContents.partition(partitionImplicits)
+          implicits       = packageObjectContents.collect(matchImplicit)
+          mirroredImplicits <- implicits.traverse { stat =>
+            stat.pats match {
+              case List(Pat.Var(mirror)) => Target.pure(stat.copy(rhs = q"$companion.$mirror"))
+              case other                 => Target.raiseUserError(s"Attempt to mirror implicits failed, expected List(Pat.Var(...)), got ${other}")
+            }
           }
+        } yield {
           sourceToBytes(
             dtoPackagePath.resolve("package.scala"),
             source"""
