@@ -44,6 +44,8 @@ runExample := Def.inputTaskDyn {
   )
 }.evaluated
 
+addCommandAlias("runtimeAkkaHttpSuite", "; resetSample ; runExample scala akka-http ; sample-akkaHttp / test")
+
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
 
 // Deprecated command
@@ -92,7 +94,22 @@ lazy val root = modules.root.project
   .customDependsOn(microsite)
   .customDependsOn(cli)
   .aggregate(allDeps, microsite)
-  .aggregate(allModules: _*)
+  .aggregate(
+    cli,
+    core,
+    guardrail,
+
+    javaSupport,
+    javaAsyncHttp,
+    javaDropwizard,
+    javaSpringMvc,
+
+    scalaSupport,
+    scalaAkkaHttp,
+    scalaEndpoints,
+    scalaHttp4s,
+    scalaDropwizard,
+  )
 
 lazy val allDeps = modules.allDeps.project
   .settings(publish / skip := true)
@@ -152,23 +169,6 @@ lazy val scalaHttp4s = modules.scalaHttp4s.project
 lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
 lazy val scalaDropwizard = modules.scalaDropwizard.project
   .customDependsOn(scalaSupport)
-
-lazy val allModules = Seq[sbt.ProjectReference](
-  cli,
-  core,
-  guardrail,
-
-  javaSupport,
-  javaAsyncHttp,
-  javaDropwizard,
-  javaSpringMvc,
-
-  scalaSupport,
-  scalaAkkaHttp,
-  scalaEndpoints,
-  scalaHttp4s,
-  scalaDropwizard,
-)
 
 lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
   .settings(

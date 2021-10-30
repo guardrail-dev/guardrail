@@ -10,7 +10,7 @@ import scala.meta._
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.operations.TracingLabelFormatter
-import dev.guardrail.generators.scala.ModelGeneratorType
+import dev.guardrail.generators.scala.{ AkkaHttpVersion, ModelGeneratorType }
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.syntax._
@@ -23,8 +23,10 @@ import dev.guardrail.terms.{ Responses, RouteMeta, SecurityScheme, TextContent, 
 import dev.guardrail.{ Target, UserError }
 
 object AkkaHttpServerGenerator {
-  def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
-    new AkkaHttpServerGenerator(modelGeneratorType)
+  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(
+      implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]
+  ): ServerTerms[ScalaLanguage, Target] =
+    new AkkaHttpServerGenerator(akkaHttpVersion, modelGeneratorType)
 
   def generateUrlPathExtractors(
       path: Tracker[String],
@@ -58,8 +60,9 @@ object AkkaHttpServerGenerator {
     } yield result.reverse
 }
 
-class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
-    extends ServerTerms[ScalaLanguage, Target] {
+class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(
+    implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]
+) extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
 
   def splitOperationParts(operationId: String): (List[String], String) = {
@@ -650,7 +653,8 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
             }
           """
               ),
-              entityDirective => q"""
+              entityDirective =>
+                q"""
         (
           handleExceptions(ExceptionHandler {
             case e: Throwable =>
@@ -666,7 +670,10 @@ class AkkaHttpServerGenerator private (modelGeneratorType: ModelGeneratorType)(i
                     case None     => s"Aggregated data length of request entity exceeds the configured limit of $$limit bytes"
                   }
                   val info = new ErrorInfo(summary, "Consider increasing the value of akka.http.server.parsing.max-content-length")
-                  val status = StatusCodes.RequestEntityTooLarge
+                  val status = ${akkaHttpVersion match {
+                  case AkkaHttpVersion.V10_1 => q"StatusCodes.RequestEntityTooLarge"
+                  case AkkaHttpVersion.V10_2 => q"StatusCodes.PayloadTooLarge"
+                }}
                   val msg = if (settings.verboseErrorMessages) info.formatPretty else info.summary
                   complete(HttpResponse(status, entity = msg))
               }
