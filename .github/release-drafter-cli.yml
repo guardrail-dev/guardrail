@@ -3,7 +3,6 @@ tag-template: 'cli-v$RESOLVED_VERSION'
 tag-prefix: cli-v
 include-paths:
   - "modules/cli/src/main/"
-  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/cli.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:

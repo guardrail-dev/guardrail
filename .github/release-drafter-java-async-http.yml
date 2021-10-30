@@ -3,7 +3,6 @@ tag-template: 'java-async-http-v$RESOLVED_VERSION'
 tag-prefix: java-async-http-v
 include-paths:
   - "modules/java-async-http/src/main/"
-  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/javaAsyncHttp.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
