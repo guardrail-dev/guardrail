@@ -45,7 +45,7 @@ class LanguageParameter[L <: LA] private[generators] (
     new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
 }
 object LanguageParameter {
-  def unapply[L <: LA](param: LanguageParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
+  def unapply[L <: LA](param: LanguageParameter[L]): Some[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParameter[L <: LA, F[_]](

@@ -235,11 +235,11 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
         object GetOrderByIdStatusMatcher extends QueryParamDecoderMatcher[OrderStatus]("status")
         object PutBarBarMatcher extends QueryParamDecoderMatcher[Long]("bar")
-        object usingForGetFoo { def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getFoo")(r)) }
-        object usingForGetFooBar { def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> trace("completely-custom-label")(r)) }
-        object usingForGetOrderById { def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getOrderById")(r)) }
-        object usingForGetRoot { def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getRoot")(r)) }
-        object usingForPutBar { def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:putBar")(r)) }
+        object usingForGetFoo { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getFoo")(r)) }
+        object usingForGetFooBar { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("completely-custom-label")(r)) }
+        object usingForGetOrderById { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getOrderById")(r)) }
+        object usingForGetRoot { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getRoot")(r)) }
+        object usingForPutBar { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:putBar")(r)) }
         private[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
         private[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
@@ -324,11 +324,11 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
           implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
           object GetOrderByIdStatusMatcher extends QueryParamDecoderMatcher[OrderStatus]("status")
           object PutBarBarMatcher extends QueryParamDecoderMatcher[Long]("bar")
-          object extractorForGetFoo { def unapply(r: Request[F]): Option[(Request[F], E)] = Some(r -> customExtract("getFoo")(r)) }
-          object extractorForGetFooBar { def unapply(r: Request[F]): Option[(Request[F], E)] = Some(r -> customExtract("getFooBar")(r)) }
-          object extractorForGetOrderById { def unapply(r: Request[F]): Option[(Request[F], E)] = Some(r -> customExtract("getOrderById")(r)) }
-          object extractorForGetRoot { def unapply(r: Request[F]): Option[(Request[F], E)] = Some(r -> customExtract("getRoot")(r)) }
-          object extractorForPutBar { def unapply(r: Request[F]): Option[(Request[F], E)] = Some(r -> customExtract("putBar")(r)) }
+          object extractorForGetFoo { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("getFoo")(r)) }
+          object extractorForGetFooBar { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("getFooBar")(r)) }
+          object extractorForGetOrderById { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("getOrderById")(r)) }
+          object extractorForGetRoot { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("getRoot")(r)) }
+          object extractorForPutBar { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("putBar")(r)) }
           private[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
           private[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
             def status = org.http4s.Status.Ok

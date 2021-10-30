@@ -37,23 +37,23 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
     )
 
   object StringLiteralExpr {
-    def unapply(value: expr.StringLiteralExpr): Option[String] = Some(value.getValue())
+    def unapply(value: expr.StringLiteralExpr): Some[String] = Some(value.getValue())
   }
 
   object BooleanLiteralExpr {
-    def unapply(value: expr.BooleanLiteralExpr): Option[Boolean] = Some(value.getValue())
+    def unapply(value: expr.BooleanLiteralExpr): Some[Boolean] = Some(value.getValue())
   }
 
   object IntegerLiteralExpr {
-    def unapply(value: expr.IntegerLiteralExpr): Option[String] = Some(value.getValue())
+    def unapply(value: expr.IntegerLiteralExpr): Some[String] = Some(value.getValue())
   }
 
   object LongLiteralExpr {
-    def unapply(value: expr.LongLiteralExpr): Option[String] = Some(value.getValue())
+    def unapply(value: expr.LongLiteralExpr): Some[String] = Some(value.getValue())
   }
 
   object DoubleLiteralExpr {
-    def unapply(value: expr.DoubleLiteralExpr): Option[String] = Some(value.getValue())
+    def unapply(value: expr.DoubleLiteralExpr): Some[String] = Some(value.getValue())
   }
 
   object ObjectCreationExpr {

@@ -21,7 +21,7 @@ object TermHolder {
   type StringMap[A] = Map[String, A]
 
   def apply[L <: LA, A, HeldType](value: A): TermHolder[L, A, HeldType] = new TermHolder[L, A, HeldType](value)
-  def unapply[A](th: TermHolder[_, A, _]): Option[A]                    = Some(th.value)
+  def unapply[A](th: TermHolder[_, A, _]): Some[A]                      = Some(th.value)
 
   final private[collections] class TermHolderPartiallyApplied[L <: LA, HeldType] private[TermHolder] (private val dummy: Boolean = true) extends AnyVal {
     def apply[A <: L#Expression](fa: A): TermHolder[L, A, HeldType] = TermHolder[L, A, HeldType](fa)

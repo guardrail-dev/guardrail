@@ -830,7 +830,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
               (q"""
                  object ${matcherName} {
                    val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                   def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
+                   def unapply(params: Map[String, Seq[String]]): Some[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
                 container.syntax
               )(q"x")})
                  }
@@ -839,7 +839,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
               (q"""
                  object ${matcherName} {
                    val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                   def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
+                   def unapply(params: Map[String, Seq[String]]): Some[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
                 container.syntax
               )(q"x")})
                  }
@@ -929,14 +929,14 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
   def generateTracingExtractor(methodName: String, tracingField: Term): Defn.Object =
     q"""
        object ${Term.Name(s"usingFor${methodName.capitalize}")} {
-         def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
+         def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
        }
      """
 
   def generateCustomExtractionFieldsExtractor(methodName: String, extractField: Term): Defn.Object =
     q"""
        object ${Term.Name(s"extractorFor${methodName.capitalize}")} {
-         def unapply(r: Request[F]): Option[(Request[F], $customExtractionTypeName)] = Some(r -> $extractField(r))
+         def unapply(r: Request[F]): Some[(Request[F], $customExtractionTypeName)] = Some(r -> $extractField(r))
        }
      """
 }

@@ -267,7 +267,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
             }
             object Base64String {
               def apply(bytes: Array[Byte]): Base64String = new Base64String(bytes)
-              def unapply(value: Base64String): Option[Array[Byte]] = Some(value.data)
+              def unapply(value: Base64String): Some[Array[Byte]] = Some(value.data)
             }
 
           }

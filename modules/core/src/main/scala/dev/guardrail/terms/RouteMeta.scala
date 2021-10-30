@@ -22,11 +22,11 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   override def toString(): String =
     s"RouteMeta(${path.unwrapTracker}, $method, ${operation.unwrapTracker.showNotNull} (${operation.showHistory}), $securityRequirements)"
   object MediaType {
-    def unapply(value: MediaType): Option[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
+    def unapply(value: MediaType): Some[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
       val schema: Option[Schema[_]] = Option(value.getSchema)
       val encoding                  = Option(value.getEncoding()).map(_.asScala.toMap)
       val extensions                = Option(value.getExtensions()).map(_.asScala.toMap)
-      Option((schema, encoding, extensions))
+      Some((schema, encoding, extensions))
     }
   }
 
