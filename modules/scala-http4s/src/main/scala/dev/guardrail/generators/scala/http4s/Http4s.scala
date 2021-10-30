@@ -13,6 +13,6 @@ object Http4s extends Framework[ScalaLanguage, Target] {
   implicit def ClientInterp         = Http4sClientGenerator()
   implicit def FrameworkInterp      = Http4sGenerator()
   implicit def ServerInterp         = Http4sServerGenerator()
-  implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]
+  implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]()
   implicit def LanguageInterp       = ScalaGenerator()
 }

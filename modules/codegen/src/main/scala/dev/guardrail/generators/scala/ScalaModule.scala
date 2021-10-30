@@ -115,7 +115,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def FrameworkInterp: FrameworkTerms[ScalaLanguage, Target]           = framework
       def ProtocolInterp: ProtocolTerms[ScalaLanguage, Target]             = protocol
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                 = server
-      def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]
+      def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]()
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator()
       def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = collections
     }).runA(modules.toList.toSet)

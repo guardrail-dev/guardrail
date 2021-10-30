@@ -822,14 +822,14 @@ object ProtocolGenerator {
             map =>
               for {
                 customTpe <- SwaggerUtil.customMapTypeName(map)
-                result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
+                result    <- customTpe.fold(emptyMap().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine({ case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr })(
             arr =>
               for {
                 customTpe <- SwaggerUtil.customArrayTypeName(arr)
-                result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
+                result    <- customTpe.fold(emptyArray().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine({ case p: BooleanSchema => p })(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))
