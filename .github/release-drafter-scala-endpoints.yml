@@ -2,7 +2,7 @@ name-template: 'scala-endpoints-v$RESOLVED_VERSION'
 tag-template: 'scala-endpoints-v$RESOLVED_VERSION'
 tag-prefix: scala-endpoints-v
 include-paths:
-  - "modules/scala-endpoints/"
+  - "modules/scala-endpoints/src/main/"
   - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/scalaEndpoints.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
