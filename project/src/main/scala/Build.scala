@@ -22,7 +22,7 @@ object Build {
         publish / skip := true,
       )
 
-  val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
+  val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any, Wart.StringPlusAny)
 
   val codegenSettings = Seq(
     ScoverageKeys.coverageExcludedPackages := "<empty>;dev.guardrail.terms.*;dev.guardrail.protocol.terms.*",
