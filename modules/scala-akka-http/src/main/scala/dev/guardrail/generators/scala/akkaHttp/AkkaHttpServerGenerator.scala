@@ -35,24 +35,30 @@ object AkkaHttpServerGenerator {
   ): Target[NonEmptyList[(Term, List[Term.Name])]] =
     for {
       (parts, (trailingSlash, queryParams)) <- AkkaHttpPathExtractor.runParse(path, pathArgs, modelGeneratorType)
-      allPairs = parts
-        .foldLeft[NonEmptyList[(Term, List[Term.Name])]](NonEmptyList.one((q"pathEnd", List.empty)))({
-          case (NonEmptyList((q"pathEnd   ", bindings), xs), (termName, b)) =>
-            NonEmptyList((q"path(${b}       )", bindings ++ termName), xs)
-          case (NonEmptyList((q"path(${a })", bindings), xs), (termName, c)) =>
-            val newBindings = bindings ++ termName
-            if (newBindings.length < 22) {
-              NonEmptyList((q"path(${a} / ${c})", newBindings), xs)
-            } else {
-              NonEmptyList((q"pathEnd", List.empty), (q"pathPrefix(${a} / ${c})", newBindings) :: xs)
+      allPairs <- parts
+        .foldLeft[Target[NonEmptyList[(Term, List[Term.Name])]]](Target.pure(NonEmptyList.one((q"pathEnd", List.empty))))({
+          case (acc, (termName, b)) =>
+            acc.flatMap {
+              case NonEmptyList((q"pathEnd   ", bindings), xs) =>
+                Target.pure(NonEmptyList((q"path(${b}       )", bindings ++ termName), xs))
+              case NonEmptyList((q"path(${a })", bindings), xs) =>
+                val newBindings = bindings ++ termName
+                if (newBindings.length < 22) {
+                  Target.pure(NonEmptyList((q"path(${a} / ${b})", newBindings), xs))
+                } else {
+                  Target.pure(NonEmptyList((q"pathEnd", List.empty), (q"pathPrefix(${a} / ${b})", newBindings) :: xs))
+                }
+              case nel =>
+                Target.raiseUserError(s"Unexpected URL extractor state: ${nel}, (${termName}, ${b})")
             }
         })
-      trailingSlashed = if (trailingSlash) {
+      trailingSlashed <- if (trailingSlash) {
         allPairs match {
-          case NonEmptyList((q"path(${a })", bindings), xs) => NonEmptyList((q"pathPrefix(${a}) & pathEndOrSingleSlash", bindings), xs)
-          case NonEmptyList((q"pathEnd", bindings), xs)     => NonEmptyList((q"pathEndOrSingleSlash", bindings), xs)
+          case NonEmptyList((q"path(${a })", bindings), xs) => Target.pure(NonEmptyList((q"pathPrefix(${a}) & pathEndOrSingleSlash", bindings), xs))
+          case NonEmptyList((q"pathEnd", bindings), xs)     => Target.pure(NonEmptyList((q"pathEndOrSingleSlash", bindings), xs))
+          case nel                                          => Target.raiseUserError(s"Unexpected URL pattern state: ${nel}")
         }
-      } else allPairs
+      } else Target.pure(allPairs)
       result = queryParams.fold(trailingSlashed) { qs =>
         val NonEmptyList((directives, bindings), xs) = trailingSlashed
         NonEmptyList((q"${directives} & ${qs}", bindings), xs)
