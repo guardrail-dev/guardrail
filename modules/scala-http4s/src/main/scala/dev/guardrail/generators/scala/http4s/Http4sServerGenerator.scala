@@ -785,6 +785,33 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
         """
       })
 
+  def modifiedOptionalMultiQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
+    q"""
+      object ${matcherName} {
+        def unapply(params: Map[String, collection.Seq[String]]): Option[Option[$container[$tpe]]] = {
+          val res = params.get(${argName}) match {
+            case Some(values) =>
+              Some(values.toList.traverse(s => QueryParamDecoder[${tpe}].decode(QueryParameterValue(s))))
+            case None => Some(cats.data.Validated.Valid(Nil)) // absent
+          }
+          res.collectFirst { case cats.data.Validated.Valid(value) => ${transform(q"Option(value).filter(_.nonEmpty)")} }
+        }
+      }
+    """
+
+  def modifiedQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
+    q"""
+      object ${matcherName} {
+        def unapply(params: Map[String, collection.Seq[String]]): Option[${container}[${tpe}]] = {
+          val res = params
+            .get(${argName})
+            .flatMap(values =>
+              values.toList.traverse(s => QueryParamDecoder[${tpe}].decode(QueryParameterValue(s)).toOption))
+          ${transform(q"res")}
+        }
+      }
+    """
+
   def generateQueryParamMatchers(methodName: String, qsArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] = {
     val (decoders, matchers) = qsArgs
       .traverse({
@@ -797,27 +824,13 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
             "IndexedSeq" -> (term => q"$term.map(_.toIndexedSeq)")
           )
           val matcherName = Term.Name(s"${methodName.capitalize}${argName.value.capitalize}Matcher")
-          val (queryParamMatcher, elemType) = param match {
+          val (queryParamMatcher: Defn.Object, elemType: Type) = param match {
             case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
               val transform = containerTransformations(container.syntax)
-              (q"""
-                object ${matcherName} {
-                  val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                  def unapply(params: Map[String, Seq[String]]): Option[Option[$container[$tpe]]] = delegate.unapply(params).collectFirst {
-                    case cats.data.Validated.Valid(value) => ${transform(q"Option(value).filter(_.nonEmpty)")}
-                  }
-                }
-               """, tpe)
+              (modifiedOptionalMultiQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
               val transform = containerTransformations(container.syntax)
-              (q"""
-                object ${matcherName} {
-                  val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                  def unapply(params: Map[String, Seq[String]]): Option[Option[$container[$tpe]]] = delegate.unapply(params).collectFirst {
-                    case cats.data.Validated.Valid(value) => ${transform(q"Option(value).filter(_.nonEmpty)")}
-                  }
-                }
-               """, tpe)
+              (modifiedOptionalMultiQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case param"$_: Option[$tpe]" =>
               (
                 q"""object ${matcherName} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
@@ -830,20 +843,10 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
               )
             case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
               val transform = containerTransformations(container.syntax)
-              (q"""
-                 object ${matcherName} {
-                   val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                   def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = ${transform(q"delegate.unapplySeq(params)")}
-                 }
-               """, tpe)
+              (modifiedQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
               val transform = containerTransformations(container.syntax)
-              (q"""
-                 object ${matcherName} {
-                   val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                   def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = ${transform(q"delegate.unapplySeq(params)")}
-                 }
-               """, tpe)
+              (modifiedQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case _ =>
               (
                 q"""object ${matcherName} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
