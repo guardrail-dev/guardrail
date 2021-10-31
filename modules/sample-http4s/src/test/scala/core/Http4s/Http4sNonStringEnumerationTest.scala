@@ -79,7 +79,7 @@ class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with Eith
 
     val client = Client.fromHttpApp(httpService.orNotFound)
 
-    val uri = Uri().withPath("/foo/1").withQueryParam("longEnum", "2").withQueryParam("stringEnum", "i like spaces")
+    val uri = Uri().withPath(Uri.Path.unsafeFromString("/foo/1")).withQueryParam("longEnum", "2").withQueryParam("stringEnum", "i like spaces")
     client.expect[Json](Request[IO](method = Method.POST, uri = uri).withEntity("3")).attempt.unsafeRunSync() should be(
       Right(Json.fromString(expectedResponse.value))
     )
