@@ -42,6 +42,6 @@ object javaDropwizard {
 
   val project = commonModule("java-dropwizard")
 
-  val sample = buildSampleProject("dropwizard", dependencies)
-  val sampleVavr = buildSampleProject("dropwizardVavr", dependenciesVavr)
+  val sample = buildSampleProject("dropwizard", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
+  val sampleVavr = buildSampleProject("dropwizardVavr", dependenciesVavr).settings(scalacOptions -= "-Xfatal-warnings")
 }

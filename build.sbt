@@ -175,6 +175,7 @@ lazy val microsite = baseModule("microsite", "microsite", file("modules/microsit
   .settings(
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",
+    scalacOptions -= "-Xfatal-warnings"
   )
   .customDependsOn(guardrail)
 

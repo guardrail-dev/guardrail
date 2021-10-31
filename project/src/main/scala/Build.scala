@@ -57,6 +57,7 @@ object Build {
     versionScheme := Some("early-semver"), // This should help once the build plugins start depending directly on modules
 
     scalacOptions ++= Seq(
+      "-Xfatal-warnings",
       "-Ydelambdafy:method",
       "-Yrangepos",
       // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/guardrail-dev/guardrail/pull/282
@@ -66,6 +67,7 @@ object Build {
       "-encoding",
       "utf8"
     ),
+    Test / scalacOptions -= "-Xfatal-warnings",
     scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
     scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
     Test / parallelExecution := true,

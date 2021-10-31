@@ -37,5 +37,5 @@ object scalaDropwizard {
 
   val project = commonModule("scala-dropwizard")
 
-  val sample = buildSampleProject("dropwizardScala", dependencies)
+  val sample = buildSampleProject("dropwizardScala", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
 }
