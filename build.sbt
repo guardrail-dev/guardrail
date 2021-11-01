@@ -127,6 +127,19 @@ lazy val guardrail = modules.guardrail.project
   .customDependsOn(scalaHttp4s)
   .customDependsOn(scalaSupport)
 
+lazy val samples = (project in file("modules/samples"))
+  .settings(publish / skip := true)
+  .aggregate(
+    dropwizardSample,
+    dropwizardVavrSample,
+    javaSpringMvcSample,
+    scalaAkkaHttpJacksonSample,
+    scalaAkkaHttpSample,
+    scalaDropwizardSample,
+    scalaEndpointsSample,
+    scalaHttp4sSample
+  )
+
 lazy val core = modules.core.project
 
 lazy val cli = modules.cli.project
