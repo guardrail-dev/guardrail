@@ -647,14 +647,22 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
 
               part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
-                .transform({
-                  case IOResult(_, Success(_)) =>
+                .transform(${Term.PartialFunction(
+                  List(
+                    if (akkaHttpVersion == AkkaHttpVersion.V10_1)
+                      Some(p"""
+                    case IOResult(_, Failure(t)) =>
+                      dest.delete()
+                      throw t
+                  """)
+                    else None,
+                    Some(p"""
+                  case IOResult(_, _) =>
                     val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
                     (dest, part.filename, part.entity.contentType, hash)
-                  case IOResult(_, Failure(t)) =>
-                    dest.delete()
-                    throw t
-                }, { case t =>
+                  """)
+                  ).flatten
+                )}, { case t =>
                   dest.delete()
                   t
                 })
