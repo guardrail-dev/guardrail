@@ -217,6 +217,9 @@ object AsyncHttpClientClientGenerator {
         case Some(AnyContentType | OctetStream | TextPlain) =>
           // TODO: These need to be addressed, just suppressing warnings as of now
           None
+        case Some(_: BinaryContent | _: TextContent) =>
+          // Impossible, see https://github.com/scala/bug/issues/12232
+          None
       }
     }
   }
@@ -1223,6 +1226,8 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         case (Some(_), Some(_)) => // no params
 
         case (Some(_), _) if !tracing => // no params
+
+        case (_, _) => // Catch edge cases
       }
 
       val builderSetters = List(

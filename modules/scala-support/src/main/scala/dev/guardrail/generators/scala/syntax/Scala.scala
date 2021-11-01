@@ -44,6 +44,7 @@ package object syntax {
             None,
             false
           )
+        case _: Term.Param => ??? // Impossible, see https://github.com/scalameta/scalameta/pull/2501
       }
   }
 

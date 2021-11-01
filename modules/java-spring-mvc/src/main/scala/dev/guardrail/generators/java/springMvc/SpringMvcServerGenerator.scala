@@ -67,6 +67,8 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
     case TextContent(name)   => new StringLiteralExpr(name)
     case BinaryContent(name) => new StringLiteralExpr(name)
     case AnyContentType      => ??? // TODO: What do we do if we get here?
+    case _: TextContent      => ???
+    case _: BinaryContent    => ???
   }
 
   private val ASYNC_RESPONSE_TYPE        = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")

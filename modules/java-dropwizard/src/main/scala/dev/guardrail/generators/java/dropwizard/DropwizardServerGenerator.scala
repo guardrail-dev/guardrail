@@ -30,7 +30,6 @@ import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server._
 import dev.guardrail.terms.{
-  AnyContentType,
   ApplicationJson,
   BinaryContent,
   CollectionsLibTerms,
@@ -66,7 +65,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
     case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
     case TextContent(name)   => new StringLiteralExpr(name)
     case BinaryContent(name) => new StringLiteralExpr(name)
-    case AnyContentType      => ??? // TODO: What do we do if we get here?
+    case _                   => ??? // TODO: What do we do if we get here?
   }
 
   private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("AsyncResponse")

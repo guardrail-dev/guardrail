@@ -400,6 +400,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
             case param"$_: $tpe" =>
               required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
+            case other =>
+              Target.raiseException(s"Unexpected parameter format when generating directives: ${other}")
           }
       }
     } yield directives match {
@@ -784,12 +786,14 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                   (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
                 }
 
-                case t @ Tracker(_, ApplicationJson) =>
-                  (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${t.showHistory})"))
+                case Tracker(hist, ApplicationJson) =>
+                  (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})"))
 
-                case t @ Tracker(_, BinaryContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${t.showHistory})"))
+                case Tracker(hist, BinaryContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})"))
 
-                case t @ Tracker(_, TextContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${t.showHistory})"))
+                case Tracker(hist, TextContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})"))
+
+                case Tracker(hist, ct) => (Nil, Target.raiseException(s"Unexpected ContentType ${ct} (${hist})"))
               })
               .traverse(_.flatSequence)
 
