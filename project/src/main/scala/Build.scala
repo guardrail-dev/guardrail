@@ -50,7 +50,7 @@ object Build {
     organization := "dev.guardrail",
     licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-    crossScalaVersions := Seq("2.12.14", "2.13.6"),
+    crossScalaVersions := Seq("2.12.14", "2.13.7"),
     scalaVersion := "2.12.14",
 
     versionScheme := Some("early-semver"), // This should help once the build plugins start depending directly on modules
