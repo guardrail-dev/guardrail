@@ -68,7 +68,7 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def FrameworkInterp: FrameworkTerms[JavaLanguage, Target]           = framework
       def ProtocolInterp: ProtocolTerms[JavaLanguage, Target]             = protocol
       def ServerInterp: ServerTerms[JavaLanguage, Target]                 = server
-      def SwaggerInterp: SwaggerTerms[JavaLanguage, Target]               = SwaggerGenerator[JavaLanguage]
+      def SwaggerInterp: SwaggerTerms[JavaLanguage, Target]               = SwaggerGenerator[JavaLanguage]()
       def LanguageInterp: LanguageTerms[JavaLanguage, Target]             = JavaGenerator()
       def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target] = collections
     }).runA(modules.toList.toSet)

@@ -8,7 +8,7 @@ import com.github.javaparser.ast.comments.{ BlockComment, Comment }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.nodeTypes.{ NodeWithName, NodeWithSimpleName }
 import com.github.javaparser.ast.{ CompilationUnit, ImportDeclaration, Node, NodeList }
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.compat.java8.OptionConverters._
 import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }

@@ -18,6 +18,7 @@ sealed trait SnippetComponent
 case object GeneratingAServer extends SnippetComponent
 case object GeneratingClients extends SnippetComponent
 
+@SuppressWarnings(Array("org.wartremover.warts.EitherProjectionPartial", "org.wartremover.warts.TraversableOps"))
 object DocsHelpers {
   def sampleSpec = "modules/microsite/docs/sample-user.json"
   def renderScalaSnippet(generator: Framework[ScalaLanguage, Target], identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {

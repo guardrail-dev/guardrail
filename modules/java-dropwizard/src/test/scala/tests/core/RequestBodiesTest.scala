@@ -6,7 +6,7 @@ import dev.guardrail.generators.java.dropwizard.Dropwizard
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.Context
 import dev.guardrail.generators.Clients
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import support.SwaggerSpecRunner
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

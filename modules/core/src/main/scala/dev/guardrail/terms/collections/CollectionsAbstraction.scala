@@ -10,7 +10,7 @@ class TermHolder[L <: LA, +A, HeldType](_value: A) {
   def value: A = _value
 
   override def equals(obj: Any): Boolean = Option(obj) match {
-    case Some(other: TermHolder[_, _, _]) => value.equals(other.value)
+    case Some(other: TermHolder[_, _, _]) => value == other.value
     case _                                => false
   }
   override def hashCode(): Int  = value.hashCode()
@@ -21,7 +21,7 @@ object TermHolder {
   type StringMap[A] = Map[String, A]
 
   def apply[L <: LA, A, HeldType](value: A): TermHolder[L, A, HeldType] = new TermHolder[L, A, HeldType](value)
-  def unapply[A](th: TermHolder[_, A, _]): Option[A]                    = Some(th.value)
+  def unapply[A](th: TermHolder[_, A, _]): Some[A]                      = Some(th.value)
 
   final private[collections] class TermHolderPartiallyApplied[L <: LA, HeldType] private[TermHolder] (private val dummy: Boolean = true) extends AnyVal {
     def apply[A <: L#Expression](fa: A): TermHolder[L, A, HeldType] = TermHolder[L, A, HeldType](fa)

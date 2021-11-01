@@ -8,7 +8,7 @@ import org.scalatest.Retries
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.tagobjects.Retryable
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.compat.java8.OptionConverters._
 import support.SwaggerSpecRunner
 

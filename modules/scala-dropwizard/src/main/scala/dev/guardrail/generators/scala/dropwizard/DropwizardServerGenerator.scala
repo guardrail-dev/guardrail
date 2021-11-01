@@ -15,6 +15,7 @@ import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
 import dev.guardrail.terms.{
+  AnyContentType,
   ApplicationJson,
   BinaryContent,
   CollectionsLibTerms,
@@ -28,7 +29,6 @@ import dev.guardrail.terms.{
   TextPlain,
   UrlencodedFormData
 }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 object DropwizardServerGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
@@ -55,6 +55,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
     case OctetStream         => q"MediaType.APPLICATION_OCTET_STREAM"
     case TextContent(name)   => Lit.String(name)
     case BinaryContent(name) => Lit.String(name)
+    case AnyContentType      => ??? // TODO: What do we do if we get here?
+    case _                   => ???
   }
 
   private def unwrapContainer(tpe: Type): (Type, Type => Type) = {

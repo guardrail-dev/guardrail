@@ -30,8 +30,7 @@ import dev.guardrail.terms.{
 }
 import cats.Foldable
 import dev.guardrail.core.extract.Default
-import scala.collection.JavaConverters._
-import scala.language.higherKinds
+import scala.jdk.CollectionConverters._
 
 case class ProtocolDefinitions[L <: LA](
     elems: List[StrictProtocolElems[L]],
@@ -501,7 +500,7 @@ object ProtocolGenerator {
     import Lt._
     for {
       paramsWithNames <- params.traverse(param => extractTermNameFromParam(param.term).map((_, param)))
-      counts = paramsWithNames.groupBy(_._1).mapValues(_.length)
+      counts = paramsWithNames.groupBy(_._1).view.mapValues(_.length).toMap
       newParams <- paramsWithNames.traverse({
         case (name, param) =>
           if (counts.getOrElse(name, 0) > 1) {
@@ -823,14 +822,14 @@ object ProtocolGenerator {
             map =>
               for {
                 customTpe <- SwaggerUtil.customMapTypeName(map)
-                result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
+                result    <- customTpe.fold(emptyMap().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine({ case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr })(
             arr =>
               for {
                 customTpe <- SwaggerUtil.customArrayTypeName(arr)
-                result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
+                result    <- customTpe.fold(emptyArray().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine({ case p: BooleanSchema => p })(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))

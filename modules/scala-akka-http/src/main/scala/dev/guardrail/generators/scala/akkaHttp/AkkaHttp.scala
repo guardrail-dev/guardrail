@@ -11,6 +11,6 @@ object AkkaHttp extends Framework[ScalaLanguage, Target] {
   implicit def FrameworkInterp      = AkkaHttpGenerator(AkkaHttpVersion.V10_2, CirceModelGenerator.V012)
   implicit def ProtocolInterp       = CirceProtocolGenerator(CirceModelGenerator.V012)
   implicit def ServerInterp         = AkkaHttpServerGenerator(AkkaHttpVersion.V10_2, CirceModelGenerator.V012)
-  implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]
+  implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]()
   implicit def LanguageInterp       = ScalaGenerator()
 }

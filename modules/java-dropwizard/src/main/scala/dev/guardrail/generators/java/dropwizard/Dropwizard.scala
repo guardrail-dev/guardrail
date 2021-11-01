@@ -17,6 +17,6 @@ object Dropwizard extends Framework[JavaLanguage, Target] {
   implicit def ClientInterp         = AsyncHttpClientClientGenerator()
   implicit def FrameworkInterp      = DropwizardGenerator()
   implicit def ServerInterp         = DropwizardServerGenerator()
-  implicit def SwaggerInterp        = SwaggerGenerator[JavaLanguage]
+  implicit def SwaggerInterp        = SwaggerGenerator[JavaLanguage]()
   implicit def LanguageInterp       = JavaGenerator()
 }

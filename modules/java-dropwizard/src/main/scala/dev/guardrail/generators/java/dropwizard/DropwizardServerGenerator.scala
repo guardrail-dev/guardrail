@@ -44,7 +44,6 @@ import dev.guardrail.terms.{
   TextPlain,
   UrlencodedFormData
 }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 object DropwizardServerGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ServerTerms[JavaLanguage, Target] =
@@ -66,6 +65,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
     case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
     case TextContent(name)   => new StringLiteralExpr(name)
     case BinaryContent(name) => new StringLiteralExpr(name)
+    case _                   => ??? // TODO: What do we do if we get here?
   }
 
   private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("AsyncResponse")

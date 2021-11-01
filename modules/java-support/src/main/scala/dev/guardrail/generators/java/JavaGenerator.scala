@@ -15,7 +15,7 @@ import java.util.Locale
 import org.eclipse.jdt.core.formatter.{ CodeFormatter, DefaultCodeFormatterConstants }
 import org.eclipse.jdt.core.{ JavaCore, ToolFactory }
 import org.eclipse.jface.text.Document
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.existentials

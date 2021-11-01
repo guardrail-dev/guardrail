@@ -4,7 +4,7 @@ import cats.Order
 import cats.data.{ NonEmptyList, NonEmptyMap }
 import cats.implicits._
 import io.swagger.v3.oas.models.security.SecurityRequirement
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.immutable.TreeMap
 
 import dev.guardrail.terms.SecurityRequirements.SecurityScopes
@@ -24,7 +24,7 @@ object SecurityRequirements {
           .flatMap(
             req =>
               NonEmptyMap.fromMap(
-                TreeMap(req.asScala.mapValues(_.asScala.toList).toSeq: _*)
+                TreeMap(req.asScala.view.mapValues(_.asScala.toList).toSeq: _*)
               )
           )
       )

@@ -1,6 +1,6 @@
 package dev.guardrail
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import java.nio.file.Path
 import java.util

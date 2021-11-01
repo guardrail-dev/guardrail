@@ -34,6 +34,7 @@ object javaSupport {
   val project =
     commonModule("java-support")
       .settings(
-        libraryDependencies ++= eclipseFormatterDependencies
+        libraryDependencies ++= eclipseFormatterDependencies,
+        libraryDependencies += "com.github.javaparser" % "javaparser-symbol-solver-core" % "3.22.1"
       )
 }

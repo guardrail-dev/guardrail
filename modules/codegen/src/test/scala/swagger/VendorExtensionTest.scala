@@ -6,7 +6,7 @@ import dev.guardrail.core.extract.VendorExtension
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.parser.core.models.ParseOptions
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

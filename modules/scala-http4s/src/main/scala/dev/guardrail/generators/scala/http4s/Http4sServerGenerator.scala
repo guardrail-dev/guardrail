@@ -785,37 +785,52 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
         """
       })
 
+  def modifiedOptionalMultiQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
+    q"""
+      object ${matcherName} {
+        def unapply(params: Map[String, collection.Seq[String]]): Option[Option[$container[$tpe]]] = {
+          val res = params.get(${argName}) match {
+            case Some(values) =>
+              Some(values.toList.traverse(s => QueryParamDecoder[${tpe}].decode(QueryParameterValue(s))))
+            case None => Some(cats.data.Validated.Valid(Nil)) // absent
+          }
+          res.collectFirst { case cats.data.Validated.Valid(value) => ${transform(q"Option(value).filter(_.nonEmpty)")} }
+        }
+      }
+    """
+
+  def modifiedQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
+    q"""
+      object ${matcherName} {
+        def unapply(params: Map[String, collection.Seq[String]]): Option[${container}[${tpe}]] = {
+          val res = params
+            .get(${argName})
+            .flatMap(values =>
+              values.toList.traverse(s => QueryParamDecoder[${tpe}].decode(QueryParameterValue(s)).toOption))
+          ${transform(q"res")}
+        }
+      }
+    """
+
   def generateQueryParamMatchers(methodName: String, qsArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] = {
     val (decoders, matchers) = qsArgs
       .traverse({
         case LanguageParameter(_, param, _, argName, argType) =>
           val containerTransformations = Map[String, Term => Term](
             "Iterable"   -> identity _,
-            "List"       -> (term => q"$term.toList"),
-            "Vector"     -> (term => q"$term.toVector"),
-            "Seq"        -> (term => q"$term.toSeq"),
-            "IndexedSeq" -> (term => q"$term.toIndexedSeq")
+            "List"       -> (term => q"$term.map(_.toList)"),
+            "Vector"     -> (term => q"$term.map(_.toVector)"),
+            "Seq"        -> (term => q"$term.map(_.toSeq)"),
+            "IndexedSeq" -> (term => q"$term.map(_.toIndexedSeq)")
           )
           val matcherName = Term.Name(s"${methodName.capitalize}${argName.value.capitalize}Matcher")
-          val (queryParamMatcher, elemType) = param match {
+          val (queryParamMatcher: Defn.Object, elemType: Type) = param match {
             case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
-              (q"""
-                object ${matcherName} {
-                  val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                  def unapply(params: Map[String, Seq[String]]): Option[Option[$container[$tpe]]] = delegate.unapply(params).collectFirst {
-                    case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty).map(x => ${containerTransformations(container.syntax)(q"x")})
-                  }
-                }
-               """, tpe)
+              val transform = containerTransformations(container.syntax)
+              (modifiedOptionalMultiQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
-              (q"""
-                object ${matcherName} {
-                  val delegate = new OptionalMultiQueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                  def unapply(params: Map[String, Seq[String]]): Option[Option[$container[$tpe]]] = delegate.unapply(params).collectFirst {
-                    case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty).map(x => ${containerTransformations(container.syntax)(q"x")})
-                  }
-                }
-               """, tpe)
+              val transform = containerTransformations(container.syntax)
+              (modifiedOptionalMultiQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case param"$_: Option[$tpe]" =>
               (
                 q"""object ${matcherName} extends OptionalQueryParamDecoderMatcher[$tpe](${argName.toLit})""",
@@ -827,23 +842,11 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                 tpe
               )
             case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
-              (q"""
-                 object ${matcherName} {
-                   val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                   def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
-                container.syntax
-              )(q"x")})
-                 }
-               """, tpe)
+              val transform = containerTransformations(container.syntax)
+              (modifiedQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
-              (q"""
-                 object ${matcherName} {
-                   val delegate = new QueryParamDecoderMatcher[$tpe](${argName.toLit}) {}
-                   def unapply(params: Map[String, Seq[String]]): Option[$container[$tpe]] = delegate.unapplySeq(params).map(x => ${containerTransformations(
-                container.syntax
-              )(q"x")})
-                 }
-               """, tpe)
+              val transform = containerTransformations(container.syntax)
+              (modifiedQueryParamDecoderMatcher(matcherName, container, argName.toLit, tpe, transform), tpe)
             case _ =>
               (
                 q"""object ${matcherName} extends QueryParamDecoderMatcher[$argType](${argName.toLit})""",
@@ -929,14 +932,14 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
   def generateTracingExtractor(methodName: String, tracingField: Term): Defn.Object =
     q"""
        object ${Term.Name(s"usingFor${methodName.capitalize}")} {
-         def unapply(r: Request[F]): Option[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
+         def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
        }
      """
 
   def generateCustomExtractionFieldsExtractor(methodName: String, extractField: Term): Defn.Object =
     q"""
        object ${Term.Name(s"extractorFor${methodName.capitalize}")} {
-         def unapply(r: Request[F]): Option[(Request[F], $customExtractionTypeName)] = Some(r -> $extractField(r))
+         def unapply(r: Request[F]): Some[(Request[F], $customExtractionTypeName)] = Some(r -> $extractField(r))
        }
      """
 }

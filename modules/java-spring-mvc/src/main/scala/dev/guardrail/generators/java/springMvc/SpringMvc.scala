@@ -16,6 +16,6 @@ object SpringMvc extends Framework[JavaLanguage, Target] {
   implicit def ClientInterp         = SpringMvcClientGenerator()
   implicit def FrameworkInterp      = SpringMvcGenerator()
   implicit def ServerInterp         = SpringMvcServerGenerator()
-  implicit def SwaggerInterp        = SwaggerGenerator[JavaLanguage]
+  implicit def SwaggerInterp        = SwaggerGenerator[JavaLanguage]()
   implicit def LanguageInterp       = JavaGenerator()
 }

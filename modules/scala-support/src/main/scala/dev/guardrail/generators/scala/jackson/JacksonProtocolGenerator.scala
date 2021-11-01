@@ -219,41 +219,41 @@ object JacksonProtocolGenerator {
             ) ++ renderedClass.mods
         ),
       encodeEnum = { (className, tpe) =>
-        val writeMethod = tpe match {
-          case t"Int"    => q"writeNumber"
-          case t"Long"   => q"writeNumber"
-          case t"String" => q"writeString"
-        }
-        Target.pure(
-          Some(
-            q"""
+        for {
+          writeMethod <- tpe match {
+            case t"Int"    => Target.pure(q"writeNumber")
+            case t"Long"   => Target.pure(q"writeNumber")
+            case t"String" => Target.pure(q"writeString")
+            case other     => Target.raiseException(s"Unexpected type during enumeration encoder: ${other}")
+          }
+        } yield Some(
+          q"""
          class ${Type.Name(className + "Serializer")} extends com.fasterxml.jackson.databind.JsonSerializer[${Type.Name(className)}] {
            override def serialize(value: ${Type
-              .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
+            .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
          }
        """
-          )
         )
       },
       decodeEnum = { (className, tpe) =>
-        val getter = tpe match {
-          case t"String" => q"getText"
-          case t"Int"    => q"getIntValue"
-          case t"Long"   => q"getLongValue"
-        }
-        Target.pure(
-          Some(
-            q"""
+        for {
+          getter <- tpe match {
+            case t"String" => Target.pure(q"getText")
+            case t"Int"    => Target.pure(q"getIntValue")
+            case t"Long"   => Target.pure(q"getLongValue")
+            case other     => Target.raiseException(s"Unexpected type during enumeration decoder: ${other}")
+          }
+        } yield Some(
+          q"""
          class ${Type.Name(className + "Deserializer")} extends com.fasterxml.jackson.databind.JsonDeserializer[${Type.Name(className)}] {
            override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
-              className
-            )} =
+            className
+          )} =
             ${Term.Name(className)}.from(p.${getter})
               .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.${getter}}' for " + ${Lit
-              .String(className)}) })
+            .String(className)}) })
          }
        """
-          )
         )
       },
       renderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
@@ -342,7 +342,7 @@ object JacksonProtocolGenerator {
                     jsonNode match {
                       case arr: com.fasterxml.jackson.databind.node.ArrayNode =>
                         import cats.implicits._
-                        import _root_.scala.collection.JavaConverters._
+                        import _root_.scala.jdk.CollectionConverters._
                         arr.iterator().asScala.toVector.traverse(implicitly[GuardrailDecoder[B]].decode)
                       case _ =>
                         scala.util.Failure(new com.fasterxml.jackson.databind.JsonMappingException(null, s"Can't decode to vector; node of type $${jsonNode.getClass.getSimpleName} is not an array"))
@@ -355,7 +355,7 @@ object JacksonProtocolGenerator {
                     jsonNode match {
                       case obj: com.fasterxml.jackson.databind.node.ObjectNode =>
                         import cats.implicits._
-                        import _root_.scala.collection.JavaConverters._
+                        import _root_.scala.jdk.CollectionConverters._
                         obj.fields().asScala.toVector.traverse(entry => implicitly[GuardrailDecoder[B]].decode(entry.getValue).map((entry.getKey, _))).map(_.toMap)
                       case _ =>
                         scala.util.Failure(new com.fasterxml.jackson.databind.JsonMappingException(null, s"Can't decode to map; node of type $${jsonNode.getClass.getSimpleName} is not an object"))
@@ -385,7 +385,7 @@ object JacksonProtocolGenerator {
               object GuardrailValidator {
                 def instance[A]: GuardrailValidator[A] = new GuardrailValidator[A] {
                   override def validate(a: A)(implicit validator: javax.validation.Validator): scala.util.Try[A] = {
-                    import _root_.scala.collection.JavaConverters._
+                    import _root_.scala.jdk.CollectionConverters._
                     scala.util.Try(validator.validate(a)).flatMap({
                       case violations if violations.isEmpty =>
                         scala.util.Success(a)

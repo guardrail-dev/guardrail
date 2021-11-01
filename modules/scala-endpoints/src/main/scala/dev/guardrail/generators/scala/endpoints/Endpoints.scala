@@ -14,6 +14,6 @@ object Endpoints extends Framework[ScalaLanguage, Target] {
   implicit def ClientInterp         = EndpointsClientGenerator()
   implicit def FrameworkInterp      = EndpointsGenerator()
   implicit def ServerInterp         = EndpointsServerGenerator()
-  implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]
+  implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]()
   implicit def LanguageInterp       = ScalaGenerator()
 }

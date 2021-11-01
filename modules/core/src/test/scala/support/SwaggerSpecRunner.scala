@@ -5,10 +5,8 @@ import _root_.io.swagger.v3.oas.models._
 import _root_.io.swagger.v3.parser.core.models.ParseOptions
 import cats.data.NonEmptyList
 import java.util.LinkedList
-import org.scalactic.Equality
 import org.scalatest.{ Assertions, EitherValues, OptionValues }
 import org.scalactic.source.Position
-import scala.meta.Tree
 
 import dev.guardrail._
 import dev.guardrail.core.{ StructuredLogger, Tracker }
@@ -25,15 +23,6 @@ trait TargetValues { self: Assertions =>
 }
 
 trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues { self: Assertions =>
-  implicit def TreeEquality[A <: Tree]: Equality[A] =
-    new Equality[A] {
-      def areEqual(a: A, b: Any): Boolean =
-        b match {
-          case x: Tree => a.structure == x.structure
-          case _       => false
-        }
-    }
-
   def swaggerFromString(spec: String): OpenAPI = {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)

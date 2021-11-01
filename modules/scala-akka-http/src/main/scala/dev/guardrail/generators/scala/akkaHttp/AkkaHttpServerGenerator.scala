@@ -35,24 +35,30 @@ object AkkaHttpServerGenerator {
   ): Target[NonEmptyList[(Term, List[Term.Name])]] =
     for {
       (parts, (trailingSlash, queryParams)) <- AkkaHttpPathExtractor.runParse(path, pathArgs, modelGeneratorType)
-      allPairs = parts
-        .foldLeft[NonEmptyList[(Term, List[Term.Name])]](NonEmptyList.one((q"pathEnd", List.empty)))({
-          case (NonEmptyList((q"pathEnd   ", bindings), xs), (termName, b)) =>
-            NonEmptyList((q"path(${b}       )", bindings ++ termName), xs)
-          case (NonEmptyList((q"path(${a })", bindings), xs), (termName, c)) =>
-            val newBindings = bindings ++ termName
-            if (newBindings.length < 22) {
-              NonEmptyList((q"path(${a} / ${c})", newBindings), xs)
-            } else {
-              NonEmptyList((q"pathEnd", List.empty), (q"pathPrefix(${a} / ${c})", newBindings) :: xs)
+      allPairs <- parts
+        .foldLeft[Target[NonEmptyList[(Term, List[Term.Name])]]](Target.pure(NonEmptyList.one((q"pathEnd", List.empty))))({
+          case (acc, (termName, b)) =>
+            acc.flatMap {
+              case NonEmptyList((q"pathEnd   ", bindings), xs) =>
+                Target.pure(NonEmptyList((q"path(${b}       )", bindings ++ termName), xs))
+              case NonEmptyList((q"path(${a })", bindings), xs) =>
+                val newBindings = bindings ++ termName
+                if (newBindings.length < 22) {
+                  Target.pure(NonEmptyList((q"path(${a} / ${b})", newBindings), xs))
+                } else {
+                  Target.pure(NonEmptyList((q"pathEnd", List.empty), (q"pathPrefix(${a} / ${b})", newBindings) :: xs))
+                }
+              case nel =>
+                Target.raiseUserError(s"Unexpected URL extractor state: ${nel}, (${termName}, ${b})")
             }
         })
-      trailingSlashed = if (trailingSlash) {
+      trailingSlashed <- if (trailingSlash) {
         allPairs match {
-          case NonEmptyList((q"path(${a })", bindings), xs) => NonEmptyList((q"pathPrefix(${a}) & pathEndOrSingleSlash", bindings), xs)
-          case NonEmptyList((q"pathEnd", bindings), xs)     => NonEmptyList((q"pathEndOrSingleSlash", bindings), xs)
+          case NonEmptyList((q"path(${a })", bindings), xs) => Target.pure(NonEmptyList((q"pathPrefix(${a}) & pathEndOrSingleSlash", bindings), xs))
+          case NonEmptyList((q"pathEnd", bindings), xs)     => Target.pure(NonEmptyList((q"pathEndOrSingleSlash", bindings), xs))
+          case nel                                          => Target.raiseUserError(s"Unexpected URL pattern state: ${nel}")
         }
-      } else allPairs
+      } else Target.pure(allPairs)
       result = queryParams.fold(trailingSlashed) { qs =>
         val NonEmptyList((directives, bindings), xs) = trailingSlashed
         NonEmptyList((q"${directives} & ${qs}", bindings), xs)
@@ -394,6 +400,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
             case param"$_: $tpe" =>
               required(argName.toLit)(argType)(tpe.flatMap(unmarshaller))
+            case other =>
+              Target.raiseException(s"Unexpected parameter format when generating directives: ${other}")
           }
       }
     } yield directives match {
@@ -639,14 +647,22 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               val fileSink: Sink[ByteString,Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk => val _ = messageDigest.map(_.update(chunk.toArray[Byte])); chunk }
 
               part.entity.dataBytes.toMat(fileSink)(Keep.right).run()
-                .transform({
-                  case IOResult(_, Success(_)) =>
+                .transform(${Term.PartialFunction(
+                  List(
+                    if (akkaHttpVersion == AkkaHttpVersion.V10_1)
+                      Some(p"""
+                    case IOResult(_, Failure(t)) =>
+                      dest.delete()
+                      throw t
+                  """)
+                    else None,
+                    Some(p"""
+                  case IOResult(_, _) =>
                     val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
                     (dest, part.filename, part.entity.contentType, hash)
-                  case IOResult(_, Failure(t)) =>
-                    dest.delete()
-                    throw t
-                }, { case t =>
+                  """)
+                  ).flatten
+                )}, { case t =>
                   dest.delete()
                   t
                 })
@@ -778,12 +794,14 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                   (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
                 }
 
-                case t @ Tracker(_, ApplicationJson) =>
-                  (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${t.showHistory})"))
+                case Tracker(hist, ApplicationJson) =>
+                  (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})"))
 
-                case t @ Tracker(_, BinaryContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${t.showHistory})"))
+                case Tracker(hist, BinaryContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})"))
 
-                case t @ Tracker(_, TextContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${t.showHistory})"))
+                case Tracker(hist, TextContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})"))
+
+                case Tracker(hist, ct) => (Nil, Target.raiseException(s"Unexpected ContentType ${ct} (${hist})"))
               })
               .traverse(_.flatSequence)
 

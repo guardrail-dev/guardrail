@@ -9,7 +9,7 @@ import dev.guardrail.sbt.RegressionTests._
 import dev.guardrail.sbt.ExampleCase
 import dev.guardrail.sbt.modules
 
-WelcomeMessage.welcomeMessage
+onLoadMessage := WelcomeMessage.welcomeMessage((guardrail / version).value)
 
 import scoverage.ScoverageKeys
 
@@ -113,6 +113,7 @@ lazy val root = modules.root.project
 
 lazy val allDeps = modules.allDeps.project
   .settings(publish / skip := true)
+  .settings(crossScalaVersions := crossScalaVersions.value.filter(_.startsWith("2.12")))
 
 lazy val guardrail = modules.guardrail.project
   .customDependsOn(core)
@@ -125,6 +126,19 @@ lazy val guardrail = modules.guardrail.project
   .customDependsOn(scalaEndpoints)
   .customDependsOn(scalaHttp4s)
   .customDependsOn(scalaSupport)
+
+lazy val samples = (project in file("modules/samples"))
+  .settings(publish / skip := true)
+  .aggregate(
+    dropwizardSample,
+    dropwizardVavrSample,
+    javaSpringMvcSample,
+    scalaAkkaHttpJacksonSample,
+    scalaAkkaHttpSample,
+    scalaDropwizardSample,
+    scalaEndpointsSample,
+    scalaHttp4sSample
+  )
 
 lazy val core = modules.core.project
 
@@ -174,6 +188,7 @@ lazy val microsite = baseModule("microsite", "microsite", file("modules/microsit
   .settings(
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",
+    scalacOptions -= "-Xfatal-warnings"
   )
   .customDependsOn(guardrail)
 

@@ -24,5 +24,5 @@ object javaSpringMvc {
 
   val project = commonModule("java-spring-mvc")
 
-  val sample = buildSampleProject("springMvc", dependencies)
+  val sample = buildSampleProject("springMvc", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
 }
