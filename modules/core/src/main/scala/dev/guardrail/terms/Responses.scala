@@ -18,7 +18,7 @@ class Response[L <: LA](
   override def toString: String = s"Response($statusCodeName, $statusCode, $value, $headers)"
 }
 object Response {
-  def unapply[L <: LA](value: Response[L]): Option[(L#TermName, Option[L#Type], Headers[L])] =
+  def unapply[L <: LA](value: Response[L]): Some[(L#TermName, Option[L#Type], Headers[L])] =
     Some((value.statusCodeName, value.value.map(_._2), value.headers))
 }
 

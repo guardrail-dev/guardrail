@@ -7,8 +7,9 @@ import scala.io.AnsiColor
 import cats.FlatMap
 
 import dev.guardrail._
-import dev.guardrail.core.{ LogLevel, LogLevels, StructuredLogger }
+import dev.guardrail.core.{ LogLevel, LogLevels }
 import dev.guardrail.terms.protocol.PropertyRequirement
+import dev.guardrail.runner.GuardrailRunner
 
 object CLICommon {
   def unsafePrintHelp(): Unit = {
@@ -54,8 +55,8 @@ object CommandLineResult {
   val success: CommandLineResult = CommandLineResult(0)
 }
 
-trait CLICommon {
-  def languages: Map[String,NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
+trait CLICommon extends GuardrailRunner {
+  def languages: Map[String, NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
 
   def processArgs(args: Array[String]): CommandLineResult = {
     val (language, strippedArgs) = args.partition(languages.contains)
@@ -70,7 +71,7 @@ trait CLICommon {
       case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
     }
 
-  def parseArgs(args: Array[String]) = {
+  def parseArgs(args: Array[String]): Target[List[Args]] = {
     def expandTilde(path: String): String =
       path.replaceFirst("^~", System.getProperty("user.home"))
     val defaultArgs =
@@ -174,6 +175,9 @@ trait CLICommon {
             println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
             unsafePrintHelp()
             fallback
+          case MissingDependency(dependency) =>
+            println(s"${AnsiColor.RED}Missing dependency:${AnsiColor.RESET} ${AnsiColor.BOLD}${dependency}${AnsiColor.RESET} not found on classpath")
+            fallback
           case NoArgsSpecified =>
             println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
             unsafePrintHelp()
@@ -222,33 +226,5 @@ trait CLICommon {
     } else {
       CommandLineResult.success
     }
-  }
-
-  def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSwagger[Target[List[WriteTree]]]]] =
-    tasks.toList.flatTraverse({
-      case (language, args) =>
-        languages.get(language) match {
-          case None => Target.raiseError(UnparseableArgument("language", language))
-          case Some(func) => func(args).map(_.toList)
-        }
-    })
-
-
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
-    runLanguages(tasks)
-      .flatMap(
-        _.flatTraverse(
-          rs =>
-            ReadSwagger
-              .readSwagger(rs)
-              .flatMap(_.traverse(WriteTree.writeTree))
-              .leftFlatMap(
-                value =>
-                  Target.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> Target.raiseError[List[Path]](value)
-              )
-              .productL(Target.pushLogger(StructuredLogger.reset))
-        )
-      )
-      .map(_.distinct)
   }
 }

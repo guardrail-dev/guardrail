@@ -7,7 +7,7 @@ class Header[L <: LA](val name: String, val isRequired: Boolean, val tpe: L#Type
 }
 
 object Header {
-  def unapply[L <: LA](header: Header[L]): Option[(String, Boolean, L#Type, L#TermName)] = Some((header.name, header.isRequired, header.tpe, header.term))
+  def unapply[L <: LA](header: Header[L]): Some[(String, Boolean, L#Type, L#TermName)] = Some((header.name, header.isRequired, header.tpe, header.term))
 }
 
 class Headers[L <: LA](val value: List[Header[L]])

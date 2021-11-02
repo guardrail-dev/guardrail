@@ -1,0 +1,59 @@
+core:
+- modules/core/*
+- modules/core/**/*
+- project/src/main/scala/modules/core.scala
+
+java-async-http:
+- modules/java-async-http/*
+- modules/java-async-http/**/*
+- project/src/main/scala/modules/javaAsyncHttp.scala
+
+java-dropwizard:
+- modules/java-dropwizard/*
+- modules/java-dropwizard/**/*
+- project/src/main/scala/modules/javaDropwizard.scala
+
+java-spring-mvc:
+- modules/java-spring-mvc/*
+- modules/java-spring-mvc/**/*
+- project/src/main/scala/modules/javaSpringMvc.scala
+
+java-support:
+- modules/java-support/*
+- modules/java-support/**/*
+- project/src/main/scala/modules/javaSupport.scala
+
+scala-akka-http:
+- modules/scala-akka-http/*
+- modules/scala-akka-http/**/*
+- project/src/main/scala/modules/scalaAkkaHttp.scala
+
+scala-dropwizard:
+- modules/scala-dropwizard/*
+- modules/scala-dropwizard/**/*
+- project/src/main/scala/modules/scalaDropwizard.scala
+
+scala-endpoints:
+- modules/scala-endpoints/*
+- modules/scala-endpoints/**/*
+- project/src/main/scala/modules/scalaEndpoints.scala
+
+scala-http4s:
+- modules/scala-http4s/*
+- modules/scala-http4s/**/*
+- project/src/main/scala/modules/scalaHttp4s.scala
+
+scala-support:
+- modules/scala-support/*
+- modules/scala-support/**/*
+- project/src/main/scala/modules/scalaSupport.scala
+
+guardrail:
+- modules/codegen/*
+- modules/codegen/**/*
+- project/src/main/scala/modules/guardrail.scala
+
+cli:
+- modules/cli/*
+- modules/cli/**/*
+- project/src/main/scala/modules/cli.scala

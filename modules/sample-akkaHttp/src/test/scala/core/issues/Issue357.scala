@@ -105,7 +105,7 @@ class Issue357Suite extends AnyFunSpec with Matchers with EitherValues with Scal
     import issues.issue357.client.akkaHttp.{ Client, DeleteFooResponse, PatchFooResponse, PutFooResponse }
 
     object pathRE {
-      def unapply(value: Uri.Path): Option[String] =
+      def unapply(value: Uri.Path): Some[String] =
         value match {
           case Uri.Path.Slash(Uri.Path.Segment(head, tail)) => Some(head)
           case rest                                         => fail("Expected \"/{arg}\" did not match: " + rest.toString())

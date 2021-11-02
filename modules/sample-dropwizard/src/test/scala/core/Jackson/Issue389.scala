@@ -5,7 +5,7 @@ import issues.issue389.client.dropwizard.definitions.{ Bar, Foo }
 import java.util
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 
 class Issue389 extends AnyFreeSpec with Matchers {

@@ -6,7 +6,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import dev.guardrail._
-import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsNull, EmptyIsEmpty, Mappish, Tracker }
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, Mappish, Tracker }
 import dev.guardrail.core.implicits._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
@@ -20,6 +20,7 @@ import dev.guardrail.terms.{
   LongHeldEnum,
   NumberEnumSchema,
   ObjectEnumSchema,
+  ProtocolTerms,
   RenderedIntEnum,
   RenderedLongEnum,
   RenderedStringEnum,
@@ -29,8 +30,7 @@ import dev.guardrail.terms.{
 }
 import cats.Foldable
 import dev.guardrail.core.extract.Default
-import scala.collection.JavaConverters._
-import scala.language.higherKinds
+import scala.jdk.CollectionConverters._
 
 case class ProtocolDefinitions[L <: LA](
     elems: List[StrictProtocolElems[L]],
@@ -72,14 +72,14 @@ object ProtocolGenerator {
       swagger: Tracker[Schema[A]],
       dtoPackage: List[String]
   )(
-      implicit E: EnumProtocolTerms[L, F],
+      implicit P: ProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       wrapEnumSchema: WrapEnumSchema[A]
   ): F[Either[String, EnumDefinition[L]]] = {
-    import E._
+    import P._
     import Sc._
     import Sw._
 
@@ -173,14 +173,11 @@ object ProtocolGenerator {
       defaultPropertyRequirement: PropertyRequirement
   )(
       implicit F: FrameworkTerms[L, F],
-      P: PolyProtocolTerms[L, F],
-      E: EnumProtocolTerms[L, F],
-      M: ModelProtocolTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolElems[L]] = {
-    import M._
     import P._
     import Sc._
 
@@ -246,15 +243,13 @@ object ProtocolGenerator {
       supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
-      implicit M: ModelProtocolTerms[L, F],
+      implicit
       F: FrameworkTerms[L, F],
-      E: EnumProtocolTerms[L, F],
-      P: PolyProtocolTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[List[SuperClass[L]]] = {
-    import M._
     import P._
     import Sc._
 
@@ -328,15 +323,14 @@ object ProtocolGenerator {
       supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
-      implicit M: ModelProtocolTerms[L, F],
+      implicit
       F: FrameworkTerms[L, F],
-      E: EnumProtocolTerms[L, F],
-      P: PolyProtocolTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[Either[String, ClassDefinition[L]]] = {
-    import M._
+    import P._
     import Sc._
 
     for {
@@ -396,15 +390,14 @@ object ProtocolGenerator {
       supportPackage: List[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
-      implicit M: ModelProtocolTerms[L, F],
+      implicit
       F: FrameworkTerms[L, F],
-      E: EnumProtocolTerms[L, F],
-      P: PolyProtocolTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[(List[ProtocolParameter[L]], List[NestedProtocolElems[L]])] = {
-    import M._
+    import P._
     import Sc._
     def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
 
@@ -507,7 +500,7 @@ object ProtocolGenerator {
     import Lt._
     for {
       paramsWithNames <- params.traverse(param => extractTermNameFromParam(param.term).map((_, param)))
-      counts = paramsWithNames.groupBy(_._1).mapValues(_.length)
+      counts = paramsWithNames.groupBy(_._1).view.mapValues(_.length).toMap
       newParams <- paramsWithNames.traverse({
         case (name, param) =>
           if (counts.getOrElse(name, 0) > 1) {
@@ -582,14 +575,14 @@ object ProtocolGenerator {
     (RandomType[L](clsName, tpe): ProtocolElems[L]).pure[F]
 
   def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]])(
-      implicit R: ArrayProtocolTerms[L, F],
+      implicit
       F: FrameworkTerms[L, F],
-      P: ProtocolSupportTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolElems[L]] = {
-    import R._
+    import P._
     for {
       deferredTpe <- SwaggerUtil.modelMetaType(arr)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
@@ -680,17 +673,14 @@ object ProtocolGenerator {
       supportPackage: NonEmptyList[String],
       defaultPropertyRequirement: PropertyRequirement
   )(
-      implicit E: EnumProtocolTerms[L, F],
-      M: ModelProtocolTerms[L, F],
-      R: ArrayProtocolTerms[L, F],
-      S: ProtocolSupportTerms[L, F],
+      implicit
       F: FrameworkTerms[L, F],
-      P: PolyProtocolTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[ProtocolDefinitions[L]] = {
-    import S._
+    import P._
     import Sc._
     import Sw._
 
@@ -832,14 +822,14 @@ object ProtocolGenerator {
             map =>
               for {
                 customTpe <- SwaggerUtil.customMapTypeName(map)
-                result    <- customTpe.fold(emptyMap.map(Option(_)))(_ => empty)
+                result    <- customTpe.fold(emptyMap().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine({ case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr })(
             arr =>
               for {
                 customTpe <- SwaggerUtil.customArrayTypeName(arr)
-                result    <- customTpe.fold(emptyArray.map(Option(_)))(_ => empty)
+                result    <- customTpe.fold(emptyArray().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine({ case p: BooleanSchema => p })(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))

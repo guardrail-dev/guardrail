@@ -2,7 +2,7 @@ package dev.guardrail
 
 import _root_.io.swagger.v3.oas.models.Operation
 import _root_.io.swagger.v3.oas.models.parameters.Parameter
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 package object shims {
   implicit class OperationExt(operation: Operation) {

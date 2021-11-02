@@ -6,7 +6,7 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.Parameter
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import dev.guardrail._
 import dev.guardrail.core.implicits._
@@ -22,11 +22,11 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   override def toString(): String =
     s"RouteMeta(${path.unwrapTracker}, $method, ${operation.unwrapTracker.showNotNull} (${operation.showHistory}), $securityRequirements)"
   object MediaType {
-    def unapply(value: MediaType): Option[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
+    def unapply(value: MediaType): Some[(Option[Schema[_]], Option[Map[String, Encoding]], Option[Map[String, Object]])] = {
       val schema: Option[Schema[_]] = Option(value.getSchema)
       val encoding                  = Option(value.getEncoding()).map(_.asScala.toMap)
       val extensions                = Option(value.getExtensions()).map(_.asScala.toMap)
-      Option((schema, encoding, extensions))
+      Some((schema, encoding, extensions))
     }
   }
 

@@ -9,7 +9,7 @@ object scalaDropwizard {
   val catsVersion            = "2.6.1"
   val dropwizardScalaVersion = "1.3.7-1"
   val dropwizardVersion      = "1.3.29"
-  val jacksonVersion         = "2.12.5"
+  val jacksonVersion         = "2.13.0"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
   val jerseyVersion          = "2.25.1"
@@ -22,7 +22,7 @@ object scalaDropwizard {
     "io.dropwizard"                  %  "dropwizard-forms"        % dropwizardVersion,
     "com.fasterxml.jackson.datatype" %  "jackson-datatype-jsr310" % jacksonVersion,
     "junit"                          %  "junit"                   % "4.13.2"             % Test,
-    "com.novocode"                   %  "junit-interface"         % "0.11"             % Test,
+    "com.github.sbt"                   %  "junit-interface"         % "0.13.2"             % Test,
     "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
     "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
@@ -30,12 +30,12 @@ object scalaDropwizard {
     "com.datasift.dropwizard.scala"  %% "dropwizard-scala-core"   % dropwizardScalaVersion,
     "com.fasterxml.jackson.module"   %% "jackson-module-scala"    % jacksonVersion,
     "org.typelevel"                  %% "cats-core"               % catsVersion,
-    "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.0"            % Test,
+    "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.2"            % Test,
     "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
-    "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.42"           % Test,
+    "org.mockito"                    %% "mockito-scala-scalatest" % "1.16.46"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val project = commonModule("scala-dropwizard")
 
-  val sample = buildSampleProject("dropwizardScala", dependencies)
+  val sample = buildSampleProject("dropwizardScala", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
 }

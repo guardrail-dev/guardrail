@@ -5,7 +5,7 @@ import cats._
 import cats.data._
 import cats.syntax.all._
 import dev.guardrail.{ Target, UserError }
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import cats.Functor
 
 /**

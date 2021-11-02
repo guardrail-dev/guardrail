@@ -45,7 +45,7 @@ class LanguageParameter[L <: LA] private[generators] (
     new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
 }
 object LanguageParameter {
-  def unapply[L <: LA](param: LanguageParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
+  def unapply[L <: LA](param: LanguageParameter[L]): Some[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParameter[L <: LA, F[_]](
@@ -112,8 +112,8 @@ object LanguageParameter {
     }
 
     log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                                     <- paramMeta(parameter)
+      _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
+      meta                                                              <- paramMeta(parameter)
       core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = parameter.downField("required", _.getRequired()).map(_.getOrElse(false)).unwrapTracker
@@ -177,7 +177,7 @@ object LanguageParameter {
     import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
-      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).view.mapValues(_.length).toMap)
       result <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>
           if (counts.getOrElse(name, 0) > 1) {

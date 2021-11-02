@@ -12,15 +12,14 @@ object core {
     commonModule("core")
       .settings(
         libraryDependencies ++= Seq(
-          "com.github.javaparser"       % "javaparser-symbol-solver-core" % "3.23.1",
           "io.swagger.parser.v3"        % "swagger-parser"                % "2.0.28",
         ) ++ Seq(
-          "org.scalameta"               %% "scalameta"                    % "4.4.28",
+          "org.scala-lang.modules"      %% "scala-collection-compat"      % "2.5.0",
           "org.tpolecat"                %% "atto-core"                    % "0.9.5",
           "org.typelevel"               %% "cats-core"                    % catsVersion,
           "org.typelevel"               %% "cats-kernel"                  % catsVersion,
           "org.typelevel"               %% "cats-free"                    % catsVersion,
-          "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.0",
+          "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.2",
         ).map(_.cross(CrossVersion.for3Use2_13)),
       )
 }

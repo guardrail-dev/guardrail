@@ -4,14 +4,15 @@ import dev.guardrail.sbt.Build._
 
 import sbt._
 import sbt.Keys._
+import wartremover.WartRemover.autoImport._
 
 object scalaAkkaHttp {
   val akkaHttpVersion        = "10.2.6"
-  val akkaVersion            = "2.6.16"
+  val akkaVersion            = "2.6.17"
   val catsVersion            = "2.6.1"
   val circeVersion           = "0.14.1"
   val hibernateVersion       = "6.2.0.Final"
-  val jacksonVersion         = "2.12.5"
+  val jacksonVersion         = "2.13.0"
   val javaxAnnotationVersion = "1.3.2"
   val javaxElVersion         = "3.0.0"
   val jaxbApiVersion         = "2.3.1"
@@ -53,6 +54,10 @@ object scalaAkkaHttp {
 
   val project = commonModule("scala-akka-http")
 
-  val sample = buildSampleProject("akkaHttp", dependencies)
-  val sampleJackson = buildSampleProject("akkaHttpJackson", dependenciesJackson)
+  val sample =
+    buildSampleProject("akkaHttp", dependencies)
+      .settings(Compile / compile / wartremoverWarnings --= Seq(Wart.NonUnitStatements, Wart.Throw))
+  val sampleJackson =
+    buildSampleProject("akkaHttpJackson", dependenciesJackson)
+      .settings(Compile / compile / wartremoverWarnings --= Seq(Wart.AsInstanceOf, Wart.NonUnitStatements, Wart.Null, Wart.OptionPartial, Wart.Throw))
 }

@@ -4,179 +4,122 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import scala.meta._
 
-import dev.guardrail.core.{EmptyIsNull, SupportDefinition}
-import dev.guardrail.generators.java.jackson.JacksonHelpers
+import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
-import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.protocol.{ Discriminator, PropertyRequirement }
-import dev.guardrail.{RuntimeFailure, Target}
+import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms }
+import dev.guardrail.{ RuntimeFailure, Target }
 
 object JacksonProtocolGenerator {
-  def EnumProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): EnumProtocolTerms[ScalaLanguage, Target] = {
-    val baseInterp = new CirceProtocolGenerator.EnumProtocolTermInterp
-    baseInterp.copy(
-      newRenderClass = (className, tpe, elems) =>
-        for {
-          renderedClass <- baseInterp.renderClass(className, tpe, elems)
-        } yield renderedClass.copy(
-          mods = List(
-              mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Serializer"))}])",
-              mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
-            ) ++ renderedClass.mods
-        ),
-      newEncodeEnum = { (className, tpe) =>
-        val writeMethod = tpe match {
-          case t"Int"    => q"writeNumber"
-          case t"Long"   => q"writeNumber"
-          case t"String" => q"writeString"
+  private def discriminatorValue(discriminator: Discriminator[ScalaLanguage], className: String): String =
+    discriminator.mapping
+      .collectFirst({ case (value, elem) if elem.name == className => value })
+      .getOrElse(className)
+
+  private def paramAnnotations(
+      param: ProtocolParameter[ScalaLanguage],
+      presenceSerType: Type,
+      presenceDeserType: Type,
+      optionNonNullDeserType: Type,
+      optionNonMissingDeserType: Type,
+      emptyIsNullDeserType: Type,
+      emptyIsNullOptionDeserType: Type
+  ): List[Mod] = {
+    val jsonProperty = List(mod"@com.fasterxml.jackson.annotation.JsonProperty(${Lit.String(param.name.value)})")
+    val containerDeserializers = param.term.decltpe match {
+      case Some(t"Vector[$inner]")        => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+      case Some(t"List[$inner]")          => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+      case Some(t"IndexedSeq[$inner]")    => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+      case Some(t"Seq[$inner]")           => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+      case Some(t"Iterable[$inner]")      => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+      case Some(t"Map[$keyType, $inner]") => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+      case _                              => List.empty
+    }
+    val presenceHandling = param.term.decltpe match {
+      case Some(t"Presence[_]") | Some(Type.Apply(Type.Select(_, Type.Name("Presence")), _)) =>
+        List(
+          mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)",
+          mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = classOf[$presenceSerType])",
+          mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$presenceDeserType])"
+        )
+      case _ => List.empty
+    }
+    val optionAndEmptyHandling = param.term.decltpe match {
+      case Some(t"Option[$inner]") =>
+        val encodeRequirement = param.propertyRequirement match {
+          case PropertyRequirement.Configured(encoder, _) => encoder
+          case other                                      => other
         }
-        Target.pure(
-          Some(
-            q"""
-         class ${Type.Name(className + "Serializer")} extends com.fasterxml.jackson.databind.JsonSerializer[${Type.Name(className)}] {
-           override def serialize(value: ${Type
-              .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
-         }
-       """
-          )
-        )
-      },
-      newDecodeEnum = { (className, tpe) =>
-        val getter = tpe match {
-          case t"String" => q"getText"
-          case t"Int"    => q"getIntValue"
-          case t"Long"   => q"getLongValue"
+        val decodeRequirement = param.propertyRequirement match {
+          case PropertyRequirement.Configured(_, decoder) => decoder
+          case other                                      => other
         }
-        Target.pure(
-          Some(
-            q"""
-         class ${Type.Name(className + "Deserializer")} extends com.fasterxml.jackson.databind.JsonDeserializer[${Type.Name(className)}] {
-           override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
-              className
-            )} =
-            ${Term.Name(className)}.from(p.${getter})
-              .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.${getter}}' for " + ${Lit
-              .String(className)}) })
-         }
-       """
-          )
-        )
-      },
-      newRenderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
-        for {
-          renderedStaticDefns <- baseInterp.renderStaticDefns(className, elems, members, accessors, encoder, decoder)
-          classType = Type.Name(className)
-        } yield renderedStaticDefns.copy(
-          definitions = renderedStaticDefns.definitions ++ List(
-                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
-                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
-                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.noop"
-                )
-        )
-    )
+
+        val serializers = encodeRequirement match {
+          case Optional =>
+            // When serializing, either include the non-null value or drop the property entirely
+            List(mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)")
+          case _ =>
+            // RequiredNullable: Always include the property, null if appropriate
+            // OptionalLegacy: Legacy behavior is to serialize non-required, unset-nullability as null if not present
+            List(mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)")
+        }
+
+        val deserializers = decodeRequirement match {
+          case Optional =>
+            // When deserializing either a non-null value must be present, or no value at all
+            List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$optionNonNullDeserType], contentAs = classOf[$inner])")
+          case RequiredNullable =>
+            // When deserializing, the property must be present, but can be null
+            List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$optionNonMissingDeserType], contentAs = classOf[$inner])")
+          case _ =>
+            (param.emptyToNull, inner) match {
+              case (EmptyIsNull, t"String") =>
+                // OptionalLegacy: Same as above, but deserializes the empty string as None
+                List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$emptyIsNullOptionDeserType])")
+              case _ =>
+                // OptionalLegacy: When deserializing the property can be present (null or non-null) or not present
+                List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
+            }
+        }
+
+        serializers ++ deserializers
+
+      case Some(t"String") if param.emptyToNull == EmptyIsNull =>
+        // Causes a deserialization failure if the value is the empty string
+        List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$emptyIsNullDeserType])")
+
+      case _ =>
+        List.empty
+    }
+    val notNull = List(mod"@constraints.NotNull")
+    jsonProperty ++ containerDeserializers ++ presenceHandling ++ optionAndEmptyHandling ++ notNull
   }
 
-  def ModelProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ModelProtocolTerms[ScalaLanguage, Target] = {
-    def paramAnnotations(
-        param: ProtocolParameter[ScalaLanguage],
-        presenceSerType: Type,
-        presenceDeserType: Type,
-        optionNonNullDeserType: Type,
-        optionNonMissingDeserType: Type,
-        emptyIsNullDeserType: Type,
-        emptyIsNullOptionDeserType: Type
-    ): List[Mod] = {
-      val jsonProperty = List(mod"@com.fasterxml.jackson.annotation.JsonProperty(${Lit.String(param.name.value)})")
-      val containerDeserializers = param.term.decltpe match {
-        case Some(t"Vector[$inner]")        => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-        case Some(t"List[$inner]")          => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-        case Some(t"IndexedSeq[$inner]")    => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-        case Some(t"Seq[$inner]")           => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-        case Some(t"Iterable[$inner]")      => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-        case Some(t"Map[$keyType, $inner]") => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-        case _                              => List.empty
-      }
-      val presenceHandling = param.term.decltpe match {
-        case Some(t"Presence[_]") | Some(Type.Apply(Type.Select(_, Type.Name("Presence")), _)) =>
-          List(
-            mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)",
-            mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = classOf[$presenceSerType])",
-            mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$presenceDeserType])"
-          )
-        case _ => List.empty
-      }
-      val optionAndEmptyHandling = param.term.decltpe match {
-        case Some(t"Option[$inner]") =>
-          val encodeRequirement = param.propertyRequirement match {
-            case PropertyRequirement.Configured(encoder, _) => encoder
-            case other                                      => other
-          }
-          val decodeRequirement = param.propertyRequirement match {
-            case PropertyRequirement.Configured(_, decoder) => decoder
-            case other                                      => other
-          }
-
-          val serializers = encodeRequirement match {
-            case Optional =>
-              // When serializing, either include the non-null value or drop the property entirely
-              List(mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)")
-            case _ =>
-              // RequiredNullable: Always include the property, null if appropriate
-              // OptionalLegacy: Legacy behavior is to serialize non-required, unset-nullability as null if not present
-              List(mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)")
-          }
-
-          val deserializers = decodeRequirement match {
-            case Optional =>
-              // When deserializing either a non-null value must be present, or no value at all
-              List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$optionNonNullDeserType], contentAs = classOf[$inner])")
-            case RequiredNullable =>
-              // When deserializing, the property must be present, but can be null
-              List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$optionNonMissingDeserType], contentAs = classOf[$inner])")
-            case _ =>
-              (param.emptyToNull, inner) match {
-                case (EmptyIsNull, t"String") =>
-                  // OptionalLegacy: Same as above, but deserializes the empty string as None
-                  List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$emptyIsNullOptionDeserType])")
-                case _ =>
-                  // OptionalLegacy: When deserializing the property can be present (null or non-null) or not present
-                  List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
-              }
-          }
-
-          serializers ++ deserializers
-
-        case Some(t"String") if param.emptyToNull == EmptyIsNull =>
-          // Causes a deserialization failure if the value is the empty string
-          List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = classOf[$emptyIsNullDeserType])")
-
-        case _ =>
-          List.empty
-      }
-      val notNull = List(mod"@constraints.NotNull")
-      jsonProperty ++ containerDeserializers ++ presenceHandling ++ optionAndEmptyHandling ++ notNull
+  private def fixDefaultValue(param: ProtocolParameter[ScalaLanguage]): Option[Term] =
+    param.propertyRequirement match {
+      case Optional | RequiredNullable | PropertyRequirement.Configured(_, Optional | RequiredNullable) =>
+        // We can't have a default value with Jackson, because it will allow us to deserialize
+        // things that are not valid (nulls in the Optional case, missing property in the
+        // RequiredNullable case). This is unfortunate because it makes the API of the case class
+        // less ergonomic, but perhaps we can add an apply() method to the companion object to fix that up.
+        None
+      case _ => param.term.default
     }
-    def fixDefaultValue(param: ProtocolParameter[ScalaLanguage]): Option[Term] =
-      param.propertyRequirement match {
-        case Optional | RequiredNullable | PropertyRequirement.Configured(_, Optional | RequiredNullable) =>
-          // We can't have a default value with Jackson, because it will allow us to deserialize
-          // things that are not valid (nulls in the Optional case, missing property in the
-          // RequiredNullable case). This is unfortunate because it makes the API of the case class
-          // less ergonomic, but perhaps we can add an apply() method to the companion object to fix that up.
-          None
-        case _ => param.term.default
-      }
 
-    val jsonIgnoreProperties = mod"""@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)"""
-    val baseInterp           = new CirceProtocolGenerator.ModelProtocolTermInterp(CirceModelGenerator.V012)
-    import baseInterp.MonadF
+  private val jsonIgnoreProperties = mod"""@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)"""
+
+  def apply(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] = {
+    val baseInterp = CirceProtocolGenerator(CirceModelGenerator.V012)
+    import Target.targetInstances
+
     baseInterp.copy(
-      newRenderDTOClass = (className, supportPackage, terms, parents) =>
+      renderDTOClass = (className, supportPackage, terms, parents) =>
         for {
           renderedClass <- baseInterp.renderDTOClass(className, supportPackage, terms, parents)
           discriminatorParams = parents.flatMap(
@@ -200,18 +143,20 @@ object JacksonProtocolGenerator {
                         Target.raiseUserError[Term](s"No declared type for property '${param.name.value}' on class $className")
                       )({
                         case tpe @ (_: Type.Name | _: Type.Select) =>
-                          ScalaGenerator.ScalaInterp.formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
+                          ScalaGenerator().formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
                         case tpe => Target.raiseError(RuntimeFailure(s"Assumed property ${param.name.value} was an enum, but can't handle $tpe"))
                       })
-                  )(ScalaGenerator.ScalaInterp)
+                  )(ScalaGenerator())
               } yield (param.name.value, param.term.name.value, param.term.decltpe, discrimValue)
           })
-          presenceSerType        <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
-          presenceDeserType      <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
-          optionNonNullDeserType <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
-          emptyIsNullDeserType   <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
-          emptyIsNullOptionDeserType   <- ScalaGenerator.ScalaInterp.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer"))
-          optionNonMissingDeserType <- ScalaGenerator.ScalaInterp.selectType(
+          presenceSerType        <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
+          presenceDeserType      <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
+          optionNonNullDeserType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
+          emptyIsNullDeserType   <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
+          emptyIsNullOptionDeserType <- ScalaGenerator().selectType(
+            NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer")
+          )
+          optionNonMissingDeserType <- ScalaGenerator().selectType(
             NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonMissingDeserializer")
           )
           allTerms = terms ++ parents.flatMap(_.params)
@@ -225,7 +170,15 @@ object JacksonProtocolGenerator {
                     .find(_.term.name.value == param.name.value)
                     .fold(param)({ term =>
                       param.copy(
-                        mods = paramAnnotations(term, presenceSerType, presenceDeserType, optionNonNullDeserType, optionNonMissingDeserType, emptyIsNullDeserType, emptyIsNullOptionDeserType) ++ param.mods,
+                        mods = paramAnnotations(
+                            term,
+                            presenceSerType,
+                            presenceDeserType,
+                            optionNonNullDeserType,
+                            optionNonMissingDeserType,
+                            emptyIsNullDeserType,
+                            emptyIsNullOptionDeserType
+                          ) ++ param.mods,
                         default = fixDefaultValue(term)
                       )
                     })
@@ -243,9 +196,9 @@ object JacksonProtocolGenerator {
               }) ++ renderedClass.templ.stats
           )
         ),
-      newEncodeModel = (_, _, _, _) => Target.pure(None),
-      newDecodeModel = (_, _, _, _, _) => Target.pure(None),
-      newRenderDTOStaticDefns = (className, deps, encoder, decoder) =>
+      encodeModel = (_, _, _, _) => Target.pure(None),
+      decodeModel = (_, _, _, _, _) => Target.pure(None),
+      renderDTOStaticDefns = (className, deps, encoder, decoder) =>
         for {
           renderedDTOStaticDefns <- baseInterp.renderDTOStaticDefns(className, deps, encoder, decoder)
           classType = Type.Name(className)
@@ -255,25 +208,74 @@ object JacksonProtocolGenerator {
                   q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
                   q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
                 )
+        ),
+      renderClass = (className, tpe, elems) =>
+        for {
+          renderedClass <- baseInterp.renderClass(className, tpe, elems)
+        } yield renderedClass.copy(
+          mods = List(
+              mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Serializer"))}])",
+              mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
+            ) ++ renderedClass.mods
+        ),
+      encodeEnum = { (className, tpe) =>
+        for {
+          writeMethod <- tpe match {
+            case t"Int"    => Target.pure(q"writeNumber")
+            case t"Long"   => Target.pure(q"writeNumber")
+            case t"String" => Target.pure(q"writeString")
+            case other     => Target.raiseException(s"Unexpected type during enumeration encoder: ${other}")
+          }
+        } yield Some(
+          q"""
+         class ${Type.Name(className + "Serializer")} extends com.fasterxml.jackson.databind.JsonSerializer[${Type.Name(className)}] {
+           override def serialize(value: ${Type
+            .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
+         }
+       """
         )
-    )
-  }
-
-  def ArrayProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ArrayProtocolTerms[ScalaLanguage, Target] =
-    new CirceProtocolGenerator.ArrayProtocolTermInterp
-
-  def ProtocolSupportTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolSupportTerms[ScalaLanguage, Target] = {
-    val baseInterp = new CirceProtocolGenerator.ProtocolSupportTermInterp
-    baseInterp.copy(
-      newProtocolImports = () =>
+      },
+      decodeEnum = { (className, tpe) =>
+        for {
+          getter <- tpe match {
+            case t"String" => Target.pure(q"getText")
+            case t"Int"    => Target.pure(q"getIntValue")
+            case t"Long"   => Target.pure(q"getLongValue")
+            case other     => Target.raiseException(s"Unexpected type during enumeration decoder: ${other}")
+          }
+        } yield Some(
+          q"""
+         class ${Type.Name(className + "Deserializer")} extends com.fasterxml.jackson.databind.JsonDeserializer[${Type.Name(className)}] {
+           override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
+            className
+          )} =
+            ${Term.Name(className)}.from(p.${getter})
+              .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.${getter}}' for " + ${Lit
+            .String(className)}) })
+         }
+       """
+        )
+      },
+      renderStaticDefns = (className, elems, members, accessors, encoder, decoder) =>
+        for {
+          renderedStaticDefns <- baseInterp.renderStaticDefns(className, elems, members, accessors, encoder, decoder)
+          classType = Type.Name(className)
+        } yield renderedStaticDefns.copy(
+          definitions = renderedStaticDefns.definitions ++ List(
+                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
+                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
+                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.noop"
+                )
+        ),
+      protocolImports = () =>
         Target.pure(
           List(
             q"import cats.implicits._"
           )
         ),
-      newPackageObjectImports = () => Target.pure(List.empty),
-      newPackageObjectContents = () => Target.pure(List.empty),
-      newImplicitsObject = () =>
+      packageObjectImports = () => Target.pure(List.empty),
+      packageObjectContents = () => Target.pure(List.empty),
+      implicitsObject = () =>
         Target.pure(
           Some(
             (
@@ -340,7 +342,7 @@ object JacksonProtocolGenerator {
                     jsonNode match {
                       case arr: com.fasterxml.jackson.databind.node.ArrayNode =>
                         import cats.implicits._
-                        import _root_.scala.collection.JavaConverters._
+                        import _root_.scala.jdk.CollectionConverters._
                         arr.iterator().asScala.toVector.traverse(implicitly[GuardrailDecoder[B]].decode)
                       case _ =>
                         scala.util.Failure(new com.fasterxml.jackson.databind.JsonMappingException(null, s"Can't decode to vector; node of type $${jsonNode.getClass.getSimpleName} is not an array"))
@@ -353,7 +355,7 @@ object JacksonProtocolGenerator {
                     jsonNode match {
                       case obj: com.fasterxml.jackson.databind.node.ObjectNode =>
                         import cats.implicits._
-                        import _root_.scala.collection.JavaConverters._
+                        import _root_.scala.jdk.CollectionConverters._
                         obj.fields().asScala.toVector.traverse(entry => implicitly[GuardrailDecoder[B]].decode(entry.getValue).map((entry.getKey, _))).map(_.toMap)
                       case _ =>
                         scala.util.Failure(new com.fasterxml.jackson.databind.JsonMappingException(null, s"Can't decode to map; node of type $${jsonNode.getClass.getSimpleName} is not an object"))
@@ -383,7 +385,7 @@ object JacksonProtocolGenerator {
               object GuardrailValidator {
                 def instance[A]: GuardrailValidator[A] = new GuardrailValidator[A] {
                   override def validate(a: A)(implicit validator: javax.validation.Validator): scala.util.Try[A] = {
-                    import _root_.scala.collection.JavaConverters._
+                    import _root_.scala.jdk.CollectionConverters._
                     scala.util.Try(validator.validate(a)).flatMap({
                       case violations if violations.isEmpty =>
                         scala.util.Success(a)
@@ -429,7 +431,7 @@ object JacksonProtocolGenerator {
             )
           )
         ),
-      newGenerateSupportDefinitions = () =>
+      generateSupportDefinitions = () =>
         for {
           generatedSupportDefinitions <- baseInterp.generateSupportDefinitions()
         } yield {
@@ -586,14 +588,14 @@ object JacksonProtocolGenerator {
                 )
             )
             .toList ++ others ++ List(
-              SupportDefinition[ScalaLanguage](
-                q"EmptyIsNullDeserializers",
-                List(
-                  q"import com.fasterxml.jackson.core.{JsonParser, JsonToken}",
-                  q"import com.fasterxml.jackson.databind.{DeserializationContext, JsonDeserializer, JsonMappingException}"
-                ),
-                List(
-                  q"""
+            SupportDefinition[ScalaLanguage](
+              q"EmptyIsNullDeserializers",
+              List(
+                q"import com.fasterxml.jackson.core.{JsonParser, JsonToken}",
+                q"import com.fasterxml.jackson.databind.{DeserializationContext, JsonDeserializer, JsonMappingException}"
+              ),
+              List(
+                q"""
                     @SuppressWarnings(Array("org.wartremover.warts.Throw"))
                     object EmptyIsNullDeserializers {
                       class EmptyIsNullDeserializer extends JsonDeserializer[String] {
@@ -619,18 +621,12 @@ object JacksonProtocolGenerator {
                       }
                     }
                   """
-                ),
-                insideDefinitions = false
-              )
+              ),
+              insideDefinitions = false
             )
-        }
-    )
-  }
-
-  def PolyProtocolTermInterp(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): PolyProtocolTerms[ScalaLanguage, Target] = {
-    val baseInterp = new CirceProtocolGenerator.PolyProtocolTermInterp
-    baseInterp.copy(
-      newRenderSealedTrait = (className, params, discriminator, parents, children) =>
+          )
+        },
+      renderSealedTrait = (className, params, discriminator, parents, children) =>
         for {
           renderedTrait      <- baseInterp.renderSealedTrait(className, params, discriminator, parents, children)
           discriminatorParam <- Target.pure(params.find(_.name.value == discriminator.propertyName))
@@ -662,9 +658,9 @@ object JacksonProtocolGenerator {
             )
           )
         },
-      newEncodeADT = (_, _, _) => Target.pure(None),
-      newDecodeADT = (_, _, _) => Target.pure(None),
-      newRenderADTStaticDefns = (className, discriminator, encoder, decoder) =>
+      encodeADT = (_, _, _) => Target.pure(None),
+      decodeADT = (_, _, _) => Target.pure(None),
+      renderADTStaticDefns = (className, discriminator, encoder, decoder) =>
         for {
           renderedADTStaticDefns <- baseInterp.renderADTStaticDefns(className, discriminator, encoder, decoder)
           classType = Type.Name(className)
@@ -677,9 +673,4 @@ object JacksonProtocolGenerator {
         )
     )
   }
-
-  private def discriminatorValue(discriminator: Discriminator[ScalaLanguage], className: String): String =
-    discriminator.mapping
-      .collectFirst({ case (value, elem) if elem.name == className => value })
-      .getOrElse(className)
 }

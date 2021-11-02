@@ -8,15 +8,28 @@ import scala.util.control.NonFatal
 
 import dev.guardrail.generators.Framework
 import dev.guardrail.languages.LA
-import dev.guardrail.terms.protocol.ProtocolSupportTerms
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol.PropertyRequirement
-import dev.guardrail.{ Args, Common, Context, Error, MissingArg, NoArgsSpecified, NoFramework, PrintHelp, ReadSwagger, Target, UnknownFramework, UnparseableArgument, WriteTree }
+import dev.guardrail.{
+  Args,
+  Common,
+  Context,
+  Error,
+  MissingArg,
+  NoArgsSpecified,
+  NoFramework,
+  PrintHelp,
+  ReadSwagger,
+  Target,
+  UnknownFramework,
+  UnparseableArgument,
+  WriteTree
+}
 
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,
     val handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
-    val frameworkMapping: PartialFunction[String, Framework[L, Target]],
+    val frameworkMapping: PartialFunction[String, Target[Framework[L, Target]]],
     val handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] { self =>
   implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -26,7 +39,8 @@ class CoreTermInterp[L <: LA](
       handleModules: NonEmptyList[String] => Target[Framework[L, Target]] = self.handleModules,
       additionalFrameworkMappings: PartialFunction[String, Framework[L, Target]] = PartialFunction.empty,
       handleImport: String => Either[Error, L#Import] = self.handleImport
-  ): CoreTermInterp[L] = new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.orElse(self.frameworkMapping), handleImport)
+  ): CoreTermInterp[L] =
+    new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.andThen(Target.pure _).orElse(self.frameworkMapping), handleImport)
 
   def getDefaultFramework =
     Target.log.function("getDefaultFramework") {
@@ -44,7 +58,7 @@ class CoreTermInterp[L <: LA](
             ctxFramework =>
               for {
                 frameworkName <- Target.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
-                framework     <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
+                framework     <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName)).flatten
                 _             <- Target.log.debug(s"Found: $framework")
               } yield framework,
             handleModules
@@ -80,12 +94,7 @@ class CoreTermInterp[L <: LA](
     }
   }
 
-  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] = {
-    import scala.meta.parsers.Parsed
-    implicit def parsed2Either[Z]: Parsed[Z] => Either[Parsed.Error, Z] = {
-      case x: Parsed.Error      => Left(x)
-      case Parsed.Success(tree) => Right(tree)
-    }
+  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] =
     Target.log.function("processArgSet")(for {
       _          <- Target.log.debug("Processing arguments")
       specPath   <- Target.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
@@ -113,7 +122,7 @@ class CoreTermInterp[L <: LA](
               import targetInterpreter._
               val Sw = implicitly[SwaggerTerms[L, Target]]
               val Sc = implicitly[LanguageTerms[L, Target]]
-              val Ps = implicitly[ProtocolSupportTerms[L, Target]]
+              val Ps = implicitly[ProtocolTerms[L, Target]]
               for {
                 _                  <- Sw.log.debug("Running guardrail codegen")
                 formattedPkgName   <- Sc.formatPackageName(pkgName)
@@ -162,5 +171,4 @@ class CoreTermInterp[L <: LA](
         }
       )
     })
-  }
 }
