@@ -176,10 +176,34 @@ object Build {
           (current ++ fromOther).distinct
         })
 
-    def customDependsOn(other: Project): Project =
+    def internalModuleDep(other: Project): Project =
       project
         .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
         .dependsOn(other % Provided)
         .accumulateClasspath(other)
+
+    def directModuleDep(other: Project, realDependencySpec: Some[ModuleID]): Project = {
+      val base =
+        project
+          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+
+      realDependencySpec.fold(
+        base
+          .dependsOn(other)
+          .accumulateClasspath(other)
+      )(dep => base.settings(libraryDependencies += dep))
+    }
+
+    def providedModuleDep(other: Project, realDependencySpec: Some[ModuleID]): Project = {
+      val base =
+        project
+          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+
+      realDependencySpec.fold(
+        base
+          .dependsOn(other % Provided)
+          .accumulateClasspath(other)
+      )(dep => base.settings(libraryDependencies += dep % Provided))
+    }
   }
 }
