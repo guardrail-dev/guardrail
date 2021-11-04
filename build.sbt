@@ -132,7 +132,6 @@ lazy val allDeps = modules.allDeps.project
   .settings(crossScalaVersions := crossScalaVersions.value.filter(_.startsWith("2.12")))
 
 lazy val guardrail = modules.guardrail.project
-  .providedModuleDep(core, Some(guardrailCore))
   .providedModuleDep(javaDropwizard, Some(guardrailJavaDropwizard))
   .providedModuleDep(javaSpringMvc, Some(guardrailJavaSpringMvc))
   .providedModuleDep(javaSupport, Some(guardrailJavaSupport))
@@ -165,20 +164,20 @@ lazy val javaSupport = modules.javaSupport.project
   .directModuleDep(core, Some(guardrailCore))
 
 lazy val javaAsyncHttp = modules.javaAsyncHttp.project
-  .providedModuleDep(javaSupport, Some(guardrailJavaSupport))
+  .directModuleDep(javaSupport, Some(guardrailJavaSupport))
 
 lazy val dropwizardSample = modules.javaDropwizard.sample
   .settings(javaSampleSettings)
 lazy val dropwizardVavrSample = modules.javaDropwizard.sampleVavr
   .settings(javaSampleSettings)
 lazy val javaDropwizard = modules.javaDropwizard.project
-  .providedModuleDep(javaSupport, Some(guardrailJavaSupport))
-  .providedModuleDep(javaAsyncHttp, Some(guardrailJavaAsyncHttp))
+  .directModuleDep(javaSupport, Some(guardrailJavaSupport))
+  .directModuleDep(javaAsyncHttp, Some(guardrailJavaAsyncHttp))
 
 lazy val javaSpringMvcSample = modules.javaSpringMvc.sample
   .settings(javaSampleSettings)
 lazy val javaSpringMvc = modules.javaSpringMvc.project
-  .providedModuleDep(javaSupport, Some(guardrailJavaSupport))
+  .directModuleDep(javaSupport, Some(guardrailJavaSupport))
 
 lazy val scalaSupport = modules.scalaSupport.project
   .directModuleDep(core, Some(guardrailCore))
@@ -186,19 +185,19 @@ lazy val scalaSupport = modules.scalaSupport.project
 lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
 lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
 lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
-  .providedModuleDep(scalaSupport, Some(guardrailScalaSupport))
+  .directModuleDep(scalaSupport, Some(guardrailScalaSupport))
 
 lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
 lazy val scalaEndpoints = modules.scalaEndpoints.project
-  .providedModuleDep(scalaSupport, Some(guardrailScalaSupport))
+  .directModuleDep(scalaSupport, Some(guardrailScalaSupport))
 
 lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
 lazy val scalaHttp4s = modules.scalaHttp4s.project
-  .providedModuleDep(scalaSupport, Some(guardrailScalaSupport))
+  .directModuleDep(scalaSupport, Some(guardrailScalaSupport))
 
 lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
 lazy val scalaDropwizard = modules.scalaDropwizard.project
-  .providedModuleDep(scalaSupport, Some(guardrailScalaSupport))
+  .directModuleDep(scalaSupport, Some(guardrailScalaSupport))
 
 lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
   .settings(
