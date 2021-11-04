@@ -182,24 +182,24 @@ object Build {
         .dependsOn(other % Provided)
         .accumulateClasspath(other)
 
-    def directModuleDep(other: Project, realDependencySpec: Some[ModuleID]): Project = {
+    def directModuleDep(other: Project, realDependencySpec: ModuleID): Project = {
       val base =
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
 
-      realDependencySpec.fold(
+      Some(realDependencySpec).fold(
         base
           .dependsOn(other)
           .accumulateClasspath(other)
       )(dep => base.settings(libraryDependencies += dep))
     }
 
-    def providedModuleDep(other: Project, realDependencySpec: Some[ModuleID]): Project = {
+    def providedModuleDep(other: Project, realDependencySpec: ModuleID): Project = {
       val base =
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
 
-      realDependencySpec.fold(
+      Some(realDependencySpec).fold(
         base
           .dependsOn(other % Provided)
           .accumulateClasspath(other)
