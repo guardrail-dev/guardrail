@@ -182,16 +182,20 @@ object Build {
         .dependsOn(other % Provided)
         .accumulateClasspath(other)
 
+    private[this] def isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
+
     def directModuleDep(other: Project, realDependencySpec: ModuleID): Project = {
       val base =
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
 
-      Some(realDependencySpec).fold(
-        base
-          .dependsOn(other)
-          .accumulateClasspath(other)
-      )(dep => base.settings(libraryDependencies += dep))
+      Some(realDependencySpec)
+        .filterNot(_ => isRelease)
+        .fold(
+          base
+            .dependsOn(other)
+            .accumulateClasspath(other)
+        )(dep => base.settings(libraryDependencies += dep))
     }
 
     def providedModuleDep(other: Project, realDependencySpec: ModuleID): Project = {
@@ -199,11 +203,13 @@ object Build {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
 
-      Some(realDependencySpec).fold(
-        base
-          .dependsOn(other % Provided)
-          .accumulateClasspath(other)
-      )(dep => base.settings(libraryDependencies += dep % Provided))
+      Some(realDependencySpec)
+        .filterNot(_ => isRelease)
+        .fold(
+          base
+            .dependsOn(other % Provided)
+            .accumulateClasspath(other)
+        )(dep => base.settings(libraryDependencies += dep % Provided))
     }
   }
 }
