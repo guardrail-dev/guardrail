@@ -196,32 +196,26 @@ object Build {
 
     private[this] def isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
 
-    def directModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project = {
-      val base =
-        project
-          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+    def directModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project =
+      Some(realDependencySpec)
+        .filterNot(_ => isRelease)
+        .fold(project.dependsOn(other))(dep =>
+          project
+            .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+            .settings(libraryDependencies += dep.value)
+        )
 
+    def providedModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project =
       Some(realDependencySpec)
         .filterNot(_ => isRelease)
         .fold(
-          base
-            .dependsOn(other)
-            .accumulateClasspath(other)
-        )(dep => base.settings(libraryDependencies += dep.value))
-    }
-
-    def providedModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project = {
-      val base =
-        project
-          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
-
-      Some(realDependencySpec)
-        .filterNot(_ => isRelease)
-        .fold(
-          base
+          project
             .dependsOn(other % Provided)
             .accumulateClasspath(other)
-        )(dep => base.settings(libraryDependencies += dep.value % Provided))
-    }
+        )(dep =>
+          project
+            .settings(libraryDependencies += dep.value % Provided)
+            .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+        )
   }
 }
