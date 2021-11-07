@@ -198,7 +198,7 @@ object Build {
 
     def directModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project =
       Some(realDependencySpec)
-        .filterNot(_ => isRelease)
+        .filter(_ => isRelease) // Only use published jars during release
         .fold(project.dependsOn(other))(dep =>
           project
             .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
@@ -207,7 +207,7 @@ object Build {
 
     def providedModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project =
       Some(realDependencySpec)
-        .filterNot(_ => isRelease)
+        .filter(_ => isRelease) // Only use published jars during release
         .fold(
           project
             .dependsOn(other % Provided)
