@@ -21,6 +21,9 @@ object scalaEndpoints {
 
 
   val project = commonModule("scala-endpoints")
+    .settings(
+      guardrailScalaSupportVersion := "dev.guardrail" %% "guardrail-scala-support" % "0.67.0"
+    )
 
   val sample = buildSampleProject("endpoints", dependencies)
 }

@@ -12,6 +12,18 @@ import xerial.sbt.Sonatype.autoImport._
 import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 
 object Build {
+  val guardrailVersion = SettingKey[ModuleID]("guardrail-version")
+  val guardrailCoreVersion = SettingKey[ModuleID]("guardrail-core-version")
+  val guardrailJavaDropwizardVersion = SettingKey[ModuleID]("guardrail-java-dropwizard-version")
+  val guardrailJavaSpringMvcVersion = SettingKey[ModuleID]("guardrail-java-spring-mvc-version")
+  val guardrailJavaSupportVersion = SettingKey[ModuleID]("guardrail-java-support-version")
+  val guardrailJavaAsyncHttpVersion = SettingKey[ModuleID]("guardrail-java-async-http-version")
+  val guardrailScalaAkkaHttpVersion = SettingKey[ModuleID]("guardrail-scala-akka-http-version")
+  val guardrailScalaDropwizardVersion = SettingKey[ModuleID]("guardrail-scala-dropwizard-version")
+  val guardrailScalaEndpointsVersion = SettingKey[ModuleID]("guardrail-scala-endpoints-version")
+  val guardrailScalaHttp4sVersion = SettingKey[ModuleID]("guardrail-scala-http4s-version")
+  val guardrailScalaSupportVersion = SettingKey[ModuleID]("guardrail-scala-support-version")
+
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
     Project(s"sample-${name}", file(s"modules/sample-${name}"))
       .settings(commonSettings)
@@ -184,7 +196,7 @@ object Build {
 
     private[this] def isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
 
-    def directModuleDep(other: Project, realDependencySpec: ModuleID): Project = {
+    def directModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project = {
       val base =
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
@@ -195,10 +207,10 @@ object Build {
           base
             .dependsOn(other)
             .accumulateClasspath(other)
-        )(dep => base.settings(libraryDependencies += dep))
+        )(dep => base.settings(libraryDependencies += dep.value))
     }
 
-    def providedModuleDep(other: Project, realDependencySpec: ModuleID): Project = {
+    def providedModuleDep(other: Project, realDependencySpec: SettingKey[ModuleID]): Project = {
       val base =
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
@@ -209,7 +221,7 @@ object Build {
           base
             .dependsOn(other % Provided)
             .accumulateClasspath(other)
-        )(dep => base.settings(libraryDependencies += dep % Provided))
+        )(dep => base.settings(libraryDependencies += dep.value % Provided))
     }
   }
 }

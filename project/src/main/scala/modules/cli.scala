@@ -7,4 +7,7 @@ import sbt.Keys._
 
 object cli {
   val project = commonModule("cli")
+    .settings(
+      guardrailVersion := "dev.guardrail" %% "guardrail" % "0.67.0"
+    )
 }

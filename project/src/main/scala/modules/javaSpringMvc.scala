@@ -23,6 +23,9 @@ object javaSpringMvc {
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val project = commonModule("java-spring-mvc")
+      .settings(
+        guardrailJavaSupportVersion := "dev.guardrail" %% "guardrail-java-support" % "0.66.0"
+      )
 
   val sample = buildSampleProject("springMvc", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
 }

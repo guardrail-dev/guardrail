@@ -36,6 +36,9 @@ object scalaDropwizard {
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val project = commonModule("scala-dropwizard")
+    .settings(
+      guardrailScalaSupportVersion := "dev.guardrail" %% "guardrail-scala-support" % "0.67.0"
+    )
 
   val sample = buildSampleProject("dropwizardScala", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
 }

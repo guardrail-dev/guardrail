@@ -41,6 +41,10 @@ object javaDropwizard {
 
 
   val project = commonModule("java-dropwizard")
+      .settings(
+        guardrailJavaSupportVersion := "dev.guardrail" %% "guardrail-java-support" % "0.66.0",
+        guardrailJavaAsyncHttpVersion := "dev.guardrail" %% "guardrail-java-async-http" % "0.66.0"
+      )
 
   val sample = buildSampleProject("dropwizard", dependencies).settings(scalacOptions -= "-Xfatal-warnings")
   val sampleVavr = buildSampleProject("dropwizardVavr", dependenciesVavr).settings(scalacOptions -= "-Xfatal-warnings")

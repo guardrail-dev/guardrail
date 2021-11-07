@@ -53,6 +53,9 @@ object scalaAkkaHttp {
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val project = commonModule("scala-akka-http")
+    .settings(
+      guardrailScalaSupportVersion := "dev.guardrail" %% "guardrail-scala-support" % "0.67.0"
+    )
 
   val sample =
     buildSampleProject("akkaHttp", dependencies)

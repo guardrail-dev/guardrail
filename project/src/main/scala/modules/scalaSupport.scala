@@ -11,4 +11,7 @@ object scalaSupport {
       .settings(
         libraryDependencies += "org.scalameta" %% "scalameta" % "4.4.29"
       )
+      .settings(
+        guardrailCoreVersion := "dev.guardrail" %% "guardrail-core" % "0.67.0"
+      )
 }

@@ -37,4 +37,7 @@ object javaSupport {
         libraryDependencies ++= eclipseFormatterDependencies,
         libraryDependencies += "com.github.javaparser" % "javaparser-symbol-solver-core" % "3.22.1"
       )
+    .settings(
+      guardrailCoreVersion := "dev.guardrail" %% "guardrail-core" % "0.67.0"
+    )
 }

@@ -13,22 +13,6 @@ onLoadMessage := WelcomeMessage.welcomeMessage((guardrail / version).value)
 
 import scoverage.ScoverageKeys
 
-/**
- * Modules
- */
-
-val guardrailGuardrail = "dev.guardrail" %% "guardrail" % "0.67.0"
-val guardrailCore = "dev.guardrail" %% "guardrail-core" % "0.67.0"
-val guardrailJavaDropwizard = "dev.guardrail" %% "guardrail-java-dropwizard" % "0.66.0"
-val guardrailJavaSpringMvc = "dev.guardrail" %% "guardrail-java-spring-mvc" % "0.66.0"
-val guardrailJavaSupport = "dev.guardrail" %% "guardrail-java-support" % "0.66.0"
-val guardrailJavaAsyncHttp = "dev.guardrail" %% "guardrail-java-async-http" % "0.66.0"
-val guardrailScalaAkkaHttp = "dev.guardrail" %% "guardrail-scala-akka-http" % "0.68.0"
-val guardrailScalaDropwizard = "dev.guardrail" %% "guardrail-scala-dropwizard" % "0.66.0"
-val guardrailScalaEndpoints = "dev.guardrail" %% "guardrail-scala-endpoints" % "0.66.0"
-val guardrailScalaHttp4s = "dev.guardrail" %% "guardrail-scala-http4s" % "0.66.0"
-val guardrailScalaSupport = "dev.guardrail" %% "guardrail-scala-support" % "0.67.0"
-
 lazy val runJavaExample: TaskKey[Unit] = taskKey[Unit]("Run java generator with example args")
 fullRunTask(
   runJavaExample,
@@ -132,15 +116,15 @@ lazy val allDeps = modules.allDeps.project
   .settings(crossScalaVersions := crossScalaVersions.value.filter(_.startsWith("2.12")))
 
 lazy val guardrail = modules.guardrail.project
-  .providedModuleDep(javaDropwizard, guardrailJavaDropwizard)
-  .providedModuleDep(javaSpringMvc, guardrailJavaSpringMvc)
-  .providedModuleDep(javaSupport, guardrailJavaSupport)
-  .providedModuleDep(javaAsyncHttp, guardrailJavaAsyncHttp)
-  .providedModuleDep(scalaAkkaHttp, guardrailScalaAkkaHttp)
-  .providedModuleDep(scalaDropwizard, guardrailScalaDropwizard)
-  .providedModuleDep(scalaEndpoints, guardrailScalaEndpoints)
-  .providedModuleDep(scalaHttp4s, guardrailScalaHttp4s)
-  .providedModuleDep(scalaSupport, guardrailScalaSupport)
+  .providedModuleDep(javaDropwizard, guardrailJavaDropwizardVersion)
+  .providedModuleDep(javaSpringMvc, guardrailJavaSpringMvcVersion)
+  .providedModuleDep(javaSupport, guardrailJavaSupportVersion)
+  .providedModuleDep(javaAsyncHttp, guardrailJavaAsyncHttpVersion)
+  .providedModuleDep(scalaAkkaHttp, guardrailScalaAkkaHttpVersion)
+  .providedModuleDep(scalaDropwizard, guardrailScalaDropwizardVersion)
+  .providedModuleDep(scalaEndpoints, guardrailScalaEndpointsVersion)
+  .providedModuleDep(scalaHttp4s, guardrailScalaHttp4sVersion)
+  .providedModuleDep(scalaSupport, guardrailScalaSupportVersion)
 
 lazy val samples = (project in file("modules/samples"))
   .settings(publish / skip := true)
@@ -158,46 +142,46 @@ lazy val samples = (project in file("modules/samples"))
 lazy val core = modules.core.project
 
 lazy val cli = modules.cli.project
-  .providedModuleDep(guardrail, guardrailGuardrail)
+  .providedModuleDep(guardrail, guardrailVersion)
 
 lazy val javaSupport = modules.javaSupport.project
-  .directModuleDep(core, guardrailCore)
+  .directModuleDep(core, guardrailCoreVersion)
 
 lazy val javaAsyncHttp = modules.javaAsyncHttp.project
-  .directModuleDep(javaSupport, guardrailJavaSupport)
+  .directModuleDep(javaSupport, guardrailJavaSupportVersion)
 
 lazy val dropwizardSample = modules.javaDropwizard.sample
   .settings(javaSampleSettings)
 lazy val dropwizardVavrSample = modules.javaDropwizard.sampleVavr
   .settings(javaSampleSettings)
 lazy val javaDropwizard = modules.javaDropwizard.project
-  .directModuleDep(javaSupport, guardrailJavaSupport)
-  .directModuleDep(javaAsyncHttp, guardrailJavaAsyncHttp)
+  .directModuleDep(javaSupport, guardrailJavaSupportVersion)
+  .directModuleDep(javaAsyncHttp, guardrailJavaAsyncHttpVersion)
 
 lazy val javaSpringMvcSample = modules.javaSpringMvc.sample
   .settings(javaSampleSettings)
 lazy val javaSpringMvc = modules.javaSpringMvc.project
-  .directModuleDep(javaSupport, guardrailJavaSupport)
+  .directModuleDep(javaSupport, guardrailJavaSupportVersion)
 
 lazy val scalaSupport = modules.scalaSupport.project
-  .directModuleDep(core, guardrailCore)
+  .directModuleDep(core, guardrailCoreVersion)
 
 lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
 lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
 lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
-  .directModuleDep(scalaSupport, guardrailScalaSupport)
+  .directModuleDep(scalaSupport, guardrailScalaSupportVersion)
 
 lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
 lazy val scalaEndpoints = modules.scalaEndpoints.project
-  .directModuleDep(scalaSupport, guardrailScalaSupport)
+  .directModuleDep(scalaSupport, guardrailScalaSupportVersion)
 
 lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
 lazy val scalaHttp4s = modules.scalaHttp4s.project
-  .directModuleDep(scalaSupport, guardrailScalaSupport)
+  .directModuleDep(scalaSupport, guardrailScalaSupportVersion)
 
 lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
 lazy val scalaDropwizard = modules.scalaDropwizard.project
-  .directModuleDep(scalaSupport, guardrailScalaSupport)
+  .directModuleDep(scalaSupport, guardrailScalaSupportVersion)
 
 lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
   .settings(

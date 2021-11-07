@@ -7,4 +7,7 @@ import sbt.Keys._
 
 object javaAsyncHttp {
   val project = commonModule("java-async-http")
+    .settings(
+      guardrailJavaSupportVersion := "dev.guardrail" %% "guardrail-java-support" % "0.66.0"
+    )
 }
