@@ -1,8 +1,10 @@
 package core.issues
 
 import _root_.department.client.http4s.department.{ DepartmentClient, GetDepartmentResponse => ClientGDR, SearchDepartmentsResponse => ClientSDR }
+import _root_.department.client.http4s.department.{ DepartmentClient, GetDepartmentResponse => ClientGDR, SearchDepartmentsResponse => ClientSDR }
 import _root_.department.client.http4s.{ definitions => cdefs }
 import _root_.department.server.http4s.department._
+import _root_.department.server.http4s.department.DepartmentResource._
 import _root_.department.server.http4s.{ definitions => sdefs }
 import cats.effect.IO
 import cats.effect.IO._

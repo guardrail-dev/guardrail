@@ -20,7 +20,8 @@ class Issue455Suite extends AnyFunSuite with Matchers with EitherValues with Sca
 
   test("Circe NPE: https://github.com/circe/circe/issues/561") {
     val route = {
-      import issues.issue455.server.http4s.{ BooResponse, Handler, Resource }
+      import issues.issue455.server.http4s.{ Handler, Resource }
+      import issues.issue455.server.http4s.Resource.BooResponse
       import issues.issue455.server.http4s.definitions.RecursiveData
       new Resource[IO].routes(new Handler[IO] {
         val recData                                                              = RecursiveData(3, "three", Some(RecursiveData(2, "two", Some(RecursiveData(1, "one", None)))))

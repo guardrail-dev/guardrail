@@ -1,8 +1,10 @@
 package core.Http4s
 
 import _root_.tracer.client.{ http4s => cdefs }
-import _root_.tracer.server.http4s.addresses.{ AddressesHandler, AddressesResource, GetAddressResponse, GetAddressesResponse }
-import _root_.tracer.server.http4s.users.{ GetUserResponse, UsersHandler, UsersResource }
+import _root_.tracer.server.http4s.addresses.{ AddressesHandler, AddressesResource }
+import _root_.tracer.server.http4s.addresses.AddressesResource.{ GetAddressResponse, GetAddressesResponse }
+import _root_.tracer.server.http4s.users.{ UsersHandler, UsersResource }
+import _root_.tracer.server.http4s.users.UsersResource.GetUserResponse
 import _root_.tracer.server.{ http4s => sdefs }
 import _root_.tracer.client.http4s.users.UsersClient
 import _root_.tracer.client.http4s.addresses.AddressesClient
@@ -43,9 +45,9 @@ class Http4sFullTracerTest extends AnyFunSuite with Matchers with EitherValues w
           def getAddress(respond: GetAddressResponse.type)(id: String)(traceBuilder: TraceBuilder[IO]) =
             IO.pure(if (id == "addressId") {
               respond.Ok(sdefs.definitions.Address(Some("line1"), Some("line2"), Some("line3")))
-            } else sdefs.addresses.GetAddressResponse.NotFound)
+            } else GetAddressResponse.NotFound)
           def getAddresses(respond: GetAddressesResponse.type)()(traceBuilder: TraceBuilder[IO]) =
-            IO.pure(sdefs.addresses.GetAddressesResponse.NotFound)
+            IO.pure(GetAddressesResponse.NotFound)
         }
       )
 

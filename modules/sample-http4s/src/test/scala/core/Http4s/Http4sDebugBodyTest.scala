@@ -2,6 +2,7 @@ package core.Http4s
 
 import _root_.debugBody.client.{ http4s => generatedClient }
 import _root_.debugBody.server.http4s._
+import _root_.debugBody.server.http4s.Resource._
 import _root_.debugBody.server.http4s.definitions._
 import cats.effect.IO
 import cats.effect.IO._
