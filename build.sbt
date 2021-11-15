@@ -90,9 +90,9 @@ val javaSampleSettings = Seq(
 
 lazy val root = modules.root.project
   .settings(publish / skip := true)
-  .customDependsOn(guardrail)
-  .customDependsOn(microsite)
-  .customDependsOn(cli)
+  .customDependsOn(guardrail, useProvided=false)
+  .customDependsOn(microsite, useProvided=false)
+  .customDependsOn(cli, useProvided=false)
   .aggregate(allDeps, microsite)
   .aggregate(
     cli,
@@ -117,15 +117,15 @@ lazy val allDeps = modules.allDeps.project
 
 lazy val guardrail = modules.guardrail.project
   .customDependsOn(core)
-  .customDependsOn(javaDropwizard)
-  .customDependsOn(javaSpringMvc)
   .customDependsOn(javaSupport)
-  .customDependsOn(javaAsyncHttp)
-  .customDependsOn(scalaAkkaHttp)
-  .customDependsOn(scalaDropwizard)
-  .customDependsOn(scalaEndpoints)
-  .customDependsOn(scalaHttp4s)
   .customDependsOn(scalaSupport)
+  .providedDependsOn(javaDropwizard)
+  .providedDependsOn(javaSpringMvc)
+  .providedDependsOn(javaAsyncHttp)
+  .providedDependsOn(scalaAkkaHttp)
+  .providedDependsOn(scalaDropwizard)
+  .providedDependsOn(scalaEndpoints)
+  .providedDependsOn(scalaHttp4s)
 
 lazy val samples = (project in file("modules/samples"))
   .settings(publish / skip := true)

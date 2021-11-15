@@ -186,19 +186,29 @@ object Build {
           (current ++ fromOther).distinct
         })
 
-    def customDependsOn(other: Project): Project = {
+    def customDependsOn(other: Project, useProvided: Boolean = false): Project = {
       val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
       if (isRelease) {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
-          .settings(libraryDependencies += "dev.guardrail" %% other.id % (other / stableVersion).value % Provided)
+          .settings(libraryDependencies += {
+            val base = "dev.guardrail" %% other.id % (other / stableVersion).value
+            if (useProvided) base % Provided else base
+          })
           .dependsOn(other % Test)
       } else {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
-          .dependsOn(other % Provided)
+          .dependsOn(
+            if (useProvided) {
+              other % Provided
+            } else other
+          )
           .accumulateClasspath(other)
       }
     }
+
+    def providedDependsOn(other: Project, useProvided: Boolean): Project =
+      customDependsOn(other, true)
   }
 }
