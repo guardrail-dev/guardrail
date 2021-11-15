@@ -3,6 +3,8 @@ tag-template: 'scala-support-v$RESOLVED_VERSION'
 tag-prefix: scala-support-v
 include-paths:
   - "modules/scala-support/src/main/"
+  - "build.sbt"
+  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/scalaSupport.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
