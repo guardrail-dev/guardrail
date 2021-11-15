@@ -208,7 +208,7 @@ object Build {
       }
     }
 
-    def providedDependsOn(other: Project, useProvided: Boolean): Project =
+    def providedDependsOn(other: Project): Project =
       customDependsOn(other, true)
   }
 }
