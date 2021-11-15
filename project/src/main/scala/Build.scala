@@ -12,6 +12,7 @@ import xerial.sbt.Sonatype.autoImport._
 import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 
 object Build {
+  val stableVersion: SettingKey[String] = SettingKey("stable-version")
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
     Project(s"sample-${name}", file(s"modules/sample-${name}"))
       .settings(commonSettings)
@@ -108,6 +109,15 @@ object Build {
              describedVersion,
              commitVersion
           )) getOrElse datedVersion // For when git isn't there at all.
+        },
+        stableVersion := {
+          // Pull the tag(s) matching the tag scheme, defaulting to 0.0.0
+          // for newly created modules that have never been released before
+          // (depending on unreleased modules is an error, so this is fine)
+          gitReader
+            .value
+            .withGit(_.describedVersion(Seq(s"${moduleSegment}-v*")))
+            .fold("0.0.0")(v => customTagToVersionNumber(moduleSegment, true)(v).getOrElse(v))
         }
       )
       .settings(commonSettings)
@@ -176,10 +186,18 @@ object Build {
           (current ++ fromOther).distinct
         })
 
-    def customDependsOn(other: Project): Project =
-      project
-        .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
-        .dependsOn(other % Provided)
-        .accumulateClasspath(other)
+    def customDependsOn(other: Project): Project = {
+      val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
+      if (isRelease) {
+        project
+          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+          .settings(libraryDependencies += "dev.guardrail" %% other.id % (other / stableVersion).value % Provided)
+      } else {
+        project
+          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+          .dependsOn(other % Provided)
+          .accumulateClasspath(other)
+      }
+    }
   }
 }
