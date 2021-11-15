@@ -195,7 +195,13 @@ object Build {
             val base = "dev.guardrail" %% other.id % (other / stableVersion).value
             if (useProvided) base % Provided else base
           })
-          .dependsOn(other % Test)
+          .settings(
+            // dependsOn(other % Test) adds the undesirable dependsOn(other % Compile) as a side-effect.
+            // Mirror libraryDependencies and source directory tracking to approximate test dependencies
+            Test / libraryDependencies ++= (other / Test / libraryDependencies).value,
+            Test / unmanagedSourceDirectories ++= (other / Test / unmanagedSourceDirectories).value,
+            Test / managedSourceDirectories ++= (other / Test / managedSourceDirectories).value
+          )
       } else {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
