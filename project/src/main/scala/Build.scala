@@ -192,6 +192,7 @@ object Build {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
           .settings(libraryDependencies += "dev.guardrail" %% other.id % (other / stableVersion).value % Provided)
+          .dependsOn(other % Test)
       } else {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
