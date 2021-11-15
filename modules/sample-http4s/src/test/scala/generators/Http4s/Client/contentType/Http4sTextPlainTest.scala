@@ -2,8 +2,8 @@ package generators.Http4s.Client.contentType
 
 import _root_.tests.contentTypes.textPlain.client.http4s.foo.FooClient
 import _root_.tests.contentTypes.textPlain.client.{ http4s => cdefs }
-import _root_.tests.contentTypes.textPlain.server.http4s.foo.{ DoBarResponse, DoBazResponse, DoFooResponse, FooHandler, FooResource }
-import _root_.tests.contentTypes.textPlain.server.{ http4s => sdefs }
+import _root_.tests.contentTypes.textPlain.server.http4s.foo.{ FooHandler, FooResource }
+import _root_.tests.contentTypes.textPlain.server.http4s.foo.FooResource.{ DoBarResponse, DoBazResponse, DoFooResponse }
 import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -48,14 +48,14 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("Plain text should be emitted for required parameters") {
     val route: HttpRoutes[IO] = new FooResource[IO]().routes(new FooHandler[IO] {
-      def doFoo(respond: DoFooResponse.type)(body: String): IO[sdefs.foo.DoFooResponse] =
+      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse] =
         if (body == "sample") {
           IO.pure(respond.Created("response"))
         } else {
           IO.pure(respond.NotAcceptable)
         }
-      def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[sdefs.foo.DoBarResponse] = ???
-      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[sdefs.foo.DoBazResponse] = ???
+      def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[DoBarResponse] = ???
+      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[DoBazResponse] = ???
     })
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
@@ -65,14 +65,14 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("Plain text should be emitted for present optional parameters") {
     val route: HttpRoutes[IO] = new FooResource[IO]().routes(new FooHandler[IO] {
-      def doFoo(respond: DoFooResponse.type)(body: String): IO[sdefs.foo.DoFooResponse] = ???
-      def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[sdefs.foo.DoBarResponse] =
+      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse] = ???
+      def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[DoBarResponse] =
         if (body.contains("sample")) {
           IO.pure(respond.Created("response"))
         } else {
           IO.pure(respond.NotAcceptable)
         }
-      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[sdefs.foo.DoBazResponse] = ???
+      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[DoBazResponse] = ???
     })
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
@@ -82,14 +82,14 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("Plain text should be emitted for missing optional parameters") {
     val route: HttpRoutes[IO] = new FooResource[IO]().routes(new FooHandler[IO] {
-      def doFoo(respond: DoFooResponse.type)(body: String): IO[sdefs.foo.DoFooResponse] = ???
-      def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[sdefs.foo.DoBarResponse] =
+      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse] = ???
+      def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[DoBarResponse] =
         if (body.isEmpty) {
           IO.pure(respond.Created("response"))
         } else {
           IO.pure(respond.NotAcceptable)
         }
-      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[sdefs.foo.DoBazResponse] = ???
+      def doBaz(respond: DoBazResponse.type)(body: Option[String]): IO[DoBazResponse] = ???
     })
 
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)

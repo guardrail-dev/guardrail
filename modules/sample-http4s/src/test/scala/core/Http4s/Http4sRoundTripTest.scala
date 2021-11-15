@@ -6,6 +6,7 @@ import java.util.Locale.US
 import _root_.examples.client.http4s.pet.PetClient
 import _root_.examples.client.{ http4s => cdefs }
 import _root_.examples.server.http4s.pet._
+import _root_.examples.server.http4s.pet.PetResource._
 import _root_.examples.server.{ http4s => sdefs }
 import cats.effect.IO
 import cats.effect.IO._
@@ -38,7 +39,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("round-trip: definition query, unit response") {
     val httpService = new PetResource().routes(new PetHandler[IO] {
-      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet): IO[sdefs.pet.AddPetResponse] =
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet): IO[sdefs.pet.PetResource.AddPetResponse] =
         body match {
           case sdefs.definitions.Pet(
               `id`,
@@ -93,7 +94,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
     val httpService = new PetResource().routes(new PetHandler[IO] {
       def findPetsByStatusEnum(
           respond: FindPetsByStatusEnumResponse.type
-      )(_status: sdefs.definitions.PetStatus): IO[sdefs.pet.FindPetsByStatusEnumResponse] =
+      )(_status: sdefs.definitions.PetStatus): IO[sdefs.pet.PetResource.FindPetsByStatusEnumResponse] =
         IO.pure(petStatus.fold(Vector.empty[sdefs.definitions.Pet])({ value =>
             if (_status.value == value) {
               Vector(
@@ -155,7 +156,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("round-trip: 404 response") {
     val httpService = new PetResource().routes(new PetHandler[IO] {
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String]): IO[sdefs.pet.FindPetsByStatusResponse] =
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String]): IO[sdefs.pet.PetResource.FindPetsByStatusResponse] =
         IO.pure(respond.NotFound)
 
       def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
@@ -193,7 +194,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
           includeChildren: Option[Boolean],
           status: Option[sdefs.definitions.PetStatus],
           _apiKey: Option[String] = None
-      ): IO[sdefs.pet.DeletePetResponse] =
+      ): IO[sdefs.pet.PetResource.DeletePetResponse] =
         if (_petId == petId && _apiKey.contains(apiKey) && status.contains(sdefs.definitions.PetStatus.Pending))
           IO.pure(respond.Ok)
         else IO.pure(respond.NotFound)

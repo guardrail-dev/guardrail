@@ -21,6 +21,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     import cats.effect.IO
     import issues.issue148.server.http4s.definitions._
     import issues.issue148.server.http4s._
+    import issues.issue148.server.http4s.Resource._
     import org.http4s._
     import org.http4s.client.Client
     import org.http4s.headers._

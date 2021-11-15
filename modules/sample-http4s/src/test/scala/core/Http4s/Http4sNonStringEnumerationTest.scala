@@ -21,6 +21,7 @@ import org.scalatest.matchers.should.Matchers
 import _root_.enumerations.client.http4s.foo.{ DoFooResponse => ClientDoFooResponse, FooClient }
 import _root_.enumerations.client.http4s.{ definitions => cdefs }
 import _root_.enumerations.server.http4s.foo._
+import _root_.enumerations.server.http4s.foo.FooResource._
 import _root_.enumerations.server.http4s.{ definitions => sdefs }
 
 class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with EitherValues {

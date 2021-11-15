@@ -184,21 +184,29 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
       supportDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean
   ): Target[List[Defn]] =
-    Target.log.function("renderClass")(for {
-      _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
-      extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
-      resourceTParams = List(tparam"F[_]") ++ extractType
-      handlerTParams  = List(Type.Name("F")) ++ List(customExtractionTypeName).filter(_ => customExtraction)
-      routesParams    = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
-    } yield q"""
-      class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
-
-        ..${supportDefinitions};
-        def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
-          ..${combinedRouteTerms}
-        }
-      }
-    """ +: responseDefinitions)
+    Target.log.function("renderClass")(
+      for {
+        _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
+        extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
+        resourceTParams = List(tparam"F[_]") ++ extractType
+        handlerTParams  = List(Type.Name("F")) ++ List(customExtractionTypeName).filter(_ => customExtraction)
+        routesParams    = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
+      } yield List(
+        q"""
+          class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
+            import ${Term.Name(resourceName)}._
+            
+            ..${supportDefinitions};
+            def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
+              ..${combinedRouteTerms}
+            }
+          }
+        """,
+        q"""object ${Term.Name(resourceName)} {
+            ..${responseDefinitions}
+        }"""
+      )
+    )
 
   def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
     Target.log.function("getExtraImports")(
@@ -583,7 +591,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
         (Term.Name(responseClsName), Type.Name(responseClsName))
       val responseType = ServerRawResponse(operation)
         .filter(_ == true)
-        .fold[Type](t"$responseCompanionType")(Function.const(t"Response[F]"))
+        .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++
             tracingFields
               .map(_.param)
@@ -682,7 +690,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
            mapRoute($methodName, req, {$routeBody})
           """
 
-      val respond: List[List[Term.Param]] = List(List(param"respond: $responseCompanionTerm.type"))
+      val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.$responseCompanionTerm.type"))
 
       val params: List[List[Term.Param]] = respond ++ orderedParameters.map(
               _.map(

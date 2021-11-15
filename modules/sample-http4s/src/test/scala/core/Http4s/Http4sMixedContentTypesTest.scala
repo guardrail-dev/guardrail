@@ -1,6 +1,7 @@
 package core.Http4s
 
 import _root_.mixedContentTypes.client.{ http4s => generatedClient }
+import _root_.mixedContentTypes.server.http4s.Resource._
 import _root_.mixedContentTypes.server.http4s._
 import _root_.mixedContentTypes.server.http4s.definitions.Error
 import cats.effect.IO
