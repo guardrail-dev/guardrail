@@ -126,6 +126,20 @@ lazy val guardrail = modules.guardrail.project
   .providedDependsOn(scalaDropwizard)
   .providedDependsOn(scalaEndpoints)
   .providedDependsOn(scalaHttp4s)
+  .aggregate(
+    core,
+
+    javaSupport,
+    javaAsyncHttp,
+    javaDropwizard,
+    javaSpringMvc,
+
+    scalaSupport,
+    scalaAkkaHttp,
+    scalaEndpoints,
+    scalaHttp4s,
+    scalaDropwizard,
+  )
 
 lazy val samples = (project in file("modules/samples"))
   .settings(publish / skip := true)

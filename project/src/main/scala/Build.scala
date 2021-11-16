@@ -199,8 +199,10 @@ object Build {
             // dependsOn(other % Test) adds the undesirable dependsOn(other % Compile) as a side-effect.
             // Mirror libraryDependencies and source directory tracking to approximate test dependencies
             Test / libraryDependencies ++= (other / Test / libraryDependencies).value,
-            Test / unmanagedSourceDirectories ++= (other / Test / unmanagedSourceDirectories).value,
-            Test / managedSourceDirectories ++= (other / Test / managedSourceDirectories).value
+            // Add everything from `other`'s test scope to our classpath
+            Test / unmanagedJars ++= (other / Test / exportedProductJars).value,
+            // Carry along `other`'s exportedProductJars along in ours, so subsequent projects can depend on them
+            Test / exportedProductJars := (Test / exportedProductJars).value ++ (other / Test / exportedProductJars).value
           )
       } else {
         project
