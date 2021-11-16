@@ -43,8 +43,8 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       trait Handler {
         def uploadFile(respond: Resource.UploadFileResponse.type)(file: (File, Option[String], ContentType)): scala.concurrent.Future[Resource.UploadFileResponse]
         def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File
-        def uploadFileUnmarshalToFile[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller { implicit executionContext =>
-          part => {
+        def uploadFileUnmarshalToFile[F[_]: Functor](hashType: F[String], destFn: (String, Option[String], ContentType) => File)(implicit mat: Materializer): Unmarshaller[Multipart.FormData.BodyPart, (File, Option[String], ContentType, F[String])] = Unmarshaller {
+          implicit executionContext => part => {
             val dest = destFn(part.name, part.filename, part.entity.contentType)
             val messageDigest = hashType.map(MessageDigest.getInstance(_))
             val fileSink: Sink[ByteString, Future[IOResult]] = FileIO.toPath(dest.toPath).contramap[ByteString] { chunk =>
@@ -52,12 +52,9 @@ class Issue127 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               chunk
             }
             part.entity.dataBytes.toMat(fileSink)(Keep.right).run().transform({
-              case IOResult(_, Success(_)) =>
+              case IOResult(_, _) =>
                 val hash = messageDigest.map(md => javax.xml.bind.DatatypeConverter.printHexBinary(md.digest()).toLowerCase(java.util.Locale.US))
                 (dest, part.filename, part.entity.contentType, hash)
-              case IOResult(_, Failure(t)) =>
-                dest.delete()
-                throw t
             }, {
               case t =>
                 dest.delete()

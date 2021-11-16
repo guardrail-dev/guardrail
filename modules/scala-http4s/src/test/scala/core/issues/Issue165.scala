@@ -44,13 +44,15 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val handler  = q"""
       trait StoreHandler[F[_]] {
-        def getRoot(respond: GetRootResponse.type)(): F[GetRootResponse]
-        def getFoo(respond: GetFooResponse.type)(): F[GetFooResponse]
-        def getFooDir(respond: GetFooDirResponse.type)(): F[GetFooDirResponse]
+
+        def getRoot(respond: StoreResource.GetRootResponse.type)(): F[StoreResource.GetRootResponse]
+        def getFoo(respond: StoreResource.GetFooResponse.type)(): F[StoreResource.GetFooResponse]
+        def getFooDir(respond: StoreResource.GetFooDirResponse.type)(): F[StoreResource.GetFooDirResponse]
       }
     """
     val resource = q"""
       class StoreResource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
+        import StoreResource._
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root =>

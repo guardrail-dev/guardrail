@@ -34,31 +34,29 @@ class Issue225 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val handler  = q"""
       trait Handler[F[_]] {
-        def getRoot(respond: GetRootResponse.type)(response: String): F[GetRootResponse]
+        def getRoot(respond: Resource.GetRootResponse.type)(response: String): F[Resource.GetRootResponse]
       }
     """
     val resource = q"""
       class Resource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
+        import Resource._
         def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
-            case req @ GET -> Root / response => 
+            case req @ GET -> Root / response =>
               mapRoute("getRoot", req, {
-                handler.getRoot(GetRootResponse)(response) flatMap {
+                handler.getRoot(GetRootResponse)(response) flatMap ({
                   case GetRootResponse.Ok =>
                     F.pure(Response[F](status = org.http4s.Status.Ok))
-                } 
+                })
               })
           }
         }
       }
     """
 
-    compare(genHandler, handler)
+    genHandler.structure shouldEqual handler.structure
 
     // Cause structure is slightly different but source code is the same the value converted to string and then parsed
-    compare(genResource.toString().parse[Stat].get, resource)
+    genResource.toString().parse[Stat].get.structure shouldEqual resource.structure
   }
-
-  private def compare(actual: Tree, expected: Tree): Unit =
-    actual.structure shouldEqual expected.structure
 }

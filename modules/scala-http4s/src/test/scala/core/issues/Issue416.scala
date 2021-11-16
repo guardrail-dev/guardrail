@@ -44,38 +44,28 @@ class Issue416 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
     val resource = q"""
       class Resource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
+        import Resource._
         private[this] val getRootDecoder: EntityDecoder[F, Option[SinkConfiguration]] = jsonOf[F, Option[SinkConfiguration]]
         def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root =>
               mapRoute("getRoot", req, {
-                req
-                  .attemptAs(getRootDecoder)
-                  .foldF(
-                    err =>
-                      err.cause match {
-                        case Some(circeErr: io.circe.DecodingFailure) =>
-                          Response[F](
-                          status = org.http4s.Status.UnprocessableEntity,
-                          body   = stringEncoder.toEntity("The request body was invalid. " + circeErr.message + ": " + circeErr.history.mkString(", ")).body
-                        ).pure[F]
-                        case _ => err.toHttpResponse[F](req.httpVersion).pure[F]
-                      },
-                    body =>
-                      handler.getRoot(GetRootResponse)(body) flatMap ({
-                        case GetRootResponse.Ok =>
-                        F.pure(Response[F](status = org.http4s.Status.Ok))
-                    })
-                    )
+                req.attemptAs(getRootDecoder).foldF(err => err.cause match {
+                  case Some(circeErr: io.circe.DecodingFailure) =>
+                    Response[F](status = org.http4s.Status.UnprocessableEntity, body = stringEncoder.toEntity("The request body was invalid. " + circeErr.message + ": " + circeErr.history.mkString(", ")).body).pure[F]
+                  case _ =>
+                    err.toHttpResponse[F](req.httpVersion).pure[F]
+                }, body => handler.getRoot(GetRootResponse)(body) flatMap ({
+                  case GetRootResponse.Ok =>
+                    F.pure(Response[F](status = org.http4s.Status.Ok))
+                }))
               })
           }
         }
       }
     """
-    // Cause structure is slightly different but source code is the same the value converted to string and then parsed
-    compare(genResource.toString().parse[Stat].get, resource)
-  }
 
-  private def compare(actual: Tree, expected: Tree): Unit =
-    actual.structure shouldEqual expected.structure
+    // Cause structure is slightly different but source code is the same the value converted to string and then parsed
+    genResource.toString().parse[Stat].get.structure shouldEqual resource.structure
+  }
 }
