@@ -91,7 +91,6 @@ val javaSampleSettings = Seq(
 lazy val root = modules.root.project
   .settings(publish / skip := true)
   .customDependsOn(guardrail, useProvided=false)
-  .customDependsOn(microsite, useProvided=false)
   .customDependsOn(cli, useProvided=false)
   .aggregate(allDeps, microsite)
   .aggregate(
@@ -190,7 +189,9 @@ lazy val microsite = baseModule("microsite", "microsite", file("modules/microsit
     mdocExtraArguments += "--no-link-hygiene",
     scalacOptions -= "-Xfatal-warnings"
   )
-  .customDependsOn(guardrail)
+  .dependsOn(guardrail)
+  .dependsOn(scalaAkkaHttp)
+  .dependsOn(scalaHttp4s)
 
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.scala").get
 watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").get
