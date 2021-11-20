@@ -255,7 +255,7 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
           (resp.value, resp.headers.value) match {
             case (None, Nil) =>
               if (isGeneric)
-                Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm): F[$baseResponseTypeRef[F]]")
+                Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm()): F[$baseResponseTypeRef[F]]")
               else
                 Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm): F[$baseResponseTypeRef]")
             case (maybeBody, headers) =>
