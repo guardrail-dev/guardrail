@@ -632,7 +632,11 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
               val encoderName   = Term.Name(s"$methodName${statusCodeName}Encoder")
               (valueType, headers.value) match {
                 case (None, Nil) =>
-                  p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
+                  if (isGeneric) {
+                    p"case $responseCompanionTerm.$responseTerm() => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
+                  } else {
+                    p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
+                  }
                 case (Some(_), Nil) =>
                   p"case resp: $respType => $generatorName(resp.value)(F,$encoderName)"
                 case (None, headersList) =>
