@@ -8,7 +8,7 @@ import dev.guardrail.generators.scala.akkaHttp.{ AkkaHttpClientGenerator, AkkaHt
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.scala.dropwizard.{ DropwizardClientGenerator, DropwizardGenerator, DropwizardServerGenerator }
 import dev.guardrail.generators.scala.endpoints.{ EndpointsClientGenerator, EndpointsGenerator, EndpointsServerGenerator }
-import dev.guardrail.generators.scala.http4s.{ Http4sClientGenerator, Http4sGenerator, Http4sServerGenerator }
+import dev.guardrail.generators.scala.http4s.{ Http4sClientGenerator, Http4sGenerator, Http4sServerGenerator, Http4sVersion }
 import dev.guardrail.generators.scala.jackson.JacksonProtocolGenerator
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.server.ServerTerms
@@ -70,13 +70,23 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     EndpointsGenerator()
   )
 
+  def http4sV0_22(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
+      ClientTerms[ScalaLanguage, Target],
+      ServerTerms[ScalaLanguage, Target],
+      FrameworkTerms[ScalaLanguage, Target]
+  ) = (
+    Http4sClientGenerator(),
+    Http4sServerGenerator(Http4sVersion.V0_22),
+    Http4sGenerator()
+  )
+
   def http4s(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
     Http4sClientGenerator(),
-    Http4sServerGenerator(),
+    Http4sServerGenerator(Http4sVersion.V0_23),
     Http4sGenerator()
   )
 
@@ -105,6 +115,8 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         ("akka-http", catchClassNotFound(akkaHttp(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
         ("akka-http-v10.1", catchClassNotFound(akkaHttpV10_1(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
         ("http4s", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
+        ("http4s-v0.23", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
+        ("http4s-v0.22", catchClassNotFound(http4sV0_22, MissingDependency("guardrail-scala-http4s"))),
         ("endpoints", catchClassNotFound(endpoints(modelGeneratorType), MissingDependency("guardrail-scala-endpoints"))),
         ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
       )

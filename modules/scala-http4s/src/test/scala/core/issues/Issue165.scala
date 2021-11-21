@@ -1,6 +1,7 @@
 package tests.core.issues
 
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import support.SwaggerSpecRunner
@@ -39,10 +40,11 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
        |         description: description
        |""".stripMargin
 
-  test("Ensure routes are generated") {
-    val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Ensure routes are generated") {
+      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    val handler  = q"""
+      val handler  = q"""
       trait StoreHandler[F[_]] {
 
         def getRoot(respond: StoreResource.GetRootResponse.type)(): F[StoreResource.GetRootResponse]
@@ -50,7 +52,7 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         def getFooDir(respond: StoreResource.GetFooDirResponse.type)(): F[StoreResource.GetFooDirResponse]
       }
     """
-    val resource = q"""
+      val resource = q"""
       class StoreResource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         import StoreResource._
         def routes(handler: StoreHandler[F]): HttpRoutes[F] = HttpRoutes.of {
@@ -81,9 +83,13 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    genHandler.structure shouldEqual handler.structure
+      genHandler.structure shouldEqual handler.structure
 
-    // Cause structure is slightly different but source code is the same the value converted to string and then parsed
-    genResource.toString().parse[Stat].get.structure shouldEqual resource.structure
+      // Cause structure is slightly different but source code is the same the value converted to string and then parsed
+      genResource.toString().parse[Stat].get.structure shouldEqual resource.structure
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

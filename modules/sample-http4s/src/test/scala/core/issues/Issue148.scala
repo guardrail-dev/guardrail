@@ -6,6 +6,7 @@ import org.scalatest.time.SpanSugar._
 import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import cats.effect.unsafe.implicits.global
 
 /** Changes
   *

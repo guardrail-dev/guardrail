@@ -10,6 +10,7 @@ import _root_.examples.server.http4s.pet.PetResource._
 import _root_.examples.server.{ http4s => sdefs }
 import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.unsafe.implicits.global
 import fs2.Stream
 import javax.xml.bind.DatatypeConverter.printHexBinary
 import org.http4s.client.Client

@@ -10,6 +10,7 @@ import _root_.tracer.client.http4s.users.UsersClient
 import _root_.tracer.client.http4s.addresses.AddressesClient
 import _root_.tracer.server.http4s.Http4sImplicits.TraceBuilder
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.http4s.{ Header, HttpRoutes, Request }
 import org.http4s.client.Client
 import org.http4s.implicits._

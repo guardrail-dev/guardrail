@@ -7,12 +7,12 @@ import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
 
-object Http4s extends Framework[ScalaLanguage, Target] {
+class Http4s(version: Http4sVersion) extends Framework[ScalaLanguage, Target] {
   implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
   implicit def ProtocolInterp       = CirceProtocolGenerator(CirceModelGenerator.V012)
   implicit def ClientInterp         = Http4sClientGenerator()
   implicit def FrameworkInterp      = Http4sGenerator()
-  implicit def ServerInterp         = Http4sServerGenerator()
+  implicit def ServerInterp         = Http4sServerGenerator(version)
   implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]()
   implicit def LanguageInterp       = ScalaGenerator()
 }

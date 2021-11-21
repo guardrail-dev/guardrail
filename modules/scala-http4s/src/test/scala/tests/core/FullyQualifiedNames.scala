@@ -9,6 +9,7 @@ import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.{ Client, Clients }
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -40,15 +41,16 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
       |            $ref: '#/definitions/User'
       |""".stripMargin
 
-  test("Test that fully qualified names are used") {
-    val (
-      ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _, _),
-      Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
-      _
-    ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Test that fully qualified names are used") {
+      val (
+        ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _, _),
+        Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
+        _
+      ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, new Http4s(version))
 
-    clz.fullType shouldEqual t"_root_.com.test.User"
-    client.head.toOption.get shouldEqual q"""
+      clz.fullType shouldEqual t"_root_.com.test.User"
+      client.head.toOption.get shouldEqual q"""
        class Client[F[_]](host: String)(implicit F: Async[F], httpClient: Http4sClient[F]) {
          val basePath: String = ""
          private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
@@ -67,8 +69,8 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
        }
     """
 
-    respTrait shouldEqual
-      q"""
+      respTrait shouldEqual
+        q"""
         sealed abstract class GetUserResponse {
           def fold[A](handleOk: _root_.com.test.User => A): A = this match {
           case x: GetUserResponse.Ok =>
@@ -77,7 +79,11 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
         }
        """
 
-    respObject shouldEqual q"""object GetUserResponse { case class Ok(value: _root_.com.test.User) extends GetUserResponse }"""
+      respObject shouldEqual q"""object GetUserResponse { case class Ok(value: _root_.com.test.User) extends GetUserResponse }"""
 
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

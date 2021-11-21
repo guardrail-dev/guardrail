@@ -9,10 +9,10 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 import cats.effect.Async
 import cats.effect.implicits._
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.http4s.client.{ Client => Http4sClient }
 
 class Issue455Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {

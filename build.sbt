@@ -138,7 +138,8 @@ lazy val samples = (project in file("modules/samples"))
     scalaAkkaHttpSample,
     scalaDropwizardSample,
     scalaEndpointsSample,
-    scalaHttp4sSample
+    scalaHttp4sSample,
+    scalaHttp4sSampleV0_22
   )
 
 lazy val core = modules.core.project
@@ -177,6 +178,7 @@ lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
 lazy val scalaEndpoints = modules.scalaEndpoints.project
   .customDependsOn(scalaSupport)
 
+lazy val scalaHttp4sSampleV0_22 = modules.scalaHttp4s.sampleV0_22
 lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
 lazy val scalaHttp4s = modules.scalaHttp4s.project
   .customDependsOn(scalaSupport)

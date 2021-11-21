@@ -9,6 +9,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients }
 import dev.guardrail.terms.protocol.{ ClassDefinition, RandomType }
@@ -74,29 +75,30 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |        type: object
     |""".stripMargin
 
-  test("Generate JSON alias definitions") {
-    val (
-      ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _, _),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Generate JSON alias definitions") {
+      val (
+        ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _, _),
+        _,
+        _
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    tpe.structure should equal(t"io.circe.Json".structure)
-  }
+      tpe.structure should equal(t"io.circe.Json".structure)
+    }
 
-  test("Handle json subvalues") {
-    val (
-      ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
-      _,
-      _
-    )       = runSwaggerSpec(swagger)(Context.empty, Http4s)
-    val cmp = companionForStaticDefns(staticDefns)
+    test(s"$version - Handle json subvalues") {
+      val (
+        ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
+        _,
+        _
+      )       = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      val cmp = companionForStaticDefns(staticDefns)
 
-    val definition = q"""
+      val definition = q"""
       case class Blix(map: io.circe.Json)
     """
 
-    val companion = q"""
+      val companion = q"""
       object Blix {
         implicit val encodeBlix: _root_.io.circe.Encoder.AsObject[Blix] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
@@ -106,23 +108,23 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.structure should equal(definition.structure)
-    cmp.structure should equal(companion.structure)
-  }
+      cls.structure should equal(definition.structure)
+      cmp.structure should equal(companion.structure)
+    }
 
-  test("Properly handle all methods") {
-    val (
-      _,
-      Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
-      _
-    )       = runSwaggerSpec(swagger)(Context.empty, Http4s)
-    val cmp = companionForStaticDefns(staticDefns)
+    test(s"$version - Properly handle all methods") {
+      val (
+        _,
+        Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
+        _
+      )       = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      val cmp = companionForStaticDefns(staticDefns)
 
-    val companion = q"""object Client {
+      val companion = q"""object Client {
       def apply[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://localhost:1234")(implicit F: Async[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
     }"""
-    val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
+      val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
 
       private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
@@ -205,16 +207,16 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
     }"""
-    val expected = List(
-      q"""
+      val expected = List(
+        q"""
         sealed abstract class GetBarResponse {
           def fold[A](handleOk: => A): A = this match {
             case GetBarResponse.Ok => handleOk
           }
         }
       """,
-      q"""object GetBarResponse { case object Ok extends GetBarResponse }""",
-      q"""
+        q"""object GetBarResponse { case object Ok extends GetBarResponse }""",
+        q"""
         sealed abstract class GetBazResponse {
           def fold[A](handleOk: io.circe.Json => A): A = this match {
             case x: GetBazResponse.Ok =>
@@ -222,51 +224,55 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           }
         }
       """,
-      q"""object GetBazResponse { case class Ok(value: io.circe.Json) extends GetBazResponse }""",
-      q"""
+        q"""object GetBazResponse { case class Ok(value: io.circe.Json) extends GetBazResponse }""",
+        q"""
         sealed abstract class PostFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case PostFooResponse.Ok => handleOk
           }
         }
       """,
-      q"""object PostFooResponse { case object Ok extends PostFooResponse }""",
-      q"""
+        q"""object PostFooResponse { case object Ok extends PostFooResponse }""",
+        q"""
         sealed abstract class GetFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case GetFooResponse.Ok => handleOk
           }
         }
       """,
-      q"""object GetFooResponse { case object Ok extends GetFooResponse }""",
-      q"""
+        q"""object GetFooResponse { case object Ok extends GetFooResponse }""",
+        q"""
         sealed abstract class PutFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case PutFooResponse.Ok => handleOk
           }
         }
       """,
-      q"""object PutFooResponse { case object Ok extends PutFooResponse }""",
-      q"""
+        q"""object PutFooResponse { case object Ok extends PutFooResponse }""",
+        q"""
         sealed abstract class PatchFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case PatchFooResponse.Ok => handleOk
           }
         }
       """,
-      q"""object PatchFooResponse { case object Ok extends PatchFooResponse }""",
-      q"""
+        q"""object PatchFooResponse { case object Ok extends PatchFooResponse }""",
+        q"""
         sealed abstract class DeleteFooResponse {
           def fold[A](handleOk: => A): A = this match {
             case DeleteFooResponse.Ok => handleOk
           }
         }
       """,
-      q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
-    )
+        q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
+      )
 
-    expected.zip(statements).foreach({ case (a, b) => a.structure should equal(b.structure) })
-    cmp.structure should equal(companion.structure)
-    cls.head.value.structure should equal(client.structure)
+      expected.zip(statements).foreach({ case (a, b) => a.structure should equal(b.structure) })
+      cmp.structure should equal(companion.structure)
+      cls.head.value.structure should equal(client.structure)
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

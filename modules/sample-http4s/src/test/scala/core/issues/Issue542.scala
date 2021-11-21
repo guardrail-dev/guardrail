@@ -1,6 +1,7 @@
 package core.issues
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.data.Kleisli
 import org.http4s._
 import org.http4s.circe._
