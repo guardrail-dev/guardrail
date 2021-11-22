@@ -42,6 +42,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Run tests
       run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test coverageAggregate versionPolicyCheck microsite/compile
+      env:
+        GUARDRAIL_CI: true
     - uses: codecov/codecov-action@v1
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml

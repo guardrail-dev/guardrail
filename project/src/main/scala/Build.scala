@@ -188,7 +188,14 @@ object Build {
 
     def customDependsOn(other: Project, useProvided: Boolean = false): Project = {
       val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
-      if (isRelease) {
+      val isCi = sys.env.contains("GUARDRAIL_CI")
+      val isBincompatCi = if (isCi) {
+        import scala.sys.process._
+        "support/current-pr-labels.sh"
+          .lineStream_!
+          .exists(Set("major", "minor").contains)
+      } else false
+      if (isRelease || isBincompatCi) {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
           .settings(libraryDependencies += {
