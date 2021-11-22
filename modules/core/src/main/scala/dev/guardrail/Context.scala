@@ -11,7 +11,7 @@ case class Context(
 )
 
 object Context {
-  val empty: Context = Context(
+  val emptyA: Context = Context(
     None,
     customExtraction = false,
     tracing = false,

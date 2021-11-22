@@ -30,7 +30,7 @@ object DocsHelpers {
     val segments: List[Option[String]] = (generator, identifier) match {
       case (AkkaHttp, GeneratingAServer) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.emptyA, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         val server                              = codegenDefinitions.servers.head
         val q"object ${oname } { ..${stats } }" = server.serverDefinitions.head
@@ -47,7 +47,7 @@ object DocsHelpers {
         )
       case (AkkaHttp, GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.emptyA, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         codegenDefinitions.clients match {
           case g :: Nil =>
@@ -82,7 +82,7 @@ object DocsHelpers {
         }
       case (_: Http4s, GeneratingAServer) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.emptyA, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         val server = codegenDefinitions.servers.head
         val q"""
@@ -114,7 +114,7 @@ object DocsHelpers {
         )
       case (_: Http4s, GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
-          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
+          Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.emptyA, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         // codegenDefinitions.clients.map(x => Option(x.toString())).toList
         codegenDefinitions.clients match {
