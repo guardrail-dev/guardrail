@@ -9,6 +9,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue429 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
@@ -24,16 +25,17 @@ class Issue429 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |          enum: [0, 1]
     |""".stripMargin
 
-  test("Test correct escaping of numbers used as identifiers") {
-    val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _, _),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Test correct escaping of numbers used as identifiers") {
+      val (
+        ProtocolDefinitions(ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _, _),
+        _,
+        _
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    val List(_, _, _, statusCodeCompanion) = staticDefns.definitions
+      val List(_, _, _, statusCodeCompanion) = staticDefns.definitions
 
-    val expected = q"""
+      val expected = q"""
       object StatusCode {
         object members {
           case object `0` extends StatusCode("0")
@@ -50,7 +52,11 @@ class Issue429 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
       """
 
-    statusCodeCompanion.structure shouldBe expected.structure
-    Term.Name("10").syntax shouldBe "`10`"
+      statusCodeCompanion.structure shouldBe expected.structure
+      Term.Name("10").syntax shouldBe "`10`"
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

@@ -1,6 +1,7 @@
 package core.issues
 
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import support.SwaggerSpecRunner
@@ -9,9 +10,11 @@ import org.scalatest.matchers.should.Matchers
 
 class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
-  describe("LocalDate path param is generated more than once") {
+  def testVersion(version: Http4sVersion) {
+    describe(version.toString()) {
+      describe("LocalDate path param is generated more than once") {
 
-    val swagger: String = """
+        val swagger: String = """
       | openapi: "3.0.0"
       | info:
       |   title: Generator Error Sample
@@ -66,27 +69,32 @@ class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       |       required:
       |         - date""".stripMargin
 
-    val (
-      _, // ProtocolDefinitions
-      _, // clients
-      Servers(
-        Server(
-          _, // pkg
-          _, // extraImports
-          _, // genHandler
-          serverDefinition :: _
-        ) :: Nil,
-        _ // supportDefinitions
-      )
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+        val (
+          _, // ProtocolDefinitions
+          _, // clients
+          Servers(
+            Server(
+              _, // pkg
+              _, // extraImports
+              _, // genHandler
+              serverDefinition :: _
+            ) :: Nil,
+            _ // supportDefinitions
+          )
+        ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    it("Ensure LocalDateVar is generated only once") {
+        it("Ensure LocalDateVar is generated only once") {
 
-      val pattern = "object LocalDateVar".r
+          val pattern = "object LocalDateVar".r
 
-      val hits = pattern.findAllIn(serverDefinition.toString()).length
+          val hits = pattern.findAllIn(serverDefinition.toString()).length
 
-      hits shouldBe 1
+          hits shouldBe 1
+        }
+      }
     }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

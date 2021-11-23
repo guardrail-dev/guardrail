@@ -80,7 +80,7 @@ object DocsHelpers {
             )
           case _ => ???
         }
-      case (Http4s, GeneratingAServer) =>
+      case (_: Http4s, GeneratingAServer) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -112,7 +112,7 @@ object DocsHelpers {
             }
           """.toString)
         )
-      case (Http4s, GeneratingClients) =>
+      case (_: Http4s, GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )

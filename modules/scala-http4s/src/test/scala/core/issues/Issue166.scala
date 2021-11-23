@@ -14,6 +14,7 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
@@ -44,29 +45,36 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                    |        type: string
                    |""".stripMargin
 
-  test("Handle generation of models") {
-    val opts = new ParseOptions()
-    opts.setResolve(true)
-    import Http4s._
-    val (proto, codegen) = Target.unsafeExtract(
-      Common
-        .prepareDefinitions[ScalaLanguage, Target](
-          CodegenTarget.Models,
-          Context.empty,
-          Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
-          List.empty,
-          NonEmptyList.one("support")
-        )
-    )
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Handle generation of models") {
+      val opts = new ParseOptions()
+      opts.setResolve(true)
 
-    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _, _) = proto
-    val CodegenDefinitions(Nil, Nil, Nil, None)                                     = codegen
+      val http4sFramework = new Http4s(version)
+      import http4sFramework._
 
-    val definition = q"""
+      val (proto, codegen) = Target.unsafeExtract(
+        Common
+          .prepareDefinitions[ScalaLanguage, Target](
+            CodegenTarget.Models,
+            Context.empty,
+            Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
+            List.empty,
+            NonEmptyList.one("support")
+          )
+      )
+
+      val ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: Nil, _, _, _, _) = proto
+      val CodegenDefinitions(Nil, Nil, Nil, None)                                     = codegen
+
+      val definition = q"""
       case class Blix(map: String)
     """
 
-    cls.structure should equal(definition.structure)
+      cls.structure should equal(definition.structure)
+    }
   }
 
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

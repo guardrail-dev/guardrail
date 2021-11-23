@@ -7,6 +7,7 @@ object RegressionTests {
     "scala" -> List(
       ExampleFramework("akka-http", "akkaHttp"),
       ExampleFramework("endpoints", "endpoints", List()),
+      ExampleFramework("http4s-v0.22", "http4s-v0_22"),
       ExampleFramework("http4s", "http4s"),
       ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
       ExampleFramework("dropwizard", "dropwizardScala", List("server")),
@@ -18,8 +19,8 @@ object RegressionTests {
     )
   )
 
-  val scalaFrameworks = exampleFrameworkSuites("scala").map(_.projectName)
-  val javaFrameworks = exampleFrameworkSuites("java").map(_.projectName)
+  val scalaFrameworks = exampleFrameworkSuites("scala")
+  val javaFrameworks = exampleFrameworkSuites("java")
 
   def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
   val exampleCases: List[ExampleCase] = List(
@@ -80,7 +81,7 @@ object RegressionTests {
     ExampleCase(sampleResource("issues/issue622.yaml"), "issues.issue622"),
     ExampleCase(sampleResource("issues/issue1138.yaml"), "issues.issue1138"),
     ExampleCase(sampleResource("issues/issue1260.yaml"), "issues.issue1260"),
-    ExampleCase(sampleResource("issues/issue1218.yaml"), "issues.issue1218").frameworks("scala" -> Set("http4s")),
+    ExampleCase(sampleResource("issues/issue1218.yaml"), "issues.issue1218").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
     ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "examples.support.PositiveLong"),
     // ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "examples.support.PositiveLong"),
@@ -92,16 +93,16 @@ object RegressionTests {
     ExampleCase(sampleResource("redaction.yaml"), "redaction"),
     ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
     ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
-    ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.toSet, "scala" -> (scalaFrameworks.toSet - "endpoints")), // Blocked by https://github.com/endpoints4s/endpoints4s/issues/713
+    ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.map(_.name).toSet, "scala" -> (scalaFrameworks.map(_.name).toSet - "endpoints")), // Blocked by https://github.com/endpoints4s/endpoints4s/issues/713
     ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
-    ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "dropwizard")),
-    ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s")),
-    ExampleCase(sampleResource("binary3.yaml"), "binary3").frameworks("scala" -> Set("http4s")),
+    ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "http4s-v0.22", "dropwizard")),
+    ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("binary3.yaml"), "binary3").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("conflicting-names.yaml"), "conflictingNames"),
-    ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.toSet),
-    ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s")),
-    ExampleCase(sampleResource("mixed-content-types-3.0.2.yaml"), "mixedContentTypes").frameworks("scala" -> scalaFrameworks.toSet),
-    ExampleCase(sampleResource("debug-body.yaml"), "debugBody").frameworks("scala" -> Set("http4s")),
+    ExampleCase(sampleResource("base64.yaml"), "base64").frameworks("scala" -> scalaFrameworks.map(_.name).toSet),
+    ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("mixed-content-types-3.0.2.yaml"), "mixedContentTypes").frameworks("scala" -> scalaFrameworks.map(_.name).toSet),
+    ExampleCase(sampleResource("debug-body.yaml"), "debugBody").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
 
   def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases

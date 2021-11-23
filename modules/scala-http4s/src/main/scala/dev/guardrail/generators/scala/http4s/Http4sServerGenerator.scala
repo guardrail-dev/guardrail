@@ -24,7 +24,12 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object Http4sServerGenerator {
-  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] = new Http4sServerGenerator
+  @deprecated("0.69.0", "Explicitly set Http4sVersion")
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    apply(Http4sVersion.V0_23)(Cl)
+
+  def apply(version: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    new Http4sServerGenerator(version)
 
   def generateUrlPathExtractors(
       path: Tracker[String],
@@ -44,8 +49,17 @@ object Http4sServerGenerator {
     } yield (trailingSlashed, queryParams)
 }
 
-class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
+class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
+    extends ServerTerms[ScalaLanguage, Target] {
+
+  private def this(Cl: CollectionsLibTerms[ScalaLanguage, Target]) = this(Http4sVersion.V0_23)(Cl)
+
   val customExtractionTypeName: Type.Name = Type.Name("E")
+
+  private val bodyUtf8Decode = version match {
+    case Http4sVersion.V0_22 => q"utf8Decode"
+    case Http4sVersion.V0_23 => q"utf8.decode"
+  }
 
   def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
@@ -441,7 +455,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                 Target.pure(
                   Param(
                     Some(
-                      enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
+                      enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid).sequence"
                     ),
                     Some(
                       (
@@ -456,7 +470,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                 Target.pure(
                   Param(
                     Some(
-                      enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                      enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                     ),
                     Some(
                       (
@@ -479,7 +493,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid).sequence"
                       ),
                       None,
                       arg.paramName
@@ -489,7 +503,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       None,
                       arg.paramName
@@ -507,7 +521,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence.map(Option(_).filter(_.nonEmpty))"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid).sequence.map(Option(_).filter(_.nonEmpty))"
                       ),
                       None,
                       arg.paramName
@@ -517,7 +531,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
                       ),
                       None,
                       arg.paramName
@@ -534,7 +548,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                 Target.pure(
                   Param(
                     Some(
-                      enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid).sequence"
+                      enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid).sequence"
                     ),
                     None,
                     arg.paramName
@@ -544,7 +558,7 @@ class Http4sServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLangu
                 Target.pure(
                   Param(
                     Some(
-                      enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through(utf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                      enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
                     ),
                     None,
                     arg.paramName

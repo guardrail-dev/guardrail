@@ -9,6 +9,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -52,17 +53,18 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |    default: x
                            |""".stripMargin
 
-  test("Test nested enum definition") {
-    val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, c1, s, _) :: _, _, _, _, _),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Test nested enum definition") {
+      val (
+        ProtocolDefinitions(ClassDefinition(_, _, _, c1, s, _) :: _, _, _, _, _),
+        _,
+        _
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    val cmp = companionForStaticDefns(s)
+      val cmp = companionForStaticDefns(s)
 
-    val companion =
-      q"""
+      val companion =
+        q"""
         object Foo {
           implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
@@ -110,7 +112,11 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         }
        """
 
-    c1.structure shouldEqual q"case class Foo(value: Option[Foo.Value] = Option(Foo.Value.A), value2: Baz = Baz.X, nested: Option[Foo.Nested] = None)".structure
-    companion.structure shouldEqual cmp.structure
+      c1.structure shouldEqual q"case class Foo(value: Option[Foo.Value] = Option(Foo.Value.A), value2: Baz = Baz.X, nested: Option[Foo.Nested] = None)".structure
+      companion.structure shouldEqual cmp.structure
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

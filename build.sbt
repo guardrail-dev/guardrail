@@ -46,7 +46,7 @@ runExample := Def.inputTaskDyn {
 
 addCommandAlias("runtimeAkkaHttpSuite", "; resetSample ; runExample scala akka-http ; sample-akkaHttp / test")
 
-addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x}/clean").mkString(" ; "))
+addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/clean").mkString(" ; "))
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
@@ -55,13 +55,13 @@ addCommandAlias("example", "runtimeSuite")
 run / fork := true
 
 addCommandAlias("cli", "runMain dev.guardrail.cli.CLI")
-addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
-addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x}/test").mkString("; "))
+addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))
+addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
 addCommandAlias("scalaTestSuite", "; guardrail/test ; runtimeScalaSuite")
 addCommandAlias("javaTestSuite", "; guardrail/test ; runtimeJavaSuite")
-addCommandAlias("format", "; guardrail/scalafmt ; guardrail/test:scalafmt ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmt ; sample-${x}/test:scalafmt").mkString("; "))
-addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"sample-${x}/scalafmtCheck ; sample-${x}/Test/scalafmtCheck").mkString("; "))
+addCommandAlias("format", "; guardrail/scalafmt ; guardrail/test:scalafmt ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/scalafmt ; sample-${x.projectName}/test:scalafmt").mkString("; "))
+addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/scalafmtCheck ; sample-${x.projectName}/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
 
 addCommandAlias(
@@ -138,7 +138,8 @@ lazy val samples = (project in file("modules/samples"))
     scalaAkkaHttpSample,
     scalaDropwizardSample,
     scalaEndpointsSample,
-    scalaHttp4sSample
+    scalaHttp4sSample,
+    scalaHttp4sSampleV0_22
   )
 
 lazy val core = modules.core.project
@@ -177,6 +178,7 @@ lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
 lazy val scalaEndpoints = modules.scalaEndpoints.project
   .customDependsOn(scalaSupport)
 
+lazy val scalaHttp4sSampleV0_22 = modules.scalaHttp4s.sampleV0_22
 lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
 lazy val scalaHttp4s = modules.scalaHttp4s.project
   .customDependsOn(scalaSupport)

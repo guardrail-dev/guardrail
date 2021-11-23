@@ -9,6 +9,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue223 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
@@ -32,13 +33,18 @@ class Issue223 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |        description: uuid of kernel
                            |""".stripMargin
 
-  test("Test uuid format generation") {
-    val (
-      ProtocolDefinitions(ClassDefinition(_, _, _, c1, _, _) :: Nil, _, _, _, _),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Test uuid format generation") {
+      val (
+        ProtocolDefinitions(ClassDefinition(_, _, _, c1, _, _) :: Nil, _, _, _, _),
+        _,
+        _
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    c1.structure shouldBe q"case class Kernel(id: java.util.UUID)".structure
+      c1.structure shouldBe q"case class Kernel(id: java.util.UUID)".structure
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

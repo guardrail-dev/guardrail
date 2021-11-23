@@ -37,7 +37,10 @@ object GeneratorMappings {
     val instance = scala.endpoints.Endpoints
   }
   private def indirectHttp4s = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = scala.http4s.Http4s
+    val instance = new scala.http4s.Http4s(scala.http4s.Http4sVersion.V0_23)
+  }
+  private def indirectHttp4sV0_22 = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
+    val instance = new scala.http4s.Http4s(scala.http4s.Http4sVersion.V0_22)
   }
   private def indirectAkkaHttpJackson = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.akkaHttp.AkkaHttpJackson
@@ -52,6 +55,8 @@ object GeneratorMappings {
       case "akka-http"         => scalaModule *> catchClassNotFound(indirectAkkaHttp, MissingDependency("guardrail-scala-akka-http"))
       case "endpoints"         => scalaModule *> catchClassNotFound(indirectEndpoints, MissingDependency("guardrail-scala-endpoints"))
       case "http4s"            => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
+      case "http4s-v0.23"      => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
+      case "http4s-v0.22"      => scalaModule *> catchClassNotFound(indirectHttp4sV0_22, MissingDependency("guardrail-scala-http4s"))
       case "akka-http-jackson" => scalaModule *> catchClassNotFound(indirectAkkaHttpJackson, MissingDependency("guardrail-scala-akka-http"))
       case "dropwizard"        => scalaModule *> catchClassNotFound(indirectScalaDropwizard, MissingDependency("guardrail-scala-dropwizard"))
     }, {

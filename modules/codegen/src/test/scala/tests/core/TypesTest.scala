@@ -10,6 +10,7 @@ import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -359,7 +360,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+    ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(Http4sVersion.V0_23))
 
     val cmp = companionForStaticDefns(staticDefns)
 

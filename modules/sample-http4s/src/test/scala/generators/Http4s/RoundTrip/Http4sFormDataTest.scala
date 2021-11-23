@@ -1,6 +1,7 @@
 package generators.Http4s.RoundTrip
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import form.client.http4s.foo.FooClient
 import form.client.{ http4s => cdefs }
 import form.server.http4s.foo._

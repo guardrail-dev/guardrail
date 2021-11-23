@@ -1,6 +1,7 @@
 package generators.Http4s.RoundTrip
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.http4s.client.{ Client => Http4sClient }
 import org.http4s.implicits._
 import org.scalatest.EitherValues

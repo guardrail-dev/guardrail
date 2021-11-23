@@ -1,6 +1,7 @@
 package tests.generators.http4s
 
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import support.SwaggerSpecRunner
@@ -127,15 +128,16 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
        |    - delivered
        |""".stripMargin
 
-  test("Ensure routes are generated") {
-    val (
-      _,
-      _,
-      Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Ensure routes are generated") {
+      val (
+        _,
+        _,
+        Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    val handler =
-      q"""
+      val handler =
+        q"""
       trait StoreHandler[F[_]] {
         def getRoot(respond: StoreResource.GetRootResponse.type)(): F[StoreResource.GetRootResponse]
         def putBar(respond: StoreResource.PutBarResponse.type)(bar: Long): F[Response[F]]
@@ -144,8 +146,8 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         def getOrderById(respond: StoreResource.GetOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed): F[StoreResource.GetOrderByIdResponse]
       }
     """
-    val resource =
-      q"""
+      val resource =
+        q"""
       class StoreResource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         import StoreResource._
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
@@ -209,19 +211,19 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
       }
     """
 
-    genHandler.structure shouldEqual handler.structure
-    genResource.structure should equal(resource.structure)
-  }
+      genHandler.structure shouldEqual handler.structure
+      genResource.structure should equal(resource.structure)
+    }
 
-  test("Ensure routes are generated with tracing") {
-    val (
-      _,
-      _,
-      Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), Http4s)
+    test(s"$version - Ensure routes are generated with tracing") {
+      val (
+        _,
+        _,
+        Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
+      ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), new Http4s(version))
 
-    val handler =
-      q"""
+      val handler =
+        q"""
       trait StoreHandler[F[_]] {
         def getRoot(respond: StoreResource.GetRootResponse.type)()(traceBuilder: TraceBuilder[F]): F[StoreResource.GetRootResponse]
         def putBar(respond: StoreResource.PutBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder[F]): F[Response[F]]
@@ -230,8 +232,8 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         def getOrderById(respond: StoreResource.GetOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed)(traceBuilder: TraceBuilder[F]): F[StoreResource.GetOrderByIdResponse]
       }
     """
-    val resource =
-      q"""
+      val resource =
+        q"""
       class StoreResource[F[_]](trace: String => Request[F] => TraceBuilder[F], mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         import StoreResource._
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
@@ -300,18 +302,18 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
       }
     """
 
-    genHandler.structure should equal(handler.structure)
-    genResource.structure should equal(resource.structure)
-  }
+      genHandler.structure should equal(handler.structure)
+      genResource.structure should equal(resource.structure)
+    }
 
-  test("Ensure routes are generated with custom extraction") {
-    val (
-      _,
-      _,
-      Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(customExtraction = true), Http4s)
-    val handler =
-      q"""
+    test(s"$version - Ensure routes are generated with custom extraction") {
+      val (
+        _,
+        _,
+        Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
+      ) = runSwaggerSpec(swagger)(Context.empty.copy(customExtraction = true), new Http4s(version))
+      val handler =
+        q"""
       trait StoreHandler[F[_], -E] {
         def getRoot(respond: StoreResource.GetRootResponse.type)()(extracted: E): F[StoreResource.GetRootResponse]
         def putBar(respond: StoreResource.PutBarResponse.type)(bar: Long)(extracted: E): F[Response[F]]
@@ -320,8 +322,8 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         def getOrderById(respond: StoreResource.GetOrderByIdResponse.type)(orderId: Long, status: OrderStatus = OrderStatus.Placed)(extracted: E): F[StoreResource.GetOrderByIdResponse]
       }
     """
-    val resource =
-      q"""
+      val resource =
+        q"""
       class StoreResource[F[_], E](customExtract: String => Request[F] => E, mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         import StoreResource._
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
@@ -390,7 +392,11 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
       }
       """
 
-    genHandler.structure should equal(handler.structure)
-    genResource.structure should equal(resource.structure)
+      genHandler.structure should equal(handler.structure)
+      genResource.structure should equal(resource.structure)
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

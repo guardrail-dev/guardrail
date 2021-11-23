@@ -1,6 +1,7 @@
 package tests.generators.http4s.client
 
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
@@ -122,22 +123,23 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
     |      name: Order
     |""".stripMargin
 
-  test("Ensure responses are generated") {
-    val (
-      _,
-      Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Ensure responses are generated") {
+      val (
+        _,
+        Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
+        _
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    tags should equal(Seq("store"))
-    val cmp = companionForStaticDefns(staticDefns)
+      tags should equal(Seq("store"))
+      val cmp = companionForStaticDefns(staticDefns)
 
-    val clientCompanion = q"""object StoreClient {
+      val clientCompanion = q"""object StoreClient {
       def apply[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]): StoreClient[F] = new StoreClient[F](host = host)(F = F, httpClient = httpClient)
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://petstore.swagger.io")(implicit F: Async[F]): StoreClient[F] = new StoreClient[F](host = host)(F = F, httpClient = httpClient)
     }"""
 
-    val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]) {
+      val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
       private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
         F.pure(response.headers.get(CIString(header)).map(_.head.value))
@@ -173,8 +175,8 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
       }
     }"""
 
-    val expected = List(
-      q"""
+      val expected = List(
+        q"""
         sealed abstract class GetOrderByIdResponse {
           def fold[A](handleOk: Order => A, handleBadRequest: => A, handleNotFound: => A): A = this match {
             case x: GetOrderByIdResponse.Ok =>
@@ -186,12 +188,12 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
           }
         }
       """,
-      q"""object GetOrderByIdResponse {
+        q"""object GetOrderByIdResponse {
       case class Ok(value: Order) extends GetOrderByIdResponse
       case object BadRequest extends GetOrderByIdResponse
       case object NotFound extends GetOrderByIdResponse
     }""",
-      q"""
+        q"""
         sealed abstract class DeleteOrderResponse {
           def fold[A](handleBadRequest: => A, handleNotFound: => A): A = this match {
             case DeleteOrderResponse.BadRequest => handleBadRequest
@@ -199,15 +201,19 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
           }
         }
       """,
-      q"""object DeleteOrderResponse {
+        q"""object DeleteOrderResponse {
       case object BadRequest extends DeleteOrderResponse
       case object NotFound extends DeleteOrderResponse
     }"""
-    )
+      )
 
-    cls.head.value.structure should equal(clientClass.structure)
-    cmp.structure should equal(clientCompanion.structure)
+      cls.head.value.structure should equal(clientClass.structure)
+      cmp.structure should equal(clientCompanion.structure)
 
-    statements.zip(expected).foreach({ case (a, b) => a.structure should equal(b.structure) })
+      statements.zip(expected).foreach({ case (a, b) => a.structure should equal(b.structure) })
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 }

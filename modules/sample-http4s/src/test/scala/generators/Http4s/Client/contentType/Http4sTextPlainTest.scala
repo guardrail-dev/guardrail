@@ -11,6 +11,7 @@ import org.scalatest.matchers.should.Matchers
 import org.http4s.dsl.io._
 import org.http4s.headers._
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.http4s.client.Client
 import org.http4s.{ Charset, HttpRoutes, MediaType }
 

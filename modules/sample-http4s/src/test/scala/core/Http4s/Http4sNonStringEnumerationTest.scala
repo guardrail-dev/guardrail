@@ -5,6 +5,7 @@ import java.util.Locale.US
 
 import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.unsafe.implicits.global
 import fs2.Stream
 import javax.xml.bind.DatatypeConverter.printHexBinary
 import io.circe.Json

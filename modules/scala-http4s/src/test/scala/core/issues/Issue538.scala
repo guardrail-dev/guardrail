@@ -9,14 +9,16 @@ import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.{ ClassDefinition, StaticDefns }
 
 class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   import scala.meta._
 
-  test("Test double inheritance - both optional") {
-    val swagger: String = """
+  def testVersion(version: Http4sVersion) {
+    test(s"$version - Test double inheritance - both optional") {
+      val swagger: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -33,28 +35,28 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                             |      - $ref: "#/definitions/Baz"
                             |""".stripMargin
 
-    val (
-      ProtocolDefinitions(
-        List(
-          _: ClassDefinition[ScalaLanguage], //bar
-          _: ClassDefinition[ScalaLanguage], //baz
-          foo: ClassDefinition[ScalaLanguage]
+      val (
+        ProtocolDefinitions(
+          List(
+            _: ClassDefinition[ScalaLanguage], //bar
+            _: ClassDefinition[ScalaLanguage], //baz
+            foo: ClassDefinition[ScalaLanguage]
+          ),
+          _,
+          _,
+          _,
+          _
         ),
         _,
-        _,
-        _,
         _
-      ),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    val companion = companionForStaticDefns(foo.staticDefns)
-    cmp(foo.cls, q"case class Foo(id: Option[String] = None)")
-  }
+      val companion = companionForStaticDefns(foo.staticDefns)
+      cmp(foo.cls, q"case class Foo(id: Option[String] = None)")
+    }
 
-  test("Test double inheritance - one required") {
-    val swagger: String = """
+    test(s"$version - Test double inheritance - one required") {
+      val swagger: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -72,27 +74,27 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                             |      - $ref: "#/definitions/Baz"
                             |""".stripMargin
 
-    val (
-      ProtocolDefinitions(
-        List(
-          _: ClassDefinition[ScalaLanguage], //bar
-          _: ClassDefinition[ScalaLanguage], //baz
-          foo: ClassDefinition[ScalaLanguage]
+      val (
+        ProtocolDefinitions(
+          List(
+            _: ClassDefinition[ScalaLanguage], //bar
+            _: ClassDefinition[ScalaLanguage], //baz
+            foo: ClassDefinition[ScalaLanguage]
+          ),
+          _,
+          _,
+          _,
+          _
         ),
         _,
-        _,
-        _,
         _
-      ),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    cmp(foo.cls, q"case class Foo(id: String)")
-  }
+      cmp(foo.cls, q"case class Foo(id: String)")
+    }
 
-  test("Test double inheritance - data redaction") {
-    val swagger: String = """
+    test(s"$version - Test double inheritance - data redaction") {
+      val swagger: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -111,27 +113,27 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                             |      - $ref: "#/definitions/Baz"
                             |""".stripMargin
 
-    val (
-      ProtocolDefinitions(
-        List(
-          _: ClassDefinition[ScalaLanguage], //bar
-          _: ClassDefinition[ScalaLanguage], //baz
-          foo: ClassDefinition[ScalaLanguage]
+      val (
+        ProtocolDefinitions(
+          List(
+            _: ClassDefinition[ScalaLanguage], //bar
+            _: ClassDefinition[ScalaLanguage], //baz
+            foo: ClassDefinition[ScalaLanguage]
+          ),
+          _,
+          _,
+          _,
+          _
         ),
         _,
-        _,
-        _,
         _
-      ),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    cmp(foo.cls, q"""case class Foo(id: String) { override def toString: String = "Foo(" + "[redacted]" + ")" }""")
-  }
+      cmp(foo.cls, q"""case class Foo(id: String) { override def toString: String = "Foo(" + "[redacted]" + ")" }""")
+    }
 
-  test("Test double inheritance - empty to null") {
-    val swagger: String = """
+    test(s"$version - Test double inheritance - empty to null") {
+      val swagger: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -150,25 +152,25 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                             |      - $ref: "#/definitions/Baz"
                             |""".stripMargin
 
-    val (
-      ProtocolDefinitions(
-        List(
-          _: ClassDefinition[ScalaLanguage], //bar
-          _: ClassDefinition[ScalaLanguage], //baz
-          foo: ClassDefinition[ScalaLanguage]
+      val (
+        ProtocolDefinitions(
+          List(
+            _: ClassDefinition[ScalaLanguage], //bar
+            _: ClassDefinition[ScalaLanguage], //baz
+            foo: ClassDefinition[ScalaLanguage]
+          ),
+          _,
+          _,
+          _,
+          _
         ),
         _,
-        _,
-        _,
         _
-      ),
-      _,
-      _
-    ) = runSwaggerSpec(swagger)(Context.empty, Http4s)
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-    val companion = companionForStaticDefns(foo.staticDefns)
-    val expected =
-      q"""
+      val companion = companionForStaticDefns(foo.staticDefns)
+      val expected =
+        q"""
         object Foo {
           implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
@@ -177,8 +179,12 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           implicit val decodeFoo: _root_.io.circe.Decoder[Foo] = new _root_.io.circe.Decoder[Foo] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Foo] = for (v0 <- c.downField("id").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) _root_.io.circe.Json.Null else j)).as[String]) yield Foo(v0) }
         }
        """
-    cmp(companion, expected)
+      cmp(companion, expected)
+    }
   }
+
+  testVersion(Http4sVersion.V0_22)
+  testVersion(Http4sVersion.V0_23)
 
   private def companionForStaticDefns(staticDefns: StaticDefns[ScalaLanguage]): Defn.Object =
     q"""

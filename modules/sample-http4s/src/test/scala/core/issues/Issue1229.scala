@@ -8,6 +8,7 @@ import _root_.department.server.http4s.department.DepartmentResource._
 import _root_.department.server.http4s.{ definitions => sdefs }
 import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.unsafe.implicits.global
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.funsuite.AnyFunSuite
