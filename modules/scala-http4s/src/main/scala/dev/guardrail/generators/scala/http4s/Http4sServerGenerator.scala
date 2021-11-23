@@ -24,6 +24,10 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object Http4sServerGenerator {
+  @deprecated("0.69.0", "Explicitly set Http4sVersion")
+  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+    apply(Http4sVersion.V0_23)(Cl)
+
   def apply(version: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
     new Http4sServerGenerator(version)
 
@@ -47,6 +51,9 @@ object Http4sServerGenerator {
 
 class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
     extends ServerTerms[ScalaLanguage, Target] {
+
+  private def this(Cl: CollectionsLibTerms[ScalaLanguage, Target]) = this(Http4sVersion.V0_23)(Cl)
+
   val customExtractionTypeName: Type.Name = Type.Name("E")
 
   private val bodyUtf8Decode = version match {

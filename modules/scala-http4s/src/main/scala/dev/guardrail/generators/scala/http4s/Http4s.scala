@@ -16,3 +16,5 @@ class Http4s(version: Http4sVersion) extends Framework[ScalaLanguage, Target] {
   implicit def SwaggerInterp        = SwaggerGenerator[ScalaLanguage]()
   implicit def LanguageInterp       = ScalaGenerator()
 }
+
+object Http4s extends Http4s(Http4sVersion.V0_23)
