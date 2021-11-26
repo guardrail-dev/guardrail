@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e
+
 cachedir=target/github
 if [ -n "$GITHUB_EVENT_PATH" ]; then
   mkdir -p "$cachedir"
