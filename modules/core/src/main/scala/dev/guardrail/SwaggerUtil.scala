@@ -319,7 +319,7 @@ object SwaggerUtil {
                       core.Resolved[L](_, None, None, None, None)
                     )
                   })
-                mapType <- customArrayTypeName(m).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(m, x))))
+                mapType <- customMapTypeName(m).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(m, x))))
                 res <- rec match {
                   case core.Resolved(inner, dep, _, _, _) =>
                     liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, None, None))
