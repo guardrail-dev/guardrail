@@ -44,7 +44,7 @@ paths:
           schema:
             type: string
         406:
-          description: "Invalid"
+          description: "Not Acceptable"
   /baz:
     post:
       operationId: doBaz

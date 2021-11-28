@@ -31,4 +31,5 @@ paths:
             type: string
             format: date
       responses:
-        204: {}
+        204:
+          description: "Created"

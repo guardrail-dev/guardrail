@@ -3,6 +3,7 @@ info:
   title: Whatever
   version: 1.0.0
 host: localhost:1234
+paths: {}
 definitions:
   Baz:
     type: object

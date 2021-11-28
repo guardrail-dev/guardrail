@@ -29,16 +29,19 @@ paths:
               $ref: '#/components/schemas/IntEnum'
       responses:
         '200':
+          description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/IntEnum'
         '201':
+          description: "Created"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/StringEnum'
         '202':
+          description: "Accepted"
           content:
             application/json:
               schema:

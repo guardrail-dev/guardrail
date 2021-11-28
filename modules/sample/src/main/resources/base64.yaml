@@ -15,7 +15,7 @@ paths:
       operationId: foo
       responses:
         '200':
-          description: foo
+          description: OK
           schema:
             $ref: '#/definitions/Foo'
 definitions:

@@ -2,18 +2,19 @@ openapi: 3.0.1
 info:
   title: Whatever
   version: 1.0.0
-host: localhost:1234
-schemes:
-  - http
-definitions:
-  Foo:
-    type: object
+servers:
+  - url: 'http://localhost:1234'
+components:
+  schemas:
+    Foo:
+      type: object
 paths:
   /foo:
     get:
       operationId: getFoo
       responses:
         '200':
+          description: OK
           headers:
             X-Required-Header:
               type: string
@@ -23,6 +24,7 @@ paths:
           schema:
             $ref: '#/definitions/Foo'
         '204':
+          description: "No Content"
           headers:
             X-Required-Header:
               type: string

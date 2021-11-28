@@ -23,6 +23,7 @@ paths:
       parameters:
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/:
@@ -46,6 +47,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/{p2}/:
@@ -81,6 +83,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/{p2}/{p3}/:
@@ -128,6 +131,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/{p2}/{p3}/{p4}/:
@@ -187,6 +191,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/{p2}/{p3}/{p4}/{p5}/:
@@ -258,6 +263,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/:
@@ -341,6 +347,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'
   /{p1}/{p2}/{p3}/{p4}/{p5}/{p6}/{p7}/:
@@ -440,5 +447,6 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/User'

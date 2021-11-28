@@ -14,7 +14,7 @@ paths:
               $ref: '#/components/schemas/Body'
       responses:
         204:
-          description: costam
+          description: "No Content"
 components:
   schemas:
     Body:

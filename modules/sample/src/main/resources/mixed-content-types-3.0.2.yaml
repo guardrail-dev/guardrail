@@ -8,7 +8,7 @@ paths:
       operationId: doFoo
       responses:
         200:
-          description: success
+          description: OK
           content:
             text/plain:
               schema:

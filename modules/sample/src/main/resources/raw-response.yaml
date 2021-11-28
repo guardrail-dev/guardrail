@@ -13,6 +13,7 @@ paths:
       x-jvm-package: foo
       responses:
         '201':
+          description: "Created"
           schema:
             $ref: '#/definitions/Foo'
 definitions:

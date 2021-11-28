@@ -1,4 +1,7 @@
 swagger: '2.0'
+info:
+  title: 'Parameters of "type: string" reject numeric values as "malformed"'
+  version: 0.1.0
 host: localhost:1234
 schemes:
 - http

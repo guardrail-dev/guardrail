@@ -1,4 +1,7 @@
 swagger: '2.0'
+info:
+  title: "formData generator fails if only one parameter is present"
+  version: 0.1.0
 host: localhost:1234
 schemes:
 - http

@@ -3,7 +3,7 @@ info:
   title: Whatever
   version: 1.0.0
 servers:
-  - url: http://localhost:1234
+  - url: 'http://localhost:1234'
 paths:
   /foo:
     post:
@@ -35,6 +35,7 @@ paths:
                   format: date-time
       responses:
         '201':
+          description: "Created"
           content:
             application/json:
               schema:

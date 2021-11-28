@@ -22,6 +22,7 @@ paths:
         required: true
       responses:
         '200':
+          description: OK
           schema:
             type: file
   /fooArray:
@@ -38,6 +39,7 @@ paths:
           required: true
       responses:
         '200':
+          description: OK
           schema:
             type: file
             x-scala-type: Array[Byte]
@@ -56,6 +58,7 @@ paths:
           required: true
       responses:
         '200':
+          description: OK
           schema:
             type: file
             x-scala-type: fs2.Chunk[Byte]

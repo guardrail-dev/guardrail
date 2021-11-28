@@ -19,11 +19,13 @@ paths:
                   type: string
       responses:
         200:
+          description: OK
           content:
             text/plain:
               schema:
                 type: string
         500:
+          description: Internal Server Error
           content:
             text/plain:
               schema:
@@ -41,11 +43,13 @@ paths:
               x-java-type: java.io.InputStream
       responses:
         200:
+          description: OK
           content:
             text/plain:
               schema:
                 type: string
         500:
+          description: Internal Server Error
           content:
             text/plain:
               schema:
@@ -62,11 +66,13 @@ paths:
               $ref: "#/components/schemas/Pojo"
       responses:
         200:
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Pojo"
         500:
+          description: Internal Server Error
           content:
             text/plain:
               schema:
