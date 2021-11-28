@@ -33,7 +33,7 @@ class Issue223 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |        description: uuid of kernel
                            |""".stripMargin
 
-  def testVersion(version: Http4sVersion): Unit = {
+  def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Test uuid format generation") {
       val (
         ProtocolDefinitions(ClassDefinition(_, _, _, c1, _, _) :: Nil, _, _, _, _),
@@ -43,7 +43,6 @@ class Issue223 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
       c1.structure shouldBe q"case class Kernel(id: java.util.UUID)".structure
     }
-  }
 
   testVersion(Http4sVersion.V0_22)
   testVersion(Http4sVersion.V0_23)

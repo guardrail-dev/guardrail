@@ -32,7 +32,7 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                           |      - $ref: "#/definitions/Bar"
                        |""".stripMargin
 
-  def testVersion(version: Http4sVersion): Unit = {
+  def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Test ordering") {
       val (
         ProtocolDefinitions(List(bar: ClassDefinition[ScalaLanguage], foo: ClassDefinition[ScalaLanguage]), _, _, _, _),
@@ -43,7 +43,6 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       cmp(bar.cls, q"case class Bar(id: Option[String] = None)")
       cmp(foo.cls, q"case class Foo(id: Option[String] = None, otherId: Option[String] = None)")
     }
-  }
 
   testVersion(Http4sVersion.V0_22)
   testVersion(Http4sVersion.V0_23)

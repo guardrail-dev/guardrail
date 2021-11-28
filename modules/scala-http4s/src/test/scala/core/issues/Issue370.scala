@@ -53,7 +53,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |    default: x
                            |""".stripMargin
 
-  def testVersion(version: Http4sVersion): Unit = {
+  def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Test nested enum definition") {
       val (
         ProtocolDefinitions(ClassDefinition(_, _, _, c1, s, _) :: _, _, _, _, _),
@@ -115,7 +115,6 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       c1.structure shouldEqual q"case class Foo(value: Option[Foo.Value] = Option(Foo.Value.A), value2: Baz = Baz.X, nested: Option[Foo.Nested] = None)".structure
       companion.structure shouldEqual cmp.structure
     }
-  }
 
   testVersion(Http4sVersion.V0_22)
   testVersion(Http4sVersion.V0_23)

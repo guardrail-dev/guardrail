@@ -55,7 +55,7 @@ object DocsHelpers {
             val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
             val Right(q"""class ${name }(...${args }) {
               ..${defns }
-            }""" )                                                = (g.client.head: @unchecked)
+            }""")                                                 = (g.client.head: @unchecked)
             val basePath = defns.collectFirst {
               case v @ q"val basePath: String = $_" => v
             }

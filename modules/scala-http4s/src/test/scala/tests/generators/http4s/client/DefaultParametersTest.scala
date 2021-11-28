@@ -123,7 +123,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
     |      name: Order
     |""".stripMargin
 
-  def testVersion(version: Http4sVersion): Unit = {
+  def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Ensure responses are generated") {
       val (
         _,
@@ -212,7 +212,6 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
 
       statements.zip(expected).foreach({ case (a, b) => a.structure should equal(b.structure) })
     }
-  }
 
   testVersion(Http4sVersion.V0_22)
   testVersion(Http4sVersion.V0_23)
