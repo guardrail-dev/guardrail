@@ -62,7 +62,12 @@ object SwaggerUtil {
                   formattedClsName <- formatTypeName(clsName)
                   typeName         <- pureTypeName(formattedClsName)
                   widenedTypeName  <- widenTypeName(typeName)
-                  parentSimpleRef = comp.downField("allOf", _.getAllOf).map(_.headOption).flatDownField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last)
+                  parentSimpleRef = comp
+                    .downField("allOf", _.getAllOf)
+                    .indexedDistribute
+                    .headOption
+                    .flatMap(_.downField("$ref", _.get$ref).indexedDistribute)
+                    .map(_.unwrapTracker.split("/").last)
                   parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
                   resolvedType = core.Resolved[L](widenedTypeName, parentTerm, None, None, None): core.ResolvedType[L]
                 } yield (clsName, resolvedType)
