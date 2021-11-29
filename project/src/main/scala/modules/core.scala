@@ -6,7 +6,7 @@ import sbt._
 import sbt.Keys._
 
 object core {
-  val catsVersion            = "2.6.1"
+  val catsVersion            = "2.7.0"
 
   val project = 
     commonModule("core")
