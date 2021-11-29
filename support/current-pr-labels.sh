@@ -1,7 +1,12 @@
 #!/bin/bash
+
+set -e
+
+cachedir=target/github
 if [ -n "$GITHUB_EVENT_PATH" ]; then
+  mkdir -p "$cachedir"
   pr_number="$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")"
-  cache="${TMPDIR}/guardrail-ci-${pr_number}-labels-cache.json"
+  cache="$cachedir/guardrail-ci-${pr_number}-labels-cache.json"
   (
     if [ -f "$cache" ]; then
       cat "$cache"
