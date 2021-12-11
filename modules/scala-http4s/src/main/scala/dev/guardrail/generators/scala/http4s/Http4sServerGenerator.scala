@@ -55,6 +55,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   private def this(Cl: CollectionsLibTerms[ScalaLanguage, Target]) = this(Http4sVersion.V0_23)(Cl)
 
   val customExtractionTypeName: Type.Name = Type.Name("E")
+  private val customCircePrinterName: Term.Name   = Term.Name("printer")
 
   private val bodyUtf8Decode = version match {
     case Http4sVersion.V0_22 => q"utf8Decode"
@@ -173,14 +174,17 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
     Target.log.function("getExtraRouteParams")(for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
+      
       mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+      customPrinter = param"""$customCircePrinterName: io.circe.Printer = io.circe.Printer.noSpaces"""
+      
       customExtraction_ = if (customExtraction) {
         Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
       } else Option.empty
       tracing_ = if (tracing) {
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
-    } yield customExtraction_.toList ::: tracing_.toList ::: List(mapRoute))
+    } yield customExtraction_.toList ::: tracing_.toList ::: List(mapRoute, customPrinter))
 
   def generateSupportDefinitions(
       tracing: Boolean,
@@ -942,8 +946,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       response    <- responses.value
       (_, tpe, _) <- response.value
     } yield {
-      val contentTypes = response.value.map(_._1).map(List(_)).getOrElse(produces) //for OpenAPI 3.x we should take ContentType from the response
-      q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${ResponseADTHelper.generateEncoder(tpe, contentTypes)}"
+      val contentTypes  = response.value.map(_._1).map(List(_)).getOrElse(produces) //for OpenAPI 3.x we should take ContentType from the response
+      q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${ResponseADTHelper.generateEncoder(tpe, contentTypes, Some(customCircePrinterName))}"
     }
 
   def generateResponseGenerators(methodName: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =

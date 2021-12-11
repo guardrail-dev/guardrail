@@ -27,6 +27,9 @@ object Http4sClientGenerator {
 class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ClientTerms[ScalaLanguage, Target] {
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
+  private val customCircePrinterParamName: Term.Name   = Term.Name("printer")
+  private val customCircePrinterParam: Term.Param   = param"""$customCircePrinterParamName: Printer = Printer.noSpaces"""
+
   def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
@@ -385,7 +388,7 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
       )
     } yield renderedClientOperation)
   }
-  def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._"))
+  def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._", q"import io.circe.Printer"))
   def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
   def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
     val ihc = param"implicit httpClient: Http4sClient[F]"
@@ -394,7 +397,7 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
       List(
         List(formatHost(serverUrls)) ++ (if (tracing)
                                            Some(formatClientName(tracingName))
-                                         else None),
+                                         else None) ++ List(customCircePrinterParam),
         List(ief, ihc)
       )
     )
@@ -431,9 +434,11 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
         List.empty
       }
 
+      val extraParams = tracingParams ::: List(customCircePrinterParam)
+
       List(
         q"""
-            def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(serverUrls)}, ..${tracingParams})(implicit F: Async[F]): ${tpe}[F] = ${ctorCall}
+            def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(serverUrls)}, ..${extraParams})(implicit F: Async[F]): ${tpe}[F] = ${ctorCall}
           """
       )
     }
@@ -515,7 +520,7 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
   def generateEncoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
     bodyArgs.toList.flatMap {
       case LanguageParameter(_, _, _, _, argType) =>
-        List(q"private[this] val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${ResponseADTHelper.generateEncoder(argType, consumes)}")
+        List(q"private[this] val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${ResponseADTHelper.generateEncoder(argType, consumes, Some(customCircePrinterParamName))}")
     }
 
   def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =

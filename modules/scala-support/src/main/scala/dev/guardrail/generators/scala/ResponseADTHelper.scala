@@ -82,9 +82,12 @@ object ResponseADTHelper {
         case _             => q"EntityDecoder[F, $tpe]"
       }
 
-  def generateEncoder(tpe: Type, produces: Seq[ContentType]): Term =
+  def generateEncoder(tpe: Type, produces: Seq[ContentType], customPrinter: Option[Term.Name] = None): Term =
     if (isJsonEncoderDecoder(produces))
-      q"jsonEncoderOf[F, $tpe]"
+      customPrinter match {
+        case Some(printer) => q"jsonEncoderWithPrinterOf[F, $tpe]($printer)"
+        case None          => q"jsonEncoderOf[F, $tpe]"
+      }
     else
       tpe match {
         case t"Option[$_]" => q"""
