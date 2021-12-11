@@ -24,7 +24,7 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 
 object Http4sServerGenerator {
-  @deprecated("0.69.0", "Explicitly set Http4sVersion")
+  @deprecated("Explicitly set Http4sVersion", "0.69.0")
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
     apply(Http4sVersion.V0_23)(Cl)
 
