@@ -55,6 +55,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   private def this(Cl: CollectionsLibTerms[ScalaLanguage, Target]) = this(Http4sVersion.V0_23)(Cl)
 
   val customExtractionTypeName: Type.Name = Type.Name("E")
+  val authContextTypeName: Type.Name      = Type.Name("AuthContextT")
 
   private val bodyUtf8Decode = version match {
     case Http4sVersion.V0_22 => q"utf8Decode"
@@ -158,21 +159,23 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       methodSigs: List[scala.meta.Decl.Def],
       handlerDefinitions: List[scala.meta.Stat],
       responseDefinitions: List[scala.meta.Defn],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authentication: Boolean
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
       extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
-      tParams     = List(tparam"F[_]") ++ extractType
+      authType    = List(tparam"$authContextTypeName").filter(_ => authentication)
+      tParams     = List(tparam"F[_]") ++ extractType ++ authType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
       ..${methodSigs ++ handlerDefinitions}
     }
   """)
 
-  def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
+  def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
     Target.log.function("getExtraRouteParams")(for {
-      _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
+      _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authentication})")
       mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
       customExtraction_ = if (customExtraction) {
         Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
@@ -180,7 +183,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       tracing_ = if (tracing) {
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
-    } yield customExtraction_.toList ::: tracing_.toList ::: List(mapRoute))
+      authentication_ = if (authentication) {
+        Option(param"""authenticationMiddleware: (Request[F], ($authContextTypeName) => F[Response[F]]) => F[Response[F]]""")
+      } else Option.empty
+    } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
   def generateSupportDefinitions(
       tracing: Boolean,
@@ -196,15 +202,19 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       extraRouteParams: List[scala.meta.Term.Param],
       responseDefinitions: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authentication: Boolean
   ): Target[List[Defn]] =
     Target.log.function("renderClass")(
       for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
-        resourceTParams = List(tparam"F[_]") ++ extractType
-        handlerTParams  = List(Type.Name("F")) ++ List(customExtractionTypeName).filter(_ => customExtraction)
-        routesParams    = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
+        authType        = List(tparam"$authContextTypeName").filter(_ => authentication)
+        resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
+        handlerTParams = List(Type.Name("F")) ++
+            List(customExtractionTypeName).filter(_ => customExtraction) ++
+            List(authContextTypeName).filter(_ => authentication)
+        routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield List(
         q"""
           class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
@@ -608,7 +618,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val responseType = ServerRawResponse(operation)
         .filter(_ == true)
         .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
-      val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++
+      val authContextArg = Option(LanguageParameter.fromParam(param"authContext: $authContextTypeName")).filter(_ => securityRequirements.nonEmpty)
+      val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
+          (authContextArg.toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
+        ) ++
             tracingFields
               .map(_.param)
               .map(List(_)) ++
@@ -630,7 +643,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         .map(_ => p"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
         .getOrElse(fullRouteWithTracingMatcher)
       val handlerCallArgs: List[List[Term]] = List(List(responseCompanionTerm)) ++ List(
-              (pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName) ++ (http4sForm ++ http4sHeaders).map(_.handlerCallArg)
+              (authContextArg.toList ++ pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName).toList ++ (http4sForm ++ http4sHeaders).map(_.handlerCallArg)
             ) ++
             tracingFields.map(_.param.paramName).map(List(_)) ++
             customExtractionFields.map(_.param.paramName).map(List(_))
@@ -706,9 +719,19 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
       val fullRoute: Case =
-        p"""case req @ $fullRouteWithTracingAndExtraction =>
-           mapRoute($methodName, req, {$routeBody})
+        authContextArg match {
+          case Some(arg) =>
+            val authContextParam = param"${arg.paramName}"
+            p"""case req @ $fullRouteWithTracingAndExtraction =>
+            authenticationMiddleware(req, { $authContextParam =>
+              mapRoute($methodName, req, { $routeBody })
+            })
           """
+          case None =>
+            p"""case req @ $fullRouteWithTracingAndExtraction =>
+            mapRoute($methodName, req, { $routeBody })
+          """
+        }
 
       val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.$responseCompanionTerm.type"))
 

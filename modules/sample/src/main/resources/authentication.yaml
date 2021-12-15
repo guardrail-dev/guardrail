@@ -1,0 +1,51 @@
+openapi: 3.0.2
+info:
+  title: Test for security support
+  version: 1.0.0
+paths:
+  /foo:
+    post:
+      x-jvm-package: auth
+      operationId: doFoo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - jwt:
+          - "foo:read"
+          - "bar:write"
+
+  /bar:
+    post:
+      x-jvm-package: auth
+      operationId: doBar
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

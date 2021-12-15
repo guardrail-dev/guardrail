@@ -638,7 +638,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
     }
 
-  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
+  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Parameter]] =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -710,7 +710,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authentication: Boolean
   ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
     safeParseSimpleName(className) >>
         safeParseSimpleName(handlerName) >>
@@ -721,7 +722,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authentication: Boolean
   ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

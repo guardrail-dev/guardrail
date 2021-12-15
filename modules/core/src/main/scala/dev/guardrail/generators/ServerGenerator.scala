@@ -50,6 +50,10 @@ object ServerGenerator {
           for {
             resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
             handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+            authenticationEnabled = securitySchemes.nonEmpty && routes.exists {
+                case route @ RouteMeta(_, _, _, securityRequirements) => securityRequirements.nonEmpty
+              }
+
             responseServerPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
@@ -73,9 +77,10 @@ object ServerGenerator {
               renderedRoutes.methodSigs,
               renderedRoutes.handlerDefinitions,
               responseDefinitions.flatten,
-              context.customExtraction
+              context.customExtraction,
+              authentication = authenticationEnabled
             )
-            extraRouteParams <- getExtraRouteParams(context.customExtraction, context.tracing)
+            extraRouteParams <- getExtraRouteParams(context.customExtraction, context.tracing, authentication = authenticationEnabled)
             classSrc <- renderClass(
               resourceName,
               handlerName,
@@ -84,7 +89,8 @@ object ServerGenerator {
               extraRouteParams,
               responseDefinitions.flatten,
               renderedRoutes.supportDefinitions,
-              context.customExtraction
+              context.customExtraction,
+              authentication = authenticationEnabled
             )
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
