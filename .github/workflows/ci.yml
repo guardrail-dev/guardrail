@@ -44,10 +44,11 @@ jobs:
       run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test coverageAggregate versionPolicyCheck microsite/compile
       env:
         GUARDRAIL_CI: true
-    - uses: codecov/codecov-action@v1
+    - uses: codecov/codecov-action@v2
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
+        verbose: true
     - name: Set scala version for matrix
       id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
       run: echo "::set-output name=scala_versions::$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)"
