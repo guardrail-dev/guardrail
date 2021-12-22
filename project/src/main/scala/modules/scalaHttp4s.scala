@@ -33,7 +33,7 @@ object scalaHttp4s {
   }
 
   val dependencies = {
-    val catsEffectVersion      = "3.3.0"
+    val catsEffectVersion      = "3.3.1"
     val http4sVersion          = "0.23.6"
 
     Seq(
