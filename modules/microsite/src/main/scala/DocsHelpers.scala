@@ -33,7 +33,7 @@ object DocsHelpers {
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
         val server                              = codegenDefinitions.servers.head
-        val q"object ${oname } { ..${stats } }" = server.serverDefinitions.head
+        val q"object ${oname } { ..${stats } }" = (server.serverDefinitions.head: @unchecked)
         val routeStats                          = stats.collectFirst({ case line @ q"def routes(...$_): $_ = $_" => line }).toList
         List(
           Some(server.handlerDefinition.toString),
@@ -53,9 +53,9 @@ object DocsHelpers {
           case g :: Nil =>
             val StaticDefns(className, extraImports, definitions) = g.staticDefns
             val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
-            val q"""class ${name }(...${args }) {
+            val Right(q"""class ${name }(...${args }) {
               ..${defns }
-            }"""                                                  = g.client.head.right.get
+            }""" )                                                = (g.client.head: @unchecked)
             val basePath = defns.collectFirst {
               case v @ q"val basePath: String = $_" => v
             }
@@ -89,7 +89,7 @@ object DocsHelpers {
           class ${oname }[..${tparms }](...${resourceParams }) extends ..${xtends } {
             ..${stats }
           }
-        """        = server.serverDefinitions.head
+        """        = (server.serverDefinitions.head: @unchecked)
 
         val routeStats = stats
           .collectFirst({
@@ -121,9 +121,9 @@ object DocsHelpers {
           case g :: Nil =>
             val StaticDefns(className, extraImports, definitions) = g.staticDefns
             val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
-            val q"""class ${name }[..${tparms }](...${args }) {
+            val Right(q"""class ${name }[..${tparms }](...${args }) {
               ..${defns }
-            }"""                                                  = g.client.head.right.get
+            }""")                                                 = (g.client.head: @unchecked)
             val basePath = defns.collectFirst {
               case v @ q"val basePath: String = $_" => v
             }
