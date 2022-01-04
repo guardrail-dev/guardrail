@@ -286,7 +286,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
         PositiveLong(20L)
       )
       .attempt
-      .unsafeRunSync
+      .unsafeRunSync()
     result
       .fold(
         { err =>

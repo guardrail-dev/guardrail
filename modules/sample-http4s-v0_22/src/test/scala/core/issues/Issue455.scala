@@ -32,7 +32,7 @@ class Issue455Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       import issues.issue455.client.http4sV022.definitions.RecursiveData
       val recData = RecursiveData(3, "three", Some(RecursiveData(2, "two", Some(RecursiveData(1, "one", None)))))
       val client  = Client.httpClient(Http4sClient.fromHttpApp[IO](route.orNotFound))
-      val resp    = client.boo(recData).unsafeToFuture.futureValue
+      val resp    = client.boo(recData).unsafeToFuture().futureValue
       resp.fold(handleOk = {
         case `recData` => ()
         case data      => fail(s"${data} != ${recData}")
