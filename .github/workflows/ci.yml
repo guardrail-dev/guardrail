@@ -57,9 +57,14 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '1.8', '1.11', '1.13', '1.15', '1.17' ]
+        java: [ '1.8', '1.15', '1.17' ]
         scala: [
             { version: '2.12.14', bincompat: '2.12' }
+          ]
+        framework: [
+            { framework: 'dropwizard',         project: 'sample-dropwizard'     },
+            { framework: 'dropwizard-vavr',    project: 'sample-dropwizardVavr' },
+            { framework: 'spring-mvc',         project: 'sample-springMvc'      }
           ]
     steps:
     - uses: actions/checkout@v2
@@ -77,7 +82,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage runtimeJavaSuite coverageAggregate
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage "runExample java ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test coverageAggregate
     - uses: codecov/codecov-action@v1
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
