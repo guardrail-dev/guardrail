@@ -9,7 +9,7 @@ object scalaEndpoints {
   val endpointsCatsVersion   = "2.4.1"
   val endpointsCirceVersion  = "0.14.1"
   val endpointsVersion       = "1.3.0"
-  val scalatestVersion       = "3.2.10"
+  val scalatestVersion       = "3.2.11"
 
   val dependencies = Seq(
     "io.circe"          %% "circe-core"          % endpointsCirceVersion,
