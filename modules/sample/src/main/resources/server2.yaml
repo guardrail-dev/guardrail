@@ -25,9 +25,10 @@ paths:
       responses:
         '200':
           description: OK
-          type: array
-          items:
-            $ref: '#/definitions/Address'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Address'
         '404':
           description: Not found
   /address/{id}:
