@@ -123,7 +123,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
     |      name: Order
     |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Ensure responses are generated") {
       val (
         _,

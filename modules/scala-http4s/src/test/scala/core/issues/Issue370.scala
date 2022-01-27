@@ -53,7 +53,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |    default: x
                            |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test nested enum definition") {
       val (
         ProtocolDefinitions(ClassDefinition(_, _, _, c1, s, _) :: _, _, _, _, _),

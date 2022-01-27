@@ -25,7 +25,7 @@ class Issue429 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |          enum: [0, 1]
     |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test correct escaping of numbers used as identifiers") {
       val (
         ProtocolDefinitions(ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _, _),

@@ -41,7 +41,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
       |            $ref: '#/definitions/User'
       |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test that fully qualified names are used") {
       val (
         ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _, _),

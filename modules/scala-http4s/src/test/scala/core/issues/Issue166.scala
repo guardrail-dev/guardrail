@@ -45,7 +45,7 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                    |        type: string
                    |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Handle generation of models") {
       val opts = new ParseOptions()
       opts.setResolve(true)

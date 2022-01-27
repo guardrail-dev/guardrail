@@ -466,8 +466,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                   }
 
                   val parseTerm = parseTermAccessors.foldLeft[Term](q"c")((acc, next) => next(acc))
-                  val enum      = enumerator"""${Pat.Var(term)} <- $parseTerm"""
-                  (term, enum)
+                  val _enum     = enumerator"""${Pat.Var(term)} <- $parseTerm"""
+                  (term, _enum)
                 }
             })
             .map({ pairs =>

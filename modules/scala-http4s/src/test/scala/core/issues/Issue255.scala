@@ -41,7 +41,7 @@ class Issue255 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |        x-scala-type: custom.Bytes
                            |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test password format generation") {
       val (
         ProtocolDefinitions(ClassDefinition(_, _, _, c1, _, _) :: Nil, _, _, _, _),

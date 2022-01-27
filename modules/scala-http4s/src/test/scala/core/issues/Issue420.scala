@@ -32,7 +32,7 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                           |      - $ref: "#/definitions/Bar"
                        |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test ordering") {
       val (
         ProtocolDefinitions(List(bar: ClassDefinition[ScalaLanguage], foo: ClassDefinition[ScalaLanguage]), _, _, _, _),

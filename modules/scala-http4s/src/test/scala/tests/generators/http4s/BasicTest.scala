@@ -75,7 +75,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     |        type: object
     |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Generate JSON alias definitions") {
       val (
         ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _, _),

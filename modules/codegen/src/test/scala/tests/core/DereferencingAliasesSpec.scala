@@ -7,7 +7,6 @@ import org.scalatest.matchers.should.Matchers
 import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
-import dev.guardrail._
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
