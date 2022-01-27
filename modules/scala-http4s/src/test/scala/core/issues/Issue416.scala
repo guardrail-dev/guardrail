@@ -40,7 +40,7 @@ class Issue416 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
        |        type: string
        |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Ensure mapRoute is generated") {
       val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, _)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 

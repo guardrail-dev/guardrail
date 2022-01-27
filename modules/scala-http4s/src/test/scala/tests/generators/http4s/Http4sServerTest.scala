@@ -128,7 +128,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
        |    - delivered
        |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Ensure routes are generated") {
       val (
         _,

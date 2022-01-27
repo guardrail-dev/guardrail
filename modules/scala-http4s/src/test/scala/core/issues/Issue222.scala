@@ -80,7 +80,7 @@ class Issue222 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
        |      - "$$ref": "#/definitions/RequestFields2"
        |""".stripMargin
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Ensure case-to-case inheritance is not generated") {
       val (x @ ProtocolDefinitions(List(request: ClassDefinition[ScalaLanguage], requestFields: ClassDefinition[ScalaLanguage], _, _, _), _, _, _, _), _, _) =
         runSwaggerSpec(swagger)(Context.empty, new Http4s(version))

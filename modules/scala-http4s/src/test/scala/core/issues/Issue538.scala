@@ -16,7 +16,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   import scala.meta._
 
-  def testVersion(version: Http4sVersion) {
+  def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test double inheritance - both optional") {
       val swagger: String = """
                             |swagger: '2.0'
