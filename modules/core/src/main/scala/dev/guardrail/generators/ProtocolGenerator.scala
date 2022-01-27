@@ -83,9 +83,9 @@ object ProtocolGenerator {
     import Sc._
     import Sw._
 
-    def validProg(enum: HeldEnum, tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
+    def validProg(held: HeldEnum, tpe: L#Type, fullType: L#Type): F[EnumDefinition[L]] =
       for {
-        (pascalValues, wrappedValues) <- enum match {
+        (pascalValues, wrappedValues) <- held match {
           case StringHeldEnum(value) =>
             for {
               elems <- value.traverse { elem =>
