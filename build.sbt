@@ -63,6 +63,7 @@ addCommandAlias("javaTestSuite", "; guardrail/test ; runtimeJavaSuite")
 addCommandAlias("format", "; guardrail/scalafmt ; guardrail/test:scalafmt ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/scalafmt ; sample-${x.projectName}/test:scalafmt").mkString("; "))
 addCommandAlias("checkFormatting", "; guardrail/scalafmtCheck ; guardrail/Test/scalafmtCheck ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/scalafmtCheck ; sample-${x.projectName}/Test/scalafmtCheck").mkString("; "))
 addCommandAlias("testSuite", "; scalaTestSuite ; javaTestSuite; microsite/compile")
+addCommandAlias("compileSamples", (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/Test/compile").mkString("; "))
 
 addCommandAlias(
   "publishSonatype",
