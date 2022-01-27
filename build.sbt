@@ -44,15 +44,15 @@ runExample := Def.inputTaskDyn {
   )
 }.evaluated
 
+// Make "cli" not emit unhandled exceptions on exit
+Test / fork := true
+
 addCommandAlias("runtimeAkkaHttpSuite", "; resetSample ; runExample scala akka-http ; sample-akkaHttp / test")
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/clean").mkString(" ; "))
 
 // Deprecated command
 addCommandAlias("example", "runtimeSuite")
-
-// Make "cli" not emit unhandled exceptions on exit
-run / fork := true
 
 addCommandAlias("cli", "runMain dev.guardrail.cli.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))
