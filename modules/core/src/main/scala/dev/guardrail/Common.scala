@@ -4,18 +4,18 @@ import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.Id
-import dev.guardrail.core.Tracker
-import dev.guardrail.extract.SecurityOptional
-import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.protocol.{ ArrayProtocolTerms, EnumProtocolTerms, ModelProtocolTerms, PolyProtocolTerms, ProtocolSupportTerms }
-import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.protocol.terms.client.ClientTerms
-import dev.guardrail.protocol.terms.server.ServerTerms
-import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, SecurityRequirements, SwaggerTerms }
 import java.nio.file.Path
 import java.net.URI
 
-case class SupportDefinition[L <: LA](className: L#TermName, imports: List[L#Import], definition: List[L#Definition], insideDefinitions: Boolean = true)
+import dev.guardrail.core.{ SupportDefinition, Tracker }
+import dev.guardrail.core.extract.SecurityOptional
+import dev.guardrail.generators.{ ClientGenerator, Clients, ProtocolDefinitions, ProtocolGenerator, ServerGenerator, Servers }
+import dev.guardrail.languages.LA
+import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.RandomType
+import dev.guardrail.terms.server.ServerTerms
+import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, ProtocolTerms, SecurityRequirements, SwaggerTerms }
 
 object Common {
   val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))
@@ -30,12 +30,8 @@ object Common {
   )(
       implicit
       C: ClientTerms[L, F],
-      R: ArrayProtocolTerms[L, F],
-      E: EnumProtocolTerms[L, F],
       Fw: FrameworkTerms[L, F],
-      M: ModelProtocolTerms[L, F],
-      Pol: PolyProtocolTerms[L, F],
-      S: ProtocolSupportTerms[L, F],
+      P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Se: ServerTerms[L, F],
@@ -85,8 +81,7 @@ object Common {
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.unwrapTracker, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes).map(_ -> route))
       groupedRoutes = classNamedRoutes
-        .groupBy(_._1)
-        .mapValues(_.map(_._2))
+        .groupMap(_._1)(_._2)
         .toList
       frameworkImports <- getFrameworkImports(context.tracing)
 
@@ -118,7 +113,7 @@ object Common {
       dtoPackage: List[String],
       customImports: List[L#Import],
       protocolSupport: List[SupportDefinition[L]]
-  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F], Pt: ProtocolSupportTerms[L, F]): F[List[WriteTree]] = {
+  )(implicit Sc: LanguageTerms[L, F], Fw: FrameworkTerms[L, F], Pt: ProtocolTerms[L, F]): F[List[WriteTree]] = {
     import Fw._
     import Sc._
 

@@ -13,9 +13,10 @@ By generating minimal clients that only have enough business knowledge to map do
 The following is an example from the [http4s](https://github.com/http4s/http4s) client generator:
 
 ```scala mdoc:passthrough
-import dev.guardrail.generators.Scala.Http4s
+import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.docs._
-DocsHelpers.renderScalaSnippet(Http4s, GeneratingClients)(
+DocsHelpers.renderScalaSnippet(new Http4s(Http4sVersion.V0_23), GeneratingClients)(
   """|// Two constructors are provided, one accepting the `httpClient` and `Async`
      |// implicitly, the other accepting an explicit `httpClient`, but still
      |// accepting the `Async` implicitly
@@ -32,6 +33,6 @@ Separation of protocol-concerns from API-level concerns
 As guardrail clients are built on top of any Http4s client type, client configuration is done the same way as you are
 already familiar with when using Http4s.
 
-Check out the docs for [Http4s Clients](https://http4s.org/v0.20/client/).
+Check out the docs for [Http4s Clients](https://http4s.org/v0.23/client/).
 
 <span style="float: left">[Prev: Generating a Server](generating-a-server)</span>

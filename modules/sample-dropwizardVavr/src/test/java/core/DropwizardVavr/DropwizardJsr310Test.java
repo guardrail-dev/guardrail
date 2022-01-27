@@ -5,6 +5,7 @@ import dateTime.server.dropwizardVavr.dateTime.DateTimeResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import io.vavr.concurrent.Future;
 import io.vavr.control.Option;
+import org.glassfish.jersey.test.TestProperties;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -18,6 +19,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 public class DropwizardJsr310Test {
+    static {
+        System.setProperty(TestProperties.CONTAINER_PORT, "0");
+    }
+
     private static final DateTimeHandler handler = mock(DateTimeHandler.class);
 
     @ClassRule

@@ -80,7 +80,7 @@ object Target {
   }
 }
 
-sealed abstract class Target[A](val logEntries: StructuredLogger) {
+sealed abstract class Target[+A](val logEntries: StructuredLogger) {
   def valueOr[AA >: A](fallback: Error => AA): AA
   def recover[AA >: A](f: Error => AA): Target[AA]
   def fold[B](fail: Error => B, pass: A => B): B
@@ -90,7 +90,7 @@ sealed abstract class Target[A](val logEntries: StructuredLogger) {
   def map[B](f: A => B): Target[B]
 }
 object TargetValue {
-  def unapply[A](x: TargetValue[A]): Option[(A, StructuredLogger)] = Some((x.value, x.logEntries))
+  def unapply[A](x: TargetValue[A]): Some[(A, StructuredLogger)] = Some((x.value, x.logEntries))
 }
 class TargetValue[A](val value: A, logEntries: StructuredLogger) extends Target[A](logEntries) {
   def valueOr[AA >: A](fallback: Error => AA): AA              = value
@@ -102,7 +102,7 @@ class TargetValue[A](val value: A, logEntries: StructuredLogger) extends Target[
   def map[B](f: A => B): Target[B]                             = new TargetValue(f(value), logEntries)
 }
 object TargetError {
-  def unapply[A](x: TargetError[A]): Option[(Error, StructuredLogger)] = Some((x.error, x.logEntries))
+  def unapply[A](x: TargetError[A]): Some[(Error, StructuredLogger)] = Some((x.error, x.logEntries))
 }
 class TargetError[A](val error: Error, logEntries: StructuredLogger) extends Target[A](logEntries) {
   def valueOr[AA >: A](fallback: Error => AA): AA              = fallback(error)

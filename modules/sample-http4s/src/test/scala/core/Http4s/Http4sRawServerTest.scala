@@ -4,7 +4,8 @@ import org.http4s.dsl.io._
 import org.http4s.circe._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.funsuite.AnyFunSuite
-import _root_.raw.server.http4s.foo.{ DoFooResponse, FooHandler, FooResource }
+import _root_.raw.server.http4s.foo.{ FooHandler, FooResource }
+import _root_.raw.server.http4s.foo.FooResource.DoFooResponse
 import _root_.raw.server.http4s.{ definitions => sdefs }
 import cats.effect.IO
 import org.http4s.{ EntityEncoder, Response }

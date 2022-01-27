@@ -2,9 +2,9 @@ name-template: 'guardrail-v$RESOLVED_VERSION'
 tag-template: 'guardrail-v$RESOLVED_VERSION'
 tag-prefix: guardrail-v
 include-paths:
-  - "modules/codegen/"
-  - "build.sbt"
-  - "project/"
+  - "modules/codegen/src/main/"
+  - "project/src/main/scala/Build.scala"
+  - "project/src/main/scala/modules/guardrail.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'

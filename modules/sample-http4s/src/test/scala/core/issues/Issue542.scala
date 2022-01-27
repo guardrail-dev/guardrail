@@ -1,6 +1,7 @@
 package core.issues
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.data.Kleisli
 import org.http4s._
 import org.http4s.circe._
@@ -22,7 +23,8 @@ class Issue542Suite extends AnyFunSuite with Matchers with EitherValues with Sca
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("base64 bytes can be sent") {
-    import base64.server.http4s.{ FooResponse, Handler, Resource }
+    import base64.server.http4s.{ Handler, Resource }
+    import base64.server.http4s.Resource.FooResponse
     import base64.server.http4s.definitions.Foo
     import base64.server.http4s.Implicits.Base64String
 

@@ -1,6 +1,7 @@
 package core.issues
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.data.Kleisli
 import org.http4s._
 import org.http4s.client.{ Client => Http4sClient }
@@ -21,7 +22,8 @@ class Issue121Suite extends AnyFunSuite with Matchers with EitherValues with Sca
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("http4s server can respond with 204") {
-    import issues.issue121.server.http4s.{ DeleteFooResponse, Handler, Resource }
+    import issues.issue121.server.http4s.{ Handler, Resource }
+    import issues.issue121.server.http4s.Resource.DeleteFooResponse
 
     val route = new Resource[IO]().routes(new Handler[IO] {
       override def deleteFoo(respond: DeleteFooResponse.type)(id: Long): IO[DeleteFooResponse] =

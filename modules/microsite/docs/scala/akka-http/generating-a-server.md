@@ -11,7 +11,7 @@ guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The
 The following is an example from the [akka-http](https://github.com/akka/akka-http) server generator:
 
 ```scala mdoc:passthrough
-import dev.guardrail.generators.Scala.AkkaHttp
+import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.docs._
 DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingAServer)("""
     |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
@@ -102,7 +102,7 @@ val userRoutes: Route = UserResource.routes(new UserHandler {
     }
   }
 })
-val userHttpClient: HttpRequest => Future[HttpResponse] = Route.asyncHandler(userRoutes)
+val userHttpClient: HttpRequest => Future[HttpResponse] = Route.toFunction(userRoutes)
 val userClient: UserClient = UserClient.httpCLient(userHttpClient)
 val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], User] = userClient.getUserByName("foo").map(_.fold(user => user))
 val user: User = getUserResponse.value.futureValue.right.value // Unwraps `User(id=Some(1234L), username=Some("foo"))` using scalatest's `ScalaFutures` and `EitherValues` unwrappers.

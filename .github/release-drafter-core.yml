@@ -2,9 +2,9 @@ name-template: 'core-v$RESOLVED_VERSION'
 tag-template: 'core-v$RESOLVED_VERSION'
 tag-prefix: core-v
 include-paths:
-  - "modules/core/"
-  - "build.sbt"
-  - "project/"
+  - "modules/core/src/main/"
+  - "project/src/main/scala/Build.scala"
+  - "project/src/main/scala/modules/core.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
   - title: '🚀 Features'

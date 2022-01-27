@@ -12,17 +12,19 @@ import xerial.sbt.Sonatype.autoImport._
 import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 
 object Build {
+  val stableVersion: SettingKey[String] = SettingKey("stable-version")
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
     Project(s"sample-${name}", file(s"modules/sample-${name}"))
       .settings(commonSettings)
       .settings(codegenSettings)
+      .settings(libraryDependencies += "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0")
       .settings(
         libraryDependencies ++= extraLibraryDependencies,
         Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
         publish / skip := true,
       )
 
-  val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any)
+  val excludedWarts = Set(Wart.DefaultArguments, Wart.Product, Wart.Serializable, Wart.Any, Wart.StringPlusAny)
 
   val codegenSettings = Seq(
     ScoverageKeys.coverageExcludedPackages := "<empty>;dev.guardrail.terms.*;dev.guardrail.protocol.terms.*",
@@ -50,12 +52,13 @@ object Build {
     organization := "dev.guardrail",
     licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-    crossScalaVersions := Seq("2.12.15", "2.13.6"),
-    scalaVersion := "2.12.15",
+    crossScalaVersions := Seq("2.12.14", "2.13.8"),
+    scalaVersion := "2.12.14",
 
     versionScheme := Some("early-semver"), // This should help once the build plugins start depending directly on modules
 
     scalacOptions ++= Seq(
+      "-Xfatal-warnings",
       "-Ydelambdafy:method",
       "-Yrangepos",
       // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/guardrail-dev/guardrail/pull/282
@@ -65,6 +68,7 @@ object Build {
       "-encoding",
       "utf8"
     ),
+    Test / scalacOptions -= "-Xfatal-warnings",
     scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
     scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
     Test / parallelExecution := true,
@@ -105,6 +109,15 @@ object Build {
              describedVersion,
              commitVersion
           )) getOrElse datedVersion // For when git isn't there at all.
+        },
+        stableVersion := {
+          // Pull the tag(s) matching the tag scheme, defaulting to 0.0.0
+          // for newly created modules that have never been released before
+          // (depending on unreleased modules is an error, so this is fine)
+          gitReader
+            .value
+            .withGit(_.describedVersion(Seq(s"${moduleSegment}-v*")))
+            .fold("0.0.0")(v => customTagToVersionNumber(moduleSegment, true)(v).getOrElse(v))
         }
       )
       .settings(commonSettings)
@@ -140,4 +153,77 @@ object Build {
         scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification", "-Ywarn-unused-import")).value,
         scalacOptions ++= ifScalaVersion(_ >= 13)(List("-Ywarn-unused:imports")).value,
       )
+
+  implicit class ProjectSyntax(project: Project) {
+    // Adding these to I _think_ work around https://github.com/sbt/sbt/issues/3733 ?
+    // Seems like there's probably a better way to do this, but I don't know what it is
+    // The intent is we should be able to use `dependsOn(core % Provided)` to compile
+    // against the module's classes, but then emit <scope>provided</scope> in the published POM.
+    //
+    // Currently, it seems as though `dependsOn(core % Provided)` doesn't expose
+    // classes from `core` to the depending module, which means even though we get the desired
+    // scope in the pom, it's useless since we can't actually compile the project.
+    def accumulateClasspath(other: Project): Project =
+      project
+        .settings(Compile / unmanagedClasspath := {
+          val current = (Compile / unmanagedClasspath).value
+          val fromOther = (other / Compile / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+        .settings(Runtime / unmanagedClasspath := {
+          val current = (Runtime / unmanagedClasspath).value
+          val fromOther = (other / Runtime / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+        .settings(Test / unmanagedClasspath := {
+          val current = (Test / unmanagedClasspath).value
+          val fromOther = (other / Test / fullClasspathAsJars).value
+          (current ++ fromOther).distinct ++ (other / Test / exportedProductJars).value
+        })
+        .settings(Default / unmanagedClasspath := {
+          val current = (Compile / unmanagedClasspath).value
+          val fromOther = (other / Compile / fullClasspathAsJars).value
+          (current ++ fromOther).distinct
+        })
+
+    def customDependsOn(other: Project, useProvided: Boolean = false): Project = {
+      val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
+      val isCi = sys.env.contains("GUARDRAIL_CI")
+      val isBincompatCi = if (isCi) {
+        import scala.sys.process._
+        "support/current-pr-labels.sh"
+          .lineStream_!
+          .exists(Set("major", "minor").contains)
+      } else false
+      if (isRelease || isBincompatCi) {
+        project
+          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+          .settings(libraryDependencies += {
+            val base = "dev.guardrail" %% other.id % (other / stableVersion).value
+            if (useProvided) base % Provided else base
+          })
+          .settings(
+            // dependsOn(other % Test) adds the undesirable dependsOn(other % Compile) as a side-effect.
+            // Mirror libraryDependencies and source directory tracking to approximate test dependencies
+            Test / libraryDependencies ++= (other / Test / libraryDependencies).value,
+            // Add everything from `other`'s test scope to our classpath
+            Test / unmanagedJars ++= (other / Test / exportedProductJars).value,
+            // Carry along `other`'s exportedProductJars along in ours, so subsequent projects can depend on them
+            Test / exportedProductJars := (Test / exportedProductJars).value ++ (other / Test / exportedProductJars).value
+          )
+      } else {
+        project
+          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
+          .dependsOn(
+            if (useProvided) {
+              other % Provided
+            } else other
+          )
+          .accumulateClasspath(other)
+      }
+    }
+
+    def providedDependsOn(other: Project): Project =
+      customDependsOn(other, true)
+  }
 }

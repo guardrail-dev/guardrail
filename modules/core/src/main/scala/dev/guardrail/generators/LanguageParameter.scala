@@ -1,16 +1,18 @@
-package dev.guardrail
-package generators
+package dev.guardrail.generators
 
+import cats.syntax.all._
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
+
+import dev.guardrail._
+import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
 import dev.guardrail.core.{ ResolvedType, Tracker }
-import dev.guardrail.extract.{ Default, FileHashAlgorithm }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
-import cats.syntax.all._
+import dev.guardrail.terms.protocol._
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
 case class RawParameterName private[generators] (value: String)
 case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
@@ -43,7 +45,7 @@ class LanguageParameter[L <: LA] private[generators] (
     new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
 }
 object LanguageParameter {
-  def unapply[L <: LA](param: LanguageParameter[L]): Option[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
+  def unapply[L <: LA](param: LanguageParameter[L]): Some[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParameter[L <: LA, F[_]](
@@ -110,8 +112,8 @@ object LanguageParameter {
     }
 
     log.function(s"fromParameter")(for {
-      _                                                                        <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                                     <- paramMeta(parameter)
+      _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
+      meta                                                              <- paramMeta(parameter)
       core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
       required = parameter.downField("required", _.getRequired()).map(_.getOrElse(false)).unwrapTracker
@@ -175,7 +177,7 @@ object LanguageParameter {
     import Sc._
     for {
       parameters <- params.traverse(fromParameter(protocolElems))
-      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).mapValues(_.length))
+      counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).view.mapValues(_.length).toMap)
       result <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>
           if (counts.getOrElse(name, 0) > 1) {

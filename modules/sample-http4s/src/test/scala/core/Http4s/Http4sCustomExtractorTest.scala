@@ -1,8 +1,10 @@
 package core.Http4s
 
 import _root_.customExtraction.client.{ http4s => cdefs }
-import _root_.customExtraction.server.http4s.users.{ GetUserResponse, UsersHandler, UsersResource }
+import _root_.customExtraction.server.http4s.users.{ UsersHandler, UsersResource }
+import _root_.customExtraction.server.http4s.users.UsersResource.GetUserResponse
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import customExtraction.client.http4s.users.UsersClient
 import customExtraction.server.http4s.definitions.{ User, UserAddress }
 import org.http4s.{ HttpRoutes, Request }

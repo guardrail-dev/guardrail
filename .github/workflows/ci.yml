@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        java: [ '15' ]
+        java: [ '1.15' ]
         scala: [
             { version: '2.12.14', bincompat: '2.12' }
           ]
@@ -25,9 +25,9 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - uses: actions/setup-java@v1
+    - uses: olafurpg/setup-scala@v11
       with:
-        java-version: ${{ matrix.java }}
+        java-version: zulu@${{ matrix.java }}
     - name: print Java version
       run: java -version
     - uses: actions/cache@v1
@@ -36,12 +36,19 @@ jobs:
         key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
+    - name: Bump version
+      run: support/apply-pr-label-locally.sh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test coverageAggregate microsite/compile
-    - uses: codecov/codecov-action@v1
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test coverageAggregate versionPolicyCheck microsite/compile
+      env:
+        GUARDRAIL_CI: true
+    - uses: codecov/codecov-action@v2
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
+        verbose: true
     - name: Set scala version for matrix
       id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
       run: echo "::set-output name=scala_versions::$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)"
@@ -50,18 +57,22 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '8', '11', '13', '14', '15', '16' ]
+        java: [ '1.8', '1.15', '1.17' ]
         scala: [
             { version: '2.12.14', bincompat: '2.12' }
+          ]
+        framework: [
+            { framework: 'dropwizard',         project: 'sample-dropwizard'     },
+            { framework: 'dropwizard-vavr',    project: 'sample-dropwizardVavr' },
+            { framework: 'spring-mvc',         project: 'sample-springMvc'      }
           ]
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - name: Set up JDK
-      uses: actions/setup-java@v1
+    - uses: olafurpg/setup-scala@v11
       with:
-        java-version: ${{ matrix.java }}
+        java-version: zulu@${{ matrix.java }}
     - name: print Java version
       run: java -version
     - uses: actions/cache@v1
@@ -71,7 +82,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
-      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage runtimeJavaSuite coverageAggregate
+      run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean coverage "runExample java ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test coverageAggregate
     - uses: codecov/codecov-action@v1
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
@@ -81,28 +92,28 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '8', '15', '16' ]
+        java: [ '1.8', '1.15', '1.17' ]
         scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
             { framework: 'akka-http',         project: 'sample-akkaHttp'        },
             #{ framework: 'endpoints',         project: 'sample-endpoints'       },
             { framework: 'http4s',            project: 'sample-http4s'          },
+            { framework: 'http4s-v0.22',      project: 'sample-http4s-v0_22'     },
             { framework: 'akka-http-jackson', project: 'sample-akkaHttpJackson' },
             { framework: 'dropwizard',        project: 'sample-dropwizardScala' }
           ]
     steps:
     - run: echo 'combo_enabled=true' >> $GITHUB_ENV
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
-      if: ${{ matrix.java == '15' && matrix.scala.bincompat == '2.12' }}
+      if: ${{ matrix.java == '1.15' && matrix.scala.bincompat == '2.12' }}
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
       if: matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' )
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - name: Set up JDK
-      uses: actions/setup-java@v1
+    - uses: olafurpg/setup-scala@v11
       with:
-        java-version: ${{ matrix.java }}
+        java-version: zulu@${{ matrix.java }}
     - name: print Java version
       run: java -version
     - uses: actions/cache@v1

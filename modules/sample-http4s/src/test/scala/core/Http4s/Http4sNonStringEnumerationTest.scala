@@ -5,6 +5,7 @@ import java.util.Locale.US
 
 import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.unsafe.implicits.global
 import fs2.Stream
 import javax.xml.bind.DatatypeConverter.printHexBinary
 import io.circe.Json
@@ -21,6 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import _root_.enumerations.client.http4s.foo.{ DoFooResponse => ClientDoFooResponse, FooClient }
 import _root_.enumerations.client.http4s.{ definitions => cdefs }
 import _root_.enumerations.server.http4s.foo._
+import _root_.enumerations.server.http4s.foo.FooResource._
 import _root_.enumerations.server.http4s.{ definitions => sdefs }
 
 class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with EitherValues {
@@ -79,7 +81,7 @@ class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with Eith
 
     val client = Client.fromHttpApp(httpService.orNotFound)
 
-    val uri = Uri().withPath("/foo/1").withQueryParam("longEnum", "2").withQueryParam("stringEnum", "i like spaces")
+    val uri = Uri().withPath(Uri.Path.unsafeFromString("/foo/1")).withQueryParam("longEnum", "2").withQueryParam("stringEnum", "i like spaces")
     client.expect[Json](Request[IO](method = Method.POST, uri = uri).withEntity("3")).attempt.unsafeRunSync() should be(
       Right(Json.fromString(expectedResponse.value))
     )

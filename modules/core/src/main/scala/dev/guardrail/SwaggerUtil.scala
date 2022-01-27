@@ -9,11 +9,11 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.core.implicits._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SecurityScheme, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
-import dev.guardrail.extract.VendorExtension.VendorExtensible._
+import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
+import dev.guardrail.core.extract.VendorExtension.VendorExtensible._
 import dev.guardrail.languages.LA
-import dev.guardrail.protocol.terms.protocol.PropMeta
-import scala.collection.JavaConverters._
+import dev.guardrail.terms.protocol.PropMeta
+import scala.jdk.CollectionConverters._
 
 object SwaggerUtil {
   def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit Cl: CollectionsLibTerms[L, F]): F[Option[String]] = {
@@ -319,7 +319,7 @@ object SwaggerUtil {
                       core.Resolved[L](_, None, None, None, None)
                     )
                   })
-                mapType <- customArrayTypeName(m).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(m, x))))
+                mapType <- customMapTypeName(m).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(m, x))))
                 res <- rec match {
                   case core.Resolved(inner, dep, _, _, _) =>
                     liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, None, None))

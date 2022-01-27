@@ -2,9 +2,11 @@ package core.Http4s
 
 import _root_.debugBody.client.{ http4s => generatedClient }
 import _root_.debugBody.server.http4s._
+import _root_.debugBody.server.http4s.Resource._
 import _root_.debugBody.server.http4s.definitions._
 import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.unsafe.implicits.global
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.EitherValues

@@ -1,11 +1,14 @@
 package core.issues
 
 import _root_.department.client.http4s.department.{ DepartmentClient, GetDepartmentResponse => ClientGDR, SearchDepartmentsResponse => ClientSDR }
+import _root_.department.client.http4s.department.{ DepartmentClient, GetDepartmentResponse => ClientGDR, SearchDepartmentsResponse => ClientSDR }
 import _root_.department.client.http4s.{ definitions => cdefs }
 import _root_.department.server.http4s.department._
+import _root_.department.server.http4s.department.DepartmentResource._
 import _root_.department.server.http4s.{ definitions => sdefs }
 import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.unsafe.implicits.global
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.funsuite.AnyFunSuite
