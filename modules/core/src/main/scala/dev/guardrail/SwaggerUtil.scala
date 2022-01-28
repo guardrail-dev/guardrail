@@ -46,20 +46,15 @@ object SwaggerUtil {
         import Cl._
         import Sw._
         import Fw._
-        log.debug(s"model:\n${log.schemaToString(model.unwrapTracker)}") >> (model
-          .refine[F[core.ResolvedType[L]]]({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(
-            ref =>
-              for {
-                ref <- getSimpleRef(ref.map(Option(_)))
-              } yield core.Deferred[L](ref)
-          )
+
+        def strategy(property: Tracker[T]): Either[Tracker[T], F[core.ResolvedType[L]]] = Left(property)
+
+        log.debug(s"model:\n${log.schemaToString(model.unwrapTracker)}") >> (strategy(model)
           .orRefine({ case arr: ArraySchema => arr })(
             arr =>
               for {
                 items <- getItems(arr)
-                _     <- log.debug(s"items:\n${log.schemaToString(items.unwrapTracker)}")
                 meta  <- propMeta[L, F](items)
-                _     <- log.debug(s"meta: ${meta}")
                 rawType   = arr.downField("type", _.getType())
                 rawFormat = arr.downField("format", _.getFormat())
                 arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
@@ -97,6 +92,7 @@ object SwaggerUtil {
               }
             } yield res
           })
+          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
           .orRefineFallback(
             impl =>
               for {
@@ -262,6 +258,7 @@ object SwaggerUtil {
           tpe           <- typeName[L, F](rawType, rawFormat, Tracker.cloneHistory(a, customTpeName))
         } yield core.Resolved[L](tpe, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker)
       }
+
       def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[core.ResolvedType[L]] = { a =>
         val rawType   = a.downField("type", _.getType())
         val rawFormat = a.downField("format", _.getFormat())
