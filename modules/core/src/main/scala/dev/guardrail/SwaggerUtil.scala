@@ -285,11 +285,11 @@ object SwaggerUtil {
               } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
           )
           .orRefine({ case a: ArraySchema => a })(
-            p =>
+            arr =>
               for {
-                items     <- getItems(p)
+                items     <- getItems(arr)
                 rec       <- propMetaImpl[L, F](items)(strategy)
-                arrayType <- customArrayTypeName(p).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(p, x))))
+                arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
                 res <- rec match {
                   case core.Resolved(inner, dep, default, _, _) =>
                     (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
