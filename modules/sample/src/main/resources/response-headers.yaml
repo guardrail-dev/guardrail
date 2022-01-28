@@ -17,17 +17,21 @@ paths:
           description: OK
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string
           schema:
             $ref: '#/definitions/Foo'
         '204':
           description: "No Content"
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string

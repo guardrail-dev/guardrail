@@ -13,10 +13,12 @@ paths:
           description: OK
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -29,10 +31,12 @@ paths:
           description: "No Content"
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string
 components:
   schemas:
     Foo:
