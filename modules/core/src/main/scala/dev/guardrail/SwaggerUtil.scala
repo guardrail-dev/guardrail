@@ -218,19 +218,7 @@ object SwaggerUtil {
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = {
-    import Fw._
-    propMetaImpl(property)(
-      _.refine({ case o: ObjectSchema => o })(
-        o =>
-          for {
-            customTpeName <- customTypeName(o)
-            customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
-            fallback      <- objectType(None)
-          } yield (core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None): core.ResolvedType[L])
-      )
-    )
-  }
+  ): F[core.ResolvedType[L]] = propMetaImpl(property)(Left(_))
 
   private[this] def liftCustomType[L <: LA, F[_]](s: Tracker[String])(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
@@ -245,25 +233,16 @@ object SwaggerUtil {
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = {
-    import Fw._
+  ): F[core.ResolvedType[L]] =
     propMetaImpl(property)(
-      _.refine({ case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema })(
-        _ => (core.Resolved[L](tpe, None, None, None, None): core.ResolvedType[L]).pure[F]
-      ).orRefine({ case o: ObjectSchema => o })(
-          o =>
-            for {
-              customTpeName <- customTypeName(o)
-              customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
-              fallback      <- objectType(None)
-            } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
-        )
-        .orRefine({ case c: ComposedSchema => c })(_ => (core.Resolved[L](tpe, None, None, None, None): core.ResolvedType[L]).pure[F])
+      _.refine[core.ResolvedType[L]]({ case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema })(
+        _ => core.Resolved[L](tpe, None, None, None, None)
+      ).orRefine({ case c: ComposedSchema => c })(_ => core.Resolved[L](tpe, None, None, None, None))
         .orRefine({ case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) => schema })(
-          _ => (core.Resolved[L](tpe, None, None, None, None): core.ResolvedType[L]).pure[F]
+          _ => core.Resolved[L](tpe, None, None, None, None)
         )
+        .map(_.pure[F])
     )
-  }
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
@@ -297,6 +276,14 @@ object SwaggerUtil {
 
       log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})").flatMap { _ =>
         strategy(property)
+          .orRefine({ case o: ObjectSchema => o })(
+            o =>
+              for {
+                customTpeName <- customTypeName(o)
+                customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
+                fallback      <- objectType(None)
+              } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
+          )
           .orRefine({ case a: ArraySchema => a })(
             p =>
               for {
