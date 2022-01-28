@@ -274,7 +274,7 @@ object SwaggerUtil {
         } yield res
       }
 
-      log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})").flatMap { _ =>
+      log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})") >> (
         strategy(property)
           .orRefine({ case o: ObjectSchema => o })(
             o =>
@@ -336,7 +336,7 @@ object SwaggerUtil {
           .orRefine({ case b: BinarySchema => b })(buildResolveNoDefault)
           .orRefine({ case u: UUIDSchema => u })(buildResolveNoDefault)
           .orRefineFallback(x => fallbackPropertyTypeHandler(x).map(core.Resolved[L](_, None, None, None, None))) // This may need to be rawType=string?
-      }
+        )
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](
