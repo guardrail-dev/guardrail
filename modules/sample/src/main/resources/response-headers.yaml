@@ -8,6 +8,10 @@ components:
   schemas:
     Foo:
       type: object
+      properties:
+        name:
+          type: string
+          required: true
 paths:
   /foo:
     get:
@@ -23,8 +27,10 @@ paths:
             X-Optional-Header:
               schema:
                 type: string
-          schema:
-            $ref: '#/definitions/Foo'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foo'
         '204':
           description: "No Content"
           headers:
