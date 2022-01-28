@@ -3,10 +3,6 @@ info:
   title: Poly
   version: 1.0.0
 paths: {}
-produces:
-  - application/json
-consumes:
-  - application/json
 components:
   schemas:
     Data:
