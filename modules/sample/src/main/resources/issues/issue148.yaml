@@ -22,7 +22,6 @@ paths:
         - in: body
           name: body
           required: true
-          type: object
           schema:
             $ref: '#/definitions/Foo'
       responses:
