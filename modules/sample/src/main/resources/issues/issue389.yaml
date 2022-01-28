@@ -1,6 +1,8 @@
 openapi: 3.0.1
 info:
+  title: "Custom types don't work for array items"
   version: 1.0.0
+paths: {}
 components:
   schemas:
     Foo:

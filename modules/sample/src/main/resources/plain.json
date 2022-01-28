@@ -5,6 +5,7 @@ info:
 host: localhost:1234
 schemes:
   - http
+paths: {}
 definitions:
   Something:
     type: object

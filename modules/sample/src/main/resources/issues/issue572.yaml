@@ -2,21 +2,23 @@ openapi: 3.0.1
 info:
   title: Whatever
   version: 1.0.0
-host: localhost:1234
-schemes:
-  - http
+servers:
+  - url: 'http://localhost:1234'
 paths:
   /foo:
     get:
       operationId: getFoo
       responses:
         '200':
+          description: OK
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -26,12 +28,15 @@ paths:
       operationId: getBar
       responses:
         '204':
+          description: "No Content"
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string
 components:
   schemas:
     Foo:

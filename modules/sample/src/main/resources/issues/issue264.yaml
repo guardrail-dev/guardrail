@@ -1,5 +1,6 @@
 openapi: 3.0.1
 info:
+  title: "Dashed-case enum names with numeric components don't get converted properly"
   version: 1.0.0
 paths:
   /foo:

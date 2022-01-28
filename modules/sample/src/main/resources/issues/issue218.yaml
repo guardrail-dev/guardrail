@@ -1,5 +1,6 @@
 swagger: "2.0"
 info:
+  title: "may the host and schemes be optional?"
   version: "1.0.1"
 basePath: "/v1"
 paths:
@@ -8,4 +9,4 @@ paths:
       operationId: "getFoo"
       responses:
         200:
-          description: "successful operation"
+          description: OK

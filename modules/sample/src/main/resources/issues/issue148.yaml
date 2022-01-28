@@ -22,11 +22,11 @@ paths:
         - in: body
           name: body
           required: true
-          type: object
           schema:
             $ref: '#/definitions/Foo'
       responses:
         200:
+          description: OK
           schema:
             $ref: '#/definitions/Foo'
     put:
@@ -45,6 +45,7 @@ paths:
           type: boolean
       responses:
         202:
+          description: "Accepted"
           schema:
             $ref: '#/definitions/Foo'
     get:
@@ -53,6 +54,7 @@ paths:
         - application/json
       responses:
         200:
+          description: OK
           schema:
             $ref: '#/definitions/Foo'
 definitions:

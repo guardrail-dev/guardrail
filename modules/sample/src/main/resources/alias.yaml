@@ -23,7 +23,7 @@ paths:
           $ref: '#/definitions/defLong'
       responses:
         '201':
-          description: "woop"
+          description: "Created"
           schema:
             $ref: '#/definitions/defLong'
 definitions:

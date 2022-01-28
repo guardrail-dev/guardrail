@@ -1,4 +1,7 @@
 swagger: '2.0'
+info:
+  title: "File uploads that exceed akka-http's limit are terminated without cleanup"
+  version: 0.1.0
 host: localhost:1234
 schemes:
 - http

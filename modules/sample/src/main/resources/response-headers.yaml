@@ -2,30 +2,42 @@ openapi: 3.0.1
 info:
   title: Whatever
   version: 1.0.0
-host: localhost:1234
-schemes:
-  - http
-definitions:
-  Foo:
-    type: object
+servers:
+  - url: 'http://localhost:1234'
+components:
+  schemas:
+    Foo:
+      type: object
+      properties:
+        name:
+          type: string
+          required: true
 paths:
   /foo:
     get:
       operationId: getFoo
       responses:
         '200':
+          description: OK
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
-          schema:
-            $ref: '#/definitions/Foo'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foo'
         '204':
+          description: "No Content"
           headers:
             X-Required-Header:
-              type: string
               required: true
+              schema:
+                type: string
             X-Optional-Header:
-              type: string
+              schema:
+                type: string

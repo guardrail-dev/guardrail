@@ -16,6 +16,7 @@ paths:
               format: binary
       responses:
         200:
+          description: OK
           content:
             application/x-pem-file:
               schema:
@@ -32,6 +33,7 @@ paths:
               type: string
       responses:
         200:
+          description: OK
           content:
             image/jpeg:
               schema:

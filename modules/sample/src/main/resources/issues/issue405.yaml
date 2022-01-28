@@ -3,7 +3,7 @@ info:
   title: Test Server
   version: "1.0"
 servers:
-  - url: http://localhost:8000
+  - url: 'http://localhost:8000'
 paths:
   /v1/Foo:
     post:

@@ -93,7 +93,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
               case Lit.Double(d)     => Some(Lit.String(d))
               case _                 => None
             }
-            defaultStr.map(s => Mod.Annot(Init(Type.Name("Default"), Name.Anonymous(), List(List(s)))))
+            defaultStr.map(s => Mod.Annot(Init(Type.Name("DefaultValue"), Name.Anonymous(), List(List(s)))))
           })
           .toList ++ param.mods,
       default = None
@@ -165,7 +165,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
         q"import javax.ws.rs.container.{AsyncResponse, Suspended}",
         q"import javax.ws.rs.core.Response.Status",
         q"import javax.ws.rs.core.{MediaType, Response}",
-        q"import javax.ws.rs.{Consumes, DELETE, FormParam, GET, HEAD, HeaderParam, OPTIONS, POST, PUT, Path, PathParam, Produces, QueryParam}",
+        q"import javax.ws.rs.{Consumes, DefaultValue, DELETE, FormParam, GET, HEAD, HeaderParam, OPTIONS, POST, PUT, Path, PathParam, Produces, QueryParam}",
         q"import org.glassfish.jersey.media.multipart.FormDataParam",
         q"import org.hibernate.validator.valuehandling.UnwrapValidatedValue",
         q"import org.slf4j.LoggerFactory",

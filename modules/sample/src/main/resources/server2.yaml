@@ -24,9 +24,11 @@ paths:
         - application/json
       responses:
         '200':
-          type: array
-          items:
-            $ref: '#/definitions/Address'
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Address'
         '404':
           description: Not found
   /address/{id}:
@@ -42,6 +44,7 @@ paths:
         type: string
       responses:
         '200':
+          description: OK
           schema:
             $ref: '#/definitions/Address'
         '404':

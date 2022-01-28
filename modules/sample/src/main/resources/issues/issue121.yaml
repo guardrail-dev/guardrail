@@ -1,4 +1,7 @@
 swagger: '2.0'
+info:
+  title: 'No Content (204) Responses are non functional'
+  version: 0.1.0
 host: localhost:1234
 schemes:
 - http

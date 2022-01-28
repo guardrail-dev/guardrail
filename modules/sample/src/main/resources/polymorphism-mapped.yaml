@@ -1,11 +1,8 @@
 openapi: 3.0.1
 info:
+  title: "Polymorphism Mapped"
   version: 1.0.0
 paths: {}
-produces:
-  - application/json
-consumes:
-  - application/json
 components:
   schemas:
     Base:

@@ -1,4 +1,7 @@
 swagger: "2.0"
+info:
+  title: 'in:query and type:array results in "missing parameter type"'
+  version: 0.1.0
 host: localhost:1234
 schemes:
   - http
