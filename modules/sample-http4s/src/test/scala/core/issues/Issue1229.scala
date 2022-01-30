@@ -20,12 +20,13 @@ import org.scalatest.matchers.should.Matchers
 class Issue1229Suite extends AnyFunSuite with Matchers {
 
   type AuthContext = Unit
-  val dummyAuth = (_: Request[IO], handle: (AuthContext => IO[Response[IO]])) => handle(())
+  val dummyAuth = (_: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
 
   test("round-trip: definition query, unit response") {
     val httpService = new DepartmentResource(dummyAuth).routes(new DepartmentHandler[IO, AuthContext] {
-      val fooDept                                                                                                               = sdefs.Department("123", "foo", "bar")
-      def getDepartment(respond: GetDepartmentResponse.type)(a: AuthContext, id: String): cats.effect.IO[GetDepartmentResponse] = IO.pure(respond.Ok(fooDept))
+      val fooDept = sdefs.Department("123", "foo", "bar")
+      def getDepartment(respond: GetDepartmentResponse.type)(a: Option[AuthContext], id: String): cats.effect.IO[GetDepartmentResponse] =
+        IO.pure(respond.Ok(fooDept))
       def searchDepartments(
           respond: SearchDepartmentsResponse.type
       )(query: Option[String], page: Int, pageSize: Int, sort: Option[Iterable[String]]): cats.effect.IO[SearchDepartmentsResponse] =

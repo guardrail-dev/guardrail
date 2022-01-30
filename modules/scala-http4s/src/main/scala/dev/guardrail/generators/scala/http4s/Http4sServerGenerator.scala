@@ -184,7 +184,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
       authentication_ = if (authentication) {
-        Option(param"""authenticationMiddleware: (Request[F], ($authContextTypeName) => F[Response[F]]) => F[Response[F]]""")
+        Option(param"""authenticationMiddleware: Request[F] => F[Option[$authContextTypeName]]""")
       } else Option.empty
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
@@ -618,7 +618,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val responseType = ServerRawResponse(operation)
         .filter(_ == true)
         .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
-      val authContextArg = Option(LanguageParameter.fromParam(param"authContext: $authContextTypeName")).filter(_ => securityRequirements.nonEmpty)
+      val authContextArg = Option(LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]")).filter(_ => securityRequirements.nonEmpty)
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
           (authContextArg.toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
         ) ++
@@ -723,9 +723,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           case Some(arg) =>
             val authContextParam = param"${arg.paramName}"
             p"""case req @ $fullRouteWithTracingAndExtraction =>
-            authenticationMiddleware(req, { $authContextParam =>
+            authenticationMiddleware(req).flatMap { $authContextParam =>
               mapRoute($methodName, req, { $routeBody })
-            })
+            }
           """
           case None =>
             p"""case req @ $fullRouteWithTracingAndExtraction =>

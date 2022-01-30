@@ -26,16 +26,15 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
-
   test("provide context to handler") {
     type AuthContext = Int
 
-    val authMiddleware = (req: Request[IO], handle: (AuthContext => IO[Response[IO]])) => handle(42)
+    val authMiddleware = (_: Request[IO]) => IO.pure(Some(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        IO(DoFooResponse.Ok(authContext.toString() + body))
+      override def doFoo(respond: DoFooResponse.type)(authContext: Option[AuthContext], body: String): IO[DoFooResponse] =
+        authContext.fold(IO(DoFooResponse.Ok("authentication failed")))(ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -58,26 +57,28 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
   test("return response directly from authentication") {
     type AuthContext = Int
 
-    val authMiddleware = (req: Request[IO], handle: (AuthContext => IO[Response[IO]])) => IO(Response[IO](Status.Forbidden))
+    val authMiddleware = (_: Request[IO]) => IO.pure(None)
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
-      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse]                           = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] = ???
+      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+      override def doFoo(respond: DoFooResponse.type)(authContext: Option[AuthContext], body: String): IO[DoFooResponse] =
+        authContext.fold(IO(DoFooResponse.Ok("authentication failed")))(ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
 
     val retrieved =
       client
-        .status(
+        .run(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
-            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"-97-\"".getBytes(): _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
+        .use(_.bodyText.compile.string)
         .attempt
         .unsafeRunSync()
         .value
 
-    retrieved shouldEqual Status.Forbidden
+    retrieved shouldEqual "\"authentication failed\""
   }
 }
