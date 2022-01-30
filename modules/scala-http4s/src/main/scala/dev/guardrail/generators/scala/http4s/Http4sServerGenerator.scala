@@ -57,6 +57,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
   val customExtractionTypeName: Type.Name = Type.Name("E")
   val authContextTypeName: Type.Name      = Type.Name("AuthContext")
+  val authSchemesTypeName: Type.Name      = Type.Name("AuthSchemes")
 
   private val bodyUtf8Decode = version match {
     case Http4sVersion.V0_22 => q"utf8Decode"
@@ -120,7 +121,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
-  ) =
+  ): Target[RenderedRoutes[ScalaLanguage]] =
     for {
       renderedRoutes <- routes
         .traverse {
@@ -140,6 +141,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       routeTerms = renderedRoutes.map(_.route)
       combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
+      securitySchemesDefinitions <- generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten)
     } yield {
       RenderedRoutes[ScalaLanguage](
         List(combinedRouteTerms),
@@ -151,9 +153,48 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           .flatMap(_._2.headOption)
           .toList
           .sortBy(_.toString()), // Only unique supportDefinitions by structure
-        renderedRoutes.flatMap(_.handlerDefinitions)
+        renderedRoutes.flatMap(_.handlerDefinitions),
+        securitySchemesDefinitions
       )
     }
+
+  private def generateSecuritySchemes(
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      securityRequirements: List[SecurityRequirements]
+  ): Target[List[scala.meta.Defn]] = {
+    val schemesNames                    = securitySchemes.keySet
+    val uniqueRequiremens: List[String] = securityRequirements.flatMap(_.requirements.flatMap(_.keys.toNonEmptyList).toList).distinct
+
+    uniqueRequiremens
+      .traverse { reqName =>
+        val existanceCheck =
+          if (schemesNames.contains(reqName)) Target.pure(()) else Target.log.warning(s"Security requirement '$reqName' is missing in security schemes")
+
+        existanceCheck *> Target.pure(q"""
+          case object ${securitySchemeNameToClassName(reqName)} extends ${Init(authSchemesTypeName, Name(""), List.empty)} {
+            override val name: String = $reqName
+          }
+        """)
+      }
+      .map {
+        case list if list.nonEmpty =>
+          List(
+            q"""sealed trait $authSchemesTypeName {
+              def name: String
+            }""",
+            q"""object ${Term.Name(authSchemesTypeName.value)} {
+              implicit val order: Order[$authSchemesTypeName] = Order.by(_.name)
+              
+              ..$list
+            }
+            """
+          )
+        case list => list
+      }
+  }
+
+  private def securitySchemeNameToClassName(name: String): Term.Name =
+    Term.Name(name.toCamelCase.capitalize)
 
   def renderHandler(
       handlerName: String,
@@ -174,7 +215,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
     }
   """)
 
-  def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
+  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
     Target.log.function("getExtraRouteParams")(for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authentication})")
       mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
@@ -185,7 +226,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
       authentication_ = if (authentication) {
-        Option(param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[String, List[String]]], Request[F]) => F[Option[$authContextTypeName]]""")
+        Option(
+          param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
+            .Name(resourceName)}.$authSchemesTypeName, List[String]]], Request[F]) => F[Option[$authContextTypeName]]"""
+        )
       } else Option.empty
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
@@ -203,18 +247,18 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       extraRouteParams: List[scala.meta.Term.Param],
       responseDefinitions: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
-      customExtraction: Boolean,
-      authentication: Boolean
+      securitySchemesDefinitions: List[scala.meta.Defn],
+      customExtraction: Boolean
   ): Target[List[Defn]] =
     Target.log.function("renderClass")(
       for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
-        authType        = List(tparam"$authContextTypeName").filter(_ => authentication)
+        authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty)
         resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
         handlerTParams = List(Type.Name("F")) ++
             List(customExtractionTypeName).filter(_ => customExtraction) ++
-            List(authContextTypeName).filter(_ => authentication)
+            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty)
         routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield List(
         q"""
@@ -228,6 +272,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           }
         """,
         q"""object ${Term.Name(resourceName)} {
+            ..${securitySchemesDefinitions}
+
             ..${responseDefinitions}
         }"""
       )
@@ -243,6 +289,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         q"import fs2.text._",
         q"import cats.data.NonEmptyList",
         q"import cats.data.NonEmptyMap",
+        q"import cats.kernel.Order",
         q"import scala.collection.immutable.SortedMap"
       )
     )
@@ -786,7 +833,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val andElements = r.toSortedMap.toList.map {
         case (key, scopes) =>
           val renderedScopes = scopes.map(Lit.String(_))
-          q"""($key -> List(..$renderedScopes))"""
+          q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> List(..$renderedScopes))"""
       }
       q"""NonEmptyMap.fromMapUnsafe(SortedMap(..$andElements))"""
     }

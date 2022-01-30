@@ -30,7 +30,7 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
   test("provide context to handler") {
     type AuthContext = Int
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure(Some(42))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, List[String]]], _: Request[IO]) => IO.pure(Some(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
@@ -58,7 +58,7 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
   test("return response directly from authentication") {
     type AuthContext = Int
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure(None)
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, List[String]]], _: Request[IO]) => IO.pure(None)
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
@@ -84,12 +84,13 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
   }
   test("provide security requirements to authentication") {
     type AuthContext = Int
+    import AuthResource.AuthSchemes
 
-    val authMiddleware = (config: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) =>
+    val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, List[String]]], _: Request[IO]) =>
       IO.pure {
         val c = config.toList.map(_.toSortedMap.toMap)
 
-        if (c == List(Map("jwt" -> List("foo:read", "bar:write")), Map("OAuth2" -> List("oauth:scope"))))
+        if (c == List(Map(AuthSchemes.Jwt -> List("foo:read", "bar:write")), Map(AuthSchemes.OAuth2 -> List("oauth:scope"))))
           Some(1)
         else
           None

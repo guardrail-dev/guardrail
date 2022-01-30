@@ -250,7 +250,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         List.empty,
         methodSigs,
         renderedRoutes.flatMap(_.supportDefinitions),
-        renderedRoutes.flatMap(_.handlerDefinitions)
+        renderedRoutes.flatMap(_.handlerDefinitions),
+        List.empty
       )
     }
   def renderHandler(
@@ -271,7 +272,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       """
     }
-  def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
+  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
     for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
       extractParam <- if (customExtraction) {
@@ -289,8 +290,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       extraRouteParams: List[scala.meta.Term.Param],
       responseDefinitions: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
-      customExtraction: Boolean,
-      authentication: Boolean
+      securitySchemesDefinitions: List[scala.meta.Defn],
+      customExtraction: Boolean
   ): Target[List[Defn]] =
     for {
       _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")

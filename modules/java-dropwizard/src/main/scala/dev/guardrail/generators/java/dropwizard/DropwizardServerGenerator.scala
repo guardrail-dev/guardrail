@@ -635,10 +635,10 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
         resourceConstructor
       )
 
-      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
+      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Parameter]] =
+  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Parameter]] =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -710,8 +710,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean,
-      authentication: Boolean
+      securitySchemesDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      customExtraction: Boolean
   ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
     safeParseSimpleName(className) >>
         safeParseSimpleName(handlerName) >>

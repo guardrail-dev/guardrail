@@ -35,7 +35,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]]
   ): F[RenderedRoutes[L]]
-  def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean): F[List[L#MethodParameter]]
+  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean): F[List[L#MethodParameter]]
   def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]]
   def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]]
   def renderClass(
@@ -46,8 +46,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       extraRouteParams: List[L#MethodParameter],
       responseDefinitions: List[L#Definition],
       supportDefinitions: List[L#Definition],
-      customExtraction: Boolean,
-      authentication: Boolean
+      securitySchemesDefinitions: List[L#Definition],
+      customExtraction: Boolean
   ): F[List[L#Definition]]
   def renderHandler(
       handlerName: String,
@@ -72,7 +72,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           List[StrictProtocolElems[L]],
           Map[String, SecurityScheme[L]]
       ) => F[RenderedRoutes[L]] = self.generateRoutes _,
-      getExtraRouteParams: (Boolean, Boolean, Boolean) => F[List[L#MethodParameter]] = self.getExtraRouteParams _,
+      getExtraRouteParams: (String, Boolean, Boolean, Boolean) => F[List[L#MethodParameter]] = self.getExtraRouteParams _,
       generateResponseDefinitions: (String, Responses[L], List[StrictProtocolElems[L]]) => F[List[L#Definition]] = self.generateResponseDefinitions _,
       generateSupportDefinitions: (Boolean, Map[String, SecurityScheme[L]]) => F[List[SupportDefinition[L]]] = self.generateSupportDefinitions _,
       renderClass: (
@@ -83,7 +83,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           List[L#MethodParameter],
           List[L#Definition],
           List[L#Definition],
-          Boolean,
+          List[L#Definition],
           Boolean
       ) => F[List[L#Definition]] = self.renderClass _,
       renderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition], Boolean, Boolean) => F[L#Definition] = self.renderHandler _,
@@ -115,8 +115,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           protocolElems: List[StrictProtocolElems[L]],
           securitySchemes: Map[String, SecurityScheme[L]]
       ) = newGenerateRoutes(tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes)
-      def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
-        newGetExtraRouteParams(customExtraction, tracing, authentication)
+      def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
+        newGetExtraRouteParams(resourceName, customExtraction, tracing, authentication)
       def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]) =
         newGenerateResponseDefinitions(responseClsName, responses, protocolElems)
       def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]) =
@@ -129,8 +129,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           extraRouteParams: List[L#MethodParameter],
           responseDefinitions: List[L#Definition],
           supportDefinitions: List[L#Definition],
-          customExtraction: Boolean,
-          authentication: Boolean
+          securitySchemesDefinitions: List[L#Definition],
+          customExtraction: Boolean
       ): F[List[L#Definition]] =
         newRenderClass(
           resourceName,
@@ -140,8 +140,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           extraRouteParams,
           responseDefinitions,
           supportDefinitions,
-          customExtraction,
-          authentication
+          securitySchemesDefinitions,
+          customExtraction
         )
       def renderHandler(
           handlerName: String,

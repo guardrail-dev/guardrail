@@ -21,7 +21,8 @@ case class RenderedRoutes[L <: LA](
     classAnnotations: List[L#Annotation],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],
-    handlerDefinitions: List[L#Statement]
+    handlerDefinitions: List[L#Statement],
+    securitySchemesDefinitions: List[L#Definition]
 )
 
 object ServerGenerator {
@@ -50,9 +51,6 @@ object ServerGenerator {
           for {
             resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
             handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
-            authenticationEnabled = securitySchemes.nonEmpty && routes.exists {
-                case route @ RouteMeta(_, _, _, securityRequirements) => securityRequirements.nonEmpty
-              }
 
             responseServerPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
@@ -78,9 +76,14 @@ object ServerGenerator {
               renderedRoutes.handlerDefinitions,
               responseDefinitions.flatten,
               context.customExtraction,
-              authentication = authenticationEnabled
+              authentication = renderedRoutes.securitySchemesDefinitions.nonEmpty
             )
-            extraRouteParams <- getExtraRouteParams(context.customExtraction, context.tracing, authentication = authenticationEnabled)
+            extraRouteParams <- getExtraRouteParams(
+              resourceName,
+              context.customExtraction,
+              context.tracing,
+              authentication = renderedRoutes.securitySchemesDefinitions.nonEmpty
+            )
             classSrc <- renderClass(
               resourceName,
               handlerName,
@@ -89,8 +92,8 @@ object ServerGenerator {
               extraRouteParams,
               responseDefinitions.flatten,
               renderedRoutes.supportDefinitions,
-              context.customExtraction,
-              authentication = authenticationEnabled
+              renderedRoutes.securitySchemesDefinitions,
+              context.customExtraction
             )
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)

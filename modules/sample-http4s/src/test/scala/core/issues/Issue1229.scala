@@ -21,7 +21,7 @@ import org.scalatest.matchers.should.Matchers
 class Issue1229Suite extends AnyFunSuite with Matchers {
 
   type AuthContext = Unit
-  val dummyAuth = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
+  val dummyAuth = (_: NonEmptyList[NonEmptyMap[DepartmentResource.AuthSchemes, List[String]]], _: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
 
   test("round-trip: definition query, unit response") {
     val httpService = new DepartmentResource(dummyAuth).routes(new DepartmentHandler[IO, AuthContext] {

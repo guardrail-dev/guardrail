@@ -428,12 +428,13 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
         List(classPathAnnotation),
         handlerMethodSigs,
         supportDefinitions,
+        List.empty,
         List.empty
       )
     )
   }
 
-  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Term.Param]] =
+  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Term.Param]] =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -452,8 +453,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       extraRouteParams: List[Term.Param],
       responseDefinitions: List[Defn],
       supportDefinitions: List[Defn],
-      customExtraction: Boolean,
-      authentication: Boolean
+      securitySchemesDefinitions: List[Defn],
+      customExtraction: Boolean
   ): Target[List[Defn]] = {
     val routeParams = param"handler: ${Type.Name(handlerName)}" +: extraRouteParams
     Target.pure(
