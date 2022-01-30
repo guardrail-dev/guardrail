@@ -55,7 +55,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   private def this(Cl: CollectionsLibTerms[ScalaLanguage, Target]) = this(Http4sVersion.V0_23)(Cl)
 
   val customExtractionTypeName: Type.Name = Type.Name("E")
-  val authContextTypeName: Type.Name      = Type.Name("AuthContextT")
+  val authContextTypeName: Type.Name      = Type.Name("AuthContext")
 
   private val bodyUtf8Decode = version match {
     case Http4sVersion.V0_22 => q"utf8Decode"
