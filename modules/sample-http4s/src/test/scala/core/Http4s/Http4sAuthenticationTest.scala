@@ -3,9 +3,9 @@ package core.Http4s
 import _root_.authentication.client.{ http4s => cdefs }
 import _root_.authentication.server.http4s.auth.AuthHandler
 import _root_.authentication.server.http4s.auth.AuthResource
-import _root_.authentication.server.http4s.auth.AuthResource.DoBarResponse
-import _root_.authentication.server.http4s.auth.AuthResource.DoFooResponse
+import _root_.authentication.server.http4s.auth.AuthResource._
 import authentication.client.http4s.auth.AuthClient
+import cats.data._
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import io.circe.Json
@@ -31,7 +31,7 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
   test("provide context to handler") {
     type AuthContext = Int
 
-    val authMiddleware = (_: Request[IO]) => IO.pure(Some(42))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure(Some(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
@@ -59,7 +59,7 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
   test("return response directly from authentication") {
     type AuthContext = Int
 
-    val authMiddleware = (_: Request[IO]) => IO.pure(None)
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure(None)
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
@@ -82,5 +82,40 @@ class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValu
         .value
 
     retrieved shouldEqual "\"authentication failed\""
+  }
+  test("provide security requirements to authentication") {
+    type AuthContext = Int
+
+    val authMiddleware = (config: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) =>
+      IO.pure {
+        val c = config.toList.map(_.toSortedMap.toMap)
+
+        if (c == List(Map("jwt" -> List("foo:read", "bar:write")), Map("OAuth2" -> List("oauth:scope"))))
+          Some(1)
+        else
+          None
+      }
+
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
+      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+      override def doFoo(respond: DoFooResponse.type)(authContext: Option[AuthContext], body: String): IO[DoFooResponse] =
+        authContext.fold(IO(DoFooResponse.Ok("test failed")))(ctx => IO(DoFooResponse.Ok("test succeed")))
+    })
+
+    val client = Client.fromHttpApp(server.orNotFound)
+
+    val retrieved =
+      client
+        .run(
+          Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withContentType(`Content-Type`(MediaType.application.json))
+        )
+        .use(_.bodyText.compile.string)
+        .attempt
+        .unsafeRunSync()
+        .value
+
+    retrieved shouldEqual "\"test succeed\""
   }
 }

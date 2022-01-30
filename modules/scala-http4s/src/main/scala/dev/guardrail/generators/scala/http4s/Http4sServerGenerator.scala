@@ -22,6 +22,7 @@ import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
+import dev.guardrail.terms.SecurityRequirements
 
 object Http4sServerGenerator {
   @deprecated("0.69.0", "Explicitly set Http4sVersion")
@@ -184,7 +185,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
       authentication_ = if (authentication) {
-        Option(param"""authenticationMiddleware: Request[F] => F[Option[$authContextTypeName]]""")
+        Option(param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[String, List[String]]], Request[F]) => F[Option[$authContextTypeName]]""")
       } else Option.empty
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
@@ -239,7 +240,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       } yield List(
         q"import org.http4s.circe.CirceInstances",
         q"import org.http4s.dsl.Http4sDsl",
-        q"import fs2.text._"
+        q"import fs2.text._",
+        q"import cats.data.NonEmptyList",
+        q"import cats.data.NonEmptyMap",
+        q"import scala.collection.immutable.SortedMap"
       )
     )
 
@@ -581,7 +585,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
   case class RenderedRoute(methodName: String, route: Case, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
-  def generateRoute(
+  private def generateRoute(
       resourceName: String,
       basePath: Option[String],
       methodName: String,
@@ -719,15 +723,16 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
       val fullRoute: Case =
-        authContextArg match {
-          case Some(arg) =>
-            val authContextParam = param"${arg.paramName}"
+        (authContextArg, securityRequirements) match {
+          case (Some(arg), Some(sr)) =>
+            val securityRequirements = renderSecurityRequirements(sr)
+            val authContextParam     = param"${arg.paramName}"
             p"""case req @ $fullRouteWithTracingAndExtraction =>
-            authenticationMiddleware(req).flatMap { $authContextParam =>
+            authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
               mapRoute($methodName, req, { $routeBody })
             }
           """
-          case None =>
+          case _ =>
             p"""case req @ $fullRouteWithTracingAndExtraction =>
             mapRoute($methodName, req, { $routeBody })
           """
@@ -775,6 +780,18 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         )
       )
     })
+
+  private def renderSecurityRequirements(sr: SecurityRequirements): Term = {
+    val orElements = sr.requirements.toList.map { r =>
+      val andElements = r.toSortedMap.toList.map {
+        case (key, scopes) =>
+          val renderedScopes = scopes.map(Lit.String(_))
+          q"""($key -> List(..$renderedScopes))"""
+      }
+      q"""NonEmptyMap.fromMapUnsafe(SortedMap(..$andElements))"""
+    }
+    q"""NonEmptyList.fromListUnsafe(List(..$orElements))"""
+  }
 
   def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
     val (names, definitions) = headers.map {

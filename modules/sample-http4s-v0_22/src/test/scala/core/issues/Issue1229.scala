@@ -7,6 +7,7 @@ import _root_.department.client.http4sV022.{ definitions => cdefs }
 import _root_.department.server.http4sV022.department.DepartmentResource._
 import _root_.department.server.http4sV022.department._
 import _root_.department.server.http4sV022.{ definitions => sdefs }
+import cats.data._
 import cats.effect.IO
 import cats.effect.IO._
 import org.http4s.Request
@@ -19,7 +20,7 @@ import org.scalatest.matchers.should.Matchers
 class Issue1229Suite extends AnyFunSuite with Matchers {
 
   type AuthContext = Unit
-  val dummyAuth = (_: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
+  val dummyAuth = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
 
   test("round-trip: definition query, unit response") {
     val httpService = new DepartmentResource(dummyAuth).routes(new DepartmentHandler[IO, AuthContext] {

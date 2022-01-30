@@ -5,6 +5,7 @@ import _root_.examples.client.{ http4sV022 => cdefs }
 import _root_.examples.server.http4sV022.pet.PetResource._
 import _root_.examples.server.http4sV022.pet._
 import _root_.examples.server.{ http4sV022 => sdefs }
+import cats.data._
 import cats.effect.IO
 import cats.effect.IO._
 import examples.support.PositiveLong
@@ -39,7 +40,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   val petStatus: Option[String]    = Some("pending")
 
   type AuthContext = Unit
-  val dummyAuth = (_: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
+  val dummyAuth = (_: NonEmptyList[NonEmptyMap[String, List[String]]], _: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
 
   test("round-trip: definition query, unit response") {
     val httpService = new PetResource(dummyAuth).routes(new PetHandler[IO, AuthContext] {
