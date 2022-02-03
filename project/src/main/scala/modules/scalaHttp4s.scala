@@ -34,7 +34,7 @@ object scalaHttp4s {
 
   val dependencies = {
     val catsEffectVersion      = "3.3.5"
-    val http4sVersion          = "0.23.9"
+    val http4sVersion          = "0.23.10"
 
     Seq(
       "javax.annotation" %  "javax.annotation-api"  % javaxAnnotationVersion, // for jdk11
