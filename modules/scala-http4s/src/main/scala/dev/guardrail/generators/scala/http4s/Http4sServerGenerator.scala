@@ -668,9 +668,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val responseType = ServerRawResponse(operation)
         .filter(_ == true)
         .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
-      val authContextArg = Option(LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]")).filter(_ => securityRequirements.nonEmpty)
+      val authContextAndSecurityRequirement = securityRequirements.map((LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]"), _))
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
-          (authContextArg.toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
+          (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
         ) ++
             tracingFields
               .map(_.param)
@@ -693,7 +693,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         .map(_ => p"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
         .getOrElse(fullRouteWithTracingMatcher)
       val handlerCallArgs: List[List[Term]] = List(List(responseCompanionTerm)) ++ List(
-              (authContextArg.toList ++ pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName).toList ++ (http4sForm ++ http4sHeaders).map(_.handlerCallArg)
+              (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName).toList ++ (http4sForm ++ http4sHeaders)
+                    .map(_.handlerCallArg)
             ) ++
             tracingFields.map(_.param.paramName).map(List(_)) ++
             customExtractionFields.map(_.param.paramName).map(List(_))
@@ -769,8 +770,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
       val fullRoute: Case =
-        (authContextArg, securityRequirements) match {
-          case (Some(arg), Some(sr)) =>
+        authContextAndSecurityRequirements match {
+          case Some((arg, sr)) =>
             val securityRequirements = renderSecurityRequirements(sr)
             val authContextParam     = param"${arg.paramName}"
             p"""case req @ $fullRouteWithTracingAndExtraction =>
