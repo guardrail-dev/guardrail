@@ -184,7 +184,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             }""",
             q"""object ${Term.Name(authSchemesTypeName.value)} {
               implicit val order: Order[$authSchemesTypeName] = Order.by(_.name)
-              
+
               ..$list
             }
             """
@@ -264,7 +264,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         q"""
           class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
             import ${Term.Name(resourceName)}._
-            
+
             ..${supportDefinitions};
             def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
               ..${combinedRouteTerms}
