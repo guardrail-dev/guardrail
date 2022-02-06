@@ -289,8 +289,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         q"import fs2.text._",
         q"import cats.data.NonEmptyList",
         q"import cats.data.NonEmptyMap",
-        q"import cats.kernel.Order",
-        q"import scala.collection.immutable.SortedMap"
+        q"import cats.kernel.Order"
       )
     )
 
@@ -835,9 +834,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           val renderedScopes = scopes.map(Lit.String(_))
           q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> List(..$renderedScopes))"""
       }
-      q"""NonEmptyMap.fromMapUnsafe(SortedMap(..$andElements))"""
+      q"""NonEmptyMap.of(..$andElements)"""
     }
-    q"""NonEmptyList.fromListUnsafe(List(..$orElements))"""
+    q"""NonEmptyList.of(..$orElements)"""
   }
 
   def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
