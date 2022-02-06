@@ -769,21 +769,21 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       }
       val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
+      val includeAuthContext: Term => Term = authContextAndSecurityRequirement.fold[Term => Term](identity _) {
+        case (arg, sr) =>
+          val securityRequirements = renderSecurityRequirements(sr)
+          val authContextParam     = param"${arg.paramName}"
+          inner => q"""
+          authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
+            $inner
+          }
+        """
+      }
+
       val fullRoute: Case =
-        authContextAndSecurityRequirements match {
-          case Some((arg, sr)) =>
-            val securityRequirements = renderSecurityRequirements(sr)
-            val authContextParam     = param"${arg.paramName}"
-            p"""case req @ $fullRouteWithTracingAndExtraction =>
-            authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
-              mapRoute($methodName, req, { $routeBody })
-            }
+        p"""case req @ $fullRouteWithTracingAndExtraction =>
+            ${includeAuthContext(q"mapRoute($methodName, req, { $routeBody })")}
           """
-          case _ =>
-            p"""case req @ $fullRouteWithTracingAndExtraction =>
-            mapRoute($methodName, req, { $routeBody })
-          """
-        }
 
       val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.$responseCompanionTerm.type"))
 
