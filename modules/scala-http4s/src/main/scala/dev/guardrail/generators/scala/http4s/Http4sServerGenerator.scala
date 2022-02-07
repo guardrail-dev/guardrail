@@ -4,7 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.Traverse
-import dev.guardrail.{ Target, UserError }
+import dev.guardrail.{ AuthImplementation, Target, UserError }
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
@@ -23,6 +23,9 @@ import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 import dev.guardrail.terms.SecurityRequirements
+import dev.guardrail.AuthImplementation.Disable
+import dev.guardrail.AuthImplementation.Simple
+import dev.guardrail.AuthImplementation.Custom
 
 object Http4sServerGenerator {
   @deprecated("0.69.0", "Explicitly set Http4sVersion")
@@ -120,7 +123,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       basePath: Option[String],
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      authImplementation: AuthImplementation
   ): Target[RenderedRoutes[ScalaLanguage]] =
     for {
       renderedRoutes <- routes
@@ -135,13 +139,25 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               parameters,
               responses
               ) =>
-            generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
+            generateRoute(
+              resourceName,
+              basePath,
+              methodName,
+              responseClsName,
+              sr,
+              customExtractionFields,
+              tracingFields,
+              parameters,
+              responses,
+              authImplementation
+            )
         }
         .map(_.flatten)
       routeTerms = renderedRoutes.map(_.route)
       combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
-      securitySchemesDefinitions <- generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten)
+      securitySchemesDefinitions <- if (authImplementation == AuthImplementation.Disable) Target.pure(List.empty)
+      else generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten)
     } yield {
       RenderedRoutes[ScalaLanguage](
         List(combinedRouteTerms),
@@ -202,12 +218,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       handlerDefinitions: List[scala.meta.Stat],
       responseDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean,
-      authentication: Boolean
+      authImplementation: AuthImplementation
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
       extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
-      authType    = List(tparam"$authContextTypeName").filter(_ => authentication)
+      authType    = List(tparam"$authContextTypeName").filter(_ => authImplementation != AuthImplementation.Disable)
       tParams     = List(tparam"F[_]") ++ extractType ++ authType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
@@ -215,9 +231,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
     }
   """)
 
-  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
+  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation) =
     Target.log.function("getExtraRouteParams")(for {
-      _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authentication})")
+      _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authImplementation})")
       mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
       customExtraction_ = if (customExtraction) {
         Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
@@ -225,12 +241,15 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       tracing_ = if (tracing) {
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
-      authentication_ = if (authentication) {
-        Option(
-          param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
-            .Name(resourceName)}.$authSchemesTypeName, List[String]]], Request[F]) => F[Option[$authContextTypeName]]"""
-        )
-      } else Option.empty
+      authentication_ = authImplementation match {
+        case Disable => Option.empty
+        case Simple  => Option.empty // FIXME: implement me
+        case Custom =>
+          Option(
+            param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
+              .Name(resourceName)}.$authSchemesTypeName, List[String]]], Request[F]) => F[Option[$authContextTypeName]]"""
+          )
+      }
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
   def generateSupportDefinitions(
@@ -640,7 +659,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       customExtractionFields: Option[CustomExtractionField[ScalaLanguage]],
       tracingFields: Option[TracingField[ScalaLanguage]],
       parameters: LanguageParameters[ScalaLanguage],
-      responses: Responses[ScalaLanguage]
+      responses: Responses[ScalaLanguage],
+      authImplementation: AuthImplementation
   ): Target[Option[RenderedRoute]] =
     // Generate the pair of the Handler method and the actual call to `complete(...)`
     Target.log.function("generateRoute")(for {
@@ -668,7 +688,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val responseType = ServerRawResponse(operation)
         .filter(_ == true)
         .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
-      val authContextAndSecurityRequirement = securityRequirements.map((LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]"), _))
+      val authContextAndSecurityRequirement =
+        if (authImplementation == AuthImplementation.Disable) None
+        else securityRequirements.map((LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]"), _))
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
           (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
         ) ++
@@ -771,13 +793,18 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
       val includeAuthContext: Term => Term = authContextAndSecurityRequirement.fold[Term => Term](identity _) {
         case (arg, sr) =>
-          val securityRequirements = renderSecurityRequirements(sr)
-          val authContextParam     = param"${arg.paramName}"
-          inner => q"""
-          authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
-            $inner
+          authImplementation match {
+            case Disable => identity _
+            case Simple  => identity _ // FIXME: implement me
+            case Custom =>
+              val securityRequirements = renderSecurityRequirements(sr)
+              val authContextParam     = param"${arg.paramName}"
+              inner => q"""
+                authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
+                  $inner
+                }
+              """
           }
-        """
       }
 
       val fullRoute: Case =

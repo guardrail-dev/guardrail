@@ -72,6 +72,14 @@ trait CLICommon extends GuardrailRunner {
       case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
     }
 
+  def parseAuthImplementation(arg: String, value: String): Target[AuthImplementation] =
+    value match {
+      case "disable" => Target.pure(AuthImplementation.Disable)
+      case "simple"  => Target.pure(AuthImplementation.Simple)
+      case "custom"  => Target.pure(AuthImplementation.Custom)
+      case _         => Target.raiseError(UnparseableArgument(arg, "Expected one of 'disable', 'simple' or 'custom'"))
+    }
+
   def parseArgs(args: Array[String]): Target[List[Args]] = {
     def expandTilde(path: String): String =
       path.replaceFirst("^~", System.getProperty("user.home"))
@@ -139,6 +147,11 @@ trait CLICommon extends GuardrailRunner {
                 for {
                   propertyRequirement <- parseOptionalProperty(arg, value)
                   res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
+                } yield res
+              case (sofar :: already, (arg @ "--auth-implementation") :: value :: xs) =>
+                for {
+                  auth <- parseAuthImplementation(arg, value)
+                  res  <- Continue((sofar.copyContext(authImplementation = auth) :: already, xs))
                 } yield res
               case (_, unknown) =>
                 debug("Unknown argument") >> Bail(UnknownArguments(unknown))

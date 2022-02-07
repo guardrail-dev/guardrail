@@ -4,6 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import io.swagger.v3.oas.models.Operation
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.languages.LA
@@ -33,9 +34,10 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       basePath: Option[String],
       routes: List[GenerateRouteMeta[L]],
       protocolElems: List[StrictProtocolElems[L]],
-      securitySchemes: Map[String, SecurityScheme[L]]
+      securitySchemes: Map[String, SecurityScheme[L]],
+      authImplementation: AuthImplementation
   ): F[RenderedRoutes[L]]
-  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean): F[List[L#MethodParameter]]
+  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation): F[List[L#MethodParameter]]
   def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]]
   def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]]
   def renderClass(
@@ -55,7 +57,7 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       handlerDefinitions: List[L#Statement],
       responseDefinitions: List[L#Definition],
       customExtraction: Boolean,
-      authentication: Boolean
+      authImplementation: AuthImplementation
   ): F[L#Definition]
   def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): F[List[L#Import]]
 
@@ -70,9 +72,10 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           Option[String],
           List[GenerateRouteMeta[L]],
           List[StrictProtocolElems[L]],
-          Map[String, SecurityScheme[L]]
+          Map[String, SecurityScheme[L]],
+          AuthImplementation
       ) => F[RenderedRoutes[L]] = self.generateRoutes _,
-      getExtraRouteParams: (String, Boolean, Boolean, Boolean) => F[List[L#MethodParameter]] = self.getExtraRouteParams _,
+      getExtraRouteParams: (String, Boolean, Boolean, AuthImplementation) => F[List[L#MethodParameter]] = self.getExtraRouteParams _,
       generateResponseDefinitions: (String, Responses[L], List[StrictProtocolElems[L]]) => F[List[L#Definition]] = self.generateResponseDefinitions _,
       generateSupportDefinitions: (Boolean, Map[String, SecurityScheme[L]]) => F[List[SupportDefinition[L]]] = self.generateSupportDefinitions _,
       renderClass: (
@@ -86,7 +89,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           List[L#Definition],
           Boolean
       ) => F[List[L#Definition]] = self.renderClass _,
-      renderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition], Boolean, Boolean) => F[L#Definition] = self.renderHandler _,
+      renderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition], Boolean, AuthImplementation) => F[L#Definition] =
+        self.renderHandler _,
       getExtraImports: (Boolean, NonEmptyList[String]) => F[List[L#Import]] = self.getExtraImports _
   ) = {
     val newMonadF                      = MonadF
@@ -113,10 +117,11 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           basePath: Option[String],
           routes: List[GenerateRouteMeta[L]],
           protocolElems: List[StrictProtocolElems[L]],
-          securitySchemes: Map[String, SecurityScheme[L]]
-      ) = newGenerateRoutes(tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes)
-      def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
-        newGetExtraRouteParams(resourceName, customExtraction, tracing, authentication)
+          securitySchemes: Map[String, SecurityScheme[L]],
+          authImplementation: AuthImplementation
+      ) = newGenerateRoutes(tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes, authImplementation)
+      def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation) =
+        newGetExtraRouteParams(resourceName, customExtraction, tracing, authImplementation)
       def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]) =
         newGenerateResponseDefinitions(responseClsName, responses, protocolElems)
       def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]) =
@@ -149,8 +154,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           handlerDefinitions: List[L#Statement],
           responseDefinitions: List[L#Definition],
           customExtraction: Boolean,
-          authentication: Boolean
-      )                                                                           = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions, customExtraction, authentication)
+          authImplementation: AuthImplementation
+      )                                                                           = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions, customExtraction, authImplementation)
       def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) = newGetExtraImports(tracing, supportPackage)
     }
   }

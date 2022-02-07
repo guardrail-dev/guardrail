@@ -19,7 +19,8 @@ case class Args(
       tracing: Boolean = self.context.tracing,
       modules: List[String] = self.context.modules,
       propertyRequirement: PropertyRequirement.Configured = self.context.propertyRequirement,
-      tagsBehaviour: Context.TagsBehaviour = self.context.tagsBehaviour
+      tagsBehaviour: Context.TagsBehaviour = self.context.tagsBehaviour,
+      authImplementation: AuthImplementation = self.context.authImplementation
   ): Args =
     self.copy(
       context = self.context.copy(
@@ -28,7 +29,8 @@ case class Args(
         tracing = tracing,
         modules = modules,
         propertyRequirement = propertyRequirement,
-        tagsBehaviour = tagsBehaviour
+        tagsBehaviour = tagsBehaviour,
+        authImplementation = authImplementation
       )
     )
 

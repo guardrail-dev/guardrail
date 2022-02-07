@@ -1,10 +1,10 @@
 package core.Http4s
 
-import _root_.authentication.client.{ http4s => cdefs }
-import _root_.authentication.server.http4s.auth.AuthHandler
-import _root_.authentication.server.http4s.auth.AuthResource
-import _root_.authentication.server.http4s.auth.AuthResource._
-import authentication.client.http4s.auth.AuthClient
+import _root_.authenticationCustom.client.{ http4s => cdefs }
+import _root_.authenticationCustom.server.http4s.auth.AuthHandler
+import _root_.authenticationCustom.server.http4s.auth.AuthResource
+import _root_.authenticationCustom.server.http4s.auth.AuthResource._
+import authenticationCustom.client.http4s.auth.AuthClient
 import cats.data._
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
@@ -26,7 +26,7 @@ import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
+class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
 
   test("provide context to handler") {
     type AuthContext = Int

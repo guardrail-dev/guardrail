@@ -40,12 +40,9 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   val tag3name: Option[String]     = None
   val petStatus: Option[String]    = Some("pending")
 
-  type AuthContext = Unit
-  val dummyAuth = (_: NonEmptyList[NonEmptyMap[PetResource.AuthSchemes, List[String]]], _: Request[IO]) => IO.pure[Option[AuthContext]](Some(()))
-
   test("round-trip: definition query, unit response") {
-    val httpService = new PetResource(dummyAuth).routes(new PetHandler[IO, AuthContext] {
-      def addPet(respond: AddPetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet): IO[sdefs.pet.PetResource.AddPetResponse] =
+    val httpService = new PetResource().routes(new PetHandler[IO] {
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet): IO[sdefs.pet.PetResource.AddPetResponse] =
         body match {
           case sdefs.definitions.Pet(
               `id`,
@@ -60,18 +57,17 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
         }
       def deletePet(
           respond: DeletePetResponse.type
-      )(a: Option[AuthContext], _petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(a: Option[AuthContext], status: Iterable[String])                                 = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(a: Option[AuthContext], status: sdefs.definitions.PetStatus)              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(a: Option[AuthContext], tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(a: Option[AuthContext], petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet)                                            = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                 = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
-      )(a: Option[AuthContext], petId: Long, name: Option[String] = None, status: Option[String] = None) =
+      )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
         ???
       def uploadFile(respond: UploadFileResponse.type)(
-          a: Option[AuthContext],
           petId: PositiveLong,
           additionalMetadata: Option[String] = None,
           file: Option[fs2.Stream[IO, Byte]] = None,
@@ -101,10 +97,10 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   }
 
   test("round-trip: enum query, Vector of definition response") {
-    val httpService = new PetResource(dummyAuth).routes(new PetHandler[IO, AuthContext] {
+    val httpService = new PetResource().routes(new PetHandler[IO] {
       def findPetsByStatusEnum(
           respond: FindPetsByStatusEnumResponse.type
-      )(a: Option[AuthContext], _status: sdefs.definitions.PetStatus): IO[sdefs.pet.PetResource.FindPetsByStatusEnumResponse] =
+      )(_status: sdefs.definitions.PetStatus): IO[sdefs.pet.PetResource.FindPetsByStatusEnumResponse] =
         IO.pure(petStatus.fold(Vector.empty[sdefs.definitions.Pet])({ value =>
             if (_status.value == value) {
               Vector(
@@ -123,20 +119,19 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
           }))
           .map(respond.Ok)
 
-      def addPet(respond: AddPetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet) = ???
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
       def deletePet(
           respond: DeletePetResponse.type
-      )(a: Option[AuthContext], _petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(a: Option[AuthContext], status: Iterable[String])                                 = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(a: Option[AuthContext], tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(a: Option[AuthContext], petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet)                                            = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                 = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
-      )(a: Option[AuthContext], petId: Long, name: Option[String] = None, status: Option[String] = None) =
+      )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
         ???
       def uploadFile(respond: UploadFileResponse.type)(
-          a: Option[AuthContext],
           petId: PositiveLong,
           additionalMetadata: Option[String] = None,
           file: Option[fs2.Stream[IO, Byte]] = None,
@@ -169,26 +164,25 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   }
 
   test("round-trip: 404 response") {
-    val httpService = new PetResource(dummyAuth).routes(new PetHandler[IO, AuthContext] {
+    val httpService = new PetResource().routes(new PetHandler[IO] {
       def findPetsByStatus(
           respond: FindPetsByStatusResponse.type
-      )(a: Option[AuthContext], status: Iterable[String]): IO[sdefs.pet.PetResource.FindPetsByStatusResponse] =
+      )(status: Iterable[String]): IO[sdefs.pet.PetResource.FindPetsByStatusResponse] =
         IO.pure(respond.NotFound)
 
-      def addPet(respond: AddPetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet) = ???
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
       def deletePet(
           respond: DeletePetResponse.type
-      )(a: Option[AuthContext], _petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(a: Option[AuthContext], status: sdefs.definitions.PetStatus)              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(a: Option[AuthContext], tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(a: Option[AuthContext], petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet)                                            = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
-      )(a: Option[AuthContext], petId: Long, name: Option[String] = None, status: Option[String] = None) =
+      )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
         ???
       def uploadFile(respond: UploadFileResponse.type)(
-          a: Option[AuthContext],
           petId: PositiveLong,
           additionalMetadata: Option[String] = None,
           file: Option[fs2.Stream[IO, Byte]] = None,
@@ -208,9 +202,8 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   test("round-trip: Raw type parameters") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpService = new PetResource(dummyAuth).routes(new PetHandler[IO, AuthContext] {
+    val httpService = new PetResource().routes(new PetHandler[IO] {
       def deletePet(respond: DeletePetResponse.type)(
-          a: Option[AuthContext],
           _petId: Long,
           includeChildren: Option[Boolean],
           status: Option[sdefs.definitions.PetStatus],
@@ -220,18 +213,17 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
           IO.pure(respond.Ok)
         else IO.pure(respond.NotFound)
 
-      def addPet(respond: AddPetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet)                                     = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(a: Option[AuthContext], status: Iterable[String])                    = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(a: Option[AuthContext], status: sdefs.definitions.PetStatus) = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(a: Option[AuthContext], tags: Iterable[String])                          = ???
-      def getPetById(respond: GetPetByIdResponse.type)(a: Option[AuthContext], petId: Long)                                             = ???
-      def updatePet(respond: UpdatePetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet)                               = ???
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet)                                     = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                    = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                          = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
-      )(a: Option[AuthContext], petId: Long, name: Option[String] = None, status: Option[String] = None) =
+      )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
         ???
       def uploadFile(respond: UploadFileResponse.type)(
-          a: Option[AuthContext],
           petId: PositiveLong,
           additionalMetadata: Option[String] = None,
           file: Option[fs2.Stream[IO, Byte]] = None,
@@ -255,22 +247,21 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   test("round-trip: File uploads") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpService = new PetResource(dummyAuth).routes(new PetHandler[IO, AuthContext] {
-      def addPet(respond: AddPetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet) = ???
+    val httpService = new PetResource().routes(new PetHandler[IO] {
+      def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
       def deletePet(
           respond: DeletePetResponse.type
-      )(a: Option[AuthContext], _petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(a: Option[AuthContext], status: Iterable[String])                                 = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(a: Option[AuthContext], status: sdefs.definitions.PetStatus)              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(a: Option[AuthContext], ags: Iterable[String])                                        = ???
-      def getPetById(respond: GetPetByIdResponse.type)(a: Option[AuthContext], petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(a: Option[AuthContext], body: sdefs.definitions.Pet)                                            = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                 = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(ags: Iterable[String])                                        = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
-      )(a: Option[AuthContext], petId: Long, name: Option[String] = None, status: Option[String] = None) =
+      )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
         ???
       def uploadFile(respond: UploadFileResponse.type)(
-          a: Option[AuthContext],
           petId: PositiveLong,
           additionalMetadata: Option[String] = None,
           file: Option[fs2.Stream[IO, Byte]] = None,

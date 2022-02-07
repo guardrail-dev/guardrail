@@ -1,11 +1,11 @@
 package core.Http4s
 
-import _root_.authentication.client.{ http4sV022 => cdefs }
-import _root_.authentication.server.http4sV022.auth.AuthHandler
-import _root_.authentication.server.http4sV022.auth.AuthResource
-import _root_.authentication.server.http4sV022.auth.AuthResource.DoBarResponse
-import _root_.authentication.server.http4sV022.auth.AuthResource.DoFooResponse
-import authentication.client.http4sV022.auth.AuthClient
+import _root_.authenticationCustom.client.{ http4sV022 => cdefs }
+import _root_.authenticationCustom.server.http4sV022.auth.AuthHandler
+import _root_.authenticationCustom.server.http4sV022.auth.AuthResource
+import _root_.authenticationCustom.server.http4sV022.auth.AuthResource.DoBarResponse
+import _root_.authenticationCustom.server.http4sV022.auth.AuthResource.DoFooResponse
+import authenticationCustom.client.http4sV022.auth.AuthClient
 import cats.data._
 import cats.effect.IO
 import io.circe.Json
@@ -26,7 +26,7 @@ import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class Http4sAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
+class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
   test("provide context to handler") {
     type AuthContext = Int
 

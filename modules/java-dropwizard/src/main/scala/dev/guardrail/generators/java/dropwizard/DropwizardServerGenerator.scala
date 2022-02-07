@@ -16,6 +16,7 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.language.existentials
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.core.extract.ServerRawResponse
@@ -269,7 +270,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       basePath: Option[String],
       routes: List[GenerateRouteMeta[JavaLanguage]],
       protocolElems: List[StrictProtocolElems[JavaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      authImplementation: AuthImplementation
   ): Target[RenderedRoutes[JavaLanguage]] =
     for {
       resourceType <- safeParseClassOrInterfaceType(resourceName)
@@ -638,7 +640,12 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Parameter]] =
+  override def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation
+  ): Target[List[Parameter]] =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -723,7 +730,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       customExtraction: Boolean,
-      authentication: Boolean
+      authImplementation: AuthImplementation
   ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

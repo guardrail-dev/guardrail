@@ -17,6 +17,7 @@ import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.RenderedRoutes
@@ -331,7 +332,8 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       basePath: Option[String],
       routes: List[GenerateRouteMeta[JavaLanguage]],
       protocolElems: List[StrictProtocolElems[JavaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      authImplementation: AuthImplementation
   ) =
     for {
       resourceType <- safeParseClassOrInterfaceType(resourceName)
@@ -705,7 +707,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
+  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation) =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -763,7 +765,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       customExtraction: Boolean,
-      authentication: Boolean
+      authImplementation: AuthImplementation
   ) = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

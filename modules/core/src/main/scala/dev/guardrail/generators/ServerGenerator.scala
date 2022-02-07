@@ -69,20 +69,30 @@ object ServerGenerator {
                 )
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes <- generateRoutes(context.tracing, resourceName, handlerName, basePath, serverOperations, protocolElems, securitySchemes)
+            renderedRoutes <- generateRoutes(
+              context.tracing,
+              resourceName,
+              handlerName,
+              basePath,
+              serverOperations,
+              protocolElems,
+              securitySchemes,
+              context.authImplementation
+            )
+            authImplementation = if (renderedRoutes.securitySchemesDefinitions.isEmpty) AuthImplementation.Disable else context.authImplementation
             handlerSrc <- renderHandler(
               handlerName,
               renderedRoutes.methodSigs,
               renderedRoutes.handlerDefinitions,
               responseDefinitions.flatten,
               context.customExtraction,
-              authentication = renderedRoutes.securitySchemesDefinitions.nonEmpty
+              authImplementation
             )
             extraRouteParams <- getExtraRouteParams(
               resourceName,
               context.customExtraction,
               context.tracing,
-              authentication = renderedRoutes.securitySchemesDefinitions.nonEmpty
+              authImplementation
             )
             classSrc <- renderClass(
               resourceName,

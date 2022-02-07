@@ -7,6 +7,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import scala.meta._
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker, VectorRawType }
 import dev.guardrail.generators.operations.TracingLabelFormatter
@@ -223,7 +224,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       basePath: Option[String],
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      authImplementation: AuthImplementation
   ) =
     for {
       renderedRoutes <- routes.traverse {
@@ -260,7 +262,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       handlerDefinitions: List[scala.meta.Stat],
       responseDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean,
-      authentication: Boolean
+      authImplementation: AuthImplementation
   ) =
     for {
       _ <- Target.log.debug(s"renderHandler(${handlerName}, ${methodSigs}")
@@ -272,7 +274,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       """
     }
-  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean) =
+  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation) =
     for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
       extractParam <- if (customExtraction) {

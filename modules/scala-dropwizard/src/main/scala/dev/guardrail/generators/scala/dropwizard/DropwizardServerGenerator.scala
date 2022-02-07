@@ -6,6 +6,7 @@ import cats.syntax.all._
 import io.swagger.v3.oas.models.Operation
 import scala.meta._
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.scala.ScalaLanguage
@@ -305,7 +306,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       basePath: Option[String],
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      authImplementation: AuthImplementation
   ): Target[RenderedRoutes[ScalaLanguage]] = {
     val basePathComponents = basePath.toList.flatMap(ResponseHelpers.splitPathComponents)
     val commonPathPrefix   = ResponseHelpers.findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
@@ -434,7 +436,12 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
     )
   }
 
-  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authentication: Boolean): Target[List[Term.Param]] =
+  override def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation
+  ): Target[List[Term.Param]] =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -481,7 +488,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       handlerDefinitions: List[Stat],
       responseDefinitions: List[Defn],
       customExtraction: Boolean,
-      authentication: Boolean
+      authImplementation: AuthImplementation
   ): Target[Defn] =
     Target.pure(
       q"""

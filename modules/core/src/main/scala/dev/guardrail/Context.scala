@@ -8,7 +8,8 @@ case class Context(
     tracing: Boolean,
     modules: List[String],
     propertyRequirement: PropertyRequirement.Configured,
-    tagsBehaviour: Context.TagsBehaviour
+    tagsBehaviour: Context.TagsBehaviour,
+    authImplementation: AuthImplementation
 )
 
 object Context {
@@ -22,6 +23,7 @@ object Context {
     tracing = false,
     modules = List.empty,
     propertyRequirement = PropertyRequirement.Configured(PropertyRequirement.OptionalLegacy, PropertyRequirement.OptionalLegacy),
-    tagsBehaviour = TagsAreIgnored
+    tagsBehaviour = TagsAreIgnored,
+    authImplementation = AuthImplementation.Disable
   )
 }
