@@ -54,7 +54,7 @@ object SwaggerUtil {
             arr =>
               for {
                 items <- getItems(arr)
-                meta  <- propMetaImpl[L, F](items)(Left(_)).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](items))
+                meta  <- propMetaImpl[L, F](items)(Left(_))
                 rawType   = arr.downField("type", _.getType())
                 rawFormat = arr.downField("format", _.getFormat())
                 arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
@@ -78,7 +78,7 @@ object SwaggerUtil {
                 .refine[F[core.ResolvedType[L]]]({ case b: java.lang.Boolean => b })(
                   _ => objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
                 )
-                .orRefine({ case s: Schema[_] => s })(s => propMetaImpl[L, F](s)(Left(_)).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](s)))
+                .orRefine({ case s: Schema[_] => s })(s => propMetaImpl[L, F](s)(Left(_)))
                 .orRefineFallback({ s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
@@ -208,7 +208,7 @@ object SwaggerUtil {
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = propMetaImpl(property)(Left(_)).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](property))
+  ): F[core.ResolvedType[L]] = propMetaImpl(property)(Left(_))
 
   private[this] def liftCustomType[L <: LA, F[_]](s: Tracker[String])(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
@@ -232,7 +232,7 @@ object SwaggerUtil {
           _ => core.Resolved[L](tpe, None, None, None, None)
         )
         .map(_.pure[F])
-    ).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](property))
+    )
 
   private def resolveScalarTypes[L <: LA, F[_]](
       partial: Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
@@ -286,12 +286,7 @@ object SwaggerUtil {
 
   private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
       strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
-  )(
-      implicit Sc: LanguageTerms[L, F],
-      Cl: CollectionsLibTerms[L, F],
-      Sw: SwaggerTerms[L, F],
-      Fw: FrameworkTerms[L, F]
-  ): F[Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]] =
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
@@ -312,7 +307,7 @@ object SwaggerUtil {
             arr =>
               for {
                 items <- getItems(arr)
-                meta  <- propMetaImpl[L, F](items)(strategy).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](items))
+                meta  <- propMetaImpl[L, F](items)(strategy)
                 rawType   = arr.downField("type", _.getType())
                 rawFormat = arr.downField("format", _.getFormat())
                 arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
@@ -336,9 +331,7 @@ object SwaggerUtil {
                 .refine[F[core.ResolvedType[L]]]({ case b: java.lang.Boolean => b })(
                   _ => objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
                 )
-                .orRefine({ case s: Schema[_] => s })(
-                  s => propMetaImpl[L, F](s)(strategy).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](s))
-                )
+                .orRefine({ case s: Schema[_] => s })(s => propMetaImpl[L, F](s)(strategy))
                 .orRefineFallback({ s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
@@ -355,6 +348,8 @@ object SwaggerUtil {
           .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
         )
         .pure[F]
+        .flatMap(resolveScalarTypes[L, F])
+        .flatMap(enrichWithDefault[L, F](property))
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](
