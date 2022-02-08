@@ -78,7 +78,7 @@ object SwaggerUtil {
                 .refine[F[core.ResolvedType[L]]]({ case b: java.lang.Boolean => b })(
                   _ => objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
                 )
-                .orRefine({ case s: Schema[_] => s })(propMeta[L, F](_))
+                .orRefine({ case s: Schema[_] => s })(s => propMetaImpl[L, F](s)(Left(_)).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](s)))
                 .orRefineFallback({ s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
@@ -326,31 +326,32 @@ object SwaggerUtil {
                 }
               } yield res
           )
-          .orRefine({ case m: MapSchema => m })(
-            m =>
-              for {
-                rec <- m
-                  .downField("additionalProperties", _.getAdditionalProperties())
-                  .map(_.getOrElse(false))
-                  .refine[F[core.ResolvedType[L]]]({ case b: java.lang.Boolean => b })(_ => objectType(None).map(core.Resolved[L](_, None, None, None, None)))
-                  .orRefine({ case s: Schema[_] => s })(
-                    s => propMetaImpl[L, F](s)(strategy).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](s))
-                  )
-                  .orRefineFallback({ s =>
-                    log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None).map(
-                      core.Resolved[L](_, None, None, None, None)
-                    )
-                  })
-                mapType <- customMapTypeName(m).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(m, x))))
-                res <- rec match {
-                  case core.Resolved(inner, dep, _, _, _) =>
-                    liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, None, None))
-                  case x: core.DeferredMap[L]   => embedMap(x, mapType)
-                  case x: core.DeferredArray[L] => embedMap(x, mapType)
-                  case x: core.Deferred[L]      => embedMap(x, mapType)
-                }
-              } yield res
-          )
+          .orRefine({ case map: MapSchema => map })({ map =>
+            val rawType   = map.downField("type", _.getType())
+            val rawFormat = map.downField("format", _.getFormat())
+            for {
+              rec <- map
+                .downField("additionalProperties", _.getAdditionalProperties())
+                .map(_.getOrElse(false))
+                .refine[F[core.ResolvedType[L]]]({ case b: java.lang.Boolean => b })(
+                  _ => objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
+                )
+                .orRefine({ case s: Schema[_] => s })(
+                  s => propMetaImpl[L, F](s)(strategy).flatMap(resolveScalarTypes[L, F]).flatMap(enrichWithDefault[L, F](s))
+                )
+                .orRefineFallback({ s =>
+                  log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
+                    .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
+                })
+              mapType <- customMapTypeName(map).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(map, x))))
+              res <- rec match {
+                case core.Resolved(inner, dep, _, tpe, fmt) => liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, tpe, fmt))
+                case x: core.DeferredMap[L]                 => embedMap(x, mapType)
+                case x: core.DeferredArray[L]               => embedMap(x, mapType)
+                case x: core.Deferred[L]                    => embedMap(x, mapType)
+              }
+            } yield res
+          })
           .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
         )
         .pure[F]
