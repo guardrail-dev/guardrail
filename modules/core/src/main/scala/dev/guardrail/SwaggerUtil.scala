@@ -38,8 +38,8 @@ object SwaggerUtil {
   }
 
   sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply[T <: Schema[_]](
-        model: Tracker[T]
+    def apply(
+        model: Tracker[Schema[_]]
     )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
       Sw.log.function("modelMetaType") {
         import Sc._
@@ -47,9 +47,17 @@ object SwaggerUtil {
         import Sw._
         import Fw._
 
-        def strategy(property: Tracker[T]): Either[Tracker[T], F[core.ResolvedType[L]]] = Left(property)
+        def strategy(property: Tracker[Schema[_]]): Either[Tracker[Schema[_]], F[core.ResolvedType[L]]] = Left(property)
 
         log.debug(s"model:\n${log.schemaToString(model.unwrapTracker)}") >> (strategy(model)
+          .orRefine({ case o: ObjectSchema => o })(
+            o =>
+              for {
+                customTpeName <- customTypeName(o)
+                customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
+                fallback      <- objectType(None)
+              } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
+          )
           .orRefine({ case arr: ArraySchema => arr })(
             arr =>
               for {
