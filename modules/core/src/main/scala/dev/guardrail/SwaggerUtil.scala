@@ -37,14 +37,8 @@ object SwaggerUtil {
     } yield CustomMapTypeName(v, prefixes)
   }
 
-  sealed class ModelMetaTypePartiallyApplied[L <: LA, F[_]](val dummy: Boolean = true) {
-    def apply(
-        model: Tracker[Schema[_]]
-    )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
-      propMetaImpl[L, F](model)(Left(_))
-  }
-
-  def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] = new ModelMetaTypePartiallyApplied[L, F]()
+  def modelMetaType[L <: LA, F[_]](model: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
+    propMetaImpl[L, F](model)(Left(_))
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])]
