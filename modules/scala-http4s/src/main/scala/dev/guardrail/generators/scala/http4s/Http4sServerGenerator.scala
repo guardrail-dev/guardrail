@@ -905,11 +905,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       for {
         _ <- Target.log.debug("Found that not all parameters could be represented as unescaped terms")
         res <- parameters.traverse[Target, LanguageParameter[ScalaLanguage]] { param =>
-          val newName = Term.Name(s"_${param.paramName.value}")
-          Target.log.debug(s"Escaping param ${param.argName.value}").flatMap { _ =>
-            if (newName.syntax == newName.value) Target.pure(param.withParamName(newName))
+          for {
+            _ <- Target.log.debug(s"Escaping param ${param.argName.value}")
+            newName = Term.Name(s"_${param.paramName.value}")
+            res <- if (newName.syntax == newName.value) Target.pure(param.withParamName(newName))
             else Target.raiseUserError(s"Can't escape parameter with name ${param.argName.value}.")
-          }
+          } yield res
         }
       } yield res
     } else {

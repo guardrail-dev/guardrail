@@ -8,10 +8,11 @@ components:
   schemas:
     Foo:
       type: object
+      required:
+        - name
       properties:
         name:
           type: string
-          required: true
 paths:
   /foo:
     get:

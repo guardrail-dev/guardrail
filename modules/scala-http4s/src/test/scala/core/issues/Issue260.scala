@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 
 class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
-  def testVersion(version: Http4sVersion): Unit = {
+  def testVersion(version: Http4sVersion): Unit =
     describe(version.toString()) {
       describe("LocalDate path param is generated more than once") {
 
@@ -93,7 +93,6 @@ class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         }
       }
     }
-  }
 
   testVersion(Http4sVersion.V0_22)
   testVersion(Http4sVersion.V0_23)

@@ -30,7 +30,7 @@ class Issue225 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
        |         description: description
        |""".stripMargin
 
-  def testVersion(version: Http4sVersion): Unit = {
+  def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Ensure mapRoute is generated") {
       val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
@@ -61,7 +61,6 @@ class Issue225 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       // Cause structure is slightly different but source code is the same the value converted to string and then parsed
       genResource.toString().parse[Stat].get.structure shouldEqual resource.structure
     }
-  }
 
   testVersion(Http4sVersion.V0_22)
   testVersion(Http4sVersion.V0_23)
