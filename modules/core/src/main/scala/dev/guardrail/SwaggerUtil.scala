@@ -95,6 +95,7 @@ object SwaggerUtil {
           .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L])))
           .pure[F]
           .flatMap(resolveScalarTypes[L, F])
+          .flatMap(enrichWithDefault[L, F](model))
       }
   }
 
