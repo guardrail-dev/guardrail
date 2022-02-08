@@ -92,16 +92,9 @@ object SwaggerUtil {
               }
             } yield res
           })
-          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
-          .orRefineFallback(
-            impl =>
-              for {
-                tpeName       <- getType(impl)
-                customTpeName <- customTypeName(impl)
-                fmt = impl.downField("format", _.getFormat())
-                tpe <- typeName[L, F](tpeName.map(Option(_)), fmt, Tracker.cloneHistory(impl, customTpeName))
-              } yield core.Resolved[L](tpe, None, None, Some(tpeName.unwrapTracker), fmt.unwrapTracker)
-          ))
+          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L])))
+          .pure[F]
+          .flatMap(resolveScalarTypes[L, F])
       }
   }
 
