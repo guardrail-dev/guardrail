@@ -69,7 +69,7 @@ object SwaggerUtil {
             )
             .getOrElse(
               for {
-                resolved <- SwaggerUtil.modelMetaType[L, F](schema)
+                resolved <- modelMetaType[L, F](schema)
               } yield (clsName, resolved)
             )
       }
