@@ -203,10 +203,11 @@ object ProtocolGenerator {
           for {
             typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
             propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
-            customType   <- SwaggerUtil.customTypeName(prop)
-            resolvedType <- SwaggerUtil.propMeta[L, F](prop)
-            defValue     <- defaultValue(typeName, prop, propertyRequirement, definitions)
-            fieldName    <- formatFieldName(name)
+            customType <- SwaggerUtil.customTypeName(prop)
+            resolvedType <- SwaggerUtil
+              .propMeta[L, F](prop) // TODO: This should be resolved via an alternate mechanism that maintains references all the way through, instead of re-deriving and assuming that references are valid
+            defValue  <- defaultValue(typeName, prop, propertyRequirement, definitions)
+            fieldName <- formatFieldName(name)
             res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
               name,
               fieldName,
