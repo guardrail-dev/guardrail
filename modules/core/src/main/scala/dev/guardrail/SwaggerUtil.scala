@@ -41,70 +41,7 @@ object SwaggerUtil {
     def apply(
         model: Tracker[Schema[_]]
     )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
-      Sw.log.function("modelMetaType") {
-        import Sc._
-        import Cl._
-        import Sw._
-        import Fw._
-
-        def strategy(property: Tracker[Schema[_]]): Either[Tracker[Schema[_]], F[core.ResolvedType[L]]] = Left(property)
-
-        log.debug(s"model:\n${log.schemaToString(model.unwrapTracker)}") >> (strategy(model)
-          .orRefine({ case o: ObjectSchema => o })(
-            o =>
-              for {
-                customTpeName <- customTypeName(o)
-                customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
-                fallback      <- objectType(None)
-              } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
-          )
-          .orRefine({ case arr: ArraySchema => arr })(
-            arr =>
-              for {
-                items <- getItems(arr)
-                meta  <- propMetaImpl[L, F](items)(Left(_))
-                rawType   = arr.downField("type", _.getType())
-                rawFormat = arr.downField("format", _.getFormat())
-                arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
-                res <- meta match {
-                  case core.Resolved(inner, dep, default, _, _) =>
-                    (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
-                      .mapN(core.Resolved[L](_, dep, _, rawType.unwrapTracker, rawFormat.unwrapTracker))
-                  case x: core.Deferred[L]      => embedArray(x, arrayType)
-                  case x: core.DeferredArray[L] => embedArray(x, arrayType)
-                  case x: core.DeferredMap[L]   => embedArray(x, arrayType)
-                }
-              } yield res
-          )
-          .orRefine({ case map: MapSchema => map })({ map =>
-            val rawType   = map.downField("type", _.getType())
-            val rawFormat = map.downField("format", _.getFormat())
-            for {
-              rec <- map
-                .downField("additionalProperties", _.getAdditionalProperties())
-                .map(_.getOrElse(false))
-                .refine[F[core.ResolvedType[L]]]({ case b: java.lang.Boolean => b })(
-                  _ => objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
-                )
-                .orRefine({ case s: Schema[_] => s })(s => propMetaImpl[L, F](s)(Left(_)))
-                .orRefineFallback({ s =>
-                  log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
-                    .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
-                })
-              mapType <- customMapTypeName(map).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(map, x))))
-              res <- rec match {
-                case core.Resolved(inner, dep, _, tpe, fmt) => liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, tpe, fmt))
-                case x: core.DeferredMap[L]                 => embedMap(x, mapType)
-                case x: core.DeferredArray[L]               => embedMap(x, mapType)
-                case x: core.Deferred[L]                    => embedMap(x, mapType)
-              }
-            } yield res
-          })
-          .orRefine({ case ref: Schema[_] if Option(ref.get$ref).isDefined => ref })(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L])))
-          .pure[F]
-          .flatMap(resolveScalarTypes[L, F])
-          .flatMap(enrichWithDefault[L, F](model))
-      }
+      propMetaImpl[L, F](model)(Left(_))
   }
 
   def modelMetaType[L <: LA, F[_]]: ModelMetaTypePartiallyApplied[L, F] = new ModelMetaTypePartiallyApplied[L, F]()
