@@ -184,8 +184,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
     val simpleAuthenticator = List(q"""
       def authenticate[F[_]: Monad, ${tparam"$authContextTypeName"}](
-        middleware: ($authSchemesTypeName, List[String], Request[F]) => F[Option[$authContextTypeName]],
-        schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, List[String]]], 
+        middleware: ($authSchemesTypeName, Set[String], Request[F]) => F[Option[$authContextTypeName]],
+        schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, Set[String]]], 
         req: Request[F]
       ): F[Option[$authContextTypeName]] = {
         schemes
@@ -267,12 +267,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         case Simple =>
           val authType = Type.Select(Term.Name(resourceName), authSchemesTypeName)
           Option(
-            param"""authenticationMiddleware: ($authType, List[String], Request[F]) => F[Option[$authContextTypeName]]"""
+            param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Option[$authContextTypeName]]"""
           )
         case Custom =>
           Option(
             param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
-              .Name(resourceName)}.$authSchemesTypeName, List[String]]], Request[F]) => F[Option[$authContextTypeName]]"""
+              .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Request[F]) => F[Option[$authContextTypeName]]"""
           )
       }
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
@@ -906,7 +906,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val andElements = r.toSortedMap.toList.map {
         case (key, scopes) =>
           val renderedScopes = scopes.map(Lit.String(_))
-          q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> List(..$renderedScopes))"""
+          q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> Set(..$renderedScopes))"""
       }
       q"""NonEmptyMap.of(..$andElements)"""
     }

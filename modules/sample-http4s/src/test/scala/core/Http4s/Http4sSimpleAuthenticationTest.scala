@@ -31,7 +31,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("provide context to handler") {
     type AuthContext = Int
 
-    val authMiddleware = (_: AuthResource.AuthSchemes, _: List[String], _: Request[IO]) => IO.pure(Some(42))
+    val authMiddleware = (_: AuthResource.AuthSchemes, _: Set[String], _: Request[IO]) => IO.pure(Some(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
@@ -59,7 +59,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("return response directly from authentication") {
     type AuthContext = Int
 
-    val authMiddleware = (_: AuthResource.AuthSchemes, _: List[String], _: Request[IO]) => IO.pure(None)
+    val authMiddleware = (_: AuthResource.AuthSchemes, _: Set[String], _: Request[IO]) => IO.pure(None)
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
@@ -87,10 +87,10 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     type AuthContext = Int
     import AuthResource.AuthSchemes
 
-    val authMiddleware: (AuthResource.AuthSchemes, List[String], Request[IO]) => IO[Option[AuthContext]] = {
-      case (AuthSchemes.Jwt, List("foo:read", "bar:write"), _) => IO.pure(Some(1))
-      case (AuthSchemes.OAuth2, List("oauth:scope"), _)        => IO.pure(Some(1))
-      case (_, _, _)                                           => IO.pure(None)
+    val authMiddleware: (AuthResource.AuthSchemes, Set[String], Request[IO]) => IO[Option[AuthContext]] = {
+      case (AuthSchemes.Jwt, s, _) if s.forall(Set("foo:read", "bar:write").contains(_)) => IO.pure(Some(1))
+      case (AuthSchemes.OAuth2, s, _) if s.forall(Set("oauth:scope").contains(_))        => IO.pure(Some(1))
+      case (_, _, _)                                                                     => IO.pure(None)
     }
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
