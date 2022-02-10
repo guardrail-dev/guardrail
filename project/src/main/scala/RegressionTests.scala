@@ -104,6 +104,7 @@ object RegressionTests {
     ExampleCase(sampleResource("mixed-content-types-3.0.2.yaml"), "mixedContentTypes").frameworks("scala" -> scalaFrameworks.map(_.name).toSet),
     ExampleCase(sampleResource("debug-body.yaml"), "debugBody").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication.yaml"), "authentication-custom").args("--auth-implementation", "custom").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("authentication.yaml"), "authentication-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
 
   def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases

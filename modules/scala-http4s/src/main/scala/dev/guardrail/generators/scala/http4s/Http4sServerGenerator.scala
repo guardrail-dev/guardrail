@@ -157,7 +157,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
       securitySchemesDefinitions <- if (authImplementation == AuthImplementation.Disable) Target.pure(List.empty)
-      else generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten)
+      else generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten, authImplementation)
     } yield {
       RenderedRoutes[ScalaLanguage](
         List(combinedRouteTerms),
@@ -176,10 +176,31 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
   private def generateSecuritySchemes(
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
-      securityRequirements: List[SecurityRequirements]
+      securityRequirements: List[SecurityRequirements],
+      authImplementation: AuthImplementation
   ): Target[List[scala.meta.Defn]] = {
     val schemesNames                    = securitySchemes.keySet
     val uniqueRequiremens: List[String] = securityRequirements.flatMap(_.requirements.flatMap(_.keys.toNonEmptyList).toList).distinct
+
+    val simpleAuthenticator = List(q"""
+      def authenticate[F[_]: Monad, ${tparam"$authContextTypeName"}](
+        middleware: ($authSchemesTypeName, List[String], Request[F]) => F[Option[$authContextTypeName]],
+        schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, List[String]]], 
+        req: Request[F]
+      ): F[Option[$authContextTypeName]] = {
+        schemes
+          .collectFirstSomeM[F, $authContextTypeName](
+            _.toNel.map { case (scheme, scopes) => middleware(scheme, scopes, req) }
+              .reduce[F[Option[$authContextTypeName]]] {
+                case (l, r) =>
+                  l.flatMap {
+                    case Some(_) => r
+                    case None    => Applicative[F].pure(None)
+                  }
+              }
+          )
+      }
+    """).filter(_ => authImplementation == AuthImplementation.Simple)
 
     uniqueRequiremens
       .traverse { reqName =>
@@ -204,7 +225,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               ..$list
             }
             """
-          )
+          ) ::: simpleAuthenticator
         case list => list
       }
   }
@@ -243,7 +264,11 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       } else Option.empty
       authentication_ = authImplementation match {
         case Disable => Option.empty
-        case Simple  => Option.empty // FIXME: implement me
+        case Simple =>
+          val authType = Type.Select(Term.Name(resourceName), authSchemesTypeName)
+          Option(
+            param"""authenticationMiddleware: ($authType, List[String], Request[F]) => F[Option[$authContextTypeName]]"""
+          )
         case Custom =>
           Option(
             param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
@@ -308,6 +333,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         q"import fs2.text._",
         q"import cats.data.NonEmptyList",
         q"import cats.data.NonEmptyMap",
+        q"import cats.Monad",
+        q"import cats.Applicative",
         q"import cats.kernel.Order"
       )
     )
@@ -795,9 +822,16 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         case (arg, sr) =>
           authImplementation match {
             case Disable => identity _
-            case Simple  => identity _ // FIXME: implement me
+            case Simple =>
+              val securityRequirements = renderCustomSecurityRequirements(sr)
+              val authContextParam     = param"${arg.paramName}"
+              inner => q"""
+              authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap { $authContextParam =>
+                $inner
+              }
+            """
             case Custom =>
-              val securityRequirements = renderSecurityRequirements(sr)
+              val securityRequirements = renderCustomSecurityRequirements(sr)
               val authContextParam     = param"${arg.paramName}"
               inner => q"""
                 authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
@@ -856,6 +890,18 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
     })
 
   private def renderSecurityRequirements(sr: SecurityRequirements): Term = {
+    val orElements = sr.requirements.toList.map { r =>
+      val andElements = r.toSortedMap.toList.map {
+        case (key, scopes) =>
+          val renderedScopes = scopes.map(Lit.String(_))
+          q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> List(..$renderedScopes))"""
+      }
+      q"""NonEmptyMap.of(..$andElements)"""
+    }
+    q"""NonEmptyList.of(..$orElements)"""
+  }
+
+  private def renderCustomSecurityRequirements(sr: SecurityRequirements): Term = {
     val orElements = sr.requirements.toList.map { r =>
       val andElements = r.toSortedMap.toList.map {
         case (key, scopes) =>
