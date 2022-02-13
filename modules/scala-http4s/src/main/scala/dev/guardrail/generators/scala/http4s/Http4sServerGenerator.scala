@@ -265,21 +265,23 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             "IndexedSeq" -> (term => q"$term.toIndexedSeq")
           )
 
-          param match {
-            case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
-              multiOpt(scalaParam)(tpe)(containerTransformations(container.syntax))
-            case param"$_: Option[$container[$tpe]] = $_" if containerTransformations.contains(container.syntax) =>
-              multiOpt(scalaParam)(tpe)(containerTransformations(container.syntax))
+          val transform: Option[LanguageParameter[ScalaLanguage] => Type => Target[T]] = param match {
+            case param"$_: Option[$container[$tpe]]" =>
+              containerTransformations.get(container.syntax).map(lift => lp => _ => multiOpt(lp)(tpe)(lift))
+            case param"$_: Option[$container[$tpe]] = $_" =>
+              containerTransformations.get(container.syntax).map(lift => lp => _ => multiOpt(lp)(tpe)(lift))
             case param"$_: Option[$tpe]" =>
-              optional(scalaParam)(tpe)
+              Some(lp => _ => optional(lp)(tpe))
             case param"$_: Option[$tpe] = $_" =>
-              optional(scalaParam)(tpe)
-            case param"$_: $container[$tpe]" if containerTransformations.contains(container.syntax) =>
-              multi(scalaParam)(tpe)(containerTransformations(container.syntax))
-            case param"$_: $container[$tpe] = $_" if containerTransformations.contains(container.syntax) =>
-              multi(scalaParam)(tpe)(containerTransformations(container.syntax))
-            case _ => required(scalaParam)(argType)
+              Some(lp => _ => optional(lp)(tpe))
+            case param"$_: $container[$tpe]" =>
+              containerTransformations.get(container.syntax).map(lift => lp => _ => multi(lp)(tpe)(lift))
+            case param"$_: $container[$tpe] = $_" =>
+              containerTransformations.get(container.syntax).map(lift => lp => _ => multi(lp)(tpe)(lift))
+            case _ => None
           }
+
+          transform.getOrElse(required).apply(scalaParam)(argType)
       }
     } yield directives
 
