@@ -206,18 +206,16 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         schemes.foldM[F, Either[$authErrorTypeName, $authContextTypeName]](Left($errorTermName.Unauthorized)){ case (result, el) => 
           result match {
             case Left(value) => 
-              el.toNel.map({
-                case (scheme, scopes) =>
-                  middleware(scheme, scopes, req)
-              }).reduce[F[Either[$authErrorTypeName, $authContextTypeName]]]({
-                case (l, r) =>
-                  l.flatMap({
-                    case Right(_) =>
-                      r
-                    case l: Left[$authErrorTypeName, $authContextTypeName] =>
-                      Applicative[F].pure(l)
-                  })
-              })
+              val nel = el.toNel
+              val (headScheme, headScopes) = nel.head
+              val headResult = middleware(headScheme, headScopes, req)
+
+              nel.tail.foldLeft(headResult){ case (acc , (scheme, scopes)) => 
+                acc.flatMap {
+                  case Right(_) => middleware(scheme, scopes, req)
+                  case l: Left[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(l)
+                }
+              }
             case r: Right[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(r)
           }
         }

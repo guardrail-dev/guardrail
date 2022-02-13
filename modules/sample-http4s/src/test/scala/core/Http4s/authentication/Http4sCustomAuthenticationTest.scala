@@ -1,13 +1,13 @@
-package core.Http4s
+package core.Http4s.authentication
 
-import _root_.authenticationCustom.client.{ http4sV022 => cdefs }
-import _root_.authenticationCustom.server.http4sV022.auth.AuthHandler
-import _root_.authenticationCustom.server.http4sV022.auth.AuthResource
-import _root_.authenticationCustom.server.http4sV022.auth.AuthResource.DoBarResponse
-import _root_.authenticationCustom.server.http4sV022.auth.AuthResource.DoFooResponse
-import authenticationCustom.client.http4sV022.auth.AuthClient
+import _root_.authenticationCustom.client.{ http4s => cdefs }
+import _root_.authenticationCustom.server.http4s.auth.AuthHandler
+import _root_.authenticationCustom.server.http4s.auth.AuthResource
+import _root_.authenticationCustom.server.http4s.auth.AuthResource._
+import authenticationCustom.client.http4s.auth.AuthClient
 import cats.data._
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import io.circe.Json
 import io.circe.Printer
 import org.http4s.HttpRoutes
@@ -27,6 +27,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
+
   test("provide context to handler") {
     type AuthContext = Int
     type AuthError   = Unit
@@ -56,16 +57,16 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     retrieved shouldEqual "\"42-97-\""
   }
 
-  test("return response directly from authentication") {
+  test("process authentication error") {
     type AuthContext = Int
-    type AuthError   = Unit
+    type AuthError   = String
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Left(()))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Left("custom-failure"))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
       override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
-        authContext.fold(_ => IO(DoFooResponse.Ok("authentication failed")), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
+        authContext.fold(f => IO(DoFooResponse.Ok(f)), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -74,7 +75,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       client
         .run(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
-            .withBodyStream(fs2.Stream.apply("\"-97-\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
         .use(_.bodyText.compile.string)
@@ -82,7 +83,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
         .unsafeRunSync()
         .value
 
-    retrieved shouldEqual "\"authentication failed\""
+    retrieved shouldEqual "\"custom-failure\""
   }
   test("provide security requirements to authentication") {
     type AuthContext = Int
@@ -93,10 +94,13 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       IO.pure {
         val c = config.toList.map(_.toSortedMap.toMap)
 
-        if (c == List(Map(AuthSchemes.Jwt -> Set("foo:read", "bar:write")), Map(AuthSchemes.OAuth2 -> Set("oauth:scope"))))
-          Right[AuthError, AuthContext](1)
+        if (c == List(
+              Map(AuthSchemes.Jwt    -> Set("foo:read", "bar:write"), AuthSchemes.Basic -> Set("bar:basic")),
+              Map(AuthSchemes.OAuth2 -> Set("oauth:scope"))
+            ))
+          Right(1)
         else
-          Left[AuthError, AuthContext](())
+          Left(())
       }
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {

@@ -24,6 +24,8 @@ paths:
         - jwt:
           - "foo:read"
           - "bar:write"
+          basic:
+          - "bar:basic"
         - OAuth2:
           - "oauth:scope"
 
@@ -51,6 +53,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    basic:
+      type: http
+      scheme: basic
     OAuth2:
       type: oauth2
       flows:
