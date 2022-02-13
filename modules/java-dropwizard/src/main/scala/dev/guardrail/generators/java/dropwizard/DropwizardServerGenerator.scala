@@ -718,7 +718,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       securitySchemesDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
     safeParseSimpleName(className) >>
         safeParseSimpleName(handlerName) >>

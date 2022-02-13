@@ -60,6 +60,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
   val customExtractionTypeName: Type.Name = Type.Name("E")
   val authContextTypeName: Type.Name      = Type.Name("AuthContext")
+  val authErrorTypeName: Type.Name        = Type.Name("AuthError")
   val authSchemesTypeName: Type.Name      = Type.Name("AuthSchemes")
 
   private val bodyUtf8Decode = version match {
@@ -182,23 +183,44 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
     val schemesNames                    = securitySchemes.keySet
     val uniqueRequiremens: List[String] = securityRequirements.flatMap(_.requirements.flatMap(_.keys.toNonEmptyList).toList).distinct
 
+    val errorTermName = Term.Name(authErrorTypeName.value)
+    val simpleAuthErrors = {
+      val errorInit = Init(authErrorTypeName, Name(""), List.empty)
+      List(
+        q"""sealed trait $authErrorTypeName""",
+        q"""
+          object $errorTermName {
+            final case object Unauthorized extends $errorInit 
+            final case object Forbidden extends $errorInit 
+          }
+        """
+      ).filter(_ => authImplementation == AuthImplementation.Simple)
+    }
+
     val simpleAuthenticator = List(q"""
       def authenticate[F[_]: Monad, ${tparam"$authContextTypeName"}](
-        middleware: ($authSchemesTypeName, Set[String], Request[F]) => F[Option[$authContextTypeName]],
+        middleware: ($authSchemesTypeName, Set[String], Request[F]) => F[Either[$authErrorTypeName, $authContextTypeName]],
         schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, Set[String]]], 
         req: Request[F]
-      ): F[Option[$authContextTypeName]] = {
-        schemes
-          .collectFirstSomeM[F, $authContextTypeName](
-            _.toNel.map { case (scheme, scopes) => middleware(scheme, scopes, req) }
-              .reduce[F[Option[$authContextTypeName]]] {
+      ): F[Either[$authErrorTypeName, $authContextTypeName]] = {
+        schemes.foldM[F, Either[$authErrorTypeName, $authContextTypeName]](Left($errorTermName.Unauthorized)){ case (result, el) => 
+          result match {
+            case Left(value) => 
+              el.toNel.map({
+                case (scheme, scopes) =>
+                  middleware(scheme, scopes, req)
+              }).reduce[F[Either[$authErrorTypeName, $authContextTypeName]]]({
                 case (l, r) =>
-                  l.flatMap {
-                    case Some(_) => r
-                    case None    => Applicative[F].pure(None)
-                  }
-              }
-          )
+                  l.flatMap({
+                    case Right(_) =>
+                      r
+                    case l: Left[$authErrorTypeName, $authContextTypeName] =>
+                      Applicative[F].pure(l)
+                  })
+              })
+            case r: Right[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(r)
+          }
+        }
       }
     """).filter(_ => authImplementation == AuthImplementation.Simple)
 
@@ -225,7 +247,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               ..$list
             }
             """
-          ) ::: simpleAuthenticator
+          ) ::: simpleAuthErrors ::: simpleAuthenticator
         case list => list
       }
   }
@@ -243,9 +265,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
-      extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
-      authType    = List(tparam"$authContextTypeName").filter(_ => authImplementation != AuthImplementation.Disable)
-      tParams     = List(tparam"F[_]") ++ extractType ++ authType
+      extractType   = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
+      authType      = List(tparam"$authContextTypeName").filter(_ => authImplementation != AuthImplementation.Disable)
+      authErrorType = List(tparam"$authErrorTypeName").filter(_ => authImplementation == AuthImplementation.Custom)
+      tParams       = List(tparam"F[_]") ++ extractType ++ authType ++ authErrorType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
       ..${methodSigs ++ handlerDefinitions}
@@ -267,12 +290,13 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         case Simple =>
           val authType = Type.Select(Term.Name(resourceName), authSchemesTypeName)
           Option(
-            param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Option[$authContextTypeName]]"""
+            param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${Term
+              .Name(resourceName)}.$authErrorTypeName, $authContextTypeName]]"""
           )
         case Custom =>
           Option(
             param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
-              .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Request[F]) => F[Option[$authContextTypeName]]"""
+              .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Request[F]) => F[Either[$authErrorTypeName, $authContextTypeName]]"""
           )
       }
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
@@ -292,17 +316,20 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       responseDefinitions: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
       securitySchemesDefinitions: List[scala.meta.Defn],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): Target[List[Defn]] =
     Target.log.function("renderClass")(
       for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
         authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty)
-        resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
+        authErrorType   = List(tparam"$authErrorTypeName").filter(_ => securitySchemesDefinitions.nonEmpty && authImplementation == AuthImplementation.Custom)
+        resourceTParams = List(tparam"F[_]") ++ extractType ++ authType ++ authErrorType
         handlerTParams = List(Type.Name("F")) ++
             List(customExtractionTypeName).filter(_ => customExtraction) ++
-            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty)
+            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty) ++
+            List(authErrorTypeName).filter(_ => securitySchemesDefinitions.nonEmpty && authImplementation == AuthImplementation.Custom)
         routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield List(
         q"""
@@ -716,8 +743,15 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         .filter(_ == true)
         .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
       val authContextAndSecurityRequirement =
-        if (authImplementation == AuthImplementation.Disable) None
-        else securityRequirements.map((LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]"), _))
+        authImplementation match {
+          case AuthImplementation.Disable => None
+          case AuthImplementation.Simple =>
+            securityRequirements.map(
+              (LanguageParameter.fromParam(param"authContext: Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"), _)
+            )
+          case AuthImplementation.Custom =>
+            securityRequirements.map((LanguageParameter.fromParam(param"authContext: Either[$authErrorTypeName, $authContextTypeName]"), _))
+        }
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
           (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
         ) ++

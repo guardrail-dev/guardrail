@@ -461,7 +461,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       responseDefinitions: List[Defn],
       supportDefinitions: List[Defn],
       securitySchemesDefinitions: List[Defn],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): Target[List[Defn]] = {
     val routeParams = param"handler: ${Type.Name(handlerName)}" +: extraRouteParams
     Target.pure(

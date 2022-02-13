@@ -49,7 +49,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       responseDefinitions: List[L#Definition],
       supportDefinitions: List[L#Definition],
       securitySchemesDefinitions: List[L#Definition],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): F[List[L#Definition]]
   def renderHandler(
       handlerName: String,
@@ -87,7 +88,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           List[L#Definition],
           List[L#Definition],
           List[L#Definition],
-          Boolean
+          Boolean,
+          AuthImplementation
       ) => F[List[L#Definition]] = self.renderClass _,
       renderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition], Boolean, AuthImplementation) => F[L#Definition] =
         self.renderHandler _,
@@ -135,7 +137,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           responseDefinitions: List[L#Definition],
           supportDefinitions: List[L#Definition],
           securitySchemesDefinitions: List[L#Definition],
-          customExtraction: Boolean
+          customExtraction: Boolean,
+          authImplementation: AuthImplementation
       ): F[List[L#Definition]] =
         newRenderClass(
           resourceName,
@@ -146,7 +149,8 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           responseDefinitions,
           supportDefinitions,
           securitySchemesDefinitions,
-          customExtraction
+          customExtraction,
+          authImplementation
         )
       def renderHandler(
           handlerName: String,

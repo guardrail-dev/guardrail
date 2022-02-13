@@ -103,7 +103,8 @@ object ServerGenerator {
               responseDefinitions.flatten,
               renderedRoutes.supportDefinitions,
               renderedRoutes.securitySchemesDefinitions,
-              context.customExtraction
+              context.customExtraction,
+              context.authImplementation
             )
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)

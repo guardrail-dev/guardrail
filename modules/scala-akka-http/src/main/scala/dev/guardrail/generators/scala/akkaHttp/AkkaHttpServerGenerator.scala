@@ -293,7 +293,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       responseDefinitions: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
       securitySchemesDefinitions: List[scala.meta.Defn],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): Target[List[Defn]] =
     for {
       _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")

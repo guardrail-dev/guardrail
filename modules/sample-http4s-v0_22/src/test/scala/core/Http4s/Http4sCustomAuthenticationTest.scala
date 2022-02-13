@@ -29,13 +29,14 @@ import org.scalatest.matchers.should.Matchers
 class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
   test("provide context to handler") {
     type AuthContext = Int
+    type AuthError   = Unit
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Some(42))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Right(42))
 
-    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: Option[AuthContext], body: String): IO[DoFooResponse] =
-        authContext.fold(IO(DoFooResponse.Ok("authentication failed")))(ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
+      override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
+        authContext.fold(_ => IO(DoFooResponse.Ok("authentication failed")), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -57,13 +58,14 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
 
   test("return response directly from authentication") {
     type AuthContext = Int
+    type AuthError   = Unit
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(None)
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Left(()))
 
-    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: Option[AuthContext], body: String): IO[DoFooResponse] =
-        authContext.fold(IO(DoFooResponse.Ok("authentication failed")))(ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
+      override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
+        authContext.fold(_ => IO(DoFooResponse.Ok("authentication failed")), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -84,6 +86,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
   }
   test("provide security requirements to authentication") {
     type AuthContext = Int
+    type AuthError   = Unit
     import AuthResource.AuthSchemes
 
     val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: Request[IO]) =>
@@ -91,15 +94,15 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
         val c = config.toList.map(_.toSortedMap.toMap)
 
         if (c == List(Map(AuthSchemes.Jwt -> Set("foo:read", "bar:write")), Map(AuthSchemes.OAuth2 -> Set("oauth:scope"))))
-          Some(1)
+          Right[AuthError, AuthContext](1)
         else
-          None
+          Left[AuthError, AuthContext](())
       }
 
-    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: Option[AuthContext], body: String): IO[DoFooResponse] =
-        authContext.fold(IO(DoFooResponse.Ok("test failed")))(ctx => IO(DoFooResponse.Ok("test succeed")))
+      override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
+        authContext.fold(_ => IO(DoFooResponse.Ok("test failed")), ctx => IO(DoFooResponse.Ok("test succeed")))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
