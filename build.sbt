@@ -46,6 +46,7 @@ runExample := Def.inputTaskDyn {
 
 // Make "cli" not emit unhandled exceptions on exit
 Test / fork := true
+run / fork := true
 
 addCommandAlias("runtimeAkkaHttpSuite", "; resetSample ; runExample scala akka-http ; sample-akkaHttp / test")
 
@@ -147,6 +148,7 @@ lazy val core = modules.core.project
 
 lazy val cli = modules.cli.project
   .customDependsOn(guardrail)
+  .settings(run / fork := true)
 
 lazy val javaSupport = modules.javaSupport.project
   .customDependsOn(core)
