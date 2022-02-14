@@ -84,12 +84,11 @@ object SwaggerUtil {
   }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def typeName[L <: LA, F[_]](
-      typeName: Tracker[Option[String]],
-      format: Tracker[Option[String]],
+  def determineTypeName[L <: LA, F[_]](
+      schema: Tracker[Schema[_]],
       customType: Tracker[Option[String]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[L#Type] =
-    Sw.log.function(s"typeName(${typeName.unwrapTracker}, ${format.unwrapTracker}, ${customType.unwrapTracker})") {
+    Sw.log.function(s"determineTypeName(${schema.unwrapTracker}, ${customType.unwrapTracker})") {
       import Sc._
       import Cl._
       import Fw._
@@ -97,7 +96,8 @@ object SwaggerUtil {
       def log(fmt: Option[String], t: L#Type): L#Type = {
         fmt.foreach { fmt =>
           println(
-            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${typeName.unwrapTracker}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${format.showHistory})"
+            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${schema.unwrapTracker
+                .getType()}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${schema.showHistory})"
           )
         }
 
@@ -107,31 +107,40 @@ object SwaggerUtil {
       for {
         customTpe <- customType.indexedDistribute.flatTraverse(x => liftCustomType[L, F](x))
         result <- customTpe.fold {
-          (typeName.unwrapTracker, format.unwrapTracker) match {
-            case (Some("string"), Some("uuid"))         => uuidType()
-            case (Some("string"), Some("password"))     => stringType(None)
-            case (Some("string"), Some("email"))        => stringType(None)
-            case (Some("string"), Some("date"))         => dateType()
-            case (Some("string"), Some("date-time"))    => dateTimeType()
-            case (Some("string"), Some("byte"))         => bytesType()
-            case (Some("string"), fmt @ Some("binary")) => fileType(None).map(log(fmt, _))
-            case (Some("string"), fmt)                  => stringType(None).map(log(fmt, _))
-            case (Some("number"), Some("float"))        => floatType()
-            case (Some("number"), Some("double"))       => doubleType()
-            case (Some("number"), fmt)                  => numberType(fmt).map(log(fmt, _))
-            case (Some("integer"), Some("int32"))       => intType()
-            case (Some("integer"), Some("int64"))       => longType()
-            case (Some("integer"), fmt)                 => integerType(fmt).map(log(fmt, _))
-            case (Some("boolean"), fmt)                 => booleanType(fmt).map(log(fmt, _))
-            case (Some("array"), fmt)                   => arrayType(fmt).map(log(fmt, _))
-            case (Some("file"), fmt) =>
-              fileType(None).map(log(fmt, _))
-            case (Some("binary"), fmt) =>
-              fileType(None).map(log(fmt, _))
-            case (Some("object"), fmt) => objectType(fmt).map(log(fmt, _))
-            case (tpe, fmt) =>
-              fallbackType(tpe, fmt)
+          def const(value: F[L#Type]): Tracker[Schema[_]] => F[L#Type] = { _ => value }
+          def extractFormat(func: Option[String] => F[L#Type]): Tracker[Schema[_]] => F[L#Type] = { schema =>
+            val fmt = schema.downField("format", _.getFormat()).unwrapTracker
+            func(fmt)
           }
+          schema
+            .refine[F[L#Type]] { case x: StringSchema if x.getFormat() == "uuid" => x }(const(uuidType()))
+            .orRefine { case x: StringSchema if x.getType() == "file" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case x: StringSchema if x.getFormat() == "password" => x }(const(stringType(None)))
+            .orRefine { case x: StringSchema if x.getFormat() == "email" => x }(const(stringType(None)))
+            .orRefine { case x: StringSchema if x.getFormat() == "date" => x }(const(dateType()))
+            .orRefine { case x: StringSchema if x.getFormat() == "date-time" => x }(const(dateTimeType()))
+            .orRefine { case x: StringSchema if x.getFormat() == "byte" => x }(const(bytesType()))
+            .orRefine { case x: StringSchema if x.getFormat() == "binary" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case x: StringSchema => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
+            .orRefine { case x: NumberSchema if x.getFormat() == "float" => x }(const(floatType()))
+            .orRefine { case x: NumberSchema if x.getFormat() == "double" => x }(const(doubleType()))
+            .orRefine { case x: NumberSchema => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
+            .orRefine { case x: IntegerSchema if x.getFormat() == "int32" => x }(const(intType()))
+            .orRefine { case x: IntegerSchema if x.getFormat() == "int64" => x }(const(longType()))
+            .orRefine { case x: IntegerSchema => x }(extractFormat(fmt => integerType(fmt).map(log(fmt, _))))
+            .orRefine { case x: BooleanSchema => x }(extractFormat(fmt => booleanType(fmt).map(log(fmt, _))))
+            .orRefine { case x: ArraySchema => x }(schema =>
+              schema
+                .downField("items", _.getItems())
+                .cotraverse(determineTypeName(_, Tracker.cloneHistory(schema, None)).flatMap(liftVectorType(_, None)))
+                .getOrElse(arrayType(None))
+            )
+            .orRefine { case x: FileSchema => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case x: BinarySchema => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case x: ObjectSchema => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefineFallback(schema =>
+              fallbackType(schema.downField("type", _.getType()).unwrapTracker, schema.downField("format", _.getFormat()).unwrapTracker)
+            )
         }(_.pure[F])
         _ <- Sw.log.debug(s"Returning ${result}")
       } yield result
@@ -186,7 +195,7 @@ object SwaggerUtil {
 
       for {
         customTpeName <- customTypeName(a)
-        tpe           <- typeName[L, F](rawType, rawFormat, Tracker.cloneHistory(a, customTpeName))
+        tpe           <- determineTypeName[L, F](a, Tracker.cloneHistory(a, customTpeName))
       } yield core.Resolved[L](tpe, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker)
     }
 

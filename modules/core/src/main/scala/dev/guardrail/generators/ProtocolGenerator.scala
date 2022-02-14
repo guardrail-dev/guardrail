@@ -132,15 +132,10 @@ object ProtocolGenerator {
         classType   <- pureTypeName(clsName)
       } yield EnumDefinition[L](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
-    // Default to `string` for untyped enums.
-    // Currently, only plain strings are correctly supported anyway, so no big loss.
-    val tpeName   = schema.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Option("string")))
-    val rawFormat = schema.downField("format", _.getFormat())
-
     for {
       enum          <- extractEnum(schema.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(schema)
-      tpe           <- SwaggerUtil.typeName(tpeName, rawFormat, Tracker.cloneHistory(schema, customTpeName))
+      tpe           <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName))
       fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -539,14 +534,9 @@ object ProtocolGenerator {
       .orRefineFallback(_ => None)
     for {
       tpe <- model.fold[F[L#Type]](objectType(None)) { m =>
-        val raw = m.downField("type", _.getType())
         for {
           tpeName <- SwaggerUtil.customTypeName[L, F, Tracker[ObjectSchema]](m)
-          res <- SwaggerUtil.typeName[L, F](
-            raw,
-            m.downField("format", _.getFormat()),
-            Tracker.cloneHistory(m, tpeName)
-          )
+          res     <- SwaggerUtil.determineTypeName[L, F](m, Tracker.cloneHistory(m, tpeName))
         } yield res
       }
       res <- typeAlias[L, F](clsName, tpe)
@@ -669,7 +659,6 @@ object ProtocolGenerator {
   ): F[ProtocolDefinitions[L]] = {
     import P._
     import Sc._
-    import Sw._
 
     val definitions = swagger.downField("components", _.getComponents()).flatDownField("schemas", _.getSchemas()).indexedCosequence
     Sw.log.function("ProtocolGenerator.fromSwagger")(for {
@@ -750,19 +739,17 @@ object ProtocolGenerator {
                 supportPackage.toList,
                 defaultPropertyRequirement
               )
-              tpeName        <- getType(x)
               customTypeName <- SwaggerUtil.customTypeName(x)
-              tpe   <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
-              alias <- typeAlias[L, F](formattedClsName, tpe)
+              tpe            <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName))
+              alias          <- typeAlias[L, F](formattedClsName, tpe)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .valueOr(x =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              tpeName          <- getType(x)
               customTypeName   <- SwaggerUtil.customTypeName(x)
-              tpe <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
-              res <- typeAlias[L, F](formattedClsName, tpe)
+              tpe              <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName))
+              res              <- typeAlias[L, F](formattedClsName, tpe)
             } yield res
           )
       }
