@@ -1,7 +1,7 @@
 package dev.guardrail.generators
 
 import cats.syntax.all._
-import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.media
 import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.Components
 
@@ -64,21 +64,17 @@ object LanguageParameter {
 
     def paramMeta(param: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)] = {
       def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): F[Option[L#Term]] =
-        (_type, fmt.unwrapTracker) match {
-          case ("string", None) =>
-            Default(p).extract[String].traverse(litString(_))
-          case ("number", Some("float")) =>
-            Default(p).extract[Float].traverse(litFloat(_))
-          case ("number", Some("double")) =>
-            Default(p).extract[Double].traverse(litDouble(_))
-          case ("integer", Some("int32")) =>
-            Default(p).extract[Int].traverse(litInt(_))
-          case ("integer", Some("int64")) =>
-            Default(p).extract[Long].traverse(litLong(_))
-          case ("boolean", None) =>
-            Default(p).extract[Boolean].traverse(litBoolean(_))
-          case x => Option.empty[L#Term].pure[F]
-        }
+        for {
+          schema <- getBodyParameterSchema(p)
+          res <- schema
+            .refine[F[Option[L#Term]]] { case x: media.StringSchema => x }(schema => Default(schema).extract[String].traverse(litString))
+            .orRefine { case x: media.NumberSchema if x.getFormat() == "float" => x }(schema => Default(schema).extract[Float].traverse(litFloat))
+            .orRefine { case x: media.NumberSchema => x }(schema => Default(schema).extract[Double].traverse(litDouble))
+            .orRefine { case x: media.IntegerSchema if x.getFormat() == "int32" => x }(schema => Default(schema).extract[Int].traverse(litInt))
+            .orRefine { case x: media.IntegerSchema => x }(schema => Default(schema).extract[Long].traverse(litLong))
+            .orRefine { case x: media.BooleanSchema => x }(schema => Default(schema).extract[Boolean].traverse(litBoolean))
+            .orRefineFallback(_ => Option.empty[L#Term].pure[F])
+        } yield res
 
       def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[(ResolvedType[L], Boolean)] =
         for {
@@ -86,7 +82,7 @@ object LanguageParameter {
           schema = param.downField("schema", _.getSchema)
           fmt    = schema.flatDownField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- schema.unwrapTracker.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
+          customSchemaTypeName <- schema.unwrapTracker.flatTraverse(SwaggerUtil.customTypeName(_: media.Schema[_]))
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
           res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
             .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
