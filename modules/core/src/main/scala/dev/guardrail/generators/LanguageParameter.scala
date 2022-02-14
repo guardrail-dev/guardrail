@@ -63,7 +63,7 @@ object LanguageParameter {
     import Sw._
 
     def paramMeta(param: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)] = {
-      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): F[Option[L#Term]] =
+      def getDefault[U <: Parameter: Default.GetDefault](p: Tracker[U]): F[Option[L#Term]] =
         for {
           schema <- getBodyParameterSchema(p)
           res <- schema
@@ -79,12 +79,12 @@ object LanguageParameter {
       def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[(ResolvedType[L], Boolean)] =
         for {
           tpeName <- typeFetcher(param)
-          schema = param.downField("schema", _.getSchema)
-          fmt    = schema.flatDownField("format", _.getFormat)
+          schema  <- getBodyParameterSchema(param)
+          fmt = schema.downField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- schema.unwrapTracker.flatTraverse(SwaggerUtil.customTypeName(_: media.Schema[_]))
+          customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
-          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
+          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(param))
             .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
         } yield (res, required)
