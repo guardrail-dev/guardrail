@@ -69,7 +69,7 @@ object ProtocolGenerator {
 
   private[this] def fromEnum[L <: LA, F[_], A](
       clsName: String,
-      swagger: Tracker[Schema[A]],
+      schema: Tracker[Schema[A]],
       dtoPackage: List[String]
   )(implicit
       P: ProtocolTerms[L, F],
@@ -134,12 +134,13 @@ object ProtocolGenerator {
 
     // Default to `string` for untyped enums.
     // Currently, only plain strings are correctly supported anyway, so no big loss.
-    val tpeName = swagger.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Option("string")))
+    val tpeName   = schema.downField("type", _.getType()).map(_.filterNot(_ == "object").orElse(Option("string")))
+    val rawFormat = schema.downField("format", _.getFormat())
 
     for {
-      enum          <- extractEnum(swagger.map(wrapEnumSchema))
-      customTpeName <- SwaggerUtil.customTypeName(swagger)
-      tpe           <- SwaggerUtil.typeName(tpeName, swagger.downField("format", _.getFormat()), Tracker.cloneHistory(swagger, customTpeName))
+      enum          <- extractEnum(schema.map(wrapEnumSchema))
+      customTpeName <- SwaggerUtil.customTypeName(schema)
+      tpe           <- SwaggerUtil.typeName(tpeName, rawFormat, Tracker.cloneHistory(schema, customTpeName))
       fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
