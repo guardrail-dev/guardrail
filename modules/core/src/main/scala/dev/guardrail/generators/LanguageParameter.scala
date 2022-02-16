@@ -61,7 +61,7 @@ object LanguageParameter {
     import Cl._
     import Sw._
 
-    def paramMeta(param: Tracker[Parameter]): F[core.ResolvedType[L]] = {
+    def paramMeta(param: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)] = {
       def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): F[Option[L#Term]] =
         (_type, fmt.unwrapTracker) match {
           case ("string", None) =>
@@ -79,7 +79,7 @@ object LanguageParameter {
           case x => Option.empty[L#Term].pure[F]
         }
 
-      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[ResolvedType[L]] =
+      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[(ResolvedType[L], Boolean)] =
         for {
           tpeName <- typeFetcher(param)
           schema = param.downField("schema", _.getSchema)
@@ -89,34 +89,47 @@ object LanguageParameter {
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
           res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
             .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
-        } yield res
+          required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+        } yield (res, required)
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
       param
-        .refine[F[core.ResolvedType[L]]]({ case r: Parameter if r.isRef => r })(
-          r => getRefParameterRef(r).map(_.unwrapTracker).map(core.Deferred(_))
+        .refine[F[(core.ResolvedType[L], Boolean)]]({ case r: Parameter if r.isRef => r })(
+          r =>
+            for {
+              name <- getRefParameterRef(r)
+              required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+            } yield (core.Deferred(name.unwrapTracker), required)
         )
-        .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(r => getSimpleRef(r.downField("schema", _.getSchema)).map(core.Deferred(_)))
+        .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(
+          r =>
+            for {
+              ref <- getSimpleRef(r.downField("schema", _.getSchema))
+              required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+            } yield (core.Deferred(ref), required)
+        )
         .orRefine({ case x: Parameter if x.isInBody => x })(
-          x =>
-            getBodyParameterSchema(x)
-              .flatMap(x => SwaggerUtil.modelMetaType[L, F](x))
+          param =>
+            for {
+              schema   <- getBodyParameterSchema(param)
+              resolved <- SwaggerUtil.modelMetaType[L, F](schema)
+              required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+            } yield (resolved, required)
         )
         .orRefine({ case x: Parameter if x.isInHeader => x })(x => resolveParam(x, getHeaderParameterType))
         .orRefine({ case x: Parameter if x.isInPath => x })(x => resolveParam(x, getPathParameterType))
         .orRefine({ case x: Parameter if x.isInQuery => x })(x => resolveParam(x, getQueryParameterType))
         .orRefine({ case x: Parameter if x.isInCookies => x })(x => resolveParam(x, getCookieParameterType))
         .orRefine({ case x: Parameter if x.isInFormData => x })(x => resolveParam(x, getFormParameterType))
-        .orRefineFallback(fallbackParameterHandler(_))
+        .orRefineFallback(fallbackParameterHandler)
     }
 
     log.function(s"fromParameter")(for {
       _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
-      meta                                                              <- paramMeta(parameter)
+      (meta, required)                                                  <- paramMeta(parameter)
       core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
-      required = parameter.downField("required", _.getRequired()).map(_.getOrElse(false)).unwrapTracker
       declType <- if (!required) {
         liftOptionalType(paramType)
       } else {
