@@ -141,7 +141,7 @@ object ProtocolGenerator {
       enum          <- extractEnum(schema.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(schema)
       tpe           <- SwaggerUtil.typeName(tpeName, rawFormat, Tracker.cloneHistory(schema, customTpeName))
-      fullType      <- selectType(NonEmptyList.fromList(dtoPackage :+ clsName).getOrElse(NonEmptyList.of(clsName)))
+      fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
   }
