@@ -178,7 +178,7 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
             .map(_.split('.').toVector)
             .orElse(
               tagBehaviour match {
-                case Context.TagsArePackages =>
+                case Context.PackageFromTags =>
                   operation
                     .downField("tags", _.getTags)
                     .toNel

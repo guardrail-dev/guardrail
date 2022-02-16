@@ -13,7 +13,7 @@ case class Context(
 
 object Context {
   sealed trait TagsBehaviour
-  case object TagsArePackages extends TagsBehaviour
+  case object PackageFromTags extends TagsBehaviour
   case object TagsAreIgnored  extends TagsBehaviour
 
   val empty: Context = Context(
