@@ -37,7 +37,9 @@ object SwaggerUtil {
     } yield CustomMapTypeName(v, prefixes)
   }
 
-  def modelMetaType[L <: LA, F[_]](model: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
+  def modelMetaType[L <: LA, F[_]](
+      model: Tracker[Schema[_]]
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
     propMetaImpl[L, F](model)(Left(_))
 
   def extractConcreteTypes[L <: LA, F[_]](
