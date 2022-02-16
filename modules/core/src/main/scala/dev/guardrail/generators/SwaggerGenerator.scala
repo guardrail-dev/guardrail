@@ -5,9 +5,12 @@ import cats.syntax.all._
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.headers
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
+import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.{ SecurityRequirement, SecurityScheme => SwSecurityScheme }
+import java.{ util => ju }
 import java.net.URI
 import scala.util.Try
 
@@ -270,6 +273,39 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
 
   override def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]) =
     Target.raiseUserError(s"Unable to resolve: ${lazyElems.map(_.name)}")
+
+  private def buildExtractor[A](components: Tracker[Option[Components]], label: String, proj: Components => ju.Map[String, A])(
+      ref: Tracker[String]
+  ): Target[Tracker[A]] = {
+    val extract = s"^#/components/$label/([^/]*)$$".r
+    ref
+      .refine[Target[Tracker[A]]] { case extract(name) => name }(name =>
+        components.indexedDistribute
+          .fold[Target[Tracker[A]]](Target.raiseException("Attempting to dereference a $ref, but no components defined"))(components =>
+            Target.fromOption(
+              components.downField(label, proj).indexedDistribute.value.toMap.get(name.unwrapTracker),
+              UserError(s"Attempting to dereference a $$ref, but no object found at the specified pointer")
+            )
+          )
+      )
+      .orRefineFallback(_ =>
+        Target.raiseException(
+          s"While attempting to dereference '${label}', encountered a JSON pointer to a different component type: ${ref.unwrapTracker} (${ref.showHistory})"
+        )
+      )
+  }
+
+  def dereferenceHeader(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[headers.Header]] =
+    buildExtractor(components, "headers", _.getHeaders())(ref)
+  def dereferenceParameter(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[Parameter]] =
+    buildExtractor(components, "parameters", _.getParameters())(ref)
+  def dereferenceRequestBodie(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[RequestBody]] =
+    buildExtractor(components, "requestBodies", _.getRequestBodies())(ref)
+  def dereferenceResponse(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[ApiResponse]] =
+    buildExtractor(components, "responses", _.getResponses())(ref)
+  def dereferenceSchema(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[Schema[_]]] =
+    buildExtractor(components, "schemas", _.getSchemas())(ref)
+
   override def log: SwaggerLogAdapter[Target] = new SwaggerLogAdapter[Target] {
     def function[A](name: String): Target[A] => Target[A] = Target.log.function(name)
     def push(name: String): Target[Unit]                  = Target.log.push(name)

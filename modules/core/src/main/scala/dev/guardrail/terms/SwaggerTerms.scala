@@ -58,5 +58,12 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def fallbackPropertyTypeHandler(prop: Tracker[Schema[_]]): F[L#Type]
   def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]): F[StrictProtocolElems[L]]
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): F[List[StrictProtocolElems[L]]]
+
+  def dereferenceHeader(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[headers.Header]]
+  def dereferenceParameter(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[Parameter]]
+  def dereferenceRequestBodie(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[RequestBody]]
+  def dereferenceResponse(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[ApiResponse]]
+  def dereferenceSchema(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[Schema[_]]]
+
   def log: SwaggerLogAdapter[F]
 }
