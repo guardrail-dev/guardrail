@@ -48,7 +48,7 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def getFormParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
   def getRefParameterRef(parameter: Tracker[Parameter]): F[Tracker[String]]
   def getSerializableParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def fallbackParameterHandler(parameter: Tracker[Parameter]): F[core.ResolvedType[L]]
+  def fallbackParameterHandler(parameter: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)]
   def getOperationId(operation: Tracker[Operation]): F[String]
   def getResponses(operationId: String, operation: Tracker[Operation]): F[NonEmptyList[(String, Tracker[ApiResponse])]]
   def getSimpleRef(ref: Tracker[Option[Schema[_]]]): F[String]
