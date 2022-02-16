@@ -224,7 +224,7 @@ object JacksonProtocolGenerator {
             case t"Int"    => Target.pure(q"writeNumber")
             case t"Long"   => Target.pure(q"writeNumber")
             case t"String" => Target.pure(q"writeString")
-            case other     => Target.raiseException(s"Unexpected type during enumeration encoder: ${other}")
+            case other     => Target.raiseException(s"Unexpected type during enumeration encoder: ${className} was ${other}")
           }
         } yield Some(
           q"""
@@ -241,7 +241,7 @@ object JacksonProtocolGenerator {
             case t"String" => Target.pure(q"getText")
             case t"Int"    => Target.pure(q"getIntValue")
             case t"Long"   => Target.pure(q"getLongValue")
-            case other     => Target.raiseException(s"Unexpected type during enumeration decoder: ${other}")
+            case other     => Target.raiseException(s"Unexpected type during enumeration decoder: ${className} was ${other}")
           }
         } yield Some(
           q"""

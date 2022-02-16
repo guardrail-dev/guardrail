@@ -38,7 +38,7 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def extractHttpSecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): F[HttpSecurityScheme[L]]
   def extractOpenIdConnectSecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): F[OpenIdConnectSecurityScheme[L]]
   def extractOAuth2SecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]): F[OAuth2SecurityScheme[L]]
-  def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String]): F[List[String]]
+  def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour): F[List[String]]
   def getParameterName(parameter: Tracker[Parameter]): F[String]
   def getBodyParameterSchema(parameter: Tracker[Parameter]): F[Tracker[Schema[_]]]
   def getHeaderParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]

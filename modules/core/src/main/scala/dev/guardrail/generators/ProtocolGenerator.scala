@@ -773,8 +773,8 @@ object ProtocolGenerator {
                   tpeName        <- getType(x)
                   customTypeName <- SwaggerUtil.customTypeName(x)
                   tpe            <- SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), x.downField("format", _.getFormat()), Tracker.cloneHistory(x, customTypeName))
-                  res            <- typeAlias[L, F](formattedClsName, tpe)
-                } yield enum.orElse(model).getOrElse(res)
+                  alias          <- typeAlias[L, F](formattedClsName, tpe)
+                } yield enum.orElse(model).getOrElse(alias)
             )
             .valueOr(
               x =>

@@ -7,15 +7,21 @@ case class Context(
     customExtraction: Boolean,
     tracing: Boolean,
     modules: List[String],
-    propertyRequirement: PropertyRequirement.Configured
+    propertyRequirement: PropertyRequirement.Configured,
+    tagsBehaviour: Context.TagsBehaviour
 )
 
 object Context {
+  sealed trait TagsBehaviour
+  case object PackageFromTags extends TagsBehaviour
+  case object TagsAreIgnored  extends TagsBehaviour
+
   val empty: Context = Context(
     None,
     customExtraction = false,
     tracing = false,
     modules = List.empty,
-    propertyRequirement = PropertyRequirement.Configured(PropertyRequirement.OptionalLegacy, PropertyRequirement.OptionalLegacy)
+    propertyRequirement = PropertyRequirement.Configured(PropertyRequirement.OptionalLegacy, PropertyRequirement.OptionalLegacy),
+    tagsBehaviour = TagsAreIgnored
   )
 }

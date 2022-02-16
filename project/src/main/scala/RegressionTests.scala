@@ -24,7 +24,7 @@ object RegressionTests {
 
   def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
   val exampleCases: List[ExampleCase] = List(
-    ExampleCase(sampleResource("department.yaml"), "department"),
+    ExampleCase(sampleResource("department.yaml"), "department").args("--package-from-tags"),
     ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
     ExampleCase(sampleResource("alias.yaml"), "alias"),
     ExampleCase(sampleResource("char-encoding/char-encoding-request-stream.yaml"), "charEncoding.requestStream").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("dropwizard")),

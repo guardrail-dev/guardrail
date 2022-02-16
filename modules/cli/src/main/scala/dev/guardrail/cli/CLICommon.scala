@@ -31,6 +31,7 @@ object CLICommon {
     |   --framework <framework name>                           : Use one of the pre-composed frameworks
     |   --module <module name>                                 : Explicitly select libraries to satisfy composition requirements
     |   --custom-extraction                                    : Permit supplying an akka-http Directive into the generated guardrail routing layer (server only)
+    |   --package-from-tags                                    : Use the tags, defined in the OpenAPI specification, to guide the generated package structures
     |
     |Examples:
     |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
@@ -127,6 +128,8 @@ trait CLICommon extends GuardrailRunner {
                 Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
               case (sofar :: already, "--custom-extraction" :: xs) =>
                 Continue((sofar.copyContext(customExtraction = true) :: already, xs))
+              case (sofar :: already, "--package-from-tags" :: xs) =>
+                Continue((sofar.copyContext(tagsBehaviour = Context.PackageFromTags) :: already, xs))
               case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
                 for {
                   propertyRequirement <- parseOptionalProperty(arg, value)

@@ -18,7 +18,8 @@ case class Args(
       customExtraction: Boolean = self.context.customExtraction,
       tracing: Boolean = self.context.tracing,
       modules: List[String] = self.context.modules,
-      propertyRequirement: PropertyRequirement.Configured = self.context.propertyRequirement
+      propertyRequirement: PropertyRequirement.Configured = self.context.propertyRequirement,
+      tagsBehaviour: Context.TagsBehaviour = self.context.tagsBehaviour
   ): Args =
     self.copy(
       context = self.context.copy(
@@ -26,7 +27,8 @@ case class Args(
         customExtraction = customExtraction,
         tracing = tracing,
         modules = modules,
-        propertyRequirement = propertyRequirement
+        propertyRequirement = propertyRequirement,
+        tagsBehaviour = tagsBehaviour
       )
     )
 
