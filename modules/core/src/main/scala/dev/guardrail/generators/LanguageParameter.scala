@@ -63,9 +63,8 @@ object LanguageParameter {
     import Sw._
 
     def paramMeta(param: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)] = {
-      def getDefault[U <: Parameter: Default.GetDefault](p: Tracker[U]): F[Option[L#Term]] =
+      def getDefault[U <: Parameter: Default.GetDefault](schema: Tracker[media.Schema[_]]): F[Option[L#Term]] =
         for {
-          schema <- getBodyParameterSchema(p)
           res <- schema
             .refine[F[Option[L#Term]]] { case x: media.StringSchema => x }(schema => Default(schema).extract[String].traverse(litString))
             .orRefine { case x: media.NumberSchema if x.getFormat() == "float" => x }(schema => Default(schema).extract[Float].traverse(litFloat))
@@ -84,7 +83,7 @@ object LanguageParameter {
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
-          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(param))
+          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(schema))
             .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
         } yield (res, required)
