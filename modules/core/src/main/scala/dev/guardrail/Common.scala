@@ -73,7 +73,8 @@ object Common {
       globalSecurityRequirements = NonEmptyList
         .fromList(swagger.downField("security", _.getSecurity).indexedDistribute)
         .flatMap(SecurityRequirements(_, SecurityRequirements.Global))
-      requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents))
+      components = swagger.downField("components", _.getComponents)
+      requestBodies    <- extractCommonRequestBodies(components)
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- Cl.vendorPrefixes()
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.unwrapTracker, prefixes)
@@ -87,7 +88,7 @@ object Common {
         case CodegenTarget.Client =>
           for {
             clientMeta <- ClientGenerator
-              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
             Clients(clients, supportDefinitions) = clientMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)
@@ -95,7 +96,7 @@ object Common {
         case CodegenTarget.Server =>
           for {
             serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, supportPackage, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes)
+              .fromSwagger[L, F](context, supportPackage, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes, components)
             Servers(servers, supportDefinitions) = serverMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)

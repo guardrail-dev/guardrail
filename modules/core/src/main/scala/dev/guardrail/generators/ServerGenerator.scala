@@ -11,6 +11,8 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server.{ GenerateRouteMeta, SecurityExposure, ServerTerms }
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
+import dev.guardrail.core.Tracker
+import io.swagger.v3.oas.models.Components
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Server[L <: LA](pkg: List[String], extraImports: List[L#Import], handlerDefinition: L#Definition, serverDefinitions: List[L#Definition])
@@ -30,7 +32,8 @@ object ServerGenerator {
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],
-      securitySchemes: Map[String, SecurityScheme[L]]
+      securitySchemes: Map[String, SecurityScheme[L]],
+      components: Tracker[Option[Components]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], S: ServerTerms[L, F], Sw: SwaggerTerms[L, F]): F[Servers[L]] = {
     import S._
     import Sw._
@@ -58,7 +61,7 @@ object ServerGenerator {
               responseClsName       <- formatTypeName(operationId, Some("Response"))
               responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
               methodName            <- formatMethodName(operationId)
-              parameters            <- route.getParameters[L, F](protocolElems)
+              parameters            <- route.getParameters[L, F](components, protocolElems)
               customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
               tracingField          <- buildTracingFields(operation, className, context.tracing)
             } yield (

@@ -3,17 +3,17 @@ package dev.guardrail.generators
 import cats.syntax.all._
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters._
+import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
 import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
-import dev.guardrail.core.{ ResolvedType, Tracker }
+import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
-import dev.guardrail.core.ReifiedRawType
 
 case class RawParameterName private[generators] (value: String)
 class LanguageParameters[L <: LA](val parameters: List[LanguageParameter[L]]) {
@@ -49,7 +49,8 @@ object LanguageParameter {
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParameter[L <: LA, F[_]](
-      protocolElems: List[StrictProtocolElems[L]]
+      protocolElems: List[StrictProtocolElems[L]],
+      components: Tracker[Option[Components]]
   )(implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
@@ -179,7 +180,8 @@ object LanguageParameter {
   }
 
   def fromParameters[L <: LA, F[_]](
-      protocolElems: List[StrictProtocolElems[L]]
+      protocolElems: List[StrictProtocolElems[L]],
+      components: Tracker[Option[Components]]
   )(implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
@@ -188,7 +190,7 @@ object LanguageParameter {
   ): List[Tracker[Parameter]] => F[List[LanguageParameter[L]]] = { params =>
     import Sc._
     for {
-      parameters <- params.traverse(fromParameter(protocolElems))
+      parameters <- params.traverse(fromParameter(protocolElems, components))
       counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).view.mapValues(_.length).toMap)
       result <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>

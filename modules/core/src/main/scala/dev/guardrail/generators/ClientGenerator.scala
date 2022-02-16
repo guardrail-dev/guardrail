@@ -12,6 +12,8 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.{ Context, _ }
+import dev.guardrail.core.Tracker
+import io.swagger.v3.oas.models.Components
 
 case class Clients[L <: LA](clients: List[Client[L]], supportDefinitions: List[SupportDefinition[L]])
 case class Client[L <: LA](
@@ -34,7 +36,8 @@ object ClientGenerator {
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],
-      securitySchemes: Map[String, SecurityScheme[L]]
+      securitySchemes: Map[String, SecurityScheme[L]],
+      components: Tracker[Option[Components]]
   )(implicit C: ClientTerms[L, F], Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[Clients[L]] = {
     import C._
     import Sc._
@@ -53,7 +56,7 @@ object ClientGenerator {
               responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
               responseClsName     <- formatTypeName(operationId, Some("Response"))
               responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
-              parameters          <- route.getParameters[L, F](protocolElems)
+              parameters          <- route.getParameters[L, F](components, protocolElems)
               methodName          <- formatMethodName(operationId)
               clientOp <- generateClientOperation(className, responseClsName, context.tracing, securitySchemes, parameters)(route, methodName, responses)
             } yield (responseDefinitions, clientOp)

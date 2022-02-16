@@ -2,7 +2,7 @@ package dev.guardrail.terms
 
 import cats.data.State
 import cats.implicits._
-import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.{ Components, Operation }
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.Parameter
@@ -204,9 +204,10 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
         }
 
   def getParameters[L <: LA, F[_]](
+      components: Tracker[Option[Components]],
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[LanguageParameters[L]] =
     for {
-      a <- LanguageParameter.fromParameters(protocolElems).apply(parameters)
+      a <- LanguageParameter.fromParameters(protocolElems, components).apply(parameters)
     } yield new LanguageParameters[L](a)
 }
