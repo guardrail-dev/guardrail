@@ -167,7 +167,7 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
       flows <- Target.fromOption(Option(securityScheme.getFlows), UserError(s"Security scheme ${schemeName} has no OAuth2 flows"))
     } yield OAuth2SecurityScheme[L](flows, tpe)
 
-  override def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String]) =
+  override def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour) =
     Target.log.function("getClassName")(for {
       _ <- Target.log.debug(s"Args: ${operation.unwrapTracker.showNotNull}")
 
@@ -176,18 +176,20 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
         case None =>
           val pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
-            .orElse({
-              operation
-                .downField("tags", _.getTags)
-                .toNel
-                .indexedCosequence
-                .map { tags =>
-                  println(
-                    s"Warning: Using `tags` to define package membership is deprecated in favor of the `x-jvm-package` vendor extension (${tags.showHistory})"
-                  )
-                  tags.unwrapTracker.toList
-                }
-            })
+            .orElse(
+              tagBehaviour match {
+                case Context.TagsArePackages =>
+                  operation
+                    .downField("tags", _.getTags)
+                    .toNel
+                    .indexedCosequence
+                    .map { tags =>
+                      tags.unwrapTracker.toList
+                    }
+                case Context.TagsAreIgnored =>
+                  None
+              }
+            )
           val opPkg = operation.downField("operationId", _.getOperationId()).map(_.toList.flatMap(splitOperationParts(_)._1)).unwrapTracker
           pkg.fold(opPkg)(_.toList ++ opPkg)
       }
