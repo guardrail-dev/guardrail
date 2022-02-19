@@ -1076,11 +1076,11 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     q"""
       object ${matcherName} {
         def unapply(params: Map[String, collection.Seq[String]]): Option[${container}[${tpe}]] = {
-          val res = params
+          ${transform(q"""params
             .get(${argName})
             .flatMap(values =>
               values.toList.traverse(s => QueryParamDecoder[${tpe}].decode(QueryParameterValue(s)).toOption))
-          ${transform(q"res")}
+          """)}
         }
       }
     """
