@@ -29,14 +29,16 @@ import org.scalatest.matchers.should.Matchers
 class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with EitherValues with StringSyntax {
 
   test("provide context to handler") {
-    type AuthContext = Int
-    type AuthError   = Unit
+    type AuthContext = Either[Unit, Int]
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Right(42))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Right(42))
 
-    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
+
+      override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
+
+      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
         authContext.fold(_ => IO(DoFooResponse.Ok("authentication failed")), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
@@ -58,14 +60,16 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
   }
 
   test("process authentication error") {
-    type AuthContext = Int
-    type AuthError   = String
+    type AuthContext = Either[String, Int]
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Request[IO]) => IO.pure(Left("custom-failure"))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Left("custom-failure"))
 
-    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
+
+      override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
+
+      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
         authContext.fold(f => IO(DoFooResponse.Ok(f)), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
     })
 
@@ -85,12 +89,12 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
 
     retrieved shouldEqual "\"custom-failure\""
   }
+
   test("provide security requirements to authentication") {
-    type AuthContext = Int
-    type AuthError   = Unit
+    type AuthContext = Either[Unit, Int]
     import AuthResource.AuthSchemes
 
-    val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: Request[IO]) =>
+    val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) =>
       IO.pure {
         val c = config.toList.map(_.toSortedMap.toMap)
 
@@ -103,9 +107,12 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
           Left(())
       }
 
-    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext, AuthError](authMiddleware).routes(new AuthHandler[IO, AuthContext, AuthError] {
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
-      override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthError, AuthContext], body: String): IO[DoFooResponse] =
+
+      override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
+
+      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
         authContext.fold(_ => IO(DoFooResponse.Ok("test failed")), ctx => IO(DoFooResponse.Ok("test succeed")))
     })
 
@@ -124,5 +131,43 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
         .value
 
     retrieved shouldEqual "\"test succeed\""
+  }
+
+  test("provide optional security requirement to the middleware") {
+    type AuthContext = Either[Unit, Unit]
+    import AuthResource.AuthSchemes
+
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], optional: Boolean, _: Request[IO]) =>
+      IO.pure(
+        if (optional) Right(())
+        else Left(())
+      )
+
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
+      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+
+      override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] =
+        authContext.fold(_ => IO(DoBazResponse.Ok("non optional")), ctx => IO(DoBazResponse.Ok("optional")))
+
+      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
+        authContext.fold(_ => IO(DoFooResponse.Ok("non optional")), ctx => IO(DoFooResponse.Ok("optional")))
+    })
+
+    val client = Client.fromHttpApp(server.orNotFound)
+
+    def request(path: String) =
+      client
+        .run(
+          Request[IO](method = Method.POST, uri = Uri.unsafeFromString(path))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withContentType(`Content-Type`(MediaType.application.json))
+        )
+        .use(_.bodyText.compile.string)
+        .attempt
+        .unsafeRunSync()
+        .value
+
+    request("/foo") shouldEqual "\"non optional\""
+    request("/baz") shouldEqual "\"optional\""
   }
 }

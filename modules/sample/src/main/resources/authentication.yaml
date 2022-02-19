@@ -47,6 +47,28 @@ paths:
               schema:
                 type: string
 
+  /baz:
+    post:
+      x-jvm-package: auth
+      operationId: doBaz
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - {}
+        - basic:
+          - "bar:basic"
+
 components:
   securitySchemes:
     jwt:

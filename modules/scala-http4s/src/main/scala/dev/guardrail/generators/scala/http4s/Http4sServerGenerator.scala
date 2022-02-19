@@ -263,10 +263,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
-      extractType   = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
-      authType      = List(tparam"$authContextTypeName").filter(_ => authImplementation != AuthImplementation.Disable)
-      authErrorType = List(tparam"$authErrorTypeName").filter(_ => authImplementation == AuthImplementation.Custom)
-      tParams       = List(tparam"F[_]") ++ extractType ++ authType ++ authErrorType
+      extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
+      authType    = List(tparam"$authContextTypeName").filter(_ => authImplementation != AuthImplementation.Disable)
+      tParams     = List(tparam"F[_]") ++ extractType ++ authType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
       ..${methodSigs ++ handlerDefinitions}
@@ -294,7 +293,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         case Custom =>
           Option(
             param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
-              .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Request[F]) => F[Either[$authErrorTypeName, $authContextTypeName]]"""
+              .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
           )
       }
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
@@ -322,12 +321,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
         authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty)
-        authErrorType   = List(tparam"$authErrorTypeName").filter(_ => securitySchemesDefinitions.nonEmpty && authImplementation == AuthImplementation.Custom)
-        resourceTParams = List(tparam"F[_]") ++ extractType ++ authType ++ authErrorType
+        resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
         handlerTParams = List(Type.Name("F")) ++
             List(customExtractionTypeName).filter(_ => customExtraction) ++
-            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty) ++
-            List(authErrorTypeName).filter(_ => securitySchemesDefinitions.nonEmpty && authImplementation == AuthImplementation.Custom)
+            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty)
         routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
       } yield List(
         q"""
@@ -748,7 +745,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               (LanguageParameter.fromParam(param"authContext: Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"), _)
             )
           case AuthImplementation.Custom =>
-            securityRequirements.map((LanguageParameter.fromParam(param"authContext: Either[$authErrorTypeName, $authContextTypeName]"), _))
+            securityRequirements.map((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), _))
         }
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
           (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
@@ -866,7 +863,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               val securityRequirements = renderCustomSecurityRequirements(sr)
               val authContextParam     = param"${arg.paramName}"
               inner => q"""
-                authenticationMiddleware($securityRequirements, req).flatMap { $authContextParam =>
+                authenticationMiddleware($securityRequirements, ${sr.optional}, req).flatMap { $authContextParam =>
                   $inner
                 }
               """
