@@ -538,7 +538,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       },
       arg => {
         case t"String" =>
-          _ => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), q"${arg.paramName}.toList"))
+          lift => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), lift(q"${arg.paramName}")))
         case tpe =>
           _ =>
             Target.pure(
