@@ -161,7 +161,10 @@ object SwaggerUtil {
                 .cotraverse(itemsSchema =>
                   for {
                     (found, innerRawType) <- determineTypeName(itemsSchema, Tracker.cloneHistory(schema, None), components)
-                    lifted                <- liftVectorType(found, None)
+                    customArrayType <- SwaggerUtil
+                      .customArrayTypeName(schema.unwrapTracker)
+                      .flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(schema, x))))
+                    lifted <- liftVectorType(found, customArrayType)
                   } yield (lifted, ReifiedRawType.ofVector(innerRawType): ReifiedRawType)
                 )
                 .getOrElse(arrayType(None).map((_, ReifiedRawType.unsafeEmpty)))
