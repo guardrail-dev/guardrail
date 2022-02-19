@@ -35,7 +35,8 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
 
-      override def doBaz(respond: DoBazResponse.type)(authContext: Either[AuthResource.AuthError, AuthContext], body: String): IO[DoBazResponse] = ???
+      override def doBaz(respond: DoBazResponse.type)(authContext: Option[AuthContext], body: String): IO[DoBazResponse] =
+        authContext.fold(IO(DoBazResponse.Ok("None")))(_ => IO(DoBazResponse.Ok("Some")))
 
       override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthResource.AuthError, AuthContext], body: String): IO[DoFooResponse] =
         authContext.fold(
@@ -47,11 +48,11 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
         )
     })
 
-  def request(server: HttpRoutes[IO]): IO[String] =
+  def request(path: String, server: HttpRoutes[IO]): IO[String] =
     Client
       .fromHttpApp(server.orNotFound)
       .run(
-        Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
+        Request[IO](method = Method.POST, uri = Uri.unsafeFromString(path))
           .withBodyStream(fs2.Stream.apply("\"-97-\"".getBytes(): _*))
           .withContentType(`Content-Type`(MediaType.application.json))
       )
@@ -59,10 +60,13 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
       .attempt
       .map(_.value)
 
+  def requestFoo(server: HttpRoutes[IO]): IO[String] = request("/foo", server)
+  def requestBaz(server: HttpRoutes[IO]): IO[String] = request("/baz", server)
+
   test("successful authentication") {
     val authMiddleware = (_: AuthResource.AuthSchemes, _: Set[String], _: Request[IO]) => IO.pure(Right("success"))
     val server         = createServer(authMiddleware)
-    val result         = request(server).unsafeRunSync()
+    val result         = requestFoo(server).unsafeRunSync()
 
     result shouldEqual s""""success""""
   }
@@ -70,7 +74,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("failed authentication") {
     val authMiddleware = (_: AuthResource.AuthSchemes, _: Set[String], _: Request[IO]) => IO.pure(Left(AuthResource.AuthError.Unauthorized))
     val server         = createServer(authMiddleware)
-    val result         = request(server).unsafeRunSync()
+    val result         = requestFoo(server).unsafeRunSync()
 
     result shouldEqual s""""authentication failed: unauthorized""""
   }
@@ -85,7 +89,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
       case (_, _, _)                                                                     => IO.pure(Left(AuthResource.AuthError.Unauthorized))
     }
     val server1 = createServer(authMiddleware1)
-    val result1 = request(server1).unsafeRunSync()
+    val result1 = requestFoo(server1).unsafeRunSync()
 
     val authMiddleware2: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = {
       case (AuthSchemes.Jwt, s, _) if s.forall(Set("foo:read", "bar:write").contains(_)) => IO.pure(Left(AuthResource.AuthError.Unauthorized))
@@ -93,7 +97,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
       case (_, _, _)                                                                     => IO.pure(Left(AuthResource.AuthError.Unauthorized))
     }
     val server2 = createServer(authMiddleware2)
-    val result2 = request(server2).unsafeRunSync()
+    val result2 = requestFoo(server2).unsafeRunSync()
 
     result1 shouldEqual s""""success""""
     result2 shouldEqual s""""success""""
@@ -112,7 +116,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
       }
     }
     val server = createServer(authMiddleware)
-    val result = request(server).unsafeRunSync()
+    val result = requestFoo(server).unsafeRunSync()
 
     invoked should contain theSameElementsInOrderAs Seq(AuthSchemes.Basic, AuthSchemes.Jwt)
     result shouldEqual s""""success""""
@@ -131,9 +135,33 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
       }
     }
     val server = createServer(authMiddleware)
-    val result = request(server).unsafeRunSync()
+    val result = requestFoo(server).unsafeRunSync()
 
     invoked should contain theSameElementsInOrderAs Seq(AuthSchemes.Basic, AuthSchemes.OAuth2)
     result shouldEqual s""""authentication failed: forbidden""""
+  }
+
+  test("return 'None' for optional authentication error") {
+    import AuthResource.AuthSchemes
+
+    val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (_, _, _) =>
+      IO.pure(Left(AuthResource.AuthError.Unauthorized))
+    }
+    val server = createServer(authMiddleware)
+    val result = requestBaz(server).unsafeRunSync()
+
+    result shouldEqual s""""None""""
+  }
+
+  test("return 'Some' for optional authentication error") {
+    import AuthResource.AuthSchemes
+
+    val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (_, _, _) =>
+      IO.pure(Right("authenticated"))
+    }
+    val server = createServer(authMiddleware)
+    val result = requestBaz(server).unsafeRunSync()
+
+    result shouldEqual s""""Some""""
   }
 }

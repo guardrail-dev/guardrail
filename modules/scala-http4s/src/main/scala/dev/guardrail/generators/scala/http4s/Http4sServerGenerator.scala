@@ -742,7 +742,11 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           case AuthImplementation.Disable => None
           case AuthImplementation.Simple =>
             securityRequirements.map(
-              (LanguageParameter.fromParam(param"authContext: Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"), _)
+              sr =>
+                if (sr.optional)
+                  (LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]"), sr)
+                else
+                  (LanguageParameter.fromParam(param"authContext: Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"), sr)
             )
           case AuthImplementation.Custom =>
             securityRequirements.map((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), _))
@@ -854,11 +858,20 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             case Simple =>
               val securityRequirements = renderCustomSecurityRequirements(sr)
               val authContextParam     = param"${arg.paramName}"
-              inner => q"""
-              authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap { $authContextParam =>
-                $inner
-              }
-            """
+              inner =>
+                if (sr.optional)
+                  q"""
+                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap { authContextEither =>
+                      val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither.toOption
+                      $inner
+                    }
+                  """
+                else
+                  q"""
+                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap { $authContextParam =>
+                      $inner
+                    }
+                  """
             case Custom =>
               val securityRequirements = renderCustomSecurityRequirements(sr)
               val authContextParam     = param"${arg.paramName}"
