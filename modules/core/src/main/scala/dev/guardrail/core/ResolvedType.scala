@@ -20,12 +20,11 @@ case class VectorRawType(items: ReifiedRawType)                               ex
 case class MapRawType(items: ReifiedRawType)                                  extends ReifiedRawType
 
 sealed trait ResolvedType[L <: LA]
-case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String])
-    extends ResolvedType[L]
-sealed trait LazyResolvedType[L <: LA]                                         extends ResolvedType[L]
-case class Deferred[L <: LA](value: String)                                    extends LazyResolvedType[L]
-case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type]) extends LazyResolvedType[L]
-case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])   extends LazyResolvedType[L]
+case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: ReifiedRawType) extends ResolvedType[L]
+sealed trait LazyResolvedType[L <: LA]                                                                                         extends ResolvedType[L]
+case class Deferred[L <: LA](value: String)                                                                                    extends LazyResolvedType[L]
+case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type])                                                 extends LazyResolvedType[L]
+case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])                                                   extends LazyResolvedType[L]
 
 object ResolvedType {
   def resolveReferences[L <: LA, F[_]](
@@ -80,20 +79,20 @@ object ResolvedType {
     import Cl._
     import Sw._
     log.debug(s"value: ${value} in ${protocolElems.length} protocol elements") >> (value match {
-      case x @ Resolved(_, _, _, _, _) => x.pure[F]
+      case x @ Resolved(_, _, _, _) => x.pure[F]
       case Deferred(name) =>
         for {
           formattedName <- formatTypeName(name)
           resolved <- resolveType(formattedName, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                Resolved[L](tpe, None, None, None, None).pure[F]
+                Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty).pure[F]
               case ClassDefinition(name, _, fullType, cls, _, _) =>
-                Resolved[L](fullType, None, None, None, None).pure[F]
+                Resolved[L](fullType, None, None, ReifiedRawType.unsafeEmpty).pure[F]
               case EnumDefinition(name, _, fullType, _, cls, _) =>
-                Resolved[L](fullType, None, None, Some("string"), None).pure[F]
+                Resolved[L](fullType, None, None, ReifiedRawType.of(Some("string"), None)).pure[F]
               case ADT(_, _, fullType, _, _) =>
-                Resolved[L](fullType, None, None, None, None).pure[F]
+                Resolved[L](fullType, None, None, ReifiedRawType.unsafeEmpty).pure[F]
             }
         } yield resolved
       case DeferredArray(name, containerTpe) =>
@@ -102,13 +101,13 @@ object ResolvedType {
           resolved <- resolveType(formattedName, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
               case ClassDefinition(name, _, fullType, cls, _, _) =>
-                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
               case EnumDefinition(name, _, fullType, _, cls, _) =>
-                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
               case ADT(_, _, fullType, _, _) =>
-                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
             }
         } yield resolved
       case DeferredMap(name, containerTpe) =>
@@ -117,13 +116,13 @@ object ResolvedType {
           resolved <- resolveType(formattedName, protocolElems)
             .flatMap {
               case RandomType(name, tpe) =>
-                liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
               case ClassDefinition(_, _, fullType, _, _, _) =>
-                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
               case EnumDefinition(_, _, fullType, _, _, _) =>
-                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
               case ADT(_, _, fullType, _, _) =>
-                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, None, None))
+                liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
             }
         } yield resolved
     })

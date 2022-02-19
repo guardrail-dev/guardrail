@@ -5,7 +5,7 @@ import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.syntax.all._
-import dev.guardrail.core.Tracker
+import dev.guardrail.core.{ ReifiedRawType, Tracker, VectorRawType }
 import dev.guardrail.core.implicits._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaProjection, SchemaRef, SecurityScheme, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -54,7 +54,7 @@ object SwaggerUtil {
               formattedClsName <- formatTypeName(clsName)
               typeName         <- pureTypeName(formattedClsName)
               widenedTypeName  <- widenTypeName(typeName)
-            } yield (clsName, core.Resolved[L](widenedTypeName, None, None, None, None): core.ResolvedType[L])
+            } yield (clsName, core.Resolved[L](widenedTypeName, None, None, ReifiedRawType.unsafeEmpty): core.ResolvedType[L])
           )
           .orRefine { case comp: ComposedSchema => comp }(comp =>
             for {
@@ -68,7 +68,7 @@ object SwaggerUtil {
                 .flatMap(_.downField("$ref", _.get$ref).indexedDistribute)
                 .map(_.unwrapTracker.split("/").last)
               parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
-              resolvedType = core.Resolved[L](widenedTypeName, parentTerm, None, None, None): core.ResolvedType[L]
+              resolvedType = core.Resolved[L](widenedTypeName, parentTerm, None, ReifiedRawType.unsafeEmpty): core.ResolvedType[L]
             } yield (clsName, resolvedType)
           )
           .getOrElse(
@@ -78,8 +78,8 @@ object SwaggerUtil {
           )
       }
       result <- core.ResolvedType.resolveReferences[L, F](entries)
-    } yield result.map { case (clsName, core.Resolved(tpe, _, _, _, _)) =>
-      PropMeta[L](clsName, tpe)
+    } yield result.map { case (clsName, core.Resolved(tpe, _, _, _)) =>
+      PropMeta[L](clsName, tpe) // TODO: We're losing ReifiedRawType here. Perhaps maintain through PropMeta?
     }
   }
 
@@ -190,10 +190,10 @@ object SwaggerUtil {
   ): F[core.ResolvedType[L]] =
     propMetaImpl(property, components)(
       _.refine[core.ResolvedType[L]] { case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
-        core.Resolved[L](tpe, None, None, None, None)
-      ).orRefine { case c: ComposedSchema => c }(_ => core.Resolved[L](tpe, None, None, None, None))
+        core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
+      ).orRefine { case c: ComposedSchema => c }(_ => core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty))
         .orRefine { case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) => schema }(_ =>
-          core.Resolved[L](tpe, None, None, None, None)
+          core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
         )
         .map(_.pure[F])
     )
@@ -210,7 +210,7 @@ object SwaggerUtil {
       for {
         customTpeName <- customTypeName(a)
         tpe           <- determineTypeName[L, F](a, Tracker.cloneHistory(a, customTpeName), components)
-      } yield core.Resolved[L](tpe, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker)
+      } yield core.Resolved[L](tpe, None, None, ReifiedRawType.of(rawType.unwrapTracker, rawFormat.unwrapTracker))
     }
 
     partial
@@ -225,7 +225,9 @@ object SwaggerUtil {
       .orRefine { case f: FileSchema => f }(buildResolveNoDefault)
       .orRefine { case b: BinarySchema => b }(buildResolveNoDefault)
       .orRefine { case u: UUIDSchema => u }(buildResolveNoDefault)
-      .orRefineFallback(x => fallbackPropertyTypeHandler(x).map(core.Resolved[L](_, None, None, None, None))) // This may need to be rawType=string?
+      .orRefineFallback(x =>
+        fallbackPropertyTypeHandler(x).map(core.Resolved[L](_, None, None, ReifiedRawType.unsafeEmpty))
+      ) // This may need to be rawType=string?
   }
 
   private def enrichWithDefault[L <: LA, F[_]](schema: Tracker[Schema[_]])(implicit
@@ -268,19 +270,23 @@ object SwaggerUtil {
               customTpeName <- customTypeName(o)
               customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
               fallback      <- objectType(None)
-            } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, None, None)
+            } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, ReifiedRawType.unsafeEmpty)
           )
           .orRefine { case arr: ArraySchema => arr }(arr =>
             for {
               items <- getItems(arr)
-              meta  <- propMetaImpl[L, F](items, components)(strategy)
-              rawType   = arr.downField("type", _.getType())
-              rawFormat = arr.downField("format", _.getFormat())
+              dereferencedItems <- items
+                .downField("$ref", _.get$ref())
+                .indexedDistribute
+                .fold[F[Tracker[Schema[_]]]](items.pure[F])(ref => dereferenceSchema(ref, components))
+              meta <- propMetaImpl[L, F](items, components)(strategy)
+              itemsRawType   = dereferencedItems.downField("type", _.getType())
+              itemsRawFormat = dereferencedItems.downField("format", _.getFormat())
               arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
               res <- meta match {
-                case core.Resolved(inner, dep, default, _, _) =>
+                case core.Resolved(inner, dep, default, _) =>
                   (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
-                    .mapN(core.Resolved[L](_, dep, _, rawType.unwrapTracker, rawFormat.unwrapTracker))
+                    .mapN(core.Resolved[L](_, dep, _, VectorRawType(ReifiedRawType.of(itemsRawType.unwrapTracker, itemsRawFormat.unwrapTracker))))
                 case x: core.Deferred[L]      => embedArray(x, arrayType)
                 case x: core.DeferredArray[L] => embedArray(x, arrayType)
                 case x: core.DeferredMap[L]   => embedArray(x, arrayType)
@@ -295,19 +301,19 @@ object SwaggerUtil {
                 .downField("additionalProperties", _.getAdditionalProperties())
                 .map(_.getOrElse(false))
                 .refine[F[core.ResolvedType[L]]] { case b: java.lang.Boolean => b }(_ =>
-                  objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
+                  objectType(None).map(core.Resolved[L](_, None, None, ReifiedRawType.ofMap(ReifiedRawType.unsafeEmpty)))
                 )
                 .orRefine { case s: Schema[_] => s }(s => propMetaImpl[L, F](s, components)(strategy))
                 .orRefineFallback { s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
-                    .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
+                    .map(core.Resolved[L](_, None, None, ReifiedRawType.ofMap(ReifiedRawType.of(rawType.unwrapTracker, rawFormat.unwrapTracker))))
                 }
               mapType <- customMapTypeName(map).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(map, x))))
               res <- rec match {
-                case core.Resolved(inner, dep, _, tpe, fmt) => liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, tpe, fmt))
-                case x: core.DeferredMap[L]                 => embedMap(x, mapType)
-                case x: core.DeferredArray[L]               => embedMap(x, mapType)
-                case x: core.Deferred[L]                    => embedMap(x, mapType)
+                case core.Resolved(inner, dep, _, rawType) => liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, ReifiedRawType.ofMap(rawType)))
+                case x: core.DeferredMap[L]                => embedMap(x, mapType)
+                case x: core.DeferredArray[L]              => embedMap(x, mapType)
+                case x: core.Deferred[L]                   => embedMap(x, mapType)
               }
             } yield res
           }

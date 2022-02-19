@@ -51,7 +51,7 @@ object Responses {
               for {
                 meta     <- SwaggerUtil.propMeta[L, F](prop)
                 resolved <- core.ResolvedType.resolve[L, F](meta, protocolElems)
-                core.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+                core.Resolved(baseType, _, baseDefaultValue, _) = resolved // TODO: ReifiedRawType is just dropped, should it be considered?
               } yield (contentType, baseType, baseDefaultValue)
             }
             headers <- resp.downField("headers", _.getHeaders()).unwrapTracker.value.toList.traverse { case (name, header) =>

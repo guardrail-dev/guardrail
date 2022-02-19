@@ -870,7 +870,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
       for {
         tpeClassDep <- meta match {
-          case core.Resolved(declType, classDep, _, _, _) =>
+          case core.Resolved(declType, classDep, _, _) =>
             Target.pure((declType, classDep))
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
@@ -960,7 +960,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
   ): Target[Type] =
     for {
       result <- arr match {
-        case core.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+        case core.Resolved(tpe, dep, default, _) => Target.pure(tpe)
         case core.Deferred(tpeName) =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes), UserError(s"Unresolved reference ${tpeName}"))
         case core.DeferredArray(tpeName, containerTpe) =>

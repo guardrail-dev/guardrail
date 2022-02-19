@@ -10,7 +10,7 @@ import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
+import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
 import dev.guardrail.generators.spi.ProtocolGeneratorLoader
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.RawParameterName
@@ -170,10 +170,10 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends
         dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
         (tpe, classDep) = meta match {
-          case core.Resolved(declType, classDep, _, Some(rawType), rawFormat) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
+          case core.Resolved(declType, classDep, _, LiteralRawType(Some(rawType), rawFormat)) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
             // assume that binary data are represented as a string. allow users to override.
             (t"String", classDep)
-          case core.Resolved(declType, classDep, _, _, _) =>
+          case core.Resolved(declType, classDep, _, _) =>
             (declType, classDep)
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -452,7 +452,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends
   override def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
     for {
       result <- arr match {
-        case core.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+        case core.Resolved(tpe, dep, default, _) => Target.pure(tpe)
         case core.Deferred(tpeName) =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
         case core.DeferredArray(tpeName, containerTpe) =>

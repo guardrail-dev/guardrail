@@ -7,7 +7,7 @@ import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
 import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
-import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
+import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, ResolvedType, Tracker, VectorRawType }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
@@ -87,7 +87,7 @@ object LanguageParameter {
           customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
           res <- (SwaggerUtil.determineTypeName[L, F](schema, customTypeName, components), getDefault(schema))
-            .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
+            .mapN(core.Resolved[L](_, None, _, ReifiedRawType.of(Some(tpeName.unwrapTracker), fmt.unwrapTracker)))
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
         } yield (res, required)
 
@@ -126,9 +126,16 @@ object LanguageParameter {
 
     log.function(s"fromParameter")(
       for {
-        _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
-        (meta, required)                                                  <- paramMeta(parameter)
-        core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
+        _                                                             <- log.debug(parameter.unwrapTracker.showNotNull)
+        (meta, required)                                              <- paramMeta(parameter)
+        core.Resolved(paramType, _, baseDefaultValue, reifiedRawType) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
+
+        (rawType, rawFormat) = reifiedRawType match {
+          case LiteralRawType(rawType, rawFormat)                => (rawType, rawFormat)
+          case VectorRawType(LiteralRawType(rawType, rawFormat)) => (rawType, rawFormat)
+          case MapRawType(LiteralRawType(rawType, rawFormat))    => (rawType, rawFormat)
+          case _ => ??? // TODO: Currently highly unlikely, will need to fix. RawParameterType needs to just be replaced with ReifiedRawType
+        }
 
         declType <-
           if (!required) {
