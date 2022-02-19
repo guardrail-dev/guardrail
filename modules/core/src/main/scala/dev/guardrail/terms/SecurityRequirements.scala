@@ -16,11 +16,14 @@ object SecurityRequirements {
   case object Global extends Location
   case object Local  extends Location
 
-  def apply(requirements: NonEmptyList[SecurityRequirement], optionalSchemes: List[String], location: Location): Option[SecurityRequirements] = {
+  def apply(requirements: NonEmptyList[SecurityRequirement], location: Location): Option[SecurityRequirements] = {
     implicit val strOrder = Order.fromComparable[String]
+    val requirementsList  = requirements.toList
+    val optional          = requirementsList.exists(_.isEmpty())
+
     for {
       convertedReqs <- NonEmptyList.fromList(
-        requirements.toList
+        requirementsList
           .flatMap(
             req =>
               NonEmptyMap.fromMap(
@@ -28,11 +31,11 @@ object SecurityRequirements {
               )
           )
       )
-    } yield SecurityRequirements(convertedReqs, optionalSchemes, location)
+    } yield SecurityRequirements(convertedReqs, optional, location)
   }
 }
 case class SecurityRequirements(
     requirements: NonEmptyList[NonEmptyMap[String, SecurityScopes]],
-    optionalSchemes: List[String],
+    optional: Boolean,
     location: SecurityRequirements.Location
 )

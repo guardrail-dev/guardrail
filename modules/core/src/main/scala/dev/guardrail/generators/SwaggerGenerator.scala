@@ -12,7 +12,7 @@ import java.net.URI
 import scala.util.Try
 
 import dev.guardrail._
-import dev.guardrail.core.extract.{ ClassPrefix, PackageName, SecurityOptional }
+import dev.guardrail.core.extract.{ ClassPrefix, PackageName }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.generators.syntax._
@@ -101,7 +101,7 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
                     .orHistory
                     .fold(
                       _ => globalSecurityRequirements,
-                      security => SecurityRequirements(security.unwrapTracker, SecurityOptional(operation), SecurityRequirements.Local)
+                      security => SecurityRequirements(security.unwrapTracker, SecurityRequirements.Local)
                     )
 
                 // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
