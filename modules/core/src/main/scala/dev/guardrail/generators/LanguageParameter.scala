@@ -7,7 +7,7 @@ import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
 import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
-import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, ResolvedType, Tracker, VectorRawType }
+import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
@@ -75,19 +75,18 @@ object LanguageParameter {
             .orRefineFallback(_ => Option.empty[L#Term].pure[F])
         } yield res
 
-      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[(ResolvedType[L], Boolean)] =
+      def resolveParam(param: Tracker[Parameter]): F[(ResolvedType[L], Boolean)] =
         for {
-          tpeName <- typeFetcher(param)
           schema <- getParameterSchema(param, components).map(_.map {
             case SchemaLiteral(schema)               => schema
             case SchemaRef(SchemaLiteral(schema), _) => schema
           })
-          fmt = schema.downField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
-          res <- (SwaggerUtil.determineTypeName[L, F](schema, customTypeName, components), getDefault(schema))
-            .mapN(core.Resolved[L](_, None, _, ReifiedRawType.of(Some(tpeName.unwrapTracker), fmt.unwrapTracker)))
+          (declType, rawType) <- SwaggerUtil.determineTypeName[L, F](schema, customTypeName, components)
+          defaultValue        <- getDefault(schema)
+          res      = core.Resolved[L](declType, None, defaultValue, rawType)
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
         } yield (res, required)
 
@@ -112,15 +111,15 @@ object LanguageParameter {
               case SchemaLiteral(schema)               => schema
               case SchemaRef(SchemaLiteral(schema), _) => schema
             })
-            resolved <- SwaggerUtil.modelMetaType[L, F](schema)
+            resolved <- SwaggerUtil.modelMetaType[L, F](schema, components)
             required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
           } yield (resolved, required)
         )
-        .orRefine { case x: Parameter if x.isInHeader => x }(x => resolveParam(x, getHeaderParameterType))
-        .orRefine { case x: Parameter if x.isInPath => x }(x => resolveParam(x, getPathParameterType))
-        .orRefine { case x: Parameter if x.isInQuery => x }(x => resolveParam(x, getQueryParameterType))
-        .orRefine { case x: Parameter if x.isInCookies => x }(x => resolveParam(x, getCookieParameterType))
-        .orRefine { case x: Parameter if x.isInFormData => x }(x => resolveParam(x, getFormParameterType))
+        .orRefine { case x: Parameter if x.isInHeader => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInPath => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInQuery => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInCookies => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInFormData => x }(resolveParam)
         .orRefineFallback(fallbackParameterHandler)
     }
 
@@ -129,13 +128,6 @@ object LanguageParameter {
         _                                                             <- log.debug(parameter.unwrapTracker.showNotNull)
         (meta, required)                                              <- paramMeta(parameter)
         core.Resolved(paramType, _, baseDefaultValue, reifiedRawType) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
-
-        (rawType, rawFormat) = reifiedRawType match {
-          case LiteralRawType(rawType, rawFormat)                => (rawType, rawFormat)
-          case VectorRawType(LiteralRawType(rawType, rawFormat)) => (rawType, rawFormat)
-          case MapRawType(LiteralRawType(rawType, rawFormat))    => (rawType, rawFormat)
-          case _ => ??? // TODO: Currently highly unlikely, will need to fix. RawParameterType needs to just be replaced with ReifiedRawType
-        }
 
         declType <-
           if (!required) {
@@ -179,7 +171,7 @@ object LanguageParameter {
         paramTermName,
         RawParameterName(name),
         declType,
-        ReifiedRawType.of(rawType, rawFormat),
+        reifiedRawType,
         required,
         FileHashAlgorithm(parameter),
         isFileType

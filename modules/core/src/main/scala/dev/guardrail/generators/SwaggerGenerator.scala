@@ -32,14 +32,6 @@ object SwaggerGenerator {
 class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
 
-  private def parameterSchemaType(parameter: Tracker[Parameter]): Target[Tracker[String]] = {
-    val parameterName: String = parameter.downField("name", _.getName).unwrapTracker.fold("no name")(s => s"named: ${s}")
-    for {
-      schema <- parameter.downField("schema", _.getSchema).raiseErrorIfEmpty(s"Parameter (${parameterName}) has no schema")
-      tpe    <- schema.downField("type", _.getType).raiseErrorIfEmpty(s"Parameter (${parameterName}) has no schema type")
-    } yield tpe
-  }
-
   private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
@@ -211,24 +203,6 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
           dereferenceSchema(ref, components).map(_.map(schema => SchemaRef(SchemaLiteral(schema), ref.unwrapTracker)))
         )
     } yield dereferenced
-
-  override def getHeaderParameterType(parameter: Tracker[Parameter]) =
-    parameterSchemaType(parameter)
-
-  override def getPathParameterType(parameter: Tracker[Parameter]) =
-    parameterSchemaType(parameter)
-
-  override def getQueryParameterType(parameter: Tracker[Parameter]) =
-    parameterSchemaType(parameter)
-
-  override def getCookieParameterType(parameter: Tracker[Parameter]) =
-    parameterSchemaType(parameter)
-
-  override def getFormParameterType(parameter: Tracker[Parameter]) =
-    parameterSchemaType(parameter)
-
-  override def getSerializableParameterType(parameter: Tracker[Parameter]) =
-    parameterSchemaType(parameter)
 
   override def getRefParameterRef(parameter: Tracker[Parameter]) =
     parameter

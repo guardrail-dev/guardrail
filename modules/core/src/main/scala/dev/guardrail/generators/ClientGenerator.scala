@@ -53,7 +53,7 @@ object ClientGenerator {
           responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId         <- getOperationId(operation)
-              responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
+              responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems, components)
               responseClsName     <- formatTypeName(operationId, Some("Response"))
               responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
               parameters          <- route.getParameters[L, F](components, protocolElems)

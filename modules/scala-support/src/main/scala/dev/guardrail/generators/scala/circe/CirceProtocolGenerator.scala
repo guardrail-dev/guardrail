@@ -153,10 +153,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends
       defaultValue: Option[scala.meta.Term]
   ): Target[ProtocolParameter[ScalaLanguage]] =
     Target.log.function(s"transformProperty") {
+      val fallbackRawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
       for {
         _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
-
-        rawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
         readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly()).unwrapTracker.contains(true))
         emptyToNull = property
@@ -169,26 +168,27 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends
 
         dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
-        (tpe, classDep) = meta match {
-          case core.Resolved(declType, classDep, _, LiteralRawType(Some(rawType), rawFormat)) if SwaggerUtil.isFile(rawType, rawFormat) && !isCustomType =>
+        (tpe, classDep, rawType) = meta match {
+          case core.Resolved(declType, classDep, _, rawType @ LiteralRawType(Some(rawTypeStr), rawFormat))
+              if SwaggerUtil.isFile(rawTypeStr, rawFormat) && !isCustomType =>
             // assume that binary data are represented as a string. allow users to override.
-            (t"String", classDep)
-          case core.Resolved(declType, classDep, _, _) =>
-            (declType, classDep)
+            (t"String", classDep, rawType)
+          case core.Resolved(declType, classDep, _, rawType) =>
+            (declType, classDep, rawType)
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
               println(s"Unable to find definition for ${tpeName}, just inlining")
               Type.Name(tpeName)
             }
-            (tpe, Option.empty)
+            (tpe, Option.empty, fallbackRawType)
           case core.DeferredArray(tpeName, containerTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-            (t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]", Option.empty)
+            (t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]", Option.empty, ReifiedRawType.ofVector(fallbackRawType))
           case core.DeferredMap(tpeName, customTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-            (t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]", Option.empty)
+            (t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]", Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))

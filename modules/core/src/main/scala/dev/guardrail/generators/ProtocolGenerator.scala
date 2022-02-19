@@ -136,7 +136,7 @@ object ProtocolGenerator {
     for {
       enum          <- extractEnum(schema.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(schema)
-      tpe           <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
+      (tpe, _)      <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
       fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -202,7 +202,8 @@ object ProtocolGenerator {
           customType <- SwaggerUtil.customTypeName(prop)
           resolvedType <- SwaggerUtil
             .propMeta[L, F](
-              prop
+              prop,
+              components
             ) // TODO: This should be resolved via an alternate mechanism that maintains references all the way through, instead of re-deriving and assuming that references are valid
           defValue  <- defaultValue(typeName, prop, propertyRequirement, definitions)
           fieldName <- formatFieldName(name)
@@ -544,9 +545,9 @@ object ProtocolGenerator {
     for {
       tpe <- model.fold[F[L#Type]](objectType(None)) { m =>
         for {
-          tpeName <- SwaggerUtil.customTypeName[L, F, Tracker[ObjectSchema]](m)
-          res     <- SwaggerUtil.determineTypeName[L, F](m, Tracker.cloneHistory(m, tpeName), components)
-        } yield res
+          tpeName       <- SwaggerUtil.customTypeName[L, F, Tracker[ObjectSchema]](m)
+          (declType, _) <- SwaggerUtil.determineTypeName[L, F](m, Tracker.cloneHistory(m, tpeName), components)
+        } yield declType
       }
       res <- typeAlias[L, F](clsName, tpe)
     } yield res
@@ -565,7 +566,7 @@ object ProtocolGenerator {
   def typeAlias[L <: LA, F[_]: Monad](clsName: String, tpe: L#Type): F[ProtocolElems[L]] =
     (RandomType[L](clsName, tpe): ProtocolElems[L]).pure[F]
 
-  def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]])(implicit
+  def fromArray[L <: LA, F[_]](clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[L]], components: Tracker[Option[Components]])(implicit
       F: FrameworkTerms[L, F],
       P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
@@ -574,7 +575,7 @@ object ProtocolGenerator {
   ): F[ProtocolElems[L]] = {
     import P._
     for {
-      deferredTpe <- SwaggerUtil.modelMetaType(arr)
+      deferredTpe <- SwaggerUtil.modelMetaType(arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
       ret         <- typeAlias[L, F](clsName, tpe)
     } yield ret
@@ -674,7 +675,7 @@ object ProtocolGenerator {
     Sw.log.function("ProtocolGenerator.fromSwagger")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
-      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value)
+      concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
@@ -717,7 +718,7 @@ object ProtocolGenerator {
           .orRefine { case a: ArraySchema => a }(arr =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              array            <- fromArray(formattedClsName, arr, concreteTypes)
+              array            <- fromArray(formattedClsName, arr, concreteTypes, components)
             } yield array
           )
           .orRefine { case o: ObjectSchema => o }(m =>
@@ -754,16 +755,16 @@ object ProtocolGenerator {
                 components
               )
               customTypeName <- SwaggerUtil.customTypeName(x)
-              tpe            <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
-              alias          <- typeAlias[L, F](formattedClsName, tpe)
+              (declType, _)  <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
+              alias          <- typeAlias[L, F](formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .valueOr(x =>
             for {
               formattedClsName <- formatTypeName(clsName)
               customTypeName   <- SwaggerUtil.customTypeName(x)
-              tpe              <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
-              res              <- typeAlias[L, F](formattedClsName, tpe)
+              (declType, _)    <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
+              res              <- typeAlias[L, F](formattedClsName, declType)
             } yield res
           )
       }
