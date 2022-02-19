@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import java.net.URI
 import scala.util.Try
+import scala.jdk.CollectionConverters._
 
 import dev.guardrail._
 import dev.guardrail.core.extract.{ ClassPrefix, PackageName }
@@ -94,15 +95,13 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
               .raiseErrorIfEmpty("No operations defined")
             operationRoutes <- operationMap.indexedCosequence.value.toList.traverse({
               case (httpMethod, operation) =>
-                val securityRequirements =
-                  operation
-                    .downField("security", _.getSecurity)
-                    .toNel
-                    .orHistory
-                    .fold(
-                      _ => globalSecurityRequirements,
-                      security => SecurityRequirements(security.unwrapTracker, SecurityRequirements.Local)
-                    )
+                val securityRequirements: Option[SecurityRequirements] =
+                  operation.downField("security", _.getSecurity)(Tracker.Convincer(_.map(_.asScala.toList))).unwrapTracker.map(_.toNel) match {
+                    // the first Option is for the field existance, the second one is for the List emptiness
+                    case Some(Some(requirements)) => SecurityRequirements(requirements, SecurityRequirements.Local)
+                    case Some(None)               => globalSecurityRequirements
+                    case None                     => None
+                  }
 
                 // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
                 // requestBodies, so let's manually fix that up here.

@@ -105,6 +105,8 @@ object RegressionTests {
     ExampleCase(sampleResource("debug-body.yaml"), "debugBody").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication.yaml"), "authentication-custom").args("--auth-implementation", "custom").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication.yaml"), "authentication-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-custom").args("--auth-implementation", "custom").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
 
   def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
