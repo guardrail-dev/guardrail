@@ -38,8 +38,10 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
 
-      override def doBaz(respond: DoBazResponse.type)(authContext: Option[AuthContext], body: String): IO[DoBazResponse] =
-        authContext.fold(IO(DoBazResponse.Ok("None")))(_ => IO(DoBazResponse.Ok("Some")))
+      override def doBaz(
+          respond: DoBazResponse.type
+      )(authContext: Either[AuthResource.AuthError.Forbidden.type, Option[AuthContext]], body: String): IO[DoBazResponse] =
+        authContext.fold(_ => IO(DoBazResponse.Ok("Forbidden")), _.fold(IO(DoBazResponse.Ok("None")))(_ => IO(DoBazResponse.Ok("Some"))))
 
       override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthResource.AuthError, AuthContext], body: String): IO[DoFooResponse] =
         authContext.fold(
@@ -144,7 +146,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     result shouldEqual s""""authentication failed: forbidden""""
   }
 
-  test("return 'None' for optional authentication error") {
+  test("return 'None' for optional authentication absent") {
     import AuthResource.AuthSchemes
 
     val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (_, _, _) =>
@@ -156,7 +158,19 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     result shouldEqual s""""None""""
   }
 
-  test("return 'Some' for optional authentication error") {
+  test("return 'Left' for optional authentication error") {
+    import AuthResource.AuthSchemes
+
+    val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (_, _, _) =>
+      IO.pure(Left(AuthResource.AuthError.Forbidden))
+    }
+    val server = createServer(authMiddleware)
+    val result = requestBaz(server).unsafeRunSync()
+
+    result shouldEqual s""""Forbidden""""
+  }
+
+  test("return 'Some' for optional authentication success") {
     import AuthResource.AuthSchemes
 
     val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (_, _, _) =>

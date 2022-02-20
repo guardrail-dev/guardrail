@@ -190,8 +190,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         q"""sealed trait $authErrorTypeName""",
         q"""
           object $errorTermName {
-            final case object Unauthorized extends $errorInit 
-            final case object Forbidden extends $errorInit 
+            final case object Unauthorized extends $errorInit
+            final case object Forbidden extends $errorInit
           }
         """
       ).filter(_ => authImplementation == AuthImplementation.Simple)
@@ -203,19 +203,19 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, Set[String]]], 
         req: Request[F]
       ): F[Either[$authErrorTypeName, $authContextTypeName]] = {
-        schemes.foldM[F, Either[$authErrorTypeName, $authContextTypeName]](Left($errorTermName.Unauthorized)){ case (result, el) => 
+        schemes.foldM[F, Either[$authErrorTypeName, $authContextTypeName]](Left($errorTermName.Unauthorized)){ case (result, el) =>
           result match {
-            case Left(value) => 
+            case Left(value) =>
               val nel = el.toNel
               val (headScheme, headScopes) = nel.head
               val headResult = middleware(headScheme, headScopes, req)
 
-              nel.tail.foldLeft(headResult){ case (acc , (scheme, scopes)) => 
+              nel.tail.foldLeft(headResult)({ case (acc , (scheme, scopes)) =>
                 acc.flatMap {
                   case Right(_) => middleware(scheme, scopes, req)
                   case l: Left[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(l)
                 }
-              }
+              })
             case r: Right[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(r)
           }
         }
@@ -741,13 +741,15 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         authImplementation match {
           case AuthImplementation.Disable => None
           case AuthImplementation.Simple =>
-            securityRequirements.map(
-              sr =>
-                if (sr.optional)
-                  (LanguageParameter.fromParam(param"authContext: Option[$authContextTypeName]"), sr)
-                else
-                  (LanguageParameter.fromParam(param"authContext: Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"), sr)
-            )
+            securityRequirements.map({ sr =>
+              val errorTermName = Term.Name(authErrorTypeName.value)
+              val inner = if (sr.optional) {
+                t"Either[${Type.Singleton(Term.Select(Term.Select(Term.Name(resourceName), errorTermName), q"Forbidden"))}, Option[$authContextTypeName]]"
+              } else {
+                t"Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"
+              }
+              (LanguageParameter.fromParam(param"authContext: $inner"), sr)
+            })
           case AuthImplementation.Custom =>
             securityRequirements.map((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), _))
         }
@@ -861,15 +863,21 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               inner =>
                 if (sr.optional)
                   q"""
-                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap { authContextEither =>
-                      val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither.toOption
-                      $inner
+                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                      authContextEither =>
+                        val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither match {
+                          case Right(success) => Right(Option(success))
+                          case Left(${Term.Name(authErrorTypeName.value)}.Unauthorized) => Right(Option.empty)
+                          case Left(x: ${Type.Singleton(Term.Select(Term.Name(authErrorTypeName.value), q"Forbidden"))}) => Left(x)
+                        }
+                        $inner
                     }
                   """
                 else
                   q"""
-                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap { $authContextParam =>
-                      $inner
+                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                      $authContextParam =>
+                        $inner
                     }
                   """
             case Custom =>
