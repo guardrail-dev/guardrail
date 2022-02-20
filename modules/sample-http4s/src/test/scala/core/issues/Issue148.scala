@@ -54,7 +54,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/test"))
         .withEntity(body)(
           EntityEncoder[IO, String]
-            .withContentType(`Content-Type`(MediaType.application.json).withCharset(DefaultCharset))
+            .withContentType(`Content-Type`(MediaType.application.json).withCharset(Charset.`UTF-8`))
         )
 
     def makeFormRequest(body: Multipart[IO]): Request[IO] =
@@ -211,7 +211,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
           Response[IO](Status.Ok)
             .withEntity(str)(
               EntityEncoder[IO, String]
-                .withContentType(`Content-Type`(MediaType.application.json).withCharset(DefaultCharset))
+                .withContentType(`Content-Type`(MediaType.application.json).withCharset(Charset.`UTF-8`))
             )
         )
       )
