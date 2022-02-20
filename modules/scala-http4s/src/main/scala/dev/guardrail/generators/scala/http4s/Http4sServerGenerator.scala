@@ -555,15 +555,15 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             )
       },
       arg => {
-        case t"String" => _ => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(_.toList)"))
+        case t"String" => lift => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(${lift(q"_")})"))
         case tpe =>
-          _ =>
+          lift =>
             Target.pure(
               Param(
                 None,
                 Some(
                   (
-                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).map(Json.fromString(_).as[$tpe]).sequence.sequence",
+                    q"${lift(q"urlForm.values.get(${arg.argName.toLit})")}.flatMap(${lift(q"_")}).map(Json.fromString(_).as[$tpe]).sequence.sequence",
                     p"Right(${Pat.Var(arg.paramName)})"
                   )
                 ),
