@@ -8,6 +8,17 @@ import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
 
+sealed trait ReifiedRawType
+object ReifiedRawType {
+  def of(rawType: Option[String], rawFormat: Option[String]): ReifiedRawType = LiteralRawType(rawType, rawFormat)
+  def ofVector(rawType: ReifiedRawType): ReifiedRawType = VectorRawType(rawType)
+  def ofMap(rawType: ReifiedRawType): ReifiedRawType = MapRawType(rawType)
+  val unsafeEmpty: ReifiedRawType = LiteralRawType(None, None)
+}
+case class LiteralRawType(rawType: Option[String], rawFormat: Option[String]) extends ReifiedRawType
+case class VectorRawType(items: ReifiedRawType) extends ReifiedRawType
+case class MapRawType(items: ReifiedRawType) extends ReifiedRawType
+
 sealed trait ResolvedType[L <: LA]
 case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: Option[String], rawFormat: Option[String])
     extends ResolvedType[L]
