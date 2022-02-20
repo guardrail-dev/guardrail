@@ -14,14 +14,14 @@ import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 
 import dev.guardrail.core
-import dev.guardrail.core.Tracker
+import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.{ RawParameterName, RawParameterType }
+import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.collections.CollectionsAbstraction
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
@@ -49,7 +49,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       parameterName: String,
       fieldType: Type,
       parameterType: Type,
-      rawType: RawParameterType,
+      rawType: ReifiedRawType,
       defaultValue: Option[Expression],
       dataRedacted: RedactionBehaviour,
       emptyToNull: EmptyToNullBehaviour
@@ -449,8 +449,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
               .discriminatorExpression[JavaLanguage](
                 discriminator.propertyName,
                 discriminatorValue,
-                term.rawType.tpe,
-                term.rawType.format
+                term.rawType
               )(
                 v => Target.pure[Node](new ObjectCreationExpr(null, BIG_INTEGER_FQ_TYPE, new NodeList(new StringLiteralExpr(v)))),
                 v => Target.pure[Node](new ObjectCreationExpr(null, BIG_DECIMAL_FQ_TYPE, new NodeList(new StringLiteralExpr(v)))),
@@ -900,7 +899,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
         }
         (tpe, classDep) = tpeClassDep
 
-        rawType = RawParameterType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
+        rawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
         expressionDefaultValue <- (defaultValue match {
           case Some(e: Expression) => Target.pure(Some(e))

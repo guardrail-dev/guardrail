@@ -8,7 +8,7 @@ import cats.implicits._
 import scala.meta._
 
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
-import dev.guardrail.core.Tracker
+import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker, VectorRawType }
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.{ AkkaHttpVersion, ModelGeneratorType }
 import dev.guardrail.generators.scala.ScalaLanguage
@@ -359,6 +359,12 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     })
   }
 
+  def findInnerTpe(rawType: ReifiedRawType): LiteralRawType = rawType match {
+    case x: LiteralRawType => x
+    case VectorRawType(inner) => findInnerTpe(inner)
+    case MapRawType(inner) => findInnerTpe(inner)
+  }
+
   def directivesFromParams(
       required: Term => Type => Option[Term] => Target[Term],
       multi: Term => Type => Option[Term] => (Term => Term) => Target[Term],
@@ -377,8 +383,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           )
 
           val unmarshaller: Type => Option[Term] = tpe =>
-            sparam.rawType.tpe match {
-              case Some("string") => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
+            findInnerTpe(sparam.rawType) match {
+              case LiteralRawType(Some("string"), _) => Some(q"stringyJsonUnmarshaller.andThen(unmarshallJson[${tpe}])")
               case _              => Option.empty
             }
           param match {
@@ -567,8 +573,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                       )
                     )
                   case false =>
-                    val textPlainUnmarshaller = rawParameter.rawType.tpe match {
-                      case Some("string") => q"MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
+                    val textPlainUnmarshaller = findInnerTpe(rawParameter.rawType) match {
+                      case LiteralRawType(Some("string"), _) => q"MFDBPviaFSU(stringyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
                       case _              => q"MFDBPviaFSU(sneakyJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
                     }
                     val jsonUnmarshaller = q"MFDBPviaFSU(structuredJsonEntityUnmarshaller.andThen(unmarshallJson[${realType}]))"
@@ -777,8 +783,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                             case t"Option[$x]"           => (x, q"get", (x: Term) => x)
                             case x                       => (x, q"get", (x: Term) => x)
                           }
-                          val unmarshaller = param.rawType.tpe match {
-                            case Some("string") => q"jsonStringyUnmarshaller"
+                          val unmarshaller = findInnerTpe(param.rawType) match {
+                            case LiteralRawType(Some("string"), _) => q"jsonStringyUnmarshaller"
                             case _              => q"jsonParsingUnmarshaller"
                           }
                           transformResponse(

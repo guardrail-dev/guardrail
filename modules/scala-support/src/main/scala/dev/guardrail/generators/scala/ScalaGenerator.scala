@@ -11,10 +11,10 @@ import scala.meta._
 
 import dev.guardrail.Common.resolveFile
 import dev.guardrail._
-import dev.guardrail.core.Tracker
+import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.syntax.RichString
-import dev.guardrail.generators.{ Client, RawParameterType, Server }
+import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 
@@ -169,7 +169,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       Target.pure(va.orElse(vb))
   }
 
-  override def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType): Target[RawParameterType] =
+  override def findCommonRawType(history: String, a: ReifiedRawType, b: ReifiedRawType): Target[ReifiedRawType] =
     if (a == b) {
       Target.pure(a)
     } else {

@@ -2,7 +2,7 @@ package dev.guardrail.scalaext.helpers
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.core.Tracker
+import dev.guardrail.core.{ LiteralRawType, Tracker }
 import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, OctetStream, Response, TextContent, TextPlain, UrlencodedFormData }
@@ -27,8 +27,10 @@ object ResponseHelpers {
           .orElse(contentTypes.collectFirst({ case bc: BinaryContent => bc }))
           .getOrElse({
             val fallback =
-              if (bodyParam.rawType.tpe.forall(_ == "object")) ApplicationJson
-              else TextPlain
+              bodyParam.rawType match {
+                case LiteralRawType(Some("object"), _) => ApplicationJson
+                case _ => TextPlain
+              }
             println(s"WARNING: no supported body param type at ${operation.showHistory}; falling back to $fallback")
             fallback
           })

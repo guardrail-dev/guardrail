@@ -1,6 +1,7 @@
 package dev.guardrail.generators.scala.jackson
 
 import dev.guardrail.Target
+import dev.guardrail.core.{ LiteralRawType, ReifiedRawType }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.LanguageTerms
 import scala.util.Try
@@ -12,8 +13,7 @@ object JacksonHelpers {
   def discriminatorExpression[L <: LA](
       discriminatorName: String,
       discriminatorValue: String,
-      discriminatorTpe: Option[String],
-      discriminatorFmt: Option[String]
+      discriminatorTpe: ReifiedRawType
   )(litBigInteger: String => Target[L#Term], litBigDecimal: String => Target[L#Term], fallback: String => Target[L#Term])(
       implicit Lt: LanguageTerms[L, Target]
   ): Target[L#Term] = {
@@ -28,29 +28,29 @@ object JacksonHelpers {
       Target.raiseUserError[L#Term](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '$discriminatorName'")
 
     discriminatorTpe match {
-      case Some(tpe @ "string") =>
-        discriminatorFmt match {
-          case Some("date") | Some("date-time") | Some("byte") | Some("binary") => errorUnsupported(tpe, discriminatorFmt.getOrElse("(none)"))
+      case LiteralRawType(Some(tpe @ "string"), fmt) =>
+        fmt match {
+          case Some("date") | Some("date-time") | Some("byte") | Some("binary") => errorUnsupported(tpe, fmt.getOrElse("(none)"))
           case _                                                                => litString(discriminatorValue)
         }
-      case Some(tpe @ "boolean") =>
+      case LiteralRawType(Some(tpe @ "boolean"), _) =>
         parseLiteral(_.toBoolean, tpe).flatMap(litBoolean)
-      case Some(tpe @ "integer") =>
-        discriminatorFmt match {
+      case LiteralRawType(Some(tpe @ "integer"), fmt) =>
+        fmt match {
           case Some(fmt @ "int32") => parseLiteral(_.toInt, fmt).flatMap(litInt)
           case Some(fmt @ "int64") => parseLiteral(_.toLong, fmt).flatMap(litLong)
           case Some(fmt)           => errorUnsupported(tpe, fmt)
           case None                => parseLiteral(BigInt(_).toString, "BigInteger").flatMap(litBigInteger)
         }
-      case Some(tpe @ "number") =>
-        discriminatorFmt match {
+      case LiteralRawType(Some(tpe @ "number"), fmt) =>
+        fmt match {
           case Some(fmt @ "float")  => parseLiteral(_.toFloat, fmt).flatMap(litFloat)
           case Some(fmt @ "double") => parseLiteral(_.toDouble, fmt).flatMap(litDouble)
           case Some(fmt)            => errorUnsupported(tpe, fmt)
           case None                 => parseLiteral(BigDecimal(_).toString, "BigDecimal").flatMap(litBigDecimal)
         }
-      case Some(tpe) => errorUnsupported(tpe, discriminatorFmt.getOrElse("(none)"))
-      case None      => fallback(discriminatorValue)
+      case LiteralRawType(Some(tpe), fmt) => errorUnsupported(tpe, fmt.getOrElse("(none)"))
+      case _      => fallback(discriminatorValue)
     }
   }
 }

@@ -13,9 +13,9 @@ import dev.guardrail.shims._
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
+import dev.guardrail.core.ReifiedRawType
 
 case class RawParameterName private[generators] (value: String)
-case class RawParameterType private[generators] (tpe: Option[String], format: Option[String])
 class LanguageParameters[L <: LA](val parameters: List[LanguageParameter[L]]) {
   val filterParamBy: String => List[LanguageParameter[L]] = LanguageParameter.filterParams(parameters)
   val headerParams: List[LanguageParameter[L]]            = filterParamBy("header")
@@ -30,7 +30,7 @@ class LanguageParameter[L <: LA] private[generators] (
     val paramName: L#TermName,
     val argName: RawParameterName,
     val argType: L#Type,
-    val rawType: RawParameterType,
+    val rawType: ReifiedRawType,
     val required: Boolean,
     val hashAlgorithm: Option[String],
     val isFile: Boolean
@@ -38,8 +38,8 @@ class LanguageParameter[L <: LA] private[generators] (
   override def toString: String =
     s"LanguageParameter($in, $param, $paramName, $argName, $argType)"
 
-  def withType(newArgType: L#Type, rawType: Option[String] = this.rawType.tpe, rawFormat: Option[String] = this.rawType.format): LanguageParameter[L] =
-    new LanguageParameter[L](in, param, paramName, argName, newArgType, RawParameterType(rawType, rawFormat), required, hashAlgorithm, isFile)
+  def withType(newArgType: L#Type): LanguageParameter[L] =
+    new LanguageParameter[L](in, param, paramName, argName, newArgType, rawType, required, hashAlgorithm, isFile)
 
   def withParamName(newParamName: L#TermName): LanguageParameter[L] =
     new LanguageParameter[L](in, param, newParamName, argName, argType, rawType, required, hashAlgorithm, isFile)
@@ -171,7 +171,7 @@ object LanguageParameter {
         paramTermName,
         RawParameterName(name),
         declType,
-        RawParameterType(rawType, rawFormat),
+        ReifiedRawType.of(rawType, rawFormat),
         required,
         FileHashAlgorithm(parameter),
         isFileType

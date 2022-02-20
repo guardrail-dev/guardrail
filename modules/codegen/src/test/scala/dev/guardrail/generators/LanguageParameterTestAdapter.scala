@@ -1,6 +1,7 @@
 package dev.guardrail
 
 import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.core.ReifiedRawType
 
 package object generators {
   implicit class RichLanguageParameter(value: LanguageParameter[ScalaLanguage]) {
@@ -11,7 +12,7 @@ package object generators {
         value.paramName,
         RawParameterName(rawParameterName),
         value.argType,
-        RawParameterType(rawType, rawFormat),
+        ReifiedRawType.of(rawType, rawFormat),
         value.required,
         value.hashAlgorithm,
         value.isFile

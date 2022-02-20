@@ -4,10 +4,10 @@ import cats.data.NonEmptyList
 import scala.meta._
 
 import dev.guardrail.Target
-import dev.guardrail.core.{ PathExtractor, Tracker }
+import dev.guardrail.core.{ PathExtractor, ReifiedRawType, Tracker }
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.syntax.GENERATED_CODE_COMMENT_LINES
-import dev.guardrail.generators.{ LanguageParameter, RawParameterName, RawParameterType }
+import dev.guardrail.generators.{ LanguageParameter, RawParameterName }
 import dev.guardrail.terms.protocol.StaticDefns
 
 package object syntax {
@@ -39,7 +39,7 @@ package object syntax {
             Term.Name(name.value),
             RawParameterName(name.value),
             tpe,
-            RawParameterType(rawType, rawFormat),
+            ReifiedRawType.of(rawType, rawFormat),
             true,
             None,
             false

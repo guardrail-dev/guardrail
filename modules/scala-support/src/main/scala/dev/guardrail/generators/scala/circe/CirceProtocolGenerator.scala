@@ -9,10 +9,10 @@ import scala.meta._
 import dev.guardrail.core
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, ResolvedType, SupportDefinition, Tracker }
+import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.{ ScalaGenerator, ScalaLanguage }
-import dev.guardrail.generators.{ RawParameterName, RawParameterType }
+import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
@@ -152,7 +152,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       for {
         _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
 
-        rawType = RawParameterType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
+        rawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
         readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly()).unwrapTracker.contains(true))
         emptyToNull = property
